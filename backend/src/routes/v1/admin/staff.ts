@@ -3,6 +3,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const adminStaffRouter = Router();
 
@@ -45,7 +46,7 @@ adminStaffRouter.get(
       const result = await pool.query(query, params);
       return res.json({ staff: result.rows });
     } catch (err) {
-      console.error("[Admin Staff] List error:", err);
+      log.error("[Admin Staff] List error:", err);
       return res.status(500).json({ error: "Failed to list staff" });
     }
   }
@@ -97,7 +98,7 @@ adminStaffRouter.post(
 
       return res.status(201).json({ staff: result.rows[0] });
     } catch (err) {
-      console.error("[Admin Staff] Create error:", err);
+      log.error("[Admin Staff] Create error:", err);
       return res.status(500).json({ error: "Failed to create staff" });
     }
   }
@@ -160,7 +161,7 @@ adminStaffRouter.patch(
 
       return res.json({ staff: result.rows[0] });
     } catch (err) {
-      console.error("[Admin Staff] Update error:", err);
+      log.error("[Admin Staff] Update error:", err);
       return res.status(500).json({ error: "Failed to update staff" });
     }
   }
@@ -197,7 +198,7 @@ adminStaffRouter.post(
 
       return res.json({ success: true });
     } catch (err) {
-      console.error("[Admin Staff] Reset PIN error:", err);
+      log.error("[Admin Staff] Reset PIN error:", err);
       return res.status(500).json({ error: "Failed to reset PIN" });
     }
   }

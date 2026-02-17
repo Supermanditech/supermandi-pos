@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posCustomersRouter = Router();
 
@@ -61,8 +63,9 @@ posCustomersRouter.get("/customers", requireDeviceToken, async (req: Request, re
     );
 
     return res.json({ customers: result.rows });
-  } catch (error: any) {
-    console.error("[CustomersAPI] List error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CustomersAPI] List error:", error.message);
     return res.status(500).json({ error: "Failed to list customers" });
   }
 });
@@ -135,8 +138,9 @@ posCustomersRouter.get("/customers/:customerId", requireDeviceToken, async (req:
       ...customer,
       purchases,
     });
-  } catch (error: any) {
-    console.error("[CustomersAPI] Get detail error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CustomersAPI] Get detail error:", error.message);
     return res.status(500).json({ error: "Failed to get customer details" });
   }
 });
@@ -184,12 +188,13 @@ posCustomersRouter.post("/customers", requireDeviceToken, requireActiveStore, as
     );
 
     return res.status(201).json({ customer: result.rows[0] });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // Handle unique constraint violation
     if (error.code === "23505") {
       return res.status(409).json({ error: "Customer with this phone already exists" });
     }
-    console.error("[CustomersAPI] Create error:", error.message);
+    log.error("[CustomersAPI] Create error:", error.message);
     return res.status(500).json({ error: "Failed to create customer" });
   }
 });
@@ -249,8 +254,9 @@ posCustomersRouter.patch("/customers/:customerId", requireDeviceToken, requireAc
     }
 
     return res.json({ customer: result.rows[0] });
-  } catch (error: any) {
-    console.error("[CustomersAPI] Update error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CustomersAPI] Update error:", error.message);
     return res.status(500).json({ error: "Failed to update customer" });
   }
 });

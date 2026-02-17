@@ -3,6 +3,7 @@
 // Ensures consistent store ID handling across all retailer-admin endpoints
 
 import type { Request, Response, NextFunction } from 'express';
+import { log } from "../lib/logger";
 
 // Extend Express Request type
 declare global {
@@ -29,7 +30,7 @@ export function getStoreId(req: Request): string | null {
 
   // Only STORE actor type has valid store access
   if (actorType && actorType !== 'STORE') {
-    console.warn(`[RetailerStoreContext] GO-LIVE-132: Non-store actor type: ${actorType}`);
+    log.warn(`[RetailerStoreContext] GO-LIVE-132: Non-store actor type: ${actorType}`);
     return null;
   }
 
@@ -65,7 +66,7 @@ export function requireStoreContext(req: Request, res: Response, next: NextFunct
   const actorType = req.headers['x-actor-type'] as string | undefined;
 
   if (!storeId) {
-    console.warn('[RetailerStoreContext] GO-LIVE-132: Store context missing', {
+    log.warn('[RetailerStoreContext] GO-LIVE-132: Store context missing', {
       path: req.path,
       method: req.method,
       hasActorId: !!req.headers['x-actor-id'],

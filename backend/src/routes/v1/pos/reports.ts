@@ -2,6 +2,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
+import { log } from "../../../lib/logger";
 
 export const posReportsRouter = Router();
 
@@ -107,7 +108,7 @@ posReportsRouter.get(
 
       return res.json({ report });
     } catch (err) {
-      console.error("[reports/daily] Error:", err);
+      log.error("[reports/daily] Error:", err);
       return res.status(500).json({ error: "Failed to generate daily report" });
     }
   }

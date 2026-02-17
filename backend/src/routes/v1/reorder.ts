@@ -7,6 +7,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { getPool } from "../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
+import { log } from "../../lib/logger";
+import { asError } from "../../lib/errorUtils";
 
 export const reorderRouter = Router();
 
@@ -74,8 +76,9 @@ reorderRouter.get("/stores/:storeId/reorder/settings", requireDeviceToken, async
       success: true,
       data: result.rows[0],
     });
-  } catch (error: any) {
-    console.error("[ReorderSettings] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ReorderSettings] Error:", error.message);
 
     // If table doesn't exist, return default settings
     if (error.code === "42P01") {
@@ -139,8 +142,9 @@ reorderRouter.patch("/stores/:storeId/reorder/settings", requireDeviceToken, asy
       data: result.rows[0],
       message: "Settings updated successfully",
     });
-  } catch (error: any) {
-    console.error("[ReorderSettings] Update error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ReorderSettings] Update error:", error.message);
     return res.status(500).json({
       success: false,
       error: "Failed to update settings",
@@ -238,8 +242,9 @@ reorderRouter.get("/stores/:storeId/reorder/policies", requireDeviceToken, async
         hasMore: offsetNum + result.rows.length < total,
       },
     });
-  } catch (error: any) {
-    console.error("[ReorderPolicies] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ReorderPolicies] Error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -312,8 +317,9 @@ reorderRouter.patch("/stores/:storeId/reorder/policies/:productId", requireDevic
       data: result.rows[0],
       message: "Policy updated successfully",
     });
-  } catch (error: any) {
-    console.error("[ReorderPolicies] Update error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ReorderPolicies] Update error:", error.message);
     return res.status(500).json({
       success: false,
       error: "Failed to update policy",
@@ -401,8 +407,9 @@ reorderRouter.get("/stores/:storeId/reorder/pending", requireDeviceToken, async 
         hasMore: offsetNum + result.rows.length < total,
       },
     });
-  } catch (error: any) {
-    console.error("[PendingReorders] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[PendingReorders] Error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -568,8 +575,9 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
     } finally {
       client.release();
     }
-  } catch (error: any) {
-    console.error("[ReorderApprove] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ReorderApprove] Error:", error.message);
 
     // If table doesn't exist
     if (error.code === "42P01") {
@@ -649,8 +657,9 @@ reorderRouter.post("/stores/:storeId/reorder/pending/:pendingId/dismiss", requir
       data: result.rows[0],
       message: "Pending reorder dismissed successfully",
     });
-  } catch (error: any) {
-    console.error("[ReorderDismiss] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ReorderDismiss] Error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(404).json({

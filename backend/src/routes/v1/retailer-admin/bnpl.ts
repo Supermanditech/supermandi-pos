@@ -4,6 +4,8 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerBnplRouter = Router();
 
@@ -56,8 +58,9 @@ retailerBnplRouter.get("/bnpl/active", async (req: Request, res: Response) => {
         overdueCount,
       },
     });
-  } catch (error: any) {
-    console.error("[Retailer BNPL] Active dues error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Retailer BNPL] Active dues error:", error.message);
     return res.status(500).json({ error: "Failed to get BNPL dues" });
   }
 });
@@ -98,8 +101,9 @@ retailerBnplRouter.get("/bnpl/history", async (req: Request, res: Response) => {
     );
 
     return res.json({ data: result.rows, total: result.rows.length });
-  } catch (error: any) {
-    console.error("[Retailer BNPL] History error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Retailer BNPL] History error:", error.message);
     return res.status(500).json({ error: "Failed to get BNPL history" });
   }
 });
@@ -147,8 +151,9 @@ retailerBnplRouter.get("/bnpl/summary", async (req: Request, res: Response) => {
         activeDrawdowns: Number(duesResult.rows[0]?.activeCount || 0),
       },
     });
-  } catch (error: any) {
-    console.error("[Retailer BNPL] Summary error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Retailer BNPL] Summary error:", error.message);
     return res.status(500).json({ error: "Failed to get BNPL summary" });
   }
 });

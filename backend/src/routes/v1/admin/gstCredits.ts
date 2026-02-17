@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const adminGstCreditsRouter = Router();
 
@@ -166,7 +167,7 @@ adminGstCreditsRouter.get("/gst-credits", async (req, res) => {
       }
     });
   } catch (error: unknown) {
-    console.error("[admin/gst-credits] Failed to fetch credits:", error);
+    log.error("[admin/gst-credits] Failed to fetch credits:", error);
     return res.status(500).json({ error: "fetch_gst_credits_failed" });
   }
 });
@@ -259,7 +260,7 @@ adminGstCreditsRouter.post("/gst-credits", async (req, res) => {
 
     return res.status(201).json({ credit: result.rows[0] });
   } catch (error: unknown) {
-    console.error("[admin/gst-credits] Failed to create credit:", error);
+    log.error("[admin/gst-credits] Failed to create credit:", error);
     const pgError = error as { code?: string };
     if (pgError.code === "23503") {
       return res.status(400).json({ error: "store_id_not_found" });
@@ -328,7 +329,7 @@ adminGstCreditsRouter.patch("/gst-credits/:id", async (req, res) => {
 
     return res.json({ credit: result.rows[0] });
   } catch (error: unknown) {
-    console.error("[admin/gst-credits] Failed to update credit:", error);
+    log.error("[admin/gst-credits] Failed to update credit:", error);
     return res.status(500).json({ error: "update_gst_credit_failed" });
   }
 });
@@ -374,7 +375,7 @@ adminGstCreditsRouter.get("/gst-credits/summary", async (req, res) => {
 
     return res.json({ summary: result.rows });
   } catch (error: unknown) {
-    console.error("[admin/gst-credits] Failed to fetch summary:", error);
+    log.error("[admin/gst-credits] Failed to fetch summary:", error);
     return res.status(500).json({ error: "fetch_summary_failed" });
   }
 });

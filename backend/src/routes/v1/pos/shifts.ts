@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posShiftsRouter = Router();
 
@@ -45,8 +47,9 @@ posShiftsRouter.get("/shifts/current", requireDeviceToken, async (req: Request, 
     );
 
     return res.json({ shift: result.rows[0] || null });
-  } catch (error: any) {
-    console.error("[ShiftsAPI] Get current error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ShiftsAPI] Get current error:", error.message);
     return res.status(500).json({ error: "Failed to get current shift" });
   }
 });
@@ -105,8 +108,9 @@ posShiftsRouter.post("/shifts/start", requireDeviceToken, requireActiveStore, as
     );
 
     return res.status(201).json({ shift: result.rows[0] });
-  } catch (error: any) {
-    console.error("[ShiftsAPI] Start error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ShiftsAPI] Start error:", error.message);
     return res.status(500).json({ error: "Failed to start shift" });
   }
 });
@@ -211,9 +215,10 @@ posShiftsRouter.post("/shifts/:shiftId/end", requireDeviceToken, requireActiveSt
         varianceMinor: variance.toString(),
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[ShiftsAPI] End error:", error.message);
+    log.error("[ShiftsAPI] End error:", error.message);
     return res.status(500).json({ error: "Failed to end shift" });
   } finally {
     client.release();
@@ -254,8 +259,9 @@ posShiftsRouter.get("/shifts/history", requireDeviceToken, async (req: Request, 
     );
 
     return res.json({ shifts: result.rows });
-  } catch (error: any) {
-    console.error("[ShiftsAPI] History error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[ShiftsAPI] History error:", error.message);
     return res.status(500).json({ error: "Failed to get shift history" });
   }
 });

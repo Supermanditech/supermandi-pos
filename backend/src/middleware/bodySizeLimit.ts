@@ -10,6 +10,7 @@
 
 import type { NextFunction, Request, Response } from "express";
 import express from "express";
+import { log } from "../lib/logger";
 
 // Endpoint-specific size limits (in bytes)
 // Keys are route patterns (regex-matched against req.path)
@@ -96,7 +97,7 @@ export function perEndpointBodyLimit() {
       const bodySize = parseInt(contentLength, 10);
       if (bodySize > limitBytes) {
         // BATCH5-SUGGESTION-1: Structured logging for observability
-        console.log(JSON.stringify({
+        log.info(JSON.stringify({
           event: "body_too_large",
           route: req.path,
           method: req.method,
@@ -122,7 +123,7 @@ export function perEndpointBodyLimit() {
       if (err) {
         if (err.type === "entity.too.large") {
           // BATCH5-SUGGESTION-1: Structured logging for backup check
-          console.log(JSON.stringify({
+          log.info(JSON.stringify({
             event: "body_too_large",
             route: req.path,
             method: req.method,

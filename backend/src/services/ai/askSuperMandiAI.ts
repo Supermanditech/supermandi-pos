@@ -23,6 +23,7 @@ import {
   fetchActivityAnalytics,
   parseRange
 } from "../analytics/analyticsService";
+import { log } from "../../lib/logger";
 
 type AiContext = {
   now: string;
@@ -174,7 +175,7 @@ ${JSON.stringify(context, null, 2)}`;
       throw new Error("Request limit reached. Please try again later.");
     }
 
-    console.error("[SuperMandiAI] Error:", error);
+    log.error("[SuperMandiAI] Error:", error);
     if (error instanceof Error) {
       if (error.message.includes("timed out") || error.message.includes("timeout")) {
         throw new Error("AI request timed out. Please try again.");

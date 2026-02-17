@@ -3,6 +3,7 @@ import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { createPurchase, type PurchaseItemInput } from "../../../services/purchaseService";
+import { asError } from "../../../lib/errorUtils";
 
 export const posPurchasesRouter = Router();
 
@@ -104,7 +105,8 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, requireActiveStore, as
       totalMinor: result.totalMinor,
       currency: result.currency
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
     const message = error?.message ? String(error.message) : "";
     if (message === "barcode_in_use") {

@@ -8,6 +8,7 @@ import type {
   StartShiftRequest,
   EndShiftRequest,
 } from "../services/shiftService";
+import { asError } from "../utils/errorUtils";
 
 interface ShiftState {
   currentShift: Shift | null;
@@ -41,7 +42,8 @@ export const useShiftStore = create<ShiftState>()(
         try {
           const shift = await shiftService.getCurrentShift();
           set({ currentShift: shift, loading: false });
-        } catch (e: any) {
+        } catch (_e: unknown) {
+    const e = asError(_e);
           console.error("[ShiftStore] fetchCurrentShift failed:", e);
           set({ loading: false, error: e?.message || "Failed to load current shift" });
         }
@@ -52,7 +54,8 @@ export const useShiftStore = create<ShiftState>()(
         try {
           const shifts = await shiftService.getShiftHistory();
           set({ history: shifts, historyLoading: false });
-        } catch (e: any) {
+        } catch (_e: unknown) {
+    const e = asError(_e);
           console.error("[ShiftStore] fetchHistory failed:", e);
           set({ historyLoading: false, error: e?.message || "Failed to load shift history" });
         }
@@ -64,7 +67,8 @@ export const useShiftStore = create<ShiftState>()(
           const shift = await shiftService.startShift(data);
           set({ currentShift: shift, starting: false });
           return true;
-        } catch (e: any) {
+        } catch (_e: unknown) {
+    const e = asError(_e);
           console.error("[ShiftStore] startShift failed:", e);
           set({ starting: false, error: e?.message || "Failed to start shift" });
           return false;
@@ -86,7 +90,8 @@ export const useShiftStore = create<ShiftState>()(
             history: [shift, ...get().history],
           });
           return true;
-        } catch (e: any) {
+        } catch (_e: unknown) {
+    const e = asError(_e);
           console.error("[ShiftStore] endShift failed:", e);
           set({ ending: false, error: e?.message || "Failed to end shift" });
           return false;

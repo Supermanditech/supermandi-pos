@@ -3,6 +3,8 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerComplianceRouter = Router();
 
@@ -66,8 +68,9 @@ retailerComplianceRouter.get("/compliance", async (req: Request, res: Response) 
         message: "Document upload coming soon. Contact support to update compliance documents.",
       },
     });
-  } catch (error: any) {
-    console.error("[Compliance] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Compliance] Error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to fetch compliance status" });
   }
 });
@@ -151,7 +154,7 @@ retailerComplianceRouter.post("/export", async (req: Request, res: Response) => 
 
     const exportRequest = result.rows[0];
 
-    console.log(`[GO-LIVE-264] GDPR export requested: user=${userId}, store=${storeId}, type=${requestType}`);
+    log.info(`[GO-LIVE-264] GDPR export requested: user=${userId}, store=${storeId}, type=${requestType}`);
 
     return res.status(201).json({
       success: true,
@@ -164,8 +167,9 @@ retailerComplianceRouter.post("/export", async (req: Request, res: Response) => 
         message: "Your data export request has been received. You will be notified when it's ready."
       }
     });
-  } catch (error: any) {
-    console.error("[GO-LIVE-264] Export request error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GO-LIVE-264] Export request error:", error.message);
 
     // Handle table not existing
     if (error.code === "42P01") {
@@ -215,8 +219,9 @@ retailerComplianceRouter.get("/export", async (req: Request, res: Response) => {
       data: result.rows,
       count: result.rows.length
     });
-  } catch (error: any) {
-    console.error("[GO-LIVE-264] Get exports error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GO-LIVE-264] Get exports error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({
@@ -282,8 +287,9 @@ retailerComplianceRouter.get("/export/:id", async (req: Request, res: Response) 
       success: true,
       data: exportData
     });
-  } catch (error: any) {
-    console.error("[GO-LIVE-264] Get export status error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GO-LIVE-264] Get export status error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(404).json({
@@ -342,7 +348,7 @@ retailerComplianceRouter.post("/privacy/accept", async (req: Request, res: Respo
       [userId, privacyVersion, termsVersion, storeId]
     );
 
-    console.log(`[GO-LIVE-263] Privacy consent recorded: user=${userId}, privacy=${privacyVersion}, terms=${termsVersion}`);
+    log.info(`[GO-LIVE-263] Privacy consent recorded: user=${userId}, privacy=${privacyVersion}, terms=${termsVersion}`);
 
     return res.json({
       success: true,
@@ -354,8 +360,9 @@ retailerComplianceRouter.post("/privacy/accept", async (req: Request, res: Respo
       },
       message: "Privacy policy and terms acceptance recorded"
     });
-  } catch (error: any) {
-    console.error("[GO-LIVE-263] Privacy accept error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GO-LIVE-263] Privacy accept error:", error.message);
 
     // Handle column not existing yet
     if (error.code === "42703") {
@@ -433,8 +440,9 @@ retailerComplianceRouter.get("/privacy/status", async (req: Request, res: Respon
         currentTermsVersion
       }
     });
-  } catch (error: any) {
-    console.error("[GO-LIVE-263] Privacy status error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GO-LIVE-263] Privacy status error:", error.message);
 
     // Handle columns not existing yet
     if (error.code === "42703") {

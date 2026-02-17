@@ -65,6 +65,7 @@ import { startRecording, stopRecording, cancelRecording, submitVoiceCommand } fr
 import { PRODUCTS_PAGE_SIZE, MAX_PAGINATION_PAGE } from "../config/pagination";
 import { showToast } from "../utils/showToast";
 import * as searchHistory from "../services/searchHistory";
+import { asError } from "../utils/errorUtils";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -2059,10 +2060,11 @@ export default function SellScanScreen({
       }
       closeDetail();
       showToast("Product updated");
-    } catch (e: any) {
+    } catch (_e: unknown) {
+      const e = asError(_e);
       console.error("[SellScanScreen] Product edit failed:", e);
       // RET-POS-SYNC-009: Handle 409 conflict (server has newer data from Dashboard)
-      if (e?.status === 409) {
+      if ((e as { status?: number }).status === 409) {
         setEditProductError("Product was updated elsewhere. Close and reopen to see latest values.");
       } else {
         setEditProductError("Update failed. Try again.");

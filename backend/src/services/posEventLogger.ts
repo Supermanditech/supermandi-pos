@@ -5,6 +5,7 @@ import { ensurePosEventsTable } from "../db/ensureSchema";
 import { posEvents } from "../db/schema/posEvents";
 // GO-LIVE-181: Use centralized schema error handling
 import { handleSchemaError, isSchemaError } from "@supermandi/common";
+import { log } from "../lib/logger";
 
 export type IncomingPosEvent = {
   deviceId?: unknown;
@@ -77,7 +78,7 @@ export async function logPosEventSafe(body: unknown): Promise<void> {
       );
     }
   } catch (e) {
-    console.error("POS event insert failed (swallowed):", e);
+    log.error("POS event insert failed (swallowed):", e);
   }
 }
 

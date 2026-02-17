@@ -103,7 +103,7 @@ adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, requirePermiss
       total, limit, offset
     });
   } catch (err: any) {
-    console.error("[admin/pending-suppliers] Error:", err);
+    log.error("[admin/pending-suppliers] Error:", err);
     if (err.code === "42P01") {
       return res.json({ data: [], count: 0, total: 0, limit, offset });
     }
@@ -178,7 +178,7 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
       total, limit, offset
     });
   } catch (err: any) {
-    console.error("[admin/verified-suppliers] Error:", err);
+    log.error("[admin/verified-suppliers] Error:", err);
     if (err.code === "42P01") {
       return res.json({ data: [], count: 0, total: 0, limit, offset });
     }
@@ -291,12 +291,12 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
       );
     } catch (auditErr: any) {
       // Don't fail the operation if audit logging fails
-      console.warn('[admin/verify-supplier] GO-LIVE-130: Audit log failed:', auditErr?.message);
+      log.warn('[admin/verify-supplier] GO-LIVE-130: Audit log failed:', auditErr?.message);
     }
 
     await client.query("COMMIT");
 
-    console.log(`[admin/verify-supplier] GO-LIVE-130: Supplier request ${supplierId} approved by ${adminEmail}`);
+    log.info(`[admin/verify-supplier] GO-LIVE-130: Supplier request ${supplierId} approved by ${adminEmail}`);
 
     return res.json({
       success: true,
@@ -306,7 +306,7 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/verify-supplier] Error:", err);
+    log.error("[admin/verify-supplier] Error:", err);
     if (err.code === "42P01") {
       return res.status(404).json({ error: "Supplier tables not initialized" });
     }
@@ -399,12 +399,12 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
         ]
       );
     } catch (auditErr: any) {
-      console.warn('[admin/reject-supplier] GO-LIVE-130: Audit log failed:', auditErr?.message);
+      log.warn('[admin/reject-supplier] GO-LIVE-130: Audit log failed:', auditErr?.message);
     }
 
     await client.query("COMMIT");
 
-    console.log(`[admin/reject-supplier] GO-LIVE-130: Supplier request ${supplierId} rejected by ${adminEmail}`);
+    log.info(`[admin/reject-supplier] GO-LIVE-130: Supplier request ${supplierId} rejected by ${adminEmail}`);
 
     return res.json({
       success: true,
@@ -413,7 +413,7 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/reject-supplier] Error:", err);
+    log.error("[admin/reject-supplier] Error:", err);
     if (err.code === "42P01") {
       return res.status(404).json({ error: "Supplier tables not initialized" });
     }
@@ -471,7 +471,7 @@ adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, requirePermiss
       count: result.rowCount
     });
   } catch (err: any) {
-    console.error("[admin/suppliers/pending] Error:", err);
+    log.error("[admin/suppliers/pending] Error:", err);
     if (err.code === "42P01") {
       return res.json({ data: [], count: 0 });
     }
@@ -531,7 +531,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminTok
        enabled ? 'enabled' : 'disabled', adminId]
     );
 
-    console.log(`[T-066] Auto-approval ${enabled ? 'enabled' : 'disabled'} for supplier ${check.rows[0].business_name} by admin ${adminId}`);
+    log.info(`[T-066] Auto-approval ${enabled ? 'enabled' : 'disabled'} for supplier ${check.rows[0].business_name} by admin ${adminId}`);
 
     return res.json({
       supplierId,
@@ -539,7 +539,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminTok
       message: `Auto-approval ${enabled ? 'enabled' : 'disabled'} for ${check.rows[0].business_name}`
     });
   } catch (err: any) {
-    console.error("[admin/suppliers/auto-approve] Error:", err);
+    log.error("[admin/suppliers/auto-approve] Error:", err);
     return res.status(500).json({ error: "Failed to update auto-approval setting" });
   }
 });
@@ -556,7 +556,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
   const adminId = (req as any).adminId;
 
   if (!adminId) {
-    console.warn("[admin/suppliers/approve] Missing adminId in request - rejecting for audit compliance");
+    log.warn("[admin/suppliers/approve] Missing adminId in request - rejecting for audit compliance");
     return res.status(401).json({ error: "Admin ID required for audit trail" });
   }
 
@@ -614,7 +614,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/suppliers/approve] Error:", err);
+    log.error("[admin/suppliers/approve] Error:", err);
     return res.status(500).json({ error: "Failed to approve supplier" });
   } finally {
     client.release();
@@ -634,7 +634,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, re
   const adminId = (req as any).adminId;
 
   if (!adminId) {
-    console.warn("[admin/suppliers/reject] Missing adminId in request - rejecting for audit compliance");
+    log.warn("[admin/suppliers/reject] Missing adminId in request - rejecting for audit compliance");
     return res.status(401).json({ error: "Admin ID required for audit trail" });
   }
 
@@ -691,7 +691,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, re
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/suppliers/reject] Error:", err);
+    log.error("[admin/suppliers/reject] Error:", err);
     return res.status(500).json({ error: "Failed to reject supplier" });
   } finally {
     client.release();
@@ -756,7 +756,7 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermissi
       pagination: { limit, offset, hasMore: offset + result.rows.length < total },
     });
   } catch (err: any) {
-    console.error("[admin/products/pending] Error:", err);
+    log.error("[admin/products/pending] Error:", err);
     if (err.code === "42P01") {
       return res.json({ data: [], count: 0 });
     }
@@ -776,7 +776,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
   const adminId = (req as any).adminId;
 
   if (!adminId) {
-    console.warn("[admin/products/approve] Missing adminId in request - rejecting for audit compliance");
+    log.warn("[admin/products/approve] Missing adminId in request - rejecting for audit compliance");
     return res.status(401).json({ error: "Admin ID required for audit trail" });
   }
 
@@ -818,7 +818,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     // GO-LIVE-131: Verify supplier-product relationship
     if (!product.supplier_id) {
       await client.query("ROLLBACK");
-      console.warn(`[admin/products/approve] GO-LIVE-131: Product ${productId} has no supplier_id`);
+      log.warn(`[admin/products/approve] GO-LIVE-131: Product ${productId} has no supplier_id`);
       return res.status(400).json({
         error: "product_no_supplier",
         message: "Cannot approve product without supplier association"
@@ -828,7 +828,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     // GO-LIVE-131: Verify supplier is verified before approving product
     if (product.supplier_status !== 'verified') {
       await client.query("ROLLBACK");
-      console.warn(`[admin/products/approve] GO-LIVE-131: Cannot approve product from non-verified supplier: ${product.supplier_name}`);
+      log.warn(`[admin/products/approve] GO-LIVE-131: Cannot approve product from non-verified supplier: ${product.supplier_name}`);
       return res.status(400).json({
         error: "supplier_not_verified",
         message: `Cannot approve product - supplier "${product.supplier_name}" is not verified (status: ${product.supplier_status || 'unknown'})`
@@ -925,14 +925,14 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
                VALUES ($1::uuid, $2::uuid, 'auto', $3, false)`,
               [productId, mappedProductId, mappingConfidence]
             );
-            console.log(`[SUP-POS-005] Auto-mapped product ${productId} → ${mappedProductId} (confidence=${mappingConfidence})`);
+            log.info(`[SUP-POS-005] Auto-mapped product ${productId} → ${mappedProductId} (confidence=${mappingConfidence})`);
             mappingResult = { catalogProductId: mappedProductId, confidence: mappingConfidence, type: 'auto' as const };
           }
         }
       }
     } catch (mapErr: any) {
       // Non-critical — mapping failure should not block approval
-      console.warn("[SUP-POS-005] Auto-mapping failed (non-blocking):", mapErr.message);
+      log.warn("[SUP-POS-005] Auto-mapping failed (non-blocking):", mapErr.message);
     }
 
     await client.query("COMMIT");
@@ -946,7 +946,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/products/approve] Error:", err);
+    log.error("[admin/products/approve] Error:", err);
     return res.status(500).json({ error: "Failed to approve product" });
   } finally {
     client.release();
@@ -966,7 +966,7 @@ adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, requ
   const adminId = (req as any).adminId;
 
   if (!adminId) {
-    console.warn("[admin/products/reject] Missing adminId in request - rejecting for audit compliance");
+    log.warn("[admin/products/reject] Missing adminId in request - rejecting for audit compliance");
     return res.status(401).json({ error: "Admin ID required for audit trail" });
   }
 
@@ -1023,7 +1023,7 @@ adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, requ
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/products/reject] Error:", err);
+    log.error("[admin/products/reject] Error:", err);
     return res.status(500).json({ error: "Failed to reject product" });
   } finally {
     client.release();
@@ -1221,7 +1221,7 @@ adminSuppliersRouter.post(
               }
             } catch (mapErr: any) {
               // Non-critical — mapping failure should not block approval
-              console.warn(`[T-188] Auto-mapping failed for ${productId} (non-blocking):`, mapErr.message);
+              log.warn(`[T-188] Auto-mapping failed for ${productId} (non-blocking):`, mapErr.message);
             }
           } else {
             // Reject the product
@@ -1248,7 +1248,7 @@ adminSuppliersRouter.post(
 
       await client.query("COMMIT");
 
-      console.log(`[T-188] Batch ${action}: processed=${processed}, failed=${errors.length}, admin=${adminId}`);
+      log.info(`[T-188] Batch ${action}: processed=${processed}, failed=${errors.length}, admin=${adminId}`);
 
       return res.json({
         success: true,
@@ -1260,7 +1260,7 @@ adminSuppliersRouter.post(
       });
     } catch (err: any) {
       await client.query("ROLLBACK");
-      console.error("[T-188] Batch action error:", err);
+      log.error("[T-188] Batch action error:", err);
       return res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Batch action failed" }
       });
@@ -1308,7 +1308,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
   const adminId = (req as any).adminId;
 
   if (!adminId) {
-    console.warn("[admin/products/edit] Missing adminId in request - rejecting for audit compliance");
+    log.warn("[admin/products/edit] Missing adminId in request - rejecting for audit compliance");
     return res.status(401).json({ error: "Admin ID required for audit trail" });
   }
 
@@ -1377,7 +1377,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     // GO-LIVE-131: Verify supplier-product relationship
     if (!current.supplier_id) {
       await client.query("ROLLBACK");
-      console.warn(`[admin/products/edit] GO-LIVE-131: Product ${productId} has no supplier_id`);
+      log.warn(`[admin/products/edit] GO-LIVE-131: Product ${productId} has no supplier_id`);
       return res.status(400).json({
         error: "product_no_supplier",
         message: "Product is not associated with any supplier"
@@ -1386,7 +1386,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
 
     // GO-LIVE-131: Warn if supplier is not verified (but allow edit for admin)
     if (current.supplier_status && current.supplier_status !== 'verified') {
-      console.warn(`[admin/products/edit] GO-LIVE-131: Editing product from non-verified supplier: ${current.supplier_name} (${current.supplier_status})`);
+      log.warn(`[admin/products/edit] GO-LIVE-131: Editing product from non-verified supplier: ${current.supplier_name} (${current.supplier_status})`);
     }
 
     const purchasePrice = current.purchase_price;
@@ -1540,7 +1540,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/products/edit] Error:", err);
+    log.error("[admin/products/edit] Error:", err);
     return res.status(500).json({ error: "Failed to edit product" });
   } finally {
     client.release();
@@ -1664,7 +1664,7 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
 
     await client.query("COMMIT");
 
-    console.log(`[T-068] Published product ${product.name} to ${publishedCount} stores by admin ${adminId}`);
+    log.info(`[T-068] Published product ${product.name} to ${publishedCount} stores by admin ${adminId}`);
 
     return res.json({
       productId,
@@ -1675,7 +1675,7 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
-    console.error("[admin/products/publish] Error:", err);
+    log.error("[admin/products/publish] Error:", err);
     return res.status(500).json({ error: "Failed to publish product" });
   } finally {
     client.release();
@@ -1782,7 +1782,7 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
         productsProcessed++;
       } catch (err) {
         await client.query("ROLLBACK");
-        console.warn(`[T-068] Bulk publish error for product ${product.id}:`, err);
+        log.warn(`[T-068] Bulk publish error for product ${product.id}:`, err);
       } finally {
         client.release();
       }
@@ -1794,7 +1794,7 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
       totalPublishedToStores: totalPublished,
     });
   } catch (err: any) {
-    console.error("[admin/products/publish-bulk] Error:", err);
+    log.error("[admin/products/publish-bulk] Error:", err);
     return res.status(500).json({ error: "Failed to bulk publish products" });
   }
 });
@@ -1804,6 +1804,7 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
 // =============================================================================
 
 import { generateSecureResetToken, hashResetToken, sendPasswordResetEmail, isEmailServiceEnabled } from "../../../services/emailService";
+import { log } from "../../../lib/logger";
 
 /**
  * POST /api/v1/admin/suppliers/:supplierId/reset-password
@@ -1877,7 +1878,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
         ]
       );
     } catch (auditErr) {
-      console.warn('[GO-LIVE-145] Audit log failed:', auditErr);
+      log.warn('[GO-LIVE-145] Audit log failed:', auditErr);
     }
 
     // GO-LIVE-166: Send password reset email with proper error handling and reporting
@@ -1889,21 +1890,21 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
         const emailResult = await sendPasswordResetEmail(supplier.primary_email, resetToken, supplier.business_name);
         emailSent = emailResult.sent;
         if (emailResult.sent) {
-          console.log(`[GO-LIVE-145] Password reset email sent to ${supplier.primary_email} (triggered by ${adminEmail})`);
+          log.info(`[GO-LIVE-145] Password reset email sent to ${supplier.primary_email} (triggered by ${adminEmail})`);
         } else {
           emailError = emailResult.errorMessage || emailResult.errorCode || 'Unknown error';
-          console.error(`[GO-LIVE-145] Failed to send reset email to ${supplier.primary_email}: ${emailResult.errorCode} - ${emailResult.errorMessage}`);
+          log.error(`[GO-LIVE-145] Failed to send reset email to ${supplier.primary_email}: ${emailResult.errorCode} - ${emailResult.errorMessage}`);
         }
       } catch (emailErr: any) {
         emailError = emailErr.message || 'Email service exception';
-        console.error(`[GO-LIVE-145] Exception sending reset email:`, emailErr);
+        log.error(`[GO-LIVE-145] Exception sending reset email:`, emailErr);
       }
     } else {
       emailError = 'Email service is not configured';
-      console.warn(`[GO-LIVE-145] Email service is disabled - admin must share reset link manually`);
+      log.warn(`[GO-LIVE-145] Email service is disabled - admin must share reset link manually`);
     }
 
-    console.log(`[GO-LIVE-145] Admin ***@${adminEmail?.split('@')[1] || '***'} triggered password reset for supplier ${supplier.business_name} (***@${supplier.primary_email?.split('@')[1] || '***'})`);
+    log.info(`[GO-LIVE-145] Admin ***@${adminEmail?.split('@')[1] || '***'} triggered password reset for supplier ${supplier.business_name} (***@${supplier.primary_email?.split('@')[1] || '***'})`);
 
     return res.json({
       success: true,
@@ -1919,7 +1920,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
       ...((process.env.NODE_ENV !== 'production' || !emailSent) && { resetToken }),
     });
   } catch (err: any) {
-    console.error("[GO-LIVE-145] Admin password reset failed:", err);
+    log.error("[GO-LIVE-145] Admin password reset failed:", err);
     return res.status(500).json({ error: "Failed to initiate password reset" });
   }
 });
@@ -1957,7 +1958,7 @@ adminSuppliersRouter.get("/suppliers/queue", requireAdminToken, requirePermissio
       })),
     });
   } catch (err: any) {
-    console.error("[admin/suppliers/queue] Query failed:", err?.message);
+    log.error("[admin/suppliers/queue] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch supplier queue" });
   }
 });
@@ -2028,7 +2029,7 @@ adminSuppliersRouter.get("/suppliers/:supplierId/kyc", requireAdminToken, requir
       documents = docsResult.rows;
     } catch (e) {
       // Table may not exist yet
-      console.log("[admin/suppliers/kyc] supplier_documents table not available");
+      log.info("[admin/suppliers/kyc] supplier_documents table not available");
     }
 
     // Get status history
@@ -2036,7 +2037,7 @@ adminSuppliersRouter.get("/suppliers/:supplierId/kyc", requireAdminToken, requir
     try {
       statusHistory = await getSupplierStatusHistory(supplierId, { limit: 20 });
     } catch (e) {
-      console.log("[admin/suppliers/kyc] status history not available");
+      log.info("[admin/suppliers/kyc] status history not available");
     }
 
     // Mask bank account
@@ -2078,7 +2079,7 @@ adminSuppliersRouter.get("/suppliers/:supplierId/kyc", requireAdminToken, requir
       status_history: statusHistory,
     });
   } catch (err: any) {
-    console.error("[admin/suppliers/kyc] Query failed:", err?.message);
+    log.error("[admin/suppliers/kyc] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch supplier KYC" });
   }
 });
@@ -2097,7 +2098,7 @@ adminSuppliersRouter.get("/suppliers/:supplierId/status-history", requireAdminTo
     const history = await getSupplierStatusHistory(supplierId, { limit: 50 });
     return res.json({ status_history: history });
   } catch (err: any) {
-    console.error("[admin/suppliers/status-history] Query failed:", err?.message);
+    log.error("[admin/suppliers/status-history] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch status history" });
   }
 });
@@ -2180,7 +2181,7 @@ adminSuppliersRouter.patch("/suppliers/:supplierId/verification-status", require
       status_history: statusHistory,
     });
   } catch (err: any) {
-    console.error("[admin/suppliers/verification-status] Update failed:", err?.message);
+    log.error("[admin/suppliers/verification-status] Update failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update supplier status" });
   }
 });
@@ -2225,7 +2226,7 @@ adminSuppliersRouter.get("/suppliers/bank-changes", requireAdminToken, requirePe
 
     return res.json({ data, count: data.length });
   } catch (err: any) {
-    console.error("[admin/suppliers/bank-changes] Query failed:", err?.message);
+    log.error("[admin/suppliers/bank-changes] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch pending bank changes" });
   }
 });
@@ -2292,7 +2293,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/bank-verify", requireAdminToke
         [supplierId, action, action === "approve" ? "verified" : "rejected", reason || (action === "approve" ? "Approved by admin" : "Rejected by admin"), adminId || supplierId]
       );
     } catch (logErr) {
-      console.error("[SA-P1-008] Failed to log bank verification:", (logErr as Error).message);
+      log.error("[SA-P1-008] Failed to log bank verification:", (logErr as Error).message);
     }
 
     return res.json({
@@ -2301,7 +2302,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/bank-verify", requireAdminToke
       action,
     });
   } catch (err: any) {
-    console.error("[admin/suppliers/bank-verify] Failed:", err?.message);
+    log.error("[admin/suppliers/bank-verify] Failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to verify bank details" });
   }
 });
@@ -2363,7 +2364,7 @@ adminSuppliersRouter.put("/suppliers/:supplierId/bnpl-interest", requireAdminTok
       });
     }
   } catch (err: any) {
-    console.error("[T-158] BNPL interest rate update failed:", err?.message);
+    log.error("[T-158] BNPL interest rate update failed:", err?.message);
     return res.status(500).json({ error: "Failed to update BNPL interest rate" });
   }
 });
@@ -2397,7 +2398,7 @@ adminSuppliersRouter.get("/suppliers/:supplierId/bnpl-interest", requireAdminTok
     const result = await pool.query(query, params);
     return res.json({ success: true, links: result.rows });
   } catch (err: any) {
-    console.error("[T-158] BNPL interest rate fetch failed:", err?.message);
+    log.error("[T-158] BNPL interest rate fetch failed:", err?.message);
     return res.status(500).json({ error: "Failed to fetch BNPL interest rates" });
   }
 });

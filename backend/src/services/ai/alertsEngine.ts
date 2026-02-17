@@ -3,6 +3,7 @@
 // Runs as a scheduled job via Cloud Scheduler
 
 import { getPool } from "../../db/client";
+import { log } from "../../lib/logger";
 
 export type AlertType = 'low_stock' | 'price_spike' | 'slow_mover' | 'expiry_warning'
   | 'anomaly' | 'payment_overdue' | 'reorder_needed' | 'high_demand';
@@ -54,7 +55,7 @@ export async function runAllStoreAlerts(): Promise<{ storesProcessed: number; to
       totalAlerts += await runStoreAlerts(row.id);
     } catch (err) {
       errors++;
-      console.error(`[AlertsEngine] Failed for store ${row.id}:`, err);
+      log.error(`[AlertsEngine] Failed for store ${row.id}:`, err);
     }
   }
   return { storesProcessed: storesResult.rows.length, totalAlerts, errors };

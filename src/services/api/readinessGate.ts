@@ -4,6 +4,7 @@
 
 import { API_BASE_URL } from "../../config/api";
 import { getDeviceToken, getDeviceStoreId } from "../deviceSession";
+import { asError } from "../../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -152,7 +153,8 @@ async function probeEndpoint(
     }
 
     console.log(`[readinessGate] Probed ${path}: exists=${status.exists}, authOk=${status.authOk}, contractOk=${status.contractOk}, ${status.latencyMs}ms`);
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     status.latencyMs = Date.now() - startTime;
     if (error.name === "AbortError") {
       status.error = "Timeout";
@@ -225,7 +227,8 @@ async function probeEndpointWithResponse(
     }
 
     console.log(`[readinessGate] Probed ${path}: exists=${status.exists}, authOk=${status.authOk}, contractOk=${status.contractOk}, ${status.latencyMs}ms`);
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     status.latencyMs = Date.now() - startTime;
     if (error.name === "AbortError") {
       status.error = "Timeout";

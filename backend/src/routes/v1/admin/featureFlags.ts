@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const adminFeatureFlagsRouter = Router();
 
@@ -36,7 +37,7 @@ adminFeatureFlagsRouter.get(
       return res.json({ flags: result.rows });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "unknown";
-      console.error("[admin/feature-flags] GET failed:", msg);
+      log.error("[admin/feature-flags] GET failed:", msg);
       return res.status(500).json({ error: "fetch_feature_flags_failed" });
     }
   }
@@ -72,11 +73,11 @@ adminFeatureFlagsRouter.patch(
       if (result.rowCount === 0) {
         return res.status(404).json({ error: "feature_key_not_found" });
       }
-      console.log("[SA-P0-005] Global flag toggled: %s → %s", key, enabled);
+      log.info("[SA-P0-005] Global flag toggled: %s → %s", key, enabled);
       return res.json({ flag: result.rows[0] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "unknown";
-      console.error("[admin/feature-flags] PATCH global failed:", msg);
+      log.error("[admin/feature-flags] PATCH global failed:", msg);
       return res.status(500).json({ error: "update_feature_flag_failed" });
     }
   }
@@ -109,7 +110,7 @@ adminFeatureFlagsRouter.get(
       return res.json({ flags: result.rows, storeId });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "unknown";
-      console.error("[admin/feature-flags] GET store flags failed:", msg);
+      log.error("[admin/feature-flags] GET store flags failed:", msg);
       return res.status(500).json({ error: "fetch_store_feature_flags_failed" });
     }
   }
@@ -152,11 +153,11 @@ adminFeatureFlagsRouter.patch(
         [key, storeId, enabled]
       );
 
-      console.log("[SA-P1-007] Store override set: store=%s flag=%s → %s", storeId, key, enabled);
+      log.info("[SA-P1-007] Store override set: store=%s flag=%s → %s", storeId, key, enabled);
       return res.json({ override: result.rows[0] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "unknown";
-      console.error("[admin/feature-flags] PATCH store override failed:", msg);
+      log.error("[admin/feature-flags] PATCH store override failed:", msg);
       return res.status(500).json({ error: "update_store_feature_override_failed" });
     }
   }
@@ -187,11 +188,11 @@ adminFeatureFlagsRouter.delete(
         return res.status(404).json({ error: "override_not_found" });
       }
 
-      console.log("[SA-P1-007] Store override removed: store=%s flag=%s", storeId, key);
+      log.info("[SA-P1-007] Store override removed: store=%s flag=%s", storeId, key);
       return res.json({ removed: true, storeId, flagKey: key });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "unknown";
-      console.error("[admin/feature-flags] DELETE store override failed:", msg);
+      log.error("[admin/feature-flags] DELETE store override failed:", msg);
       return res.status(500).json({ error: "remove_store_feature_override_failed" });
     }
   }
@@ -241,12 +242,12 @@ adminFeatureFlagsRouter.post(
       }
 
       await client.query("COMMIT");
-      console.log("[SA-P1-007] Bulk override: flag=%s enabled=%s stores=%d", flagKey, enabled, updated);
+      log.info("[SA-P1-007] Bulk override: flag=%s enabled=%s stores=%d", flagKey, enabled, updated);
       return res.json({ updated });
     } catch (err: unknown) {
       await client.query("ROLLBACK").catch(() => {});
       const msg = err instanceof Error ? err.message : "unknown";
-      console.error("[admin/feature-flags] Bulk update failed:", msg);
+      log.error("[admin/feature-flags] Bulk update failed:", msg);
       return res.status(500).json({ error: "bulk_update_failed" });
     } finally {
       client.release();

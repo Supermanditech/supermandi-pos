@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
+import { log } from "../lib/logger";
 
 export type BaseUnit = "g" | "ml";
 
@@ -491,7 +492,7 @@ export async function listInventoryVariants(params: {
       params
     );
 
-    console.warn(`[AUTOFIXED] Created ${missingLinks.length} missing retailer_variants links for store ${storeId}`);
+    log.warn(`[AUTOFIXED] Created ${missingLinks.length} missing retailer_variants links for store ${storeId}`);
   }
 
   return res.rows.map((row) => {

@@ -7,6 +7,7 @@ import type {
   CreateCustomerRequest,
   UpdateCustomerRequest,
 } from "../services/customerService";
+import { asError } from "../utils/errorUtils";
 
 interface CustomerState {
   customers: Customer[];
@@ -35,7 +36,8 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
     try {
       const customers = await customerService.getCustomers(query);
       set({ customers, loading: false });
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[CustomerStore] fetchCustomers failed:", e);
       set({ loading: false, error: e?.message || "Failed to load customers" });
     }
@@ -46,7 +48,8 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
     try {
       const detail = await customerService.getCustomerDetail(customerId);
       set({ selectedCustomer: detail, detailLoading: false });
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[CustomerStore] fetchCustomerDetail failed:", e);
       set({ detailLoading: false, error: e?.message || "Failed to load customer detail" });
     }
@@ -57,7 +60,8 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
       const customer = await customerService.createCustomer(data);
       set({ customers: [customer, ...get().customers] });
       return true;
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[CustomerStore] createCustomer failed:", e);
       set({ error: e?.message || "Failed to create customer" });
       return false;
@@ -77,7 +81,8 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
         set({ selectedCustomer: { ...selected, ...updated } });
       }
       return true;
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[CustomerStore] updateCustomer failed:", e);
       set({ error: e?.message || "Failed to update customer" });
       return false;

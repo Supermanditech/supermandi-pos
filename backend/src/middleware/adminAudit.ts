@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/client';
+import { log } from "../lib/logger";
 
 // Sensitive fields to redact from request body
 const SENSITIVE_FIELDS = ['password', 'pin', 'token', 'secret', 'apiKey'];
@@ -284,7 +285,7 @@ async function writeAuditLog(params: {
     );
   } catch (error) {
     // Don't fail the request if audit logging fails
-    console.error('[AdminAudit] Failed to write audit log:', error);
+    log.error('[AdminAudit] Failed to write audit log:', error);
   }
 }
 

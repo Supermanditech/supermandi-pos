@@ -7,6 +7,8 @@ import { Router, Request, Response } from "express";
 import { randomUUID, randomBytes } from "crypto";
 import { getPool } from "../../../db/client";
 import { StoreStatus, type StoreStatusType } from "../../../services/storeStateMachine";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerAdminDevicesRouter = Router();
 
@@ -126,7 +128,7 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
     const deviceFingerprint = codeRecord.device_fingerprint;
 
     // Create device in public.pos_devices
-    console.log(`[RET-WEB-002] Creating device: id=${deviceId}, storeId=${storeId}`);
+    log.info(`[RET-WEB-002] Creating device: id=${deviceId}, storeId=${storeId}`);
     await client.query(
       `INSERT INTO public.pos_devices (
         id, store_id, device_fingerprint, device_token, label, device_type, printing_mode, created_at
@@ -135,11 +137,11 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
       )`,
       [deviceId, storeId, deviceFingerprint, deviceToken, 'POS Device', 'RETAILER_PHONE', 'NONE']
     );
-    console.log(`[RET-WEB-002] Device created`);
+    log.info(`[RET-WEB-002] Device created`);
 
     // Mark activation code as used
     // Note: bound_store_id and bound_device_id are UUID type
-    console.log(`[RET-WEB-002] Marking code used: storeId=${storeId}, deviceId=${deviceId}, codeId=${codeRecord.id}`);
+    log.info(`[RET-WEB-002] Marking code used: storeId=${storeId}, deviceId=${deviceId}, codeId=${codeRecord.id}`);
     await client.query(
       `UPDATE public.device_activation_codes
        SET used_at = NOW(),
@@ -148,7 +150,7 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
        WHERE id = $3`,
       [storeId, deviceId, codeRecord.id]
     );
-    console.log(`[RET-WEB-002] Code marked used`);
+    log.info(`[RET-WEB-002] Code marked used`);
 
     // RET-WEB-002: Status transition DRAFT → ENROLLED on device binding
     const shouldTransition = currentStatus === StoreStatus.DRAFT;
@@ -171,9 +173,9 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
 
     // Log the activation
     if (shouldTransition) {
-      console.log(`[RET-WEB-002] Store ${storeId} transitioned: ${currentStatus} → ${newStatus}`);
+      log.info(`[RET-WEB-002] Store ${storeId} transitioned: ${currentStatus} → ${newStatus}`);
     }
-    console.log(`[RET-WEB-002] Device ${deviceId} activated for store ${storeId}`);
+    log.info(`[RET-WEB-002] Device ${deviceId} activated for store ${storeId}`);
 
     return res.json({
       success: true,
@@ -186,9 +188,10 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
       }
     });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RET-WEB-002] Activate device error:", error.message);
+    log.error("[RET-WEB-002] Activate device error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to activate device" } });
   } finally {
     client.release();
@@ -245,8 +248,9 @@ retailerAdminDevicesRouter.get("/devices", async (req: Request, res: Response) =
       }))
     });
 
-  } catch (error: any) {
-    console.error("[RET-WEB-002] List devices error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RET-WEB-002] List devices error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list devices" } });
   }
 });
@@ -341,7 +345,7 @@ retailerAdminDevicesRouter.patch("/devices/:deviceId", async (req: Request, res:
     );
 
     const updatedDevice = result.rows[0];
-    console.log(`[RET-AUD-027] Device ${deviceId} updated by store ${storeId}: active=${updatedDevice.active}`);
+    log.info(`[RET-AUD-027] Device ${deviceId} updated by store ${storeId}: active=${updatedDevice.active}`);
 
     return res.json({
       success: true,
@@ -359,8 +363,9 @@ retailerAdminDevicesRouter.patch("/devices/:deviceId", async (req: Request, res:
       }
     });
 
-  } catch (error: any) {
-    console.error("[RET-AUD-027] Update device error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RET-AUD-027] Update device error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update device" } });
   }
 });

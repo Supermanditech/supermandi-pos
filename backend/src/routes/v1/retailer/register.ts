@@ -19,6 +19,7 @@ import {
   recordFailedRegistration,
 } from "../../../services/retailerRegistrationService";
 import { registrationAbuseGuard } from "../../../middleware/registrationRateLimiter";
+import { log } from "../../../lib/logger";
 
 export const retailerRegisterRouter = Router();
 
@@ -49,10 +50,10 @@ try {
   const firebase = require("@supermandi/common");
   if (firebase.verifyFirebaseIdToken) {
     verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
-    console.log("[RetailerRegister] Firebase server-side verification available");
+    log.info("[RetailerRegister] Firebase server-side verification available");
   }
 } catch {
-  console.warn("[RetailerRegister] Firebase verification not available");
+  log.warn("[RetailerRegister] Firebase verification not available");
 }
 
 /**
@@ -91,7 +92,7 @@ retailerRegisterRouter.post(
           message: "Phone verification service is not configured",
         });
       }
-      console.warn("[RetailerRegister] Skipping OTP verification (dev mode)");
+      log.warn("[RetailerRegister] Skipping OTP verification (dev mode)");
     } else {
       const verifyResult = await verifyFirebaseIdToken(data.otpProof);
       if (!verifyResult.success) {
@@ -135,7 +136,7 @@ retailerRegisterRouter.post(
         enrollmentCode: result.enrollmentCode || undefined,  // DRX-003
       });
     } catch (err: any) {
-      console.error("[RetailerRegister] Registration failed:", err?.message);
+      log.error("[RetailerRegister] Registration failed:", err?.message);
 
       // Record failed event (non-blocking — must not mask the actual error response)
       recordFailedRegistration(pool, {
@@ -152,7 +153,7 @@ retailerRegisterRouter.post(
 
       // DR-009: Handle PG unique violations with generic message (no field leakage)
       if (err?.code === "23505") {
-        console.warn("[DR-009] Registration duplicate constraint hit:", err?.constraint);
+        log.warn("[DR-009] Registration duplicate constraint hit:", err?.constraint);
         return res.status(409).json({
           error: "DUPLICATE_ENTRY",
           message: "Registration could not be completed. An account with these details may already exist. Please try logging in instead.",

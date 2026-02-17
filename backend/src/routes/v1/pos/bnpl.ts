@@ -8,6 +8,8 @@ import { requireActiveStore } from "../../../middleware/storeStatusGate";
 // AUDIT-API-041/063: Rate limit BNPL financial endpoints
 import { financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
 import { randomUUID } from "crypto";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posBnplRouter = Router();
 
@@ -95,7 +97,7 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
     };
     });
 
-    console.log(`[SM-019] BNPL active: storeId=${storeId}, count=${drawdowns.length}, outstanding=${totalOutstanding}`);
+    log.info(`[SM-019] BNPL active: storeId=${storeId}, count=${drawdowns.length}, outstanding=${totalOutstanding}`);
 
     return res.json({
       success: true,
@@ -107,8 +109,9 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
       maxDays: store.bnpl_max_days || 7
     });
 
-  } catch (error: any) {
-    console.error("[SM-019] BNPL active error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-019] BNPL active error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({
@@ -168,8 +171,9 @@ posBnplRouter.get("/bnpl/summary", requireDeviceToken, async (req: Request, res:
       bnplEnabled: store.bnpl_enabled === true
     });
 
-  } catch (error: any) {
-    console.error("[SM-019] BNPL summary error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-019] BNPL summary error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to load BNPL summary" });
   }
 });
@@ -280,7 +284,7 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
 
       await client.query("COMMIT");
 
-      console.log(`[SM-019] BNPL UPI repayment initiated: drawdownId=${drawdownId}, repaymentId=${repaymentId}`);
+      log.info(`[SM-019] BNPL UPI repayment initiated: drawdownId=${drawdownId}, repaymentId=${repaymentId}`);
 
       return res.json({
         success: true,
@@ -347,7 +351,7 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
 
       // DATA-003: Log with actual status
       const actualStatus = isFullPayment ? 'paid' : 'partial';
-      console.log(`[SM-019] BNPL cash repayment ${actualStatus}: drawdownId=${drawdownId}, amount=${payAmount}, remaining=${remainingBalance - payAmount}`);
+      log.info(`[SM-019] BNPL cash repayment ${actualStatus}: drawdownId=${drawdownId}, amount=${payAmount}, remaining=${remainingBalance - payAmount}`);
 
       return res.json({
         success: true,
@@ -364,9 +368,10 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
     await client.query("ROLLBACK");
     return res.status(400).json({ success: false, error: "Invalid payment mode" });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-019] BNPL pay error:", error.message);
+    log.error("[SM-019] BNPL pay error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to process BNPL payment" });
   } finally {
     client.release();
@@ -453,7 +458,7 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, requireA
 
     await client.query("COMMIT");
 
-    console.log(`[SM-019] BNPL repayment confirmed: drawdownId=${drawdownId}, utr=${normalizedUtr}`);
+    log.info(`[SM-019] BNPL repayment confirmed: drawdownId=${drawdownId}, utr=${normalizedUtr}`);
 
     return res.json({
       success: true,
@@ -463,9 +468,10 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, requireA
       paidAt: new Date().toISOString()
     });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-019] BNPL confirm error:", error.message);
+    log.error("[SM-019] BNPL confirm error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to confirm repayment" });
   } finally {
     client.release();
@@ -544,7 +550,7 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
         apiStatus = "pending";
     }
 
-    console.log(`[GL-RJ-008] BNPL status poll: repaymentId=${repaymentId}, status=${apiStatus}`);
+    log.info(`[GL-RJ-008] BNPL status poll: repaymentId=${repaymentId}, status=${apiStatus}`);
 
     return res.json({
       success: true,
@@ -557,8 +563,9 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
       errorMessage: repayment.errorMessage || undefined
     });
 
-  } catch (error: any) {
-    console.error("[GL-RJ-008] BNPL status poll error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GL-RJ-008] BNPL status poll error:", error.message);
     return res.status(500).json({
       success: false,
       repaymentId,
@@ -639,7 +646,7 @@ posBnplRouter.post("/bnpl/:drawdownId/dispute", requireDeviceToken, requireActiv
 
     await client.query("COMMIT");
 
-    console.log(`[GO-LIVE-240] BNPL dispute submitted: disputeId=${disputeId}, drawdownId=${drawdownId}, reason=${reason}`);
+    log.info(`[GO-LIVE-240] BNPL dispute submitted: disputeId=${disputeId}, drawdownId=${drawdownId}, reason=${reason}`);
 
     return res.json({
       success: true,
@@ -649,9 +656,10 @@ posBnplRouter.post("/bnpl/:drawdownId/dispute", requireDeviceToken, requireActiv
       createdAt: new Date().toISOString()
     });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[GO-LIVE-240] BNPL dispute error:", error.message);
+    log.error("[GO-LIVE-240] BNPL dispute error:", error.message);
 
     // Handle missing table gracefully
     if (error.code === "42P01") {

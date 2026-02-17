@@ -5,6 +5,8 @@ import { requireDeviceToken } from "../middleware/deviceToken";
 import { listInventoryVariants } from "../services/inventoryService";
 import { createPurchase, type PurchaseItemInput } from "../services/purchaseService";
 import { normalizeScan } from "../services/scanNormalization";
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 export const productsRouter = Router();
 
@@ -713,10 +715,11 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
     });
 
     return res.status(201).json({ product: payload });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
     const message = error?.message ? String(error.message) : "";
-    console.error("receive_product_error", { storeId, scanned, error: message, stack: error?.stack });
+    log.error("receive_product_error", { storeId, scanned, error: message, stack: error?.stack });
     if (message === "global_identifier_conflict") {
       return res.status(409).json({ error: message });
     }

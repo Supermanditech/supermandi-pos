@@ -8,6 +8,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/client';
 import { StoreStatus, type StoreStatusType } from '../services/storeStateMachine';
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 // Extend Express Request to include storeStatus
 declare global {
@@ -120,7 +122,7 @@ export function requireStoreStatus(allowedStatuses: StoreStatusType | StoreStatu
           required_status: statusArray.length === 1 ? statusArray[0] : statusArray,
         };
 
-        console.warn('[SEC-001] Store status gate blocked request', {
+        log.warn('[SEC-001] Store status gate blocked request', {
           storeId,
           currentStatus,
           requiredStatus: statusArray,
@@ -133,8 +135,9 @@ export function requireStoreStatus(allowedStatuses: StoreStatusType | StoreStatu
       }
 
       next();
-    } catch (error: any) {
-      console.error('[SEC-001] Store status check failed:', error?.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error('[SEC-001] Store status check failed:', error?.message);
       res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to verify store status' });
     }
   };

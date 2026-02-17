@@ -4,6 +4,7 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const retailerAdminSearchRouter = Router();
 
@@ -140,7 +141,7 @@ retailerAdminSearchRouter.get("/search", async (req: Request, res: Response) => 
       },
     });
   } catch (err) {
-    console.error("[RCAT-SEARCH-001] Search error:", err);
+    log.error("[RCAT-SEARCH-001] Search error:", err);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Search failed" } });
   }
 });

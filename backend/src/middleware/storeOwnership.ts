@@ -5,6 +5,8 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/client';
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -136,7 +138,7 @@ async function storeExists(storeId: string): Promise<StoreInfo | null> {
     }
     return result.rows[0] as StoreInfo;
   } catch (err: any) {
-    console.error('[StoreOwnership] GO-LIVE-129: Store lookup error:', err?.message);
+    log.error('[StoreOwnership] GO-LIVE-129: Store lookup error:', err?.message);
     return null;
   }
 }
@@ -160,10 +162,10 @@ async function supplierHasStoreAccess(supplierId: string, storeId: string): Prom
   } catch (err: any) {
     // Table might not exist yet
     if (err?.code === '42P01') {
-      console.log('[StoreOwnership] GO-LIVE-129: supplier_store_links table not found');
+      log.info('[StoreOwnership] GO-LIVE-129: supplier_store_links table not found');
       return false;
     }
-    console.error('[StoreOwnership] GO-LIVE-129: Supplier store access check error:', err?.message);
+    log.error('[StoreOwnership] GO-LIVE-129: Supplier store access check error:', err?.message);
     return false;
   }
 }
@@ -187,10 +189,10 @@ async function deviceHasStoreAccess(deviceId: string, storeId: string): Promise<
   } catch (err: any) {
     // Table might not exist yet
     if (err?.code === '42P01') {
-      console.log('[StoreOwnership] GO-LIVE-129: devices table not found');
+      log.info('[StoreOwnership] GO-LIVE-129: devices table not found');
       return false;
     }
-    console.error('[StoreOwnership] GO-LIVE-129: Device store access check error:', err?.message);
+    log.error('[StoreOwnership] GO-LIVE-129: Device store access check error:', err?.message);
     return false;
   }
 }
@@ -243,13 +245,14 @@ export async function verifyStoreOwnership(
     }
 
     return { verified: false, error: 'Access denied to this store' };
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // GO-LIVE-129: Handle missing tables gracefully
     if (error?.code === '42P01') {
-      console.warn('[StoreOwnership] GO-LIVE-129: Required table not found:', error?.message);
+      log.warn('[StoreOwnership] GO-LIVE-129: Required table not found:', error?.message);
       return { verified: false, error: 'Store access table not initialized' };
     }
-    console.error('[StoreOwnership] Verification error:', error);
+    log.error('[StoreOwnership] Verification error:', error);
     return { verified: false, error: 'Verification failed' };
   }
 }
@@ -280,7 +283,7 @@ export function requireStoreOwnership(
 
   // SuperAdmin bypasses store ownership check
   if (isSuperAdmin(req)) {
-    console.log('[StoreOwnership] GO-LIVE-129: SuperAdmin access - bypassing verification');
+    log.info('[StoreOwnership] GO-LIVE-129: SuperAdmin access - bypassing verification');
     return next();
   }
 
@@ -292,7 +295,7 @@ export function requireStoreOwnership(
   if (authorizedStoreId) {
     // If request includes a specific storeId, verify it matches authorized store
     if (requestedStoreId && requestedStoreId !== authorizedStoreId) {
-      console.warn(
+      log.warn(
         `[StoreOwnership] GO-LIVE-129: Store mismatch - authorized: ${authorizedStoreId}, requested: ${requestedStoreId}`
       );
       res.status(403).json({
@@ -306,7 +309,7 @@ export function requireStoreOwnership(
 
     // Set verified store ID on request for downstream use
     (req as any).verifiedStoreId = authorizedStoreId;
-    console.log(`[StoreOwnership] GO-LIVE-129: Verified store access: ${authorizedStoreId}`);
+    log.info(`[StoreOwnership] GO-LIVE-129: Verified store access: ${authorizedStoreId}`);
     return next();
   }
 
@@ -318,10 +321,10 @@ export function requireStoreOwnership(
         if (hasAccess) {
           (req as any).verifiedStoreId = requestedStoreId;
           (req as any).verifiedSupplierId = authorizedSupplierId;
-          console.log(`[StoreOwnership] GO-LIVE-129: Verified supplier ${authorizedSupplierId} access to store: ${requestedStoreId}`);
+          log.info(`[StoreOwnership] GO-LIVE-129: Verified supplier ${authorizedSupplierId} access to store: ${requestedStoreId}`);
           return next();
         }
-        console.warn(`[StoreOwnership] GO-LIVE-129: Supplier ${authorizedSupplierId} denied access to store ${requestedStoreId}`);
+        log.warn(`[StoreOwnership] GO-LIVE-129: Supplier ${authorizedSupplierId} denied access to store ${requestedStoreId}`);
         res.status(403).json({
           error: {
             code: 'FORBIDDEN',
@@ -330,7 +333,7 @@ export function requireStoreOwnership(
         });
       })
       .catch((error) => {
-        console.error('[StoreOwnership] GO-LIVE-129: Supplier verification error:', error);
+        log.error('[StoreOwnership] GO-LIVE-129: Supplier verification error:', error);
         res.status(500).json({
           error: {
             code: 'INTERNAL_ERROR',
@@ -344,12 +347,12 @@ export function requireStoreOwnership(
   // Case 3: Supplier without specific store request - allow (for supplier-only endpoints)
   if (authorizedSupplierId && !requestedStoreId) {
     (req as any).verifiedSupplierId = authorizedSupplierId;
-    console.log(`[StoreOwnership] GO-LIVE-129: Supplier access (no store): ${authorizedSupplierId}`);
+    log.info(`[StoreOwnership] GO-LIVE-129: Supplier access (no store): ${authorizedSupplierId}`);
     return next();
   }
 
   // No valid authorization found
-  console.log('[StoreOwnership] GO-LIVE-129: No authorized store/supplier for request');
+  log.info('[StoreOwnership] GO-LIVE-129: No authorized store/supplier for request');
   res.status(403).json({
     error: {
       code: 'FORBIDDEN',
@@ -511,7 +514,7 @@ export async function requireActiveUser(
 
     const userStatus = result.rows[0].status;
     if (userStatus !== 'active') {
-      console.warn(`[RCAT-FIX-002] Blocked ${userStatus} user ${userId} on ${req.method} ${req.path}`);
+      log.warn(`[RCAT-FIX-002] Blocked ${userStatus} user ${userId} on ${req.method} ${req.path}`);
       res.status(403).json({
         error: {
           code: 'USER_INACTIVE',
@@ -522,8 +525,9 @@ export async function requireActiveUser(
     }
 
     next();
-  } catch (error: any) {
-    console.error('[requireActiveUser] DB error:', error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error('[requireActiveUser] DB error:', error.message);
     // Fail open on DB error to avoid blocking all traffic
     // Production monitoring will catch persistent failures
     next();

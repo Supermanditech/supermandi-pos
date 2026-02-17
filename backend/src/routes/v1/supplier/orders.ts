@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import { requireActiveSupplier, requireRegisteredSupplier } from "../../../middleware/supplierStatusGate";
+import { log } from "../../../lib/logger";
 
 // SUP-POS-012: JWT config for SSE token verification (EventSource can't set headers)
 // SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
@@ -18,7 +19,7 @@ const SSE_JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    log.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;

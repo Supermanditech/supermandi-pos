@@ -1,5 +1,6 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { log } from "../lib/logger";
 
 let pool: Pool | undefined;
 let db: NodePgDatabase | undefined;
@@ -27,7 +28,7 @@ export function getDb(): NodePgDatabase | undefined {
 
   const url = process.env.DATABASE_URL?.trim();
   if (!url) {
-    console.warn("DATABASE_URL missing; DB features disabled");
+    log.warn("DATABASE_URL missing; DB features disabled");
     return undefined;
   }
 
@@ -53,17 +54,17 @@ export function getDb(): NodePgDatabase | undefined {
 
   // Log pool errors
   pool.on('error', (err) => {
-    console.error('[DB Pool] Unexpected error on idle client:', err);
+    log.error('[DB Pool] Unexpected error on idle client:', err);
   });
 
   // GO-LIVE-076: Pool monitoring - log connection stats periodically
   if (process.env.DB_POOL_MONITORING === 'true') {
     setInterval(() => {
-      console.log(`[DB Pool Stats] total=${pool?.totalCount}, idle=${pool?.idleCount}, waiting=${pool?.waitingCount}`);
+      log.info(`[DB Pool Stats] total=${pool?.totalCount}, idle=${pool?.idleCount}, waiting=${pool?.waitingCount}`);
     }, 60000); // Log every minute
   }
 
-  console.log(`[DB Pool] Initialized with min=${POOL_CONFIG.min}, max=${POOL_CONFIG.max}, idleTimeout=${POOL_CONFIG.idleTimeoutMillis}ms, statementTimeout=${POOL_CONFIG.statement_timeout}ms`);
+  log.info(`[DB Pool] Initialized with min=${POOL_CONFIG.min}, max=${POOL_CONFIG.max}, idleTimeout=${POOL_CONFIG.idleTimeoutMillis}ms, statementTimeout=${POOL_CONFIG.statement_timeout}ms`);
 
   db = drizzle(pool);
   return db;

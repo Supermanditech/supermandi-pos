@@ -4,6 +4,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { getRedis, cacheGet, cacheSet } from '../db/redis';
 import { getPool } from '../db/client';
+import { log } from "../lib/logger";
 
 // In-memory cache for TTL config (to avoid DB queries on every request)
 const ttlConfigCache: Map<string, { ttl: number; enabled: boolean; lastFetch: number }> = new Map();
@@ -47,7 +48,7 @@ async function getCacheTtl(cacheKey: string): Promise<{ ttl: number; enabled: bo
       }
     }
   } catch (error) {
-    console.error(`[ApiCache] Failed to fetch TTL config for ${cacheKey}:`, error);
+    log.error(`[ApiCache] Failed to fetch TTL config for ${cacheKey}:`, error);
   }
 
   // Fall back to defaults
@@ -172,7 +173,7 @@ export function apiCache(
         };
 
         cacheSet(cacheKey, cachedResponse, finalTtl).catch((err) => {
-          console.error(`[ApiCache] Failed to cache ${cacheKey}:`, err);
+          log.error(`[ApiCache] Failed to cache ${cacheKey}:`, err);
         });
 
         return originalJson(body);
@@ -180,7 +181,7 @@ export function apiCache(
 
       next();
     } catch (error) {
-      console.error(`[ApiCache] Error for ${cacheKey}:`, error);
+      log.error(`[ApiCache] Error for ${cacheKey}:`, error);
       // On error, proceed without caching
       next();
     }
@@ -199,10 +200,10 @@ export async function invalidateCache(pattern: string): Promise<number> {
     if (keys.length === 0) return 0;
 
     const deleted = await redis.del(...keys);
-    console.log(`[ApiCache] Invalidated ${deleted} keys matching ${pattern}`);
+    log.info(`[ApiCache] Invalidated ${deleted} keys matching ${pattern}`);
     return deleted;
   } catch (error) {
-    console.error(`[ApiCache] Failed to invalidate ${pattern}:`, error);
+    log.error(`[ApiCache] Failed to invalidate ${pattern}:`, error);
     return 0;
   }
 }
@@ -213,5 +214,5 @@ export async function invalidateCache(pattern: string): Promise<number> {
  */
 export function clearTtlConfigCache(): void {
   ttlConfigCache.clear();
-  console.log('[ApiCache] TTL config cache cleared');
+  log.info('[ApiCache] TTL config cache cleared');
 }

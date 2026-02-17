@@ -3,6 +3,7 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
+import { log } from "../../../lib/logger";
 
 export const posOpeningStockRouter = Router();
 
@@ -59,7 +60,7 @@ posOpeningStockRouter.post(
       return res.status(200).json({ processedCount });
     } catch (err) {
       await client.query("ROLLBACK");
-      console.error("[opening-stock] Error:", err);
+      log.error("[opening-stock] Error:", err);
       return res.status(500).json({ error: "Failed to process opening stock" });
     } finally {
       client.release();

@@ -6,6 +6,7 @@ import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { getPool } from "../../../db/client";
 import {
+import { log } from "../../../lib/logger";
   isWhatsAppConfigured,
   sendTextMessage,
   sendBillReceipt,
@@ -99,7 +100,7 @@ posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response
         ]
       );
     } catch (logErr) {
-      console.warn("[WA-001] Failed to log WhatsApp message:", logErr);
+      log.warn("[WA-001] Failed to log WhatsApp message:", logErr);
     }
 
     if (!result.sent) {
@@ -108,7 +109,7 @@ posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response
 
     return res.json({ sent: true, wamid: result.wamid });
   } catch (err: unknown) {
-    console.error("[WA-001] send-bill error:", err);
+    log.error("[WA-001] send-bill error:", err);
     return res.status(500).json({ sent: false, error: "Internal server error" });
   }
 });
@@ -161,7 +162,7 @@ posWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) => 
         ]
       );
     } catch (logErr) {
-      console.warn("[WA-001] Failed to log WhatsApp message:", logErr);
+      log.warn("[WA-001] Failed to log WhatsApp message:", logErr);
     }
 
     if (!result.sent) {
@@ -170,7 +171,7 @@ posWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) => 
 
     return res.json({ sent: true, wamid: result.wamid });
   } catch (err: unknown) {
-    console.error("[WA-001] send error:", err);
+    log.error("[WA-001] send error:", err);
     return res.status(500).json({ sent: false, error: "Internal server error" });
   }
 });

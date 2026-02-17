@@ -13,6 +13,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import rateLimit from "express-rate-limit";
 import { sendRegistrationConfirmationEmail } from "../../../services/emailService";
+import { log } from "../../../lib/logger";
 
 const router = Router();
 
@@ -28,10 +29,10 @@ try {
   const firebase = require("@supermandi/common");
   if (firebase.verifyFirebaseIdToken) {
     verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
-    console.log("[SupplierReg] Firebase server-side verification available");
+    log.info("[SupplierReg] Firebase server-side verification available");
   }
 } catch {
-  console.warn("[SupplierReg] Firebase verification not available");
+  log.warn("[SupplierReg] Firebase verification not available");
 }
 
 // Rate limiter for registration endpoints
@@ -590,7 +591,7 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       );
       application = updateResult.rows[0];
       isResumed = true;
-      console.log(`[SupplierReg] REG-AUTH-202: Application updated ${application.id} (phone re-registration) for GSTIN ${gstinNormalized}`);
+      log.info(`[SupplierReg] REG-AUTH-202: Application updated ${application.id} (phone re-registration) for GSTIN ${gstinNormalized}`);
     } else {
       // Create new application
       const result = await pool.query(
@@ -644,7 +645,7 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
         [application.id]
       );
 
-      console.log(`[SupplierReg] REG-AUTH-202: Application created ${application.id} for GSTIN ${gstinNormalized}`);
+      log.info(`[SupplierReg] REG-AUTH-202: Application created ${application.id} for GSTIN ${gstinNormalized}`);
     }
 
     // STAGING-FIX-012: Inline phone verification during create.
@@ -671,12 +672,12 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
               [verifyResult.payload.uid, application.id]
             );
             phoneVerified = true;
-            console.log(`[SupplierReg] STAGING-FIX-012: Phone verified inline for ${application.id}`);
+            log.info(`[SupplierReg] STAGING-FIX-012: Phone verified inline for ${application.id}`);
           }
         }
       } catch (firebaseErr) {
         // Firebase verification failed — non-blocking, user can verify separately
-        console.warn(`[SupplierReg] STAGING-FIX-012: Inline verify failed for ${application.id}:`, firebaseErr);
+        log.warn(`[SupplierReg] STAGING-FIX-012: Inline verify failed for ${application.id}:`, firebaseErr);
       }
     }
 
@@ -832,7 +833,7 @@ router.post("/verify-otp", registrationRateLimiter, async (req: Request, res: Re
       [firebaseUid, applicationId]
     );
 
-    console.log(`[SupplierReg] REG-AUTH-202: Phone verified for application ${applicationId}`);
+    log.info(`[SupplierReg] REG-AUTH-202: Phone verified for application ${applicationId}`);
 
     res.json({
       success: true,
@@ -933,7 +934,7 @@ router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Re
       [applicationId]
     );
 
-    console.log(`[SupplierReg] REG-AUTH-202: KYC submitted for application ${applicationId}`);
+    log.info(`[SupplierReg] REG-AUTH-202: KYC submitted for application ${applicationId}`);
 
     // STAGING-FIX-014: Send registration confirmation email (non-blocking)
     const appDetails = await pool.query(
@@ -946,7 +947,7 @@ router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Re
         appDetails.rows[0].business_name || 'Supplier',
         'supplier',
         applicationId
-      ).catch(err => console.error('[SupplierReg] Email send failed (non-blocking):', err));
+      ).catch(err => log.error('[SupplierReg] Email send failed (non-blocking):', err));
     }
 
     res.json({

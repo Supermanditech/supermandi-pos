@@ -15,6 +15,7 @@
 
 import { v4 as uuidv4 } from "uuid";
 import {
+import { log } from "../../lib/logger";
   speechToText,
   chatCompletion,
   parseJSONResponse,
@@ -194,14 +195,14 @@ export function registerProductSearch(fn: ProductSearchFn): void {
  */
 async function searchProducts(query: string, storeId: string): Promise<ProductCandidate[]> {
   if (!productSearchFn) {
-    console.warn("[VoiceOrder] No product search function registered");
+    log.warn("[VoiceOrder] No product search function registered");
     return [];
   }
 
   try {
     return await productSearchFn(query, storeId);
   } catch (error) {
-    console.error("[VoiceOrder] Product search failed:", error);
+    log.error("[VoiceOrder] Product search failed:", error);
     return [];
   }
 }
@@ -307,7 +308,7 @@ Return the structured actions as JSON.`;
 
   if (!parsed.success) {
     const errorMsg = "error" in parsed ? parsed.error : "Unknown error";
-    console.error("[VoiceOrder] Failed to parse LLM response:", errorMsg);
+    log.error("[VoiceOrder] Failed to parse LLM response:", errorMsg);
     return {
       actions: [{
         type: "UNKNOWN",
@@ -435,7 +436,7 @@ export async function processVoiceOrder(
   // Check if already processed (idempotency)
   const existing = processedRequests.get(requestId);
   if (existing) {
-    console.log("[VoiceOrder] Returning cached result for:", requestId);
+    log.info("[VoiceOrder] Returning cached result for:", requestId);
     return existing.result;
   }
 
@@ -460,7 +461,7 @@ export async function processVoiceOrder(
     if (request.transcript) {
       // Transcript provided - skip STT
       transcript = request.transcript.trim();
-      console.log("[VoiceOrder] Using provided transcript:", transcript.slice(0, 50));
+      log.info("[VoiceOrder] Using provided transcript:", transcript.slice(0, 50));
     } else if (request.audioBuffer && request.audioBuffer.length > 0) {
       // Do Speech-to-Text
       const sttResult = await speechToText({
@@ -579,7 +580,7 @@ export async function processVoiceOrder(
 
     return result;
   } catch (error) {
-    console.error("[VoiceOrder] Processing failed:", error);
+    log.error("[VoiceOrder] Processing failed:", error);
     throw error;
   }
 }

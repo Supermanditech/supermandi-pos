@@ -4,6 +4,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { log } from "../lib/logger";
 
 // =============================================================================
 // CONFIGURATION
@@ -17,7 +18,7 @@ const JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    log.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -66,7 +67,7 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
     // AUDIT-API-019: Never trust x-user-id/x-actor-id headers without JWT.
     // If backend is accessed directly (bypassing gateway), these headers
     // can be spoofed. Always require Bearer token for defense-in-depth.
-    console.log('[ValidateGateway] No authorization provided (gateway headers alone are not trusted)');
+    log.info('[ValidateGateway] No authorization provided (gateway headers alone are not trusted)');
     res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
@@ -86,7 +87,7 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
 
     // Validate required claims
     if (!decoded.sub || !decoded.actorId || !decoded.actorType) {
-      console.log('[ValidateGateway] JWT missing required claims');
+      log.info('[ValidateGateway] JWT missing required claims');
       res.status(401).json({
         error: {
           code: 'INVALID_TOKEN',
@@ -101,7 +102,7 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
     const gatewayActorId = req.headers['x-actor-id'] as string | undefined;
 
     if (gatewayUserId && gatewayUserId !== decoded.sub) {
-      console.warn(`[ValidateGateway] Mismatched x-user-id - header: ${gatewayUserId}, jwt: ${decoded.sub}`);
+      log.warn(`[ValidateGateway] Mismatched x-user-id - header: ${gatewayUserId}, jwt: ${decoded.sub}`);
       res.status(403).json({
         error: {
           code: 'FORBIDDEN',
@@ -112,7 +113,7 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
     }
 
     if (gatewayActorId && gatewayActorId !== decoded.actorId) {
-      console.warn(`[ValidateGateway] Mismatched x-actor-id - header: ${gatewayActorId}, jwt: ${decoded.actorId}`);
+      log.warn(`[ValidateGateway] Mismatched x-actor-id - header: ${gatewayActorId}, jwt: ${decoded.actorId}`);
       res.status(403).json({
         error: {
           code: 'FORBIDDEN',
@@ -134,11 +135,11 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
       req.headers['x-actor-type'] = decoded.actorType;
     }
 
-    console.log(`[ValidateGateway] JWT validated - userId: ${decoded.sub}, actorId: ${decoded.actorId}`);
+    log.info(`[ValidateGateway] JWT validated - userId: ${decoded.sub}, actorId: ${decoded.actorId}`);
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      console.log('[ValidateGateway] Token expired');
+      log.info('[ValidateGateway] Token expired');
       res.status(401).json({
         error: {
           code: 'TOKEN_EXPIRED',
@@ -149,7 +150,7 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
     }
 
     if (error instanceof jwt.JsonWebTokenError) {
-      console.log(`[ValidateGateway] Invalid token: ${error.message}`);
+      log.info(`[ValidateGateway] Invalid token: ${error.message}`);
       res.status(401).json({
         error: {
           code: 'INVALID_TOKEN',
@@ -159,7 +160,7 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
       return;
     }
 
-    console.error('[ValidateGateway] Token verification error:', error);
+    log.error('[ValidateGateway] Token verification error:', error);
     res.status(500).json({
       error: {
         code: 'INTERNAL_ERROR',

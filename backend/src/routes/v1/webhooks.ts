@@ -19,6 +19,8 @@ import {
 } from "../../services/supplierPayoutService";
 // T-262: Payment event outbox for downstream consumers
 import { writePaymentEvent, PaymentEventTypes } from "../../services/paymentOutboxWorker";
+import { log } from "../../lib/logger";
+import { asError } from "../../lib/errorUtils";
 
 // =============================================================================
 // T-211: Redis-backed Webhook Idempotency (cluster-safe)
@@ -52,7 +54,7 @@ async function isWebhookEventProcessed(eventId: string): Promise<boolean> {
       return result !== null;
     }
   } catch (err) {
-    console.warn("[T-211] Redis idempotency check failed, using fallback:", err instanceof Error ? err.message : err);
+    log.warn("[T-211] Redis idempotency check failed, using fallback:", err instanceof Error ? err.message : err);
   }
   return processedWebhookEventsFallback.has(eventId);
 }
@@ -68,7 +70,7 @@ async function markWebhookEventProcessed(eventId: string): Promise<void> {
       return;
     }
   } catch (err) {
-    console.warn("[T-211] Redis idempotency mark failed, using fallback:", err instanceof Error ? err.message : err);
+    log.warn("[T-211] Redis idempotency mark failed, using fallback:", err instanceof Error ? err.message : err);
   }
   processedWebhookEventsFallback.set(eventId, Date.now());
 }
@@ -106,7 +108,7 @@ async function handleSellPaymentWebhook(
   const payment = payload?.payment?.entity;
 
   if (!payment) {
-    console.warn("[GL-AUD-002] Missing payment entity in webhook payload");
+    log.warn("[GL-AUD-002] Missing payment entity in webhook payload");
     return { success: false, error: "Missing payment entity" };
   }
 
@@ -116,11 +118,11 @@ async function handleSellPaymentWebhook(
   const payerVpa = vpa || null;
 
   if (!order_id) {
-    console.warn("[GL-AUD-002] Missing order_id in payment entity");
+    log.warn("[GL-AUD-002] Missing order_id in payment entity");
     return { success: false, error: "Missing order_id" };
   }
 
-  console.log(`[GL-AUD-002] Processing ${event} for order_id=${order_id}`);
+  log.info(`[GL-AUD-002] Processing ${event} for order_id=${order_id}`);
 
   const client = await pool.connect();
   try {
@@ -137,7 +139,7 @@ async function handleSellPaymentWebhook(
     );
 
     if (findResult.rowCount === 0) {
-      console.warn(`[GL-AUD-002] No sell_payment found for order_id=${order_id}`);
+      log.warn(`[GL-AUD-002] No sell_payment found for order_id=${order_id}`);
       await client.query("ROLLBACK");
       return { success: false, error: "Payment not found" };
     }
@@ -146,7 +148,7 @@ async function handleSellPaymentWebhook(
 
     // Skip if already in terminal state
     if (sellPayment.status === 'completed' || sellPayment.status === 'failed') {
-      console.log(`[GL-AUD-002] Payment ${sellPayment.id} already in terminal state: ${sellPayment.status}`);
+      log.info(`[GL-AUD-002] Payment ${sellPayment.id} already in terminal state: ${sellPayment.status}`);
       await client.query("COMMIT");
       return { success: true, paymentId: sellPayment.id };
     }
@@ -161,7 +163,7 @@ async function handleSellPaymentWebhook(
       failureReason = error_description || error_code || 'Payment failed';
     } else {
       // For other events (payment.authorized, etc.), just log
-      console.log(`[GL-AUD-002] Ignoring event ${event} for payment ${sellPayment.id}`);
+      log.info(`[GL-AUD-002] Ignoring event ${event} for payment ${sellPayment.id}`);
       await client.query("COMMIT");
       return { success: true, paymentId: sellPayment.id };
     }
@@ -211,12 +213,13 @@ async function handleSellPaymentWebhook(
 
     await client.query("COMMIT");
 
-    console.log(`[GL-AUD-002] Updated payment ${sellPayment.id} to status=${newStatus}`);
+    log.info(`[GL-AUD-002] Updated payment ${sellPayment.id} to status=${newStatus}`);
     return { success: true, paymentId: sellPayment.id };
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error(`[GL-AUD-002] Error processing webhook: ${error.message}`);
+    log.error(`[GL-AUD-002] Error processing webhook: ${error.message}`);
     return { success: false, error: error.message };
   } finally {
     client.release();
@@ -252,16 +255,16 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   // ITER4-P0-006: Require webhook signature in production - never process unsigned webhooks
   if (process.env.NODE_ENV === 'production') {
     if (!signature) {
-      console.warn("[SM-018] Missing Razorpay webhook signature in production - rejecting");
+      log.warn("[SM-018] Missing Razorpay webhook signature in production - rejecting");
       return res.status(401).json({ error: "Missing signature" });
     }
     if (!verifyWebhookSignature(rawBody, signature)) {
-      console.warn("[SM-018] Invalid Razorpay webhook signature");
+      log.warn("[SM-018] Invalid Razorpay webhook signature");
       return res.status(401).json({ error: "Invalid signature" });
     }
   } else if (signature && !verifyWebhookSignature(rawBody, signature)) {
     // In development, still verify if signature is provided
-    console.warn("[SM-018] Invalid Razorpay webhook signature");
+    log.warn("[SM-018] Invalid Razorpay webhook signature");
     return res.status(401).json({ error: "Invalid signature" });
   }
 
@@ -280,11 +283,11 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
 
   // T-211: Check idempotency - skip if already processed (Redis-backed)
   if (await isWebhookEventProcessed(idempotencyKey)) {
-    console.log(`[SM-018] Duplicate webhook ignored: ${idempotencyKey}`);
+    log.info(`[SM-018] Duplicate webhook ignored: ${idempotencyKey}`);
     return res.json({ status: "ok", event, duplicate: true });
   }
 
-  console.log(`[SM-018] Razorpay webhook received: ${event} (id: ${razorpayEventId})`);
+  log.info(`[SM-018] Razorpay webhook received: ${event} (id: ${razorpayEventId})`);
 
   // Handle payout events
   const payoutEvents = ["payout.processed", "payout.failed", "payout.reversed", "payout.queued"];
@@ -322,7 +325,7 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
         }
       } catch (outboxErr) {
         // Non-fatal: payout was already processed successfully
-        console.warn("[T-262] Failed to write payout outbox event:", outboxErr instanceof Error ? outboxErr.message : outboxErr);
+        log.warn("[T-262] Failed to write payout outbox event:", outboxErr instanceof Error ? outboxErr.message : outboxErr);
       }
 
       return res.json({ status: "ok", event });
@@ -347,7 +350,7 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   // Acknowledge other events without processing
   // T-211: Mark ignored events as processed too to prevent retries
   await markWebhookEventProcessed(idempotencyKey);
-  console.log(`[SM-018] Ignoring webhook event: ${event}`);
+  log.info(`[SM-018] Ignoring webhook event: ${event}`);
   return res.json({ status: "ignored", event });
 });
 
@@ -370,12 +373,12 @@ webhooksRouter.post("/razorpay/payments", async (req: Request, res: Response) =>
   // Verify webhook signature - always verify for payment webhooks
   if (signature) {
     if (!verifyWebhookSignature(rawBody, signature)) {
-      console.warn("[GL-AUD-002] Invalid Razorpay payment webhook signature");
+      log.warn("[GL-AUD-002] Invalid Razorpay payment webhook signature");
       return res.status(401).json({ error: "Invalid signature" });
     }
   } else if (process.env.NODE_ENV === 'production') {
     // In production, signature is required
-    console.warn("[GL-AUD-002] Missing signature in production");
+    log.warn("[GL-AUD-002] Missing signature in production");
     return res.status(401).json({ error: "Missing signature" });
   }
 
@@ -385,12 +388,12 @@ webhooksRouter.post("/razorpay/payments", async (req: Request, res: Response) =>
     return res.status(400).json({ error: "Missing event or payload" });
   }
 
-  console.log(`[GL-AUD-002] Payment webhook received: ${event}`);
+  log.info(`[GL-AUD-002] Payment webhook received: ${event}`);
 
   // Only handle payment events
   const paymentEvents = ["payment.captured", "payment.failed", "payment.authorized"];
   if (!paymentEvents.includes(event)) {
-    console.log(`[GL-AUD-002] Ignoring non-payment event: ${event}`);
+    log.info(`[GL-AUD-002] Ignoring non-payment event: ${event}`);
     return res.json({ status: "ignored", event });
   }
 
@@ -405,7 +408,7 @@ webhooksRouter.post("/razorpay/payments", async (req: Request, res: Response) =>
   } else {
     // Return 200 even for not-found to prevent Razorpay retries
     // Log the error for debugging
-    console.error(`[GL-AUD-002] Webhook processing failed: ${result.error}`);
+    log.error(`[GL-AUD-002] Webhook processing failed: ${result.error}`);
     return res.json({
       status: "error",
       event,
@@ -436,12 +439,12 @@ webhooksRouter.post("/payouts/process", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  console.log("[SM-018] Manual payout processing triggered");
+  log.info("[SM-018] Manual payout processing triggered");
 
   try {
     const result = await processAllScheduledPayouts(pool);
 
-    console.log(`[SM-018] Payout processing complete: ${result.processed} processed, ${result.succeeded} succeeded, ${result.failed} failed`);
+    log.info(`[SM-018] Payout processing complete: ${result.processed} processed, ${result.succeeded} succeeded, ${result.failed} failed`);
 
     return res.json({
       success: true,
@@ -449,8 +452,9 @@ webhooksRouter.post("/payouts/process", async (req: Request, res: Response) => {
       payoutsEnabled: isPayoutsEnabled(),
       ...result,
     });
-  } catch (error: any) {
-    console.error("[SM-018] Payout processing error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-018] Payout processing error:", error.message);
     return res.status(500).json({
       success: false,
       error: "Failed to process payouts",
@@ -496,8 +500,9 @@ webhooksRouter.get("/payouts/pending", async (req: Request, res: Response) => {
         payoutMethod: p.payoutMethod,
       })),
     });
-  } catch (error: any) {
-    console.error("[SM-018] Get pending payouts error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-018] Get pending payouts error:", error.message);
     return res.status(500).json({
       success: false,
       error: "Failed to get pending payouts",
@@ -524,14 +529,15 @@ webhooksRouter.post("/payouts/process-retries", async (req: Request, res: Respon
 
   try {
     const result = await processPayoutRetries(pool);
-    console.log(`[T-258] Retry processing complete: ${result.processed} processed, ${result.succeeded} succeeded, ${result.failed} failed`);
+    log.info(`[T-258] Retry processing complete: ${result.processed} processed, ${result.succeeded} succeeded, ${result.failed} failed`);
 
     return res.json({
       success: true,
       ...result,
     });
-  } catch (error: any) {
-    console.error("[T-258] Retry processing error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[T-258] Retry processing error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to process retries" });
   }
 });

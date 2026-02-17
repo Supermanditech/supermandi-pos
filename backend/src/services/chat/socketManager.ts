@@ -4,6 +4,7 @@
 
 import type { Server as HttpServer } from 'http';
 import type { Pool } from 'pg';
+import { log } from "../../lib/logger";
 
 // =============================================================================
 // TYPES
@@ -85,7 +86,7 @@ export async function initChatSocket(
         const jwt = await import('jsonwebtoken');
         const secret = process.env.JWT_SECRET;
         if (!secret) {
-          console.error('[ChatSocket] JWT_SECRET not configured');
+          log.error('[ChatSocket] JWT_SECRET not configured');
           return next(new Error('Server misconfigured'));
         }
         const decoded = jwt.verify(String(token), secret) as Record<string, unknown>;
@@ -132,7 +133,7 @@ export async function initChatSocket(
         socket.join(`conv:${row.conversation_id}`);
       }
     } catch (err) {
-      console.error('[ChatSocket] Failed to join rooms:', err);
+      log.error('[ChatSocket] Failed to join rooms:', err);
     }
 
     // Broadcast online status to all conversations
@@ -182,7 +183,7 @@ export async function initChatSocket(
           socket.join(`conv:${data.conversationId}`);
         }
       } catch (err) {
-        console.error('[ChatSocket] conversation:join error:', err);
+        log.error('[ChatSocket] conversation:join error:', err);
       }
     });
 
@@ -212,7 +213,7 @@ export async function initChatSocket(
     },
   };
 
-  console.log('[ChatSocket] Socket.io chat server initialized on /ws/chat');
+  log.info('[ChatSocket] Socket.io chat server initialized on /ws/chat');
   return manager;
 }
 

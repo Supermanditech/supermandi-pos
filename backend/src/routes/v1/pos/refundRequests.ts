@@ -11,6 +11,7 @@
 import { Router, Request, Response } from 'express';
 import { requireDeviceToken } from '../../../middleware/posDeviceToken';
 import { getPool } from '../../../db/client';
+import { log } from "../../../lib/logger";
 
 export const posRefundRequestsRouter = Router();
 
@@ -90,7 +91,7 @@ posRefundRequestsRouter.post('/refund-requests', async (req: Request, res: Respo
     if (payment.razorpay_payment_id) {
       // Non-blocking: attempt Razorpay refund in background
       initiateRazorpayRefund(refund.id, payment.razorpay_payment_id, refundAmount).catch((err) => {
-        console.error('[T-219] Razorpay refund initiation failed:', err);
+        log.error('[T-219] Razorpay refund initiation failed:', err);
       });
     }
 
@@ -106,7 +107,7 @@ posRefundRequestsRouter.post('/refund-requests', async (req: Request, res: Respo
       },
     });
   } catch (err) {
-    console.error('[T-219] Create refund request error:', err);
+    log.error('[T-219] Create refund request error:', err);
     return res.status(500).json({ error: 'Failed to create refund request' });
   }
 });
@@ -183,7 +184,7 @@ posRefundRequestsRouter.get('/refund-requests', async (req: Request, res: Respon
     if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '42P01') {
       return res.json({ success: true, data: [], pagination: { total: 0, limit, offset, hasMore: false } });
     }
-    console.error('[T-219] List refund requests error:', err);
+    log.error('[T-219] List refund requests error:', err);
     return res.status(500).json({ error: 'Failed to list refund requests' });
   }
 });
@@ -230,7 +231,7 @@ posRefundRequestsRouter.get('/refund-requests/:id', async (req: Request, res: Re
       },
     });
   } catch (err) {
-    console.error('[T-219] Get refund request error:', err);
+    log.error('[T-219] Get refund request error:', err);
     return res.status(500).json({ error: 'Failed to get refund request' });
   }
 });
@@ -258,7 +259,7 @@ posRefundRequestsRouter.post('/refund-requests/:id/cancel', async (req: Request,
 
     return res.json({ success: true, data: result.rows[0] });
   } catch (err) {
-    console.error('[T-219] Cancel refund error:', err);
+    log.error('[T-219] Cancel refund error:', err);
     return res.status(500).json({ error: 'Failed to cancel refund request' });
   }
 });
@@ -279,7 +280,7 @@ async function initiateRazorpayRefund(
   const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 
   if (!razorpayKeyId || !razorpayKeySecret) {
-    console.warn('[T-219] Razorpay credentials not configured, refund stays in initiated state');
+    log.warn('[T-219] Razorpay credentials not configured, refund stays in initiated state');
     return;
   }
 
@@ -320,7 +321,7 @@ async function initiateRazorpayRefund(
          WHERE id = $1`,
         [refundRequestId, data.id, data.status || 'created']
       );
-      console.log(`[T-219] Razorpay refund ${data.id} initiated for request ${refundRequestId}`);
+      log.info(`[T-219] Razorpay refund ${data.id} initiated for request ${refundRequestId}`);
     } else {
       // Razorpay API error
       const errorMsg = data.error?.description || 'Razorpay refund API error';
@@ -330,7 +331,7 @@ async function initiateRazorpayRefund(
          WHERE id = $1`,
         [refundRequestId, errorMsg]
       );
-      console.error(`[T-219] Razorpay refund failed:`, data.error);
+      log.error(`[T-219] Razorpay refund failed:`, data.error);
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -340,6 +341,6 @@ async function initiateRazorpayRefund(
        WHERE id = $1`,
       [refundRequestId, errorMsg]
     );
-    console.error('[T-219] Razorpay refund exception:', err);
+    log.error('[T-219] Razorpay refund exception:', err);
   }
 }

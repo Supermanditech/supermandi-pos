@@ -19,6 +19,7 @@ import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
 import { BackHeader } from "../components/ui/BackHeader";
 import { apiClient } from "../services/api/apiClient";
+import { asError } from "../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -158,7 +159,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
       }
       setReturnQuantities(initQty);
       setStep("SELECT");
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[ReturnScreen] Lookup failed:", e);
       setLookupError(e?.message || "Bill not found. Please check the number.");
     } finally {
@@ -218,7 +220,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
       });
       setRefundResult(result);
       setStep("SUCCESS");
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[ReturnScreen] Process return failed:", e);
       Alert.alert(
         "Return Failed",

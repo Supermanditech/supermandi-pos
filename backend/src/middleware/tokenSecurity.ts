@@ -4,6 +4,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { getPool } from "../db/client";
 import { createHash } from "crypto";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // CONFIGURATION
@@ -64,7 +65,7 @@ export async function logTokenEvent(params: {
     );
   } catch (err) {
     // Non-critical, just log
-    console.warn("[TokenSecurity] Failed to log token event:", err);
+    log.warn("[TokenSecurity] Failed to log token event:", err);
   }
 }
 
@@ -127,11 +128,11 @@ export async function revokeDeviceToken(params: {
       metadata: { revokedBy: params.revokedBy, reason: params.reason },
     });
 
-    console.log(`[TokenSecurity] Token revoked: device=${params.deviceId} by=${params.revokedBy}`);
+    log.info(`[TokenSecurity] Token revoked: device=${params.deviceId} by=${params.revokedBy}`);
     return true;
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("[TokenSecurity] Failed to revoke token:", err);
+    log.error("[TokenSecurity] Failed to revoke token:", err);
     return false;
   } finally {
     client.release();
@@ -175,10 +176,10 @@ export async function refreshDeviceToken(deviceId: string, storeId: string): Pro
       metadata: { newExpiresAt: newExpiresAt.toISOString() },
     });
 
-    console.log(`[TokenSecurity] Token refreshed: device=${deviceId}`);
+    log.info(`[TokenSecurity] Token refreshed: device=${deviceId}`);
     return { success: true, newExpiresAt };
   } catch (err) {
-    console.error("[TokenSecurity] Failed to refresh token:", err);
+    log.error("[TokenSecurity] Failed to refresh token:", err);
     return { success: false, error: "Refresh failed" };
   }
 }
@@ -238,7 +239,7 @@ export async function checkRateLimit(
     };
   } catch (err) {
     // Fail open
-    console.warn("[TokenSecurity] Rate limit check failed:", err);
+    log.warn("[TokenSecurity] Rate limit check failed:", err);
     return { allowed: true, remaining: limit, resetAt: new Date(windowStart.getTime() + 60000) };
   }
 }
@@ -285,7 +286,7 @@ export function rateLimitMiddleware(req: Request, res: Response, next: NextFunct
       next();
     })
     .catch((err) => {
-      console.warn("[TokenSecurity] Rate limit middleware error:", err);
+      log.warn("[TokenSecurity] Rate limit middleware error:", err);
       next(); // Fail open
     });
 }
@@ -306,7 +307,7 @@ export async function isTokenRevoked(deviceId: string): Promise<boolean> {
 
     return result.rows[0]?.token_revoked_at != null;
   } catch (err) {
-    console.warn("[TokenSecurity] Revocation check failed:", err);
+    log.warn("[TokenSecurity] Revocation check failed:", err);
     return false; // Fail open
   }
 }
@@ -326,7 +327,7 @@ export async function cleanupOldRateLimits(): Promise<number> {
     );
     return result.rowCount || 0;
   } catch (err) {
-    console.warn("[TokenSecurity] Cleanup failed:", err);
+    log.warn("[TokenSecurity] Cleanup failed:", err);
     return 0;
   }
 }
@@ -342,7 +343,7 @@ export async function cleanupOldAuditLogs(daysToKeep: number = 90): Promise<numb
     );
     return result.rowCount || 0;
   } catch (err) {
-    console.warn("[TokenSecurity] Audit log cleanup failed:", err);
+    log.warn("[TokenSecurity] Audit log cleanup failed:", err);
     return 0;
   }
 }

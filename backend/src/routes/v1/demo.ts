@@ -7,6 +7,8 @@ import jwt from "jsonwebtoken";
 import { getPool } from "../../db/client";
 import { randomUUID } from "crypto";
 import { devOnlyMiddleware, isProduction } from "../../middleware/devOnly";
+import { log } from "../../lib/logger";
+import { asError } from "../../lib/errorUtils";
 
 export const demoRouter = Router();
 
@@ -46,7 +48,7 @@ const DEMO_PHONE = '+919999999999';
  * 4. References the standard demo store
  */
 demoRouter.post("/token", devOnlyMiddleware(), async (req: Request, res: Response) => {
-  console.log('[GO-LIVE-139] Generating demo token');
+  log.info('[GO-LIVE-139] Generating demo token');
 
   // Generate JTI for potential revocation tracking
   const jti = randomUUID();
@@ -81,7 +83,7 @@ demoRouter.post("/token", devOnlyMiddleware(), async (req: Request, res: Respons
     expiresIn: '7d',
   });
 
-  console.log(`[GO-LIVE-139] Demo token generated for user ${DEMO_USER_ID}, store ${DEMO_STORE_ID}`);
+  log.info(`[GO-LIVE-139] Demo token generated for user ${DEMO_USER_ID}, store ${DEMO_STORE_ID}`);
 
   return res.json({
     token: accessToken,
@@ -178,7 +180,7 @@ demoRouter.post("/seed", devOnlyMiddleware(), async (req: Request, res: Response
       return res.status(403).json({ error: { code: "NOT_DEMO_STORE", message: "Seed only allowed for demo stores" } });
     }
 
-    console.log(`[Demo Seed] Starting seed for store ${storeId} (${storeCode})`);
+    log.info(`[Demo Seed] Starting seed for store ${storeId} (${storeCode})`);
 
     await client.query("BEGIN");
 
@@ -229,7 +231,7 @@ demoRouter.post("/seed", devOnlyMiddleware(), async (req: Request, res: Response
 
     await client.query("COMMIT");
 
-    console.log(`[Demo Seed] Completed: ${productsSeeded} products, ${storeProductsSeeded} store products`);
+    log.info(`[Demo Seed] Completed: ${productsSeeded} products, ${storeProductsSeeded} store products`);
 
     return res.json({
       success: true,
@@ -239,9 +241,10 @@ demoRouter.post("/seed", devOnlyMiddleware(), async (req: Request, res: Response
         store_products: storeProductsSeeded,
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[Demo Seed] Error:", error.message);
+    log.error("[Demo Seed] Error:", error.message);
     // SEC-004: Never leak SQL error details (table/column names) to client
     return res.status(500).json({ error: { code: "SEED_FAILED", message: "Demo seed failed. Check server logs." } });
   } finally {

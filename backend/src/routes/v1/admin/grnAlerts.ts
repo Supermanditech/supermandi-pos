@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const adminGrnAlertsRouter = Router();
 
@@ -94,7 +95,7 @@ adminGrnAlertsRouter.get(
         return res.json({ alerts: [], pagination: { total: 0, limit, offset }, openCount: 0 });
       }
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Admin GRN Alerts] List error:", msg);
+      log.error("[Admin GRN Alerts] List error:", msg);
       return res.status(500).json({ error: "Failed to list GRN alerts" });
     }
   }
@@ -137,7 +138,7 @@ adminGrnAlertsRouter.patch(
       return res.json({ alert: result.rows[0] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Admin GRN Alerts] Update error:", msg);
+      log.error("[Admin GRN Alerts] Update error:", msg);
       return res.status(500).json({ error: "Failed to update GRN alert" });
     }
   }

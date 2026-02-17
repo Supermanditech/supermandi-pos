@@ -3,6 +3,8 @@
 import { Router } from "express";
 import { requireAdminToken, requirePermission, generateAdminApiKey, hashAdminApiKey, AdminRole } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const adminUsersRouter = Router();
 
@@ -51,8 +53,9 @@ adminUsersRouter.get("/users", requirePermission("users", "read"), async (req, r
     ]);
 
     return res.json({ users: result.rows, total: countResult.rows[0]?.total ?? 0, limit, offset });
-  } catch (error: any) {
-    console.error("[admin/users] Failed to fetch users:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/users] Failed to fetch users:", error);
     return res.status(500).json({ error: "fetch_users_failed" });
   }
 });
@@ -87,8 +90,9 @@ adminUsersRouter.get("/users/:userId", requirePermission("users", "read"), async
     }
 
     return res.json({ user: result.rows[0] });
-  } catch (error: any) {
-    console.error("[admin/users] Failed to fetch user:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/users] Failed to fetch user:", error);
     return res.status(500).json({ error: "fetch_user_failed" });
   }
 });
@@ -147,8 +151,9 @@ adminUsersRouter.patch("/users/:userId", requirePermission("users", "update"), a
     }
 
     return res.json({ user: result.rows[0] });
-  } catch (error: any) {
-    console.error("[admin/users] Failed to update user:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/users] Failed to update user:", error);
     return res.status(500).json({ error: "update_user_failed" });
   }
 });
@@ -216,7 +221,7 @@ adminUsersRouter.post("/users", requirePermission("users", "create"), async (req
         message: "A reason of at least 10 characters is required for creating platform admin users."
       });
     }
-    console.log(`[admin/users] GL-CRIT-0053: Platform user creation verified. Reason: ${admin_verification.reason}`);
+    log.info(`[admin/users] GL-CRIT-0053: Platform user creation verified. Reason: ${admin_verification.reason}`);
   }
 
   const pool = getPool();
@@ -257,10 +262,11 @@ adminUsersRouter.post("/users", requirePermission("users", "create"), async (req
       finalActorId
     ]);
 
-    console.log("[admin/users] Created user:", result.rows[0]?.id);
+    log.info("[admin/users] Created user:", result.rows[0]?.id);
     return res.status(201).json({ user: result.rows[0] });
-  } catch (error: any) {
-    console.error("[admin/users] Failed to create user:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/users] Failed to create user:", error);
 
     // Handle unique constraint violation
     if (error.code === '23505') {
@@ -299,11 +305,12 @@ adminUsersRouter.delete("/users/:userId", requirePermission("users", "delete"), 
     }
 
     const user = result.rows[0];
-    console.log(`[admin/users] User soft-deleted: ${user.name} (${user.id})`);
+    log.info(`[admin/users] User soft-deleted: ${user.name} (${user.id})`);
 
     return res.json({ success: true, message: `User ${user.name} has been deleted` });
-  } catch (error: any) {
-    console.error("[admin/users] Failed to delete user:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/users] Failed to delete user:", error);
     return res.status(500).json({ error: "delete_user_failed" });
   }
 });
@@ -343,12 +350,13 @@ adminUsersRouter.get("/admins", requirePermission("admins", "read"), async (_req
     `);
 
     return res.json({ admins: result.rows });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     if (error.code === '42P01') {
       // Table doesn't exist yet - return empty array
       return res.json({ admins: [] });
     }
-    console.error("[admin/admins] Failed to fetch admins:", error);
+    log.error("[admin/admins] Failed to fetch admins:", error);
     return res.status(500).json({ error: "fetch_admins_failed" });
   }
 });
@@ -416,7 +424,7 @@ adminUsersRouter.post("/admins", requirePermission("admins", "create"), async (r
     ]);
 
     const admin = result.rows[0];
-    console.log(`[admin/admins] GO-LIVE-128: Created admin account: ${admin.email} with role ${admin.role}`);
+    log.info(`[admin/admins] GO-LIVE-128: Created admin account: ${admin.email} with role ${admin.role}`);
 
     // Return the API key ONLY on creation - it cannot be retrieved later
     return res.status(201).json({
@@ -426,14 +434,15 @@ adminUsersRouter.post("/admins", requirePermission("admins", "create"), async (r
       },
       warning: "IMPORTANT: Save this API key now. It cannot be retrieved later."
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     if (error.code === '42P01') {
       return res.status(503).json({ error: "admin_tables_not_initialized", message: "Run migrations to create admin.admins table" });
     }
     if (error.code === '23505') {
       return res.status(409).json({ error: "admin_email_exists" });
     }
-    console.error("[admin/admins] Failed to create admin:", error);
+    log.error("[admin/admins] Failed to create admin:", error);
     return res.status(500).json({ error: "create_admin_failed" });
   }
 });
@@ -498,10 +507,11 @@ adminUsersRouter.patch("/admins/:adminId", requirePermission("admins", "update")
       return res.status(404).json({ error: "admin_not_found" });
     }
 
-    console.log(`[admin/admins] GO-LIVE-128: Updated admin ${adminId}: role=${role}, status=${status}`);
+    log.info(`[admin/admins] GO-LIVE-128: Updated admin ${adminId}: role=${role}, status=${status}`);
     return res.json({ admin: result.rows[0] });
-  } catch (error: any) {
-    console.error("[admin/admins] Failed to update admin:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/admins] Failed to update admin:", error);
     return res.status(500).json({ error: "update_admin_failed" });
   }
 });
@@ -537,7 +547,7 @@ adminUsersRouter.post("/admins/:adminId/regenerate-key", requirePermission("admi
     }
 
     const admin = result.rows[0];
-    console.log(`[admin/admins] GO-LIVE-128: Regenerated API key for admin ${admin.email}`);
+    log.info(`[admin/admins] GO-LIVE-128: Regenerated API key for admin ${admin.email}`);
 
     return res.json({
       admin: {
@@ -546,8 +556,9 @@ adminUsersRouter.post("/admins/:adminId/regenerate-key", requirePermission("admi
       },
       warning: "IMPORTANT: Save this API key now. It cannot be retrieved later. Old key is now invalid."
     });
-  } catch (error: any) {
-    console.error("[admin/admins] Failed to regenerate key:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/admins] Failed to regenerate key:", error);
     return res.status(500).json({ error: "regenerate_key_failed" });
   }
 });
@@ -580,11 +591,12 @@ adminUsersRouter.delete("/admins/:adminId", requirePermission("admins", "delete"
     }
 
     const admin = result.rows[0];
-    console.log(`[admin/admins] GO-LIVE-128: Deactivated admin account: ${admin.email}`);
+    log.info(`[admin/admins] GO-LIVE-128: Deactivated admin account: ${admin.email}`);
 
     return res.json({ success: true, message: `Admin ${admin.email} has been deactivated` });
-  } catch (error: any) {
-    console.error("[admin/admins] Failed to delete admin:", error);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/admins] Failed to delete admin:", error);
     return res.status(500).json({ error: "delete_admin_failed" });
   }
 });

@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { getPool } from "../db/client";
+import { log } from "../lib/logger";
 
 export type PosDeviceContext = {
   deviceId: string;
@@ -68,7 +69,7 @@ function enforceStoreBinding(req: Request, res: Response, status: PosDeviceStatu
   const mismatches = candidates.filter((candidate) => candidate.value !== status.storeId);
   if (mismatches.length === 0) return true;
 
-  console.warn("store_mismatch_reject", {
+  log.warn("store_mismatch_reject", {
     deviceId: status.deviceId,
     enrolledStoreId: status.storeId,
     method: req.method,
@@ -174,10 +175,10 @@ async function autoRefreshTokenIfNeeded(deviceId: string, tokenExpiresAt: Date |
            AND token_expires_at < NOW() + INTERVAL '30 days'`,
         [deviceId, TOKEN_EXPIRY_DAYS]
       );
-      console.log(`[DeviceToken] Auto-refreshed token expiry for device ${deviceId}`);
+      log.info(`[DeviceToken] Auto-refreshed token expiry for device ${deviceId}`);
     } catch (err) {
       // Non-critical, just log
-      console.warn("[DeviceToken] Failed to auto-refresh token:", err);
+      log.warn("[DeviceToken] Failed to auto-refresh token:", err);
     }
   } else {
     // Just update last_active_at
@@ -188,7 +189,7 @@ async function autoRefreshTokenIfNeeded(deviceId: string, tokenExpiresAt: Date |
       );
     } catch (err) {
       // ISSUE-MICRO-012: Log instead of silently swallowing
-      console.warn("[DeviceToken] Failed to update last_active_at:", err);
+      log.warn("[DeviceToken] Failed to update last_active_at:", err);
     }
   }
 }
@@ -203,7 +204,7 @@ function logPosRequest(params: {
   durationMs: number;
 }): void {
   // Structured logging for aggregation/monitoring (JSON format for log parsers)
-  console.log(JSON.stringify({
+  log.info(JSON.stringify({
     type: "pos_request",
     ts: new Date().toISOString(),
     store: params.storeId,
@@ -257,7 +258,7 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
   // FINDING-026: Auto-refresh token if about to expire (non-blocking)
   // ISSUE-MICRO-012: Log errors instead of silently swallowing
   autoRefreshTokenIfNeeded(status.deviceId, status.tokenExpiresAt).catch((err) => {
-    console.warn("[DeviceToken] Auto-refresh background error:", err);
+    log.warn("[DeviceToken] Auto-refresh background error:", err);
   });
 
   (req as any).posDevice = {

@@ -11,6 +11,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAdminToken, requirePermission } from '../../../middleware/adminToken';
 import { getPool } from '../../../db/client';
+import { log } from "../../../lib/logger";
 
 export const adminGstComplianceRouter = Router();
 
@@ -144,7 +145,7 @@ adminGstComplianceRouter.get(
       if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '42P01') {
         return res.json({ success: true, data: null, message: 'GST tables not yet created' });
       }
-      console.error('[T-235] GST summary error:', err);
+      log.error('[T-235] GST summary error:', err);
       return res.status(500).json({ error: 'Failed to generate GST summary' });
     }
   }
@@ -247,7 +248,7 @@ adminGstComplianceRouter.get(
       if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '42P01') {
         return res.json({ error: 'Invoice tables not yet created' });
       }
-      console.error('[T-235] GSTR-1 export error:', err);
+      log.error('[T-235] GSTR-1 export error:', err);
       return res.status(500).json({ error: 'Failed to export GSTR-1 data' });
     }
   }
@@ -319,7 +320,7 @@ adminGstComplianceRouter.get(
       if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '42P01') {
         return res.json({ success: true, period: { month, year }, totals: {}, stores: [] });
       }
-      console.error('[T-235] GST stores overview error:', err);
+      log.error('[T-235] GST stores overview error:', err);
       return res.status(500).json({ error: 'Failed to fetch GST overview' });
     }
   }

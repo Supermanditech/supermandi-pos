@@ -18,6 +18,7 @@ import { detectSlowMovers } from "../../../services/ai/slowMoverService";
 import { getExpiringProducts, updateProductExpiry } from "../../../services/ai/expiryTrackingService";
 import { getStoreAnomalies, markAnomalyReviewed, detectAllAnomalies } from "../../../services/ai/anomalyDetectionService";
 import { getProductRecommendations, getTrendingProducts, computeAllRecommendations } from "../../../services/ai/recommendationService";
+import { log } from "../../../lib/logger";
 
 export const aiIntelligenceRouter = Router();
 
@@ -37,7 +38,7 @@ aiIntelligenceRouter.get("/pos/ai/alerts", requireDeviceToken, requireActiveStor
     const result = await getStoreAlerts(storeId, { unreadOnly, limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI] alerts error:', err);
+    log.error('[AI] alerts error:', err);
     res.status(500).json({ error: { message: 'Failed to load alerts' } });
   }
 });
@@ -49,7 +50,7 @@ aiIntelligenceRouter.get("/pos/ai/alerts/count", requireDeviceToken, requireActi
     const count = await getUnreadAlertCount(storeId);
     res.json({ count });
   } catch (err) {
-    console.error('[AI] alert count error:', err);
+    log.error('[AI] alert count error:', err);
     res.status(500).json({ error: { message: 'Failed to get alert count' } });
   }
 });
@@ -61,7 +62,7 @@ aiIntelligenceRouter.patch("/pos/ai/alerts/:alertId/read", requireDeviceToken, r
     const ok = await markAlertRead(req.params.alertId, storeId);
     res.json({ success: ok });
   } catch (err) {
-    console.error('[AI] mark alert read error:', err);
+    log.error('[AI] mark alert read error:', err);
     res.status(500).json({ error: { message: 'Failed to mark alert' } });
   }
 });
@@ -73,7 +74,7 @@ aiIntelligenceRouter.patch("/pos/ai/alerts/:alertId/dismiss", requireDeviceToken
     const ok = await dismissAlert(req.params.alertId, storeId);
     res.json({ success: ok });
   } catch (err) {
-    console.error('[AI] dismiss alert error:', err);
+    log.error('[AI] dismiss alert error:', err);
     res.status(500).json({ error: { message: 'Failed to dismiss alert' } });
   }
 });
@@ -88,7 +89,7 @@ aiIntelligenceRouter.get("/pos/ai/forecasts", requireDeviceToken, requireActiveS
     const forecasts = await getStoreForecasts(storeId, { productId, days, limit });
     res.json({ forecasts });
   } catch (err) {
-    console.error('[AI] forecasts error:', err);
+    log.error('[AI] forecasts error:', err);
     res.status(500).json({ error: { message: 'Failed to load forecasts' } });
   }
 });
@@ -102,7 +103,7 @@ aiIntelligenceRouter.get("/pos/ai/recommendations/:productId", requireDeviceToke
     const recs = await getProductRecommendations(storeId, req.params.productId, { type, limit });
     res.json({ recommendations: recs });
   } catch (err) {
-    console.error('[AI] recommendations error:', err);
+    log.error('[AI] recommendations error:', err);
     res.status(500).json({ error: { message: 'Failed to load recommendations' } });
   }
 });
@@ -115,7 +116,7 @@ aiIntelligenceRouter.get("/pos/ai/trending", requireDeviceToken, requireActiveSt
     const trending = await getTrendingProducts(storeId, limit);
     res.json({ trending });
   } catch (err) {
-    console.error('[AI] trending error:', err);
+    log.error('[AI] trending error:', err);
     res.status(500).json({ error: { message: 'Failed to load trending' } });
   }
 });
@@ -127,7 +128,7 @@ aiIntelligenceRouter.get("/pos/ai/auto-closing/config", requireDeviceToken, requ
     const config = await getAutoClosingConfig(storeId);
     res.json(config);
   } catch (err) {
-    console.error('[AI] auto-closing config error:', err);
+    log.error('[AI] auto-closing config error:', err);
     res.status(500).json({ error: { message: 'Failed to load config' } });
   }
 });
@@ -140,7 +141,7 @@ aiIntelligenceRouter.patch("/pos/ai/auto-closing/config", requireDeviceToken, re
     await updateAutoClosingConfig(storeId, { enabled, closeTime });
     res.json({ success: true });
   } catch (err) {
-    console.error('[AI] update config error:', err);
+    log.error('[AI] update config error:', err);
     res.status(500).json({ error: { message: 'Failed to update config' } });
   }
 });
@@ -156,7 +157,7 @@ aiIntelligenceRouter.get("/pos/ai/price-comparisons", requireDeviceToken, requir
     const result = await getStorePriceComparisons(storeId, { productId, onlyWithSavings, limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI] price comparisons error:', err);
+    log.error('[AI] price comparisons error:', err);
     res.status(500).json({ error: { message: 'Failed to load comparisons' } });
   }
 });
@@ -171,7 +172,7 @@ aiIntelligenceRouter.get("/pos/ai/customer-insights", requireDeviceToken, requir
     const result = await getStoreCustomerInsights(storeId, { segment: segment as any, limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI] customer insights error:', err);
+    log.error('[AI] customer insights error:', err);
     res.status(500).json({ error: { message: 'Failed to load insights' } });
   }
 });
@@ -185,7 +186,7 @@ aiIntelligenceRouter.get("/pos/ai/slow-movers", requireDeviceToken, requireActiv
     const result = await detectSlowMovers(storeId, { limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI] slow movers error:', err);
+    log.error('[AI] slow movers error:', err);
     res.status(500).json({ error: { message: 'Failed to load slow movers' } });
   }
 });
@@ -201,7 +202,7 @@ aiIntelligenceRouter.get("/pos/ai/expiring", requireDeviceToken, requireActiveSt
     const result = await getExpiringProducts(storeId, { daysAhead, includeExpired, limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI] expiring products error:', err);
+    log.error('[AI] expiring products error:', err);
     res.status(500).json({ error: { message: 'Failed to load expiring products' } });
   }
 });
@@ -214,7 +215,7 @@ aiIntelligenceRouter.patch("/pos/ai/expiry/:productId", requireDeviceToken, requ
     const ok = await updateProductExpiry(storeId, req.params.productId, expiryDate || null);
     res.json({ success: ok });
   } catch (err) {
-    console.error('[AI] update expiry error:', err);
+    log.error('[AI] update expiry error:', err);
     res.status(500).json({ error: { message: 'Failed to update expiry' } });
   }
 });
@@ -229,7 +230,7 @@ aiIntelligenceRouter.get("/pos/ai/anomalies", requireDeviceToken, requireActiveS
     const result = await getStoreAnomalies(storeId, { unreviewed, limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI] anomalies error:', err);
+    log.error('[AI] anomalies error:', err);
     res.status(500).json({ error: { message: 'Failed to load anomalies' } });
   }
 });
@@ -244,7 +245,7 @@ aiIntelligenceRouter.post("/admin/jobs/ai-alerts", requireAdminToken, async (_re
     const result = await runAllStoreAlerts();
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[AI Job] alerts error:', err);
+    log.error('[AI Job] alerts error:', err);
     res.status(500).json({ error: { message: 'Job failed' } });
   }
 });
@@ -255,7 +256,7 @@ aiIntelligenceRouter.post("/admin/jobs/ai-forecasts", requireAdminToken, async (
     const result = await computeAllForecasts();
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[AI Job] forecasts error:', err);
+    log.error('[AI Job] forecasts error:', err);
     res.status(500).json({ error: { message: 'Job failed' } });
   }
 });
@@ -266,7 +267,7 @@ aiIntelligenceRouter.post("/admin/jobs/ai-smart-reorder", requireAdminToken, asy
     const result = await generateAllSmartReorders();
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[AI Job] smart reorder error:', err);
+    log.error('[AI Job] smart reorder error:', err);
     res.status(500).json({ error: { message: 'Job failed' } });
   }
 });
@@ -277,7 +278,7 @@ aiIntelligenceRouter.post("/admin/jobs/ai-auto-closing", requireAdminToken, asyn
     const result = await processAutoClosing();
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[AI Job] auto-closing error:', err);
+    log.error('[AI Job] auto-closing error:', err);
     res.status(500).json({ error: { message: 'Job failed' } });
   }
 });
@@ -288,7 +289,7 @@ aiIntelligenceRouter.post("/admin/jobs/ai-customer-insights", requireAdminToken,
     const result = await computeAllInsights();
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[AI Job] customer insights error:', err);
+    log.error('[AI Job] customer insights error:', err);
     res.status(500).json({ error: { message: 'Job failed' } });
   }
 });
@@ -299,7 +300,7 @@ aiIntelligenceRouter.post("/admin/jobs/ai-anomaly-detection", requireAdminToken,
     const result = await detectAllAnomalies();
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[AI Job] anomaly detection error:', err);
+    log.error('[AI Job] anomaly detection error:', err);
     res.status(500).json({ error: { message: 'Job failed' } });
   }
 });
@@ -310,7 +311,7 @@ aiIntelligenceRouter.post("/admin/jobs/ai-recommendations", requireAdminToken, a
     const result = await computeAllRecommendations();
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('[AI Job] recommendations error:', err);
+    log.error('[AI Job] recommendations error:', err);
     res.status(500).json({ error: { message: 'Job failed' } });
   }
 });
@@ -325,7 +326,7 @@ aiIntelligenceRouter.get("/admin/ai/alerts", requireAdminToken, async (req: Requ
     const result = await getStoreAlerts(storeId, { limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI Admin] alerts error:', err);
+    log.error('[AI Admin] alerts error:', err);
     res.status(500).json({ error: { message: 'Failed to load alerts' } });
   }
 });
@@ -340,7 +341,7 @@ aiIntelligenceRouter.get("/admin/ai/anomalies", requireAdminToken, async (req: R
     const result = await getStoreAnomalies(storeId, { limit, offset });
     res.json(result);
   } catch (err) {
-    console.error('[AI Admin] anomalies error:', err);
+    log.error('[AI Admin] anomalies error:', err);
     res.status(500).json({ error: { message: 'Failed to load anomalies' } });
   }
 });
@@ -353,7 +354,7 @@ aiIntelligenceRouter.get("/admin/ai/customer-insights", requireAdminToken, async
     const result = await getStoreCustomerInsights(storeId);
     res.json(result);
   } catch (err) {
-    console.error('[AI Admin] insights error:', err);
+    log.error('[AI Admin] insights error:', err);
     res.status(500).json({ error: { message: 'Failed to load insights' } });
   }
 });

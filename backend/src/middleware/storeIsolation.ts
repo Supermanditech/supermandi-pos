@@ -11,6 +11,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import { log } from "../lib/logger";
 
 /**
  * SEC-002: Fields that should never be accepted from client
@@ -85,7 +86,7 @@ export function enforceStoreIsolation(options?: {
               reason: `Client attempted to set ${field} in body`,
             };
 
-            console.warn('[SEC-002] Store isolation violation BLOCKED', auditEntry);
+            log.warn('[SEC-002] Store isolation violation BLOCKED', auditEntry);
 
             res.status(403).json({
               error: 'STORE_ISOLATION_VIOLATION',
@@ -108,7 +109,7 @@ export function enforceStoreIsolation(options?: {
               reason: `Client attempted to set ${field} in body - stripped`,
             };
 
-            console.warn('[SEC-002] Store isolation attempt STRIPPED', auditEntry);
+            log.warn('[SEC-002] Store isolation attempt STRIPPED', auditEntry);
           }
         }
       }
@@ -183,7 +184,7 @@ export function validateStoreOwnership(req: Request, res: Response, next: NextFu
   }
 
   if (paramStoreId && paramStoreId !== tokenStoreId) {
-    console.warn('[SEC-002] Store ownership validation failed', {
+    log.warn('[SEC-002] Store ownership validation failed', {
       tokenStoreId,
       paramStoreId,
       path: req.path,

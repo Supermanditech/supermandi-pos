@@ -13,6 +13,7 @@
 
 import OpenAI from "openai";
 import { v4 as uuidv4 } from "uuid";
+import { log } from "../../lib/logger";
 
 // =============================================================================
 // CONFIGURATION
@@ -23,12 +24,12 @@ import { v4 as uuidv4 } from "uuid";
 function loadOpenAIApiKey(): string {
   const envKey = process.env.OPENAI_API_KEY?.trim();
   if (envKey) {
-    console.log('[OpenAI] API key loaded from environment variable');
+    log.info('[OpenAI] API key loaded from environment variable');
     return envKey;
   }
   // STAGE-011: Warn in staging (don't crash — voice is not core to staging testing)
   if (process.env.NODE_ENV !== 'development') {
-    console.warn(`[OpenAI] WARN: OPENAI_API_KEY not set in ${process.env.NODE_ENV}. Voice/AI features will return 503.`);
+    log.warn(`[OpenAI] WARN: OPENAI_API_KEY not set in ${process.env.NODE_ENV}. Voice/AI features will return 503.`);
   }
   return '';
 }
@@ -101,7 +102,7 @@ function getClient(): OpenAI {
     });
     configuredAt = new Date();
     // LOG-SAFE: Only log that client was created, never the key
-    console.log("[OpenAI] Client initialized", { model: config.model, maxTokens: config.maxTokens });
+    log.info("[OpenAI] Client initialized", { model: config.model, maxTokens: config.maxTokens });
   }
 
   return openaiClient;
@@ -273,7 +274,7 @@ export function logAudit(entry: AuditLogEntry): void {
   }
 
   // LOG-SAFE: Only structured data, no PII
-  console.log("[OpenAI:Audit]", JSON.stringify({
+  log.info("[OpenAI:Audit]", JSON.stringify({
     requestId: entry.requestId,
     operation: entry.operation,
     storeId: entry.storeId,

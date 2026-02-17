@@ -15,6 +15,7 @@ import {
   type InvoiceItemInput,
 } from "../../../services/invoiceService";
 import { generateInvoicePdf } from "../../../services/invoicePdfService";
+import { log } from "../../../lib/logger";
 
 export const adminInvoicesRouter = Router();
 
@@ -127,7 +128,7 @@ adminInvoicesRouter.post("/invoices/purchase", requireAdminToken, requirePermiss
       data: invoice,
     });
   } catch (err: any) {
-    console.error("[admin/invoices/purchase] Error:", err);
+    log.error("[admin/invoices/purchase] Error:", err);
     return res.status(500).json({ error: "Failed to create purchase invoice" });
   }
 });
@@ -231,7 +232,7 @@ adminInvoicesRouter.post("/invoices/sale", requireAdminToken, requirePermission(
       data: invoice,
     });
   } catch (err: any) {
-    console.error("[admin/invoices/sale] Error:", err);
+    log.error("[admin/invoices/sale] Error:", err);
     return res.status(500).json({ error: "Failed to create sale invoice" });
   }
 });
@@ -357,7 +358,7 @@ adminInvoicesRouter.post("/invoices/commission", requireAdminToken, requirePermi
       data: invoice,
     });
   } catch (err: any) {
-    console.error("[admin/invoices/commission] Error:", err);
+    log.error("[admin/invoices/commission] Error:", err);
     return res.status(500).json({ error: "Failed to create commission invoice" });
   }
 });
@@ -476,7 +477,7 @@ adminInvoicesRouter.post("/invoices/supplier-sale", requireAdminToken, requirePe
       data: invoice,
     });
   } catch (err: any) {
-    console.error("[admin/invoices/supplier-sale] Error:", err);
+    log.error("[admin/invoices/supplier-sale] Error:", err);
     return res.status(500).json({ error: "Failed to create supplier sale invoice" });
   }
 });
@@ -509,7 +510,7 @@ adminInvoicesRouter.get("/invoices", requireAdminToken, requirePermission("produ
 
     return res.json({ success: true, ...result });
   } catch (err: any) {
-    console.error("[admin/invoices] Error:", err);
+    log.error("[admin/invoices] Error:", err);
     if (err.code === "42P01") {
       return res.json({ success: true, data: [], total: 0 });
     }
@@ -532,7 +533,7 @@ adminInvoicesRouter.get("/invoices/:invoiceId", requireAdminToken, requirePermis
     }
     return res.json({ success: true, data: invoice });
   } catch (err: any) {
-    console.error("[admin/invoices/:id] Error:", err);
+    log.error("[admin/invoices/:id] Error:", err);
     return res.status(500).json({ error: "Failed to get invoice" });
   }
 });
@@ -549,7 +550,7 @@ adminInvoicesRouter.post("/invoices/:invoiceId/issue", requireAdminToken, requir
     await issueInvoice(pool, req.params.invoiceId);
     return res.json({ success: true, message: "Invoice issued" });
   } catch (err: any) {
-    console.error("[admin/invoices/issue] Error:", err);
+    log.error("[admin/invoices/issue] Error:", err);
     return res.status(400).json({ error: err.message || "Failed to issue invoice" });
   }
 });
@@ -576,7 +577,7 @@ adminInvoicesRouter.post("/invoices/:invoiceId/payment", requireAdminToken, requ
     await recordInvoicePayment(pool, req.params.invoiceId, amountMinor, paymentMode, paymentReference, adminId);
     return res.json({ success: true, message: "Payment recorded" });
   } catch (err: any) {
-    console.error("[admin/invoices/payment] Error:", err);
+    log.error("[admin/invoices/payment] Error:", err);
     return res.status(400).json({ error: err.message || "Failed to record payment" });
   }
 });
@@ -607,7 +608,7 @@ adminInvoicesRouter.post("/invoices/:invoiceId/cancel", requireAdminToken, requi
 
     return res.json({ success: true, message: "Invoice cancelled" });
   } catch (err: any) {
-    console.error("[admin/invoices/cancel] Error:", err);
+    log.error("[admin/invoices/cancel] Error:", err);
     return res.status(500).json({ error: "Failed to cancel invoice" });
   }
 });
@@ -638,7 +639,7 @@ adminInvoicesRouter.get("/invoices/:invoiceId/pdf", requireAdminToken, requirePe
 
     pdfDoc.pipe(res);
   } catch (err: any) {
-    console.error("[admin/invoices/pdf] Error:", err);
+    log.error("[admin/invoices/pdf] Error:", err);
     return res.status(500).json({ error: "Failed to generate invoice PDF" });
   }
 });

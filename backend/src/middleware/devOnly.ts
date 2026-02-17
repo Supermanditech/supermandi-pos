@@ -2,6 +2,7 @@
 // Hard blocks endpoints/scripts from running in production
 
 import { Request, Response, NextFunction } from 'express';
+import { log } from "../lib/logger";
 
 // =============================================================================
 // ENVIRONMENT DETECTION
@@ -53,7 +54,7 @@ export function devOnlyMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {
     if (isProduction()) {
       // Return 404 to hide the existence of dev-only endpoints
-      console.warn(
+      log.warn(
         `[DevOnly] Blocked request to dev-only endpoint in production: ${req.method} ${req.path}`
       );
       res.status(404).json({
@@ -109,17 +110,17 @@ export function devOnlyWithConfirmation(requiredHeaderValue: string) {
  */
 export function assertNotProduction(scriptName: string): void {
   if (isProduction()) {
-    console.error(
+    log.error(
       `\n[BLOCKED] Script "${scriptName}" cannot run in production environment.`
     );
-    console.error(`Current NODE_ENV: ${getEnvironment()}`);
-    console.error(
+    log.error(`Current NODE_ENV: ${getEnvironment()}`);
+    log.error(
       `\nThis script is only allowed in: development, staging, test, local\n`
     );
     process.exit(1);
   }
 
-  console.log(
+  log.info(
     `[DevOnly] Script "${scriptName}" running in: ${getEnvironment()}`
   );
 }
@@ -137,9 +138,9 @@ export function assertNotProductionWithConfirm(
   assertNotProduction(scriptName);
 
   if (!confirmed) {
-    console.error(`\n[BLOCKED] Script "${scriptName}" requires confirmation.`);
-    console.error(`\nRun with --confirm flag to proceed:\n`);
-    console.error(`  npx ts-node scripts/${scriptName}.ts --confirm\n`);
+    log.error(`\n[BLOCKED] Script "${scriptName}" requires confirmation.`);
+    log.error(`\nRun with --confirm flag to proceed:\n`);
+    log.error(`  npx ts-node scripts/${scriptName}.ts --confirm\n`);
     process.exit(1);
   }
 }

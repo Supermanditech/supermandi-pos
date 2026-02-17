@@ -37,6 +37,7 @@ import {
   type PrintSettings,
 } from "../services/barcodeSheet";
 import { theme } from "../theme";
+import { asError } from "../utils/errorUtils";
 
 // GO-LIVE-243: Persist barcode sheet tier preference
 const BARCODE_TIER_KEY = "supermandi.barcode.tier.v1";
@@ -236,7 +237,8 @@ export default function BarcodeSheetScreen() {
     setActionLoading("download");
     try {
       await shareBarcodeSheetPdf(finalItems, activeTier, "Save Barcode Sheet PDF", printSettings);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
         Alert.alert("Download unavailable", "Sharing is not available on this device.");
@@ -254,7 +256,8 @@ export default function BarcodeSheetScreen() {
     setActionLoading("whatsapp");
     try {
       await shareBarcodeSheetPdf(finalItems, activeTier, "Send Barcode Sheet via WhatsApp", printSettings);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
         Alert.alert("Share unavailable", "Sharing is not available on this device.");

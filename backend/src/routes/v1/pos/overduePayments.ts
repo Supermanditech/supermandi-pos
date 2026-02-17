@@ -2,6 +2,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
+import { log } from "../../../lib/logger";
 
 export const posOverduePaymentsRouter = Router();
 
@@ -62,7 +63,7 @@ posOverduePaymentsRouter.get(
         totalOutstandingMinor,
       });
     } catch (err) {
-      console.error("[payments/overdue] Error:", err);
+      log.error("[payments/overdue] Error:", err);
       return res.status(500).json({ error: "Failed to fetch overdue payments" });
     }
   }

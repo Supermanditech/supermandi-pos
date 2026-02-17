@@ -14,6 +14,7 @@ import { formatDateTime } from "../i18n/formatters";
 import { theme } from "../theme";
 // T-122: Standardized back header
 import { BackHeader } from "../components/ui/BackHeader";
+import { asError } from "../utils/errorUtils";
 
 type RootStackParamList = {
   BillDetail: { saleId: string; billRef?: string };
@@ -49,7 +50,8 @@ export default function BillDetailScreen() {
           return;
         }
         setSnapshot(result);
-      } catch (e: any) {
+      } catch (_e: unknown) {
+    const e = asError(_e);
         if (!active) return;
         setError(e?.message ? String(e.message) : "Failed to load bill.");
       } finally {
@@ -68,7 +70,8 @@ export default function BillDetailScreen() {
     setSharing(true);
     try {
       await shareBillPdf(snapshot);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
         Alert.alert("Share unavailable", "Sharing is not available on this device.");
@@ -95,7 +98,8 @@ export default function BillDetailScreen() {
             try {
               await printerService.printReceipt(buildBillText(snapshot));
               Alert.alert("Print queued", "Bill sent to printer.");
-            } catch (e: any) {
+            } catch (_e: unknown) {
+    const e = asError(_e);
               const message = e?.message ? String(e.message) : "print_failed";
               if (message.toLowerCase().includes("paper")) {
                 Alert.alert("Printer error", "Printer is out of paper.");
@@ -118,7 +122,8 @@ export default function BillDetailScreen() {
     setWhatsapping(true);
     try {
       await shareBillWhatsApp(snapshot);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       const message = e?.message ? String(e.message) : "whatsapp_failed";
       if (message === "whatsapp_not_installed") {
         Alert.alert("WhatsApp not found", "Please install WhatsApp to share bills.");

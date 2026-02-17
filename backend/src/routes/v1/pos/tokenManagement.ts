@@ -7,6 +7,7 @@ import { refreshDeviceToken, revokeDeviceToken, logTokenEvent } from "../../../m
 import { getPool } from "../../../db/client";
 // GO-LIVE-188: Import rate limiter for token operations
 import { tokenRevocationRateLimiter, financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
+import { log } from "../../../lib/logger";
 
 export const tokenManagementRouter = Router();
 
@@ -105,7 +106,7 @@ tokenManagementRouter.get("/token/status", requireDeviceToken, async (req: Reque
       }
     });
   } catch (error) {
-    console.error("[TokenManagement] Status check error:", error);
+    log.error("[TokenManagement] Status check error:", error);
     return res.status(500).json({
       error: { code: "STATUS_CHECK_FAILED", message: "Failed to check token status" }
     });
@@ -201,7 +202,7 @@ tokenManagementRouter.get("/token/audit", requireDeviceToken, async (req: Reques
       }
     });
   } catch (error) {
-    console.error("[TokenManagement] Audit fetch error:", error);
+    log.error("[TokenManagement] Audit fetch error:", error);
     return res.status(500).json({
       error: { code: "AUDIT_FETCH_FAILED", message: "Failed to fetch audit log" }
     });

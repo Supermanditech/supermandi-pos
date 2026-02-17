@@ -3,6 +3,7 @@ import { getPool } from "../../../db/client";
 import { requireDeviceTokenAllowInactive, type PosDeviceStatusContext } from "../../../middleware/deviceToken";
 // SA-P2-003: Semantic version comparison for minimum app version enforcement
 import { compareSemver } from "../../../utils/semver";
+import { log } from "../../../lib/logger";
 
 export const posUiStatusRouter = Router();
 
@@ -74,7 +75,7 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
         allowedPaymentMethods = storeRow.allowed_payment_methods;
       }
     } catch (storeErr: any) {
-      console.error("[uiStatus] Store lookup failed:", storeErr?.message);
+      log.error("[uiStatus] Store lookup failed:", storeErr?.message);
     }
 
     // GO-LIVE-REVEAL-001: Check reorder_settings for reorderEnabled if store has settings
@@ -156,7 +157,7 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   const prior = scanLookupV2LogState.get(status.deviceId);
   if (prior !== logKey) {
     scanLookupV2LogState.set(status.deviceId, logKey);
-    console.log(
+    log.info(
       "[scan_lookup_v2] deviceId=%s storeId=%s source=%s deviceFlag=%s storeFlag=%s effective=%s",
       status.deviceId,
       status.storeId ?? "none",

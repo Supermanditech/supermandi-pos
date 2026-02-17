@@ -14,6 +14,7 @@ import { generateStoreCode } from "./storeCodeService";
 import { sendOnboardingLinks } from "./notificationService";  // RO-008
 import { createEnrollmentCode } from "./enrollmentCodeService";  // DRX-003
 import type {
+import { log } from "../lib/logger";
   RetailerRegistrationData,
   RegistrationSource,
 } from "@supermandi/common";
@@ -158,7 +159,7 @@ export async function registerRetailer(
          WHERE gstin = $2 AND entity_type = 'retailer' AND approved_store_id IS NULL AND status != 'EXPIRED'`,
         [storeId, data.gstin]
       ).catch((err) => {
-        console.warn("[registration] DR-012: Failed to link legacy application:", err?.message);
+        log.warn("[registration] DR-012: Failed to link legacy application:", err?.message);
       });
     }
 
@@ -175,7 +176,7 @@ export async function registerRetailer(
       businessName: data.businessName,
       gstin: data.gstin,
     }).catch((err) => {
-      console.error("[registration] Failed to record event:", err?.message);
+      log.error("[registration] Failed to record event:", err?.message);
     });
 
     // Step 7: RO-008 — Send onboarding notifications (fire-and-forget)
@@ -185,7 +186,7 @@ export async function registerRetailer(
       storeCode,
       ownerName: data.ownerName,
     }).catch((err) => {
-      console.warn("[registration] Onboarding notification failed:", err?.message);
+      log.warn("[registration] Onboarding notification failed:", err?.message);
     });
 
     // Step 8: DRX-003 — Auto-generate enrollment code for POS sources
@@ -194,9 +195,9 @@ export async function registerRetailer(
       try {
         const enrollment = await createEnrollmentCode(storeId, storeCode, "registration");
         enrollmentCode = enrollment.code;
-        console.log(`[registration] DRX-003: Auto-generated enrollment code ${enrollmentCode} for POS registration`);
+        log.info(`[registration] DRX-003: Auto-generated enrollment code ${enrollmentCode} for POS registration`);
       } catch (err: any) {
-        console.warn("[registration] DRX-003: Failed to auto-generate enrollment code:", err?.message);
+        log.warn("[registration] DRX-003: Failed to auto-generate enrollment code:", err?.message);
         // Non-blocking: registration still succeeds without enrollment code
       }
     }
@@ -314,7 +315,7 @@ async function recordRegistrationEvent(
   // arbitrary strings that would make $::inet throw and lose the event row.
   let safeIp: string | null = event.ipAddress || null;
   if (safeIp && !/^[\d.:a-fA-F]+$/.test(safeIp)) {
-    console.warn(`[registration] Invalid IP format, storing as null: "${safeIp}"`);
+    log.warn(`[registration] Invalid IP format, storing as null: "${safeIp}"`);
     safeIp = null;
   }
 
@@ -356,6 +357,6 @@ export async function recordFailedRegistration(
     storeId: null,
     userId: null,
   }).catch((err) => {
-    console.error("[registration] Failed to record error event:", err?.message);
+    log.error("[registration] Failed to record error event:", err?.message);
   });
 }

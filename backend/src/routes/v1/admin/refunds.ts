@@ -8,6 +8,7 @@ import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { requireAdminToken } from '../../../middleware/adminToken';
 import { getPool } from '../../../db/client';
+import { log } from "../../../lib/logger";
 
 /**
  * T-259: Initiate Razorpay refund via API
@@ -23,7 +24,7 @@ async function initiateRazorpayRefund(
   const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 
   if (!razorpayKeyId || !razorpayKeySecret) {
-    console.warn('[T-259] Razorpay credentials not configured, refund stays in processing state');
+    log.warn('[T-259] Razorpay credentials not configured, refund stays in processing state');
     return;
   }
 
@@ -56,7 +57,7 @@ async function initiateRazorpayRefund(
          WHERE id = $1`,
         [refundRequestId, data.id, data.status || 'created']
       );
-      console.log(`[T-259] Razorpay refund ${data.id} initiated for admin-approved request ${refundRequestId}`);
+      log.info(`[T-259] Razorpay refund ${data.id} initiated for admin-approved request ${refundRequestId}`);
     } else {
       const errorMsg = data.error?.description || 'Razorpay refund API error';
       await pool.query(
@@ -65,7 +66,7 @@ async function initiateRazorpayRefund(
          WHERE id = $1`,
         [refundRequestId, errorMsg]
       );
-      console.error(`[T-259] Razorpay refund failed for ${refundRequestId}:`, data.error);
+      log.error(`[T-259] Razorpay refund failed for ${refundRequestId}:`, data.error);
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -75,7 +76,7 @@ async function initiateRazorpayRefund(
        WHERE id = $1`,
       [refundRequestId, errorMsg]
     );
-    console.error('[T-259] Razorpay refund exception:', err);
+    log.error('[T-259] Razorpay refund exception:', err);
   }
 }
 
@@ -189,7 +190,7 @@ adminRefundsRouter.post('/refunds/:id/approve', async (req: Request, res: Respon
     // T-259: Initiate Razorpay refund if payment ID is available
     if (refund.razorpay_payment_id) {
       initiateRazorpayRefund(pool, refund.id, refund.razorpay_payment_id, refund.refund_amount).catch((err) => {
-        console.error('[T-259] Admin refund Razorpay initiation failed:', err);
+        log.error('[T-259] Admin refund Razorpay initiation failed:', err);
       });
     }
 

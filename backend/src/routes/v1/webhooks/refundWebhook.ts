@@ -12,6 +12,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { getPool } from '../../../db/client';
+import { log } from "../../../lib/logger";
 
 export const refundWebhookRouter = Router();
 
@@ -34,7 +35,7 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
   // Verify webhook signature — REQUIRED (reject if secret not configured)
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    console.error('[T-219] RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
+    log.error('[T-219] RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
     return res.status(500).json({ error: 'Webhook secret not configured' });
   }
 
@@ -49,7 +50,7 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
     .digest('hex');
 
   if (!safeTimingEqual(signature, expectedSignature)) {
-    console.warn('[T-219] Invalid Razorpay webhook signature');
+    log.warn('[T-219] Invalid Razorpay webhook signature');
     return res.status(400).json({ error: 'Invalid signature' });
   }
 
@@ -80,7 +81,7 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
     return res.json({ received: true, skipped: 'no payment ID' });
   }
 
-  console.log(`[T-219] Razorpay refund webhook: ${eventType} for payment ${paymentId}`);
+  log.info(`[T-219] Razorpay refund webhook: ${eventType} for payment ${paymentId}`);
 
   // Wrap all DB updates in a transaction for atomicity
   const client = await pool.connect();
@@ -142,13 +143,13 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
       }
 
       default:
-        console.log(`[T-219] Unhandled refund webhook event: ${eventType}`);
+        log.info(`[T-219] Unhandled refund webhook event: ${eventType}`);
     }
 
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('[T-219] Refund webhook processing error:', err);
+    log.error('[T-219] Refund webhook processing error:', err);
     // Return 200 to prevent Razorpay retries for non-transient errors
   } finally {
     client.release();

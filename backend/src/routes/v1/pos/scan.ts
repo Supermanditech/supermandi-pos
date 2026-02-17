@@ -10,6 +10,7 @@ import { resolveScanForDigitisation } from "../../../services/storeProductDigiti
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { requirePosStaff } from "../../../middleware/posStaff";
+import { log } from "../../../lib/logger";
 
 export const posScanRouter = Router();
 
@@ -126,7 +127,7 @@ posScanRouter.post("/scan/resolve", requireDeviceToken, requireActiveStore, requ
       const result = await resolveScanForDigitisation(storeId, trimmedBarcode);
       return res.json(result);
     } catch (error) {
-      console.error("[scan/resolve] Error resolving barcode:", error);
+      log.error("[scan/resolve] Error resolving barcode:", error);
       return res.status(503).json({
         error: "SERVICE_UNAVAILABLE",
         message: "Database unavailable"

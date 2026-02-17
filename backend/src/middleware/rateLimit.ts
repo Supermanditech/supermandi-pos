@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { log } from "../lib/logger";
 
 /**
  * Simple in-memory rate limit (per PM2 process) to control costs.
@@ -34,7 +35,7 @@ export function rateLimitAi(opts: { windowMs: number; max: number }) {
         const key = iterator.next().value;
         if (key) hits.delete(key);
       }
-      console.log(`[rateLimitAi] GO-LIVE-191: Cache pruned, removed ${entriesToRemove} entries`);
+      log.info(`[rateLimitAi] GO-LIVE-191: Cache pruned, removed ${entriesToRemove} entries`);
     }
   }
 

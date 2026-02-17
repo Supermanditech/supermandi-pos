@@ -6,6 +6,8 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { StoreStatus, type StoreStatusType } from "../../../services/storeStateMachine";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerAdminSettingsRouter = Router();
 
@@ -102,8 +104,9 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
       }
     });
 
-  } catch (error: any) {
-    console.error("[GL-AUD-004] Get settings error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GL-AUD-004] Get settings error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get settings" } });
   }
 });
@@ -178,11 +181,11 @@ retailerAdminSettingsRouter.put("/settings/upi", async (req: Request, res: Respo
 
     // RET-WEB-003: Log status transition if it occurred
     if (shouldTransition) {
-      console.log(`[RET-WEB-003] Store ${storeId} transitioned: ${currentStatus} → ${newStatus}`);
+      log.info(`[RET-WEB-003] Store ${storeId} transitioned: ${currentStatus} → ${newStatus}`);
       // Audit log automatically created by trigger on platform.stores
     }
 
-    console.log(`[GL-AUD-004] Updated UPI VPA for store ${storeId} to ${trimmedVpa}`);
+    log.info(`[GL-AUD-004] Updated UPI VPA for store ${storeId} to ${trimmedVpa}`);
 
     return res.json({
       success: true,
@@ -191,8 +194,9 @@ retailerAdminSettingsRouter.put("/settings/upi", async (req: Request, res: Respo
       statusTransitioned: shouldTransition
     });
 
-  } catch (error: any) {
-    console.error("[GL-AUD-004] Update UPI VPA error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GL-AUD-004] Update UPI VPA error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update UPI VPA" } });
   }
 });
@@ -362,15 +366,16 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
       return res.status(404).json({ error: { code: "NOT_FOUND", message: "Store not found" } });
     }
 
-    console.log(`[GO-LIVE-016] Updated settings for store ${storeId}`);
+    log.info(`[GO-LIVE-016] Updated settings for store ${storeId}`);
 
     return res.json({
       success: true,
       settings: result.rows[0]
     });
 
-  } catch (error: any) {
-    console.error("[GO-LIVE-016] Update settings error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GO-LIVE-016] Update settings error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update settings" } });
   }
 });
@@ -397,12 +402,13 @@ retailerAdminSettingsRouter.delete("/settings/upi", async (req: Request, res: Re
       [storeId]
     );
 
-    console.log(`[GL-AUD-004] Removed UPI VPA for store ${storeId}`);
+    log.info(`[GL-AUD-004] Removed UPI VPA for store ${storeId}`);
 
     return res.json({ success: true, upiVpa: null });
 
-  } catch (error: any) {
-    console.error("[GL-AUD-004] Remove UPI VPA error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GL-AUD-004] Remove UPI VPA error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to remove UPI VPA" } });
   }
 });

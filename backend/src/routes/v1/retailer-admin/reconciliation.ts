@@ -5,6 +5,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { getStoreId, requireStoreContext } from "../../../middleware/retailerStoreContext";
+import { log } from "../../../lib/logger";
 
 export const retailerReconciliationRouter = Router();
 
@@ -149,7 +150,7 @@ retailerReconciliationRouter.get(
 
       res.json({ success: true, data, summary });
     } catch (err: any) {
-      console.error("[T-260] Reconciliation query error:", err.message);
+      log.error("[T-260] Reconciliation query error:", err.message);
       res.status(500).json({ error: { code: "QUERY_ERROR", message: "Failed to load reconciliation data" } });
     }
   }

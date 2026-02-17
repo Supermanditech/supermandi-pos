@@ -7,6 +7,8 @@ import { getPool } from "../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
 // T-197: Keyword-based auto-categorization
 import { suggestCategory, getAvailableCategories } from "../../utils/autoCategorization";
+import { log } from "../../lib/logger";
+import { asError } from "../../lib/errorUtils";
 
 export const catalogRouter = Router();
 
@@ -137,8 +139,9 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
         inStockOnly,
       },
     });
-  } catch (error: any) {
-    console.error("[Catalog] List error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Catalog] List error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({
@@ -187,8 +190,9 @@ catalogRouter.get("/stores/:storeId/catalog/categories", requireDeviceToken, asy
       data: categories,
       count: categories.length,
     });
-  } catch (error: any) {
-    console.error("[Catalog] Categories error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Catalog] Categories error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({
@@ -277,8 +281,9 @@ catalogRouter.get("/stores/:storeId/catalog/:productId", requireDeviceToken, asy
         suppliers: [],
       },
     });
-  } catch (error: any) {
-    console.error("[Catalog] Get product error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Catalog] Get product error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(404).json({
@@ -485,8 +490,9 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
       },
       context: "BUY",
     });
-  } catch (error: any) {
-    console.error("[SM-003] Buy catalog error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-003] Buy catalog error:", error.message);
 
     // If tables don't exist yet, return empty response
     if (error.code === "42P01" || error.code === "42703") {
@@ -540,8 +546,9 @@ catalogRouter.get("/stores/:storeId/buy-catalog/categories", requireDeviceToken,
       data: categories,
       count: categories.length,
     });
-  } catch (error: any) {
-    console.error("[SM-003] Buy catalog categories error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-003] Buy catalog categories error:", error.message);
 
     if (error.code === "42P01" || error.code === "42703") {
       return res.json({
@@ -611,8 +618,9 @@ catalogRouter.get("/stores/:storeId/buy-catalog/suppliers", requireDeviceToken, 
       data: suppliers,
       count: suppliers.length,
     });
-  } catch (error: any) {
-    console.error("[SM-003] Buy catalog suppliers error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-003] Buy catalog suppliers error:", error.message);
 
     if (error.code === "42P01" || error.code === "42703") {
       return res.json({
@@ -760,8 +768,9 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
       success: true,
       data: product,
     });
-  } catch (error: any) {
-    console.error("[SUP-POS-004] Barcode lookup error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SUP-POS-004] Barcode lookup error:", error.message);
 
     if (error.code === "42P01" || error.code === "42703") {
       return res.json({
@@ -861,8 +870,9 @@ catalogRouter.get("/stores/:storeId/categories", requireDeviceToken, async (req:
       data: result.rows,
       count: result.rows.length,
     });
-  } catch (error: any) {
-    console.error("[Catalog] FMCG categories error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Catalog] FMCG categories error:", error.message);
 
     // If tables don't exist, return minimal response
     if (error.code === "42P01") {
@@ -990,8 +1000,9 @@ catalogRouter.get("/stores/:storeId/categories/:taxonomyId/products", requireDev
       },
       context: "SELL",
     });
-  } catch (error: any) {
-    console.error("[Catalog] Category products error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Catalog] Category products error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({

@@ -9,6 +9,7 @@ import multer from 'multer';
 import { getPool } from '../../db/client';
 import * as chatService from '../../services/chat/chatService';
 import { noopSocketManager } from '../../services/chat/socketManager';
+import { log } from "../../lib/logger";
 
 export const chatRouter = Router();
 
@@ -200,12 +201,12 @@ chatRouter.post('/conversations/:id/messages', async (req, res) => {
               senderId: userId,
             },
             channel: 'chat',
-          }).catch(err => console.error('[Chat FCM] Failed:', err));
+          }).catch(err => log.error('[Chat FCM] Failed:', err));
         }
       }
     } catch (fcmErr) {
       // FCM failures should not block message sending
-      console.error('[Chat FCM] Push notification error:', fcmErr);
+      log.error('[Chat FCM] Push notification error:', fcmErr);
     }
 
     res.status(201).json({ message: msg });
@@ -294,7 +295,7 @@ chatRouter.post('/conversations/:id/upload', upload.single('file'), async (req, 
     } catch {
       // Fallback: store as data URI for dev/staging (not ideal for production)
       attachmentUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64').substring(0, 100)}...`;
-      console.warn('[Chat Upload] GCS unavailable, using fallback');
+      log.warn('[Chat Upload] GCS unavailable, using fallback');
     }
 
     const pool = getPool();

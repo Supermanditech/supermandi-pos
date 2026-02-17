@@ -8,6 +8,7 @@ import {
   type CreateStoreProductResult
 } from "../../../services/storeProductDigitisationService";
 import {
+import { log } from "../../../lib/logger";
   validateProductName as validateProductNameUnified,
   validateBarcode as validateBarcodeUnified,
   validatePrice as validatePriceUnified,
@@ -39,7 +40,7 @@ function logStockDriftIfDetected(params: {
   const percentDiff = diff / maxStock;
 
   if (diff > STOCK_DRIFT_THRESHOLD || percentDiff > STOCK_DRIFT_PERCENT) {
-    console.warn(
+    log.warn(
       `[ITER3-003] Stock drift detected: store=${params.storeId}, product=${params.productId}, ` +
       `storeProduct=${params.storeProductId || 'N/A'}, stock_balances=${balanceQty}, ` +
       `store_products=${productStock}, diff=${diff}, context=${params.context}`
@@ -247,7 +248,7 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
       message: validationResult.message
     });
   } catch (error) {
-    console.error("[storeProducts] Error creating store product:", error);
+    log.error("[storeProducts] Error creating store product:", error);
     return res.status(503).json({
       error: "SERVICE_UNAVAILABLE",
       message: "Database unavailable"
@@ -423,7 +424,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
     const groups = Array.from(groupsMap.values());
     return res.json({ success: true, data: groups, total: rows.length, context: "SELL" });
   } catch (error) {
-    console.error("[storeProducts] Search error:", error);
+    log.error("[storeProducts] Search error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Search failed" });
   }
 });
@@ -508,7 +509,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
     // RCAT-PROD-014: Conflict detection — if multiple store_products match the same barcode
     if (result.rows.length > 1) {
       const ids = result.rows.map((r: any) => r.store_product_id);
-      console.error(`[RCAT-PROD-014] Barcode conflict: store=${storeId}, barcode=${barcode}, products=[${ids.join(",")}]`);
+      log.error(`[RCAT-PROD-014] Barcode conflict: store=${storeId}, barcode=${barcode}, products=[${ids.join(",")}]`);
       const canonical = result.rows[0]; // most recently updated
       return res.status(409).json({
         error: "BARCODE_CONFLICT",
@@ -566,7 +567,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
       context: "SELL",
     });
   } catch (error) {
-    console.error("[storeProducts] Lookup error:", error);
+    log.error("[storeProducts] Lookup error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Lookup failed" });
   }
 });
@@ -663,7 +664,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
 
     return res.json({ success: true, data, total, limit, offset, context: "SELL" });
   } catch (error) {
-    console.error("[storeProducts] List error:", error);
+    log.error("[storeProducts] List error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "List failed" });
   }
 });
@@ -713,7 +714,7 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
       storeId,
     });
   } catch (error) {
-    console.error("[storeProducts] Freshness check error:", error);
+    log.error("[storeProducts] Freshness check error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Freshness check failed" });
   }
 });
@@ -825,7 +826,7 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requir
       },
     });
   } catch (error) {
-    console.error("[storeProducts] Price update error:", error);
+    log.error("[storeProducts] Price update error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Price update failed" });
   }
 });
@@ -954,7 +955,7 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, requir
     return res.json({ success: true, data: { productId: resolvedProductId, stock: newStock, stockUpdatedAt: new Date().toISOString() } });
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("[storeProducts] Stock update error:", error);
+    log.error("[storeProducts] Stock update error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Stock update failed" });
   } finally {
     client.release();
@@ -1011,7 +1012,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, req
 
   // PRA-080/CONC-001: Warn when LWW timestamp missing (helps identify clients needing update)
   if (!validIncomingTimestamp) {
-    console.warn(`[METADATA] LWW timestamp missing for product update (store=${storeId}, barcode=${barcode || 'N/A'}, productId=${productId || 'N/A'})`);
+    log.warn(`[METADATA] LWW timestamp missing for product update (store=${storeId}, barcode=${barcode || 'N/A'}, productId=${productId || 'N/A'})`);
   }
 
   const pool = getPool();
@@ -1191,7 +1192,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, req
       }
     });
   } catch (error) {
-    console.error("[storeProducts] Metadata update (body-based) error:", error);
+    log.error("[storeProducts] Metadata update (body-based) error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Metadata update failed" });
   }
 });
@@ -1310,7 +1311,7 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
       }
     });
   } catch (error) {
-    console.error("[storeProducts] Metadata update error:", error);
+    log.error("[storeProducts] Metadata update error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Metadata update failed" });
   }
 });
@@ -1362,7 +1363,7 @@ posStoreProductsRouter.get("/store-products/:storeProductId/variants", requireDe
 
     return res.json({ success: true, data: result.rows });
   } catch (error) {
-    console.error("[storeProducts] Variants fetch error:", error);
+    log.error("[storeProducts] Variants fetch error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch variants" });
   }
 });
@@ -1448,7 +1449,7 @@ posStoreProductsRouter.get("/products/frequent", requireDeviceToken, async (req,
 
     return res.json({ success: true, data, cached: false });
   } catch (error) {
-    console.error("[storeProducts] Frequent products error:", error);
+    log.error("[storeProducts] Frequent products error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch frequent products" });
   }
 });
@@ -1510,7 +1511,7 @@ posStoreProductsRouter.get("/purchases/recent", requireDeviceToken, async (req, 
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error("[storeProducts] Recent purchases error:", error);
+    log.error("[storeProducts] Recent purchases error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch recent purchases" });
   }
 });
@@ -1572,7 +1573,7 @@ posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToke
       data: substitutesResult.rows,
     });
   } catch (error) {
-    console.error("[storeProducts] Substitutes error:", error);
+    log.error("[storeProducts] Substitutes error:", error);
     // Fallback: try without similarity (pg_trgm might not be installed)
     try {
       const pool = getPool();
@@ -1608,7 +1609,7 @@ posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToke
       );
       return res.json({ success: true, data: fallbackResult.rows });
     } catch (fallbackError) {
-      console.error("[storeProducts] Substitutes fallback error:", fallbackError);
+      log.error("[storeProducts] Substitutes fallback error:", fallbackError);
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch substitutes" });
     }
   }

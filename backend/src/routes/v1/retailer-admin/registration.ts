@@ -13,6 +13,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import { sendRegistrationConfirmationEmail } from "../../../services/emailService";
+import { log } from "../../../lib/logger";
 
 const router = Router();
 
@@ -45,10 +46,10 @@ try {
   const firebase = require("@supermandi/common");
   if (firebase.verifyFirebaseIdToken) {
     verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
-    console.log("[RetailerReg] Firebase server-side verification available");
+    log.info("[RetailerReg] Firebase server-side verification available");
   }
 } catch {
-  console.warn("[RetailerReg] Firebase verification not available");
+  log.warn("[RetailerReg] Firebase verification not available");
 }
 
 // =============================================================================
@@ -480,7 +481,7 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       );
       application = updateResult.rows[0];
       isResumed = true;
-      console.log(`[RetailerReg] REG-AUTH-201: Application updated ${application.id} (phone re-registration) for GSTIN ${gstinNormalized}`);
+      log.info(`[RetailerReg] REG-AUTH-201: Application updated ${application.id} (phone re-registration) for GSTIN ${gstinNormalized}`);
     } else {
       // Create new application
       const result = await pool.query(
@@ -527,7 +528,7 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
         [application.id]
       );
 
-      console.log(`[RetailerReg] REG-AUTH-201: Application created ${application.id} for GSTIN ${gstinNormalized}`);
+      log.info(`[RetailerReg] REG-AUTH-201: Application created ${application.id} for GSTIN ${gstinNormalized}`);
     }
 
     res.status(201).json({
@@ -675,7 +676,7 @@ router.post("/verify-otp", registrationRateLimiter, async (req: Request, res: Re
       [firebaseUid, applicationId]
     );
 
-    console.log(`[RetailerReg] REG-AUTH-201: Phone verified for application ${applicationId}`);
+    log.info(`[RetailerReg] REG-AUTH-201: Phone verified for application ${applicationId}`);
 
     res.json({
       success: true,
@@ -776,7 +777,7 @@ router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Re
       [applicationId]
     );
 
-    console.log(`[RetailerReg] REG-AUTH-201: KYC submitted for application ${applicationId}`);
+    log.info(`[RetailerReg] REG-AUTH-201: KYC submitted for application ${applicationId}`);
 
     // STAGING-FIX-014: Send registration confirmation email (non-blocking)
     const appDetails = await pool.query(
@@ -789,7 +790,7 @@ router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Re
         appDetails.rows[0].business_name || 'Retailer',
         'retailer',
         applicationId
-      ).catch(err => console.error('[RetailerReg] Email send failed (non-blocking):', err));
+      ).catch(err => log.error('[RetailerReg] Email send failed (non-blocking):', err));
     }
 
     res.json({

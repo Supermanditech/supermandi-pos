@@ -10,6 +10,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { log } from "../lib/logger";
 
 export interface GcpValidationResult {
   valid: boolean;
@@ -165,28 +166,28 @@ export function validateGcpCredentials(): GcpValidationResult {
 export function logGcpValidationResults(): GcpValidationResult {
   const result = validateGcpCredentials();
 
-  console.log('[GO-LIVE-180] GCP Credential Validation:');
+  log.info('[GO-LIVE-180] GCP Credential Validation:');
 
   if (result.errors.length > 0) {
-    console.error('[GO-LIVE-180] ERRORS:');
+    log.error('[GO-LIVE-180] ERRORS:');
     for (const error of result.errors) {
-      console.error(`  - ${error}`);
+      log.error(`  - ${error}`);
     }
   }
 
   if (result.warnings.length > 0) {
-    console.warn('[GO-LIVE-180] Warnings:');
+    log.warn('[GO-LIVE-180] Warnings:');
     for (const warning of result.warnings) {
-      console.warn(`  - ${warning}`);
+      log.warn(`  - ${warning}`);
     }
   }
 
-  console.log('[GO-LIVE-180] Service Availability:');
-  console.log(`  - Translation: ${result.services.translation.available ? '✓' : '✗'} (${result.services.translation.reason})`);
-  console.log(`  - Storage: ${result.services.storage.available ? '✓' : '✗'} (${result.services.storage.reason})`);
+  log.info('[GO-LIVE-180] Service Availability:');
+  log.info(`  - Translation: ${result.services.translation.available ? '✓' : '✗'} (${result.services.translation.reason})`);
+  log.info(`  - Storage: ${result.services.storage.available ? '✓' : '✗'} (${result.services.storage.reason})`);
 
   if (!result.valid) {
-    console.error(
+    log.error(
       '[GO-LIVE-180] GCP validation failed. Services requiring GCP will not function correctly.'
     );
   }

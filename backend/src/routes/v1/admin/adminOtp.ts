@@ -5,6 +5,7 @@ import { Router, Request, Response } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import crypto from "crypto";
 import { getRedis } from "../../../db/redis";
+import { log } from "../../../lib/logger";
 
 export const adminOtpRouter = Router();
 
@@ -135,9 +136,9 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
 
   // ITER3-P1-001: Only log OTP in development, never in production
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[GL-CRIT-0053] DEV ONLY - OTP for ${email} (${purpose}): ${otp}`);
+    log.info(`[GL-CRIT-0053] DEV ONLY - OTP for ${email} (${purpose}): ${otp}`);
   } else {
-    console.log(`[GL-CRIT-0053] OTP generated for ${email} (${purpose})`);
+    log.info(`[GL-CRIT-0053] OTP generated for ${email} (${purpose})`);
   }
 
   // Phase 8: Wire OTP to email service (was TODO, now implemented)
@@ -165,9 +166,9 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
           <p style="color:#6b7280;font-size:13px;">This code expires in 10 minutes. If you did not request this, please ignore this email.</p>
         </div>`,
       });
-      console.log(`[GL-CRIT-0053] OTP email sent to ${email}`);
+      log.info(`[GL-CRIT-0053] OTP email sent to ${email}`);
     } catch (emailErr) {
-      console.warn(`[GL-CRIT-0053] OTP email failed for ${email}:`, emailErr);
+      log.warn(`[GL-CRIT-0053] OTP email failed for ${email}:`, emailErr);
       // Don't fail the OTP request — fallback to console logging
     }
   }
@@ -207,7 +208,7 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
 
   if (ipAttempts.count >= IP_OTP_MAX_ATTEMPTS) {
     const waitSeconds = Math.ceil((ipAttempts.windowStart + IP_OTP_WINDOW_MS - now) / 1000);
-    console.warn(`[GO-LIVE-135] IP ${clientIp} rate limited for OTP verify (${ipAttempts.count} attempts)`);
+    log.warn(`[GO-LIVE-135] IP ${clientIp} rate limited for OTP verify (${ipAttempts.count} attempts)`);
     return res.status(429).json({
       error: "ip_rate_limited",
       message: `Too many verification attempts from this location. Please wait ${waitSeconds} seconds.`
@@ -266,7 +267,7 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     currentFailures.count += 1;
     if (currentFailures.count >= MAX_OTP_VERIFY_FAILURES) {
       currentFailures.lockedUntil = Date.now() + OTP_LOCKOUT_MS;
-      console.warn(`[GL-CRIT-0053] OTP verify locked out for ${email} after ${currentFailures.count} failures`);
+      log.warn(`[GL-CRIT-0053] OTP verify locked out for ${email} after ${currentFailures.count} failures`);
     }
     if (!(await rSet(R.failures(email!), currentFailures, 1800))) {
       _otpVerifyFailures.set(email!, currentFailures);
@@ -292,7 +293,7 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     verifiedTokens.set(verificationToken, tokenData);
   }
 
-  console.log(`[GL-CRIT-0053] OTP verified for ${email} (${purpose})`);
+  log.info(`[GL-CRIT-0053] OTP verified for ${email} (${purpose})`);
 
   return res.json({
     success: true,

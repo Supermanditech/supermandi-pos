@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../../middleware/deviceToken";
 import { randomUUID } from "crypto";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posCreditRouter = Router();
 
@@ -171,8 +173,9 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
         accountAge,
       },
     };
-  } catch (error: any) {
-    console.error("[SM-021] Credit scoring error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-021] Credit scoring error:", error.message);
     return defaultScore;
   }
 }
@@ -325,7 +328,7 @@ posCreditRouter.get("/credit/offers", requireDeviceToken, async (req: Request, r
       ORDER BY created_at DESC LIMIT 1
     `, [storeId]);
 
-    console.log(`[SM-021] Credit offers: storeId=${storeId}, score=${creditScore.score}, offers=${offers.length}`);
+    log.info(`[SM-021] Credit offers: storeId=${storeId}, score=${creditScore.score}, offers=${offers.length}`);
 
     return res.json({
       success: true,
@@ -336,8 +339,9 @@ posCreditRouter.get("/credit/offers", requireDeviceToken, async (req: Request, r
       activeApplication: activeApps.rows[0] || null,
     });
 
-  } catch (error: any) {
-    console.error("[SM-021] Credit offers error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-021] Credit offers error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({
@@ -440,7 +444,7 @@ posCreditRouter.post("/credit/apply", requireDeviceToken, async (req: Request, r
 
     await client.query("COMMIT");
 
-    console.log(`[SM-021] Credit application created: applicationId=${applicationId}, offerId=${offerId}`);
+    log.info(`[SM-021] Credit application created: applicationId=${applicationId}, offerId=${offerId}`);
 
     return res.json({
       success: true,
@@ -450,9 +454,10 @@ posCreditRouter.post("/credit/apply", requireDeviceToken, async (req: Request, r
       message: "Application submitted. Please complete KYC verification.",
     });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-021] Credit apply error:", error.message);
+    log.error("[SM-021] Credit apply error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to submit application" });
   } finally {
     client.release();
@@ -545,7 +550,7 @@ posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, async (re
 
     await client.query("COMMIT");
 
-    console.log(`[SM-021] KYC verified, pending admin approval: applicationId=${applicationId}`);
+    log.info(`[SM-021] KYC verified, pending admin approval: applicationId=${applicationId}`);
 
     return res.json({
       success: true,
@@ -554,9 +559,10 @@ posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, async (re
       message: "KYC verified. Your credit application is under review and will be approved shortly.",
     });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-021] KYC error:", error.message);
+    log.error("[SM-021] KYC error:", error.message);
 
     // Check if columns don't exist
     if (error.message.includes('pan_number') || error.message.includes('aadhaar_last4') || error.message.includes('approved_amount_minor')) {
@@ -609,8 +615,9 @@ posCreditRouter.get("/credit/applications", requireDeviceToken, async (req: Requ
       applications: result.rows,
     });
 
-  } catch (error: any) {
-    console.error("[SM-021] Credit applications error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-021] Credit applications error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to load applications" });
   }
 });

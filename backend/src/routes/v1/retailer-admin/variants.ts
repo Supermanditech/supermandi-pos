@@ -9,6 +9,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { getStoreId, requireStoreContext } from "../../../middleware/retailerStoreContext";
 import { sanitizeHtml } from "@supermandi/common";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerAdminVariantsRouter = Router();
 
@@ -80,8 +82,9 @@ retailerAdminVariantsRouter.get(
       );
 
       return res.json({ ok: true, data: result.rows });
-    } catch (error: any) {
-      console.error("[Variants] GET error:", error.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error("[Variants] GET error:", error.message);
       return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch variants" } });
     }
   }
@@ -215,9 +218,10 @@ retailerAdminVariantsRouter.post(
       await client.query("COMMIT");
 
       return res.status(201).json({ ok: true, data: created });
-    } catch (error: any) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       await client.query("ROLLBACK");
-      console.error("[Variants] POST error:", error.message);
+      log.error("[Variants] POST error:", error.message);
 
       if (error.code === '23505') {
         return res.status(409).json({
@@ -355,9 +359,10 @@ retailerAdminVariantsRouter.patch(
       await client.query("COMMIT");
 
       return res.json({ ok: true, data: updateResult.rows[0] });
-    } catch (error: any) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       await client.query("ROLLBACK");
-      console.error("[Variants] PATCH error:", error.message);
+      log.error("[Variants] PATCH error:", error.message);
       return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update variant" } });
     } finally {
       client.release();
@@ -401,8 +406,9 @@ retailerAdminVariantsRouter.delete(
       );
 
       return res.json({ ok: true, message: "Variant deactivated" });
-    } catch (error: any) {
-      console.error("[Variants] DELETE error:", error.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error("[Variants] DELETE error:", error.message);
       return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete variant" } });
     }
   }

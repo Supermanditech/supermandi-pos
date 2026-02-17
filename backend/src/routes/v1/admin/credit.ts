@@ -5,6 +5,8 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const adminCreditRouter = Router();
 
@@ -56,8 +58,9 @@ adminCreditRouter.get(
         data: result.rows,
         total: Number(countResult.rows[0]?.total || 0),
       });
-    } catch (error: any) {
-      console.error("[Admin Credit] List applications error:", error.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error("[Admin Credit] List applications error:", error.message);
       return res.status(500).json({ error: "Failed to list credit applications" });
     }
   }
@@ -135,8 +138,9 @@ adminCreditRouter.post(
       } finally {
         client.release();
       }
-    } catch (error: any) {
-      console.error("[Admin Credit] Approve error:", error.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error("[Admin Credit] Approve error:", error.message);
       return res.status(500).json({ error: "Failed to approve credit application" });
     }
   }
@@ -186,8 +190,9 @@ adminCreditRouter.post(
         success: true,
         data: { applicationId: id, status: "rejected", reason },
       });
-    } catch (error: any) {
-      console.error("[Admin Credit] Reject error:", error.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error("[Admin Credit] Reject error:", error.message);
       return res.status(500).json({ error: "Failed to reject credit application" });
     }
   }

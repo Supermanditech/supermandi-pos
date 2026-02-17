@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posDailyClosingRouter = Router();
 
@@ -98,8 +100,9 @@ posDailyClosingRouter.get("/daily-closing/summary", requireDeviceToken, async (r
   try {
     const summary = await computeDailySummary(pool, storeId!, date);
     return res.json({ summary });
-  } catch (error: any) {
-    console.error("[DailyClosingAPI] Summary error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[DailyClosingAPI] Summary error:", error.message);
     return res.status(500).json({ error: "Failed to compute daily summary" });
   }
 });
@@ -186,8 +189,9 @@ posDailyClosingRouter.post("/daily-closing/close", requireDeviceToken, requireAc
     );
 
     return res.status(201).json({ record: result.rows[0] });
-  } catch (error: any) {
-    console.error("[DailyClosingAPI] Close error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[DailyClosingAPI] Close error:", error.message);
     return res.status(500).json({ error: "Failed to record daily closing" });
   }
 });
@@ -231,8 +235,9 @@ posDailyClosingRouter.get("/daily-closing/history", requireDeviceToken, async (r
     );
 
     return res.json({ records: result.rows });
-  } catch (error: any) {
-    console.error("[DailyClosingAPI] History error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[DailyClosingAPI] History error:", error.message);
     return res.status(500).json({ error: "Failed to get daily closing history" });
   }
 });

@@ -3,6 +3,7 @@ import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { isDemoStoreCode } from "../../../services/storeCodeService";
+import { log } from "../../../lib/logger";
 
 export const adminDeviceEnrollmentRouter = Router();
 
@@ -95,7 +96,7 @@ adminDeviceEnrollmentRouter.get("/device-enrollments", requireAdminToken, async 
       }
     });
   } catch (error) {
-    console.error("[AdminEnrollment] Error listing enrollments:", error);
+    log.error("[AdminEnrollment] Error listing enrollments:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to list enrollments" });
   }
 });
@@ -143,7 +144,7 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
       [code, store.id, expiresAt, maxUses, "superadmin"]
     );
 
-    console.log(`[AdminEnrollment] Created code=${code} store=${storeCode} isDemo=${isDemo} maxUses=${maxUses}`);
+    log.info(`[AdminEnrollment] Created code=${code} store=${storeCode} isDemo=${isDemo} maxUses=${maxUses}`);
 
     return res.json({
       code,
@@ -153,7 +154,7 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
       qrPayload: `supermandi://enroll?code=${encodeURIComponent(code)}`
     });
   } catch (error) {
-    console.error("[AdminEnrollment] Error creating enrollment:", error);
+    log.error("[AdminEnrollment] Error creating enrollment:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to create enrollment" });
   }
 });

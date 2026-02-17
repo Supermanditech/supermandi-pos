@@ -14,6 +14,7 @@ import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
 // T-254: Razorpay order creation for real UPI payment tracking
 import { createRazorpayOrder, isRazorpayOrdersConfigured } from "../../../services/razorpayOrderService";
+import { log } from "../../../lib/logger";
 
 export const posPaymentsRouter = Router();
 
@@ -226,7 +227,7 @@ posPaymentsRouter.post(
             txnRef: rzpOrder.id,
             note: `Sale ${saleId.substring(0, 8)}`
           });
-          console.log(`[T-254] Razorpay order created: ${rzpOrder.id} for sale ${saleId}`);
+          log.info(`[T-254] Razorpay order created: ${rzpOrder.id} for sale ${saleId}`);
         } else {
           // Razorpay call returned null (shouldn't happen if configured, but safe fallback)
           orderId = generateOrderId();
@@ -272,7 +273,7 @@ posPaymentsRouter.post(
 
       await client.query("COMMIT");
 
-      console.log(`[SM-010] UPI payment initiated: paymentId=${paymentId}, orderId=${orderId}, storeId=${storeId}`);
+      log.info(`[SM-010] UPI payment initiated: paymentId=${paymentId}, orderId=${orderId}, storeId=${storeId}`);
 
       const response: UpiInitResponse = {
         paymentId,
@@ -286,7 +287,7 @@ posPaymentsRouter.post(
 
     } catch (err: any) {
       await client.query("ROLLBACK");
-      console.error("[SM-010] UPI init error:", err);
+      log.error("[SM-010] UPI init error:", err);
 
       // Handle specific errors
       if (err.code === '23505') { // Unique violation
@@ -368,7 +369,7 @@ posPaymentsRouter.get(
       });
 
     } catch (err: any) {
-      console.error("[SM-011] UPI status error:", err);
+      log.error("[SM-011] UPI status error:", err);
       return res.status(500).json({ error: "Failed to get payment status" });
     }
   }
@@ -628,7 +629,7 @@ posPaymentsRouter.post(
 
       await client.query("COMMIT");
 
-      console.log(`[SM-013] Split payment initiated: saleId=${saleId}, payments=${payments.length}, storeId=${storeId}`);
+      log.info(`[SM-013] Split payment initiated: saleId=${saleId}, payments=${payments.length}, storeId=${storeId}`);
 
       const response: Record<string, unknown> = {
         paymentIds,
@@ -649,7 +650,7 @@ posPaymentsRouter.post(
 
     } catch (err: any) {
       await client.query("ROLLBACK");
-      console.error("[SM-013] Split payment error:", err);
+      log.error("[SM-013] Split payment error:", err);
 
       if (err.code === '23505') {
         return res.status(409).json({ error: "Duplicate payment request" });
@@ -775,7 +776,7 @@ posPaymentsRouter.post(
 
       await client.query("COMMIT");
 
-      console.log(`[SM-013] Cash confirmed: paymentId=${paymentId}, change=${changeMinor}`);
+      log.info(`[SM-013] Cash confirmed: paymentId=${paymentId}, change=${changeMinor}`);
 
       // GL-RJ-001: Return saleCompleted (matching frontend expectation)
       return res.json({
@@ -786,7 +787,7 @@ posPaymentsRouter.post(
 
     } catch (err: any) {
       await client.query("ROLLBACK");
-      console.error("[SM-013] Confirm cash error:", err);
+      log.error("[SM-013] Confirm cash error:", err);
       return res.status(500).json({ error: "Failed to confirm cash payment" });
     } finally {
       client.release();
@@ -866,7 +867,7 @@ posPaymentsRouter.get(
       // Determine if awaiting cash collection (UPI must complete first for cash)
       const awaitingCash = upiStatus === 'completed' && cashStatus !== 'completed' && cashStatus !== 'not_found';
 
-      console.log(`[T-152] Split status check: saleId=${saleId}, upi=${upiStatus}, cash=${cashStatus}, due=${dueStatus}`);
+      log.info(`[T-152] Split status check: saleId=${saleId}, upi=${upiStatus}, cash=${cashStatus}, due=${dueStatus}`);
 
       return res.json({
         upiStatus,
@@ -880,7 +881,7 @@ posPaymentsRouter.get(
       });
 
     } catch (err: any) {
-      console.error("[GL-RJ-001] Split status error:", err);
+      log.error("[GL-RJ-001] Split status error:", err);
       return res.status(500).json({ error: "Failed to get split payment status" });
     }
   }
@@ -1039,7 +1040,7 @@ posPaymentsRouter.post(
       }
 
       // Structured audit log
-      console.log(JSON.stringify({
+      log.info(JSON.stringify({
         event: "UTR_VERIFICATION_ATTEMPT",
         storeId,
         utr: normalizedUtr,
@@ -1078,7 +1079,7 @@ posPaymentsRouter.post(
 
       await client.query("COMMIT");
 
-      console.log(JSON.stringify({
+      log.info(JSON.stringify({
         event: "UTR_VERIFICATION_SUCCESS",
         storeId,
         utr: normalizedUtr,
@@ -1101,7 +1102,7 @@ posPaymentsRouter.post(
 
     } catch (err: any) {
       await client.query("ROLLBACK");
-      console.error("[GL-RJ-004] UTR verification error:", err);
+      log.error("[GL-RJ-004] UTR verification error:", err);
       return res.status(500).json({
         verified: false,
         status: 'FAILED',
@@ -1168,7 +1169,7 @@ posPaymentsRouter.get(
       } as UtrVerifyResponse);
 
     } catch (err: any) {
-      console.error("[GL-RJ-004] UTR verification status error:", err);
+      log.error("[GL-RJ-004] UTR verification status error:", err);
       return res.status(500).json({
         verified: false,
         status: 'FAILED',

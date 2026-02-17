@@ -8,6 +8,7 @@
 
 import * as admin from 'firebase-admin';
 import { getPool } from '../db/client';
+import { log } from "../lib/logger";
 
 // =============================================================================
 // TYPES
@@ -146,13 +147,13 @@ export async function sendToTokens(
             errorCode === 'messaging/registration-token-not-registered'
           ) {
             deactivateToken(batch[idx]).catch((err) =>
-              console.warn('[FCM] Failed to deactivate token:', err)
+              log.warn('[FCM] Failed to deactivate token:', err)
             );
           }
         }
       });
     } catch (err) {
-      console.error('[FCM] Multicast send error:', err);
+      log.error('[FCM] Multicast send error:', err);
       result.success = false;
       result.failureCount += batch.length;
     }
@@ -367,7 +368,7 @@ export async function sendAndPersistNotification(input: {
       }
     }
   } catch (err) {
-    console.error('[FCM] sendAndPersist push failed:', err);
+    log.error('[FCM] sendAndPersist push failed:', err);
     pushResult = { success: false, successCount: 0, failureCount: 0, errors: [] };
   }
 

@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 /**
  * External Barcode Lookup Provider
  * SD-ONBOARD-001B: Provides product prefill data from external barcode databases
@@ -66,7 +67,7 @@ function cleanCache(force = false): void {
       const key = iterator.next().value;
       if (key) lookupCache.delete(key);
     }
-    console.log(`[barcodeLookup] GO-LIVE-190: Cache pruned, removed ${entriesToRemove} entries`);
+    log.info(`[barcodeLookup] GO-LIVE-190: Cache pruned, removed ${entriesToRemove} entries`);
   }
 }
 
@@ -114,9 +115,9 @@ async function lookupOpenFoodFacts(barcode: string): Promise<BarcodeProductPrefi
     };
   } catch (error) {
     if ((error as Error).name === "AbortError") {
-      console.warn("[barcodeLookup] Open Food Facts lookup timed out:", barcode);
+      log.warn("[barcodeLookup] Open Food Facts lookup timed out:", barcode);
     } else {
-      console.warn("[barcodeLookup] Open Food Facts lookup failed:", barcode, (error as Error).message);
+      log.warn("[barcodeLookup] Open Food Facts lookup failed:", barcode, (error as Error).message);
     }
     return null;
   }
@@ -168,9 +169,9 @@ async function lookupUpcDatabase(barcode: string): Promise<BarcodeProductPrefill
     };
   } catch (error) {
     if ((error as Error).name === "AbortError") {
-      console.warn("[barcodeLookup] UPC Database lookup timed out:", barcode);
+      log.warn("[barcodeLookup] UPC Database lookup timed out:", barcode);
     } else {
-      console.warn("[barcodeLookup] UPC Database lookup failed:", barcode, (error as Error).message);
+      log.warn("[barcodeLookup] UPC Database lookup failed:", barcode, (error as Error).message);
     }
     return null;
   }
@@ -204,7 +205,7 @@ export async function lookupBarcodeExternal(barcode: string): Promise<BarcodePro
     return cached.data;
   }
 
-  console.log("[barcodeLookup] Looking up barcode from external providers:", normalizedBarcode);
+  log.info("[barcodeLookup] Looking up barcode from external providers:", normalizedBarcode);
 
   // Try providers in order
   let result: BarcodeProductPrefill | null = null;
@@ -230,9 +231,9 @@ export async function lookupBarcodeExternal(barcode: string): Promise<BarcodePro
   });
 
   if (result) {
-    console.log("[barcodeLookup] External barcode lookup found product:", normalizedBarcode, result.name);
+    log.info("[barcodeLookup] External barcode lookup found product:", normalizedBarcode, result.name);
   } else {
-    console.log("[barcodeLookup] External barcode lookup returned no results:", normalizedBarcode);
+    log.info("[barcodeLookup] External barcode lookup returned no results:", normalizedBarcode);
   }
 
   return result;

@@ -13,6 +13,7 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { getPool } from "../../../db/client";
 import { createEnrollmentCode } from "../../../services/enrollmentCodeService";  // DRX-003
 import { sendEnrollmentCode } from "../../../services/notificationService";  // DRX-003
+import { log } from "../../../lib/logger";
 
 export const adminRegistrationEventsRouter = Router();
 
@@ -132,7 +133,7 @@ adminRegistrationEventsRouter.get(
         pagination: { total, limit, offset },
       });
     } catch (err: any) {
-      console.error("[admin/registration-events] Query failed:", err?.message);
+      log.error("[admin/registration-events] Query failed:", err?.message);
       return res.status(500).json({ error: "QUERY_FAILED" });
     }
   }
@@ -204,7 +205,7 @@ adminRegistrationEventsRouter.get(
         bySource,
       });
     } catch (err: any) {
-      console.error("[admin/registration-events/summary] Query failed:", err?.message);
+      log.error("[admin/registration-events/summary] Query failed:", err?.message);
       return res.status(500).json({ error: "QUERY_FAILED" });
     }
   }
@@ -271,7 +272,7 @@ adminRegistrationEventsRouter.post(
         expiresAt: enrollment.expiresAt,
       });
 
-      console.log(
+      log.info(
         `[DRX-003] Enrollment code ${enrollment.code} sent for store ${storeId} — SMS: ${notification.smsSent}, Email: ${notification.emailSent}`
       );
 
@@ -287,7 +288,7 @@ adminRegistrationEventsRouter.post(
         },
       });
     } catch (err: any) {
-      console.error("[DRX-003] Send enrollment code failed:", err?.message);
+      log.error("[DRX-003] Send enrollment code failed:", err?.message);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
   }

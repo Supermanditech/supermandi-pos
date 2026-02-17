@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import * as khataService from "../services/khataService";
 import type { KhataCustomer, KhataEntry, AddKhataEntryRequest } from "../services/khataService";
+import { asError } from "../utils/errorUtils";
 
 interface KhataState {
   customers: KhataCustomer[];
@@ -37,7 +38,8 @@ export const useKhataStore = create<KhataState>()((set, get) => ({
     try {
       const customers = await khataService.getKhataCustomers(query);
       set({ customers, loading: false });
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[KhataStore] fetchCustomers failed:", e);
       set({ loading: false, error: e?.message || "Failed to load customers" });
     }
@@ -54,7 +56,8 @@ export const useKhataStore = create<KhataState>()((set, get) => ({
         selectedCustomer: response.customer,
         entriesLoading: false,
       });
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[KhataStore] fetchEntries failed:", e);
       set({ entriesLoading: false, error: e?.message || "Failed to load entries" });
     }
@@ -77,7 +80,8 @@ export const useKhataStore = create<KhataState>()((set, get) => ({
       entries.set(response.customer.id, [...existing, response.entry]);
       set({ customers, entries, selectedCustomer: response.customer });
       return true;
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[KhataStore] addEntry failed:", e);
       set({ error: e?.message || "Failed to add entry" });
       return false;

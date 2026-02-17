@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { getPool } from "../db/client";
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 // ISSUE-MICRO-025: Extract cookie value without cookie-parser dependency
 function extractCookie(req: Request, name: string): string | undefined {
@@ -48,11 +50,11 @@ function timingSafeEqual(a: string, b: string): boolean {
 function loadAdminToken(): string | undefined {
   const envToken = process.env.ADMIN_TOKEN?.trim();
   if (envToken) {
-    console.log('[AdminToken] ADMIN_TOKEN loaded from environment variable');
+    log.info('[AdminToken] ADMIN_TOKEN loaded from environment variable');
     return envToken;
   }
   if (process.env.NODE_ENV === 'production') {
-    console.error('[AdminToken] FATAL: ADMIN_TOKEN is required in production but not set');
+    log.error('[AdminToken] FATAL: ADMIN_TOKEN is required in production but not set');
     process.exit(1);
   }
   return undefined;
@@ -88,13 +90,13 @@ async function verifyAdminApiKey(apiKey: string): Promise<AdminInfo | null> {
 
     // Check if account is active
     if (admin.status !== 'active') {
-      console.warn(`[AdminToken] GO-LIVE-128: Admin account ${admin.email} is ${admin.status}`);
+      log.warn(`[AdminToken] GO-LIVE-128: Admin account ${admin.email} is ${admin.status}`);
       return null;
     }
 
     // Check if account is locked
     if (admin.locked_until && new Date(admin.locked_until) > new Date()) {
-      console.warn(`[AdminToken] GO-LIVE-128: Admin account ${admin.email} is locked until ${admin.locked_until}`);
+      log.warn(`[AdminToken] GO-LIVE-128: Admin account ${admin.email} is locked until ${admin.locked_until}`);
       return null;
     }
 
@@ -112,13 +114,14 @@ async function verifyAdminApiKey(apiKey: string): Promise<AdminInfo | null> {
       name: admin.name,
       role: admin.role as AdminRole,
     };
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // If table doesn't exist, fall back to legacy auth
     if (error?.code === '42P01') {
-      console.log('[AdminToken] GO-LIVE-128: admin.admins table not yet created, using legacy auth');
+      log.info('[AdminToken] GO-LIVE-128: admin.admins table not yet created, using legacy auth');
       return null;
     }
-    console.error('[AdminToken] GO-LIVE-128: Error verifying admin API key:', error?.message);
+    log.error('[AdminToken] GO-LIVE-128: Error verifying admin API key:', error?.message);
     return null;
   }
 }
@@ -131,7 +134,7 @@ const JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    log.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -163,7 +166,7 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
       }
     } catch (err) {
       // Cookie JWT invalid or expired - fall through to other methods
-      console.warn('[AdminToken] Cookie JWT verification failed:', err instanceof Error ? err.message : 'unknown error');
+      log.warn('[AdminToken] Cookie JWT verification failed:', err instanceof Error ? err.message : 'unknown error');
     }
   }
 
@@ -180,7 +183,7 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
       }
     } catch (err) {
       // JWT invalid or expired - fall through to other methods
-      console.warn('[AdminToken] JWT verification failed:', err instanceof Error ? err.message : 'unknown error');
+      log.warn('[AdminToken] JWT verification failed:', err instanceof Error ? err.message : 'unknown error');
     }
   }
 
@@ -262,7 +265,7 @@ export function requirePermission(resource: string, action: string) {
       );
 
       if (result.rowCount === 0 || !result.rows[0].allowed) {
-        console.warn(`[AdminToken] GO-LIVE-128: Permission denied - ${role} cannot ${action} ${resource}`);
+        log.warn(`[AdminToken] GO-LIVE-128: Permission denied - ${role} cannot ${action} ${resource}`);
         res.status(403).json({
           error: "permission_denied",
           message: `Role '${role}' cannot perform '${action}' on '${resource}'`
@@ -271,7 +274,8 @@ export function requirePermission(resource: string, action: string) {
       }
 
       next();
-    } catch (error: any) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       // If permissions table doesn't exist, fall back to defaults
       if (error?.code === '42P01') {
         const allowed = checkDefaultPermission(role, resource, action);
@@ -279,7 +283,7 @@ export function requirePermission(resource: string, action: string) {
           return next();
         }
       }
-      console.error('[AdminToken] GO-LIVE-128: Permission check error:', error?.message);
+      log.error('[AdminToken] GO-LIVE-128: Permission check error:', error?.message);
       res.status(403).json({
         error: "permission_denied",
         message: `Role '${role}' cannot perform '${action}' on '${resource}'`

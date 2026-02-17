@@ -3,6 +3,7 @@
 // CRITICAL: This service must never lie about email delivery status
 
 import crypto from 'crypto';
+import { log } from "../lib/logger";
 
 // =============================================================================
 // TYPES
@@ -50,7 +51,7 @@ function getEmailConfig(): EmailConfig {
   if (provider === 'resend') {
     config.resendApiKey = process.env.RESEND_API_KEY;
     if (!config.resendApiKey) {
-      console.error('[EmailService] RESEND_API_KEY is required when EMAIL_PROVIDER=resend');
+      log.error('[EmailService] RESEND_API_KEY is required when EMAIL_PROVIDER=resend');
     }
   }
 
@@ -63,7 +64,7 @@ function getEmailConfig(): EmailConfig {
       pass: process.env.SMTP_PASS || '',
     };
     if (!config.smtp.host || !config.smtp.user) {
-      console.error('[EmailService] SMTP_HOST and SMTP_USER are required when EMAIL_PROVIDER=smtp');
+      log.error('[EmailService] SMTP_HOST and SMTP_USER are required when EMAIL_PROVIDER=smtp');
     }
   }
 
@@ -262,7 +263,7 @@ async function sendViaResend(
     const data = await response.json() as { id?: string; name?: string; message?: string };
 
     if (!response.ok) {
-      console.error('[EmailService] Resend API error:', data);
+      log.error('[EmailService] Resend API error:', data);
       return {
         sent: false,
         errorCode: data.name || 'RESEND_ERROR',
@@ -270,13 +271,13 @@ async function sendViaResend(
       };
     }
 
-    console.log(`[EmailService] Email sent via Resend to ${to}, messageId: ${data.id}`);
+    log.info(`[EmailService] Email sent via Resend to ${to}, messageId: ${data.id}`);
     return {
       sent: true,
       messageId: data.id || 'unknown',
     };
   } catch (error) {
-    console.error('[EmailService] Resend request failed:', error);
+    log.error('[EmailService] Resend request failed:', error);
     return {
       sent: false,
       errorCode: 'NETWORK_ERROR',
@@ -327,7 +328,7 @@ async function sendViaSMTP(
       html,
     });
 
-    console.log(`[EmailService] Email sent via SMTP to ${to}, messageId: ${info.messageId}`);
+    log.info(`[EmailService] Email sent via SMTP to ${to}, messageId: ${info.messageId}`);
     return {
       sent: true,
       messageId: info.messageId as string,
@@ -335,14 +336,14 @@ async function sendViaSMTP(
   } catch (error) {
     // Handle nodemailer not being installed
     if (error instanceof Error && error.message.includes('Cannot find module')) {
-      console.error('[EmailService] nodemailer is not installed. Run: pnpm add nodemailer');
+      log.error('[EmailService] nodemailer is not installed. Run: pnpm add nodemailer');
       return {
         sent: false,
         errorCode: 'NODEMAILER_NOT_INSTALLED',
         errorMessage: 'SMTP provider requires nodemailer. Contact administrator.',
       };
     }
-    console.error('[EmailService] SMTP send failed:', error);
+    log.error('[EmailService] SMTP send failed:', error);
     return {
       sent: false,
       errorCode: 'SMTP_ERROR',
@@ -394,14 +395,14 @@ export async function sendVerificationEmail(
 
   // Log only in non-production for debugging (never log OTP in production)
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[EmailService] DEV: Sending verification email to ${data.to}`);
+    log.info(`[EmailService] DEV: Sending verification email to ${data.to}`);
   } else {
-    console.log(`[EmailService] Sending verification email to ${data.to}`);
+    log.info(`[EmailService] Sending verification email to ${data.to}`);
   }
 
   // Check if email is disabled
   if (config.provider === 'disabled') {
-    console.warn('[EmailService] Email provider is disabled');
+    log.warn('[EmailService] Email provider is disabled');
     return {
       sent: false,
       errorCode: 'EMAIL_DISABLED',
@@ -423,7 +424,7 @@ export async function sendVerificationEmail(
     // Resend failed - check if SMTP fallback is configured
     const smtpConfig = getEmailConfig();
     if (smtpConfig.smtp?.host && smtpConfig.smtp?.user) {
-      console.log('[EmailService] Resend failed, trying SMTP fallback...');
+      log.info('[EmailService] Resend failed, trying SMTP fallback...');
       return sendViaSMTP(smtpConfig, data.to, subject, html, text);
     }
 
@@ -459,10 +460,10 @@ export async function sendPasswordResetEmail(
 ): Promise<SendEmailResult> {
   const config = getEmailConfig();
 
-  console.log(`[EmailService] GO-LIVE-145: Sending password reset email to ${to}`);
+  log.info(`[EmailService] GO-LIVE-145: Sending password reset email to ${to}`);
 
   if (config.provider === 'disabled') {
-    console.warn('[EmailService] Email provider is disabled - cannot send password reset');
+    log.warn('[EmailService] Email provider is disabled - cannot send password reset');
     return {
       sent: false,
       errorCode: 'EMAIL_DISABLED',
@@ -523,7 +524,7 @@ This link will expire in 24 hours. If you didn't request this, please ignore thi
 
     // Try SMTP fallback
     if (config.smtp?.host && config.smtp?.user) {
-      console.log('[EmailService] Resend failed, trying SMTP fallback...');
+      log.info('[EmailService] Resend failed, trying SMTP fallback...');
       return sendViaSMTP(config, to, subject, html, text);
     }
     return result;
@@ -679,10 +680,10 @@ export async function sendRegistrationConfirmationEmail(
 ): Promise<SendEmailResult> {
   const config = getEmailConfig();
 
-  console.log(`[EmailService] Sending registration confirmation to ${to} for ${entityType} app ${applicationId}`);
+  log.info(`[EmailService] Sending registration confirmation to ${to} for ${entityType} app ${applicationId}`);
 
   if (config.provider === 'disabled') {
-    console.warn('[EmailService] Email provider is disabled — registration confirmation not sent');
+    log.warn('[EmailService] Email provider is disabled — registration confirmation not sent');
     return { sent: false, errorCode: 'EMAIL_DISABLED', errorMessage: 'Email service not configured' };
   }
 
@@ -699,7 +700,7 @@ export async function sendRegistrationConfirmationEmail(
     }
     return { sent: false, errorCode: 'UNKNOWN_PROVIDER', errorMessage: `Unknown provider: ${config.provider}` };
   } catch (err) {
-    console.error('[EmailService] Registration confirmation email failed:', err);
+    log.error('[EmailService] Registration confirmation email failed:', err);
     return { sent: false, errorCode: 'SEND_FAILED', errorMessage: 'Failed to send email' };
   }
 }

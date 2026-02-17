@@ -9,6 +9,7 @@ import { getPool } from '../../../db/client';
 import { getStoreId, requireStoreContext } from '../../../middleware/retailerStoreContext';
 import { creditRegistry } from '../../../services/credit/CreditProviderRegistry';
 import {
+import { log } from "../../../lib/logger";
   upsertKycDocument,
   getStoreKycDocuments,
   checkKycReadiness,
@@ -49,7 +50,7 @@ creditProvidersRouter.get('/offers', async (req: Request, res: Response) => {
       providerCount: offers.length > 0 ? new Set(offers.map(o => o.providerId)).size : 0,
     });
   } catch (err: any) {
-    console.error('[T-274] Error fetching offers:', err.message);
+    log.error('[T-274] Error fetching offers:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to load credit offers' } });
   }
 });
@@ -69,7 +70,7 @@ creditProvidersRouter.get('/eligibility', async (req: Request, res: Response) =>
     const results = await creditRegistry.checkAllEligibility(storeId);
     res.json({ success: true, providers: results });
   } catch (err: any) {
-    console.error('[T-263] Eligibility check error:', err.message);
+    log.error('[T-263] Eligibility check error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to check eligibility' } });
   }
 });
@@ -124,7 +125,7 @@ creditProvidersRouter.post('/drawdown', async (req: Request, res: Response) => {
 
     res.json({ success: true, ...result });
   } catch (err: any) {
-    console.error('[T-263] Drawdown error:', err.message);
+    log.error('[T-263] Drawdown error:', err.message);
     res.status(500).json({ error: { code: 'DRAWDOWN_ERROR', message: 'Failed to create drawdown' } });
   }
 });
@@ -163,7 +164,7 @@ creditProvidersRouter.get('/repayment-schedule/:drawdownId', async (req: Request
     const schedule = await provider.getRepaymentSchedule(drawdownId);
     res.json({ success: true, schedule });
   } catch (err: any) {
-    console.error('[T-275] Repayment schedule error:', err.message);
+    log.error('[T-275] Repayment schedule error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to load repayment schedule' } });
   }
 });
@@ -183,7 +184,7 @@ creditProvidersRouter.get('/balance', async (req: Request, res: Response) => {
     const balance = await creditRegistry.getAggregatedBalance(storeId);
     res.json({ success: true, ...balance });
   } catch (err: any) {
-    console.error('[T-275] Balance error:', err.message);
+    log.error('[T-275] Balance error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to load balance' } });
   }
 });
@@ -219,7 +220,7 @@ creditProvidersRouter.get('/kyc', async (req: Request, res: Response) => {
 
     res.json({ success: true, documents: docs, providerReadiness });
   } catch (err: any) {
-    console.error('[T-276] KYC fetch error:', err.message);
+    log.error('[T-276] KYC fetch error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to load KYC documents' } });
   }
 });
@@ -256,7 +257,7 @@ creditProvidersRouter.post('/kyc', async (req: Request, res: Response) => {
     const doc = await upsertKycDocument(pool, storeId, documentType, documentNumber || null);
     res.json({ success: true, document: doc });
   } catch (err: any) {
-    console.error('[T-276] KYC submit error:', err.message);
+    log.error('[T-276] KYC submit error:', err.message);
     res.status(500).json({ error: { code: 'SUBMIT_ERROR', message: 'Failed to submit KYC document' } });
   }
 });
@@ -307,7 +308,7 @@ creditProvidersRouter.get('/settlements', async (req: Request, res: Response) =>
       offset,
     });
   } catch (err: any) {
-    console.error('[T-278] Settlements error:', err.message);
+    log.error('[T-278] Settlements error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to load settlements' } });
   }
 });

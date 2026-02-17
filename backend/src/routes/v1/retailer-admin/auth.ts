@@ -17,6 +17,7 @@ import { blacklistToken } from "../../../db/redis";
 import { authRateLimiter } from "../../../middleware/posRateLimiter";
 // GO-LIVE-195: Enhanced auth protection with per-store-code limiting and progressive lockout
 import { enhancedAuthProtection } from "../../../middleware/authProtection";
+import { log } from "../../../lib/logger";
 
 // GO-LIVE-045: Import Firebase verification from common package
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -24,10 +25,10 @@ try {
   const firebase = require("@supermandi/common");
   if (firebase.verifyFirebaseIdToken) {
     verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
-    console.log("[RetailerAuth] Firebase server-side verification available");
+    log.info("[RetailerAuth] Firebase server-side verification available");
   }
 } catch {
-  console.warn("[RetailerAuth] Firebase verification not available - using client-side extraction");
+  log.warn("[RetailerAuth] Firebase verification not available - using client-side extraction");
 }
 
 // =============================================================================
@@ -44,7 +45,7 @@ const JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    log.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -103,7 +104,7 @@ function recordLoginAttempt(key: string, success: boolean): void {
 
   if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
     attempts.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
-    console.warn(`[RetailerAuth] GO-LIVE-LOGIN: Account locked for ${key} after ${attempts.count} failed attempts`);
+    log.warn(`[RetailerAuth] GO-LIVE-LOGIN: Account locked for ${key} after ${attempts.count} failed attempts`);
   }
 
   loginAttempts.set(key, attempts);
@@ -216,11 +217,11 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
 
     if (verifyFirebaseIdToken) {
       // Server-side verification available - use it
-      console.log("[RetailerAuth] Verifying Firebase token server-side");
+      log.info("[RetailerAuth] Verifying Firebase token server-side");
       const verifyResult = await verifyFirebaseIdToken(idToken);
 
       if (!verifyResult.success) {
-        console.warn(`[RetailerAuth] Firebase verification failed: ${verifyResult.error} (${verifyResult.code})`);
+        log.warn(`[RetailerAuth] Firebase verification failed: ${verifyResult.error} (${verifyResult.code})`);
         res.status(401).json({
           error: verifyResult.code === 'TOKEN_EXPIRED'
             ? "Firebase token has expired. Please sign in again."
@@ -233,13 +234,13 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
       // Extract verified phone number from Firebase
       phone = verifyResult.payload?.phone_number || phoneNumber;
       firebaseUid = verifyResult.payload?.uid;
-      console.log(`[RetailerAuth] Firebase token verified. UID: ${firebaseUid}, Phone: ${phone ? '***' + phone.slice(-4) : 'N/A'}`);
+      log.info(`[RetailerAuth] Firebase token verified. UID: ${firebaseUid}, Phone: ${phone ? '***' + phone.slice(-4) : 'N/A'}`);
     } else {
       // GO-LIVE-104: Firebase Admin SDK is REQUIRED for production
       // The previous fallback allowed JWT forgery by simply base64-decoding the token
       // without cryptographic verification - attackers could forge any phone number
       if (process.env.NODE_ENV === 'production') {
-        console.error("[RetailerAuth] SECURITY: Firebase Admin SDK not configured in production");
+        log.error("[RetailerAuth] SECURITY: Firebase Admin SDK not configured in production");
         res.status(503).json({
           error: "Authentication service unavailable. Firebase verification required.",
           code: "FIREBASE_NOT_CONFIGURED"
@@ -249,9 +250,9 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
 
       // Development only: Allow bypass with explicit phone number from request
       // This does NOT extract from token (which would be insecure)
-      console.warn("[RetailerAuth] DEV MODE: Firebase Admin not configured, using phoneNumber from request body");
+      log.warn("[RetailerAuth] DEV MODE: Firebase Admin not configured, using phoneNumber from request body");
       if (!phone) {
-        console.error("[RetailerAuth] DEV MODE: phoneNumber required in request body when Firebase Admin not configured");
+        log.error("[RetailerAuth] DEV MODE: phoneNumber required in request body when Firebase Admin not configured");
         res.status(400).json({
           error: "Phone number required in request body (Firebase Admin not configured)",
           code: "PHONE_REQUIRED_DEV_MODE"
@@ -593,7 +594,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
       otpApplicationStatus = stores[0].status;
     }
 
-    console.log(`[RetailerAuth] GO-LIVE-RET-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}, ${stores.length} stores`);
+    log.info(`[RetailerAuth] GO-LIVE-RET-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}, ${stores.length} stores`);
 
     // AUTH-SESSION-169: Set HttpOnly cookies for session persistence across page refreshes
     // Access token: 24h (matches JWT expiresIn), Refresh token: 7d
@@ -764,7 +765,7 @@ router.post("/auth/register", enhancedAuthProtection(), authRateLimiter, async (
       [phoneNormalized, store.id]
     );
 
-    console.log(`[RetailerAuth] GO-LIVE-LOGIN: Registration successful for store ${storeCode}, phone: ***${phoneNormalized.slice(-4)}`);
+    log.info(`[RetailerAuth] GO-LIVE-LOGIN: Registration successful for store ${storeCode}, phone: ***${phoneNormalized.slice(-4)}`);
 
     res.json({
       success: true,
@@ -936,7 +937,7 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       pwApplicationStatus = store.status;
     }
 
-    console.log(`[RetailerAuth] GO-LIVE-LOGIN: Password login successful for store ${storeCode}`);
+    log.info(`[RetailerAuth] GO-LIVE-LOGIN: Password login successful for store ${storeCode}`);
 
     res.json({
       success: true,
@@ -1107,7 +1108,7 @@ router.post("/auth/forgot-password/reset", authRateLimiter, async (req: Request,
       [passwordHash, userId]
     );
 
-    console.log(`[RetailerAuth] GO-LIVE-LOGIN: Password reset for user ${userId}, store ${storeCode}`);
+    log.info(`[RetailerAuth] GO-LIVE-LOGIN: Password reset for user ${userId}, store ${storeCode}`);
 
     res.json({
       success: true,
@@ -1395,7 +1396,7 @@ router.post("/auth/change-password", authRateLimiter, async (req: Request, res: 
       [newHash, userId]
     );
 
-    console.log(`[RetailerAuth] T-004: Password changed for user ${userId}`);
+    log.info(`[RetailerAuth] T-004: Password changed for user ${userId}`);
 
     res.json({ data: { success: true, message: "Password changed successfully" } });
   } catch (error) {
@@ -1444,7 +1445,7 @@ router.post("/auth/logout", async (req: Request, res: Response, next: NextFuncti
 
     if (!decoded?.jti) {
       // Old tokens without JTI - still return success
-      console.log(`[RetailerAuth] GO-LIVE-137: Logout for user ${userId} (no JTI)`);
+      log.info(`[RetailerAuth] GO-LIVE-137: Logout for user ${userId} (no JTI)`);
       res.json({ data: { success: true, message: 'Logged out' } });
       return;
     }
@@ -1480,10 +1481,10 @@ router.post("/auth/logout", async (req: Request, res: Response, next: NextFuncti
         ]
       );
 
-      console.log(`[RetailerAuth] GO-LIVE-137: Token revoked for user ${userId}, JTI: ${decoded.jti}`);
+      log.info(`[RetailerAuth] GO-LIVE-137: Token revoked for user ${userId}, JTI: ${decoded.jti}`);
     } catch (dbError) {
       // Log but don't fail
-      console.warn('[RetailerAuth] GO-LIVE-137: Failed to record token revocation:', dbError);
+      log.warn('[RetailerAuth] GO-LIVE-137: Failed to record token revocation:', dbError);
     }
 
     // T-184: Also blacklist in Redis for immediate gateway-level revocation
@@ -1558,7 +1559,7 @@ router.post("/auth/logout-all", async (req: Request, res: Response, next: NextFu
       [userId]
     );
 
-    console.log(`[RetailerAuth] GO-LIVE-137: All tokens revoked for user ${userId}`);
+    log.info(`[RetailerAuth] GO-LIVE-137: All tokens revoked for user ${userId}`);
 
     res.json({
       data: {

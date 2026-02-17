@@ -16,6 +16,8 @@ import {
 } from "../../../utils/productValidation";
 // T-197: Keyword-based auto-categorization fallback
 import { suggestCategory } from "../../../utils/autoCategorization";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerAdminCsvImportRouter = Router();
 
@@ -255,8 +257,9 @@ retailerAdminCsvImportRouter.post("/products/import/upload", csvUploadRateLimite
         fileName: fileName || 'upload.csv',
       },
     });
-  } catch (error: any) {
-    console.error("[CsvImport] Upload error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CsvImport] Upload error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Failed to upload CSV" },
@@ -463,8 +466,9 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
         previewRows: previewRows.slice(0, 20), // First 20 for preview
       },
     });
-  } catch (error: any) {
-    console.error("[CsvImport] Validate error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CsvImport] Validate error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Validation failed" },
@@ -763,7 +767,7 @@ async function processCommitInBackground(jobId: string, storeId: string, validRo
       await client.query("COMMIT");
     } catch (chunkErr: any) {
       await client.query("ROLLBACK").catch(() => {});
-      console.error(`[CsvImport] Chunk ${i}-${i + chunk.length} failed:`, chunkErr.message);
+      log.error(`[CsvImport] Chunk ${i}-${i + chunk.length} failed:`, chunkErr.message);
       for (const row of chunk) {
         skipped++;
         allWarnings.push(categorizeDbError(chunkErr, row));
@@ -799,7 +803,7 @@ async function processCommitInBackground(jobId: string, storeId: string, validRo
       await client.query("COMMIT");
     } catch (chunkErr: any) {
       await client.query("ROLLBACK").catch(() => {});
-      console.error(`[CsvImport] Variant chunk ${i}-${i + chunk.length} failed:`, chunkErr.message);
+      log.error(`[CsvImport] Variant chunk ${i}-${i + chunk.length} failed:`, chunkErr.message);
       for (const row of chunk) {
         skipped++;
         allWarnings.push(categorizeDbError(chunkErr, row));
@@ -852,7 +856,7 @@ async function processCommitInBackground(jobId: string, storeId: string, validRo
       })]
     );
   } catch (err: any) {
-    console.error("[CsvImport] Final status update failed:", err.message);
+    log.error("[CsvImport] Final status update failed:", err.message);
     // Mark as failed if we can't update status
     try {
       await finalClient.query(
@@ -929,7 +933,7 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
     // Start background processing
     setImmediate(() => {
       processCommitInBackground(jobId as string, storeId, validRows).catch((err) => {
-        console.error("[CsvImport] Background commit failed:", err);
+        log.error("[CsvImport] Background commit failed:", err);
       });
     });
 
@@ -938,8 +942,9 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
       data: { jobId, status: 'committing', progress: { created: 0, total: validRows.length } },
       message: "Commit started. Poll GET /products/import/status for progress.",
     });
-  } catch (error: any) {
-    console.error("[CsvImport] Commit error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CsvImport] Commit error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Commit failed" },
@@ -995,8 +1000,9 @@ retailerAdminCsvImportRouter.get("/products/import/status", async (req: Request,
     }
 
     return res.json(response);
-  } catch (error: any) {
-    console.error("[CsvImport] Status check error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CsvImport] Status check error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Status check failed" } });
   }
 });
@@ -1100,8 +1106,9 @@ retailerAdminCsvImportRouter.get("/products/import/errors", async (req: Request,
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="import_errors_${jobId}.csv"`);
     return res.send(csvContent);
-  } catch (error: any) {
-    console.error("[CsvImport] Error export error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CsvImport] Error export error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Failed to export errors" },
@@ -1412,9 +1419,10 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
           ? `Imported ${created} products. ${skipped} row(s) failed (see failureSummary for details).`
           : `Imported ${created} products`,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[BulkPaste] Commit error:", error.message);
+    log.error("[BulkPaste] Commit error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Commit failed" },

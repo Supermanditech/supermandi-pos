@@ -10,6 +10,7 @@
  */
 
 import type { NextFunction, Request, Response } from "express";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // CONFIGURATION
@@ -94,7 +95,7 @@ function cleanup(): void {
       const key = iterator.next().value;
       if (key) storeCodeAttempts.delete(key);
     }
-    console.log(`[GO-LIVE-195] Auth protection: Pruned ${toRemove} storeCode entries`);
+    log.info(`[GO-LIVE-195] Auth protection: Pruned ${toRemove} storeCode entries`);
   }
 
   if (ipFailures.size > MAX_ENTRIES) {
@@ -104,7 +105,7 @@ function cleanup(): void {
       const key = iterator.next().value;
       if (key) ipFailures.delete(key);
     }
-    console.log(`[GO-LIVE-195] Auth protection: Pruned ${toRemove} IP failure entries`);
+    log.info(`[GO-LIVE-195] Auth protection: Pruned ${toRemove} IP failure entries`);
   }
 }
 
@@ -140,7 +141,7 @@ export function enhancedAuthProtection() {
     if (ipEntry.lockedUntil > now) {
       const remainingSec = Math.ceil((ipEntry.lockedUntil - now) / 1000);
       // BATCH5-SUGGESTION-1: Structured logging for observability
-      console.log(JSON.stringify({
+      log.info(JSON.stringify({
         event: "auth_lockout",
         ip,
         storeCode: storeCode || null, // Don't log if empty
@@ -173,7 +174,7 @@ export function enhancedAuthProtection() {
         const retryAfterSec = Math.ceil(retryAfterMs / 1000);
 
         // BATCH5-SUGGESTION-1: Structured logging for observability
-        console.log(JSON.stringify({
+        log.info(JSON.stringify({
           event: "rate_limited",
           key_type: "store_code",
           route: req.path,
@@ -212,7 +213,7 @@ export function enhancedAuthProtection() {
 
     if (globalAttempts.length >= GLOBAL_SOFT_THRESHOLD) {
       // BATCH5-SUGGESTION-1: Structured logging for observability
-      console.log(JSON.stringify({
+      log.info(JSON.stringify({
         event: globalAttempts.length >= GLOBAL_HARD_THRESHOLD ? "rate_limited" : "rate_limit_warning",
         key_type: "global",
         route: req.path,
@@ -270,7 +271,7 @@ export function enhancedAuthProtection() {
             LOCKOUT_MAX_MS
           );
           ipEntry.lockedUntil = now + lockoutDuration;
-          console.warn(
+          log.warn(
             `[GO-LIVE-195] IP ${ip} locked out for ${lockoutDuration / 1000}s after ${ipEntry.failureCount} failures`
           );
         }

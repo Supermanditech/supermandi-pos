@@ -5,6 +5,8 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { validatePan, validatePinCode, validatePhone, validateEmail } from "@supermandi/common";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerAdminSuppliersRouter = Router();
 
@@ -111,8 +113,9 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
       count: result.rows.length,
       lastUpdated: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error("[RetailerSuppliers] GET error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerSuppliers] GET error:", error.message);
 
     // If table doesn't exist, return empty list gracefully
     if (error.code === "42P01") {
@@ -211,8 +214,9 @@ retailerAdminSuppliersRouter.get("/suppliers/available", async (req: Request, re
         totalPages: Math.ceil(total / limit),
       },
     });
-  } catch (error: any) {
-    console.error("[RetailerSuppliers] GET available error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerSuppliers] GET available error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({ success: true, data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } });
@@ -286,8 +290,9 @@ retailerAdminSuppliersRouter.post("/suppliers/:supplierId/link", async (req: Req
       success: true,
       message: "Supplier linked successfully",
     });
-  } catch (error: any) {
-    console.error("[RetailerSuppliers] POST link error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerSuppliers] POST link error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Failed to link supplier" },
@@ -493,9 +498,10 @@ retailerAdminSuppliersRouter.post("/suppliers", async (req: Request, res: Respon
       data: { id: supplierId },
       message: "Supplier created successfully",
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RetailerSuppliers] POST error:", error.message);
+    log.error("[RetailerSuppliers] POST error:", error.message);
 
     if (error.code === "23505") { // Unique violation
       return res.status(409).json({
@@ -719,9 +725,10 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
       message: "Supplier updated successfully",
       warnings: warnings.length > 0 ? warnings : undefined,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RetailerSuppliers] PATCH error:", error.message);
+    log.error("[RetailerSuppliers] PATCH error:", error.message);
 
     return res.status(500).json({
       success: false,
@@ -888,8 +895,9 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
         hasMore: offsetNum + result.rows.length < total,
       },
     });
-  } catch (error: any) {
-    console.error("[RetailerSupplierCatalog] GET error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerSupplierCatalog] GET error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -1044,9 +1052,10 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
       },
       message: "Product added to your catalog",
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RetailerSupplierCatalog] POST add error:", error.message);
+    log.error("[RetailerSupplierCatalog] POST add error:", error.message);
 
     return res.status(500).json({
       success: false,
@@ -1088,8 +1097,9 @@ retailerAdminSuppliersRouter.delete("/suppliers/:id", async (req: Request, res: 
       success: true,
       message: "Supplier removed from store",
     });
-  } catch (error: any) {
-    console.error("[RetailerSuppliers] DELETE error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerSuppliers] DELETE error:", error.message);
 
     return res.status(500).json({
       success: false,

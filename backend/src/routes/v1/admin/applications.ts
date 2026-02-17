@@ -17,6 +17,7 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
 import rateLimit from "express-rate-limit";
+import { log } from "../../../lib/logger";
 
 export const adminApplicationsRouter = Router();
 
@@ -141,7 +142,7 @@ adminApplicationsRouter.get(
         offset,
       });
     } catch (err) {
-      console.error("[admin/applications] List error:", err);
+      log.error("[admin/applications] List error:", err);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch applications" } });
     }
   }
@@ -240,7 +241,7 @@ adminApplicationsRouter.get(
         })),
       });
     } catch (err) {
-      console.error("[admin/applications] Detail error:", err);
+      log.error("[admin/applications] Detail error:", err);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch application details" } });
     }
   }
@@ -310,7 +311,7 @@ adminApplicationsRouter.post(
           storeCode = await generateStoreCode(app.business_name);
         } catch (codeErr: any) {
           await client.query('ROLLBACK');
-          console.error("[admin/applications] Store code generation failed:", codeErr?.message);
+          log.error("[admin/applications] Store code generation failed:", codeErr?.message);
           return res.status(500).json({
             error: { code: "STORE_CODE_FAILED", message: "Could not generate store code. Please try again." }
           });
@@ -414,7 +415,7 @@ adminApplicationsRouter.post(
       });
     } catch (err: any) {
       await client.query('ROLLBACK');
-      console.error("[admin/applications] Approve error:", err);
+      log.error("[admin/applications] Approve error:", err);
 
       // Handle unique constraint violations gracefully
       if (err.code === '23505') {
@@ -523,7 +524,7 @@ adminApplicationsRouter.post(
         newStatus: "NEEDS_FIX",
       });
     } catch (err) {
-      console.error("[admin/applications] Reject error:", err);
+      log.error("[admin/applications] Reject error:", err);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to reject application" } });
     }
   }

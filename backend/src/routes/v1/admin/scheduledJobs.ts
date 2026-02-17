@@ -11,6 +11,7 @@ import { Router, Request, Response } from 'express';
 import { requireAdminToken } from '../../../middleware/adminToken';
 import { processOverdueReminders } from '../../../services/paymentReminderService';
 import { getPool } from '../../../db/client';
+import { log } from "../../../lib/logger";
 
 export const adminScheduledJobsRouter = Router();
 
@@ -26,7 +27,7 @@ adminScheduledJobsRouter.post('/jobs/payment-reminders', async (_req: Request, r
       data: result,
     });
   } catch (err) {
-    console.error('[Scheduled Jobs] Payment reminder error:', err);
+    log.error('[Scheduled Jobs] Payment reminder error:', err);
     return res.status(500).json({ error: 'Payment reminder processing failed' });
   }
 });
@@ -81,7 +82,7 @@ adminScheduledJobsRouter.get('/jobs/payment-reminders/history', async (req: Requ
     if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '42P01') {
       return res.json({ success: true, data: [] });
     }
-    console.error('[Scheduled Jobs] Reminder history error:', err);
+    log.error('[Scheduled Jobs] Reminder history error:', err);
     return res.status(500).json({ error: 'Failed to fetch reminder history' });
   }
 });
@@ -111,7 +112,7 @@ adminScheduledJobsRouter.post('/jobs/token-cleanup', async (_req: Request, res: 
       deleted: deleteResult.rowCount ?? 0,
     });
   } catch (err) {
-    console.error('[Scheduled Jobs] Token cleanup error:', err);
+    log.error('[Scheduled Jobs] Token cleanup error:', err);
     return res.status(500).json({ error: 'Token cleanup failed' });
   }
 });

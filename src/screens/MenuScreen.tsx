@@ -25,6 +25,7 @@ import { syncOutbox } from "../services/offline/sync";
 import { subscribeNetworkStatus } from "../services/networkStatus";
 import { formatMoney } from "../utils/money";
 import { printerService, type PrinterStatus } from "../services/printerService";
+import { asError } from "../utils/errorUtils";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -170,7 +171,8 @@ export default function MenuScreen() {
       ]);
       setDailySummary(summary);
       setYesterdaySummary(yesterdayData);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[MenuScreen] dailySummary fetch failed:", e);
       setSummaryError(e.message || "Failed to load summary");
     } finally {
@@ -226,7 +228,8 @@ export default function MenuScreen() {
       if (count === 0) {
         Alert.alert(t('menu.syncComplete', { defaultValue: "Sync Complete" }), t('menu.allDataSynced', { defaultValue: "All data has been synced." }));
       }
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[MenuScreen] sync failed:", e);
       Alert.alert(t('menu.syncFailed', { defaultValue: "Sync Failed" }), e.message || "Please try again.");
     } finally {

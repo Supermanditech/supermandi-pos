@@ -502,7 +502,7 @@ describe("FIX-041: clear printer error on successful print", () => {
         // simulate print
         this.status.error = undefined; // FIX-041: clear on success
         return true;
-      } catch (e: any) {
+      } catch (e: unknown) {
         this.status.error = e.message;
         return false;
       }

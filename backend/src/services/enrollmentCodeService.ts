@@ -11,6 +11,7 @@
 import { randomBytes } from "crypto";
 import { getPool } from "../db/client";
 import { isDemoStoreCode } from "./storeCodeService";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // CONSTANTS
@@ -97,7 +98,7 @@ export async function createEnrollmentCode(
     [code, storeId, expiresAt, maxUses, createdBy]
   );
 
-  console.log(
+  log.info(
     `[EnrollmentCode] Created code=${code} store=${storeCode} isDemo=${isDemo} createdBy=${createdBy}`
   );
 

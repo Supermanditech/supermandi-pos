@@ -12,6 +12,8 @@ import {
   fetchPurchasesAnalytics,
   fetchActivityAnalytics
 } from "../../../services/analytics/analyticsService";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const adminAnalyticsRouter = Router();
 
@@ -110,9 +112,10 @@ adminAnalyticsRouter.get("/analytics/overview", apiCache('analytics:overview', {
 
     const data = await fetchOverview({ storeId, from, to });
     res.json({ overview: data });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });
@@ -133,9 +136,10 @@ adminAnalyticsRouter.get("/analytics/devices", async (req, res) => {
 
     const data = await fetchDevicesAnalytics({ storeId, from, to, limit, offset });
     res.json({ devices: data.devices, total: data.total, range: data.range, storeId: data.storeId });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });
@@ -157,9 +161,10 @@ adminAnalyticsRouter.get("/analytics/products", async (req, res) => {
 
     const data = await fetchProductsAnalytics({ storeId, from, to, groupBy, limit, offset });
     res.json({ products: data });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });
@@ -180,9 +185,10 @@ adminAnalyticsRouter.get("/analytics/purchases", async (req, res) => {
 
     const data = await fetchPurchasesAnalytics({ storeId, from, to, limit, offset });
     res.json({ purchases: data });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });
@@ -201,9 +207,10 @@ adminAnalyticsRouter.get("/analytics/consumer-sales", async (req, res) => {
 
     const data = await fetchConsumerSalesAnalytics({ storeId, from, to });
     res.json({ consumer_sales: data });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });
@@ -222,9 +229,10 @@ adminAnalyticsRouter.get("/analytics/payments", async (req, res) => {
 
     const data = await fetchPaymentsAnalytics({ storeId, from, to });
     res.json({ payments: data });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });
@@ -247,9 +255,10 @@ adminAnalyticsRouter.get("/analytics/dues", async (req, res) => {
 
     const data = await fetchDuesAnalytics({ storeId, from, to, limit, offset });
     res.json({ dues: data });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });
@@ -351,8 +360,9 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
       groupBy,
       pagination: { limit, offset },
     });
-  } catch (e: any) {
-    console.error("[T-189] Margin analysis failed:", e?.message);
+  } catch (_e: unknown) {
+    const e = asError(_e);
+    log.error("[T-189] Margin analysis failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch margin analysis" } });
   }
 });
@@ -374,9 +384,10 @@ adminAnalyticsRouter.get("/analytics/activity", async (req, res) => {
 
     const data = await fetchActivityAnalytics({ storeId, from, to, groupBy });
     res.json({ activity: data });
-  } catch (e: any) {
+  } catch (_e: unknown) {
+    const e = asError(_e);
     // XPORT-003: Never leak raw error messages — log server-side only
-    console.error("[Analytics] Query failed:", e?.message);
+    log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
   }
 });

@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const adminAuditRouter = Router();
 
@@ -144,7 +145,7 @@ adminAuditRouter.get("/audit", async (req, res) => {
       offset: offsetNum,
     });
   } catch (error: unknown) {
-    console.error("[admin/audit] Failed to fetch audit logs:", error);
+    log.error("[admin/audit] Failed to fetch audit logs:", error);
     return res.status(500).json({ error: "fetch_audit_failed" });
   }
 });
@@ -180,7 +181,7 @@ adminAuditRouter.get("/audit/stats", async (_req, res) => {
       summary: totalStats.rows[0] || { total_logs: 0, error_count: 0, unique_actors: 0 },
     });
   } catch (error: unknown) {
-    console.error("[admin/audit] Failed to fetch audit stats:", error);
+    log.error("[admin/audit] Failed to fetch audit stats:", error);
     return res.status(500).json({ error: "fetch_audit_stats_failed" });
   }
 });
