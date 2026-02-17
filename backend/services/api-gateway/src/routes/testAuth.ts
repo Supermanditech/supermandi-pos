@@ -51,7 +51,8 @@ export function createTestAuthRouter(): Router {
   const router = Router();
 
   // STAGE-005: Only enable in development (disabled in staging AND production)
-  const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+  // PRA-079: Require explicit 'development' — never enable when NODE_ENV is unset
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   if (!isDevelopment) {
     // Return router with no routes - all requests will 404

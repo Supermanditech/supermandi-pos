@@ -243,7 +243,8 @@ router.post(
 
     // AUTH-REFRESH-001: Rotate refresh token - revoke old, issue new
     await revokeRefreshToken(tokenHash);
-    const { token: newRefreshToken } = generateRefreshToken(user.id);
+    // PRA-079: Carry actorType into rotated refresh token
+    const { token: newRefreshToken } = generateRefreshToken(user.id, user.actorType);
     const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
     await createRefreshToken({
       userId: user.id,

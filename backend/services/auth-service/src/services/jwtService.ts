@@ -91,7 +91,7 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
 /**
  * Generate a refresh token
  */
-export function generateRefreshToken(userId: string): { token: string; tokenId: string } {
+export function generateRefreshToken(userId: string, actorType?: string): { token: string; tokenId: string } {
   const tokenId = crypto.randomUUID();
 
   // Convert days to seconds
@@ -102,6 +102,8 @@ export function generateRefreshToken(userId: string): { token: string; tokenId: 
       sub: userId,
       tokenId,
       type: 'refresh',
+      // PRA-079: Include actorType to prevent cross-platform refresh token reuse
+      ...(actorType ? { actorType } : {}),
     },
     config.jwt.secret,
     {
@@ -129,7 +131,7 @@ export function generateTokenPair(
     permissions,
   });
 
-  const { token: refreshToken, tokenId: refreshTokenId } = generateRefreshToken(userId);
+  const { token: refreshToken, tokenId: refreshTokenId } = generateRefreshToken(userId, actorType);
 
   // Parse expiresIn to seconds
   const expiresIn = parseExpiresIn(config.jwt.accessTokenExpiresIn);

@@ -723,6 +723,7 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
     const refreshPayload = {
       sub: supplier.id,
       type: 'refresh',
+      actorType: 'SUPPLIER',          // PRA-079: Prevent cross-platform refresh token reuse
       jti: refreshJti,
     };
     const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
@@ -1732,6 +1733,7 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
     const refreshPayload = {
       sub: supplier.id,
       type: 'refresh',
+      actorType: 'SUPPLIER',          // PRA-079: Prevent cross-platform refresh token reuse
       jti: refreshJti,
     };
 
@@ -1791,11 +1793,11 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
     }
 
     // Verify refresh token
-    let decoded: { sub: string; type: string; jti?: string; iat?: number };
+    let decoded: { sub: string; type: string; actorType?: string; jti?: string; iat?: number };
     try {
       decoded = jwt.verify(refreshToken, JWT_SECRET, {
         issuer: JWT_ISSUER,
-      }) as { sub: string; type: string; jti?: string; iat?: number };
+      }) as { sub: string; type: string; actorType?: string; jti?: string; iat?: number };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         res.status(401).json({ error: { code: 'TOKEN_EXPIRED', message: 'Refresh token expired. Please login again.' } });
@@ -1807,6 +1809,12 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
 
     if (decoded.type !== 'refresh') {
       res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid token type' } });
+      return;
+    }
+
+    // PRA-079: Reject refresh tokens from other platforms (backward-compat: allow missing actorType)
+    if (decoded.actorType && decoded.actorType !== 'SUPPLIER') {
+      res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid token for this endpoint' } });
       return;
     }
 
