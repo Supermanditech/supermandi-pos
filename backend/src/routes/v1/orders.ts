@@ -703,16 +703,20 @@ ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, asyn
     try {
       await client.query("BEGIN");
 
-      // Delete order items first
+      // PRA-087: Delete order items with store_id defense-in-depth via EXISTS subquery
       await client.query(
-        `DELETE FROM orders.purchase_order_items WHERE order_id = $1`,
-        [orderId]
+        `DELETE FROM orders.purchase_order_items
+         WHERE order_id = $1
+           AND EXISTS (SELECT 1 FROM orders.purchase_orders WHERE id = $1 AND store_id = $2)`,
+        [orderId, storeId]
       );
 
-      // Delete order events
+      // PRA-087: Delete order events with store_id defense-in-depth via EXISTS subquery
       await client.query(
-        `DELETE FROM orders.order_events WHERE purchase_order_id = $1`,
-        [orderId]
+        `DELETE FROM orders.order_events
+         WHERE purchase_order_id = $1
+           AND EXISTS (SELECT 1 FROM orders.purchase_orders WHERE id = $1 AND store_id = $2)`,
+        [orderId, storeId]
       );
 
       // Delete the order
