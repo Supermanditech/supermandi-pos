@@ -199,37 +199,67 @@ export function getWebhookVerifyToken(): string {
   return WHATSAPP_VERIFY_TOKEN;
 }
 
-// ===== META API CALLER =====
+// ===== META API CALLER WITH RETRY =====
+const MAX_RETRIES = 2;
+const RETRY_BASE_MS = 1000;
+const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+
 async function callMetaApi(body: Record<string, unknown>): Promise<WhatsAppSendResult> {
-  try {
-    const url = `${WHATSAPP_API_BASE}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30000),
-    });
+  const url = `${WHATSAPP_API_BASE}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
-    const data = (await response.json()) as {
-      messages?: Array<{ id: string }>;
-      error?: { message: string; code: number; error_subcode?: number };
-    };
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000),
+      });
 
-    if (!response.ok || data.error) {
-      const errMsg = data.error?.message || `Meta API error: ${response.status}`;
-      const errCode = data.error?.code ? String(data.error.code) : String(response.status);
-      console.error(`[WhatsAppService] Send failed: ${errMsg}`);
-      return { sent: false, errorCode: errCode, errorMessage: errMsg };
+      // Retry on transient errors (429 rate limit, 5xx server errors)
+      if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < MAX_RETRIES) {
+        const backoffMs = RETRY_BASE_MS * Math.pow(2, attempt);
+        console.warn(`[WhatsAppService] Meta API ${response.status} — retry ${attempt + 1}/${MAX_RETRIES} in ${backoffMs}ms`);
+        await sleep(backoffMs);
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        messages?: Array<{ id: string }>;
+        error?: { message: string; code: number; error_subcode?: number };
+      };
+
+      if (!response.ok || data.error) {
+        const errMsg = data.error?.message || `Meta API error: ${response.status}`;
+        const errCode = data.error?.code ? String(data.error.code) : String(response.status);
+        console.error(`[WhatsAppService] Send failed: ${errMsg}`);
+        return { sent: false, errorCode: errCode, errorMessage: errMsg };
+      }
+
+      const wamid = data.messages?.[0]?.id;
+      return { sent: true, wamid };
+    } catch (err: unknown) {
+      // Retry on network errors (timeouts, connection refused)
+      if (attempt < MAX_RETRIES) {
+        const backoffMs = RETRY_BASE_MS * Math.pow(2, attempt);
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        console.warn(`[WhatsAppService] Request error "${msg}" — retry ${attempt + 1}/${MAX_RETRIES} in ${backoffMs}ms`);
+        await sleep(backoffMs);
+        continue;
+      }
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[WhatsAppService] Request failed after ${MAX_RETRIES + 1} attempts: ${message}`);
+      return { sent: false, errorCode: "REQUEST_FAILED", errorMessage: message };
     }
-
-    const wamid = data.messages?.[0]?.id;
-    return { sent: true, wamid };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`[WhatsAppService] Request failed: ${message}`);
-    return { sent: false, errorCode: "REQUEST_FAILED", errorMessage: message };
   }
+
+  // Should never reach here, but TypeScript needs it
+  return { sent: false, errorCode: "RETRY_EXHAUSTED", errorMessage: "All retry attempts failed" };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

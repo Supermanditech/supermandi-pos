@@ -197,9 +197,14 @@ describe("sendTextMessage", () => {
   });
 
   it("returns error on network failure", async () => {
+    // WA-002: Provide 3 rejection mocks (original + 2 retries) for network errors
+    mockFetch.mockRejectedValueOnce(new Error("Network timeout"));
+    mockFetch.mockRejectedValueOnce(new Error("Network timeout"));
     mockFetch.mockRejectedValueOnce(new Error("Network timeout"));
 
-    const result = await sendTextMessage({ to: "9876543210", body: "Test" });
+    const resultPromise = sendTextMessage({ to: "9876543210", body: "Test" });
+    await jest.advanceTimersByTimeAsync(10000);
+    const result = await resultPromise;
 
     expect(result.sent).toBe(false);
     expect(result.errorCode).toBe("REQUEST_FAILED");
@@ -375,9 +380,14 @@ describe("Meta API response edge cases", () => {
   });
 
   it("handles non-Error thrown by fetch", async () => {
+    // WA-002: Provide 3 rejection mocks (original + 2 retries)
+    mockFetch.mockRejectedValueOnce("string error");
+    mockFetch.mockRejectedValueOnce("string error");
     mockFetch.mockRejectedValueOnce("string error");
 
-    const result = await sendTextMessage({ to: "6000000200", body: "Test" });
+    const resultPromise = sendTextMessage({ to: "6000000200", body: "Test" });
+    await jest.advanceTimersByTimeAsync(10000);
+    const result = await resultPromise;
 
     expect(result.sent).toBe(false);
     expect(result.errorCode).toBe("REQUEST_FAILED");
@@ -385,29 +395,96 @@ describe("Meta API response edge cases", () => {
   });
 
   it("handles Meta error without code field", async () => {
-    mockFetch.mockResolvedValueOnce({
+    // WA-002: Provide 3 mocks (original + 2 retries) for retryable 500 status
+    const errorResponse = {
       ok: false,
       status: 500,
       json: async () => ({ error: { message: "Internal error" } }),
-    });
+    };
+    mockFetch.mockResolvedValueOnce(errorResponse);
+    mockFetch.mockResolvedValueOnce(errorResponse);
+    mockFetch.mockResolvedValueOnce(errorResponse);
 
-    const result = await sendTextMessage({ to: "6000000300", body: "Test" });
+    const resultPromise = sendTextMessage({ to: "6000000300", body: "Test" });
+    await jest.advanceTimersByTimeAsync(10000);
+    const result = await resultPromise;
 
     expect(result.sent).toBe(false);
     expect(result.errorMessage).toBe("Internal error");
   });
 
   it("handles HTTP error without error body", async () => {
-    mockFetch.mockResolvedValueOnce({
+    // WA-002: Provide 3 mocks (original + 2 retries) for retryable 429 status
+    const errorResponse = {
       ok: false,
       status: 429,
       json: async () => ({}),
-    });
+    };
+    mockFetch.mockResolvedValueOnce(errorResponse);
+    mockFetch.mockResolvedValueOnce(errorResponse);
+    mockFetch.mockResolvedValueOnce(errorResponse);
 
-    const result = await sendTextMessage({ to: "6000000400", body: "Test" });
+    const resultPromise = sendTextMessage({ to: "6000000400", body: "Test" });
+    await jest.advanceTimersByTimeAsync(10000);
+    const result = await resultPromise;
 
     expect(result.sent).toBe(false);
     expect(result.errorCode).toBe("429");
     expect(result.errorMessage).toContain("Meta API error: 429");
+  });
+});
+
+// =============================================================================
+// WA-002: RETRY LOGIC TESTS
+// =============================================================================
+describe("Retry logic", () => {
+  it("succeeds after transient 503 then success", async () => {
+    // First attempt: 503 (retryable)
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+    });
+    // Second attempt: success
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ messages: [{ id: "wamid.retry_success" }] }),
+    });
+
+    const resultPromise = sendTextMessage({ to: "6000000500", body: "Retry test" });
+    await jest.advanceTimersByTimeAsync(5000);
+    const result = await resultPromise;
+
+    expect(result.sent).toBe(true);
+    expect(result.wamid).toBe("wamid.retry_success");
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("succeeds after network error then success", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("ECONNRESET"));
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ messages: [{ id: "wamid.net_retry" }] }),
+    });
+
+    const resultPromise = sendTextMessage({ to: "6000000600", body: "Net retry" });
+    await jest.advanceTimersByTimeAsync(5000);
+    const result = await resultPromise;
+
+    expect(result.sent).toBe(true);
+    expect(result.wamid).toBe("wamid.net_retry");
+  });
+
+  it("does not retry on 400 (non-retryable)", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { message: "Bad request", code: 100 } }),
+    });
+
+    const result = await sendTextMessage({ to: "6000000700", body: "No retry" });
+
+    expect(result.sent).toBe(false);
+    expect(result.errorCode).toBe("100");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

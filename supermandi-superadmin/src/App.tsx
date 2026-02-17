@@ -96,6 +96,7 @@ import { QualityDashboardTab } from "./tabs/QualityDashboardTab";  // Quality te
 import { CreditProvidersTab } from "./tabs/CreditProvidersTab";  // T-289/T-290: Finance monitoring
 import { SupportQueueTab } from "./tabs/SupportQueueTab";  // T-300/T-302: Support queue + templates
 import { AIInsightsTab } from "./tabs/AIInsightsTab";  // T-316: AI intelligence dashboard
+import { WhatsAppTab } from "./tabs/WhatsAppTab";  // WA-002: WhatsApp dashboard
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
@@ -105,6 +106,7 @@ import {
   IndianRupee, ArrowLeftRight, HeartPulse, FlaskConical,  // T-235, T-219, T-223, Quality icons
   MessageSquare,  // T-300: Support queue
   Brain,  // T-316: AI Insights
+  MessageCircle,  // WA-002: WhatsApp dashboard
 } from "lucide-react";
 import "./App.css";
 
@@ -135,6 +137,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   "credit-providers": "Finance",
   "support": "Support",
   "ai-insights": "AI Intelligence",
+  "whatsapp": "WhatsApp",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -2653,6 +2656,9 @@ export default function App() {
             <button className={`sidebarItem ${tab === "ai-insights" ? "sidebarItemActive" : ""}`} onClick={() => setTab("ai-insights")}>
               <span className="sidebarItemLabel"><Brain size={18} style={{ opacity: tab === "ai-insights" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />AI Intelligence</span>
             </button>
+            <button className={`sidebarItem ${tab === "whatsapp" ? "sidebarItemActive" : ""}`} onClick={() => setTab("whatsapp")}>
+              <span className="sidebarItemLabel"><MessageCircle size={18} style={{ opacity: tab === "whatsapp" ? 1 : 0.6, marginRight: 10, flexShrink: 0, color: tab === "whatsapp" ? "#25D366" : undefined }} />WhatsApp</span>
+            </button>
           </div>
 
           {/* Onboarding */}
@@ -3199,6 +3205,8 @@ export default function App() {
       {tab === "support" && <SupportQueueTab />}
 
       {tab === "ai-insights" && <AIInsightsTab />}
+
+      {tab === "whatsapp" && <WhatsAppTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}

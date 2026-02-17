@@ -1,5 +1,6 @@
-// WA-001: SuperAdmin WhatsApp API Routes
+// WA-001/WA-002: SuperAdmin WhatsApp API Routes
 // Enables superadmin to send messages to retailers and suppliers via WhatsApp Cloud API
+// WA-002: Added message log listing + stats endpoint
 
 import { Router, Request, Response } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
@@ -19,6 +20,104 @@ adminWhatsAppRouter.use(requireAdminToken);
 // =============================================================================
 adminWhatsAppRouter.get("/whatsapp/status", (_req: Request, res: Response) => {
   res.json({ configured: isWhatsAppConfigured() });
+});
+
+// =============================================================================
+// GET /admin/whatsapp/logs — Query WhatsApp message logs with filtering
+// =============================================================================
+adminWhatsAppRouter.get("/whatsapp/logs", async (req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
+
+    const limit = Math.min(parseInt(String(req.query.limit)) || 50, 100);
+    const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+    const senderType = req.query.senderType as string | undefined;
+    const recipientType = req.query.recipientType as string | undefined;
+    const deliveryStatus = req.query.deliveryStatus as string | undefined;
+    const contextType = req.query.contextType as string | undefined;
+    const storeId = req.query.storeId as string | undefined;
+
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+    let idx = 1;
+
+    if (senderType) { where += ` AND ml.sender_type = $${idx++}`; params.push(senderType); }
+    if (recipientType) { where += ` AND ml.recipient_type = $${idx++}`; params.push(recipientType); }
+    if (deliveryStatus) { where += ` AND ml.delivery_status = $${idx++}`; params.push(deliveryStatus); }
+    if (contextType) { where += ` AND ml.context_type = $${idx++}`; params.push(contextType); }
+    if (storeId) { where += ` AND ml.store_id = $${idx++}::uuid`; params.push(storeId); }
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM whatsapp.message_logs ml ${where}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    const logsResult = await pool.query(
+      `SELECT
+        ml.id, ml.store_id as "storeId",
+        ml.sender_type as "senderType", ml.recipient_type as "recipientType",
+        ml.recipient_phone as "recipientPhone", ml.message_type as "messageType",
+        ml.template_name as "templateName",
+        ml.content_preview as "contentPreview",
+        ml.wamid, ml.delivery_status as "deliveryStatus",
+        ml.delivery_error_code as "deliveryErrorCode",
+        ml.delivered_at as "deliveredAt", ml.read_at as "readAt",
+        ml.context_type as "contextType", ml.context_id as "contextId",
+        ml.created_at as "createdAt"
+      FROM whatsapp.message_logs ml
+      ${where}
+      ORDER BY ml.created_at DESC
+      LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, offset]
+    );
+
+    return res.json({ data: logsResult.rows, total });
+  } catch (err: unknown) {
+    console.error("[WA-002] logs query error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// =============================================================================
+// GET /admin/whatsapp/stats — Aggregate message statistics
+// =============================================================================
+adminWhatsAppRouter.get("/whatsapp/stats", async (_req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
+
+    const result = await pool.query(
+      `SELECT
+        COUNT(*) as "totalMessages",
+        COUNT(*) FILTER (WHERE delivery_status = 'sent') as "sent",
+        COUNT(*) FILTER (WHERE delivery_status = 'delivered') as "delivered",
+        COUNT(*) FILTER (WHERE delivery_status = 'read') as "read",
+        COUNT(*) FILTER (WHERE delivery_status = 'failed') as "failed",
+        COUNT(*) FILTER (WHERE sender_type = 'pos') as "fromPos",
+        COUNT(*) FILTER (WHERE sender_type = 'superadmin') as "fromAdmin",
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as "last24h",
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as "last7d"
+      FROM whatsapp.message_logs`
+    );
+
+    const row = result.rows[0] || {};
+    return res.json({
+      totalMessages: parseInt(row.totalMessages || "0", 10),
+      sent: parseInt(row.sent || "0", 10),
+      delivered: parseInt(row.delivered || "0", 10),
+      read: parseInt(row.read || "0", 10),
+      failed: parseInt(row.failed || "0", 10),
+      fromPos: parseInt(row.fromPos || "0", 10),
+      fromAdmin: parseInt(row.fromAdmin || "0", 10),
+      last24h: parseInt(row.last24h || "0", 10),
+      last7d: parseInt(row.last7d || "0", 10),
+    });
+  } catch (err: unknown) {
+    console.error("[WA-002] stats query error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // =============================================================================

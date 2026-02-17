@@ -1178,8 +1178,10 @@ export interface SupplierInvoice {
 export interface SupplierInvoiceDetail extends SupplierInvoice {
   sellerGstin?: string;
   sellerAddress?: string;
+  sellerPhone?: string;  // WA-002: For direct WhatsApp linking
   buyerGstin?: string;
   buyerAddress?: string;
+  buyerPhone?: string;   // WA-002: For direct WhatsApp linking
   taxableAmountMinor: number;
   discountMinor: number;
   cgstMinor: number;

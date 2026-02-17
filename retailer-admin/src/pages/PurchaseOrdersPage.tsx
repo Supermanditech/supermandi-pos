@@ -30,6 +30,7 @@ interface PurchaseOrder {
   poNumber: string;
   supplierId: string;
   supplierName: string;
+  supplierPhone?: string;  // WA-002: For direct WhatsApp linking
   orderDate: string;
   expectedDeliveryDate?: string;
   totalMinor: number;
@@ -303,16 +304,15 @@ export default function PurchaseOrdersPage() {
               </div>
             )}
 
-            {/* WhatsApp Follow-up Button */}
-            {/* TODO: supplierPhone needs to be added to PurchaseOrder API response for direct WhatsApp linking */}
+            {/* WA-002: WhatsApp Follow-up Button — uses supplierPhone from API when available */}
             <div style={{ marginBottom: '1rem' }}>
               <button
                 onClick={() => {
                   const expected = selectedPO.expectedDeliveryDate ? new Date(selectedPO.expectedDeliveryDate).toLocaleDateString('en-IN') : 'N/A';
                   const status = selectedPO.status.charAt(0).toUpperCase() + selectedPO.status.slice(1);
                   const msg = `Follow-up on PO #${selectedPO.poNumber}. Status: ${status}. Expected delivery: ${expected}.`;
-                  // Opens WhatsApp with pre-filled message; user picks the contact manually
-                  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                  const phone = selectedPO.supplierPhone ? selectedPO.supplierPhone.replace(/\D/g, '') : '';
+                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
                 }}
                 style={{
                   padding: '6px 16px', background: '#f0fdf4', color: '#15803d',
