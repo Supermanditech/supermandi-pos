@@ -467,6 +467,8 @@ jobs:
       # Supplier Portal (Next.js)
       - name: Build supplier-portal
         working-directory: supplier-portal
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ""
         run: |
           pnpm install --frozen-lockfile
           pnpm run build
@@ -669,14 +671,20 @@ jobs:
       # Rebuild portals for bundle size measurement
       - name: Build retailer-admin
         working-directory: retailer-admin
+        env:
+          VITE_API_BASE_URL: ""
         run: pnpm install --frozen-lockfile && pnpm run build
 
       - name: Build supermandi-superadmin
         working-directory: supermandi-superadmin
+        env:
+          VITE_API_BASE_URL: ""
         run: pnpm install --frozen-lockfile && pnpm run build
 
       - name: Build supplier-portal
         working-directory: supplier-portal
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ""
         run: pnpm install --frozen-lockfile && pnpm run build
 
       - name: Run config parity gate
