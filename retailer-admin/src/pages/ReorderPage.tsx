@@ -68,6 +68,7 @@ export default function ReorderPage() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
   const [editEnabled, setEditEnabled] = useState(true);
   const [editRequireApproval, setEditRequireApproval] = useState(true);
   const [editNotifyLowStock, setEditNotifyLowStock] = useState(true);
@@ -124,7 +125,8 @@ export default function ReorderPage() {
       if (!response.ok) throw new Error('Failed to save settings');
       const data = await safeJson<{ data: ReorderSettings }>(response);
       if (data?.data) setSettings(data.data);
-      alert('Reorder settings saved successfully');
+      setSettingsSaveSuccess(true);
+      setTimeout(() => setSettingsSaveSuccess(false), 3000);
     } catch (e: any) {
       setSettingsError(e?.message || 'Failed to save');
     } finally {
@@ -307,6 +309,7 @@ export default function ReorderPage() {
       {activeTab === 'settings' && (
         <div>
           {settingsLoading && <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>Loading settings...</div>}
+          {settingsSaveSuccess && <div style={{ background: '#dcfce7', color: '#166534', padding: '0.75rem 1rem', borderRadius: '0.375rem', marginBottom: 12, fontSize: '0.875rem' }}>Reorder settings saved successfully</div>}
           {settingsError && <div className="error-banner" style={{ marginBottom: 12 }}>{settingsError}</div>}
           {!settingsLoading && (
             <div className="card" style={{ padding: 24, maxWidth: 520 }}>

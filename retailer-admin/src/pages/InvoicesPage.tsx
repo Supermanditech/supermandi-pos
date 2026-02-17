@@ -155,7 +155,7 @@ export default function InvoicesPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("PDF download failed:", err);
-      alert("Failed to download PDF. Please try again.");
+      setError("Failed to download PDF. Please try again.");
     }
   };
 

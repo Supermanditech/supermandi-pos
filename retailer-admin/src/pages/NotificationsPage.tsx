@@ -54,7 +54,7 @@ export default function NotificationsPage() {
       await authFetch(`/api/v1/retailer-admin/notifications/${id}/read`, accessToken, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
     } catch {
-      alert('Failed to mark notification as read');
+      setError('Failed to mark notification as read');
     }
   };
 
@@ -64,7 +64,7 @@ export default function NotificationsPage() {
       await authFetch('/api/v1/retailer-admin/notifications/read-all', accessToken, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
     } catch {
-      alert('Failed to mark all as read');
+      setError('Failed to mark all as read');
     }
   };
 
