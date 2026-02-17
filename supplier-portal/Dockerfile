@@ -69,10 +69,11 @@ RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 # Environment
+# PRA-090: Cloud Run overrides PORT to 8080 at runtime; default matches Cloud Run
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=8080
 
-EXPOSE 3001
+EXPOSE 8080
 
 # SUP-ROOT-001: Health check uses /supplier/ path (basePath + trailingSlash in next.config.js)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
