@@ -5,8 +5,8 @@
 import { Router, Request, Response } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
-import {
 import { log } from "../../../lib/logger";
+import {
   isWhatsAppConfigured,
   sendTextMessage,
   normalizePhone,
