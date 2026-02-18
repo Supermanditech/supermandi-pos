@@ -409,7 +409,7 @@ describe('MonitoringTab', () => {
       fireEvent.click(screen.getByText('Run Cleanup'));
 
       await waitFor(() => {
-        expect(screen.getByText(/Token cleanup failed/)).toBeInTheDocument();
+        expect(screen.getByText(/Cleanup failed/)).toBeInTheDocument();
       });
     });
   });
