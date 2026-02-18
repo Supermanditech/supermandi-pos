@@ -1,9 +1,11 @@
 // SA-P2-003: Force update screen — blocks POS access when app version is below minimum
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform } from "react-native";
+// SCR-S2-HARDENING: Loading spinner, offline handling, param validation, a11y, throttle, theme tokens
+import React, { useState, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform, ActivityIndicator } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import NetInfo from "@react-native-community/netinfo";
 
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { clearDeviceSession } from "../services/deviceSession";
@@ -23,13 +25,24 @@ const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.supermanditech.supermandipos";
 const APP_STORE_URL = ""; // TODO: Add App Store URL after first iOS submission
 
+/** S2-8: Theme token constants for icon/layout sizes */
+const ICON_SIZE = 28;
+const ICON_WRAP_SIZE = 52;
+
+/** S2-9: Retry cooldown to prevent rapid taps */
+const RETRY_COOLDOWN_MS = 3000;
+
 export default function ForceUpdateScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<RootStackParamList, "ForceUpdate">>();
   const [checking, setChecking] = useState(false);
+  const lastRetryRef = useRef(0);
 
-  const currentVersion = route.params?.currentVersion ?? "unknown";
-  const requiredVersion = route.params?.requiredVersion ?? "unknown";
+  // S2-5: Validate route params — fallback to "unknown" for missing/invalid values
+  const rawCurrent = route.params?.currentVersion;
+  const rawRequired = route.params?.requiredVersion;
+  const currentVersion = rawCurrent && rawCurrent.trim() ? rawCurrent.trim() : "unknown";
+  const requiredVersion = rawRequired && rawRequired.trim() ? rawRequired.trim() : "unknown";
 
   const handleUpdate = () => {
     const url = Platform.OS === "ios" && APP_STORE_URL ? APP_STORE_URL : PLAY_STORE_URL;
@@ -39,6 +52,24 @@ export default function ForceUpdateScreen() {
   };
 
   const handleRetry = async () => {
+    // S2-9: Throttle rapid retries
+    const now = Date.now();
+    if (now - lastRetryRef.current < RETRY_COOLDOWN_MS) {
+      return;
+    }
+    lastRetryRef.current = now;
+
+    // S2-3: Check network connectivity before making API call
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        Alert.alert("No Internet", "Please connect to the internet and try again.");
+        return;
+      }
+    } catch {
+      // NetInfo failed — proceed anyway (best effort)
+    }
+
     setChecking(true);
     try {
       const status = await fetchUiStatus();
@@ -65,31 +96,54 @@ export default function ForceUpdateScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.iconWrap}>
-          <MaterialCommunityIcons name="cellphone-arrow-down" size={28} color={theme.colors.error} />
+    <View
+      style={styles.container}
+      testID="force-update-screen"
+      accessibilityLabel="App update required screen"
+    >
+      <View style={styles.card} testID="force-update-card">
+        <View
+          style={styles.iconWrap}
+          accessibilityElementsHidden
+        >
+          <MaterialCommunityIcons name="cellphone-arrow-down" size={ICON_SIZE} color={theme.colors.error} />
         </View>
-        <Text style={styles.title}>Update Required</Text>
-        <Text style={styles.subtitle}>
+        <Text
+          style={styles.title}
+          testID="force-update-title"
+          accessibilityRole="header"
+        >
+          Update Required
+        </Text>
+        <Text
+          style={styles.subtitle}
+          testID="force-update-subtitle"
+          accessibilityLabel={`Your app version ${currentVersion} is below minimum required version ${requiredVersion}. Please update to continue.`}
+        >
           Your app version ({currentVersion}) is below the minimum required
           version ({requiredVersion}). Please update to continue using the POS.
         </Text>
 
-        <View style={styles.versionRow}>
+        <View style={styles.versionRow} accessibilityLabel={`Current version ${currentVersion}, required version ${requiredVersion}`}>
           <View style={styles.versionBox}>
             <Text style={styles.versionLabel}>Current</Text>
-            <Text style={styles.versionValue}>{currentVersion}</Text>
+            <Text style={styles.versionValue} testID="force-update-current-version">{currentVersion}</Text>
           </View>
-          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.textSecondary} />
+          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.textSecondary} accessibilityElementsHidden />
           <View style={styles.versionBox}>
             <Text style={styles.versionLabel}>Required</Text>
-            <Text style={[styles.versionValue, { color: theme.colors.primary }]}>{requiredVersion}</Text>
+            <Text style={[styles.versionValue, { color: theme.colors.primary }]} testID="force-update-required-version">{requiredVersion}</Text>
           </View>
         </View>
 
-        <Pressable style={styles.button} onPress={handleUpdate}>
-          <MaterialCommunityIcons name="download" size={18} color={colors.textInverse} style={{ marginRight: 6 }} />
+        <Pressable
+          style={styles.button}
+          onPress={handleUpdate}
+          testID="force-update-update-button"
+          accessibilityLabel="Update now — opens app store"
+          accessibilityRole="button"
+        >
+          <MaterialCommunityIcons name="download" size={18} color={colors.textInverse} style={{ marginRight: 6 }} accessibilityElementsHidden />
           <Text style={styles.buttonText}>Update Now</Text>
         </Pressable>
 
@@ -97,8 +151,20 @@ export default function ForceUpdateScreen() {
           style={[styles.secondaryButton, checking && styles.buttonDisabled]}
           onPress={handleRetry}
           disabled={checking}
+          testID="force-update-check-button"
+          accessibilityLabel={checking ? "Checking for updates" : "Check again for updates"}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: checking }}
         >
-          <Text style={styles.secondaryButtonText}>{checking ? "Checking..." : "Check Again"}</Text>
+          {/* S2-2: Show ActivityIndicator while checking */}
+          {checking ? (
+            <View style={styles.checkingRow}>
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.secondaryButtonText}>Checking...</Text>
+            </View>
+          ) : (
+            <Text style={styles.secondaryButtonText}>Check Again</Text>
+          )}
         </Pressable>
       </View>
     </View>
@@ -116,37 +182,37 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: theme.borderRadius.xl,
+    padding: spacing.lg,
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
   },
   iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: ICON_WRAP_SIZE,
+    height: ICON_WRAP_SIZE,
+    borderRadius: ICON_WRAP_SIZE / 2,
     backgroundColor: colors.errorSoft,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 22,
+    ...typography.h4,
     fontWeight: "800",
     color: colors.textPrimary,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
   },
   subtitle: {
     ...typography.caption,
     color: colors.textSecondary,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   versionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
   versionBox: {
@@ -154,9 +220,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: colors.background,
-    borderRadius: 8,
+    borderRadius: theme.borderRadius.md,
   },
   versionLabel: {
+    ...typography.caption,
     fontSize: 11,
     color: colors.textSecondary,
     fontWeight: "600",
@@ -172,9 +239,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.primary,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: theme.borderRadius.lg,
     width: "100%",
     justifyContent: "center",
   },
@@ -186,12 +253,16 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
   },
   secondaryButton: {
-    marginTop: 12,
-    paddingVertical: 10,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
   },
   secondaryButtonText: {
     ...typography.bodySmall,
     color: colors.primary,
     fontWeight: "600",
+  },
+  checkingRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 });
