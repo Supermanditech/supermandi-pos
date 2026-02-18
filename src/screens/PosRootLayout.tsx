@@ -93,6 +93,7 @@ type RootStackParamList = {
   SellScan: undefined;
   EnrollDevice: undefined;
   DeviceBlocked: undefined;
+  ForceUpdate: { currentVersion?: string; requiredVersion?: string };
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "SellScan">;
@@ -534,7 +535,7 @@ export default function PosRootLayout() {
           navigation.reset({
             index: 0,
             routes: [{
-              name: "ForceUpdate" as any,
+              name: "ForceUpdate",
               params: {
                 currentVersion: meta.appVersion ?? "unknown",
                 requiredVersion: status.minAppVersion ?? "unknown",
