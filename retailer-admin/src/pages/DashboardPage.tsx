@@ -10,7 +10,7 @@ import { getCategoryIcon as getCategoryIconFromConfig } from '../config/category
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
 // TZ-FORMAT-001 + CURRENCY-FORMAT-001: Use shared formatters
-import { formatCurrencyWhole, formatCurrency, formatDateShort, formatRupees } from '../lib/formatters';
+import { formatCurrencyWhole, formatCurrency, formatDateShort } from '../lib/formatters';
 
 export default function DashboardPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
