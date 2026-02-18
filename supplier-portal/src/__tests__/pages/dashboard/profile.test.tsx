@@ -11,30 +11,33 @@ jest.mock('react-hot-toast', () => ({
   }),
 }));
 
-// Mock auth context
+// Mock auth context — stable reference to prevent infinite useEffect loop
+// (profile page has useEffect([supplier]) which re-runs if supplier is a new object each render)
+const mockSupplier = {
+  businessName: 'Test Supplier Co',
+  gstin: '22AAAAA0000A1Z5',
+  verificationStatus: 'verified',
+  contactName: 'John Doe',
+  email: 'john@test.com',
+  phone: '+919876543210',
+  address: '123 Main St',
+  city: 'Mumbai',
+  state: 'Maharashtra',
+  pincode: '400001',
+  bankDetails: {
+    accountName: 'Test Supplier',
+    accountNumber: '1234567890',
+    ifscCode: 'HDFC0001234',
+    bankName: 'HDFC Bank',
+  },
+  bankVerificationStatus: null,
+  emailVerified: true,
+};
+const mockRefreshProfile = jest.fn();
 jest.mock('../../../lib/auth', () => ({
   useAuth: () => ({
-    supplier: {
-      businessName: 'Test Supplier Co',
-      gstin: '22AAAAA0000A1Z5',
-      verificationStatus: 'verified',
-      contactName: 'John Doe',
-      email: 'john@test.com',
-      phone: '+919876543210',
-      address: '123 Main St',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400001',
-      bankDetails: {
-        accountName: 'Test Supplier',
-        accountNumber: '1234567890',
-        ifscCode: 'HDFC0001234',
-        bankName: 'HDFC Bank',
-      },
-      bankVerificationStatus: null,
-      emailVerified: true,
-    },
-    refreshProfile: jest.fn(),
+    supplier: mockSupplier,
+    refreshProfile: mockRefreshProfile,
   }),
 }));
 
