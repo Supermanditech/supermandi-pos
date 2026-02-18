@@ -7,7 +7,9 @@ import {
   Pressable,
   Alert,
   Linking,
-  Platform
+  Platform,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
@@ -74,6 +76,8 @@ import { useSettingsStore } from "../stores/settingsStore";
 type RootStackParamList = {
   EnrollDevice: { enrollmentCode?: string } | undefined;  // DRX-003: Optional pre-fill from registration
   SellScan: undefined;
+  ForceUpdate: { currentVersion?: string; requiredVersion?: string };
+  DeviceBlocked: undefined;
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "EnrollDevice">;
@@ -321,6 +325,12 @@ export default function EnrollDeviceScreen() {
       return;
     }
 
+    // SCR-AUDIT-312: Block enrollment while label check is in-flight to prevent race condition
+    if (checkingLabel) {
+      Alert.alert("Please Wait", "Label availability check is in progress. Please wait a moment.");
+      return;
+    }
+
     // S3-1: Offline detection before enrollment attempt
     try {
       const netState = await NetInfo.fetch();
@@ -485,7 +495,13 @@ export default function EnrollDeviceScreen() {
   };
 
   return (
-    <View style={styles.container} testID="enroll-device-screen" accessibilityLabel="Enroll POS device screen">
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      testID="enroll-device-screen"
+      accessibilityLabel="Enroll POS device screen"
+    >
       <Text style={styles.title} testID="enroll-title" accessibilityRole="header">Enroll POS Device</Text>
       <Text style={styles.subtitle} testID="enroll-subtitle">Scan the QR code or enter the enrollment code.</Text>
 
@@ -661,9 +677,14 @@ export default function EnrollDeviceScreen() {
           accessibilityRole="button"
           accessibilityState={{ disabled: loading }}
         >
-          <Text style={[styles.primaryButtonText, loading && styles.primaryButtonTextDisabled]}>
-            {loading ? "Enrolling..." : "Enroll Device"}
-          </Text>
+          {loading ? (
+            <View style={styles.enrollingRow}>
+              <ActivityIndicator size="small" color={colors.textInverse} style={{ marginRight: spacing.xs }} />
+              <Text style={styles.primaryButtonText}>Enrolling...</Text>
+            </View>
+          ) : (
+            <Text style={styles.primaryButtonText}>Enroll Device</Text>
+          )}
         </Pressable>
 
         {/* DEV-only Test Store Shortcuts */}
@@ -704,15 +725,18 @@ export default function EnrollDeviceScreen() {
           </View>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: 20
+  },
+  scrollContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
   },
   title: {
     ...typography.h4,
@@ -738,7 +762,7 @@ const styles = StyleSheet.create({
   permissionBox: {
     padding: spacing.md,
     alignItems: "center",
-    gap: 12,
+    gap: spacing.sm,
   },
   permissionText: {
     ...typography.caption,
@@ -746,8 +770,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   controls: {
-    marginTop: 18,
-    gap: 12
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   label: {
     ...typography.caption,
@@ -758,9 +782,9 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.surfaceAlt,
     color: colors.textPrimary,
   },
@@ -770,21 +794,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorSoft
   },
   labelHint: {
+    ...typography.caption,
     fontSize: 11,
     color: colors.textSecondary,
-    fontStyle: "italic"
+    fontStyle: "italic",
   },
   duplicateWarning: {
     backgroundColor: colors.errorSoft,
-    padding: 10,
-    borderRadius: 8,
+    padding: spacing.sm,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.error
+    borderColor: colors.error,
   },
   duplicateWarningText: {
+    ...typography.caption,
     fontSize: 12,
     color: colors.error,
-    fontWeight: "500"
+    fontWeight: "500",
   },
   suggestions: {
     marginTop: spacing.sm,
@@ -792,30 +818,31 @@ const styles = StyleSheet.create({
   suggestionsLabel: {
     fontSize: 11,
     color: colors.textSecondary,
-    marginBottom: 6
+    marginBottom: spacing.xs,
   },
   suggestionPills: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6
+    gap: spacing.xs,
   },
   suggestionPill: {
     backgroundColor: colors.primarySoft,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: theme.borderRadius.full,
     borderWidth: 1,
     borderColor: colors.primary
   },
   suggestionPillText: {
+    ...typography.caption,
     fontSize: 12,
     fontWeight: "600",
-    color: colors.primaryDark
+    color: colors.primaryDark,
   },
   labelAvailable: {
     fontSize: 11,
     color: colors.success,
-    fontWeight: "500"
+    fontWeight: "500",
   },
   pillRow: {
     flexDirection: "row",
@@ -823,9 +850,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: theme.borderRadius.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface
@@ -835,17 +862,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft
   },
   pillText: {
+    ...typography.caption,
     fontSize: 12,
     fontWeight: "600",
-    color: colors.textSecondary
+    color: colors.textSecondary,
   },
   pillTextActive: {
     color: colors.primaryDark
   },
   primaryButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: spacing.sm,
+    borderRadius: theme.borderRadius.lg,
     alignItems: "center",
   },
   primaryButtonDisabled: {
@@ -862,9 +890,9 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderWidth: 1,
     borderColor: colors.primary,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center"
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
   },
   secondaryButtonText: {
     ...typography.bodySmall,
@@ -873,9 +901,9 @@ const styles = StyleSheet.create({
   },
   devSection: {
     marginTop: spacing.lg,
-    padding: 12,
+    padding: spacing.sm,
     backgroundColor: colors.warning + "15",
-    borderRadius: 10,
+    borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.warning,
     borderStyle: "dashed"
@@ -885,11 +913,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.warning,
     textTransform: "uppercase",
-    marginBottom: 8
+    marginBottom: spacing.sm,
   },
   devInfoRow: {
     flexDirection: "row",
-    marginBottom: 4
+    marginBottom: spacing.xs,
   },
   devInfoLabel: {
     fontSize: 11,
@@ -904,23 +932,27 @@ const styles = StyleSheet.create({
     color: colors.textPrimary
   },
   devButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     backgroundColor: colors.warning,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    alignItems: "center"
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: theme.borderRadius.sm,
+    alignItems: "center",
   },
   devButtonText: {
     color: colors.ink,
     fontWeight: "700",
     fontSize: 12,
   },
+  enrollingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   devWarning: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     fontSize: 10,
     color: colors.textSecondary,
     fontStyle: "italic",
-    lineHeight: 14
-  }
+    lineHeight: 14,
+  },
 });

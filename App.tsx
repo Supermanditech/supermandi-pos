@@ -347,15 +347,15 @@ import { registerForPushNotifications, setupNotificationListeners } from "./src/
 
 const Stack = createNativeStackNavigator();
 
-// SCR-NAV-PARITY: Deep link config for enrollment QR codes (supermandi://enroll?code=X)
+// SCR-AUDIT-311: Deep link config for enrollment QR codes (supermandi://enroll?code=X)
+// Path-only matching: React Navigation routes to EnrollDevice screen.
+// Param extraction (code=X → codeInput) is handled by EnrollDeviceScreen's own
+// Linking.getInitialURL() + addEventListener handler, which correctly parses ?code=X.
 const linking = {
   prefixes: ["supermandi://"],
   config: {
     screens: {
-      EnrollDevice: {
-        path: "enroll",
-        parse: { enrollmentCode: (code: string) => code },
-      },
+      EnrollDevice: "enroll",
     },
   },
 };

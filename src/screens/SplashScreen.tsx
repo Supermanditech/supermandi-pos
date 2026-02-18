@@ -18,6 +18,8 @@ type RootStackParamList = {
   Splash: undefined;
   EnrollDevice: undefined;
   SellScan: undefined;
+  ForceUpdate: { currentVersion?: string; requiredVersion?: string };
+  DeviceBlocked: undefined;
   Payment: undefined;
   SuccessPrint: undefined;
 };
@@ -64,12 +66,6 @@ export default function SplashScreen() {
     return Promise.race([getDeviceSession(), timeoutPromise]);
   }, []);
 
-  /** S1-4: Retry handler — resets error and re-runs session check */
-  const handleRetry = useCallback(() => {
-    setErrorState(null);
-    navigateAfterSession();
-  }, []);
-
   /** S1-1 + S1-2 + S1-3: Session check with full error handling */
   const navigateAfterSession = useCallback(async () => {
     try {
@@ -81,6 +77,12 @@ export default function SplashScreen() {
       setErrorState(msg);
     }
   }, [navigation, getSessionWithTimeout]);
+
+  /** S1-4: Retry handler — resets error and re-runs session check */
+  const handleRetry = useCallback(() => {
+    setErrorState(null);
+    navigateAfterSession();
+  }, [navigateAfterSession]);
 
   useEffect(() => {
     // S1-6: Non-blocking infra boot with error logging (not silent swallow)
@@ -108,7 +110,7 @@ export default function SplashScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, []);
+  }, [navigateAfterSession]);
 
   // S1-1 + S1-4: Error state with retry button
   if (errorState) {

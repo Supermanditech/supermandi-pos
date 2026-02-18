@@ -2,6 +2,7 @@ import { API_BASE_URL } from "../../config/api";
 import { getDeviceToken, getDeviceSession } from "../deviceSession";
 import { getDeviceMeta } from "../deviceInfo";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { ApiError } from "./apiClient";
 
 export type UiStatusResponse = {
   storeId?: string | null;
@@ -176,4 +177,45 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
       deviceId: session?.deviceId ?? null,
     };
   }
+}
+
+/**
+ * SCR-AUDIT-310: Strict version of fetchUiStatus that THROWS on errors.
+ *
+ * Used by gate screens (ForceUpdate, DeviceBlocked) where returning safe defaults
+ * would incorrectly let the user bypass the security gate.
+ *
+ * The regular fetchUiStatus() returns defaults on errors (correct for PosRootLayout
+ * offline mode). This version throws so callers can show an error alert instead
+ * of navigating away from the gate.
+ */
+export async function fetchUiStatusStrict(): Promise<UiStatusResponse> {
+  const deviceToken = await getDeviceToken();
+  if (!deviceToken) {
+    throw new ApiError(401, "DEVICE_SESSION_MISSING");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
+    headers: {
+      "X-Device-Token": deviceToken,
+      "X-App-Version": getDeviceMeta().appVersion ?? "unknown",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    let message = `Server error (${response.status})`;
+    try {
+      const data = JSON.parse(text);
+      if (data?.error) {
+        message = typeof data.error === "string" ? data.error : data.error?.code || message;
+      }
+    } catch {
+      // JSON parse failed — use default message
+    }
+    throw new ApiError(response.status, message);
+  }
+
+  const data = await response.json();
+  return parseUiStatusResponse(data);
 }
