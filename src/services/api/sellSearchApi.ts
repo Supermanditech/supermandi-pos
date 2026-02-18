@@ -188,7 +188,8 @@ export async function lookupStoreProductByBarcode(
     return response.data;
   } catch (error: unknown) {
     // 404 means product not in store catalog
-    if (error?.status === 404 || error?.response?.status === 404) {
+    const err = error as { status?: number; response?: { status?: number } };
+    if (err?.status === 404 || err?.response?.status === 404) {
       return null;
     }
     throw error;

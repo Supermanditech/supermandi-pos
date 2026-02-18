@@ -184,16 +184,6 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       .finally(() => setCategoriesLoading(false));
   }, [storeId]);
 
-  // Load products when filters change
-  // UIUX-POS-007: loadProducts must be in deps to avoid stale closure on rapid filter changes
-  useEffect(() => {
-    if (!storeId) return;
-
-    setPage(1);
-    setHasMore(true);
-    loadProducts(1, true);
-  }, [storeId, debouncedQuery, selectedCategory, loadProducts]);
-
   // Load products function
   // T-146: Enhanced with offline cache support
   const loadProducts = useCallback(
@@ -260,6 +250,16 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     },
     [storeId, debouncedQuery, selectedCategory]
   );
+
+  // Load products when filters change
+  // UIUX-POS-007: loadProducts must be in deps to avoid stale closure on rapid filter changes
+  useEffect(() => {
+    if (!storeId) return;
+
+    setPage(1);
+    setHasMore(true);
+    loadProducts(1, true);
+  }, [storeId, debouncedQuery, selectedCategory, loadProducts]);
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
