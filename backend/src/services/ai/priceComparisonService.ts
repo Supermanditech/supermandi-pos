@@ -44,14 +44,14 @@ export async function getStorePriceComparisons(storeId: string, opts: {
   const result = await pool.query(
     `SELECT sp.product_id, sp.display_name, sp.sell_price AS current_price,
             sup_p.id AS supplier_product_id, sup_p.supplier_id, sup_p.name AS supplier_product_name,
-            sup_p.price AS supplier_price, sup_p.moq,
+            sup_p.purchase_price AS supplier_price, sup_p.moq,
             s.company_name AS supplier_name
      FROM catalog.store_products sp
      JOIN catalog.supplier_product_map spm ON spm.product_id = sp.product_id
      JOIN catalog.supplier_products sup_p ON sup_p.id = spm.supplier_product_id AND sup_p.is_active = true
      JOIN platform.suppliers s ON s.id = sup_p.supplier_id
      WHERE ${conditions.join(' AND ')}
-     ORDER BY sp.display_name, sup_p.price ASC`,
+     ORDER BY sp.display_name, sup_p.purchase_price ASC`,
     params
   );
 
