@@ -51,7 +51,8 @@ export async function initChatSocket(
   httpServer: HttpServer,
   pool: Pool,
 ): Promise<ChatSocketManager> {
-  // Dynamic import — socket.io is optional dependency
+  // Dynamic import — socket.io is optional dependency (not in package.json)
+  // @ts-expect-error socket.io resolved at runtime when installed
   const { Server } = await import('socket.io');
 
   // CORS: restrict to known portal origins (not wildcard)

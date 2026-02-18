@@ -284,7 +284,7 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
       return res.status(400).json({ error: dateValidation.error });
     }
 
-    const pool = (await import("../../../db/client")).getPool();
+    const pool = (await import("../../../db/client.js")).getPool();
     if (!pool) return res.status(503).json({ error: "database unavailable" });
 
     let query: string;

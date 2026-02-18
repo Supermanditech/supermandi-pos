@@ -103,7 +103,7 @@ function getInvoiceTitle(model: string, type: string): string {
 // PDF Generation
 // =============================================================================
 
-export function generateInvoicePdf(data: InvoicePdfData): PDFKit.PDFDocument {
+export function generateInvoicePdf(data: InvoicePdfData): InstanceType<typeof PDFDocument> {
   const doc = new PDFDocument({
     size: "A4",
     margin: 40,

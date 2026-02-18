@@ -1,9 +1,9 @@
 // Production-grade error extraction from unknown catch variables
 // Usage: catch (_error: unknown) { const error = asError(_error); ... error.message, error.code ... }
 
-/** Typed shape of caught errors — includes PostgreSQL error properties */
+/** Typed shape of caught errors — includes PostgreSQL (string) and gRPC (number) error codes */
 export interface CaughtError extends Error {
-  code?: string;
+  code?: string | number;
   detail?: string;
   constraint?: string;
   severity?: string;
