@@ -1,6 +1,6 @@
 // SA-P2-003: Force update screen — blocks POS access when app version is below minimum
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -18,6 +18,11 @@ type RootStackParamList = {
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "ForceUpdate">;
 
+// Store links — update these once listings are live
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.supermanditech.supermandipos";
+const APP_STORE_URL = ""; // TODO: Add App Store URL after first iOS submission
+
 export default function ForceUpdateScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<RootStackParamList, "ForceUpdate">>();
@@ -25,6 +30,13 @@ export default function ForceUpdateScreen() {
 
   const currentVersion = route.params?.currentVersion ?? "unknown";
   const requiredVersion = route.params?.requiredVersion ?? "unknown";
+
+  const handleUpdate = () => {
+    const url = Platform.OS === "ios" && APP_STORE_URL ? APP_STORE_URL : PLAY_STORE_URL;
+    Linking.openURL(url).catch(() =>
+      Alert.alert("Cannot Open Store", "Please update the app manually from your app store.")
+    );
+  };
 
   const handleRetry = async () => {
     setChecking(true);
@@ -76,8 +88,17 @@ export default function ForceUpdateScreen() {
           </View>
         </View>
 
-        <Pressable style={[styles.button, checking && styles.buttonDisabled]} onPress={handleRetry} disabled={checking}>
-          <Text style={styles.buttonText}>{checking ? "Checking..." : "Check Again"}</Text>
+        <Pressable style={styles.button} onPress={handleUpdate}>
+          <MaterialCommunityIcons name="download" size={18} color={colors.textInverse} style={{ marginRight: 6 }} />
+          <Text style={styles.buttonText}>Update Now</Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.secondaryButton, checking && styles.buttonDisabled]}
+          onPress={handleRetry}
+          disabled={checking}
+        >
+          <Text style={styles.secondaryButtonText}>{checking ? "Checking..." : "Check Again"}</Text>
         </Pressable>
       </View>
     </View>
@@ -148,10 +169,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   button: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 10,
+    width: "100%",
+    justifyContent: "center",
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -159,5 +184,14 @@ const styles = StyleSheet.create({
   buttonText: {
     ...typography.button,
     color: colors.textInverse,
+  },
+  secondaryButton: {
+    marginTop: 12,
+    paddingVertical: 10,
+  },
+  secondaryButtonText: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: "600",
   },
 });
