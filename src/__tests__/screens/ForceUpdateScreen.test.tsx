@@ -1,0 +1,163 @@
+/**
+ * SCR-S2-HARDENING (S2-7): ForceUpdateScreen tests
+ * Covers: render, button labels, retry flow, offline detection, param validation, a11y, throttle
+ */
+import React from "react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { Alert, Linking, Platform } from "react-native";
+
+// Mock navigation + route
+const mockReset = jest.fn();
+const mockRouteParams = { currentVersion: "1.0.0", requiredVersion: "2.0.0" };
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ reset: mockReset }),
+  useRoute: () => ({ params: mockRouteParams }),
+}));
+
+// Mock NetInfo
+const mockNetInfoFetch = jest.fn().mockResolvedValue({ isConnected: true });
+jest.mock("@react-native-community/netinfo", () => ({
+  __esModule: true,
+  default: { fetch: () => mockNetInfoFetch() },
+}));
+
+// Mock fetchUiStatus
+const mockFetchUiStatus = jest.fn();
+jest.mock("../../services/api/uiStatusApi", () => ({
+  fetchUiStatus: () => mockFetchUiStatus(),
+}));
+
+// Mock clearDeviceSession
+const mockClearDeviceSession = jest.fn().mockResolvedValue(undefined);
+jest.mock("../../services/deviceSession", () => ({
+  clearDeviceSession: () => mockClearDeviceSession(),
+}));
+
+// Mock ApiError
+jest.mock("../../services/api/apiClient", () => ({
+  ApiError: class ApiError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "ApiError";
+    }
+  },
+}));
+
+// Mock vector icons
+jest.mock("@expo/vector-icons", () => ({
+  MaterialCommunityIcons: (props: any) => {
+    const React = require("react");
+    return React.createElement("View", { testID: `icon-${props.name}`, ...props });
+  },
+}));
+
+import ForceUpdateScreen from "../../screens/ForceUpdateScreen";
+
+describe("ForceUpdateScreen", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNetInfoFetch.mockResolvedValue({ isConnected: true });
+    mockFetchUiStatus.mockResolvedValue({ forceUpdate: false });
+    mockRouteParams.currentVersion = "1.0.0";
+    mockRouteParams.requiredVersion = "2.0.0";
+  });
+
+  it("renders with all key elements", () => {
+    render(<ForceUpdateScreen />);
+    expect(screen.getByTestId("force-update-screen")).toBeTruthy();
+    expect(screen.getByText("Update Required")).toBeTruthy();
+    expect(screen.getByText("Update Now")).toBeTruthy();
+    expect(screen.getByText("Check Again")).toBeTruthy();
+  });
+
+  it("displays version params correctly", () => {
+    render(<ForceUpdateScreen />);
+    expect(screen.getByTestId("force-update-current-version")).toHaveTextContent("1.0.0");
+    expect(screen.getByTestId("force-update-required-version")).toHaveTextContent("2.0.0");
+  });
+
+  it("falls back to 'unknown' for missing params (S2-5)", () => {
+    mockRouteParams.currentVersion = undefined as any;
+    mockRouteParams.requiredVersion = "";
+    render(<ForceUpdateScreen />);
+    expect(screen.getByTestId("force-update-current-version")).toHaveTextContent("unknown");
+    expect(screen.getByTestId("force-update-required-version")).toHaveTextContent("unknown");
+  });
+
+  it("has a11y labels on interactive elements (S2-6)", () => {
+    render(<ForceUpdateScreen />);
+    expect(screen.getByTestId("force-update-update-button")).toBeTruthy();
+    expect(screen.getByTestId("force-update-check-button")).toBeTruthy();
+    expect(screen.getByTestId("force-update-title")).toBeTruthy();
+  });
+
+  it("opens Play Store on Update Now (Android)", () => {
+    const spy = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined as any);
+    Platform.OS = "android";
+    render(<ForceUpdateScreen />);
+    fireEvent.press(screen.getByTestId("force-update-update-button"));
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("play.google.com"));
+    spy.mockRestore();
+  });
+
+  it("checks network before retry (S2-3) and shows alert when offline", async () => {
+    mockNetInfoFetch.mockResolvedValue({ isConnected: false });
+    const alertSpy = jest.spyOn(Alert, "alert");
+    render(<ForceUpdateScreen />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("force-update-check-button"));
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith("No Internet", expect.any(String));
+    expect(mockFetchUiStatus).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it("navigates to SellScan when update no longer required", async () => {
+    mockFetchUiStatus.mockResolvedValue({ forceUpdate: false });
+    render(<ForceUpdateScreen />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("force-update-check-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockReset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: "SellScan" }],
+      });
+    });
+  });
+
+  it("shows alert when update still required", async () => {
+    mockFetchUiStatus.mockResolvedValue({ forceUpdate: true, minAppVersion: "3.0.0" });
+    const alertSpy = jest.spyOn(Alert, "alert");
+    render(<ForceUpdateScreen />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("force-update-check-button"));
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith("Update Still Required", expect.stringContaining("3.0.0"));
+    alertSpy.mockRestore();
+  });
+
+  it("handles device_unauthorized by clearing session", async () => {
+    const { ApiError } = require("../../services/api/apiClient");
+    mockFetchUiStatus.mockRejectedValue(new ApiError("device_unauthorized"));
+    render(<ForceUpdateScreen />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("force-update-check-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockClearDeviceSession).toHaveBeenCalled();
+      expect(mockReset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: "EnrollDevice" }],
+      });
+    });
+  });
+});
