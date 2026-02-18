@@ -31,6 +31,11 @@ interface DevicesTabProps {
   refreshDevices: (page: number) => void;
   limit: number;
   devices: Array<{ deviceId: string; storeId: string; lastSeen: string; lastEventType: string; eventCount: number }>;
+  // SA-ENROLL-UX G1: Store picker dropdown
+  storeDirectory: Array<{ id: string; name?: string | null; storeName?: string | null }>;
+  // SA-ENROLL-UX G2: Code revocation
+  handleRevokeEnrollment: (code: string) => void;
+  revokeLoading: boolean;
 }
 
 export function DevicesTab({
@@ -55,6 +60,10 @@ export function DevicesTab({
   refreshDevices,
   limit,
   devices,
+  // SA-ENROLL-UX G1 + G2
+  storeDirectory,
+  handleRevokeEnrollment,
+  revokeLoading,
 }: DevicesTabProps) {
   return (
     <section className="card">
@@ -67,13 +76,21 @@ export function DevicesTab({
 
       <div className="tableWrap" style={{ paddingTop: 0 }}>
         <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          {/* SA-ENROLL-UX G1: Store picker dropdown */}
           <div className="control">
-            <label>Store ID</label>
-            <input
+            <label>Store</label>
+            <select
               value={enrollStoreId}
               onChange={(e) => setEnrollStoreId(e.target.value)}
-              placeholder="e.g. store-1"
-            />
+              style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ddd", fontSize: 13, minWidth: 260 }}
+            >
+              <option value="">-- Select a store --</option>
+              {storeDirectory.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name || s.storeName || s.id}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="control">
             <label>&nbsp;</label>
@@ -124,6 +141,16 @@ export function DevicesTab({
                     title="Regenerate QR code with new enrollment"
                   >
                     {enrollLoading ? "Regenerating..." : "Regenerate QR"}
+                  </button>
+                  {/* SA-ENROLL-UX G2: Revoke enrollment code */}
+                  <button
+                    className="btnGhost"
+                    onClick={() => handleRevokeEnrollment(enrollment.code)}
+                    disabled={revokeLoading}
+                    title="Revoke this enrollment code so it can no longer be used"
+                    style={{ color: "#dc2626" }}
+                  >
+                    {revokeLoading ? "Revoking..." : "Revoke Code"}
                   </button>
                 </div>
               </div>

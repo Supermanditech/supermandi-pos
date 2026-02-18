@@ -18,7 +18,8 @@ import { log } from "../lib/logger";
 // =============================================================================
 
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-const ENROLLMENT_TTL_MINUTES = 30;
+// SA-ENROLL-UX G4: Configurable production code expiry (default 24hr for field agents)
+const ENROLLMENT_TTL_MINUTES = parseInt(process.env.ENROLLMENT_TTL_MINUTES || "1440", 10);
 const DEMO_MAX_USES = 9999;
 const PRODUCTION_MAX_USES = 1;
 
