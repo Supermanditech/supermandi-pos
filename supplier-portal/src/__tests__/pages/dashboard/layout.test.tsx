@@ -78,7 +78,7 @@ jest.mock('../../../components/LimitedModeBanner', () => {
   };
 });
 
-// Mock lucide-react
+// Mock lucide-react — must include ALL icons imported by layout.tsx
 jest.mock('lucide-react', () => {
   const React = require('react');
   const mockIcon = (name: string) => (props: any) =>
@@ -95,6 +95,8 @@ jest.mock('lucide-react', () => {
     Menu: mockIcon('Menu'),
     X: mockIcon('X'),
     Bell: mockIcon('Bell'),
+    MessageSquare: mockIcon('MessageSquare'),
+    CreditCard: mockIcon('CreditCard'),
   };
 });
 

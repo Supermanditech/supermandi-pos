@@ -160,3 +160,19 @@ retailer-admin/coverage/
 supermandi-superadmin/coverage/
 supplier-portal/coverage/
 coverage/
+
+# Research / reference text files (payment gateway docs, RBI circulars, etc.)
+cashfree_*.txt
+decentro_*.txt
+hdfc_*.txt
+juspay_*.txt
+npci_*.txt
+open_*.txt
+paytm_*.txt
+paytmpayments_*.txt
+payu_*.txt
+phonepe_*.txt
+razorpay_*.txt
+razorpayx_*.txt
+rbi_*.txt
+tmp_*.txt
