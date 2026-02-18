@@ -7,7 +7,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import NetInfo from "@react-native-community/netinfo";
 
-import { fetchUiStatus } from "../services/api/uiStatusApi";
+import { fetchUiStatusStrict } from "../services/api/uiStatusApi";
 import { clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { theme, colors, typography, spacing } from "../theme";
@@ -16,6 +16,7 @@ type RootStackParamList = {
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
   SellScan: undefined;
   EnrollDevice: undefined;
+  DeviceBlocked: undefined;
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "ForceUpdate">;
@@ -72,7 +73,10 @@ export default function ForceUpdateScreen() {
 
     setChecking(true);
     try {
-      const status = await fetchUiStatus();
+      // SCR-AUDIT-310: Use strict fetch that throws on server errors.
+      // Regular fetchUiStatus returns safe defaults on errors, which would
+      // bypass this gate (forceUpdate: false → navigate to SellScan).
+      const status = await fetchUiStatusStrict();
       if (status.forceUpdate) {
         Alert.alert(
           "Update Still Required",
