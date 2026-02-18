@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
-import { theme } from "../theme";
+import { theme, colors, typography, spacing } from "../theme";
 
 type RootStackParamList = {
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
@@ -76,7 +76,7 @@ export default function ForceUpdateScreen() {
           </View>
         </View>
 
-        <Pressable style={styles.button} onPress={handleRetry} disabled={checking}>
+        <Pressable style={[styles.button, checking && styles.buttonDisabled]} onPress={handleRetry} disabled={checking}>
           <Text style={styles.buttonText}>{checking ? "Checking..." : "Check Again"}</Text>
         </Pressable>
       </View>
@@ -87,25 +87,25 @@ export default function ForceUpdateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: 24,
+    backgroundColor: colors.background,
+    padding: spacing.lg,
     justifyContent: "center",
     alignItems: "center",
   },
   card: {
     width: "100%",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   iconWrap: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -113,12 +113,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+    ...typography.caption,
+    color: colors.textSecondary,
     textAlign: "center",
     marginBottom: 20,
   },
@@ -126,35 +126,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   versionBox: {
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.background,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
     borderRadius: 8,
   },
   versionLabel: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "600",
     textTransform: "uppercase",
     marginBottom: 2,
   },
   versionValue: {
-    fontSize: 16,
+    ...typography.bodySmall,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   button: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 10,
   },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   buttonText: {
-    color: theme.colors.textInverse,
-    fontWeight: "700",
+    ...typography.button,
+    color: colors.textInverse,
   },
 });
