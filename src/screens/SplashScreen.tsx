@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   // S1-1: Error state styles
   errorCard: {
     marginTop: spacing.xl,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: colors.overlayInverse,
     borderRadius: theme.borderRadius.lg,
     padding: spacing.lg,
     alignItems: "center",

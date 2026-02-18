@@ -347,6 +347,19 @@ import { registerForPushNotifications, setupNotificationListeners } from "./src/
 
 const Stack = createNativeStackNavigator();
 
+// SCR-NAV-PARITY: Deep link config for enrollment QR codes (supermandi://enroll?code=X)
+const linking = {
+  prefixes: ["supermandi://"],
+  config: {
+    screens: {
+      EnrollDevice: {
+        path: "enroll",
+        parse: { enrollmentCode: (code: string) => code },
+      },
+    },
+  },
+};
+
 export default function App() {
   const [appReady, setAppReady] = useState(false);
 
@@ -412,7 +425,7 @@ export default function App() {
         />
 
         <ErrorBoundary>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{

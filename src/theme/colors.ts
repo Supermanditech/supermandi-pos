@@ -42,6 +42,7 @@ export const colors = {
   // Overlays
   overlay: "rgba(15, 23, 42, 0.45)",
   overlayLight: "rgba(15, 23, 42, 0.2)",
+  overlayInverse: "rgba(255, 255, 255, 0.15)",
   ink: "#0B1220",
 } as const;
 
