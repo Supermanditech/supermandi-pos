@@ -22,7 +22,7 @@ import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../serv
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { POS_MESSAGES } from "../utils/uiStatus";
-import { theme } from "../theme";
+import { colors, typography, spacing } from "../theme";
 import { API_BASE_URL, BUILD_INFO, TEST_STORE_CONFIG } from "../config/api";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { useCartStore } from "../stores/cartStore";
@@ -657,87 +657,87 @@ export default function EnrollDeviceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
     padding: 20
   },
   title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: theme.colors.textPrimary
+    ...typography.h4,
+    color: colors.textPrimary,
   },
   subtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    color: theme.colors.textSecondary
+    ...typography.caption,
+    marginTop: spacing.xs,
+    color: colors.textSecondary,
   },
   cameraWrap: {
-    marginTop: 16,
+    marginTop: spacing.md,
     borderRadius: 12,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   camera: {
     height: 220,
     width: "100%"
   },
   permissionBox: {
-    padding: 16,
+    padding: spacing.md,
     alignItems: "center",
-    gap: 12
+    gap: 12,
   },
   permissionText: {
-    color: theme.colors.textSecondary,
-    textAlign: "center"
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: "center",
   },
   controls: {
     marginTop: 18,
     gap: 12
   },
   label: {
-    fontSize: 12,
+    ...typography.caption,
     fontWeight: "600",
-    color: theme.colors.textSecondary
+    color: colors.textSecondary,
   },
   input: {
+    ...typography.bodySmall,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    color: theme.colors.textPrimary
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
   },
   // GL-RJ-006: Duplicate label detection styles
   inputError: {
-    borderColor: theme.colors.error,
-    backgroundColor: theme.colors.errorSoft
+    borderColor: colors.error,
+    backgroundColor: colors.errorSoft
   },
   labelHint: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     fontStyle: "italic"
   },
   duplicateWarning: {
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.error
+    borderColor: colors.error
   },
   duplicateWarningText: {
     fontSize: 12,
-    color: theme.colors.error,
+    color: colors.error,
     fontWeight: "500"
   },
   suggestions: {
-    marginTop: 8
+    marginTop: spacing.sm,
   },
   suggestionsLabel: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 6
   },
   suggestionPills: {
@@ -746,89 +746,90 @@ const styles = StyleSheet.create({
     gap: 6
   },
   suggestionPill: {
-    backgroundColor: theme.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.primary
+    borderColor: colors.primary
   },
   suggestionPillText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.primaryDark
+    color: colors.primaryDark
   },
   labelAvailable: {
     fontSize: 11,
-    color: theme.colors.success,
+    color: colors.success,
     fontWeight: "500"
   },
   pillRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8
+    gap: spacing.sm,
   },
   pill: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface
+    borderColor: colors.border,
+    backgroundColor: colors.surface
   },
   pillActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.accentSoft
+    borderColor: colors.primary,
+    backgroundColor: colors.accentSoft
   },
   pillText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary
+    color: colors.textSecondary
   },
   pillTextActive: {
-    color: theme.colors.primaryDark
+    color: colors.primaryDark
   },
   primaryButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
-    alignItems: "center"
+    alignItems: "center",
   },
   primaryButtonDisabled: {
-    backgroundColor: theme.colors.border,
-    opacity: 0.7
+    backgroundColor: colors.border,
+    opacity: 0.6,
   },
   primaryButtonText: {
-    color: theme.colors.textInverse,
-    fontWeight: "700"
+    ...typography.button,
+    color: colors.textInverse,
   },
   primaryButtonTextDisabled: {
-    color: theme.colors.textSecondary
+    color: colors.textSecondary
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: "center"
   },
   secondaryButtonText: {
-    color: theme.colors.primary,
-    fontWeight: "600"
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: "600",
   },
   devSection: {
-    marginTop: 24,
+    marginTop: spacing.lg,
     padding: 12,
-    backgroundColor: theme.colors.warning + "15",
+    backgroundColor: colors.warning + "15",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.warning,
+    borderColor: colors.warning,
     borderStyle: "dashed"
   },
   devSectionLabel: {
     fontSize: 11,
     fontWeight: "800",
-    color: theme.colors.warning,
+    color: colors.warning,
     textTransform: "uppercase",
     marginBottom: 8
   },
@@ -839,32 +840,32 @@ const styles = StyleSheet.create({
   devInfoLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     width: 45
   },
   devInfoValue: {
     flex: 1,
     fontSize: 11,
     fontFamily: "monospace",
-    color: theme.colors.textPrimary
+    color: colors.textPrimary
   },
   devButton: {
     marginTop: 8,
-    backgroundColor: theme.colors.warning,
+    backgroundColor: colors.warning,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
     alignItems: "center"
   },
   devButtonText: {
-    color: "#000",
+    color: colors.ink,
     fontWeight: "700",
-    fontSize: 12
+    fontSize: 12,
   },
   devWarning: {
     marginTop: 8,
     fontSize: 10,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     fontStyle: "italic",
     lineHeight: 14
   }
