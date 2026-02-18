@@ -2,6 +2,7 @@
 import React from "react";
 import type { StoreRecord } from "../api/stores";
 import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
+import type { EnrollmentRecord } from "../api/deviceEnrollments";
 import { formatDateTime } from "../lib/formatters";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 
@@ -75,6 +76,14 @@ interface StoresTabProps {
   // Store activity (derived from events)
   stores: Array<{ storeId: string; eventCount: number; lastSeen: string }>;
   limit: number;
+  // SA-ENROLL-UX G3 + G5: Enrollment from stores tab
+  handleCreateEnrollmentForStore: (storeId: string) => void;
+  enrollmentForStoreLoading: string;
+  storeEnrollments: Record<string, EnrollmentRecord[]>;
+  loadStoreEnrollments: (storeId: string) => void;
+  storeEnrollmentsLoading: Record<string, boolean>;
+  handleRevokeEnrollment: (code: string) => void;
+  revokeLoading: boolean;
 }
 
 export function StoresTab({
@@ -138,6 +147,14 @@ export function StoresTab({
   handleBarcodeSheetShare,
   stores,
   limit,
+  // SA-ENROLL-UX G3 + G5
+  handleCreateEnrollmentForStore,
+  enrollmentForStoreLoading,
+  storeEnrollments,
+  loadStoreEnrollments,
+  storeEnrollmentsLoading,
+  handleRevokeEnrollment,
+  revokeLoading,
 }: StoresTabProps) {
   return (
     <section className="card">
@@ -339,7 +356,7 @@ export function StoresTab({
                       <td>
                         <button
                           className="btnGhost"
-                          onClick={() => { const nextId = isExpanded ? null : s.id; setExpandedStoreId(nextId); if (nextId) loadStoreFeatureFlags(nextId); }}
+                          onClick={() => { const nextId = isExpanded ? null : s.id; setExpandedStoreId(nextId); if (nextId) { loadStoreFeatureFlags(nextId); loadStoreEnrollments(nextId); } }}
                           title={isExpanded ? "Hide details" : "Edit details"}
                         >
                           {s.contact_name || s.contact_phone ? `${s.contact_name ?? ""}` : "(none)"}
@@ -365,6 +382,16 @@ export function StoresTab({
                       <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         <button onClick={() => handleStoreNameSave(s.id)} disabled={storeNameSaving[s.id]}>
                           {storeNameSaving[s.id] ? "Saving..." : "Save"}
+                        </button>
+                        {/* SA-ENROLL-UX G3: Generate QR button per store */}
+                        <button
+                          className="btnGhost"
+                          onClick={() => handleCreateEnrollmentForStore(s.id)}
+                          disabled={enrollmentForStoreLoading === s.id}
+                          title="Generate enrollment QR code for this store"
+                          style={{ fontSize: 12, padding: "4px 8px" }}
+                        >
+                          {enrollmentForStoreLoading === s.id ? "..." : "QR"}
                         </button>
                         {/* SA-P0-001: Suspend/Reactivate buttons */}
                         {s.status === "ACTIVE" && (
@@ -481,6 +508,46 @@ export function StoresTab({
                                 ))}
                               </div>
                             ) : null}
+                          </div>
+                          {/* SA-ENROLL-UX G5: Per-store enrollment codes */}
+                          <div style={{ marginTop: "12px" }}>
+                            <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Enrollment Codes</label>
+                            {storeEnrollmentsLoading[s.id] ? (
+                              <span style={{ fontSize: 12, color: "#888" }}>Loading...</span>
+                            ) : storeEnrollments[s.id] && storeEnrollments[s.id].length > 0 ? (
+                              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                {storeEnrollments[s.id].map((e) => {
+                                  const badgeStyle: React.CSSProperties = {
+                                    display: "inline-flex", alignItems: "center", gap: 6,
+                                    padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+                                    ...(e.status === "ACTIVE" ? { background: "#dcfce7", color: "#166534" }
+                                      : e.status === "REVOKED" ? { background: "#fee2e2", color: "#991b1b" }
+                                      : e.status === "USED" ? { background: "#dbeafe", color: "#1e40af" }
+                                      : { background: "#fef3c7", color: "#92400e" }),
+                                  };
+                                  return (
+                                    <span key={e.id} style={badgeStyle}>
+                                      <span className="mono">{e.code}</span>
+                                      <span>{e.status}</span>
+                                      <span style={{ fontSize: 10, opacity: 0.7 }}>
+                                        {e.uses_count}/{e.max_uses} uses
+                                      </span>
+                                      {e.status === "ACTIVE" && (
+                                        <button
+                                          onClick={() => handleRevokeEnrollment(e.code)}
+                                          disabled={revokeLoading}
+                                          style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 11, textDecoration: "underline", padding: 0 }}
+                                        >
+                                          revoke
+                                        </button>
+                                      )}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: 12, color: "#888" }}>No enrollment codes yet</span>
+                            )}
                           </div>
                         </td>
                       </tr>

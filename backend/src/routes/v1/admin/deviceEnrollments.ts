@@ -12,7 +12,8 @@ const DEMO_MAX_USES = 9999;
 // Production stores get single-use enrollment codes
 const PRODUCTION_MAX_USES = 1;
 
-const ENROLLMENT_TTL_MINUTES = 30;
+// SA-ENROLL-UX G4: Configurable production code expiry (default 24hr for field agents)
+const ENROLLMENT_TTL_MINUTES = parseInt(process.env.ENROLLMENT_TTL_MINUTES || "1440", 10);
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 // AUD-063-A FIX: Use crypto.randomBytes instead of Math.random() for secure code generation
@@ -64,7 +65,7 @@ adminDeviceEnrollmentRouter.get("/device-enrollments", requireAdminToken, async 
     const countResult = await pool.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
-    // Get paginated data
+    // Get paginated data (SA-ENROLL-UX G5: include status + revocation fields)
     const dataQuery = `
       SELECT
         e.code as id,
@@ -76,7 +77,16 @@ adminDeviceEnrollmentRouter.get("/device-enrollments", requireAdminToken, async 
         e.max_uses,
         e.uses_count,
         e.created_at,
-        e.created_by
+        e.created_by,
+        e.revoked_at,
+        e.used_at,
+        e.last_used_at,
+        CASE
+          WHEN e.revoked_at IS NOT NULL THEN 'REVOKED'
+          WHEN e.expires_at < NOW() THEN 'EXPIRED'
+          WHEN COALESCE(e.uses_count, 0) >= COALESCE(e.max_uses, 1) THEN 'USED'
+          ELSE 'ACTIVE'
+        END as status
       FROM pos_device_enrollments e
       LEFT JOIN platform.stores s ON e.store_id::uuid = s.id
       ${whereClause}
@@ -156,5 +166,40 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
   } catch (error) {
     log.error("[AdminEnrollment] Error creating enrollment:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to create enrollment" });
+  }
+});
+
+// SA-ENROLL-UX G2: PATCH /api/v1/admin/device-enrollments/:code/revoke
+adminDeviceEnrollmentRouter.patch("/device-enrollments/:code/revoke", requireAdminToken, async (req, res) => {
+  try {
+    const code = typeof req.params.code === "string" ? req.params.code.trim() : "";
+    if (!code) {
+      return res.status(400).json({ error: "code is required" });
+    }
+
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const result = await pool.query(
+      `UPDATE pos_device_enrollments
+       SET revoked_at = NOW(), updated_at = NOW()
+       WHERE code = $1 AND revoked_at IS NULL
+       RETURNING code, store_id, revoked_at, expires_at, max_uses, uses_count, created_at`,
+      [code]
+    );
+
+    if (result.rowCount === 0) {
+      const check = await pool.query(`SELECT code, revoked_at FROM pos_device_enrollments WHERE code = $1`, [code]);
+      if (check.rowCount === 0) {
+        return res.status(404).json({ error: "enrollment code not found" });
+      }
+      return res.status(409).json({ error: "enrollment code already revoked" });
+    }
+
+    log.info(`[AdminEnrollment] Revoked code=${code}`);
+    return res.json({ success: true, enrollment: result.rows[0] });
+  } catch (error) {
+    log.error("[AdminEnrollment] Error revoking enrollment:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to revoke enrollment" });
   }
 });

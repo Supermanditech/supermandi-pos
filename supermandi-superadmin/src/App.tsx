@@ -9,7 +9,7 @@ import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
-import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
+import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
   fetchAnalyticsOverview,
   fetchAnalyticsDevices,
@@ -462,6 +462,11 @@ export default function App() {
   const [enrollment, setEnrollment] = useState<DeviceEnrollmentResponse | null>(null);
   const [enrollError, setEnrollError] = useState<string>("");
   const [enrollLoading, setEnrollLoading] = useState<boolean>(false);
+  // SA-ENROLL-UX: Enrollment revocation and per-store enrollment state
+  const [revokeLoading, setRevokeLoading] = useState<boolean>(false);
+  const [enrollmentForStoreLoading, setEnrollmentForStoreLoading] = useState<string>("");
+  const [storeEnrollments, setStoreEnrollments] = useState<Record<string, EnrollmentRecord[]>>({});
+  const [storeEnrollmentsLoading, setStoreEnrollmentsLoading] = useState<Record<string, boolean>>({});
   // ISSUE-MICRO-086: enrollNow state removed — timer moved to EnrollmentCountdown component
 
   // Analytics state
@@ -2484,6 +2489,54 @@ export default function App() {
     }
   }
 
+  // SA-ENROLL-UX G2: Revoke an enrollment code
+  async function handleRevokeEnrollment(code: string) {
+    if (!confirm(`Revoke enrollment code ${code}? This cannot be undone.`)) return;
+    setRevokeLoading(true);
+    try {
+      await revokeEnrollmentCode(code);
+      if (enrollment?.code === code) {
+        setEnrollment(null);
+      }
+      // Refresh any store enrollments that contain this code
+      for (const [sid, records] of Object.entries(storeEnrollments)) {
+        if (records.some((r) => r.code === code)) {
+          void loadStoreEnrollmentsHandler(sid);
+        }
+      }
+    } catch (e: any) {
+      setEnrollError(e?.message ? String(e.message) : "Failed to revoke enrollment code");
+    } finally {
+      setRevokeLoading(false);
+    }
+  }
+
+  // SA-ENROLL-UX G3: Generate enrollment from Stores tab
+  async function handleCreateEnrollmentForStore(storeId: string) {
+    setEnrollmentForStoreLoading(storeId);
+    try {
+      await createDeviceEnrollment(storeId);
+      await loadStoreEnrollmentsHandler(storeId);
+    } catch (e: any) {
+      setStoreDirectoryError(e?.message ? String(e.message) : "Failed to create enrollment");
+    } finally {
+      setEnrollmentForStoreLoading("");
+    }
+  }
+
+  // SA-ENROLL-UX G5: Load enrollment codes for a specific store
+  async function loadStoreEnrollmentsHandler(storeId: string) {
+    setStoreEnrollmentsLoading((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      const records = await fetchStoreEnrollments(storeId);
+      setStoreEnrollments((prev) => ({ ...prev, [storeId]: records }));
+    } catch {
+      // Silently fail — enrollment codes are supplementary info
+    } finally {
+      setStoreEnrollmentsLoading((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
   // ISSUE-MICRO-086: enrollmentCountdown useMemo removed — rendered by EnrollmentCountdown component
 
   // =========================================================================
@@ -2897,6 +2950,9 @@ export default function App() {
           refreshDevices={refreshDevices}
           limit={limit}
           devices={devices}
+          storeDirectory={storeDirectory}
+          handleRevokeEnrollment={handleRevokeEnrollment}
+          revokeLoading={revokeLoading}
         />
       )}
 
@@ -2962,6 +3018,13 @@ export default function App() {
           handleBarcodeSheetShare={handleBarcodeSheetShare}
           stores={stores}
           limit={limit}
+          handleCreateEnrollmentForStore={handleCreateEnrollmentForStore}
+          enrollmentForStoreLoading={enrollmentForStoreLoading}
+          storeEnrollments={storeEnrollments}
+          loadStoreEnrollments={loadStoreEnrollmentsHandler}
+          storeEnrollmentsLoading={storeEnrollmentsLoading}
+          handleRevokeEnrollment={handleRevokeEnrollment}
+          revokeLoading={revokeLoading}
         />
       )}
 
