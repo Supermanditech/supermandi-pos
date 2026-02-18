@@ -7,8 +7,8 @@ import {
   type CreateStoreProductInput,
   type CreateStoreProductResult
 } from "../../../services/storeProductDigitisationService";
-import {
 import { log } from "../../../lib/logger";
+import {
   validateProductName as validateProductNameUnified,
   validateBarcode as validateBarcodeUnified,
   validatePrice as validatePriceUnified,

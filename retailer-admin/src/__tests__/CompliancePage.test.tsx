@@ -40,7 +40,7 @@ describe('CompliancePage', () => {
   it('shows empty state when no documents', async () => {
     mockAuthFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve({ data: { documents: [], uploadEnabled: false } }),
     });
     renderPage();
     await waitFor(() => {
@@ -52,10 +52,13 @@ describe('CompliancePage', () => {
     mockAuthFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        data: [
-          { id: 'd1', type: 'gstin', fileName: 'gstin.pdf', uploadedAt: '2026-01-01T00:00:00Z', status: 'verified' },
-          { id: 'd2', type: 'fssai', fileName: 'fssai.pdf', uploadedAt: '2026-01-02T00:00:00Z', status: 'pending' },
-        ],
+        data: {
+          documents: [
+            { id: 'd1', type: 'gstin', fileName: 'gstin.pdf', uploadedAt: '2026-01-01T00:00:00Z', status: 'verified' },
+            { id: 'd2', type: 'fssai', fileName: 'fssai.pdf', uploadedAt: '2026-01-02T00:00:00Z', status: 'pending' },
+          ],
+          uploadEnabled: false,
+        },
       }),
     });
     renderPage();
@@ -69,10 +72,13 @@ describe('CompliancePage', () => {
     mockAuthFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        data: [
-          { id: 'd1', type: 'gstin', fileName: 'g.pdf', uploadedAt: '2026-01-01T00:00:00Z', status: 'verified' },
-          { id: 'd2', type: 'pan', fileName: 'p.pdf', uploadedAt: '2026-01-01T00:00:00Z', status: 'pending' },
-        ],
+        data: {
+          documents: [
+            { id: 'd1', type: 'gstin', fileName: 'g.pdf', uploadedAt: '2026-01-01T00:00:00Z', status: 'verified' },
+            { id: 'd2', type: 'pan', fileName: 'p.pdf', uploadedAt: '2026-01-01T00:00:00Z', status: 'pending' },
+          ],
+          uploadEnabled: false,
+        },
       }),
     });
     renderPage();
@@ -85,7 +91,7 @@ describe('CompliancePage', () => {
   it('toggles upload form when button clicked', async () => {
     mockAuthFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve({ data: { documents: [], uploadEnabled: true } }),
     });
     renderPage();
     await waitFor(() => {
@@ -103,7 +109,7 @@ describe('CompliancePage', () => {
   it('shows required documents list', async () => {
     mockAuthFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve({ data: { documents: [], uploadEnabled: false } }),
     });
     renderPage();
     await waitFor(() => {
@@ -116,7 +122,7 @@ describe('CompliancePage', () => {
   it('renders breadcrumb', async () => {
     mockAuthFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve({ data: { documents: [], uploadEnabled: false } }),
     });
     renderPage();
     expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();

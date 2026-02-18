@@ -8,8 +8,8 @@ import { Router, Request, Response } from 'express';
 import { getPool } from '../../../db/client';
 import { getStoreId, requireStoreContext } from '../../../middleware/retailerStoreContext';
 import { creditRegistry } from '../../../services/credit/CreditProviderRegistry';
-import {
 import { log } from "../../../lib/logger";
+import {
   upsertKycDocument,
   getStoreKycDocuments,
   checkKycReadiness,

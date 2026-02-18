@@ -27,8 +27,8 @@ try {
 } catch {
   log.warn("[SupplierAuth] Firebase verification not available");
 }
-import {
 import { log } from "../../../lib/logger";
+import {
   sendVerificationEmail,
   sendPasswordResetEmail,
   generateSecureOTP,
