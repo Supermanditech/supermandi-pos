@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 // WA-001: WhatsApp Business Cloud API Service
 // Pattern: razorpayOrderService.ts (raw fetch, env vars, graceful degradation)
 // API: Meta Graph API v22.0
@@ -19,7 +20,7 @@ if (!isWhatsAppConfigured()) {
     !WHATSAPP_ACCESS_TOKEN && "WHATSAPP_ACCESS_TOKEN",
     !WHATSAPP_PHONE_NUMBER_ID && "WHATSAPP_PHONE_NUMBER_ID",
   ].filter(Boolean);
-  console.warn(
+  log.warn(
     `[WhatsAppService] WARNING: Not configured (missing: ${missing.join(", ")}). ` +
     `Cloud API messaging DISABLED. Deep link sharing still works.`
   );
@@ -229,7 +230,7 @@ async function callMetaApi(body: Record<string, unknown>): Promise<WhatsAppSendR
       // Retry on transient errors (429 rate limit, 5xx server errors)
       if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < MAX_RETRIES) {
         const backoffMs = RETRY_BASE_MS * Math.pow(2, attempt);
-        console.warn(`[WhatsAppService] Meta API ${response.status} — retry ${attempt + 1}/${MAX_RETRIES} in ${backoffMs}ms`);
+        log.warn(`[WhatsAppService] Meta API ${response.status} — retry ${attempt + 1}/${MAX_RETRIES} in ${backoffMs}ms`);
         await sleep(backoffMs);
         continue;
       }
@@ -242,7 +243,7 @@ async function callMetaApi(body: Record<string, unknown>): Promise<WhatsAppSendR
       if (!response.ok || data.error) {
         const errMsg = data.error?.message || `Meta API error: ${response.status}`;
         const errCode = data.error?.code ? String(data.error.code) : String(response.status);
-        console.error(`[WhatsAppService] Send failed: ${errMsg}`);
+        log.error(`[WhatsAppService] Send failed: ${errMsg}`);
         return { sent: false, errorCode: errCode, errorMessage: errMsg };
       }
 
@@ -253,12 +254,12 @@ async function callMetaApi(body: Record<string, unknown>): Promise<WhatsAppSendR
       if (attempt < MAX_RETRIES) {
         const backoffMs = RETRY_BASE_MS * Math.pow(2, attempt);
         const msg = err instanceof Error ? err.message : "Unknown error";
-        console.warn(`[WhatsAppService] Request error "${msg}" — retry ${attempt + 1}/${MAX_RETRIES} in ${backoffMs}ms`);
+        log.warn(`[WhatsAppService] Request error "${msg}" — retry ${attempt + 1}/${MAX_RETRIES} in ${backoffMs}ms`);
         await sleep(backoffMs);
         continue;
       }
       const message = err instanceof Error ? err.message : "Unknown error";
-      console.error(`[WhatsAppService] Request failed after ${MAX_RETRIES + 1} attempts: ${message}`);
+      log.error(`[WhatsAppService] Request failed after ${MAX_RETRIES + 1} attempts: ${message}`);
       return { sent: false, errorCode: "REQUEST_FAILED", errorMessage: message };
     }
   }

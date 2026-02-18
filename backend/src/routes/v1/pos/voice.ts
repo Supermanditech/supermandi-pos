@@ -24,6 +24,7 @@ import {
   type VoiceOrderResult,
 } from "../../../services/ai/voiceOrderService";
 import { getHealthStatus } from "../../../services/ai/openaiProvider";
+import { log } from "../../../lib/logger";
 
 export const voiceRouter = Router();
 
@@ -72,7 +73,7 @@ const voiceRateLimit = rateLimitAi({ windowMs: 60_000, max: 20 });
 registerProductSearch(async (query: string, _storeId: string): Promise<ProductCandidate[]> => {
   // For now, return empty array - product resolution happens client-side
   // The voice service returns productName and the POS app resolves it
-  console.log("[Voice] Product search query:", query);
+  log.info("[Voice] Product search query:", query);
   return [];
 });
 
@@ -158,7 +159,7 @@ voiceRouter.post(
       const userRole = device?.role || "cashier";
       const requestId = req.body.requestId || uuidv4();
 
-      console.log("[Voice] Processing request:", {
+      log.info("[Voice] Processing request:", {
         requestId,
         storeId,
         mode,
@@ -192,7 +193,7 @@ voiceRouter.post(
         message: result.message,
       });
     } catch (error) {
-      console.error("[Voice] Interpret error:", error);
+      log.error("[Voice] Interpret error:", error);
 
       // Handle specific error types
       if (error instanceof Error) {
@@ -227,7 +228,7 @@ voiceRouter.post(
       // Clean up temp file
       if (audioFile?.path) {
         fs.unlink(audioFile.path, (err) => {
-          if (err) console.warn("[Voice] Failed to delete temp file:", err);
+          if (err) log.warn("[Voice] Failed to delete temp file:", err);
         });
       }
     }
@@ -310,7 +311,7 @@ voiceRouter.post(
         message: result.message,
       });
     } catch (error) {
-      console.error("[Voice] Parse error:", error);
+      log.error("[Voice] Parse error:", error);
       next(error);
     }
   }

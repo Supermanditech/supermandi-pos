@@ -12,6 +12,8 @@ import {
   uploadBuffer,
   deleteFile as gcsDeleteFile,
 } from "@supermandi/common";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 const router = Router();
 
@@ -81,7 +83,8 @@ async function lookupIFSC(ifscCode: string): Promise<IFSCData | null> {
 
     const data = await response.json() as IFSCData;
     return data;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // STBT-183: On timeout/network error, derive bank name from IFSC prefix
     // First 4 chars of IFSC = bank code (e.g., SBIN = State Bank of India)
     const bankPrefix = ifscCode.substring(0, 4);
@@ -97,7 +100,7 @@ async function lookupIFSC(ifscCode: string): Promise<IFSCData | null> {
 
     const bankName = knownBanks[bankPrefix];
     if (bankName) {
-      console.warn(`[IFSC] External API failed, using fallback for ${bankPrefix}: ${error?.name || error?.message}`);
+      log.warn(`[IFSC] External API failed, using fallback for ${bankPrefix}: ${error?.name || error?.message}`);
       return {
         BANK: bankName,
         BRANCH: 'Branch lookup unavailable',
@@ -108,7 +111,7 @@ async function lookupIFSC(ifscCode: string): Promise<IFSCData | null> {
       };
     }
 
-    console.error('[IFSC] Lookup failed, no fallback available:', error?.message);
+    log.error('[IFSC] Lookup failed, no fallback available:', error?.message);
     return null;
   }
 }
@@ -378,7 +381,7 @@ router.delete("/documents/:id", requireSupplierAuth, async (req: SupplierAuthReq
       await gcsDeleteFile(GCS_DOCUMENTS_BUCKET, filePath);
     } catch (err) {
       // Non-fatal: file may already be gone
-      console.warn('[KYC] GCS delete failed (non-fatal):', err);
+      log.warn('[KYC] GCS delete failed (non-fatal):', err);
     }
 
     // Delete from database

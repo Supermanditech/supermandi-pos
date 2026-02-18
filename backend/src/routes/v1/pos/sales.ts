@@ -27,6 +27,7 @@ import {
 } from "../../../services/inventoryLedgerService";
 // GO-LIVE-034: Import stock cache invalidation for returns
 import { invalidateStockCache } from "./inventory";
+import { log } from "../../../lib/logger";
 
 export const posSalesRouter = Router();
 
@@ -585,7 +586,7 @@ async function getStore(storeId: string): Promise<{ id: string; name: string; up
       active: Boolean(row.active)
     };
   } catch (err: any) {
-    console.error("[sales/getStore] Query failed:", err?.message);
+    log.error("[sales/getStore] Query failed:", err?.message);
     return null;
   }
 }
@@ -692,7 +693,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[daily-summary] Error:", error);
+    log.error("[daily-summary] Error:", error);
     return res.status(500).json({ error: "failed to load daily summary" });
   }
 });
@@ -1271,17 +1272,17 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     if ((error as any)?.code === "40001") {
       if (serializationAttempt < MAX_SERIALIZATION_RETRIES) {
         serializationRetryDelay = (serializationAttempt + 1) * 50; // 50ms, 100ms, 150ms backoff
-        console.warn(`[POS/sales] Serialization conflict, attempt ${serializationAttempt + 1}/${MAX_SERIALIZATION_RETRIES} — retrying in ${serializationRetryDelay}ms`);
+        log.warn(`[POS/sales] Serialization conflict, attempt ${serializationAttempt + 1}/${MAX_SERIALIZATION_RETRIES} — retrying in ${serializationRetryDelay}ms`);
         continue; // finally releases client, loop retries with backoff
       }
-      console.warn("[POS/sales] Serialization conflict — all retries exhausted:", (error as Error).message);
+      log.warn("[POS/sales] Serialization conflict — all retries exhausted:", (error as Error).message);
       return res.status(409).json({
         error: "serialization_conflict",
         message: "Transaction conflict after retries — please retry",
         retryable: true
       });
     }
-    console.error("[POS/sales] Unhandled sale creation error:", error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "");
+    log.error("[POS/sales] Unhandled sale creation error:", error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "");
     return res.status(500).json({ error: "failed to create sale" });
   } finally {
     client.release();
@@ -1676,7 +1677,7 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("[sales/return] Error:", error);
+    log.error("[sales/return] Error:", error);
     return res.status(500).json({ error: "failed to process return" });
   } finally {
     client.release();
@@ -2472,7 +2473,7 @@ posSalesRouter.get("/sales/:saleId/payment-status", requireDeviceToken, async (r
       } : null
     });
   } catch (error) {
-    console.error("[sales/payment-status] Error:", error);
+    log.error("[sales/payment-status] Error:", error);
     return res.status(500).json({ error: "failed to get payment status" });
   }
 });
@@ -2523,7 +2524,7 @@ posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req
       paymentRecorded: payment.status === "PAID" || payment.status === "DUE"
     });
   } catch (error) {
-    console.error("[payments/status] Error:", error);
+    log.error("[payments/status] Error:", error);
     return res.status(500).json({ error: "failed to get payment status" });
   }
 });

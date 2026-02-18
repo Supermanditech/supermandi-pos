@@ -4,6 +4,7 @@
 
 import { getPool } from "../../db/client";
 import { registerProductSearch, type ProductCandidate } from "./voiceOrderService";
+import { log } from "../../lib/logger";
 
 /**
  * Search products by name/query for a store using pg_trgm similarity
@@ -40,7 +41,7 @@ async function searchStoreProducts(query: string, storeId: string): Promise<Prod
       matchScore: parseFloat(row.sim_score) || 0.5,
     }));
   } catch (error) {
-    console.error("[ProductSearchBridge] Search failed:", error);
+    log.error("[ProductSearchBridge] Search failed:", error);
     return [];
   }
 }
@@ -51,5 +52,5 @@ async function searchStoreProducts(query: string, storeId: string): Promise<Prod
  */
 export function initProductSearchBridge(): void {
   registerProductSearch(searchStoreProducts);
-  console.log("[ProductSearchBridge] Product search registered for voice orders");
+  log.info("[ProductSearchBridge] Product search registered for voice orders");
 }

@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const adminSettingsRouter = Router();
 
@@ -61,8 +62,8 @@ adminSettingsRouter.get("/settings/stats", async (_req, res) => {
     };
 
     return res.json({ stats });
-  } catch (error: any) {
-    console.error("[admin/settings] Failed to fetch stats:", error);
+  } catch (error: unknown) {
+    log.error("[admin/settings] Failed to fetch stats:", error);
     return res.status(500).json({ error: "fetch_stats_failed" });
   }
 });

@@ -6,6 +6,8 @@ import multer from "multer";
 import crypto from "crypto";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posComplianceRouter = Router();
 
@@ -104,7 +106,8 @@ posComplianceRouter.get("/compliance/status", requireDeviceToken, async (req: Re
         isComplete: requiredMissing === 0 && pendingCount === 0,
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // Table might not exist yet
     if (error.code === "42P01") {
       return res.json({
@@ -121,7 +124,7 @@ posComplianceRouter.get("/compliance/status", requireDeviceToken, async (req: Re
         summary: { total: VALID_DOC_TYPES.length, verified: 0, pending: 0, requiredMissing: 2, isComplete: false },
       });
     }
-    console.error("[T-190] Compliance status error:", error.message);
+    log.error("[T-190] Compliance status error:", error.message);
     return res.status(500).json({ error: "Failed to fetch compliance status" });
   }
 });
@@ -191,7 +194,7 @@ posComplianceRouter.post("/compliance/upload", requireDeviceToken, (req: Request
           fs.writeFileSync(path.join(uploadsDir, fileName), file.buffer);
           fileUrl = `/uploads/compliance/${fileName}`;
         } else {
-          console.error("[T1-005] GCS document upload failed in production:", gcsErr);
+          log.error("[T1-005] GCS document upload failed in production:", gcsErr);
           return res.status(503).json({ error: "Document storage is temporarily unavailable" });
         }
       }
@@ -212,8 +215,9 @@ posComplianceRouter.post("/compliance/upload", requireDeviceToken, (req: Request
         fileName,
         status: 'pending',
       });
-    } catch (error: any) {
-      console.error("[T-190] Document upload error:", error.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error("[T-190] Document upload error:", error.message);
       return res.status(500).json({ error: "Failed to upload document" });
     }
   });

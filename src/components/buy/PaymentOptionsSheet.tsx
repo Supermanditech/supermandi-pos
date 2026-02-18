@@ -22,6 +22,7 @@ import { formatMoney } from "../../utils/money";
 import { verifyUtr } from "../../services/api/posApi";
 // T-127: Modal back handler for Android hardware back button
 import { useModalBackHandler } from "../../hooks/useModalBackHandler";
+import { asError } from "../../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -129,7 +130,8 @@ export function PaymentOptionsSheet({
           );
           setSelectedMode(null);
         }
-      } catch (error: any) {
+      } catch (_error: unknown) {
+    const error = asError(_error);
         console.error("[PaymentOptionsSheet] Payment error:", error);
         Alert.alert(
           t("payment.error", "Payment Error"),
@@ -178,7 +180,8 @@ export function PaymentOptionsSheet({
           result.errorMessage || t("payment.utrNotFound", "Could not verify this UTR. Please check and try again.")
         );
       }
-    } catch (error: any) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       console.error("[PaymentOptionsSheet] UTR verification error:", error);
       setVerificationStatus("failed");
       Alert.alert(

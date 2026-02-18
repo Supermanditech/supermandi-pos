@@ -13,6 +13,7 @@ import {
   recordEmailSend,
 } from "../../../services/emailService";
 import { getRedis } from "../../../db/redis";
+import { log } from "../../../lib/logger";
 
 export const adminAuthRouter = Router();
 
@@ -40,7 +41,7 @@ const JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    log.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -154,7 +155,7 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
 
   // Check allowlist
   if (!isEmailAllowed(normalizedEmail)) {
-    console.warn(`[GO-LIVE-LOGIN-004] Unauthorized admin login attempt: ${normalizedEmail}`);
+    log.warn(`[GO-LIVE-LOGIN-004] Unauthorized admin login attempt: ${normalizedEmail}`);
     return res.status(403).json({
       error: { code: "NOT_AUTHORIZED", message: "This email is not authorized for admin access" }
     });
@@ -191,7 +192,7 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
   });
 
   if (!emailResult.sent) {
-    console.error(`[GO-LIVE-LOGIN-004] Failed to send OTP email to ${normalizedEmail}:`, emailResult.errorMessage);
+    log.error(`[GO-LIVE-LOGIN-004] Failed to send OTP email to ${normalizedEmail}:`, emailResult.errorMessage);
     await deleteOtp(normalizedEmail); // Clean up on failure
     return res.status(500).json({
       error: {
@@ -201,7 +202,7 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
     });
   }
 
-  console.log(`[GO-LIVE-LOGIN-004] Admin OTP sent to ${normalizedEmail}`);
+  log.info(`[GO-LIVE-LOGIN-004] Admin OTP sent to ${normalizedEmail}`);
 
   return res.json({
     success: true,
@@ -268,7 +269,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
     if (stored.attempts >= MAX_VERIFY_ATTEMPTS) {
       await deleteOtp(normalizedEmail);
       await setLockout(normalizedEmail, Date.now() + LOCKOUT_MS);
-      console.warn(`[GO-LIVE-LOGIN-004] Admin OTP lockout for ${normalizedEmail} after ${stored.attempts} failed attempts`);
+      log.warn(`[GO-LIVE-LOGIN-004] Admin OTP lockout for ${normalizedEmail} after ${stored.attempts} failed attempts`);
       return res.status(429).json({
         error: {
           code: "TOO_MANY_ATTEMPTS",
@@ -297,7 +298,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
     { expiresIn: JWT_EXPIRY }
   );
 
-  console.log(`[GO-LIVE-LOGIN-004] Admin login successful: ${normalizedEmail}`);
+  log.info(`[GO-LIVE-LOGIN-004] Admin login successful: ${normalizedEmail}`);
 
   // ISSUE-MICRO-025: Set HttpOnly cookie (XSS-safe) alongside JSON response
   res.cookie('admin_session', token, {

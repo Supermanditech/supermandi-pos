@@ -10,6 +10,7 @@
 
 import { Router } from "express";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
 
 export const retailerMeRouter = Router();
 
@@ -104,7 +105,7 @@ retailerMeRouter.get("/me", async (req, res) => {
       stores,                // Backward compatibility
     });
   } catch (err: any) {
-    console.error("[retailer/me] Query failed:", err?.message);
+    log.error("[retailer/me] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR" });
   }
 });

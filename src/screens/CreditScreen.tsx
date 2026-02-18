@@ -30,6 +30,7 @@ import type {
   CreditScore,
   ScoringFactors,
 } from "../services/api/creditApi";
+import { asError } from "../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -150,10 +151,11 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     return () => clearInterval(pollInterval);
   }, [activeApplication?.status, loadData]);
 
-  // GO-LIVE-245: Calculate credit utilization warning
-  // Note: currentUtilization would need to be added to the API response
-  // For now, default to 0 (no warning) until backend provides this data
-  const creditUtilization = 0; // TODO: Add utilization tracking to backend
+  // GO-LIVE-245: Credit utilization warning — derived from loaded data
+  const usedCreditMinor = applications
+    .filter(a => a.status === "disbursed" || a.status === "approved")
+    .reduce((sum, a) => sum + (a.disbursedAmountMinor ?? a.requestedAmountMinor), 0);
+  const creditUtilization = eligibleAmount > 0 ? (usedCreditMinor / eligibleAmount) * 100 : 0;
   const showCreditWarning = creditUtilization >= 90;
 
   const handleRefresh = useCallback(() => {
@@ -208,7 +210,8 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
           loading: false,
         }));
       }
-    } catch (error: any) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       setApplyModal((prev) => ({
         ...prev,
         error: error.message || t("credit.applyError", "Failed to submit application"),
@@ -261,7 +264,8 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
           loading: false,
         }));
       }
-    } catch (error: any) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       setApplyModal((prev) => ({
         ...prev,
         error: error.message || t("credit.kycError", "KYC verification failed"),

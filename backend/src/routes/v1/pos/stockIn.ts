@@ -9,6 +9,8 @@ import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { requirePosStaff, requireRole } from "../../../middleware/posStaff";
 import type { PosStaffContext } from "../../../middleware/posStaff";
 import { randomUUID } from "crypto";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posStockInRouter = Router();
 
@@ -93,8 +95,9 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
       data: { entries },
       pagination: { total, limit: limitNum, offset: offsetNum },
     });
-  } catch (error: any) {
-    console.error("[stock-in] GET error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[stock-in] GET error:", error.message);
 
     // Table might not exist yet — return empty
     if (error.code === "42P01") {
@@ -238,7 +241,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
         currentStock = productResult.rows[0].current_stock ?? 0;
       } else {
         // Product not in store catalog — skip (can't stock-in unknown product)
-        console.log(`[stock-in] Skipping unknown barcode ${barcode} for store ${storeId}`);
+        log.info(`[stock-in] Skipping unknown barcode ${barcode} for store ${storeId}`);
         continue;
       }
 
@@ -312,9 +315,10 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
         createdAt: new Date().toISOString(),
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[stock-in] POST error:", error.message);
+    log.error("[stock-in] POST error:", error.message);
     return res.status(500).json({ success: false, error: "Failed to record stock-in" });
   } finally {
     client.release();

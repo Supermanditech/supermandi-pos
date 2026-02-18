@@ -4,6 +4,7 @@
  * and makes it available for structured logging and performance tracking.
  */
 import { Request, Response, NextFunction } from 'express';
+import { log } from "../lib/logger";
 
 export interface TraceContext {
   traceId: string;
@@ -43,7 +44,7 @@ export function tracingMiddleware(req: Request, _res: Response, next: NextFuncti
     const duration = Date.now() - startTime;
     // GCP Cloud Logging will auto-correlate if we log with trace fields
     if (trace && duration > 1000) {
-      console.warn(`Slow request: ${req.method} ${req.path} took ${duration}ms [trace=${trace.traceId}]`);
+      log.warn(`Slow request: ${req.method} ${req.path} took ${duration}ms [trace=${trace.traceId}]`);
     }
   });
 

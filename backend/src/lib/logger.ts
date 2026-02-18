@@ -71,3 +71,15 @@ export const logger: Logger = {
   error: (msg, meta) => emit('error', msg, meta),
   child: createChild,
 };
+
+/** Console-compatible variadic wrapper — drop-in replacement for console.log/error/warn */
+function joinArgs(args: unknown[]): string {
+  return args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+}
+
+export const log = {
+  info: (...args: unknown[]) => logger.info(joinArgs(args)),
+  error: (...args: unknown[]) => logger.error(joinArgs(args)),
+  warn: (...args: unknown[]) => logger.warn(joinArgs(args)),
+  debug: (...args: unknown[]) => logger.debug(joinArgs(args)),
+};

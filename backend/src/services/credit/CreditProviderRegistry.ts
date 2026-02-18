@@ -11,6 +11,7 @@ import type {
 } from './CreditProvider';
 import { SuperMandiCreditProvider } from './SuperMandiCreditProvider';
 import { MockCreditProvider } from './MockCreditProvider';
+import { log } from "../../lib/logger";
 
 export class CreditProviderRegistry {
   private providers = new Map<string, CreditProvider>();
@@ -74,7 +75,7 @@ export class CreditProviderRegistry {
         const offers = await provider.getOffers(storeId);
         allOffers.push(...offers);
       } catch (err) {
-        console.warn(`[T-263] Provider ${config.providerId} getOffers failed:`, err instanceof Error ? err.message : err);
+        log.warn(`[T-263] Provider ${config.providerId} getOffers failed:`, err instanceof Error ? err.message : err);
       }
     });
 
@@ -104,7 +105,7 @@ export class CreditProviderRegistry {
         const result = await provider.checkEligibility(storeId);
         results.push({ providerId: config.providerId, result });
       } catch (err) {
-        console.warn(`[T-263] Provider ${config.providerId} eligibility check failed:`, err instanceof Error ? err.message : err);
+        log.warn(`[T-263] Provider ${config.providerId} eligibility check failed:`, err instanceof Error ? err.message : err);
       }
     });
 
@@ -126,7 +127,7 @@ export class CreditProviderRegistry {
         const bal = await provider.getBalance(storeId);
         perProvider.push({ ...bal, providerId: config.providerId });
       } catch (err) {
-        console.warn(`[T-263] Provider ${config.providerId} balance failed:`, err instanceof Error ? err.message : err);
+        log.warn(`[T-263] Provider ${config.providerId} balance failed:`, err instanceof Error ? err.message : err);
       }
     });
 

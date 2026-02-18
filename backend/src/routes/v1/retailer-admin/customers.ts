@@ -3,6 +3,8 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerAdminCustomersRouter = Router();
 
@@ -66,8 +68,9 @@ retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Respons
       customers: dataResult.rows,
       total: countResult.rows[0]?.total || 0,
     });
-  } catch (error: any) {
-    console.error("[T-218] Customer list error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[T-218] Customer list error:", error.message);
     return res.status(500).json({ error: "Failed to list customers" });
   }
 });
@@ -113,8 +116,9 @@ retailerAdminCustomersRouter.get("/customers/:customerId", async (req: Request, 
     );
 
     return res.json({ customer, purchases: purchasesResult.rows });
-  } catch (error: any) {
-    console.error("[T-218] Customer detail error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[T-218] Customer detail error:", error.message);
     return res.status(500).json({ error: "Failed to get customer details" });
   }
 });

@@ -18,6 +18,8 @@ import {
   validatePrice,
 } from "@supermandi/common";
 import {
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
   validateProductName as validateProductNameUnified,
   validateBarcode as validateBarcodeUnified,
   validatePrice as validatePriceUnified,
@@ -164,8 +166,9 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
       count: data.length,
       lastUpdated: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error("[RetailerProducts] GET error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerProducts] GET error:", error.message);
 
     if (error.code === "42P01" || error.code === "42703") {
       // Table or column doesn't exist
@@ -429,9 +432,10 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         },
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RetailerProducts] POST error:", error.message);
+    log.error("[RetailerProducts] POST error:", error.message);
 
     if (error.code === "23505") {
       // Unique violation - likely barcode conflict
@@ -684,9 +688,10 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       data: { id, productId },
       message: "Product updated successfully",
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RetailerProducts] PATCH error:", error.message);
+    log.error("[RetailerProducts] PATCH error:", error.message);
 
     return res.status(500).json({
       success: false,
@@ -732,8 +737,9 @@ retailerAdminProductsRouter.delete("/products/:id", async (req: Request, res: Re
       success: true,
       message: "Product removed from store",
     });
-  } catch (error: any) {
-    console.error("[RetailerProducts] DELETE error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerProducts] DELETE error:", error.message);
 
     return res.status(500).json({
       success: false,
@@ -880,9 +886,10 @@ retailerAdminProductsRouter.post("/products/bulk", async (req: Request, res: Res
       errors: errors.length > 0 ? errors : undefined,
       message: `Imported ${imported} products${skipped > 0 ? `, ${skipped} skipped` : ''}`,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RetailerProducts] BULK error:", error.message);
+    log.error("[RetailerProducts] BULK error:", error.message);
 
     return res.status(500).json({
       success: false,
@@ -1027,9 +1034,10 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
         },
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[RetailerProducts] POST /loose error:", error.message);
+    log.error("[RetailerProducts] POST /loose error:", error.message);
 
     return res.status(500).json({
       success: false,
@@ -1224,8 +1232,9 @@ retailerAdminProductsRouter.get("/products/:id/sku.pdf", async (req: Request, re
     res.setHeader('Content-Disposition', `attachment; filename="sku_${barcodeValue}.pdf"`);
     res.setHeader('Content-Length', pdfBuffer.length.toString());
     return res.send(pdfBuffer);
-  } catch (error: any) {
-    console.error("[RetailerProducts] SKU PDF error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerProducts] SKU PDF error:", error.message);
 
     return res.status(500).json({
       success: false,

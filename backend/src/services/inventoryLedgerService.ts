@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
+import { log } from "../lib/logger";
 
 export type InventoryMovementType = "RECEIVE" | "SELL" | "ADJUSTMENT";
 
@@ -129,7 +130,7 @@ export async function applyInventoryMovement(
       [storeId, globalProductId, input.referenceType, input.referenceId]
     );
     if (existingEntry.rows.length > 0) {
-      console.log(`[InventoryLedger] GO-LIVE-121: Skipping duplicate movement for ${input.referenceType}/${input.referenceId}`);
+      log.info(`[InventoryLedger] GO-LIVE-121: Skipping duplicate movement for ${input.referenceType}/${input.referenceId}`);
       // Return current stock without applying delta again
       const currentRes = await input.client.query(
         `SELECT available_qty FROM store_inventory

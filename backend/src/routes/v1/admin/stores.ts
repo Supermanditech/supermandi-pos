@@ -18,6 +18,8 @@ import {
   isValidTransition,
   getValidTransitions,
 } from "../../../services/storeStateMachine";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const adminStoresRouter = Router();
 
@@ -117,7 +119,8 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
   let storeId = "";
   try {
     storeId = await ensureUniqueStoreId(pool, storeIdInput.value);
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     if (error?.message === "store_exists") {
       return res.status(409).json({ error: "store_exists" });
     }
@@ -129,8 +132,9 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
   let storeCode: string;
   try {
     storeCode = await generateStoreCode(storeNameInput.value);
-  } catch (error: any) {
-    console.error("[stores] CRITICAL: generate_store_code() failed:", error?.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[stores] CRITICAL: generate_store_code() failed:", error?.message);
     return res.status(500).json({ error: "STORE_CODE_GENERATION_FAILED", message: "Could not generate store code. Database function may be missing." });
   }
 
@@ -153,7 +157,7 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
       return res.status(409).json({ error: "store_exists" });
     }
     // BACKEND-CRASH-001: Handle all DB errors gracefully (was: throw err → process crash)
-    console.error("[admin/stores] Store creation DB error:", err?.message, err?.code);
+    log.error("[admin/stores] Store creation DB error:", err?.message, err?.code);
     return res.status(500).json({ error: "store_creation_failed" });
   }
 
@@ -214,9 +218,10 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
     }));
 
     return res.json({ stores, total, limit, offset });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // Fallback: query only base columns if extended columns don't exist
-    console.error("[admin/stores] Full query failed, trying base columns:", error?.message);
+    log.error("[admin/stores] Full query failed, trying base columns:", error?.message);
     try {
       const [countResult, result] = await Promise.all([
         pool.query(`SELECT COUNT(*)::int as total FROM platform.stores`),
@@ -234,7 +239,7 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
       }));
       return res.json({ stores, total, limit, offset });
     } catch (fallbackErr: any) {
-      console.error("[admin/stores] Fallback query also failed:", fallbackErr?.message);
+      log.error("[admin/stores] Fallback query also failed:", fallbackErr?.message);
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch stores" });
     }
   }
@@ -305,8 +310,9 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
     }
 
     return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], ...(deviceInfo ?? {}) } });
-  } catch (error: any) {
-    console.error("[admin/stores/:storeId] Query failed:", error?.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/stores/:storeId] Query failed:", error?.message);
     // Fallback with base columns
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
@@ -456,7 +462,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE']
     } });
   } catch (err: any) {
-    console.error("[admin/stores PATCH] Update failed:", err?.message);
+    log.error("[admin/stores PATCH] Update failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update store" });
   }
 });
@@ -491,11 +497,11 @@ adminStoresRouter.delete("/stores/:storeId", requirePermission("stores", "delete
     }
 
     const store = result.rows[0];
-    console.log(`[admin/stores] Store deleted: ${store.code} (${store.id})`);
+    log.info(`[admin/stores] Store deleted: ${store.code} (${store.id})`);
 
     return res.json({ success: true, message: `Store ${store.code} has been deleted` });
   } catch (err: any) {
-    console.error("[admin/stores DELETE] Delete failed:", err?.message);
+    log.error("[admin/stores DELETE] Delete failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to delete store" });
   }
 });
@@ -529,7 +535,7 @@ adminStoresRouter.get("/stores/pending", requirePermission("stores", "read"), as
       })),
     });
   } catch (err: any) {
-    console.error("[admin/stores/pending] Query failed:", err?.message);
+    log.error("[admin/stores/pending] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch pending stores" });
   }
 });
@@ -594,7 +600,7 @@ adminStoresRouter.get("/stores/:storeId/application", requirePermission("stores"
       documents = docsResult.rows;
     } catch (e) {
       // Table may not exist yet
-      console.log("[admin/stores/application] store_documents table not available");
+      log.info("[admin/stores/application] store_documents table not available");
     }
 
     // Get bound devices
@@ -609,7 +615,7 @@ adminStoresRouter.get("/stores/:storeId/application", requirePermission("stores"
       );
       devices = devicesResult.rows;
     } catch (e) {
-      console.log("[admin/stores/application] pos_devices query failed");
+      log.info("[admin/stores/application] pos_devices query failed");
     }
 
     // Get status history
@@ -617,7 +623,7 @@ adminStoresRouter.get("/stores/:storeId/application", requirePermission("stores"
     try {
       statusHistory = await getStoreStatusHistory(storeId, { limit: 20 });
     } catch (e) {
-      console.log("[admin/stores/application] status history not available");
+      log.info("[admin/stores/application] status history not available");
     }
 
     // Get payment details (masked)
@@ -654,7 +660,7 @@ adminStoresRouter.get("/stores/:storeId/application", requirePermission("stores"
       status_history: statusHistory,
     });
   } catch (err: any) {
-    console.error("[admin/stores/application] Query failed:", err?.message);
+    log.error("[admin/stores/application] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch store application" });
   }
 });
@@ -671,7 +677,7 @@ adminStoresRouter.get("/stores/:storeId/status-history", requirePermission("stor
     const history = await getStoreStatusHistory(storeId, { limit: 50 });
     return res.json({ status_history: history });
   } catch (err: any) {
-    console.error("[admin/stores/status-history] Query failed:", err?.message);
+    log.error("[admin/stores/status-history] Query failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch status history" });
   }
 });
@@ -760,7 +766,7 @@ adminStoresRouter.patch("/stores/:storeId/status", requirePermission("stores", "
       status_history: statusHistory,
     });
   } catch (err: any) {
-    console.error("[admin/stores/status] Update failed:", err?.message);
+    log.error("[admin/stores/status] Update failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update store status" });
   }
 });
@@ -846,7 +852,7 @@ adminStoresRouter.get("/duplicates", requirePermission("stores", "read"), async 
       },
     });
   } catch (err: any) {
-    console.error("[admin/duplicates] Error:", err?.message);
+    log.error("[admin/duplicates] Error:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch duplicates" });
   }
 });
@@ -880,11 +886,11 @@ adminStoresRouter.patch("/duplicates/:id", requirePermission("stores", "update")
       return res.status(404).json({ error: "NOT_FOUND", message: "Duplicate flag not found" });
     }
 
-    console.log(`[DEDUP-001] Resolved duplicate flag ${id} as ${status}`);
+    log.info(`[DEDUP-001] Resolved duplicate flag ${id} as ${status}`);
 
     return res.json({ success: true, duplicate: result.rows[0] });
   } catch (err: any) {
-    console.error("[admin/duplicates] Resolve error:", err?.message);
+    log.error("[admin/duplicates] Resolve error:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to resolve duplicate" });
   }
 });

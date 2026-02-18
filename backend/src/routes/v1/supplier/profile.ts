@@ -5,6 +5,7 @@ import { Router, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import { validatePinCode, validateEmail, validatePhone } from "@supermandi/common";
+import { log } from "../../../lib/logger";
 
 const router = Router();
 
@@ -282,7 +283,7 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
         );
       } catch (logErr) {
         // Audit log failure should not block the profile update
-        console.error("[SA-P1-008] Failed to log bank change:", (logErr as Error).message);
+        log.error("[SA-P1-008] Failed to log bank change:", (logErr as Error).message);
       }
     }
 

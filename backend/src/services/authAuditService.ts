@@ -2,6 +2,7 @@
 // Centralized service for logging authentication events
 
 import { getPool } from "../db/client";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // TYPES
@@ -47,7 +48,7 @@ export interface AuthAuditEvent {
 export async function logAuthEvent(event: AuthAuditEvent): Promise<void> {
   const pool = getPool();
   if (!pool) {
-    console.warn('[GO-LIVE-144] Auth audit: Pool unavailable');
+    log.warn('[GO-LIVE-144] Auth audit: Pool unavailable');
     return;
   }
 
@@ -74,11 +75,11 @@ export async function logAuthEvent(event: AuthAuditEvent): Promise<void> {
 
     // Log critical events to console as well
     if (['login_success', 'account_locked', 'logout_all'].includes(event.eventType)) {
-      console.log(`[GO-LIVE-144] Auth event: ${event.eventType} for ${event.email || event.phone || event.actorId} (${event.actorType})`);
+      log.info(`[GO-LIVE-144] Auth event: ${event.eventType} for ${event.email || event.phone || event.actorId} (${event.actorType})`);
     }
   } catch (err) {
     // Non-critical - don't fail the request
-    console.warn('[GO-LIVE-144] Failed to log auth event:', err);
+    log.warn('[GO-LIVE-144] Failed to log auth event:', err);
   }
 }
 

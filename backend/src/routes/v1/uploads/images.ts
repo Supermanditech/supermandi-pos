@@ -10,6 +10,7 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { log } from "../../../lib/logger";
 
 export const uploadsRouter = Router();
 
@@ -135,7 +136,7 @@ let sharpModule: any = null;
 try {
   sharpModule = require("sharp");
 } catch {
-  console.warn("[T-164] sharp not available — image resizing disabled (fallback to original)");
+  log.warn("[T-164] sharp not available — image resizing disabled (fallback to original)");
 }
 
 /**
@@ -169,7 +170,7 @@ async function generateImageVariants(
       const resized = await pipeline.toBuffer();
       variants.set(variant.suffix, resized);
     } catch (err) {
-      console.warn(`[T-164] Failed to generate ${variant.suffix} variant:`, err);
+      log.warn(`[T-164] Failed to generate ${variant.suffix} variant:`, err);
       // Continue with other variants
     }
   }
@@ -302,7 +303,7 @@ uploadsRouter.post("/image", requireDeviceToken, (req: Request, res: Response) =
         if (process.env.NODE_ENV === 'development') {
           imageUrl = saveToLocal(file.buffer, fileName);
         } else {
-          console.error('[T1-005] GCS upload failed and local fallback disabled in production');
+          log.error('[T1-005] GCS upload failed and local fallback disabled in production');
           return res.status(503).json({
             success: false,
             error: { code: 'STORAGE_UNAVAILABLE', message: 'Image storage is temporarily unavailable' },
@@ -323,7 +324,7 @@ uploadsRouter.post("/image", requireDeviceToken, (req: Request, res: Response) =
           }
         }
       } catch (variantErr) {
-        console.warn("[T-164] Variant generation failed (non-fatal):", variantErr);
+        log.warn("[T-164] Variant generation failed (non-fatal):", variantErr);
         // Non-fatal: original image is still saved
       }
 
@@ -336,7 +337,7 @@ uploadsRouter.post("/image", requireDeviceToken, (req: Request, res: Response) =
         },
       });
     } catch (error) {
-      console.error("[T-160] Image upload error:", error);
+      log.error("[T-160] Image upload error:", error);
       return res.status(503).json({
         success: false,
         error: {

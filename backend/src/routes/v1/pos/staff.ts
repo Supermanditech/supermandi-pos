@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import type { PosDeviceContext } from "../../../middleware/deviceToken";
+import { log } from "../../../lib/logger";
 
 export const posStaffRouter = Router();
 
@@ -61,7 +62,7 @@ posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
       role: staff.role
     });
   } catch (err) {
-    console.error("[POS Staff Login] Error:", err);
+    log.error("[POS Staff Login] Error:", err);
     return res.status(500).json({
       error: { code: "INTERNAL_ERROR", message: "Staff login failed" }
     });

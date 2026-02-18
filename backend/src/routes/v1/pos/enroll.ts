@@ -5,6 +5,8 @@ import { getPool } from "../../../db/client";
 import { isDemoStoreCode } from "../../../services/storeCodeService";
 import { validateDeviceFingerprint } from "@supermandi/common";
 import { enrollStore } from "../../../services/storeStateMachine";  // DR-005
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 // DEV-071: Enhanced enrollment with multi-use codes, idempotent enrollment, and proper error codes
 // BUG-FIX: Demo stores get unlimited multi-use enrollment codes; production stores stay single-use
@@ -97,7 +99,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
 
   // Dev logging to debug field name issues
   if (process.env.NODE_ENV !== "production" && !code) {
-    console.log("[Enroll] Request body keys:", Object.keys(req.body || {}));
+    log.info("[Enroll] Request body keys:", Object.keys(req.body || {}));
   }
 
   if (!code) {
@@ -259,7 +261,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       );
 
       // AUD-063-B FIX: Log re-enrollment with full context for audit trail
-      console.log(`[Enroll] Idempotent re-enrollment: device=${existingDeviceByFingerprint.id} code=${code} store=${store.id} matchType=fingerprint`);
+      log.info(`[Enroll] Idempotent re-enrollment: device=${existingDeviceByFingerprint.id} code=${code} store=${store.id} matchType=fingerprint`);
 
       await client.query("COMMIT");
       return res.json({
@@ -291,7 +293,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       // Check if code is already used/exhausted
       if (usesExhausted) {
         await client.query("ROLLBACK");
-        console.log(`[Enroll] REJECT 409: Production code ${code} already used (maxUses=${maxUses}, usesCount=${usesCount}, isMultiUse=${isMultiUseMode})`);
+        log.info(`[Enroll] REJECT 409: Production code ${code} already used (maxUses=${maxUses}, usesCount=${usesCount}, isMultiUse=${isMultiUseMode})`);
         return res.status(409).json({
           error: {
             code: "ENROLLMENT_CODE_USED",
@@ -303,7 +305,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       // Check if code is expired
       if (isExpired) {
         await client.query("ROLLBACK");
-        console.log(`[Enroll] REJECT 409: Production code ${code} expired at ${enrollment.expires_at}`);
+        log.info(`[Enroll] REJECT 409: Production code ${code} expired at ${enrollment.expires_at}`);
         return res.status(409).json({
           error: {
             code: "ENROLLMENT_CODE_EXPIRED",
@@ -315,7 +317,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
 
     // Log demo multi-use enrollment (for monitoring)
     if (isDemo && (usesExhausted || isExpired)) {
-      console.log(`[Enroll] Demo bypass: code=${code} store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
+      log.info(`[Enroll] Demo bypass: code=${code} store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
     }
 
     // ISSUE-MICRO-091: Check daily enrollment attempt count per store
@@ -330,7 +332,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       const dailyCount = dailyCountRes.rows[0]?.count ?? 0;
       if (dailyCount >= MAX_DAILY_ENROLLMENTS_PER_STORE) {
         await client.query("ROLLBACK");
-        console.warn(`[Enroll] REJECT 429: Store ${store.id} daily enrollment limit reached (${dailyCount}/${MAX_DAILY_ENROLLMENTS_PER_STORE})`);
+        log.warn(`[Enroll] REJECT 429: Store ${store.id} daily enrollment limit reached (${dailyCount}/${MAX_DAILY_ENROLLMENTS_PER_STORE})`);
         return res.status(429).json({
           error: {
             code: "DAILY_ENROLLMENT_LIMIT",
@@ -351,7 +353,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       const currentDeviceCount = deviceCountRes.rows[0]?.count ?? 0;
       if (currentDeviceCount >= storeMaxDevices) {
         await client.query("ROLLBACK");
-        console.log(`[Enroll] REJECT 409: Store ${store.id} has reached device limit (${currentDeviceCount}/${storeMaxDevices})`);
+        log.info(`[Enroll] REJECT 409: Store ${store.id} has reached device limit (${currentDeviceCount}/${storeMaxDevices})`);
         return res.status(409).json({
           error: {
             code: "DEVICE_LIMIT_EXCEEDED",
@@ -426,7 +428,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
             );
           } catch (eventErr) {
             // Non-critical, just log
-            console.warn("[Enroll] Failed to log re-enrollment event:", eventErr);
+            log.warn("[Enroll] Failed to log re-enrollment event:", eventErr);
           }
         } else {
           // Insert new device
@@ -485,12 +487,13 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
             );
           } catch (eventErr) {
             // Non-critical, just log
-            console.warn("[Enroll] Failed to log enrollment event:", eventErr);
+            log.warn("[Enroll] Failed to log enrollment event:", eventErr);
           }
         }
         inserted = true;
         break;
-      } catch (error: any) {
+      } catch (_error: unknown) {
+    const error = asError(_error);
         if (error?.code === "23505") {
           // Token collision, retry with new token
           deviceToken = generateDeviceToken();
@@ -522,14 +525,14 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
 
     await client.query("COMMIT");
 
-    console.log(`[Enroll] Device ${deviceId} enrolled with code ${code} (uses: ${usesCount + 1}/${maxUses})`);
+    log.info(`[Enroll] Device ${deviceId} enrolled with code ${code} (uses: ${usesCount + 1}/${maxUses})`);
 
     // DR-005: Transition store DRAFT → ENROLLED after first device enrollment
     // Non-blocking: if transition fails (already ENROLLED, etc.), enrollment still succeeds
     if (!existingDevice) {
       enrollStore(store.id, "system:enrollment").catch((err) => {
         // Expected to fail if store is already past DRAFT (e.g., ENROLLED, ACTIVE)
-        console.log(`[Enroll] DR-005: Store status transition skipped for ${store.id}:`, err?.message);
+        log.info(`[Enroll] DR-005: Store status transition skipped for ${store.id}:`, err?.message);
       });
     }
 
@@ -544,7 +547,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("[Enroll] Error:", error);
+    log.error("[Enroll] Error:", error);
     return res.status(500).json({ error: { code: "ENROLLMENT_FAILED", message: "Enrollment failed. Please try again." } });
   } finally {
     client.release();
@@ -654,7 +657,7 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
 
     return res.json({ isDuplicate: false });
   } catch (error) {
-    console.error("[checkDuplicateLabel] Error:", error);
+    log.error("[checkDuplicateLabel] Error:", error);
     // ISSUE-MICRO-090: Standardized error format (was flat string)
     return res.status(500).json({ error: { code: "LABEL_CHECK_FAILED", message: "Failed to check label" } });
   }
@@ -735,7 +738,7 @@ posEnrollRouter.post("/generate-activation-code", async (req, res) => {
       [code, device_fingerprint, expiresAt.toISOString()]
     );
 
-    console.log(`[POS-DEV-001] Generated activation code ${code} for device ${device_fingerprint.substring(0, 8)}...`);
+    log.info(`[POS-DEV-001] Generated activation code ${code} for device ${device_fingerprint.substring(0, 8)}...`);
 
     return res.json({
       success: true,
@@ -744,8 +747,9 @@ posEnrollRouter.post("/generate-activation-code", async (req, res) => {
       expires_in_seconds: ACTIVATION_CODE_EXPIRY_MINUTES * 60
     });
 
-  } catch (error: any) {
-    console.error("[POS-DEV-001] Generate activation code error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[POS-DEV-001] Generate activation code error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate activation code" } });
   }
 });
@@ -825,8 +829,9 @@ posEnrollRouter.get("/activation-status/:fingerprint", async (req, res) => {
       expires_in_seconds: Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000))
     });
 
-  } catch (error: any) {
-    console.error("[POS-DEV-001] Activation status check error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[POS-DEV-001] Activation status check error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to check activation status" } });
   }
 });

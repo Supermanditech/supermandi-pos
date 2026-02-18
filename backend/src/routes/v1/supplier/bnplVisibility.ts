@@ -3,6 +3,7 @@
 
 import { Router, Request, Response } from 'express';
 import { getPool } from '../../../db/client';
+import { log } from "../../../lib/logger";
 
 export const supplierBnplRouter = Router();
 
@@ -87,7 +88,7 @@ supplierBnplRouter.get('/backed-orders', async (req: Request, res: Response) => 
       },
     });
   } catch (err: any) {
-    console.error('[T-280] Supplier BNPL visibility error:', err.message);
+    log.error('[T-280] Supplier BNPL visibility error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to load BNPL orders' } });
   }
 });

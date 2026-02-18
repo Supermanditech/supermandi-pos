@@ -11,6 +11,7 @@ import {
   type SendEmailResult,
 } from "./emailService";
 import { getOnboardingConfig } from "../config/onboardingConfig";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // TYPES
@@ -68,7 +69,7 @@ async function sendGenericEmail(
 
     const data = (await response.json()) as { id?: string; name?: string; message?: string };
     if (!response.ok) {
-      console.error("[NotificationService] Resend API error:", data);
+      log.error("[NotificationService] Resend API error:", data);
       return { sent: false, errorCode: data.name || "RESEND_ERROR", errorMessage: data.message || "Resend error" };
     }
 
@@ -297,16 +298,16 @@ export async function sendOnboardingLinks(
       result.smsSent = smsResult.sent;
       if (!smsResult.sent) {
         result.smsError = smsResult.errorMessage;
-        console.warn(`[NotificationService] SMS not sent to ${input.phone}: ${smsResult.errorMessage}`);
+        log.warn(`[NotificationService] SMS not sent to ${input.phone}: ${smsResult.errorMessage}`);
       } else {
-        console.log(`[NotificationService] Onboarding SMS sent to ${input.phone}`);
+        log.info(`[NotificationService] Onboarding SMS sent to ${input.phone}`);
       }
     } catch (err) {
       result.smsError = err instanceof Error ? err.message : "SMS send failed";
-      console.warn(`[NotificationService] SMS exception for ${input.phone}:`, result.smsError);
+      log.warn(`[NotificationService] SMS exception for ${input.phone}:`, result.smsError);
     }
   } else {
-    console.log(`[NotificationService] SMS disabled — skipping onboarding SMS to ${input.phone}`);
+    log.info(`[NotificationService] SMS disabled — skipping onboarding SMS to ${input.phone}`);
   }
 
   // --- Email ---
@@ -320,16 +321,16 @@ export async function sendOnboardingLinks(
       result.emailSent = emailResult.sent;
       if (!emailResult.sent) {
         result.emailError = emailResult.errorMessage;
-        console.warn(`[NotificationService] Email not sent to ${input.email}: ${emailResult.errorMessage}`);
+        log.warn(`[NotificationService] Email not sent to ${input.email}: ${emailResult.errorMessage}`);
       } else {
-        console.log(`[NotificationService] Onboarding email sent to ${input.email}`);
+        log.info(`[NotificationService] Onboarding email sent to ${input.email}`);
       }
     } catch (err) {
       result.emailError = err instanceof Error ? err.message : "Email send failed";
-      console.warn(`[NotificationService] Email exception for ${input.email}:`, result.emailError);
+      log.warn(`[NotificationService] Email exception for ${input.email}:`, result.emailError);
     }
   } else if (input.email && !isEmailServiceEnabled()) {
-    console.log(`[NotificationService] Email disabled — skipping onboarding email to ${input.email}`);
+    log.info(`[NotificationService] Email disabled — skipping onboarding email to ${input.email}`);
   }
 
   return result;

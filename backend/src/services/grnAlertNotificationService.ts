@@ -8,6 +8,7 @@
 
 import { getPool } from '../db/client';
 import { sendAndPersistNotification } from './fcmService';
+import { log } from "../lib/logger";
 
 /**
  * Send push notification for a GRN excess alert.
@@ -63,10 +64,10 @@ export async function notifyGrnExcessAlert(input: {
       priority: 'high',
     });
 
-    console.log(`[T-232] GRN excess notification sent for store ${store.name} - ${input.productName}`);
+    log.info(`[T-232] GRN excess notification sent for store ${store.name} - ${input.productName}`);
   } catch (err) {
     // Non-blocking — log and continue
-    console.error('[T-232] GRN alert notification failed:', err);
+    log.error('[T-232] GRN alert notification failed:', err);
   }
 }
 
@@ -103,7 +104,7 @@ export async function notifyGrnMismatch(input: {
       priority: 'normal',
     });
   } catch (err) {
-    console.error('[T-232] GRN mismatch notification failed:', err);
+    log.error('[T-232] GRN mismatch notification failed:', err);
   }
 }
 
@@ -168,6 +169,6 @@ export async function notifyOrderStatusChange(input: {
       });
     }
   } catch (err) {
-    console.error('[T-232] Order status notification failed:', err);
+    log.error('[T-232] Order status notification failed:', err);
   }
 }

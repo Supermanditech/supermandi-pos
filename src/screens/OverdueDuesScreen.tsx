@@ -22,6 +22,7 @@ import { formatDate } from "../i18n/formatters";
 import { apiClient } from "../services/api/apiClient";
 import { BackHeader } from "../components/ui/BackHeader";
 import EmptyState from "../components/ui/EmptyState";
+import { asError } from "../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -111,7 +112,8 @@ export default function OverdueDuesScreen({
       // Sort by days overdue descending (oldest first)
       const sorted = [...data].sort((a, b) => b.daysOverdue - a.daysOverdue);
       setDues(sorted);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[OverdueDuesScreen] Failed to load overdue dues:", e);
       setError(e?.message || "Failed to load overdue dues");
     } finally {

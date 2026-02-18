@@ -9,6 +9,8 @@ import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceTok
 import { isPayoutsEnabled } from "../../services/supplierPayoutService";
 // T-232: GRN alert push notifications
 import { notifyGrnExcessAlert, notifyGrnMismatch, notifyOrderStatusChange } from "../../services/grnAlertNotificationService";
+import { log } from "../../lib/logger";
+import { asError } from "../../lib/errorUtils";
 
 export const ordersRouter = Router();
 
@@ -236,12 +238,12 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         [orderId, JSON.stringify({ orderType, itemCount: validatedItems.length })]
       );
     } catch (eventErr: any) {
-      console.warn("[Orders] Failed to log creation event:", eventErr.message);
+      log.warn("[Orders] Failed to log creation event:", eventErr.message);
     }
 
     await client.query("COMMIT");
 
-    console.log(`[SUP-POS-001] Order created: ${orderNumber}, storeId=${storeId}, supplierId=${supplierId}, items=${validatedItems.length}, total=${totalAmount}`);
+    log.info(`[SUP-POS-001] Order created: ${orderNumber}, storeId=${storeId}, supplierId=${supplierId}, items=${validatedItems.length}, total=${totalAmount}`);
 
     return res.status(201).json({
       success: true,
@@ -256,9 +258,10 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         items: insertedItems,
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SUP-POS-001] Create order error:", error.message);
+    log.error("[SUP-POS-001] Create order error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(400).json({
@@ -369,8 +372,9 @@ ordersRouter.get("/stores/:storeId/orders", requireDeviceToken, async (req: Requ
         totalPages: Math.ceil(total / limitNum),
       },
     });
-  } catch (error: any) {
-    console.error("[Orders] List error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] List error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -476,8 +480,9 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (
         items: itemsResult.rows,
       },
     });
-  } catch (error: any) {
-    console.error("[Orders] Get error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] Get error:", error.message);
 
     // If table doesn't exist
     if (error.code === "42P01") {
@@ -530,8 +535,9 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/events", requireDeviceToken, 
       success: true,
       data: result.rows,
     });
-  } catch (error: any) {
-    console.error("[Orders] Events error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] Events error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -571,7 +577,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", requireDeviceToken,
 
     // GL-PO-001: If order doesn't exist, return success (idempotent)
     if (orderResult.rows.length === 0) {
-      console.log(`[Orders] Cancel: order ${orderId} not found, returning idempotent success`);
+      log.info(`[Orders] Cancel: order ${orderId} not found, returning idempotent success`);
       return res.json({
         success: true,
         message: "Order already cancelled or deleted",
@@ -631,7 +637,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", requireDeviceToken,
       );
     } catch (eventErr: any) {
       // Non-critical, just log
-      console.warn("[Orders] Failed to log cancel event:", eventErr.message);
+      log.warn("[Orders] Failed to log cancel event:", eventErr.message);
     }
 
     return res.json({
@@ -642,8 +648,9 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", requireDeviceToken,
         to: "cancelled",
       },
     });
-  } catch (error: any) {
-    console.error("[Orders] Cancel error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] Cancel error:", error.message);
 
     // GL-PO-001: If table doesn't exist, return success (idempotent)
     if (error.code === "42P01") {
@@ -683,7 +690,7 @@ ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, asyn
 
     // GL-PO-001: If order doesn't exist, return 204 (idempotent success)
     if (orderResult.rows.length === 0) {
-      console.log(`[Orders] Delete: order ${orderId} not found, returning idempotent 204`);
+      log.info(`[Orders] Delete: order ${orderId} not found, returning idempotent 204`);
       return res.status(204).send();
     }
 
@@ -735,8 +742,9 @@ ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, asyn
 
     // GL-PO-001: Return 204 No Content on successful delete
     return res.status(204).send();
-  } catch (error: any) {
-    console.error("[Orders] Delete error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] Delete error:", error.message);
 
     // GL-PO-001: If table doesn't exist, return 204 (idempotent success)
     if (error.code === "42P01") {
@@ -850,9 +858,10 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/payment-options", requireDevi
       );
       creditUsed = parseInt(creditUsage.rows[0]?.used || '0', 10);
 
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       // If tables don't exist, continue with defaults
-      console.log('[SM-016] Store settings query failed, using defaults:', e.code);
+      log.info('[SM-016] Store settings query failed, using defaults:', e.code);
     }
 
     // 3. Build payment options
@@ -903,7 +912,7 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/payment-options", requireDevi
       reason: creditReason || undefined
     });
 
-    console.log(`[SM-016] Payment options: orderId=${orderId}, storeId=${storeId}, amount=${order.totalAmount}`);
+    log.info(`[SM-016] Payment options: orderId=${orderId}, storeId=${storeId}, amount=${order.totalAmount}`);
 
     return res.json({
       success: true,
@@ -913,8 +922,9 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/payment-options", requireDevi
       options
     });
 
-  } catch (error: any) {
-    console.error("[SM-016] Payment options error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-016] Payment options error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(400).json({
@@ -1077,7 +1087,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
 
       await client.query("COMMIT");
 
-      console.log(`[SM-017] BUY UPI payment initiated: paymentId=${paymentId}, orderId=${orderId}`);
+      log.info(`[SM-017] BUY UPI payment initiated: paymentId=${paymentId}, orderId=${orderId}`);
 
       return res.json({
         success: true,
@@ -1173,7 +1183,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
 
       await client.query("COMMIT");
 
-      console.log(`[SM-019] BNPL drawdown created: drawdownId=${drawdownId}, paymentId=${paymentId}, dueDate=${dueDateStr}`);
+      log.info(`[SM-019] BNPL drawdown created: drawdownId=${drawdownId}, paymentId=${paymentId}, dueDate=${dueDateStr}`);
 
       return res.json({
         success: true,
@@ -1242,7 +1252,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
 
       await client.query("COMMIT");
 
-      console.log(`[SM-017] BUY CREDIT payment created: paymentId=${paymentId}, orderId=${orderId}, creditRemaining=${availableCredit - order.total_amount}`);
+      log.info(`[SM-017] BUY CREDIT payment created: paymentId=${paymentId}, orderId=${orderId}, creditRemaining=${availableCredit - order.total_amount}`);
 
       return res.json({
         success: true,
@@ -1257,9 +1267,10 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
     await client.query("ROLLBACK");
     return res.status(400).json({ success: false, error: "Invalid payment mode" });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-017] BUY pay error:", error.message);
+    log.error("[SM-017] BUY pay error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(400).json({ success: false, error: "Payment tables not initialized" });
@@ -1358,7 +1369,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
 
     // GO-LIVE-118: Verify payment amount matches order total (reconciliation)
     if (orderTotal !== undefined && payment.amount_minor !== orderTotal) {
-      console.error(`[SM-017] GO-LIVE-118: Payout reconciliation mismatch! payment=${payment.amount_minor}, order=${orderTotal}`);
+      log.error(`[SM-017] GO-LIVE-118: Payout reconciliation mismatch! payment=${payment.amount_minor}, order=${orderTotal}`);
       // Don't fail the payment, but log critical discrepancy
       // This could indicate a race condition or data corruption
     }
@@ -1381,18 +1392,19 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
          VALUES ($1, $2, $3)`,
         [payoutId, orderId, payment.amount_minor]
       );
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       // Table might not exist yet, log and continue
-      console.log('[SM-017] supplier_payouts table not ready:', e.code);
+      log.info('[SM-017] supplier_payouts table not ready:', e.code);
     }
 
     if (!payoutsEnabled) {
-      console.warn(`[SM-017] POS-UPI-002: Automated payouts disabled. Payout ${payoutId} created as pending_manual. Operator must process manually.`);
+      log.warn(`[SM-017] POS-UPI-002: Automated payouts disabled. Payout ${payoutId} created as pending_manual. Operator must process manually.`);
     }
 
     await client.query("COMMIT");
 
-    console.log(`[SM-017] BUY payment confirmed: paymentId=${paymentId}, utr=${upiTxnRef}, payoutStatus=${payoutStatus}`);
+    log.info(`[SM-017] BUY payment confirmed: paymentId=${paymentId}, utr=${upiTxnRef}, payoutStatus=${payoutStatus}`);
 
     return res.json({
       success: true,
@@ -1402,9 +1414,10 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
       payoutStatus,
     });
 
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-017] BUY confirm error:", error.message);
+    log.error("[SM-017] BUY confirm error:", error.message);
 
     return res.status(500).json({ success: false, error: "Failed to confirm payment" });
   } finally {
@@ -1687,8 +1700,9 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
     } finally {
       client.release();
     }
-  } catch (error: any) {
-    console.error("[Orders] Receive error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] Receive error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(400).json({
@@ -1747,8 +1761,9 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/receives", requireDeviceToken
       success: true,
       data: result.rows,
     });
-  } catch (error: any) {
-    console.error("[Orders] List receives error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] List receives error:", error.message);
 
     if (error.code === "42P01") {
       return res.json({
@@ -1834,8 +1849,9 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/receives/:receiveId", require
         items: itemsResult.rows,
       },
     });
-  } catch (error: any) {
-    console.error("[Orders] Get receive error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] Get receive error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(404).json({

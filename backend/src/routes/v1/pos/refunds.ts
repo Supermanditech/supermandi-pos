@@ -22,6 +22,7 @@ import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
+import { log } from "../../../lib/logger";
 
 export const posRefundsRouter = Router();
 
@@ -267,7 +268,7 @@ posRefundsRouter.post(
 
       await client.query("COMMIT");
 
-      console.log(`[T-150] Refund created: refundId=${refundId}, saleId=${saleId}, amount=${refundAmountMinor}, method=${refundMethod}, status=${initialStatus}`);
+      log.info(`[T-150] Refund created: refundId=${refundId}, saleId=${saleId}, amount=${refundAmountMinor}, method=${refundMethod}, status=${initialStatus}`);
 
       return res.status(201).json({
         success: true,
@@ -285,7 +286,7 @@ posRefundsRouter.post(
       });
     } catch (err: any) {
       await client.query("ROLLBACK");
-      console.error("[T-150] Refund creation error:", err);
+      log.error("[T-150] Refund creation error:", err);
 
       if (err.code === '23503') {
         return res.status(400).json({
@@ -377,7 +378,7 @@ posRefundsRouter.get(
         offset,
       });
     } catch (err: any) {
-      console.error("[T-150] List refunds error:", err);
+      log.error("[T-150] List refunds error:", err);
 
       // Handle table not existing yet (migration may not have run)
       if (err.code === '42P01') {
@@ -482,7 +483,7 @@ posRefundsRouter.get(
         stockMovements,
       });
     } catch (err: any) {
-      console.error("[T-150] Get refund detail error:", err);
+      log.error("[T-150] Get refund detail error:", err);
 
       if (err.code === '42P01') {
         return res.status(404).json({

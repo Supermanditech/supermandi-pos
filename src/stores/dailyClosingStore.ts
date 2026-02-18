@@ -6,6 +6,7 @@ import type {
   DailyClosingRecord,
   CloseDayRequest,
 } from "../services/dailyClosingService";
+import { asError } from "../utils/errorUtils";
 
 interface DailyClosingState {
   summary: DailyClosingSummary | null;
@@ -34,7 +35,8 @@ export const useDailyClosingStore = create<DailyClosingState>()((set, get) => ({
     try {
       const summary = await dailyClosingService.getDailyClosingSummary(date);
       set({ summary, loading: false });
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[DailyClosingStore] fetchSummary failed:", e);
       set({ loading: false, error: e?.message || "Failed to load summary" });
     }
@@ -45,7 +47,8 @@ export const useDailyClosingStore = create<DailyClosingState>()((set, get) => ({
     try {
       const records = await dailyClosingService.getDailyClosingHistory();
       set({ history: records, historyLoading: false });
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[DailyClosingStore] fetchHistory failed:", e);
       set({ historyLoading: false, error: e?.message || "Failed to load history" });
     }
@@ -60,7 +63,8 @@ export const useDailyClosingStore = create<DailyClosingState>()((set, get) => ({
         history: [record, ...get().history],
       });
       return true;
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[DailyClosingStore] closeDay failed:", e);
       set({ closing: false, error: e?.message || "Failed to close day" });
       return false;

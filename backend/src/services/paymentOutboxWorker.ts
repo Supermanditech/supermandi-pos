@@ -3,6 +3,7 @@
 // Pattern matches common/events/outboxWorker.ts but adapted for payments schema
 
 import { Pool, PoolClient } from "pg";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // TYPES
@@ -55,7 +56,7 @@ export class PaymentOutboxWorker {
   start(): void {
     if (this.running) return;
     this.running = true;
-    console.log("[T-262] Payment outbox worker started");
+    log.info("[T-262] Payment outbox worker started");
     this.poll();
   }
 
@@ -68,7 +69,7 @@ export class PaymentOutboxWorker {
       clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
-    console.log("[T-262] Payment outbox worker stopped");
+    log.info("[T-262] Payment outbox worker stopped");
   }
 
   private async poll(): Promise<void> {
@@ -77,10 +78,10 @@ export class PaymentOutboxWorker {
     try {
       const processed = await this.processBatch();
       if (processed > 0) {
-        console.log(`[T-262] Processed ${processed} payment events`);
+        log.info(`[T-262] Processed ${processed} payment events`);
       }
     } catch (error) {
-      console.error("[T-262] Poll error:", error instanceof Error ? error.message : error);
+      log.error("[T-262] Poll error:", error instanceof Error ? error.message : error);
     }
 
     this.pollTimer = setTimeout(() => this.poll(), POLL_INTERVAL_MS);
@@ -157,7 +158,7 @@ export class PaymentOutboxWorker {
          WHERE id = $1`,
         [event.id, newRetryCount, error.message]
       );
-      console.error(`[T-262] Event ${event.id} (${event.event_type}) failed after ${MAX_RETRIES} retries: ${error.message}`);
+      log.error(`[T-262] Event ${event.id} (${event.event_type}) failed after ${MAX_RETRIES} retries: ${error.message}`);
     } else {
       await client.query(
         `UPDATE payments.event_outbox

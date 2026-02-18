@@ -186,7 +186,7 @@ export async function lookupStoreProductByBarcode(
       `/api/v1/pos/store-products/lookup?barcode=${encodeURIComponent(barcode)}`
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 404 means product not in store catalog
     if (error?.status === 404 || error?.response?.status === 404) {
       return null;

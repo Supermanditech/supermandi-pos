@@ -4,6 +4,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { getStoreId, requireStoreContext } from "../../../middleware/retailerStoreContext";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerPurchaseOrdersRouter = Router();
 
@@ -79,7 +80,8 @@ retailerPurchaseOrdersRouter.get("/purchase-orders", async (req: Request, res: R
       data: result.rows,
       total,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // Table might not exist yet — return empty
     if (error.code === "42P01") {
       res.json({ success: true, data: [], total: 0 });
@@ -156,7 +158,8 @@ retailerPurchaseOrdersRouter.get("/purchase-orders/:orderId", async (req: Reques
     };
 
     res.json({ success: true, data: order });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     if (error.code === "42P01") {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Purchase order not found" } });
       return;

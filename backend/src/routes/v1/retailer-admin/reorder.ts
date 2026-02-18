@@ -4,6 +4,8 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const retailerReorderRouter = Router();
 
@@ -56,8 +58,9 @@ retailerReorderRouter.get("/reorder/settings", async (req: Request, res: Respons
     }
 
     return res.json({ data: result.rows[0] });
-  } catch (error: any) {
-    console.error("[Retailer Reorder] Get settings error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Retailer Reorder] Get settings error:", error.message);
     return res.status(500).json({ error: "Failed to get reorder settings" });
   }
 });
@@ -106,8 +109,9 @@ retailerReorderRouter.put("/reorder/settings", async (req: Request, res: Respons
     );
 
     return res.json({ data: result.rows[0] });
-  } catch (error: any) {
-    console.error("[Retailer Reorder] Update settings error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Retailer Reorder] Update settings error:", error.message);
     return res.status(500).json({ error: "Failed to update reorder settings" });
   }
 });
@@ -155,8 +159,9 @@ retailerReorderRouter.get("/reorder/suggestions", async (req: Request, res: Resp
       data: result.rows,
       total: result.rows.length,
     });
-  } catch (error: any) {
-    console.error("[Retailer Reorder] Suggestions error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Retailer Reorder] Suggestions error:", error.message);
     return res.status(500).json({ error: "Failed to get reorder suggestions" });
   }
 });
@@ -201,8 +206,9 @@ retailerReorderRouter.get("/reorder/pending", async (req: Request, res: Response
     );
 
     return res.json({ data: result.rows, total: result.rows.length });
-  } catch (error: any) {
-    console.error("[Retailer Reorder] Pending error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Retailer Reorder] Pending error:", error.message);
     return res.status(500).json({ error: "Failed to get pending reorders" });
   }
 });

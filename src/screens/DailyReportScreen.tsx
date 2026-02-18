@@ -21,6 +21,7 @@ import { formatMoney } from "../utils/money";
 import { BackHeader } from "../components/ui/BackHeader";
 import { apiClient } from "../services/api/apiClient";
 import { printerService } from "../services/printerService";
+import { asError } from "../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -248,7 +249,8 @@ export default function DailyReportScreen({
     try {
       const data = await fetchDailyReport(date);
       setReport(data);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       // UIUX-POS-017: 404 means no data for this date — show empty state, not error
       if (e?.message?.includes("404") || e?.status === 404) {
         setReport(null);
@@ -291,7 +293,8 @@ export default function DailyReportScreen({
     try {
       const content = generatePrintContent(report);
       await printerService.printReport(content);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[DailyReportScreen] Print failed:", e);
       Alert.alert(
         "Print Failed",
@@ -314,7 +317,8 @@ export default function DailyReportScreen({
         title: `Daily Report - ${formatDisplayDate(report.date)}`,
         message: `SuperMandi Daily Report for ${formatDisplayDate(report.date)}`,
       });
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       // User might cancel share - not an error
       if (!e?.message?.includes("cancel")) {
         console.error("[DailyReportScreen] Share failed:", e);

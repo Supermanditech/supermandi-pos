@@ -3,6 +3,7 @@
 // Returns existing entity or flags potential duplicates for admin review
 
 import { Pool } from "pg";
+import { log } from "../lib/logger";
 
 export interface DuplicateCheckResult {
   hasDuplicate: boolean;
@@ -159,7 +160,7 @@ export async function createDuplicateFlag(
     [entityType, entityId, duplicateType, duplicateValue, matchingEntityId || null]
   );
 
-  console.log(`[DEDUP-001] Flagged ${duplicateType} duplicate for ${entityType} ${entityId}`);
+  log.info(`[DEDUP-001] Flagged ${duplicateType} duplicate for ${entityType} ${entityId}`);
 }
 
 /**

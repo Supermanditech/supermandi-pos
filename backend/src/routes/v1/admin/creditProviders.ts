@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express';
 import { getPool } from '../../../db/client';
 import { requireAdminToken } from '../../../middleware/adminToken';
 import { creditRegistry } from '../../../services/credit/CreditProviderRegistry';
+import { log } from "../../../lib/logger";
 
 export const adminCreditProvidersRouter = Router();
 
@@ -21,7 +22,7 @@ adminCreditProvidersRouter.get('/health', async (_req: Request, res: Response) =
     const health = await creditRegistry.healthCheckAll();
     res.json({ success: true, providers: health });
   } catch (err: any) {
-    console.error('[T-281] Health check error:', err.message);
+    log.error('[T-281] Health check error:', err.message);
     res.status(500).json({ error: { code: 'HEALTH_ERROR', message: 'Failed to check provider health' } });
   }
 });
@@ -40,7 +41,7 @@ adminCreditProvidersRouter.get('/', async (_req: Request, res: Response) => {
     );
     res.json({ success: true, providers: result.rows });
   } catch (err: any) {
-    console.error('[T-290] List providers error:', err.message);
+    log.error('[T-290] List providers error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR' } });
   }
 });
@@ -100,7 +101,7 @@ adminCreditProvidersRouter.patch('/:providerId', async (req: Request, res: Respo
 
     res.json({ success: true, provider: result.rows[0] });
   } catch (err: any) {
-    console.error('[T-290] Update provider error:', err.message);
+    log.error('[T-290] Update provider error:', err.message);
     res.status(500).json({ error: { code: 'UPDATE_ERROR' } });
   }
 });
@@ -155,7 +156,7 @@ adminCreditProvidersRouter.post('/', async (req: Request, res: Response) => {
 
     res.json({ success: true, provider: result.rows[0] });
   } catch (err: any) {
-    console.error('[T-290] Register provider error:', err.message);
+    log.error('[T-290] Register provider error:', err.message);
     res.status(500).json({ error: { code: 'INSERT_ERROR' } });
   }
 });
@@ -206,7 +207,7 @@ adminCreditProvidersRouter.get('/dashboard', async (_req: Request, res: Response
       kycStats: kycStats.rows,
     });
   } catch (err: any) {
-    console.error('[T-289] Dashboard error:', err.message);
+    log.error('[T-289] Dashboard error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR' } });
   }
 });

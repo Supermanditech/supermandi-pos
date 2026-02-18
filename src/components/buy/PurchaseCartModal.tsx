@@ -27,6 +27,7 @@ import * as creditApi from "../../services/api/creditApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 // T-127: Modal back handler for Android hardware back button
 import { useModalBackHandler } from "../../hooks/useModalBackHandler";
+import { asError } from "../../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -336,7 +337,8 @@ export function PurchaseCartModal({
         Alert.alert("Order Placed", successMessage, [{ text: "OK" }]);
 
         return { success: true };
-      } catch (error: any) {
+      } catch (_error: unknown) {
+    const error = asError(_error);
         console.error("[PurchaseCartModal] Failed to place order:", error);
         // GL-RJ-003: On failure, cart items remain intact - no removal happened
         return { success: false, error: error.message || "Failed to place order" };

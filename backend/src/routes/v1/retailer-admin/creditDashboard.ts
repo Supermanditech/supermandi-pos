@@ -5,6 +5,7 @@ import { Router, Request, Response } from 'express';
 import { getPool } from '../../../db/client';
 import { getStoreId, requireStoreContext } from '../../../middleware/retailerStoreContext';
 import { creditRegistry } from '../../../services/credit/CreditProviderRegistry';
+import { log } from "../../../lib/logger";
 
 export const retailerCreditDashboardRouter = Router();
 retailerCreditDashboardRouter.use(requireStoreContext);
@@ -124,7 +125,7 @@ retailerCreditDashboardRouter.get('/reports/credit-summary', async (req: Request
       applications: appsResult.rows,
     });
   } catch (err: any) {
-    console.error('[T-277] Credit dashboard error:', err.message);
+    log.error('[T-277] Credit dashboard error:', err.message);
     res.status(500).json({ error: { code: 'QUERY_ERROR', message: 'Failed to load credit dashboard' } });
   }
 });

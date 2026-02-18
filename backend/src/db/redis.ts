@@ -2,6 +2,7 @@
 // This module provides a centralized Redis client for the main backend
 
 import Redis, { RedisOptions } from 'ioredis';
+import { log } from "../lib/logger";
 
 let redisClient: Redis | null = null;
 
@@ -69,7 +70,7 @@ export function getRedis(): Redis | null {
 
   // Check if Redis is enabled
   if (process.env.REDIS_ENABLED === 'false') {
-    console.log('[Redis] Disabled via REDIS_ENABLED=false');
+    log.info('[Redis] Disabled via REDIS_ENABLED=false');
     return null;
   }
 
@@ -80,7 +81,7 @@ export function getRedis(): Redis | null {
 
     if (config.sentinelEnabled && config.sentinels.length > 0) {
       // GO-LIVE-077: Sentinel mode for HA
-      console.log(`[Redis] Connecting via Sentinel (master: ${config.sentinelName})`);
+      log.info(`[Redis] Connecting via Sentinel (master: ${config.sentinelName})`);
       options = {
         sentinels: config.sentinels,
         name: config.sentinelName,
@@ -95,7 +96,7 @@ export function getRedis(): Redis | null {
       };
     } else {
       // Standard single-instance mode
-      console.log(`[Redis] Connecting to ${config.host}:${config.port}`);
+      log.info(`[Redis] Connecting to ${config.host}:${config.port}`);
       options = {
         host: config.host,
         port: config.port,
@@ -113,35 +114,35 @@ export function getRedis(): Redis | null {
 
     // Event handlers
     redisClient.on('error', (err) => {
-      console.error('[Redis] Connection error:', err.message);
+      log.error('[Redis] Connection error:', err.message);
     });
 
     redisClient.on('connect', () => {
-      console.log('[Redis] Connected successfully');
+      log.info('[Redis] Connected successfully');
     });
 
     redisClient.on('ready', () => {
-      console.log('[Redis] Ready to accept commands');
+      log.info('[Redis] Ready to accept commands');
     });
 
     redisClient.on('close', () => {
-      console.log('[Redis] Connection closed');
+      log.info('[Redis] Connection closed');
     });
 
     redisClient.on('reconnecting', (delay: number) => {
-      console.log(`[Redis] Reconnecting in ${delay}ms`);
+      log.info(`[Redis] Reconnecting in ${delay}ms`);
     });
 
     // GO-LIVE-077: Sentinel-specific events
     if (config.sentinelEnabled) {
       redisClient.on('+switch-master', (msg) => {
-        console.log('[Redis Sentinel] Master switched:', msg);
+        log.info('[Redis Sentinel] Master switched:', msg);
       });
     }
 
     return redisClient;
   } catch (error) {
-    console.error('[Redis] Failed to initialize client:', error);
+    log.error('[Redis] Failed to initialize client:', error);
     return null;
   }
 }
@@ -151,13 +152,13 @@ export function getRedis(): Redis | null {
  */
 function retryStrategy(times: number): number | null {
   if (times > 10) {
-    console.error('[Redis] Max retries exceeded, giving up');
+    log.error('[Redis] Max retries exceeded, giving up');
     return null; // Stop retrying
   }
 
   // Exponential backoff: 100ms, 200ms, 400ms, ... up to 30 seconds
   const delay = Math.min(times * 100, 30000);
-  console.log(`[Redis] Retry attempt ${times}, waiting ${delay}ms`);
+  log.info(`[Redis] Retry attempt ${times}, waiting ${delay}ms`);
   return delay;
 }
 
@@ -168,7 +169,7 @@ export async function closeRedis(): Promise<void> {
   if (redisClient) {
     await redisClient.quit();
     redisClient = null;
-    console.log('[Redis] Connection closed');
+    log.info('[Redis] Connection closed');
   }
 }
 
@@ -219,7 +220,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 
     return JSON.parse(value) as T;
   } catch (error) {
-    console.error(`[Redis Cache] Get error for ${key}:`, error);
+    log.error(`[Redis Cache] Get error for ${key}:`, error);
     return null;
   }
 }
@@ -238,7 +239,7 @@ export async function cacheSet<T>(
 
     await client.setex(CACHE_PREFIX + key, ttlSeconds, JSON.stringify(value));
   } catch (error) {
-    console.error(`[Redis Cache] Set error for ${key}:`, error);
+    log.error(`[Redis Cache] Set error for ${key}:`, error);
     // Don't throw - cache failures shouldn't break the app
   }
 }
@@ -253,7 +254,7 @@ export async function cacheDelete(key: string): Promise<void> {
 
     await client.del(CACHE_PREFIX + key);
   } catch (error) {
-    console.error(`[Redis Cache] Delete error for ${key}:`, error);
+    log.error(`[Redis Cache] Delete error for ${key}:`, error);
   }
 }
 
@@ -318,7 +319,7 @@ export async function checkRateLimit(
 
     return { allowed: true, remaining: limit - count - 1, resetAt: 0 };
   } catch (error) {
-    console.error(`[Redis Rate Limit] Error for ${key}:`, error);
+    log.error(`[Redis Rate Limit] Error for ${key}:`, error);
     // Fail open on error
     return { allowed: true, remaining: limit, resetAt: 0 };
   }
@@ -379,9 +380,9 @@ export async function blacklistToken(jtiOrHash: string, ttlSeconds: number): Pro
     // Uses CACHE_PREFIX + BLACKLIST_PREFIX to match gateway key: supermandi:token_blacklist:{key}
     await client.setex(CACHE_PREFIX + BLACKLIST_PREFIX + jtiOrHash, effectiveTtl, '1');
 
-    console.log(`[T-184] Token blacklisted via backend: ${jtiOrHash.substring(0, 8)}..., TTL: ${effectiveTtl}s`);
+    log.info(`[T-184] Token blacklisted via backend: ${jtiOrHash.substring(0, 8)}..., TTL: ${effectiveTtl}s`);
   } catch (error) {
-    console.error('[T-184] Redis blacklist write error:', error);
+    log.error('[T-184] Redis blacklist write error:', error);
     // Non-fatal — DB revocation table is the fallback
   }
 }

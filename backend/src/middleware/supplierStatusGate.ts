@@ -8,6 +8,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/client';
 import { SupplierStatus, type SupplierStatusType } from '../services/supplierStateMachine';
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 // Extend Express Request to include supplierStatus
 declare global {
@@ -109,7 +111,7 @@ export function requireSupplierStatus(allowedStatuses: SupplierStatusType | Supp
           required_status: statusArray.length === 1 ? statusArray[0] : statusArray,
         };
 
-        console.warn('[SEC-001] Supplier status gate blocked request', {
+        log.warn('[SEC-001] Supplier status gate blocked request', {
           supplierId,
           currentStatus,
           requiredStatus: statusArray,
@@ -122,8 +124,9 @@ export function requireSupplierStatus(allowedStatuses: SupplierStatusType | Supp
       }
 
       next();
-    } catch (error: any) {
-      console.error('[SEC-001] Supplier status check failed:', error?.message);
+    } catch (_error: unknown) {
+    const error = asError(_error);
+      log.error('[SEC-001] Supplier status check failed:', error?.message);
       res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to verify supplier status' });
     }
   };
@@ -174,8 +177,9 @@ export async function loadSupplierContext(req: Request, res: Response, next: Nex
     }
 
     next();
-  } catch (error: any) {
-    console.error('[SEC-001] Failed to load supplier context:', error?.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error('[SEC-001] Failed to load supplier context:', error?.message);
     next();
   }
 }

@@ -6,6 +6,7 @@ import { Router, Request, Response } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
 import {
+import { log } from "../../../lib/logger";
   isWhatsAppConfigured,
   sendTextMessage,
   normalizePhone,
@@ -75,7 +76,7 @@ adminWhatsAppRouter.get("/whatsapp/logs", async (req: Request, res: Response) =>
 
     return res.json({ data: logsResult.rows, total });
   } catch (err: unknown) {
-    console.error("[WA-002] logs query error:", err);
+    log.error("[WA-002] logs query error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -115,7 +116,7 @@ adminWhatsAppRouter.get("/whatsapp/stats", async (_req: Request, res: Response) 
       last7d: parseInt(row.last7d || "0", 10),
     });
   } catch (err: unknown) {
-    console.error("[WA-002] stats query error:", err);
+    log.error("[WA-002] stats query error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -170,7 +171,7 @@ adminWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) =
         ]
       );
     } catch (logErr) {
-      console.warn("[WA-001] Failed to log WhatsApp message:", logErr);
+      log.warn("[WA-001] Failed to log WhatsApp message:", logErr);
     }
 
     if (!result.sent) {
@@ -179,7 +180,7 @@ adminWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) =
 
     return res.json({ sent: true, wamid: result.wamid });
   } catch (err: unknown) {
-    console.error("[WA-001] admin send error:", err);
+    log.error("[WA-001] admin send error:", err);
     return res.status(500).json({ sent: false, error: "Internal server error" });
   }
 });
@@ -241,7 +242,7 @@ adminWhatsAppRouter.post("/whatsapp/broadcast", async (req: Request, res: Respon
           ]
         );
       } catch (logErr) {
-        console.warn("[WA-001] Failed to log broadcast message:", logErr);
+        log.warn("[WA-001] Failed to log broadcast message:", logErr);
       }
 
       if (result.sent) {
@@ -254,7 +255,7 @@ adminWhatsAppRouter.post("/whatsapp/broadcast", async (req: Request, res: Respon
 
     return res.json({ sent, failed, total: phones.length, errors: errors.slice(0, 10) });
   } catch (err: unknown) {
-    console.error("[WA-001] broadcast error:", err);
+    log.error("[WA-001] broadcast error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

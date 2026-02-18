@@ -7,6 +7,7 @@
  */
 
 import type { Response } from "express";
+import { log } from "../lib/logger";
 
 // Connected SSE clients: storeId -> Set of Response objects
 const connectedClients = new Map<string, Set<Response>>();
@@ -44,7 +45,7 @@ export function registerSseClient(storeId: string, res: Response): () => void {
 
   clients.add(res);
 
-  console.log(`[SSE] Client connected: storeId=${storeId}, total=${clients.size}`);
+  log.info(`[SSE] Client connected: storeId=${storeId}, total=${clients.size}`);
 
   // Return cleanup function
   return () => {
@@ -54,7 +55,7 @@ export function registerSseClient(storeId: string, res: Response): () => void {
       if (storeClients.size === 0) {
         connectedClients.delete(storeId);
       }
-      console.log(`[SSE] Client disconnected: storeId=${storeId}, remaining=${storeClients.size}`);
+      log.info(`[SSE] Client disconnected: storeId=${storeId}, remaining=${storeClients.size}`);
     }
   };
 }
@@ -143,7 +144,7 @@ export function startSseHeartbeat(): void {
   if (heartbeatTimer && typeof heartbeatTimer === 'object' && 'unref' in heartbeatTimer) {
     heartbeatTimer.unref();
   }
-  console.log(`[SSE] Heartbeat started (interval=${HEARTBEAT_INTERVAL_MS}ms)`);
+  log.info(`[SSE] Heartbeat started (interval=${HEARTBEAT_INTERVAL_MS}ms)`);
 }
 
 export function stopSseHeartbeat(): void {

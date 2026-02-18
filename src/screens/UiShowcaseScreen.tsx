@@ -21,6 +21,7 @@ import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
 import type { CatalogProduct } from "../services/api/catalogApi";
 import { seedDemoStore } from "../services/api/demoApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { asError } from "../utils/errorUtils";
 
 // =============================================================================
 // QA GATE CHECK
@@ -220,7 +221,8 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
           `Reorder Policies: ${seeded.reorder_policies}`
         );
       }
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       const message = error instanceof Error ? error.message : "Unknown error";
       Alert.alert("Seed Failed", message);
     } finally {

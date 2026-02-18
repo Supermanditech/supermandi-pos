@@ -7,6 +7,7 @@ import { requireAdminToken } from "../../../middleware/adminToken";
 import { rateLimitAi } from "../../../middleware/rateLimit";
 import { askSuperMandiAI, isSuperMandiAIConfigured } from "../../../services/ai/askSuperMandiAI";
 import { getHealthStatus, getRecentAuditLogs } from "../../../services/ai/openaiProvider";
+import { log } from "../../../lib/logger";
 
 export const adminAiRouter = Router();
 
@@ -60,7 +61,7 @@ async function handleAi(req: any, res: any) {
     res.json({ answer, requestId });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "AI unavailable";
-    console.error("[AI] Request failed", { requestId, error: msg });
+    log.error("[AI] Request failed", { requestId, error: msg });
 
     // Return appropriate status code based on error type
     if (msg.includes("Rate limit") || msg.includes("Too many")) {

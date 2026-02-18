@@ -3,6 +3,8 @@
 
 import { Pool } from "pg";
 import crypto from "crypto";
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 // Environment configuration
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || "";
@@ -68,7 +70,7 @@ async function callRazorpayPayoutApi(params: {
     // GO-LIVE-119: NEVER return mock success in production - suppliers would not receive money
     const isProduction = process.env.NODE_ENV === "production";
     if (isProduction) {
-      console.error("[SM-018] GO-LIVE-119: CRITICAL - Razorpay not configured in production! Payout cannot proceed.");
+      log.error("[SM-018] GO-LIVE-119: CRITICAL - Razorpay not configured in production! Payout cannot proceed.");
       return {
         success: false,
         error: "Payment gateway not configured - please contact support",
@@ -77,7 +79,7 @@ async function callRazorpayPayoutApi(params: {
     }
 
     // Only allow mock response in development/testing
-    console.log("[SM-018] Razorpay not configured (dev mode), using mock payout");
+    log.info("[SM-018] Razorpay not configured (dev mode), using mock payout");
     const mockPayoutId = `pout_mock_${Date.now().toString(36)}`;
     const mockUtr = `UTR${Date.now()}`;
     return {
@@ -120,7 +122,7 @@ async function callRazorpayPayoutApi(params: {
     };
 
     if (!response.ok) {
-      console.error("[SM-018] Razorpay payout failed:", data);
+      log.error("[SM-018] Razorpay payout failed:", data);
       // GO-LIVE-120: Server errors (5xx) and rate limits (429) are retryable
       const isRetryable = response.status >= 500 || response.status === 429;
       return {
@@ -136,9 +138,10 @@ async function callRazorpayPayoutApi(params: {
       utr: data.utr,
       status: data.status,
     };
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // GO-LIVE-120: Network errors are retryable (timeout, connection refused, etc.)
-    console.error("[SM-018] Razorpay payout exception:", error.message);
+    log.error("[SM-018] Razorpay payout exception:", error.message);
     return {
       success: false,
       error: error.message,
@@ -166,7 +169,7 @@ export async function processScheduledPayout(
     const orderTotal = orderResult.rows[0]?.total_amount;
 
     if (orderTotal !== undefined && payout.amountMinor !== orderTotal) {
-      console.error(
+      log.error(
         `[SM-018] GO-LIVE-118: CRITICAL - Payout reconciliation mismatch! ` +
         `payoutId=${payout.id}, payoutAmount=${payout.amountMinor}, orderTotal=${orderTotal}`
       );
@@ -193,7 +196,7 @@ export async function processScheduledPayout(
     if (!fundAccountId && payout.supplierUpiVpa) {
       // For MVP, we'll use a mock fund account or create one
       // In production, fund accounts should be pre-created during supplier onboarding
-      console.log(`[SM-018] Using UPI VPA directly for supplier: ${payout.supplierUpiVpa}`);
+      log.info(`[SM-018] Using UPI VPA directly for supplier: ${payout.supplierUpiVpa}`);
       fundAccountId = `fa_mock_${payout.supplierId.substring(0, 8)}`;
     }
 
@@ -251,13 +254,13 @@ export async function processScheduledPayout(
       );
 
       await client.query("COMMIT");
-      console.log(`[SM-018] Payout completed: payoutId=${payout.id}, razorpayId=${result.payoutId}, utr=${result.utr}`);
+      log.info(`[SM-018] Payout completed: payoutId=${payout.id}, razorpayId=${result.payoutId}, utr=${result.utr}`);
     } else {
       // GO-LIVE-120 + T-258: Handle retryable vs permanent failures
       if (result.isRetryable) {
         // T-258: Retryable error — schedule retry with exponential backoff
         await client.query("ROLLBACK");
-        console.warn(`[SM-018] GO-LIVE-120: Retryable payout error: payoutId=${payout.id}, error=${result.error}`);
+        log.warn(`[SM-018] GO-LIVE-120: Retryable payout error: payoutId=${payout.id}, error=${result.error}`);
         // Schedule retry (uses its own transaction)
         await schedulePayoutRetry(pool, payout.id, result.error || 'Unknown retryable error');
       } else {
@@ -269,14 +272,15 @@ export async function processScheduledPayout(
           [result.error, payout.id]
         );
         await client.query("COMMIT");
-        console.error(`[SM-018] Payout permanently failed: payoutId=${payout.id}, error=${result.error}`);
+        log.error(`[SM-018] Payout permanently failed: payoutId=${payout.id}, error=${result.error}`);
       }
     }
 
     return result;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-018] Process payout error:", error.message);
+    log.error("[SM-018] Process payout error:", error.message);
     return {
       success: false,
       error: error.message,
@@ -312,8 +316,9 @@ export async function getScheduledPayouts(pool: Pool): Promise<ScheduledPayout[]
       LIMIT 100
     `);
     return result.rows;
-  } catch (error: any) {
-    console.error("[SM-018] Get scheduled payouts error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SM-018] Get scheduled payouts error:", error.message);
     return [];
   }
 }
@@ -333,12 +338,12 @@ export async function processAllScheduledPayouts(pool: Pool): Promise<{
     const reason = !SUPPLIER_PAYOUTS_ENABLED
       ? "SUPPLIER_PAYOUTS_ENABLED is not set to true"
       : "Razorpay API keys not configured";
-    console.warn(`[SM-018] POS-UPI-002: Automated payouts disabled — ${reason}. Payouts remain in scheduled/pending_manual status for manual processing.`);
+    log.warn(`[SM-018] POS-UPI-002: Automated payouts disabled — ${reason}. Payouts remain in scheduled/pending_manual status for manual processing.`);
     return { processed: 0, succeeded: 0, failed: 0, skipped: true, reason };
   }
 
   const payouts = await getScheduledPayouts(pool);
-  console.log(`[SM-018] Processing ${payouts.length} scheduled payouts`);
+  log.info(`[SM-018] Processing ${payouts.length} scheduled payouts`);
 
   let succeeded = 0;
   let failed = 0;
@@ -369,10 +374,10 @@ export function verifyWebhookSignature(body: string, signature: string): boolean
     // GO-LIVE-119: Never skip verification in production - attackers could send fake events
     const isProduction = process.env.NODE_ENV === "production";
     if (isProduction) {
-      console.error("[SM-018] GO-LIVE-119: CRITICAL - Webhook secret not configured in production!");
+      log.error("[SM-018] GO-LIVE-119: CRITICAL - Webhook secret not configured in production!");
       return false; // Reject webhooks in production without proper verification
     }
-    console.warn("[SM-018] Webhook secret not configured (dev mode), skipping verification");
+    log.warn("[SM-018] Webhook secret not configured (dev mode), skipping verification");
     return true; // Only allow in development
   }
 
@@ -404,10 +409,10 @@ export async function handlePayoutWebhook(
     };
   }
 ): Promise<boolean> {
-  console.log(`[SM-018] Handling webhook event: ${event}`);
+  log.info(`[SM-018] Handling webhook event: ${event}`);
 
   if (!payload.payout) {
-    console.warn("[SM-018] Webhook missing payout payload");
+    log.warn("[SM-018] Webhook missing payout payload");
     return false;
   }
 
@@ -426,7 +431,7 @@ export async function handlePayoutWebhook(
     );
 
     if (payoutResult.rows.length === 0) {
-      console.warn(`[SM-018] Payout not found for Razorpay ID: ${razorpayPayoutId}`);
+      log.warn(`[SM-018] Payout not found for Razorpay ID: ${razorpayPayoutId}`);
       await client.query("ROLLBACK");
       return false;
     }
@@ -456,7 +461,7 @@ export async function handlePayoutWebhook(
         [payout.purchase_order_id]
       );
 
-      console.log(`[SM-018] Payout webhook: completed, payoutId=${payout.id}, utr=${utr}`);
+      log.info(`[SM-018] Payout webhook: completed, payoutId=${payout.id}, utr=${utr}`);
     } else if (event === "payout.failed" || event === "payout.reversed") {
       // Payout failed
       await client.query(
@@ -466,14 +471,15 @@ export async function handlePayoutWebhook(
         [failure_reason || "Unknown error", payout.id]
       );
 
-      console.log(`[SM-018] Payout webhook: failed, payoutId=${payout.id}, reason=${failure_reason}`);
+      log.info(`[SM-018] Payout webhook: failed, payoutId=${payout.id}, reason=${failure_reason}`);
     }
 
     await client.query("COMMIT");
     return true;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[SM-018] Webhook handler error:", error.message);
+    log.error("[SM-018] Webhook handler error:", error.message);
     return false;
   } finally {
     client.release();
@@ -513,7 +519,7 @@ export async function schedulePayoutRetry(
          WHERE id = $2`,
         [`Exhausted ${MAX_RETRY_ATTEMPTS} retries. Last error: ${errorMessage}`, payoutId]
       );
-      console.error(`[T-258] ALERT: Payout ${payoutId} exhausted all ${MAX_RETRY_ATTEMPTS} retries. Manual intervention required.`);
+      log.error(`[T-258] ALERT: Payout ${payoutId} exhausted all ${MAX_RETRY_ATTEMPTS} retries. Manual intervention required.`);
       return { scheduled: false, attempt: currentRetries, scheduledFor: null };
     }
 
@@ -539,12 +545,13 @@ export async function schedulePayoutRetry(
     );
 
     await client.query("COMMIT");
-    console.log(`[T-258] Payout ${payoutId} retry ${nextAttempt}/${MAX_RETRY_ATTEMPTS} scheduled for ${scheduledFor.toISOString()}`);
+    log.info(`[T-258] Payout ${payoutId} retry ${nextAttempt}/${MAX_RETRY_ATTEMPTS} scheduled for ${scheduledFor.toISOString()}`);
 
     return { scheduled: true, attempt: nextAttempt, scheduledFor };
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK").catch(() => {});
-    console.error(`[T-258] Failed to schedule retry for payout ${payoutId}:`, error.message);
+    log.error(`[T-258] Failed to schedule retry for payout ${payoutId}:`, error.message);
     return { scheduled: false, attempt: 0, scheduledFor: null };
   } finally {
     client.release();
@@ -578,7 +585,7 @@ export async function processPayoutRetries(pool: Pool): Promise<{
       return { processed: 0, succeeded: 0, failed: 0 };
     }
 
-    console.log(`[T-258] Processing ${dueRetries.rowCount} due payout retries`);
+    log.info(`[T-258] Processing ${dueRetries.rowCount} due payout retries`);
 
     let succeeded = 0;
     let failed = 0;
@@ -641,8 +648,9 @@ export async function processPayoutRetries(pool: Pool): Promise<{
     }
 
     return { processed: dueRetries.rowCount || 0, succeeded, failed };
-  } catch (error: any) {
-    console.error("[T-258] Process payout retries error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[T-258] Process payout retries error:", error.message);
     return { processed: 0, succeeded: 0, failed: 0 };
   }
 }

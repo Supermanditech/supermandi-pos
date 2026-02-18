@@ -5,6 +5,8 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posSuppliersRouter = Router();
 
@@ -140,7 +142,7 @@ posSuppliersRouter.get("/suppliers", requireDeviceToken, async (req, res) => {
       count: suppliers.length,
     });
   } catch (error) {
-    console.error("[pos/suppliers] Error fetching suppliers:", error);
+    log.error("[pos/suppliers] Error fetching suppliers:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to fetch suppliers",
@@ -238,7 +240,7 @@ posSuppliersRouter.get("/suppliers/:supplierId", requireDeviceToken, async (req,
       data: supplier,
     });
   } catch (error) {
-    console.error("[pos/suppliers] Error fetching supplier:", error);
+    log.error("[pos/suppliers] Error fetching supplier:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to fetch supplier",
@@ -323,8 +325,9 @@ posSuppliersRouter.get("/suppliers/:supplierId/products", requireDeviceToken, as
       },
       pagination: { total, limit: limitNum, offset: offsetNum },
     });
-  } catch (error: any) {
-    console.error("[pos/suppliers] Error fetching supplier products:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[pos/suppliers] Error fetching supplier products:", error.message);
 
     // Table might not exist yet
     if (error.code === "42P01") {
@@ -393,8 +396,9 @@ posSuppliersRouter.get("/suppliers/browse/available", requireDeviceToken, async 
       data: { suppliers: result.rows },
       pagination: { limit: limitNum, offset: offsetNum },
     });
-  } catch (error: any) {
-    console.error("[T-182] Browse suppliers error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[T-182] Browse suppliers error:", error.message);
     return res.status(500).json({ error: "Failed to browse suppliers" });
   }
 });
@@ -447,8 +451,9 @@ posSuppliersRouter.post("/suppliers/:supplierId/request-link", requireDeviceToke
       success: true,
       message: `Link request sent to ${supplierCheck.rows[0].business_name}`,
     });
-  } catch (error: any) {
-    console.error("[T-182] Request link error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[T-182] Request link error:", error.message);
     return res.status(500).json({ error: "Failed to request supplier link" });
   }
 });

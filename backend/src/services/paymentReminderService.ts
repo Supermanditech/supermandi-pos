@@ -13,6 +13,7 @@
 import { getPool } from '../db/client';
 import { sendSms, isSmsServiceEnabled } from './smsService';
 import { sendAndPersistNotification } from './fcmService';
+import { log } from "../lib/logger";
 
 export interface OverduePaymentSummary {
   storeId: string;
@@ -159,10 +160,10 @@ export async function processOverdueReminders(): Promise<ReminderResult> {
       }
     }
 
-    console.log(`[T-231] Payment reminders processed: ${result.processed}, SMS: ${result.smsSent}, Push: ${result.pushSent}`);
+    log.info(`[T-231] Payment reminders processed: ${result.processed}, SMS: ${result.smsSent}, Push: ${result.pushSent}`);
     return result;
   } catch (err) {
-    console.error('[T-231] Payment reminder processing error:', err);
+    log.error('[T-231] Payment reminder processing error:', err);
     throw err;
   }
 }

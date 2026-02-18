@@ -11,6 +11,7 @@ import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { validateMoq, validatePrice } from "@supermandi/common";
 import type { Pool } from "pg";
+import { log } from "../../../lib/logger";
 
 const router = Router();
 
@@ -112,11 +113,11 @@ async function checkAndAutoApprove(pool: Pool, supplierId: string, productId: st
       );
 
       await client.query("COMMIT");
-      console.log(`[T-066] Auto-approved product ${productId} for supplier ${supplierId}`);
+      log.info(`[T-066] Auto-approved product ${productId} for supplier ${supplierId}`);
       return true;
     } catch (err) {
       await client.query("ROLLBACK");
-      console.warn("[T-066] Auto-approval failed (non-blocking):", err);
+      log.warn("[T-066] Auto-approval failed (non-blocking):", err);
       return false;
     } finally {
       client.release();
@@ -928,7 +929,7 @@ router.post(
             }
           }
         } catch (aaErr) {
-          console.warn("[T-066] CSV batch auto-approval failed (non-blocking):", aaErr);
+          log.warn("[T-066] CSV batch auto-approval failed (non-blocking):", aaErr);
         }
       }
 

@@ -15,6 +15,7 @@ import { Router, Request, Response } from 'express';
 import { requireDeviceToken } from '../../../middleware/posDeviceToken';
 import { getPool } from '../../../db/client';
 import {
+import { log } from "../../../lib/logger";
   registerDeviceToken,
   removeDeviceToken,
 } from '../../../services/fcmService';
@@ -57,7 +58,7 @@ posNotificationsRouter.post('/notifications/device-token', async (req: Request, 
       },
     });
   } catch (err) {
-    console.error('[POS Notifications] Token registration error:', err);
+    log.error('[POS Notifications] Token registration error:', err);
     return res.status(500).json({ error: 'Failed to register device token' });
   }
 });
@@ -78,7 +79,7 @@ posNotificationsRouter.delete('/notifications/device-token', async (req: Request
     const removed = await removeDeviceToken(userId, token);
     return res.json({ success: true, removed });
   } catch (err) {
-    console.error('[POS Notifications] Token removal error:', err);
+    log.error('[POS Notifications] Token removal error:', err);
     return res.status(500).json({ error: 'Failed to remove device token' });
   }
 });
@@ -148,7 +149,7 @@ posNotificationsRouter.get('/notifications', async (req: Request, res: Response)
     if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '42P01') {
       return res.json({ success: true, data: [], pagination: { total: 0, limit, offset, hasMore: false } });
     }
-    console.error('[POS Notifications] List error:', err);
+    log.error('[POS Notifications] List error:', err);
     return res.status(500).json({ error: 'Failed to fetch notifications' });
   }
 });
@@ -173,7 +174,7 @@ posNotificationsRouter.get('/notifications/unread-count', async (req: Request, r
     if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '42P01') {
       return res.json({ success: true, count: 0 });
     }
-    console.error('[POS Notifications] Unread count error:', err);
+    log.error('[POS Notifications] Unread count error:', err);
     return res.status(500).json({ error: 'Failed to fetch unread count' });
   }
 });
@@ -205,7 +206,7 @@ posNotificationsRouter.put('/notifications/:id/read', async (req: Request, res: 
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('[POS Notifications] Mark read error:', err);
+    log.error('[POS Notifications] Mark read error:', err);
     return res.status(500).json({ error: 'Failed to mark notification as read' });
   }
 });
@@ -230,7 +231,7 @@ posNotificationsRouter.put('/notifications/read-all', async (req: Request, res: 
 
     return res.json({ success: true, markedRead: result.rowCount ?? 0 });
   } catch (err) {
-    console.error('[POS Notifications] Mark all read error:', err);
+    log.error('[POS Notifications] Mark all read error:', err);
     return res.status(500).json({ error: 'Failed to mark notifications as read' });
   }
 });

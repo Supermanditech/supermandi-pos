@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { randomUUID } from "crypto";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posInventoryRouter = Router();
 
@@ -200,7 +202,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
     );
 
     // ITER2: Log ledger query results for audit trail
-    console.log(`[Ledger] Query: storeId=${storeId}, returned=${result.rows.length} of ${total} entries`);
+    log.info(`[Ledger] Query: storeId=${storeId}, returned=${result.rows.length} of ${total} entries`);
 
     return res.json({
       success: true,
@@ -212,8 +214,9 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
         hasMore: offsetNum + result.rows.length < total,
       },
     });
-  } catch (error: any) {
-    console.error("[Ledger] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Ledger] Error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -392,9 +395,10 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
       data: { entries },
       message: `Recorded ${entries.length} transaction(s)`,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[InventoryTransactions] Error:", error.message);
+    log.error("[InventoryTransactions] Error:", error.message);
 
     return res.status(500).json({
       success: false,
@@ -480,8 +484,9 @@ posInventoryRouter.get("/inventory/stock/:productId", requireDeviceToken, async 
         cached: false,
       }
     });
-  } catch (error: any) {
-    console.error("[InventoryStock] Get error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[InventoryStock] Get error:", error.message);
     return res.status(500).json({ error: "Failed to get stock" });
   }
 });
@@ -543,8 +548,9 @@ posInventoryRouter.post("/inventory/stock/batch", requireDeviceToken, async (req
     });
 
     return res.json({ data });
-  } catch (error: any) {
-    console.error("[InventoryStock] Batch error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[InventoryStock] Batch error:", error.message);
     return res.status(500).json({ error: "Failed to get stock batch" });
   }
 });
@@ -635,8 +641,9 @@ posInventoryRouter.get("/inventory/statement", requireDeviceToken, async (req: R
         source: 'inventory.stock_balances', // AUD-074-B: Indicate data source
       },
     });
-  } catch (error: any) {
-    console.error("[InventoryStatement] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[InventoryStatement] Error:", error.message);
     return res.status(500).json({ error: "Failed to get stock statement" });
   }
 });
@@ -713,8 +720,9 @@ posInventoryRouter.get("/inventory/statement/export", requireDeviceToken, async 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.send(csv);
-  } catch (error: any) {
-    console.error("[InventoryExport] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[InventoryExport] Error:", error.message);
     return res.status(500).json({ error: "Failed to export stock statement" });
   }
 });
@@ -772,8 +780,9 @@ posInventoryRouter.get("/inventory/valuation", requireDeviceToken, async (req: R
         asOf: new Date().toISOString(),
       },
     });
-  } catch (error: any) {
-    console.error("[Valuation] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Valuation] Error:", error.message);
     return res.status(500).json({ error: "Failed to compute valuation" });
   }
 });
@@ -806,7 +815,7 @@ posInventoryRouter.post("/inventory/stock/refresh", requireDeviceToken, async (r
     ? `Cache invalidated for product ${productId}`
     : `Cache invalidated for all products in store`;
 
-  console.log(`[InventoryCache] Refresh requested: storeId=${storeId}, productId=${productId || 'ALL'}`);
+  log.info(`[InventoryCache] Refresh requested: storeId=${storeId}, productId=${productId || 'ALL'}`);
 
   return res.json({
     success: true,
@@ -893,7 +902,7 @@ posInventoryRouter.post("/inventory/stock/recompute", requireDeviceToken, async 
     // Invalidate cache
     invalidateStockCache(storeId, productId);
 
-    console.log(`[InventoryRecompute] storeId=${storeId}, productId=${productId}: ${stockBefore} -> ${computedQty} (${entryCount} ledger entries)`);
+    log.info(`[InventoryRecompute] storeId=${storeId}, productId=${productId}: ${stockBefore} -> ${computedQty} (${entryCount} ledger entries)`);
 
     return res.json({
       success: true,
@@ -904,9 +913,10 @@ posInventoryRouter.post("/inventory/stock/recompute", requireDeviceToken, async 
         ? `Stock recomputed: ${stockBefore} -> ${computedQty}`
         : `Stock verified: ${computedQty} (no change needed)`,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[InventoryRecompute] Error:", error.message);
+    log.error("[InventoryRecompute] Error:", error.message);
     return res.status(500).json({ error: "Failed to recompute stock" });
   } finally {
     client.release();
@@ -986,7 +996,7 @@ posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, as
         );
 
         productsFixed++;
-        console.log(`[InventoryRecompute] Fixed: ${productId}: ${currentQty} -> ${computedQty}`);
+        log.info(`[InventoryRecompute] Fixed: ${productId}: ${currentQty} -> ${computedQty}`);
       }
     }
 
@@ -995,7 +1005,7 @@ posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, as
     // Invalidate entire store cache
     invalidateStockCache(storeId);
 
-    console.log(`[InventoryRecompute] Store ${storeId}: checked=${productsChecked}, fixed=${productsFixed}`);
+    log.info(`[InventoryRecompute] Store ${storeId}: checked=${productsChecked}, fixed=${productsFixed}`);
 
     return res.json({
       success: true,
@@ -1005,9 +1015,10 @@ posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, as
         ? `Recomputed ${productsFixed} of ${productsChecked} products`
         : `All ${productsChecked} products verified correctly`,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[InventoryRecompute] Error:", error.message);
+    log.error("[InventoryRecompute] Error:", error.message);
     return res.status(500).json({ error: "Failed to recompute stock" });
   } finally {
     client.release();
@@ -1140,7 +1151,7 @@ posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, async (re
     // Invalidate cache
     invalidateStockCache(storeId, productId);
 
-    console.log(`[InventoryAdjust] storeId=${storeId}, productId=${productId}: ${stockBefore} -> ${stockAfter} (${reason})`);
+    log.info(`[InventoryAdjust] storeId=${storeId}, productId=${productId}: ${stockBefore} -> ${stockAfter} (${reason})`);
 
     return res.json({
       success: true,
@@ -1151,9 +1162,10 @@ posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, async (re
       reason,
       message: `Stock adjusted: ${stockBefore} -> ${stockAfter}`,
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[InventoryAdjust] Error:", error.message);
+    log.error("[InventoryAdjust] Error:", error.message);
     return res.status(500).json({ error: "Failed to adjust stock" });
   } finally {
     client.release();
@@ -1218,7 +1230,7 @@ posInventoryRouter.post("/inventory/physical-count/start", requireDeviceToken, a
       [countId, storeId]
     );
 
-    console.log(`[PhysicalCount] Started count ${countId} for store ${storeId}`);
+    log.info(`[PhysicalCount] Started count ${countId} for store ${storeId}`);
 
     return res.json({
       success: true,
@@ -1226,8 +1238,9 @@ posInventoryRouter.post("/inventory/physical-count/start", requireDeviceToken, a
       startedAt: new Date().toISOString(),
       message: "Physical count session started"
     });
-  } catch (error: any) {
-    console.error("[PhysicalCount] Start error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[PhysicalCount] Start error:", error.message);
     return res.status(500).json({ error: "Failed to start physical count" });
   }
 });
@@ -1302,8 +1315,9 @@ posInventoryRouter.post("/inventory/physical-count/:countId/record", requireDevi
       counted: item.counted_qty,
       variance: item.variance
     });
-  } catch (error: any) {
-    console.error("[PhysicalCount] Record error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[PhysicalCount] Record error:", error.message);
     return res.status(500).json({ error: "Failed to record count" });
   }
 });
@@ -1432,7 +1446,7 @@ posInventoryRouter.post("/inventory/physical-count/:countId/complete", requireDe
 
     await client.query("COMMIT");
 
-    console.log(`[PhysicalCount] Completed count ${countId}: ${itemsCounted} items, ${variancesFound} variances`);
+    log.info(`[PhysicalCount] Completed count ${countId}: ${itemsCounted} items, ${variancesFound} variances`);
 
     return res.json({
       success: true,
@@ -1444,9 +1458,10 @@ posInventoryRouter.post("/inventory/physical-count/:countId/complete", requireDe
         ? `Count completed. Applied ${variancesFound} stock adjustments.`
         : `Count completed. ${variancesFound} variances found (not applied).`
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[PhysicalCount] Complete error:", error.message);
+    log.error("[PhysicalCount] Complete error:", error.message);
     return res.status(500).json({ error: "Failed to complete physical count" });
   } finally {
     client.release();

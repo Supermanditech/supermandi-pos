@@ -28,6 +28,7 @@ import * as bnplApi from "../services/api/bnplApi";
 import type { BnplDrawdown } from "../services/api/bnplApi";
 // T-109: Branded empty state
 import EmptyState from "../components/ui/EmptyState";
+import { asError } from "../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -226,7 +227,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             },
           },
         ]);
-      } catch (error: any) {
+      } catch (_error: unknown) {
+    const error = asError(_error);
         // GO-LIVE-192: Check if error was due to abort (user closed modal)
         if (error?.message === "Payment polling cancelled") {
           console.log("[BnplDuesScreen] Polling cancelled by user");

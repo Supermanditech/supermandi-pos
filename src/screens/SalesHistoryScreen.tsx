@@ -16,6 +16,7 @@ import { SkeletonList } from "../components/ui/LoadingState";
 import EmptyState from "../components/ui/EmptyState";
 // T-122: Standardized back header
 import { BackHeader } from "../components/ui/BackHeader";
+import { asError } from "../utils/errorUtils";
 
 type RootStackParamList = {
   SalesHistory: undefined;
@@ -42,7 +43,8 @@ export default function SalesHistoryScreen() {
     try {
       const results = await listBills();
       setBills(results);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       // GL-CRIT-0095: Use i18n for error messages
       setError(e?.message ? String(e.message) : t('history.loadError', 'Failed to load bills.'));
     } finally {

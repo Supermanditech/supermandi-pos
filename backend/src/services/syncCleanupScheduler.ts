@@ -11,6 +11,8 @@
  */
 
 import { getPool } from "../db/client";
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 // =============================================================================
 // CONFIGURATION
@@ -62,13 +64,14 @@ async function cleanupStaleSyncLocks(): Promise<number> {
     stats.sync_locks.rowsCleaned += count;
 
     if (count > 0) {
-      console.log(`[SyncCleanup] Cleaned ${count} stale sync locks`);
+      log.info(`[SyncCleanup] Cleaned ${count} stale sync locks`);
     }
 
     return count;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     stats.sync_locks.errors++;
-    console.error("[SyncCleanup] Error cleaning sync locks:", error?.message);
+    log.error("[SyncCleanup] Error cleaning sync locks:", error?.message);
     return 0;
   } finally {
     client.release();
@@ -95,13 +98,14 @@ async function cleanupOldProcessedEvents(): Promise<number> {
     stats.processed_events.rowsCleaned += count;
 
     if (count > 0) {
-      console.log(`[SyncCleanup] Cleaned ${count} old processed events`);
+      log.info(`[SyncCleanup] Cleaned ${count} old processed events`);
     }
 
     return count;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     stats.processed_events.errors++;
-    console.error("[SyncCleanup] Error cleaning processed events:", error?.message);
+    log.error("[SyncCleanup] Error cleaning processed events:", error?.message);
     return 0;
   } finally {
     client.release();
@@ -128,13 +132,14 @@ async function cleanupOldFailedEvents(): Promise<number> {
     stats.failed_events.rowsCleaned += count;
 
     if (count > 0) {
-      console.log(`[SyncCleanup] Cleaned ${count} old failed events`);
+      log.info(`[SyncCleanup] Cleaned ${count} old failed events`);
     }
 
     return count;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     stats.failed_events.errors++;
-    console.error("[SyncCleanup] Error cleaning failed events:", error?.message);
+    log.error("[SyncCleanup] Error cleaning failed events:", error?.message);
     return 0;
   } finally {
     client.release();
@@ -153,10 +158,10 @@ export function startSyncCleanupScheduler(): void {
   // Clear any existing intervals (for hot reload)
   stopSyncCleanupScheduler();
 
-  console.log("[SyncCleanup] Starting cleanup scheduler...");
-  console.log(`  - Sync locks: every ${SYNC_LOCKS_CLEANUP_INTERVAL_MS / 1000}s`);
-  console.log(`  - Processed events: every ${PROCESSED_EVENTS_CLEANUP_INTERVAL_MS / 60000}min`);
-  console.log(`  - Failed events: every ${FAILED_EVENTS_CLEANUP_INTERVAL_MS / 60000}min`);
+  log.info("[SyncCleanup] Starting cleanup scheduler...");
+  log.info(`  - Sync locks: every ${SYNC_LOCKS_CLEANUP_INTERVAL_MS / 1000}s`);
+  log.info(`  - Processed events: every ${PROCESSED_EVENTS_CLEANUP_INTERVAL_MS / 60000}min`);
+  log.info(`  - Failed events: every ${FAILED_EVENTS_CLEANUP_INTERVAL_MS / 60000}min`);
 
   // Run initial cleanup after 30 seconds (let DB connections settle)
   setTimeout(() => {

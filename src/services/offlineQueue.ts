@@ -4,6 +4,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { isOnline } from "./networkStatus";
 import { apiClient } from "./api/apiClient";
+import { asError } from "../utils/errorUtils";
 
 const OFFLINE_QUEUE_KEY = "supermandi.offline.queue.v1";
 const MAX_RETRIES = 3;
@@ -125,7 +126,8 @@ export async function syncOfflineQueue(): Promise<{ synced: number; failed: numb
       await apiClient.post(`/api/v1/pos/inventory/transactions`, tx.payload);
       synced++;
       console.log(`[OfflineQueue] Synced transaction ${tx.id}`);
-    } catch (error: any) {
+    } catch (_error: unknown) {
+    const error = asError(_error);
       console.error(`[OfflineQueue] Failed to sync ${tx.id}:`, error.message);
 
       tx.retryCount++;

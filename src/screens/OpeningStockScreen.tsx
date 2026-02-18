@@ -18,6 +18,7 @@ import { theme } from "../theme";
 import { BackHeader } from "../components/ui/BackHeader";
 import EmptyState from "../components/ui/EmptyState";
 import { apiClient } from "../services/api/apiClient";
+import { asError } from "../utils/errorUtils";
 
 // =============================================================================
 // TYPES
@@ -101,7 +102,8 @@ export default function OpeningStockScreen({
     try {
       const results = await searchProducts(trimmed);
       setSearchResults(results);
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       console.error("[OpeningStockScreen] Search failed:", e);
       Alert.alert("Search Failed", e?.message || "Could not search products.");
     } finally {
@@ -252,7 +254,8 @@ export default function OpeningStockScreen({
               clearInterval(progressInterval);
               setProcessedCount(result.processedCount);
               setSuccess(true);
-            } catch (e: any) {
+            } catch (_e: unknown) {
+    const e = asError(_e);
               console.error("[OpeningStockScreen] Submit failed:", e);
               Alert.alert(
                 "Submission Failed",

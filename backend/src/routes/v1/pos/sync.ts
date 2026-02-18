@@ -21,6 +21,8 @@ import { createPurchase, type PurchaseItemInput } from "../../../services/purcha
 import { logPosEventSafe } from "../../../services/posEventLogger";
 // GO-LIVE-034: Import stock cache invalidation for offline sales
 import { invalidateStockCache } from "./inventory";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posSyncRouter = Router();
 
@@ -94,7 +96,7 @@ async function ensureProductByBarcode(
         `UPDATE products SET retailer_status = 'retailer_created', updated_at = NOW() WHERE id = $1`,
         [existing.rows[0].product_id]
       );
-      console.log(`[Sync] Reactivated soft-deleted product for barcode ${lookupBarcode}`);
+      log.info(`[Sync] Reactivated soft-deleted product for barcode ${lookupBarcode}`);
     }
     return existing.rows[0].variant_id as string;
   }
@@ -181,7 +183,7 @@ async function ensureCatalogProduct(
         `UPDATE catalog.store_products SET is_active = true, updated_at = NOW() WHERE id = $1`,
         [store_product_id]
       );
-      console.log(`[Sync] Reactivated soft-deleted catalog product for barcode ${normalizedBarcode}`);
+      log.info(`[Sync] Reactivated soft-deleted catalog product for barcode ${normalizedBarcode}`);
     }
 
     return {
@@ -644,7 +646,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
       const elapsed = Date.now() - batchStartTime;
       if (elapsed >= SYNC_BATCH_TIMEOUT_MS) {
         timedOut = true;
-        console.warn(`[Sync] Batch timeout after ${elapsed}ms, processed ${processedEventCount}/${events.length} events`);
+        log.warn(`[Sync] Batch timeout after ${elapsed}ms, processed ${processedEventCount}/${events.length} events`);
         break;
       }
 
@@ -820,7 +822,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
 
             if (alreadyDeducted) {
               // Inventory already processed - this is a true duplicate
-              console.log(`[Sync] GO-LIVE-114: Inventory already deducted for sale ${saleId}, skipping`);
+              log.info(`[Sync] GO-LIVE-114: Inventory already deducted for sale ${saleId}, skipping`);
               await client.query("COMMIT");
               results.push({ eventId, status: "duplicate_ignored" });
               saleMappings.push({
@@ -834,7 +836,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
             }
 
             // Sale exists but inventory not deducted - proceed with inventory only
-            console.log(`[Sync] GO-LIVE-114: Retrying inventory deduction for existing sale ${saleId}`);
+            log.info(`[Sync] GO-LIVE-114: Retrying inventory deduction for existing sale ${saleId}`);
             skipSaleCreation = true;
           }
 
@@ -1267,13 +1269,13 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
             // Later events take precedence since they may be corrections to earlier data
             const existingAmount = existingPayment.rows[0]?.amount_minor ?? 0;
             if (existingAmount !== amountMinor) {
-              console.warn(`[Sync] PAYMENT amount mismatch detected: sale_id=${saleId}, existing=${existingAmount}, new=${amountMinor}`);
+              log.warn(`[Sync] PAYMENT amount mismatch detected: sale_id=${saleId}, existing=${existingAmount}, new=${amountMinor}`);
               // Always update to the new amount - newer events are authoritative corrections
               await client.query(
                 `UPDATE payments SET amount_minor = $1, updated_at = NOW() WHERE id = $2`,
                 [amountMinor, existingPayment.rows[0].id]
               );
-              console.log(`[Sync] Updated payment amount from ${existingAmount} to ${amountMinor} (newer event is authoritative)`);
+              log.info(`[Sync] Updated payment amount from ${existingAmount} to ${amountMinor} (newer event is authoritative)`);
             }
           }
         } else if (type === "COLLECTION_CREATED") {
@@ -1300,7 +1302,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
               [effectiveSaleId, storeId]
             );
             if ((saleCheck.rowCount ?? 0) === 0) {
-              console.warn(`[Sync] COLLECTION_CREATED: Reference ${effectiveSaleId} appears to be a sale ID but sale not found for store ${storeId}. Collection will be created anyway.`);
+              log.warn(`[Sync] COLLECTION_CREATED: Reference ${effectiveSaleId} appears to be a sale ID but sale not found for store ${storeId}. Collection will be created anyway.`);
             }
           }
 
@@ -1331,7 +1333,8 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
 
         results.push({ eventId, status: "applied" });
         processedEventCount++;
-      } catch (error: any) {
+      } catch (_error: unknown) {
+    const error = asError(_error);
         // AUD-080-A FIX: Rollback only the current event's savepoint, not the entire batch
         // This allows other events in the batch to still be processed
         await client.query(`ROLLBACK TO SAVEPOINT event_${eventId.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}`);
@@ -1366,7 +1369,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
     try {
       await client.query("ROLLBACK");
     } catch (_) { /* ignore rollback errors */ }
-    console.error(`[Sync] Batch transaction failed:`, batchError?.message);
+    log.error(`[Sync] Batch transaction failed:`, batchError?.message);
     return res.status(500).json({
       error: "batch_transaction_failed",
       message: batchError?.message ?? "unknown error"

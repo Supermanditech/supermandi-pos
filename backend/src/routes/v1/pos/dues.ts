@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posDuesRouter = Router();
 
@@ -79,8 +81,9 @@ posDuesRouter.get("/dues", requireDeviceToken, async (req: Request, res: Respons
         offset,
       },
     });
-  } catch (error: any) {
-    console.error("[DuesAPI] List error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[DuesAPI] List error:", error.message);
     return res.status(500).json({ error: "Failed to list dues" });
   }
 });
@@ -151,9 +154,10 @@ posDuesRouter.post("/dues/:dueId/pay", requireDeviceToken, requireActiveStore, a
         status: newStatus,
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[DuesAPI] Pay error:", error.message);
+    log.error("[DuesAPI] Pay error:", error.message);
     return res.status(500).json({ error: "Failed to record payment" });
   } finally {
     client.release();
@@ -189,8 +193,9 @@ posDuesRouter.get("/dues/aging", requireDeviceToken, async (req: Request, res: R
       success: true,
       data: result.rows[0],
     });
-  } catch (error: any) {
-    console.error("[DuesAPI] Aging error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[DuesAPI] Aging error:", error.message);
     return res.status(500).json({ error: "Failed to generate aging report" });
   }
 });

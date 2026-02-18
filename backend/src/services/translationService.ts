@@ -15,6 +15,8 @@
 import { createHash } from "crypto";
 import type { Pool, PoolClient } from "pg";
 import { TranslationServiceClient } from "@google-cloud/translate";
+import { log } from "../lib/logger";
+import { asError } from "../lib/errorUtils";
 
 // =============================================================================
 // GOOGLE CLOUD TRANSLATION CLIENT (Lazy Singleton)
@@ -33,17 +35,17 @@ function getTranslationClient(): TranslationServiceClient | null {
 
   const projectId = process.env.GOOGLE_CLOUD_PROJECT;
   if (!projectId) {
-    console.warn("[translationService] GOOGLE_CLOUD_PROJECT not set. Machine translation disabled.");
+    log.warn("[translationService] GOOGLE_CLOUD_PROJECT not set. Machine translation disabled.");
     translationClientInitFailed = true;
     return null;
   }
 
   try {
     translationClient = new TranslationServiceClient();
-    console.log("[translationService] Google Cloud Translation client initialized");
+    log.info("[translationService] Google Cloud Translation client initialized");
     return translationClient;
   } catch (error) {
-    console.error("[translationService] Failed to initialize Translation client:", error);
+    log.error("[translationService] Failed to initialize Translation client:", error);
     translationClientInitFailed = true;
     return null;
   }
@@ -345,13 +347,14 @@ async function translateWithGoogleCloud(
       return translated;
     }
 
-    console.warn("[translationService] Empty translation response, using original text");
+    log.warn("[translationService] Empty translation response, using original text");
     return text;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // GO-LIVE-179: Handle timeout and deadline exceeded errors
     // gRPC error codes: 4 = DEADLINE_EXCEEDED, 14 = UNAVAILABLE
     if (error.code === 4) {
-      console.error("[translationService] Translation API timeout (DEADLINE_EXCEEDED)");
+      log.error("[translationService] Translation API timeout (DEADLINE_EXCEEDED)");
       // Re-throw timeout errors so callers can handle appropriately
       const timeoutError = new Error(`Translation API timeout: ${error.message || 'DEADLINE_EXCEEDED'}`);
       (timeoutError as any).code = 'TRANSLATION_TIMEOUT';
@@ -360,7 +363,7 @@ async function translateWithGoogleCloud(
     }
 
     if (error.code === 14) {
-      console.error("[translationService] Translation API unavailable (UNAVAILABLE)");
+      log.error("[translationService] Translation API unavailable (UNAVAILABLE)");
       // Re-throw unavailable errors
       const unavailableError = new Error(`Translation API unavailable: ${error.message || 'UNAVAILABLE'}`);
       (unavailableError as any).code = 'TRANSLATION_UNAVAILABLE';
@@ -371,13 +374,13 @@ async function translateWithGoogleCloud(
     // Handle specific GCP errors
     if (error.code === 7) {
       // PERMISSION_DENIED
-      console.error("[translationService] GCP permission denied. Check service account.");
+      log.error("[translationService] GCP permission denied. Check service account.");
     } else if (error.code === 8) {
       // RESOURCE_EXHAUSTED (quota)
-      console.warn("[translationService] Translation API quota exceeded. Using glossary only.");
+      log.warn("[translationService] Translation API quota exceeded. Using glossary only.");
     } else if (error.code === 5) {
       // NOT_FOUND (glossary doesn't exist)
-      console.warn("[translationService] Glossary not found. Retrying without glossary.");
+      log.warn("[translationService] Glossary not found. Retrying without glossary.");
       // Retry without glossary
       try {
         const [response] = await client.translateText({
@@ -391,24 +394,24 @@ async function translateWithGoogleCloud(
       } catch (retryError: any) {
         // GO-LIVE-179: Re-throw timeout errors from retry attempt
         if (retryError.code === 4) {
-          console.error("[translationService] Translation retry timeout (DEADLINE_EXCEEDED)");
+          log.error("[translationService] Translation retry timeout (DEADLINE_EXCEEDED)");
           const timeoutError = new Error(`Translation retry timeout: ${retryError.message || 'DEADLINE_EXCEEDED'}`);
           (timeoutError as any).code = 'TRANSLATION_TIMEOUT';
           (timeoutError as any).isTimeout = true;
           throw timeoutError;
         }
         if (retryError.code === 14) {
-          console.error("[translationService] Translation retry unavailable");
+          log.error("[translationService] Translation retry unavailable");
           const unavailableError = new Error(`Translation retry unavailable: ${retryError.message || 'UNAVAILABLE'}`);
           (unavailableError as any).code = 'TRANSLATION_UNAVAILABLE';
           (unavailableError as any).isUnavailable = true;
           throw unavailableError;
         }
-        console.error("[translationService] Translation retry failed:", retryError);
+        log.error("[translationService] Translation retry failed:", retryError);
         return text;
       }
     } else {
-      console.error("[translationService] Translation API error:", error.message || error);
+      log.error("[translationService] Translation API error:", error.message || error);
     }
 
     // Fallback to original text (with glossary substitutions already applied)
@@ -456,13 +459,14 @@ export async function translateText(
     );
     await storeCache(pool, cacheKey, text, machineTranslated, "en", targetLocale);
     return { text: machineTranslated, source: "machine" };
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // GO-LIVE-179: Re-throw timeout and unavailable errors for caller handling
     if (error.isTimeout || error.isUnavailable) {
-      console.error(`[translationService] Machine translation ${error.code}:`, error.message);
+      log.error(`[translationService] Machine translation ${error.code}:`, error.message);
       throw error;
     }
-    console.error("[translationService] Machine translation failed:", error);
+    log.error("[translationService] Machine translation failed:", error);
     // Fall back to glossary-only result
     return { text: glossaryResult.text, source: "glossary" };
   }
@@ -771,14 +775,15 @@ export async function translateTextSafe(
     const result = await translateText(pool, text, targetLocale);
     // Never return empty string
     return result.text || text;
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     // GO-LIVE-179: Categorize errors for better diagnostics
     if (error.isTimeout) {
-      console.error(`[translationService] translateTextSafe: timeout error for "${text.substring(0, 30)}...": ${error.message}`);
+      log.error(`[translationService] translateTextSafe: timeout error for "${text.substring(0, 30)}...": ${error.message}`);
     } else if (error.isUnavailable) {
-      console.error(`[translationService] translateTextSafe: service unavailable for "${text.substring(0, 30)}...": ${error.message}`);
+      log.error(`[translationService] translateTextSafe: service unavailable for "${text.substring(0, 30)}...": ${error.message}`);
     } else {
-      console.error("[translationService] translateTextSafe caught error:", error);
+      log.error("[translationService] translateTextSafe caught error:", error);
     }
     // Ultimate fallback: return original text
     return text;
@@ -816,7 +821,7 @@ export async function checkTranslationQuota(
     const withinQuota = result.rows[0]?.within_quota ?? true;
 
     if (!withinQuota) {
-      console.warn(
+      log.warn(
         `[translationService] Quota exceeded for store ${storeId}. ` +
         `Requested: ${productCount} products, ${charCount} chars. ` +
         `Degrading to glossary-only mode.`
@@ -826,7 +831,7 @@ export async function checkTranslationQuota(
     return withinQuota;
   } catch (error) {
     // On error, allow the request (fail open for availability)
-    console.error("[translationService] Quota check failed:", error);
+    log.error("[translationService] Quota check failed:", error);
     return true;
   }
 }
@@ -865,7 +870,7 @@ export async function getQuotaStatus(
       resetAt: new Date(row.reset_at),
     };
   } catch (error) {
-    console.error("[translationService] Failed to get quota status:", error);
+    log.error("[translationService] Failed to get quota status:", error);
     return {
       productsUsed: 0,
       productsRemaining: 500,

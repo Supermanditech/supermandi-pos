@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 /**
  * RO-008: SMS Service — Pluggable SMS Provider
  *
@@ -105,20 +106,20 @@ export async function sendSms(
 ): Promise<SendSmsResult> {
   // Check disabled
   if (process.env.SMS_DISABLED === "true") {
-    console.log(`[SmsService] SMS disabled — skipping send to ${phone}`);
+    log.info(`[SmsService] SMS disabled — skipping send to ${phone}`);
     return { sent: false, errorCode: "SMS_DISABLED", errorMessage: "SMS is disabled" };
   }
 
   const provider = (process.env.SMS_PROVIDER || "disabled").toLowerCase();
   if (provider === "disabled" || !provider) {
-    console.warn(`[SmsService] No SMS provider configured — skipping send to ${phone}`);
+    log.warn(`[SmsService] No SMS provider configured — skipping send to ${phone}`);
     return { sent: false, errorCode: "NO_PROVIDER", errorMessage: "SMS provider not configured" };
   }
 
   // Rate limit check
   const rateLimitMsg = checkSmsRateLimit(phone);
   if (rateLimitMsg) {
-    console.warn(`[SmsService] Rate limited for ${phone}: ${rateLimitMsg}`);
+    log.warn(`[SmsService] Rate limited for ${phone}: ${rateLimitMsg}`);
     return { sent: false, errorCode: "RATE_LIMITED", errorMessage: rateLimitMsg };
   }
 
@@ -131,7 +132,7 @@ export async function sendSms(
       // case "msg91": result = await sendViaMsg91(phone, message); break;
       default:
         // Log-only provider for development / unrecognized providers
-        console.log(`[SmsService] [${provider}] → ${phone}: ${message}`);
+        log.info(`[SmsService] [${provider}] → ${phone}: ${message}`);
         result = { sent: true, messageId: `log-${Date.now()}` };
         break;
     }
@@ -142,7 +143,7 @@ export async function sendSms(
 
     return result;
   } catch (err) {
-    console.error(`[SmsService] Send failed to ${phone}:`, err instanceof Error ? err.message : err);
+    log.error(`[SmsService] Send failed to ${phone}:`, err instanceof Error ? err.message : err);
     return {
       sent: false,
       errorCode: "SEND_FAILED",

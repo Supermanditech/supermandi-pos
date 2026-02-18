@@ -10,6 +10,7 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // CONFIGURATION
@@ -128,7 +129,7 @@ export function registrationAbuseGuard(req: Request, res: Response, next: NextFu
   if (phone) {
     const phoneCheck = checkLimit(phoneAttempts, phone, PHONE_WINDOW_MS, PHONE_MAX_ATTEMPTS);
     if (!phoneCheck.allowed) {
-      console.warn(JSON.stringify({
+      log.warn(JSON.stringify({
         event: "DR-006:registration_blocked",
         reason: "phone_rate_limit",
         phone: phone.slice(0, 6) + "****", // Partial for audit
@@ -152,7 +153,7 @@ export function registrationAbuseGuard(req: Request, res: Response, next: NextFu
   if (gstin) {
     const gstinCheck = checkLimit(gstinAttempts, gstin, GSTIN_WINDOW_MS, GSTIN_MAX_ATTEMPTS);
     if (!gstinCheck.allowed) {
-      console.warn(JSON.stringify({
+      log.warn(JSON.stringify({
         event: "DR-006:registration_blocked",
         reason: "gstin_rate_limit",
         gstin: gstin.slice(0, 4) + "***" + gstin.slice(-3), // Partial for audit

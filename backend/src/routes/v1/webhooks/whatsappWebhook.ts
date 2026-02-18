@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { getWebhookVerifyToken } from "../../../services/whatsappService";
+import { log } from "../../../lib/logger";
 
 export const whatsappWebhookRouter = Router();
 
@@ -22,11 +23,11 @@ whatsappWebhookRouter.get("/whatsapp", (req: Request, res: Response) => {
   const verifyToken = getWebhookVerifyToken();
 
   if (mode === "subscribe" && token === verifyToken && verifyToken) {
-    console.log("[WA-001] Webhook verified successfully");
+    log.info("[WA-001] Webhook verified successfully");
     return res.status(200).send(challenge);
   }
 
-  console.warn("[WA-001] Webhook verification failed");
+  log.warn("[WA-001] Webhook verification failed");
   return res.sendStatus(403);
 });
 
@@ -39,7 +40,7 @@ whatsappWebhookRouter.post("/whatsapp", async (req: Request, res: Response) => {
   if (WHATSAPP_APP_SECRET) {
     const signature = req.headers["x-hub-signature-256"] as string | undefined;
     if (!signature) {
-      console.warn("[WA-001] Webhook missing X-Hub-Signature-256 header");
+      log.warn("[WA-001] Webhook missing X-Hub-Signature-256 header");
       return res.sendStatus(401);
     }
 
@@ -56,11 +57,11 @@ whatsappWebhookRouter.post("/whatsapp", async (req: Request, res: Response) => {
     const sigBuffer = Buffer.from(signature);
     const expectedBuffer = Buffer.from(expectedSig);
     if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
-      console.warn("[WA-001] Webhook signature mismatch — rejecting");
+      log.warn("[WA-001] Webhook signature mismatch — rejecting");
       return res.sendStatus(403);
     }
   } else {
-    console.warn("[WA-001] WHATSAPP_APP_SECRET not configured — skipping signature verification");
+    log.warn("[WA-001] WHATSAPP_APP_SECRET not configured — skipping signature verification");
   }
 
   // Always respond 200 immediately after auth (Meta requirement — they retry on non-200)
@@ -91,7 +92,7 @@ whatsappWebhookRouter.post("/whatsapp", async (req: Request, res: Response) => {
       }
     }
   } catch (err) {
-    console.error("[WA-001] Webhook processing error:", err);
+    log.error("[WA-001] Webhook processing error:", err);
   }
 });
 
@@ -172,7 +173,7 @@ async function processStatusUpdate(
       );
     }
   } catch (err) {
-    console.error(`[WA-001] Failed to update status for wamid ${wamid}:`, err);
+    log.error(`[WA-001] Failed to update status for wamid ${wamid}:`, err);
   }
 }
 

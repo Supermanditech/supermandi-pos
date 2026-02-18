@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posKhataRouter = Router();
 
@@ -64,8 +66,9 @@ posKhataRouter.get("/khata/customers", requireDeviceToken, async (req: Request, 
     }));
 
     return res.json({ customers });
-  } catch (error: any) {
-    console.error("[KhataAPI] Customers error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[KhataAPI] Customers error:", error.message);
     return res.status(500).json({ error: "Failed to list khata customers" });
   }
 });
@@ -147,8 +150,9 @@ posKhataRouter.get("/khata/entries", requireDeviceToken, async (req: Request, re
       entries: entriesResult.rows,
       customer,
     });
-  } catch (error: any) {
-    console.error("[KhataAPI] Entries error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[KhataAPI] Entries error:", error.message);
     return res.status(500).json({ error: "Failed to list khata entries" });
   }
 });
@@ -261,9 +265,10 @@ posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, as
         balanceMinor: newBalance.toString(),
       },
     });
-  } catch (error: any) {
+  } catch (_error: unknown) {
+    const error = asError(_error);
     await client.query("ROLLBACK");
-    console.error("[KhataAPI] Create entry error:", error.message);
+    log.error("[KhataAPI] Create entry error:", error.message);
     return res.status(500).json({ error: "Failed to create khata entry" });
   } finally {
     client.release();

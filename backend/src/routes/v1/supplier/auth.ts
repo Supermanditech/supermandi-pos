@@ -22,12 +22,13 @@ try {
   const firebase = require("@supermandi/common");
   if (firebase.verifyFirebaseIdToken) {
     verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
-    console.log("[SupplierAuth] Firebase server-side verification available");
+    log.info("[SupplierAuth] Firebase server-side verification available");
   }
 } catch {
-  console.warn("[SupplierAuth] Firebase verification not available");
+  log.warn("[SupplierAuth] Firebase verification not available");
 }
 import {
+import { log } from "../../../lib/logger";
   sendVerificationEmail,
   sendPasswordResetEmail,
   generateSecureOTP,
@@ -55,7 +56,7 @@ const JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    log.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -285,7 +286,7 @@ async function isTokenRevoked(jti: string | undefined, supplierId: string, token
 
     return false;
   } catch (err) {
-    console.warn('[SupplierAuth] Revocation check failed:', err);
+    log.warn('[SupplierAuth] Revocation check failed:', err);
     return false; // Fail open
   }
 }
@@ -590,7 +591,7 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
     // GO-LIVE-134: Check if account is locked
     if (supplier.locked_until && new Date(supplier.locked_until) > new Date()) {
       const remainingMinutes = Math.ceil((new Date(supplier.locked_until).getTime() - Date.now()) / 60000);
-      console.warn(`[SupplierAuth] GO-LIVE-134: Account ${email} is locked for ${remainingMinutes} more minutes`);
+      log.warn(`[SupplierAuth] GO-LIVE-134: Account ${email} is locked for ${remainingMinutes} more minutes`);
       res.status(403).json({
         error: {
           code: 'ACCOUNT_LOCKED',
@@ -639,7 +640,7 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
            WHERE id = $4`,
           [newCount, lockedUntil, clientIp, supplier.id]
         );
-        console.warn(`[SupplierAuth] GO-LIVE-134: Account ${email} locked after ${newCount} failed attempts`);
+        log.warn(`[SupplierAuth] GO-LIVE-134: Account ${email} locked after ${newCount} failed attempts`);
 
         // GO-LIVE-144: Log account lockout
         logAccountLocked({
@@ -666,7 +667,7 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
            WHERE id = $3`,
           [newCount, clientIp, supplier.id]
         );
-        console.warn(`[SupplierAuth] GO-LIVE-134: Failed login for ${email}, ${attemptsRemaining} attempts remaining`);
+        log.warn(`[SupplierAuth] GO-LIVE-134: Failed login for ${email}, ${attemptsRemaining} attempts remaining`);
 
         // GO-LIVE-144: Log failed login attempt
         logLoginFailed({
@@ -884,7 +885,7 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
     );
 
     // ITER4-P0-013: Never log reset tokens - only log that a reset was requested
-    console.log(`[GL-WF-035] Password reset requested for ***@${email?.split('@')[1] || '***'} (GO-LIVE-085/086: secure hashed token)`);
+    log.info(`[GL-WF-035] Password reset requested for ***@${email?.split('@')[1] || '***'} (GO-LIVE-085/086: secure hashed token)`);
 
     // GO-LIVE-166: Send email with reset token (with proper error handling)
     let emailSent = false;
@@ -895,15 +896,15 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
         emailSent = emailResult.sent;
         if (!emailResult.sent) {
           emailError = emailResult.errorCode;
-          console.error(`[GL-WF-035] Failed to send password reset email to ${email}: ${emailResult.errorCode} - ${emailResult.errorMessage}`);
+          log.error(`[GL-WF-035] Failed to send password reset email to ${email}: ${emailResult.errorCode} - ${emailResult.errorMessage}`);
         }
       } catch (err) {
         emailError = 'EMAIL_SEND_EXCEPTION';
-        console.error(`[GL-WF-035] Exception sending password reset email:`, err);
+        log.error(`[GL-WF-035] Exception sending password reset email:`, err);
       }
     } else {
       emailError = 'EMAIL_SERVICE_DISABLED';
-      console.warn(`[GL-WF-035] Email service is disabled - password reset email not sent`);
+      log.warn(`[GL-WF-035] Email service is disabled - password reset email not sent`);
     }
 
     res.json({
@@ -1081,7 +1082,7 @@ router.post("/auth/send-verification", requireSupplierAuth, async (req: Supplier
 
     // NEVER log OTP in production
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[GL-WF-034] DEV: Verification code for ${supplier.primary_email}: ${verificationCode}`);
+      log.info(`[GL-WF-034] DEV: Verification code for ${supplier.primary_email}: ${verificationCode}`);
     }
 
     // Return HONEST result about email delivery
@@ -1097,7 +1098,7 @@ router.post("/auth/send-verification", requireSupplierAuth, async (req: Supplier
       });
     } else {
       // Email failed to send - be honest about it
-      console.error(`[GL-WF-034] Failed to send verification email to ${supplier.primary_email}: ${emailResult.errorCode}`);
+      log.error(`[GL-WF-034] Failed to send verification email to ${supplier.primary_email}: ${emailResult.errorCode}`);
       res.status(500).json({
         error: {
           code: 'EMAIL_SEND_FAILED',
@@ -1205,7 +1206,7 @@ router.post("/auth/verify-email", requireSupplierAuth, async (req: SupplierAuthR
       [req.supplierId]
     );
 
-    console.log(`[GL-WF-034] Email verified for supplier ${req.supplierId}`);
+    log.info(`[GL-WF-034] Email verified for supplier ${req.supplierId}`);
 
     res.json({ data: { success: true, message: 'Email verified successfully!' } });
   } catch (error) {
@@ -1279,7 +1280,7 @@ router.post("/auth/logout", requireSupplierAuth, async (req: SupplierAuthRequest
 
     if (!decoded?.jti) {
       // Old tokens without JTI - still return success
-      console.log(`[SupplierAuth] Logout for supplier ${req.supplierId} (no JTI)`);
+      log.info(`[SupplierAuth] Logout for supplier ${req.supplierId} (no JTI)`);
       res.json({ data: { success: true, message: 'Logged out' } });
       return;
     }
@@ -1307,10 +1308,10 @@ router.post("/auth/logout", requireSupplierAuth, async (req: SupplierAuthRequest
         ]
       );
 
-      console.log(`[GO-LIVE-084] Token revoked for supplier ${req.supplierId}, JTI: ${decoded.jti}`);
+      log.info(`[GO-LIVE-084] Token revoked for supplier ${req.supplierId}, JTI: ${decoded.jti}`);
     } catch (dbError) {
       // Log but don't fail - token will expire eventually
-      console.warn('[SupplierAuth] Failed to record token revocation:', dbError);
+      log.warn('[SupplierAuth] Failed to record token revocation:', dbError);
     }
 
     // T-184: Also blacklist in Redis for immediate gateway-level revocation
@@ -1383,7 +1384,7 @@ router.post("/auth/logout-all", requireSupplierAuth, async (req: SupplierAuthReq
       [req.supplierId]
     );
 
-    console.log(`[GO-LIVE-084] All tokens revoked for supplier ${req.supplierId}`);
+    log.info(`[GO-LIVE-084] All tokens revoked for supplier ${req.supplierId}`);
 
     res.json({
       data: {
@@ -1552,7 +1553,7 @@ router.post("/auth/firebase-register", async (req: Request, res: Response, next:
 
     const supplier = result.rows[0];
 
-    console.log(`[SupplierAuth] GO-LIVE-SUP-AUTH-002: Registration successful for phone ***${phone.slice(-4)}`);
+    log.info(`[SupplierAuth] GO-LIVE-SUP-AUTH-002: Registration successful for phone ***${phone.slice(-4)}`);
 
     res.status(201).json({
       success: true,
@@ -1750,7 +1751,7 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
       userAgent: req.get('user-agent'),
     }).catch(() => {});
 
-    console.log(`[SupplierAuth] GO-LIVE-SUP-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}`);
+    log.info(`[SupplierAuth] GO-LIVE-SUP-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}`);
 
     // T-208: Clear phone rate limit on success
     clearPhoneLoginAttempts(phoneNormalized);

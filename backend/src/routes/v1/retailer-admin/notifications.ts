@@ -13,6 +13,7 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../../../db/client';
 import { registerDeviceToken, removeDeviceToken } from '../../../services/fcmService';
+import { log } from "../../../lib/logger";
 
 export const retailerNotificationsRouter = Router();
 
@@ -30,7 +31,7 @@ retailerNotificationsRouter.post('/notifications/device-token', async (req: Requ
     const result = await registerDeviceToken(userId, token, 'web');
     return res.json({ success: true, data: { tokenId: result.id, isNew: result.isNew } });
   } catch (err) {
-    console.error('[Retailer Notifications] Token registration error:', err);
+    log.error('[Retailer Notifications] Token registration error:', err);
     return res.status(500).json({ error: 'Failed to register token' });
   }
 });

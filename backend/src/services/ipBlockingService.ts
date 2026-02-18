@@ -102,7 +102,7 @@ export async function recordAuthFailure(
     // Log to database asynchronously
     logIpBlock(ip, failureType, record.count, metadata).catch(console.error);
 
-    console.warn(`[GO-LIVE-138] IP ${ip} blocked after ${record.count} failures (${failureType})`);
+    log.warn(`[GO-LIVE-138] IP ${ip} blocked after ${record.count} failures (${failureType})`);
 
     return {
       blocked: true,
@@ -172,7 +172,7 @@ async function logIpBlock(
     );
   } catch (err) {
     // Non-critical - in-memory tracking is primary
-    console.warn('[GO-LIVE-138] Failed to persist IP block:', err);
+    log.warn('[GO-LIVE-138] Failed to persist IP block:', err);
   }
 }
 
@@ -200,6 +200,7 @@ setInterval(() => {
 // =============================================================================
 
 import type { Request, Response, NextFunction } from 'express';
+import { log } from "../lib/logger";
 
 /**
  * Middleware to check if the client IP is blocked

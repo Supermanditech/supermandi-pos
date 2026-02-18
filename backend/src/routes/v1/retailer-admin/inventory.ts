@@ -6,6 +6,8 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { fetchProductsAnalytics } from "../../../services/analytics/analyticsService";
+import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 // Git SHA and build time for health endpoint
 const GIT_SHA = process.env['GIT_SHA'] || 'dev';
@@ -77,8 +79,9 @@ retailerAdminInventoryRouter.get("/store", async (req: Request, res: Response) =
       success: true,
       data: result.rows[0],
     });
-  } catch (error: any) {
-    console.error("[RetailerStore] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerStore] Error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Failed to load store info" },
@@ -191,8 +194,9 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
         topSellingItems,
       },
     });
-  } catch (error: any) {
-    console.error("[RetailerDailySummary] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerDailySummary] Error:", error.message);
 
     // If tables don't exist yet, return empty summary
     if (error.code === "42P01") {
@@ -337,8 +341,9 @@ retailerAdminInventoryRouter.get("/analytics/sales", async (req: Request, res: R
         })),
       },
     });
-  } catch (error: any) {
-    console.error("[T-212] Analytics error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[T-212] Analytics error:", error.message);
     if (error.code === "42P01") {
       return res.json({
         success: true,
@@ -419,8 +424,9 @@ retailerAdminInventoryRouter.get("/analytics/products", async (req: Request, res
         missingFields: result.missing_fields,
       },
     });
-  } catch (error: any) {
-    console.error("[PRA-007] Product analytics error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[PRA-007] Product analytics error:", error.message);
     if (error.message === "database unavailable") {
       return res.status(503).json({ error: "database unavailable" });
     }
@@ -538,8 +544,9 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
       },
       lastUpdated: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error("[RetailerInventory] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerInventory] Error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -702,8 +709,9 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
       },
       lastUpdated: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error("[RetailerLedger] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerLedger] Error:", error.message);
 
     // If table doesn't exist, return empty list
     if (error.code === "42P01") {
@@ -812,8 +820,9 @@ retailerAdminInventoryRouter.get("/categories", async (req: Request, res: Respon
       count: categories.length,
       lastUpdated: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error("[RetailerCategories] Error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerCategories] Error:", error.message);
 
     // If fmcg_taxonomy table doesn't exist, return default categories
     if (error.code === "42P01") {
@@ -896,8 +905,9 @@ retailerAdminInventoryRouter.patch("/categories/:categoryId", async (req: Reques
       success: true,
       message: "Category renamed for your store",
     });
-  } catch (error: any) {
-    console.error("[RetailerCategories] PATCH error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerCategories] PATCH error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(500).json({
@@ -966,8 +976,9 @@ retailerAdminInventoryRouter.delete("/categories/:categoryId", async (req: Reque
       isHidden: newHiddenState,
       message: newHiddenState ? "Category hidden for your store" : "Category restored for your store",
     });
-  } catch (error: any) {
-    console.error("[RetailerCategories] DELETE error:", error.message);
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[RetailerCategories] DELETE error:", error.message);
 
     if (error.code === "42P01") {
       return res.status(500).json({

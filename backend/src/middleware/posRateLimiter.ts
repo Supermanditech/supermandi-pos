@@ -13,6 +13,7 @@
 
 import type { NextFunction, Request, Response } from "express";
 import type { PosDeviceContext } from "./deviceToken";
+import { log } from "../lib/logger";
 
 // DEPLOY-OPS: Rate limit multiplier for non-production environments (local-prod, staging)
 // Production default = 1 (no change). Set RATE_LIMIT_MULTIPLIER=10 in local-prod to 10x all limits.
@@ -108,7 +109,7 @@ export function createPosRateLimiter(config: RateLimiterConfig) {
 
       // BATCH5-SUGGESTION-1: Structured logging for observability
       const posDevice = (req as any).posDevice as PosDeviceContext | undefined;
-      console.log(JSON.stringify({
+      log.info(JSON.stringify({
         event: "rate_limited",
         key_type: config.keyType,
         route: req.path,

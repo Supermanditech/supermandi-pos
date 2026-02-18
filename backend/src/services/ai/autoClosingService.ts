@@ -3,6 +3,7 @@
 // Runs as scheduled job via Cloud Scheduler
 
 import { getPool } from "../../db/client";
+import { log } from "../../lib/logger";
 
 /**
  * Get or create auto-closing config for a store
@@ -156,7 +157,7 @@ export async function processAutoClosing(): Promise<{ storesProcessed: number; s
       if (didClose) closed++;
     } catch (err) {
       errors++;
-      console.error(`[AutoClose] Failed for store ${row.store_id}:`, err);
+      log.error(`[AutoClose] Failed for store ${row.store_id}:`, err);
     }
   }
 

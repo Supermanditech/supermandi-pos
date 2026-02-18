@@ -2,6 +2,7 @@ import * as Print from "expo-print";
 import { Platform } from "react-native";
 import { eventLogger } from './eventLogger';
 import { logPosEvent } from "./cloudEventLogger";
+import { asError } from "../utils/errorUtils";
 
 export interface PrintJob {
   id: string;
@@ -55,7 +56,8 @@ class PrinterService {
       });
 
       return this.status.connected;
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       this.status.connected = false;
       this.status.error = e?.message || 'Initialization failed';
       return false;
@@ -80,7 +82,8 @@ class PrinterService {
       });
       this.status.connected = true;
       this.status.error = undefined;
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       this.status.connected = false;
       this.status.error = e?.message || 'Print pipeline unavailable';
       void logPosEvent("PRINTER_ERROR", { reason: 'connectivity_check_failed', error: e?.message });
@@ -179,7 +182,8 @@ class PrinterService {
       this.status.error = undefined;
 
       return true;
-    } catch (e: any) {
+    } catch (_e: unknown) {
+    const e = asError(_e);
       // User cancelled the print dialog — not a real error
       if (e?.message?.includes('cancelled') || e?.message?.includes('canceled')) {
         await eventLogger.log('USER_ACTION', {

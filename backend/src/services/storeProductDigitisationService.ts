@@ -11,6 +11,7 @@
 import { randomUUID } from "crypto";
 import { getPool } from "../db/client";
 import { lookupBarcodeExternal, type BarcodeProductPrefill } from "./barcodeLookupProvider";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // Types (matching API contract)
@@ -294,7 +295,7 @@ export async function resolveScanForDigitisation(
   }
 
   // Step 2: Not in store - try external lookup for prefill
-  console.log("[digitisation] Barcode not in store catalog, trying external lookup:", normalizedBarcode);
+  log.info("[digitisation] Barcode not in store catalog, trying external lookup:", normalizedBarcode);
 
   const externalData = await lookupBarcodeExternal(normalizedBarcode);
 
@@ -389,7 +390,7 @@ export async function createStoreProductFromDigitisation(
 
     if (existingProductResult.rows[0]) {
       productId = existingProductResult.rows[0].id;
-      console.log("[digitisation] Using existing catalog product:", productId);
+      log.info("[digitisation] Using existing catalog product:", productId);
 
       // AUD-073-A FIX: Update variant and pack_size if provided (may have been missing before)
       if (input.variant || input.packSize) {
@@ -422,7 +423,7 @@ export async function createStoreProductFromDigitisation(
           input.packSize || null
         ]
       );
-      console.log("[digitisation] Created new catalog product:", productId);
+      log.info("[digitisation] Created new catalog product:", productId);
     }
 
     // Step 2: Auto-assign taxonomy based on product name (CAT-002)
@@ -527,7 +528,7 @@ export async function createStoreProductFromDigitisation(
 
     await client.query("COMMIT");
 
-    console.log("[digitisation] Successfully created store product:", actualStoreProductId, "for store:", storeId);
+    log.info("[digitisation] Successfully created store product:", actualStoreProductId, "for store:", storeId);
 
     // Return the created store product
     // AUD-073-A FIX: Include variant and packSize in response
@@ -557,7 +558,7 @@ export async function createStoreProductFromDigitisation(
     };
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("[digitisation] Failed to create store product:", error);
+    log.error("[digitisation] Failed to create store product:", error);
 
     // Check if it's a unique constraint violation (race condition)
     if ((error as any).code === "23505") {

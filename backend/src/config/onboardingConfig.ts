@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 /**
  * RO-009: Config Closure + URL Consistency
  *
@@ -55,11 +56,11 @@ export function loadOnboardingConfig(): OnboardingConfig {
   if (missing.length > 0) {
     const msg = `[RO-009] Missing onboarding env vars:\n${missing.map((v) => `  - ${v}`).join("\n")}`;
     if (isProduction) {
-      console.error(msg);
+      log.error(msg);
       throw new Error(msg);
     } else {
-      console.warn(msg);
-      console.warn("[RO-009] Continuing in dev mode — some features will be disabled");
+      log.warn(msg);
+      log.warn("[RO-009] Continuing in dev mode — some features will be disabled");
     }
   }
 
@@ -72,7 +73,7 @@ export function loadOnboardingConfig(): OnboardingConfig {
     posAppDownloadUrl,
   };
 
-  console.log("[RO-009] Onboarding config loaded:", {
+  log.info("[RO-009] Onboarding config loaded:", {
     sms: smsEnabled ? smsProvider : "disabled",
     email: emailEnabled ? emailProvider : "disabled",
     portalUrl: portalBaseUrl ? "set" : "missing",
