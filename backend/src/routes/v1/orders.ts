@@ -669,6 +669,95 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", requireDeviceToken,
 });
 
 /**
+ * PATCH /api/v1/orders/stores/:storeId/orders/:orderId/tracking
+ * GO-LIVE-242: Update tracking number for a purchase order.
+ * Can be called for any non-cancelled order.
+ * GO-LIVE: Requires device token authentication
+ */
+ordersRouter.patch("/stores/:storeId/orders/:orderId/tracking", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { orderId } = req.params;
+  const { trackingNumber, carrier } = req.body || {};
+
+  // Input validation
+  if (!trackingNumber || typeof trackingNumber !== "string" || trackingNumber.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "invalid_tracking",
+      message: "trackingNumber is required and must be a non-empty string",
+    });
+  }
+
+  if (trackingNumber.trim().length > 100) {
+    return res.status(400).json({
+      success: false,
+      error: "invalid_tracking",
+      message: "trackingNumber must be 100 characters or fewer",
+    });
+  }
+
+  try {
+    // Build update fields
+    const setClauses = ["tracking_number = $3", "updated_at = NOW()"];
+    const params: (string | null)[] = [orderId, storeId, trackingNumber.trim()];
+
+    if (carrier && typeof carrier === "string" && carrier.trim().length > 0) {
+      setClauses.push(`carrier = $${params.length + 1}`);
+      params.push(carrier.trim());
+    }
+
+    const updateResult = await pool.query(
+      `UPDATE orders.purchase_orders
+       SET ${setClauses.join(", ")}
+       WHERE id = $1 AND store_id = $2 AND status != 'cancelled'
+       RETURNING
+         id,
+         order_number as "orderNumber",
+         store_id as "storeId",
+         supplier_id as "supplierId",
+         order_type as "orderType",
+         status,
+         total_amount as "totalAmount",
+         item_count as "itemCount",
+         store_notes as "storeNotes",
+         supplier_notes as "supplierNotes",
+         delivery_address as "deliveryAddress",
+         expected_delivery_date as "expectedDeliveryDate",
+         actual_delivery_date as "actualDeliveryDate",
+         tracking_number as "trackingNumber",
+         carrier,
+         created_by_user_id as "createdByUserId",
+         created_at as "createdAt",
+         updated_at as "updatedAt"`,
+      params
+    );
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "not_found",
+        message: "Order not found or is cancelled",
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: updateResult.rows[0],
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[Orders] Update tracking error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update tracking number",
+    });
+  }
+});
+
+/**
  * DELETE /api/v1/orders/stores/:storeId/orders/:orderId
  * GL-PO-001: Delete a draft purchase order (idempotent).
  * Returns 200/204 even if order was already deleted.
