@@ -346,14 +346,19 @@ describe('MonitoringTab', () => {
       render(<MonitoringTab />);
 
       await waitFor(() => {
-        const button = screen.queryByText('Cleanup Stale Tokens');
-        expect(button).toBeInTheDocument();
-      }, { timeout: 5000 });
+        expect(screen.getByText('Cleanup Stale Tokens')).toBeInTheDocument();
+      });
 
-      const cleanupButton = screen.getByText('Cleanup Stale Tokens');
-      fireEvent.click(cleanupButton);
+      // Click cleanup button → opens ConfirmDialog (UIUX-SA-009)
+      fireEvent.click(screen.getByText('Cleanup Stale Tokens'));
 
-      // Just verify cleanup message appears - don't check specific numbers
+      // Confirm in the dialog
+      await waitFor(() => {
+        expect(screen.getByText('Run Cleanup')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Run Cleanup'));
+
+      // Verify cleanup message appears
       await waitFor(() => {
         const message = screen.queryByText(/cleanup complete|deactivated|deleted/i);
         expect(message).toBeInTheDocument();
@@ -371,8 +376,14 @@ describe('MonitoringTab', () => {
         expect(screen.getByText('Cleanup Stale Tokens')).toBeInTheDocument();
       });
 
-      const cleanupButton = screen.getByText('Cleanup Stale Tokens');
-      fireEvent.click(cleanupButton);
+      // Click cleanup button → opens ConfirmDialog (UIUX-SA-009)
+      fireEvent.click(screen.getByText('Cleanup Stale Tokens'));
+
+      // Confirm in the dialog
+      await waitFor(() => {
+        expect(screen.getByText('Run Cleanup')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Run Cleanup'));
 
       await waitFor(() => {
         expect(screen.getByText('Cleaning...')).toBeDisabled();
@@ -388,8 +399,14 @@ describe('MonitoringTab', () => {
         expect(screen.getByText('Cleanup Stale Tokens')).toBeInTheDocument();
       });
 
-      const cleanupButton = screen.getByText('Cleanup Stale Tokens');
-      fireEvent.click(cleanupButton);
+      // Click cleanup button → opens ConfirmDialog (UIUX-SA-009)
+      fireEvent.click(screen.getByText('Cleanup Stale Tokens'));
+
+      // Confirm in the dialog
+      await waitFor(() => {
+        expect(screen.getByText('Run Cleanup')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Run Cleanup'));
 
       await waitFor(() => {
         expect(screen.getByText(/Cleanup failed/)).toBeInTheDocument();

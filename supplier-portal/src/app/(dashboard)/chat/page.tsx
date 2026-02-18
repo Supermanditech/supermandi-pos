@@ -68,7 +68,7 @@ export default function SupplierChatPage() {
     refetchInterval: 10000,
   });
 
-  const conversations: Conversation[] = convData?.conversations || [];
+  const conversations: Conversation[] = (convData as { conversations?: Conversation[] })?.conversations || [];
   const selectedConv = conversations.find(c => c.id === selectedConvId);
 
   // Fetch messages for selected conversation
@@ -79,7 +79,7 @@ export default function SupplierChatPage() {
     refetchInterval: 5000,
   });
 
-  const messages: ChatMessage[] = (msgData?.messages || []).slice().reverse();
+  const messages: ChatMessage[] = ((msgData as { messages?: ChatMessage[] })?.messages || []).slice().reverse();
 
   // Mark as read when selecting conversation
   useEffect(() => {

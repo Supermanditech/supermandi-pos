@@ -278,7 +278,7 @@ jobs:
       - name: "ZRP-D-003: Secret freshness check (BLOCKING)"
         run: |
           echo "=== ZRP-D-003: Secret Freshness Check ==="
-          SECRETS=(database-url postgres-password jwt-secret admin-token smtp-password WHATSAPP_ACCESS_TOKEN WHATSAPP_PHONE_NUMBER_ID WHATSAPP_VERIFY_TOKEN WHATSAPP_APP_SECRET)
+          SECRETS=(database-url postgres-password jwt-secret admin-token smtp-password WHATSAPP_ACCESS_TOKEN WHATSAPP_PHONE_NUMBER_ID WHATSAPP_VERIFY_TOKEN WHATSAPP_APP_SECRET OPENAI_API_KEY)
           FAIL=0
           for secret in "${SECRETS[@]}"; do
             # Check secret exists and has an enabled version
@@ -596,7 +596,7 @@ jobs:
           SUPERMANDI_ADDRESS=166/1 Bhandu Khurd Jodhpur Rajasthan 342014,\
           SUPERMANDI_STATE=Rajasthan,\
           FRONTEND_URL=https://staging.supermandi.tech" \
-            --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest" \
+            --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest" \
             --allow-unauthenticated \
             --quiet
           echo "    OK: $SERVICE_NAME deployed"

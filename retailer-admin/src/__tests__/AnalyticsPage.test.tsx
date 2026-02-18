@@ -16,17 +16,23 @@ vi.mock('../lib/formatters', () => ({
 }));
 
 const mockFetchAnalytics = vi.fn();
+const mockFetchProductAnalytics = vi.fn();
 vi.mock('../api/store', () => ({
   fetchSalesAnalytics: (...args: unknown[]) => mockFetchAnalytics(...args),
+  fetchProductAnalytics: (...args: unknown[]) => mockFetchProductAnalytics(...args),
 }));
+
+const defaultCategoryData = { data: { salesByGroup: [], missingFields: [] } };
 
 describe('AnalyticsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetchProductAnalytics.mockResolvedValue(defaultCategoryData);
   });
 
   it('shows loading state initially', () => {
     mockFetchAnalytics.mockReturnValue(new Promise(() => {}));
+    mockFetchProductAnalytics.mockReturnValue(new Promise(() => {}));
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
     expect(screen.getByText('Sales Analytics')).toBeInTheDocument();
   });
@@ -59,6 +65,7 @@ describe('AnalyticsPage', () => {
 
   it('shows date range picker', () => {
     mockFetchAnalytics.mockReturnValue(new Promise(() => {}));
+    mockFetchProductAnalytics.mockReturnValue(new Promise(() => {}));
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
     const dateInputs = screen.getAllByDisplayValue(/\d{4}-\d{2}-\d{2}/);
     expect(dateInputs.length).toBe(2);
@@ -86,6 +93,7 @@ describe('AnalyticsPage', () => {
 
   it('renders breadcrumb', () => {
     mockFetchAnalytics.mockReturnValue(new Promise(() => {}));
+    mockFetchProductAnalytics.mockReturnValue(new Promise(() => {}));
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
     expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
   });

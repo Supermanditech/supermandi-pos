@@ -442,30 +442,6 @@ export default function PurchaseScreen({
     setQuickItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  const handleQuickSubmit = useCallback(async () => {
-    // GATE-000: Gate Stock In when API not available
-    if (!stockInReady) {
-      Alert.alert(
-        "Backend Pending",
-        `Stock In API is not deployed yet. Your data will be saved locally but not synced to backend.\n\n${stockInBlocker || "Blocked by: API-003"}`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Retry Check",
-            onPress: () => retryStockIn(),
-          },
-          {
-            text: "Save Locally (Demo)",
-            onPress: () => proceedWithSubmit(),
-          },
-        ]
-      );
-      return;
-    }
-    proceedWithSubmit();
-    // UIUX-POS-013: proceedWithSubmit must be in deps to avoid stale closure
-  }, [stockInReady, stockInBlocker, retryStockIn, proceedWithSubmit]);
-
   const proceedWithSubmit = useCallback(async () => {
     if (quickItems.length === 0) {
       Alert.alert("No Items", "Scan items to add.");
@@ -511,6 +487,30 @@ export default function PurchaseScreen({
       setSubmitting(false);
     }
   }, [quickItems, stockInReady, walkInSupplierName, walkInSupplierGstin]);
+
+  const handleQuickSubmit = useCallback(async () => {
+    // GATE-000: Gate Stock In when API not available
+    if (!stockInReady) {
+      Alert.alert(
+        "Backend Pending",
+        `Stock In API is not deployed yet. Your data will be saved locally but not synced to backend.\n\n${stockInBlocker || "Blocked by: API-003"}`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Retry Check",
+            onPress: () => retryStockIn(),
+          },
+          {
+            text: "Save Locally (Demo)",
+            onPress: () => proceedWithSubmit(),
+          },
+        ]
+      );
+      return;
+    }
+    proceedWithSubmit();
+    // UIUX-POS-013: proceedWithSubmit must be in deps to avoid stale closure
+  }, [stockInReady, stockInBlocker, retryStockIn, proceedWithSubmit]);
 
   const quickTotal = quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0);
 

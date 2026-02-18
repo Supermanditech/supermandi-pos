@@ -3,6 +3,7 @@
 
 export interface CaughtError extends Error {
   code?: string;
+  status?: number;
   name: string;
 }
 

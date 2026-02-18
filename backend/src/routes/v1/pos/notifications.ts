@@ -14,8 +14,8 @@
 import { Router, Request, Response } from 'express';
 import { requireDeviceToken } from '../../../middleware/posDeviceToken';
 import { getPool } from '../../../db/client';
-import {
 import { log } from "../../../lib/logger";
+import {
   registerDeviceToken,
   removeDeviceToken,
 } from '../../../services/fcmService';

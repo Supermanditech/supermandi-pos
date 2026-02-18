@@ -13,8 +13,8 @@ import { randomUUID } from "crypto";
 import { generateStoreCode } from "./storeCodeService";
 import { sendOnboardingLinks } from "./notificationService";  // RO-008
 import { createEnrollmentCode } from "./enrollmentCodeService";  // DRX-003
-import type {
 import { log } from "../lib/logger";
+import type {
   RetailerRegistrationData,
   RegistrationSource,
 } from "@supermandi/common";

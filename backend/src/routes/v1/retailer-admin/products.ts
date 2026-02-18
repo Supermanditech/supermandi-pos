@@ -17,9 +17,9 @@ import {
   validateCategoryId,
   validatePrice,
 } from "@supermandi/common";
-import {
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+import {
   validateProductName as validateProductNameUnified,
   validateBarcode as validateBarcodeUnified,
   validatePrice as validatePriceUnified,
