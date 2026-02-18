@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../../config/api";
 import { getDeviceToken, getDeviceSession } from "../deviceSession";
+import { getDeviceMeta } from "../deviceInfo";
 import { useSettingsStore } from "../../stores/settingsStore";
 
 export type UiStatusResponse = {
@@ -140,6 +141,7 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
     const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
       headers: {
         "X-Device-Token": deviceToken,
+        "X-App-Version": getDeviceMeta().appVersion ?? "unknown",
       },
     });
 

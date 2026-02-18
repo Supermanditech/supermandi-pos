@@ -16,6 +16,12 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
 
   const status = (req as any).posDeviceStatus as PosDeviceStatusContext;
 
+  // SA-P2-003-FIX: Prefer X-App-Version header over DB value to avoid
+  // race condition after Play Store update (DB may still have old version)
+  const headerAppVersion = typeof req.headers["x-app-version"] === "string"
+    ? req.headers["x-app-version"].trim()
+    : null;
+
   const result = await pool.query(
     `
     SELECT pending_outbox_count,
@@ -30,6 +36,11 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   );
   const row = result.rows[0] ?? {};
   const nowIso = new Date().toISOString();
+
+  // Use header version if available (always fresh), fall back to DB version
+  const effectiveAppVersion = headerAppVersion && headerAppVersion !== "unknown"
+    ? headerAppVersion
+    : (row.app_version || "0.0.0");
 
   let storeName: string | null = null;
   let storeCode: string | null = null; // STORECODE-003
@@ -121,8 +132,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
               const dbVersion = ffRow.payload_json?.version ? String(ffRow.payload_json.version) : null;
               minAppVersionValue = autoVersion || dbVersion || null;
               if (minAppVersionValue) {
-                const deviceVersion = row.app_version || "0.0.0";
-                forceUpdate = compareSemver(deviceVersion, minAppVersionValue) < 0;
+                // SA-P2-003-FIX: Use effectiveAppVersion (header-first) to avoid
+                // post-update race condition where DB still has old version
+                forceUpdate = compareSemver(effectiveAppVersion, minAppVersionValue) < 0;
               }
             }
             break;
@@ -133,10 +145,18 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     }
   }
 
-  await pool.query(
-    `UPDATE pos_devices SET last_seen_online = NOW(), updated_at = NOW() WHERE id = $1`,
-    [status.deviceId]
-  );
+  // SA-P2-003-FIX: Also persist header app_version to DB so it stays current
+  if (headerAppVersion && headerAppVersion !== "unknown") {
+    await pool.query(
+      `UPDATE pos_devices SET last_seen_online = NOW(), app_version = $2, updated_at = NOW() WHERE id = $1`,
+      [status.deviceId, headerAppVersion]
+    );
+  } else {
+    await pool.query(
+      `UPDATE pos_devices SET last_seen_online = NOW(), updated_at = NOW() WHERE id = $1`,
+      [status.deviceId]
+    );
+  }
 
   const pending =
     typeof row.pending_outbox_count === "number" && Number.isFinite(row.pending_outbox_count)
