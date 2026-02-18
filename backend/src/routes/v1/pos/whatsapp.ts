@@ -5,8 +5,8 @@ import { Router, Request, Response } from "express";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { getPool } from "../../../db/client";
-import {
 import { log } from "../../../lib/logger";
+import {
   isWhatsAppConfigured,
   sendTextMessage,
   sendBillReceipt,
