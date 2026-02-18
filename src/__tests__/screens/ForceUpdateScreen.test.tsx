@@ -21,10 +21,10 @@ jest.mock("@react-native-community/netinfo", () => ({
   default: { fetch: () => mockNetInfoFetch() },
 }));
 
-// Mock fetchUiStatus
-const mockFetchUiStatus = jest.fn();
+// Mock fetchUiStatusStrict (SCR-AUDIT-310: ForceUpdateScreen now uses strict fetch)
+const mockFetchUiStatusStrict = jest.fn();
 jest.mock("../../services/api/uiStatusApi", () => ({
-  fetchUiStatus: () => mockFetchUiStatus(),
+  fetchUiStatusStrict: () => mockFetchUiStatusStrict(),
 }));
 
 // Mock clearDeviceSession
@@ -33,12 +33,14 @@ jest.mock("../../services/deviceSession", () => ({
   clearDeviceSession: () => mockClearDeviceSession(),
 }));
 
-// Mock ApiError
+// Mock ApiError (matches real constructor: status, message, payload?)
 jest.mock("../../services/api/apiClient", () => ({
   ApiError: class ApiError extends Error {
-    constructor(message: string) {
+    public readonly status: number;
+    constructor(status: number, message: string) {
       super(message);
       this.name = "ApiError";
+      this.status = status;
     }
   },
 }));
@@ -57,7 +59,7 @@ describe("ForceUpdateScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNetInfoFetch.mockResolvedValue({ isConnected: true });
-    mockFetchUiStatus.mockResolvedValue({ forceUpdate: false });
+    mockFetchUiStatusStrict.mockResolvedValue({ forceUpdate: false });
     mockRouteParams.currentVersion = "1.0.0";
     mockRouteParams.requiredVersion = "2.0.0";
   });
@@ -110,12 +112,12 @@ describe("ForceUpdateScreen", () => {
     });
 
     expect(alertSpy).toHaveBeenCalledWith("No Internet", expect.any(String));
-    expect(mockFetchUiStatus).not.toHaveBeenCalled();
+    expect(mockFetchUiStatusStrict).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 
   it("navigates to SellScan when update no longer required", async () => {
-    mockFetchUiStatus.mockResolvedValue({ forceUpdate: false });
+    mockFetchUiStatusStrict.mockResolvedValue({ forceUpdate: false });
     render(<ForceUpdateScreen />);
 
     await act(async () => {
@@ -131,7 +133,7 @@ describe("ForceUpdateScreen", () => {
   });
 
   it("shows alert when update still required", async () => {
-    mockFetchUiStatus.mockResolvedValue({ forceUpdate: true, minAppVersion: "3.0.0" });
+    mockFetchUiStatusStrict.mockResolvedValue({ forceUpdate: true, minAppVersion: "3.0.0" });
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<ForceUpdateScreen />);
 
@@ -145,7 +147,7 @@ describe("ForceUpdateScreen", () => {
 
   it("handles device_unauthorized by clearing session", async () => {
     const { ApiError } = require("../../services/api/apiClient");
-    mockFetchUiStatus.mockRejectedValue(new ApiError("device_unauthorized"));
+    mockFetchUiStatusStrict.mockRejectedValue(new ApiError(401, "device_unauthorized"));
     render(<ForceUpdateScreen />);
 
     await act(async () => {
