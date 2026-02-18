@@ -17,12 +17,14 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 // expo-updates disabled for development - channel info not needed
 const Updates = { channel: null as string | null };
 
+import NetInfo from "@react-native-community/netinfo";
+
 import { enrollDevice, checkDuplicateLabel, CheckDuplicateLabelResponse } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { POS_MESSAGES } from "../utils/uiStatus";
-import { colors, typography, spacing } from "../theme";
+import { theme, colors, typography, spacing } from "../theme";
 import { API_BASE_URL, BUILD_INFO, TEST_STORE_CONFIG } from "../config/api";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { useCartStore } from "../stores/cartStore";
@@ -319,6 +321,20 @@ export default function EnrollDeviceScreen() {
       return;
     }
 
+    // S3-1: Offline detection before enrollment attempt
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        Alert.alert(
+          "No Internet",
+          "Enrollment requires a network connection. Please connect to the internet and try again."
+        );
+        return;
+      }
+    } catch {
+      // NetInfo failed — proceed anyway (best effort)
+    }
+
     // GL-RJ-006: Block enrollment if duplicate label detected
     if (labelCheckResult?.isDuplicate) {
       const suggestions = labelCheckResult.suggestions?.slice(0, 3).join(", ");
@@ -469,9 +485,9 @@ export default function EnrollDeviceScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Enroll POS Device</Text>
-      <Text style={styles.subtitle}>Scan the QR code or enter the enrollment code.</Text>
+    <View style={styles.container} testID="enroll-device-screen" accessibilityLabel="Enroll POS device screen">
+      <Text style={styles.title} testID="enroll-title" accessibilityRole="header">Enroll POS Device</Text>
+      <Text style={styles.subtitle} testID="enroll-subtitle">Scan the QR code or enter the enrollment code.</Text>
 
       {scannerOpen && (
         <View style={styles.cameraWrap}>
@@ -484,10 +500,37 @@ export default function EnrollDeviceScreen() {
             />
           ) : (
             <View style={styles.permissionBox}>
-              <Text style={styles.permissionText}>Camera permission is required to scan QR codes.</Text>
-              <Pressable style={styles.secondaryButton} onPress={() => requestPermission()}>
-                <Text style={styles.secondaryButtonText}>Allow Camera</Text>
-              </Pressable>
+              <Text
+                style={styles.permissionText}
+                testID="enroll-camera-permission-text"
+                accessibilityLabel="Camera permission is required to scan QR codes"
+              >
+                {permission?.canAskAgain === false
+                  ? "Camera permission was denied. Please enable it in Settings."
+                  : "Camera permission is required to scan QR codes."}
+              </Text>
+              {/* S3-4: Recovery path for denied camera permission */}
+              {permission?.canAskAgain === false ? (
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={() => Linking.openSettings()}
+                  testID="enroll-open-settings-button"
+                  accessibilityLabel="Open device settings to enable camera"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.secondaryButtonText}>Open Settings</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={() => requestPermission()}
+                  testID="enroll-allow-camera-button"
+                  accessibilityLabel="Allow camera access"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.secondaryButtonText}>Allow Camera</Text>
+                </Pressable>
+              )}
             </View>
           )}
         </View>
@@ -501,6 +544,8 @@ export default function EnrollDeviceScreen() {
           autoCapitalize="characters"
           value={codeInput}
           onChangeText={setCodeInput}
+          testID="enroll-code-input"
+          accessibilityLabel="Enrollment code"
         />
 
         <Text style={styles.label}>Device Label (required)</Text>
@@ -512,6 +557,8 @@ export default function EnrollDeviceScreen() {
           placeholder="Counter-1"
           value={labelInput}
           onChangeText={setLabelInput}
+          testID="enroll-label-input"
+          accessibilityLabel="Device label"
         />
         {/* GL-RJ-006: Duplicate label warning */}
         {checkingLabel && (
@@ -596,6 +643,9 @@ export default function EnrollDeviceScreen() {
             setScannerOpen((prev) => !prev);
             setScanned(false);
           }}
+          testID="enroll-scan-button"
+          accessibilityLabel={scannerOpen ? "Hide QR scanner" : "Open QR scanner"}
+          accessibilityRole="button"
         >
           <Text style={styles.secondaryButtonText}>
             {scannerOpen ? "Hide Scanner" : "Scan QR"}
@@ -606,6 +656,10 @@ export default function EnrollDeviceScreen() {
           style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
           onPress={handleEnroll}
           disabled={loading}
+          testID="enroll-submit-button"
+          accessibilityLabel={loading ? "Enrolling device" : "Enroll device"}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: loading }}
         >
           <Text style={[styles.primaryButtonText, loading && styles.primaryButtonTextDisabled]}>
             {loading ? "Enrolling..." : "Enroll Device"}
@@ -671,7 +725,7 @@ const styles = StyleSheet.create({
   },
   cameraWrap: {
     marginTop: spacing.md,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.lg,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: colors.border,
