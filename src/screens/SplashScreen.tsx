@@ -5,7 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Svg, { Path } from "react-native-svg";
 
-import { theme } from "../theme";
+import { theme, colors, typography, spacing } from "../theme";
 import { startCloudEventLogger } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
 import { startAutoSync } from "../services/syncService";
@@ -24,7 +24,7 @@ type RootStackParamList = {
 type NavProp = NativeStackNavigationProp<RootStackParamList, "Splash">;
 
 /** T-107: Brand shortmark — S-curve icon rendered as inline SVG */
-function BrandShortmark({ size = 64, color = "#FFFFFF" }: { size?: number; color?: string }) {
+function BrandShortmark({ size = 64, color = colors.textInverse }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       {/* S-curve path representing the SuperMandi brand shortmark */}
@@ -74,7 +74,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <BrandShortmark size={64} color="#FFFFFF" />
+      <BrandShortmark size={64} color={theme.colors.textInverse} />
       <Text style={styles.brandName}>SuperMandi</Text>
       <Text style={styles.subtitle}>POS</Text>
       <ActivityIndicator
@@ -94,19 +94,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   brandName: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginTop: 16,
+    ...typography.h2,
+    color: colors.textInverse,
+    marginTop: spacing.md,
   },
   subtitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#FFFFFF",
+    ...typography.label,
+    color: colors.textInverse,
     opacity: 0.8,
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   loader: {
-    marginTop: 32,
+    marginTop: spacing.xl,
   },
 });
