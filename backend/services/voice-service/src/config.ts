@@ -1,5 +1,4 @@
 // Voice Service Configuration - VOICE-003
-// AUD-076-D: Migrated from OpenAI to Claude/Anthropic API
 // ENV-FAILFAST-001: Crash in production if required env vars are missing
 
 const IS_PROD = process.env['NODE_ENV'] === 'production';
@@ -32,19 +31,12 @@ export const config = {
   port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('VOICE_SERVICE_PORT', 3009),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
-  // AUD-076-D: Claude/Anthropic API configuration (replaces OpenAI)
-  // ENV-FAILFAST-001: ANTHROPIC_API_KEY required in production
-  anthropic: {
-    apiKey: requireEnv('ANTHROPIC_API_KEY', ''),
-    model: getEnvOrDefault('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
-    language: getEnvOrDefault('VOICE_LANGUAGE', 'hi'), // Hindi primary
-  },
-
-  // Legacy OpenAI config (deprecated - kept for backwards compatibility)
+  // OpenAI API configuration (Whisper STT + GPT intent)
+  // ENV-FAILFAST-001: OPENAI_API_KEY required in production
   openai: {
-    apiKey: '', // AUD-076-D: Disabled - use anthropic.apiKey instead
-    model: 'whisper-1',
-    language: 'hi',
+    apiKey: requireEnv('OPENAI_API_KEY', ''),
+    sttModel: getEnvOrDefault('OPENAI_STT_MODEL', 'whisper-1'),
+    language: getEnvOrDefault('VOICE_LANGUAGE', 'hi'), // Hindi primary
   },
 
   // Database configuration (uses shared pool from @supermandi/common)

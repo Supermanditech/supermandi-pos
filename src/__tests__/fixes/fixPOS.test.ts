@@ -455,7 +455,7 @@ describe("FIX-040: auto-stop voice recording after 60 seconds", () => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const onAutoStop = jest.fn();
 
-    timer = setTimeout(onAutoStop, MAX_RECORDING_DURATION_MS);
+    timer = setTimeout(onAutoStop, MAX_RECORDING_DURATION_MS) as unknown as ReturnType<typeof setTimeout>;
 
     // Manual stop clears timer
     if (timer) {
@@ -471,7 +471,7 @@ describe("FIX-040: auto-stop voice recording after 60 seconds", () => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const onAutoStop = jest.fn();
 
-    timer = setTimeout(onAutoStop, MAX_RECORDING_DURATION_MS);
+    timer = setTimeout(onAutoStop, MAX_RECORDING_DURATION_MS) as unknown as ReturnType<typeof setTimeout>;
 
     // Cancel clears timer
     if (timer) {
@@ -503,7 +503,7 @@ describe("FIX-041: clear printer error on successful print", () => {
         this.status.error = undefined; // FIX-041: clear on success
         return true;
       } catch (e: unknown) {
-        this.status.error = e.message;
+        this.status.error = (e as Error).message;
         return false;
       }
     }

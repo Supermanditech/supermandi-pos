@@ -240,7 +240,7 @@ describe("SellScanScreen", () => {
 
   it("renders without crashing", () => {
     const { unmount } = render(
-      <SellScanScreen navigation={{} as any} route={{ params: {} } as any} />
+      <SellScanScreen storeActive={true} scanDisabled={false} onOpenScanner={jest.fn()} />
     );
     unmount();
   });

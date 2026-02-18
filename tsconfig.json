@@ -13,6 +13,8 @@
     "supermandi-superadmin/**",
     "e2e",
     "e2e/**",
+    "e2e-tests",
+    "e2e-tests/**",
     "src/screens/deprecated",
     "src/screens/deprecated/**",
     "retailer-admin",

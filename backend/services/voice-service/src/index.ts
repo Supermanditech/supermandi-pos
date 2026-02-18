@@ -42,14 +42,13 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 // =============================================================================
 
 app.get('/health', async (_req: Request, res: Response) => {
-  // AUD-076-D: Check Anthropic API key instead of OpenAI
-  const hasAnthropicKey = Boolean(config.anthropic.apiKey);
+  const hasOpenaiKey = Boolean(config.openai.apiKey);
 
   res.status(200).json({
     status: 'ok',
     service: 'voice-service',
-    version: '1.1.0', // AUD-076-D: Version bump for Claude migration
-    anthropic: hasAnthropicKey ? 'configured' : 'not_configured (using mock)',
+    version: '1.2.0',
+    openai: hasOpenaiKey ? 'configured' : 'not_configured (using mock)',
   });
 });
 
@@ -139,10 +138,10 @@ process.on('SIGINT', async () => {
 app.listen(config.port, () => {
   console.log(`
 ====================================================
-  SuperMandi Voice Service v1.1.0
+  SuperMandi Voice Service v1.2.0
   Running on port ${config.port}
   Environment: ${config.env}
-  Anthropic Claude: ${config.anthropic.apiKey ? 'Configured' : 'Not configured (mock mode)'}
+  OpenAI Whisper: ${config.openai.apiKey ? 'Configured' : 'Not configured (mock mode)'}
 ====================================================
   `);
 });
