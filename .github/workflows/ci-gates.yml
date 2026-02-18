@@ -229,11 +229,15 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run --if-present test
 
+      - name: Install supplier-portal deps
+        working-directory: supplier-portal
+        timeout-minutes: 3
+        run: pnpm install --frozen-lockfile
+
       - name: Test supplier-portal
         working-directory: supplier-portal
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run --if-present test
+        timeout-minutes: 5
+        run: pnpm run --if-present test
 
       - name: Install backend dependencies
         working-directory: backend

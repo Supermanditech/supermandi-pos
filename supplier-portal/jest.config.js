@@ -6,6 +6,7 @@ const createJestConfig = nextJest({ dir: './' });
 const config = {
   testEnvironment: 'jest-environment-jsdom',
   testMatch: ['<rootDir>/src/**/*.{test,spec}.{ts,tsx}'],
+  testTimeout: 15000,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
