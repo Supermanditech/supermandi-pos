@@ -1,7 +1,7 @@
 // T-107: Brand-styled splash screen with shortmark icon
 // SCR-S1-HARDENING: Production-grade error handling, timeout, retry, a11y
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Pressable } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Pressable, BackHandler } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Svg, { Path } from "react-native-svg";
@@ -59,6 +59,12 @@ function BrandShortmark({ size = 64, color = colors.textInverse }: { size?: numb
 export default function SplashScreen() {
   const navigation = useNavigation<NavProp>();
   const [errorState, setErrorState] = useState<string | null>(null);
+
+  // #405: Prevent Android back button during splash (consistent with gate screens)
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
 
   /** S1-3: Race getDeviceSession against a timeout */
   const getSessionWithTimeout = useCallback(async () => {

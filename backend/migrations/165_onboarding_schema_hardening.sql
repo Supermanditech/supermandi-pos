@@ -73,10 +73,14 @@ CREATE POLICY rls_application_status_log_admin ON auth.application_status_log
 
 -- =============================================================================
 -- DB-9: Index on pos_device_enrollments(store_id, enrollment_code_hash)
--- Used by admin dashboard to list codes per store and by enrollment lookup
+-- Column added in migration 166. Safe wrapper in case migrations run out of order.
 -- =============================================================================
-CREATE INDEX IF NOT EXISTS idx_enrollments_store_code_hash
-  ON pos_device_enrollments (store_id, enrollment_code_hash);
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_enrollments_store_code_hash
+    ON pos_device_enrollments (store_id, enrollment_code_hash);
+EXCEPTION WHEN undefined_column THEN
+  RAISE NOTICE 'enrollment_code_hash column not yet created — index deferred to migration 166';
+END $$;
 
 -- =============================================================================
 -- DB-10: Index on pos_devices(device_token) for token-based auth
