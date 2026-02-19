@@ -19,8 +19,7 @@ import i18n, { initI18n } from "./src/i18n";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/screens/SplashScreen";
 import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
-// RO-004: POS store registration screen
-import RegisterStoreScreen from "./src/screens/RegisterStoreScreen";
+// #329: RegisterStoreScreen removed — registration happens on Retailer Web only
 import PosRootLayout from "./src/screens/PosRootLayout";
 import PaymentScreen from "./src/screens/PaymentScreen";
 import SuccessPrintScreen from "./src/screens/SuccessPrintScreenV2";
@@ -436,8 +435,7 @@ export default function App() {
         >
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="EnrollDevice" component={EnrollDeviceScreen} />
-          {/* RO-004: POS store registration */}
-          <Stack.Screen name="RegisterStore" component={RegisterStoreScreen} />
+          {/* #329: RegisterStore removed — registration on Retailer Web only */}
           <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
           {/* SA-P2-003: Force update screen for minimum app version enforcement */}
           <Stack.Screen name="ForceUpdate" component={ForceUpdateScreen} />

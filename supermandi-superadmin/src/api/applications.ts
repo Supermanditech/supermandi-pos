@@ -120,13 +120,24 @@ export async function fetchApplicationDetail(id: string): Promise<ApplicationDet
   return await res.json();
 }
 
+// #331: Enhanced approval response includes activation code
+export type ApprovalResponse = {
+  success: boolean;
+  approvedEntityId?: string;
+  message?: string;
+  activationCode?: string;
+  codeSentTo?: string;
+  codeSentVia?: string[];
+};
+
 /**
  * Approve an application. Creates store (retailer) or supplier record.
+ * #330: For retailers, also generates activation code and sends WhatsApp/Email.
  */
 export async function approveApplication(
   id: string,
   input?: { notes?: string }
-): Promise<{ success: boolean; approvedEntityId?: string; message?: string }> {
+): Promise<ApprovalResponse> {
   const base = requireApiBase();
   const res = await fetchWithTimeout(`${base}/api/v1/admin/applications/${encodeURIComponent(id)}/approve`, {
     method: "POST",

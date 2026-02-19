@@ -1012,7 +1012,7 @@ export default function RegisterPage() {
 
                 <h2 style={{ ...styles.cardTitle, textAlign: 'center' }}>Application Submitted</h2>
                 <p style={{ ...styles.cardSubtitle, textAlign: 'center' }}>
-                  Your registration is pending verification. We'll review your documents and notify you once approved.
+                  Your registration is pending verification. We'll review your documents and notify you shortly.
                 </p>
 
                 {applicationId && (
@@ -1027,8 +1027,14 @@ export default function RegisterPage() {
                   </div>
                 )}
 
+                {/* #332: Updated success message — activation code sent on approval */}
                 <div style={styles.alertSuccess}>
-                  You will receive a notification once your application is approved. After approval, you can login to manage your store.
+                  <strong>What happens next?</strong>
+                  <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem', textAlign: 'left' }}>
+                    <li>We review your documents (usually 1-2 business days)</li>
+                    <li>Once approved, you'll receive a <strong>POS Activation Code</strong> via WhatsApp and Email</li>
+                    <li>Download the SuperMandi POS app and enter the code to activate your store</li>
+                  </ol>
                 </div>
 
                 <Link

@@ -16,6 +16,8 @@ import { randomUUID } from "crypto";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
+import { createEnrollmentCode } from "../../../services/enrollmentCodeService";
+import { sendActivationCodeNotification } from "../../../services/notificationService";
 import rateLimit from "express-rate-limit";
 import { log } from "../../../lib/logger";
 
@@ -406,12 +408,55 @@ adminApplicationsRouter.post(
 
       await client.query('COMMIT');
 
+      // #330: For retailers, auto-generate activation code + send WhatsApp/Email (fire-and-forget)
+      let activationCode: string | undefined;
+      let codeSentTo: string | undefined;
+      const codeSentVia: string[] = [];
+
+      if (app.entity_type === 'retailer' && approvedEntityId) {
+        try {
+          const storeCode = (await pool.query(
+            `SELECT code FROM platform.stores WHERE id = $1::uuid`, [approvedEntityId]
+          )).rows[0]?.code || '';
+
+          const enrollment = await createEnrollmentCode(approvedEntityId, storeCode, `admin_approval:${adminId}`);
+          activationCode = enrollment.code;
+          codeSentTo = app.phone;
+
+          log.info(`[admin/applications] Activation code ${enrollment.code} generated for store ${storeCode}`);
+
+          // Send notifications (non-blocking)
+          sendActivationCodeNotification({
+            phone: app.phone,
+            email: app.email || undefined,
+            ownerName: app.owner_name || app.business_name,
+            storeName: app.business_name,
+            storeCode,
+            activationCode: enrollment.code,
+            expiresAt: enrollment.expiresAt,
+          }).then((result) => {
+            if (result.whatsappSent) codeSentVia.push('whatsapp');
+            if (result.smsSent) codeSentVia.push('sms');
+            if (result.emailSent) codeSentVia.push('email');
+            log.info(`[admin/applications] Activation code sent via: ${codeSentVia.join(', ') || 'none'}`);
+          }).catch((err) => {
+            log.warn(`[admin/applications] Activation notification failed:`, err?.message);
+          });
+        } catch (err: any) {
+          log.warn(`[admin/applications] Activation code generation failed:`, err?.message);
+          // Non-blocking: approval still succeeds without activation code
+        }
+      }
+
       res.json({
         success: true,
         message: `${app.entity_type === 'retailer' ? 'Store' : 'Supplier'} approved successfully`,
         applicationId: id,
         approvedEntityId,
         entityType: app.entity_type,
+        ...(activationCode && { activationCode }),
+        ...(codeSentTo && { codeSentTo }),
+        ...(codeSentVia.length > 0 && { codeSentVia }),
       });
     } catch (err: any) {
       await client.query('ROLLBACK');

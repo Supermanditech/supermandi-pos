@@ -77,43 +77,4 @@ export async function enrollDevice(input: {
   }
 }
 
-// =============================================================================
-// GL-RJ-006: Duplicate Label Detection
-// =============================================================================
-
-export type DeviceLabelInfo = {
-  label: string;
-  deviceId: string;
-  status: 'active' | 'inactive';
-  lastSeen?: string;
-};
-
-export type CheckDuplicateLabelResponse = {
-  isDuplicate: boolean;
-  existingDevice?: DeviceLabelInfo;
-  suggestions?: string[];
-};
-
-/**
- * GL-RJ-006: Check if a device label already exists for the store
- * This is called before enrollment to prevent duplicate labels
- */
-export async function checkDuplicateLabel(input: {
-  enrollmentCode: string;
-  label: string;
-}): Promise<CheckDuplicateLabelResponse> {
-  try {
-    const response = await apiClient.post<CheckDuplicateLabelResponse>(
-      "/api/v1/pos/enroll/check-label",
-      {
-        code: input.enrollmentCode,
-        label: input.label.trim(),
-      }
-    );
-    return response;
-  } catch (error) {
-    // On error, allow enrollment to proceed (don't block on label check failure)
-    console.warn("[checkDuplicateLabel] Check failed, allowing enrollment:", error);
-    return { isDuplicate: false };
-  }
-}
+// #329: GL-RJ-006 checkDuplicateLabel removed — simplified activation flow has no device labels

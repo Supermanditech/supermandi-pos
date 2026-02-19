@@ -93,3 +93,23 @@ export async function fetchStoreEnrollments(storeId: string): Promise<Enrollment
   const data = (await res.json()) as { enrollments: EnrollmentRecord[] };
   return data.enrollments;
 }
+
+// #330: Resend activation code notification (WhatsApp + SMS + Email)
+export async function resendEnrollmentCode(code: string): Promise<{ sent: boolean; channels: string[]; sentTo?: string }> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/device-enrollments/${encodeURIComponent(code)}/resend`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders()
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return (await res.json()) as { sent: boolean; channels: string[]; sentTo?: string };
+}
