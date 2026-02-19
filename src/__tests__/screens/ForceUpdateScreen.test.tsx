@@ -4,7 +4,7 @@
  */
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react-native";
-import { Alert, Linking, Platform } from "react-native";
+import { Alert, Linking, Platform, BackHandler } from "react-native";
 
 // Mock navigation + route
 const mockReset = jest.fn();
@@ -74,16 +74,16 @@ describe("ForceUpdateScreen", () => {
 
   it("displays version params correctly", () => {
     render(<ForceUpdateScreen />);
-    expect(screen.getByTestId("force-update-current-version")).toHaveTextContent("1.0.0");
-    expect(screen.getByTestId("force-update-required-version")).toHaveTextContent("2.0.0");
+    expect(screen.getByTestId("force-update-current-version").props.children).toBe("1.0.0");
+    expect(screen.getByTestId("force-update-required-version").props.children).toBe("2.0.0");
   });
 
   it("falls back to 'unknown' for missing params (S2-5)", () => {
     mockRouteParams.currentVersion = undefined as any;
     mockRouteParams.requiredVersion = "";
     render(<ForceUpdateScreen />);
-    expect(screen.getByTestId("force-update-current-version")).toHaveTextContent("unknown");
-    expect(screen.getByTestId("force-update-required-version")).toHaveTextContent("unknown");
+    expect(screen.getByTestId("force-update-current-version").props.children).toBe("unknown");
+    expect(screen.getByTestId("force-update-required-version").props.children).toBe("unknown");
   });
 
   it("has a11y labels on interactive elements (S2-6)", () => {
@@ -161,5 +161,14 @@ describe("ForceUpdateScreen", () => {
         routes: [{ name: "EnrollDevice" }],
       });
     });
+  });
+
+  it("prevents Android back button from bypassing gate (DEPLOY-390)", () => {
+    const addListenerSpy = jest.spyOn(BackHandler, "addEventListener");
+    render(<ForceUpdateScreen />);
+    expect(addListenerSpy).toHaveBeenCalledWith("hardwareBackPress", expect.any(Function));
+    const handler = addListenerSpy.mock.calls[0][1];
+    expect(handler()).toBe(true);
+    addListenerSpy.mockRestore();
   });
 });
