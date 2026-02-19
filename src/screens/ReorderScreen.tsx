@@ -301,7 +301,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
             color={theme.colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => loadPendingReorders()}>
+          <Pressable style={styles.retryButton} onPress={() => loadPendingReorders()} accessibilityLabel="Retry loading reorders" accessibilityRole="button" testID="reorder-retry-btn">
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -339,6 +339,10 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
           <Pressable
             style={styles.selectAllButton}
             onPress={allSelected ? handleDeselectAll : handleSelectAll}
+            accessibilityLabel={allSelected ? "Deselect All" : "Select All"}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: allSelected }}
+            testID="reorder-select-all"
           >
             <MaterialCommunityIcons
               name={allSelected ? "checkbox-marked" : "checkbox-blank-outline"}
@@ -393,6 +397,9 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
             style={[styles.approveButton, approving && styles.approveButtonDisabled]}
             onPress={handleApproveSelected}
             disabled={approving}
+            accessibilityLabel={`Approve ${selectedIds.size} selected reorders`}
+            accessibilityRole="button"
+            testID="reorder-approve-btn"
           >
             {approving ? (
               <ActivityIndicator size="small" color={theme.colors.textInverse} />
