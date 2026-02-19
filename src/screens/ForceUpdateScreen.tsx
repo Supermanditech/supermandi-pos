@@ -1,7 +1,8 @@
 // SA-P2-003: Force update screen — blocks POS access when app version is below minimum
 // SCR-S2-HARDENING: Loading spinner, offline handling, param validation, a11y, throttle, theme tokens
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform, ActivityIndicator, BackHandler } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform, ActivityIndicator, BackHandler, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -106,8 +107,10 @@ export default function ForceUpdateScreen() {
   };
 
   return (
-    <View
-      style={styles.container}
+    <SafeAreaView style={styles.safeArea}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
       testID="force-update-screen"
       accessibilityLabel="App update required screen"
     >
@@ -177,14 +180,18 @@ export default function ForceUpdateScreen() {
           )}
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  container: {
+    flexGrow: 1,
     padding: spacing.lg,
     justifyContent: "center",
     alignItems: "center",
