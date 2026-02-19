@@ -58,7 +58,7 @@ async function sendGenericEmail(
       return { sent: false, errorCode: "MISSING_API_KEY", errorMessage: "Resend API key not configured" };
     }
 
-    const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.com>";
+    const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.tech>";
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -89,7 +89,7 @@ async function sendGenericEmail(
         auth: { user: process.env.SMTP_USER || "", pass: process.env.SMTP_PASS || "" },
       });
 
-      const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.com>";
+      const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.tech>";
       const info = await transporter.sendMail({ from, to, subject, text, html });
       return { sent: true, messageId: info.messageId as string };
     } catch (err) {

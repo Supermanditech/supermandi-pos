@@ -117,7 +117,7 @@ router.post(
       data: {
         storeId,
         storeCode: store.code,
-        portalUrl: `https://supermandi.in/s/${store.code}`,
+        portalUrl: `https://supermandi.tech/s/${store.code}`,
         phone: normalizedPhone,
         maskedPhone: maskPhoneNumber(normalizedPhone),
         message: 'Retailer portal initialized. User will complete registration on first login.',
@@ -288,7 +288,7 @@ router.post(
       data: {
         storeId,
         storeCode: store.code,
-        portalUrl: `https://supermandi.in/s/${store.code}`,
+        portalUrl: `https://supermandi.tech/s/${store.code}`,
         expiresAt: tokenExpiresAt,
         impersonatedBy: adminUserId,
         message: 'Impersonation session created. Token generation requires auth-service integration.',

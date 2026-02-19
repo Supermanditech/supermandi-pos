@@ -100,7 +100,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@supermandi.com"
+                placeholder="admin@supermandi.tech"
                 disabled={loading}
                 autoFocus
               />

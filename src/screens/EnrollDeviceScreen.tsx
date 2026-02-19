@@ -42,7 +42,7 @@ import { useProductsStore } from "../stores/productsStore";
 import { useSettingsStore } from "../stores/settingsStore";
 
 type RootStackParamList = {
-  EnrollDevice: { enrollmentCode?: string } | undefined;
+  EnrollDevice: { enrollmentCode?: string; code?: string } | undefined;
   SellScan: undefined;
   PaymentSetup: undefined;
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
@@ -122,7 +122,8 @@ const PAYMENT_PROMPTED_KEY = "supermandi.payment_setup_prompted";
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<EnrollRoute>();
-  const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || "");
+  // #342: Accept both ?enrollmentCode=X and ?code=X from deep links
+  const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || route.params?.code || "");
   const [loading, setLoading] = useState(false);
 
   // Phone lookup state
