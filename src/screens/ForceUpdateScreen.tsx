@@ -80,9 +80,10 @@ export default function ForceUpdateScreen() {
 
     setChecking(true);
     try {
-      // SCR-AUDIT-310: Use strict fetch that throws on server errors.
-      // Regular fetchUiStatus returns safe defaults on errors, which would
-      // bypass this gate (forceUpdate: false → navigate to SellScan).
+      // DESIGN: Uses fetchUiStatusStrict (strict) intentionally — throws on server errors.
+      // SplashScreen uses fetchUiStatus (non-strict) which returns safe defaults on error,
+      // enabling offline-first access. Here we MUST throw because returning defaults
+      // (forceUpdate: false) would bypass this security gate → navigate to SellScan.
       const status = await fetchUiStatusStrict();
       if (status.forceUpdate) {
         Alert.alert(
