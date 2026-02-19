@@ -97,6 +97,7 @@ jest.mock('lucide-react', () => {
     Bell: mockIcon('Bell'),
     MessageSquare: mockIcon('MessageSquare'),
     CreditCard: mockIcon('CreditCard'),
+    HelpCircle: mockIcon('HelpCircle'),
   };
 });
 
