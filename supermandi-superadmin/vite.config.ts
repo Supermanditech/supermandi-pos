@@ -1,6 +1,8 @@
-import { defineConfig } from 'vite'
+import { defineConfig, Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'child_process'
+import { writeFileSync, mkdirSync } from 'fs'
+import { join } from 'path'
 
 // GO-LIVE-SOP: Get build info for cache-proof deployment verification
 // STAGING-FIX-006: Check VITE_GIT_SHA env var first (Docker builds lack .git directory)
@@ -18,6 +20,28 @@ function getBuildInfo() {
 
 const buildInfo = getBuildInfo();
 
+// DEPLOY-389: Version endpoint plugin - writes _version.json to dist
+function versionPlugin(): Plugin {
+  return {
+    name: 'version-plugin',
+    closeBundle() {
+      const versionData = {
+        commit: buildInfo.sha,
+        buildTime: buildInfo.time,
+        portal: 'superadmin',
+      };
+      const distPath = join(__dirname, 'dist');
+      try {
+        mkdirSync(distPath, { recursive: true });
+        writeFileSync(join(distPath, '_version.json'), JSON.stringify(versionData, null, 2));
+        console.log('[version-plugin] Wrote _version.json:', versionData);
+      } catch (err) {
+        console.error('[version-plugin] Failed to write _version.json:', err);
+      }
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
   // FIX-004: Fail build when VITE_API_BASE_URL is not explicitly set
@@ -30,7 +54,7 @@ export default defineConfig(({ command }) => {
   }
 
   return {
-    plugins: [react()],
+    plugins: [react(), versionPlugin()],
     base: '/admin/',
     // GO-LIVE-SOP: Inject build info at compile time
     define: {

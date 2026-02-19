@@ -3,6 +3,7 @@ import { StatusBar, Platform, View, ActivityIndicator, AppState, AppStateStatus 
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Font from "expo-font";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { I18nextProvider } from "react-i18next";
@@ -427,6 +428,7 @@ export default function App() {
 
   return (
     <I18nextProvider i18n={i18n}>
+      <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <StatusBar
           backgroundColor={theme.colors.background}
@@ -507,6 +509,7 @@ export default function App() {
       </NavigationContainer>
         </ErrorBoundary>
       </GestureHandlerRootView>
+      </SafeAreaProvider>
     </I18nextProvider>
   );
 }

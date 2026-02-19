@@ -1,7 +1,7 @@
 // SA-P2-003: Force update screen — blocks POS access when app version is below minimum
 // SCR-S2-HARDENING: Loading spinner, offline handling, param validation, a11y, throttle, theme tokens
-import React, { useState, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform, ActivityIndicator } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform, ActivityIndicator, BackHandler } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -38,6 +38,12 @@ export default function ForceUpdateScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "ForceUpdate">>();
   const [checking, setChecking] = useState(false);
   const lastRetryRef = useRef(0);
+
+  // DEPLOY-390: Prevent Android back gesture from bypassing force update gate
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
 
   // S2-5: Validate route params — fallback to "unknown" for missing/invalid values
   const rawCurrent = route.params?.currentVersion;

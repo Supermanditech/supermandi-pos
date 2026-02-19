@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from "react";
+import NetInfo from "@react-native-community/netinfo";
 import {
   View,
   Text,
@@ -83,6 +84,18 @@ export default function PaymentSetupScreen() {
       return;
     }
     setErrors({});
+
+    // DEPLOY-392: Check network before API call
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        Alert.alert("No Internet", "Please connect to the internet and try again.");
+        return;
+      }
+    } catch {
+      // NetInfo failed — proceed anyway
+    }
+
     setSaving(true);
 
     try {
