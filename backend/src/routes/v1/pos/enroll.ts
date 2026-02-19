@@ -908,7 +908,7 @@ posEnrollRouter.get("/activation-status/:fingerprint", async (req, res) => {
 
       // Get device token
       const deviceResult = await pool.query(
-        `SELECT device_token FROM pos.pos_devices WHERE id = $1`,
+        `SELECT device_token FROM pos_devices WHERE id = $1`,
         [record.bound_device_id]
       );
 
