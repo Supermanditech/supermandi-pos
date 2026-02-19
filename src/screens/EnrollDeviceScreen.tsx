@@ -75,6 +75,10 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
     message: "Store not found for this code.",
     hint: "Verify the code with support."
   },
+  STORE_INACTIVE: {
+    message: "This store is not active yet.",
+    hint: "Your registration may still be pending approval. Contact hello@supermandi.tech for help."
+  },
   DATABASE_UNAVAILABLE: {
     message: "Server temporarily unavailable.",
     hint: "Wait a minute and try again."

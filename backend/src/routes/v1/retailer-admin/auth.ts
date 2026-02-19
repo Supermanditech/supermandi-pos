@@ -291,6 +291,16 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
       return;
     }
 
+    // SEC-3: Block login for suspended/deleted stores
+    if (store.status === 'SUSPENDED' || store.status === 'suspended') {
+      res.status(403).json({ error: { code: "ACCOUNT_SUSPENDED", message: "Your store account has been suspended. Contact support at hello@supermandi.tech" } });
+      return;
+    }
+    if (store.status === 'DELETED' || store.status === 'deleted') {
+      res.status(404).json({ error: "Store not found" });
+      return;
+    }
+
     const phoneNormalized = normalizePhoneNumber(phone);
 
     // Verify phone matches store's retailer portal phone

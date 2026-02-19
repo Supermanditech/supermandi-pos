@@ -153,6 +153,15 @@ router.all("/lookup", registrationRateLimiter, async (req: Request, res: Respons
     );
 
     if (storeUserResult.rows.length > 0) {
+      // SEC-3: Check store status before allowing login
+      const storeStatus = (storeUserResult.rows[0].store_status || '').toUpperCase();
+      if (storeStatus === 'SUSPENDED') {
+        res.json({
+          action: 'ACCOUNT_SUSPENDED',
+          message: 'Your store account has been suspended. Contact hello@supermandi.tech for assistance.',
+        });
+        return;
+      }
       // Phone has an active store user - can login directly
       // DR-009: No existence boolean — action-only response
       res.json({
