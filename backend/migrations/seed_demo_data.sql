@@ -15,7 +15,7 @@ VALUES (
   'SuperMandi Wholesale Pvt Ltd',
   'SuperMandi Wholesale',
   '+91-9876543211',
-  'wholesale@supermandi.in',
+  'wholesale@supermandi.tech',
   'active',
   'ACTIVE',
   NOW()

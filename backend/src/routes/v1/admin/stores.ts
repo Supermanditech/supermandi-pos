@@ -607,9 +607,9 @@ adminStoresRouter.get("/stores/:storeId/application", requirePermission("stores"
     let devices: any[] = [];
     try {
       const devicesResult = await pool.query(
-        `SELECT id, device_fingerprint, last_seen_at, created_at
-         FROM pos.pos_devices
-         WHERE store_id = $1 AND revoked_at IS NULL
+        `SELECT id, device_fingerprint, last_seen_online, created_at
+         FROM pos_devices
+         WHERE store_id = $1 AND active = true
          ORDER BY created_at DESC`,
         [storeId]
       );
