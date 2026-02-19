@@ -58,9 +58,9 @@ describe('DeviceRequiredBanner', () => {
     });
     renderInRoute();
     await waitFor(() => {
-      expect(screen.getByText('Your store is incomplete')).toBeInTheDocument();
+      expect(screen.getByText('Activate Your POS')).toBeInTheDocument();
     });
-    expect(screen.getByText(/Please activate a POS device/)).toBeInTheDocument();
+    expect(screen.getByText(/Download the SuperMandi POS app/)).toBeInTheDocument();
     expect(screen.getByText('Activate Device')).toBeInTheDocument();
   });
 
@@ -95,11 +95,11 @@ describe('DeviceRequiredBanner', () => {
     });
     renderInRoute();
     await waitFor(() => {
-      expect(screen.getByText('Your store is incomplete')).toBeInTheDocument();
+      expect(screen.getByText('Activate Your POS')).toBeInTheDocument();
     });
     const closeBtn = screen.getByTitle(/Dismiss/);
     fireEvent.click(closeBtn);
-    expect(screen.queryByText('Your store is incomplete')).not.toBeInTheDocument();
+    expect(screen.queryByText('Activate Your POS')).not.toBeInTheDocument();
   });
 
   it('hides banner on API error (no false positives)', async () => {

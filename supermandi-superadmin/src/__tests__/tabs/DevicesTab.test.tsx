@@ -44,6 +44,9 @@ function createProps(overrides: Partial<Parameters<typeof DevicesTab>[0]> = {}) 
     refreshDevices: vi.fn(),
     limit: 100,
     devices: [],
+    storeDirectory: [],
+    handleRevokeEnrollment: vi.fn(),
+    revokeLoading: false,
     ...overrides,
   };
 }

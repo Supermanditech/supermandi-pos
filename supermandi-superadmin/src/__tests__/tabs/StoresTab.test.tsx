@@ -72,6 +72,15 @@ function createDefaultProps(overrides: Partial<Parameters<typeof StoresTab>[0]> 
     handleBarcodeSheetShare: vi.fn(),
     stores: [],
     limit: 100,
+    handleCreateEnrollmentForStore: vi.fn(),
+    enrollmentForStoreLoading: '',
+    storeEnrollments: {},
+    loadStoreEnrollments: vi.fn(),
+    storeEnrollmentsLoading: {},
+    handleRevokeEnrollment: vi.fn(),
+    revokeLoading: false,
+    handleResendCode: vi.fn(),
+    resendLoading: false,
     ...overrides,
   };
   return defaultProps;
