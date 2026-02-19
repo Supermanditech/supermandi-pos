@@ -131,7 +131,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
               value={printerAutoPrint}
               onValueChange={setPrinterAutoPrint}
               trackColor={{ false: theme.colors.border, true: theme.colors.primarySoft }}
-              thumbColor={printerAutoPrint ? theme.colors.primary : "#f4f3f4"}
+              thumbColor={printerAutoPrint ? theme.colors.primary : theme.colors.backgroundTertiary}
             />
           </View>
         </View>

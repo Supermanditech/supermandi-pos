@@ -169,7 +169,7 @@ export default function BillDetailScreen() {
           onPress={handleWhatsApp}
           disabled={whatsapping}
         >
-          <MaterialCommunityIcons name="whatsapp" size={18} color="#fff" />
+          <MaterialCommunityIcons name="whatsapp" size={18} color={theme.colors.textInverse} />
           <Text style={styles.actionTextPrimary}>{whatsapping ? "..." : "WhatsApp"}</Text>
         </Pressable>
         <Pressable

@@ -248,7 +248,7 @@ export default function SuccessPrintScreenV2() {
             disabled={waStatus === "sending"}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <MaterialCommunityIcons name="whatsapp" size={20} color="#fff" />
+              <MaterialCommunityIcons name="whatsapp" size={20} color={theme.colors.textInverse} />
               <Text style={styles.btnText}>
                 {waStatus === "sending" ? "Sending..." : waStatus === "sent" ? "Sent! Tap to Resend" : waStatus === "failed" ? "Retry WhatsApp" : "WhatsApp Bill"}
               </Text>
@@ -270,7 +270,7 @@ export default function SuccessPrintScreenV2() {
             <TextInput
               style={styles.phoneInput}
               placeholder="9876543210"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.colors.textTertiary}
               keyboardType="phone-pad"
               maxLength={10}
               value={waPhone}
@@ -294,7 +294,7 @@ export default function SuccessPrintScreenV2() {
                 disabled={waStatus === "sending"}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <MaterialCommunityIcons name="whatsapp" size={18} color="#fff" />
+                  <MaterialCommunityIcons name="whatsapp" size={18} color={theme.colors.textInverse} />
                   <Text style={styles.btnText}>{waStatus === "sending" ? "Sending..." : "Send"}</Text>
                 </View>
               </TouchableOpacity>

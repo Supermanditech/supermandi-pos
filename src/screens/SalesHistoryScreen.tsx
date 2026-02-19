@@ -128,8 +128,8 @@ export default function SalesHistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#2563EB"]}
-              tintColor="#2563EB"
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
             />
           }
         />

@@ -59,7 +59,7 @@ type RootStackParamList = {
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 /** T-108: Compact brand shortmark for menu header */
-function HeaderBrandIcon({ size = 24, color = "#FFFFFF" }: { size?: number; color?: string }) {
+function HeaderBrandIcon({ size = 24, color = theme.colors.textInverse }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <Path
@@ -411,7 +411,7 @@ export default function MenuScreen() {
       <View style={styles.header}>
         <View style={styles.brandHeader}>
           <View style={styles.brandIconCircle}>
-            <HeaderBrandIcon size={20} color="#FFFFFF" />
+            <HeaderBrandIcon size={20} color={theme.colors.textInverse} />
           </View>
           <Text style={styles.title}>{t('menu.title')}</Text>
         </View>
