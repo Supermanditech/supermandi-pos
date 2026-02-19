@@ -13,6 +13,8 @@ import { startAutoSync } from "../services/syncService";
 import { initOfflineDb } from "../services/offline/localDb";
 import { syncOutbox } from "../services/offline/sync";
 import { getDeviceSession } from "../services/deviceSession";
+import { fetchUiStatus } from "../services/api/uiStatusApi";
+import { getDeviceMeta } from "../services/deviceInfo";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -66,11 +68,36 @@ export default function SplashScreen() {
     return Promise.race([getDeviceSession(), timeoutPromise]);
   }, []);
 
-  /** S1-1 + S1-2 + S1-3: Session check with full error handling */
+  /** S1-1 + S1-2 + S1-3 + #337: Session + version/blocked check */
   const navigateAfterSession = useCallback(async () => {
     try {
       const session = await getSessionWithTimeout();
-      navigation.replace(session ? "SellScan" : "EnrollDevice");
+      if (!session) {
+        navigation.replace("EnrollDevice");
+        return;
+      }
+
+      // #337: Check version enforcement and device-blocked status before SellScan.
+      // fetchUiStatus returns safe defaults on error (forceUpdate=false, deviceActive=true)
+      // so offline users are NOT blocked — PosRootLayout re-checks with polling.
+      try {
+        const status = await fetchUiStatus();
+        if (status.forceUpdate) {
+          navigation.replace("ForceUpdate", {
+            currentVersion: getDeviceMeta().appVersion ?? "unknown",
+            requiredVersion: status.minAppVersion ?? undefined,
+          });
+          return;
+        }
+        if (status.deviceActive === false) {
+          navigation.replace("DeviceBlocked");
+          return;
+        }
+      } catch {
+        // Network/parse error — proceed to SellScan (offline-first)
+      }
+
+      navigation.replace("SellScan");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       console.warn("[SplashScreen] Session check failed:", msg);

@@ -151,7 +151,7 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
         secure: process.env.SMTP_SECURE === "true",
         auth: { user: process.env.SMTP_USER || "", pass: process.env.SMTP_PASS || "" },
       });
-      const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.com>";
+      const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.tech>";
       await transporter.sendMail({
         from,
         to: email,

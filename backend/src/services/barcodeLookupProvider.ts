@@ -85,7 +85,7 @@ async function lookupOpenFoodFacts(barcode: string): Promise<BarcodeProductPrefi
       {
         signal: controller.signal,
         headers: {
-          "User-Agent": "SuperMandi-POS/1.0 (contact@supermandi.com)"
+          "User-Agent": "SuperMandi-POS/1.0 (hello@supermandi.tech)"
         }
       }
     );

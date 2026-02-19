@@ -75,6 +75,10 @@ export function getPool(): Pool | undefined {
   return pool;
 }
 
+// #343: UUID format validation for RLS store context
+// rls_store_check() casts to ::uuid — passing non-UUID would throw at DB level.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // T-216: RLS store context helper
 // Sets app.current_store_id for the duration of a transaction/callback
 // SET LOCAL requires an active transaction — this wraps fn in BEGIN/COMMIT.
@@ -83,6 +87,9 @@ export async function withStoreContext<T>(
   storeId: string,
   fn: (client: import("pg").PoolClient) => Promise<T>
 ): Promise<T> {
+  if (!UUID_RE.test(storeId)) {
+    throw new Error(`withStoreContext: invalid store_id format (expected UUID): ${storeId}`);
+  }
   const p = getPool();
   if (!p) throw new Error("Database pool not initialized");
   const client = await p.connect();

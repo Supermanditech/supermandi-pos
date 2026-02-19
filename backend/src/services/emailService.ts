@@ -41,7 +41,7 @@ export interface VerificationEmailData {
 
 function getEmailConfig(): EmailConfig {
   const provider = (process.env.EMAIL_PROVIDER || 'disabled').toLowerCase() as EmailConfig['provider'];
-  const from = process.env.EMAIL_FROM || 'SuperMandi <noreply@supermandi.com>';
+  const from = process.env.EMAIL_FROM || 'SuperMandi <noreply@supermandi.tech>';
 
   const config: EmailConfig = {
     provider,
@@ -472,7 +472,7 @@ export async function sendPasswordResetEmail(
   }
 
   // Build reset URL - use frontend URL or fallback
-  const frontendUrl = process.env.SUPPLIER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supplier.supermandi.in';
+  const frontendUrl = process.env.SUPPLIER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supermandi.tech/supplier';
   const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
   const subject = 'Reset your SuperMandi password';
