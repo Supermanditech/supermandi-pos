@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { ErrorBoundary } from './ErrorBoundary.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 
 // AUDIT-SA-049: Catch async errors that ErrorBoundary cannot (unhandled rejections, global errors)
 window.addEventListener('unhandledrejection', (event) => {

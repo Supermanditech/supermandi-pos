@@ -123,6 +123,10 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
     message: "Daily activation limit reached for this store.",
     hint: "Please try again tomorrow or contact support."
   },
+  // Phone lookup error codes (from /pos/phone-lookup endpoint)
+  PHONE_REQUIRED: { message: "Phone number is required.", hint: "Enter your 10-digit mobile number." },
+  PHONE_INVALID: { message: "Enter a valid 10-digit Indian mobile number.", hint: "Phone number must start with 6-9." },
+  LOOKUP_FAILED: { message: "Could not look up your phone number.", hint: "Try again. If the problem persists, contact support." },
   // Legacy error codes
   enrollment_invalid: { message: "Activation code is invalid or expired.", hint: "Contact support for a new code." },
   enrollment_expired: { message: "This activation code has expired.", hint: "Contact support for a new code." },

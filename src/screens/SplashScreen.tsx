@@ -22,8 +22,6 @@ type RootStackParamList = {
   SellScan: undefined;
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
   DeviceBlocked: undefined;
-  Payment: undefined;
-  SuccessPrint: undefined;
 };
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "Splash">;
@@ -84,8 +82,10 @@ export default function SplashScreen() {
       }
 
       // #337: Check version enforcement and device-blocked status before SellScan.
-      // fetchUiStatus returns safe defaults on error (forceUpdate=false, deviceActive=true)
-      // so offline users are NOT blocked — PosRootLayout re-checks with polling.
+      // DESIGN: Uses fetchUiStatus (non-strict) intentionally — returns safe defaults on
+      // error (forceUpdate=false, deviceActive=true) so offline users are NOT blocked.
+      // Gate screens (ForceUpdate, DeviceBlocked) use fetchUiStatusStrict which throws on
+      // error to prevent gate bypass. PosRootLayout re-checks with polling.
       try {
         const status = await fetchUiStatus();
         if (status.forceUpdate) {
