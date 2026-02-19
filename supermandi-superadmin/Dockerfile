@@ -14,17 +14,17 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_GIT_SHA=$VITE_GIT_SHA
 ENV VITE_BUILD_TIME=$VITE_BUILD_TIME
 
-# Copy package files
-COPY package*.json ./
+# Copy package files + lockfile
+COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies (npm install: no lockfile in pnpm-managed project)
-RUN npm install
+# DEPLOY-388: Use pnpm for deterministic builds (lockfile exists)
+RUN corepack enable && pnpm install --frozen-lockfile
 
 # Copy source
 COPY . .
 
 # Build
-RUN if [ -z "$VITE_BUILD_TIME" ]; then export VITE_BUILD_TIME=$(date -Iseconds); fi && npm run build
+RUN if [ -z "$VITE_BUILD_TIME" ]; then export VITE_BUILD_TIME=$(date -Iseconds); fi && pnpm run build
 
 # Production stage - serve with nginx
 FROM nginx:alpine
