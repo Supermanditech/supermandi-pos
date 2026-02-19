@@ -1,10 +1,12 @@
 /**
- * #404 + #405: EnrollDeviceScreen tests
- * Covers: render, inputs, label requirement, enroll flow, offline detection, error codes, a11y
+ * #404 + #405 + #409: EnrollDeviceScreen tests
+ * Covers: render, inputs, label requirement, enroll flow, offline detection, error codes, a11y,
+ *         phone lookup (lookupActivation), PaymentSetup routing (upiVpa + AsyncStorage)
  */
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Mock navigation + route
 const mockReplace = jest.fn();
@@ -251,5 +253,138 @@ describe("EnrollDeviceScreen", () => {
     render(<EnrollDeviceScreen />);
     // expo-device mock has modelName: "TestDevice"
     expect(screen.getByTestId("enroll-label-input").props.value).toBe("TestDevice");
+  });
+
+  // =========================================================================
+  // #409: Phone Lookup (lookupActivation) tests
+  // =========================================================================
+
+  it("looks up activation code by phone number", async () => {
+    mockLookupActivation.mockResolvedValue({ code: "SM-FOUND1", storeName: "My Store" });
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "9876543210");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockLookupActivation).toHaveBeenCalledWith("9876543210");
+      // Code input should be filled with the looked-up code
+      expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-FOUND1");
+    });
+  });
+
+  it("shows error for invalid phone number in lookup", async () => {
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "12345");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
+    });
+
+    // Should NOT call the API
+    expect(mockLookupActivation).not.toHaveBeenCalled();
+  });
+
+  it("shows error when lookup returns STORE_NOT_FOUND", async () => {
+    const { ApiError } = require("../../services/api/apiClient");
+    mockLookupActivation.mockRejectedValue(new ApiError("STORE_NOT_FOUND", 404));
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "9876543210");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
+    });
+
+    // lookupActivation was called
+    expect(mockLookupActivation).toHaveBeenCalledWith("9876543210");
+  });
+
+  it("blocks lookup when offline", async () => {
+    mockNetInfoFetch.mockResolvedValue({ isConnected: false });
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "9876543210");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
+    });
+
+    expect(mockLookupActivation).not.toHaveBeenCalled();
+  });
+
+  // =========================================================================
+  // #409: PaymentSetup routing tests (upiVpa + AsyncStorage)
+  // =========================================================================
+
+  it("navigates to PaymentSetup when upiVpa is missing and not prompted before", async () => {
+    mockEnrollDevice.mockResolvedValue({
+      deviceId: "d1",
+      storeId: "s1",
+      deviceToken: "token123",
+      storeName: "Test Store",
+      storeCode: "TS",
+      storeActive: true,
+      upiVpa: null, // No UPI VPA
+    });
+    // AsyncStorage returns null (not prompted before)
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-submit-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("PaymentSetup");
+    });
+  });
+
+  it("navigates to SellScan when upiVpa is missing but already prompted", async () => {
+    mockEnrollDevice.mockResolvedValue({
+      deviceId: "d1",
+      storeId: "s1",
+      deviceToken: "token123",
+      storeName: "Test Store",
+      storeCode: "TS",
+      storeActive: true,
+      upiVpa: null, // No UPI VPA
+    });
+    // AsyncStorage returns truthy (already prompted)
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("true");
+
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-submit-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+    });
+  });
+
+  it("navigates to SellScan when upiVpa is present (regardless of prompt state)", async () => {
+    // Default mock has upiVpa: "test@upi"
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-submit-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+    });
   });
 });
