@@ -11,6 +11,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import * as chatApi from '../services/api/chatApi';
 
+// Support-type conversation uses violet (#7c3aed / #f5f3ff) — not a brand color
+const SUPPORT_ICON_COLOR = '#7c3aed';
+const SUPPORT_BG_COLOR = '#f5f3ff';
+
 interface Props {
   onSelectConversation: (conversation: chatApi.Conversation) => void;
   onContactSupport: () => void;
@@ -82,12 +86,14 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
     <Pressable
       style={styles.conversationItem}
       onPress={() => onSelectConversation(item)}
+      accessibilityLabel={`${item.title || item.otherParticipantName || 'Conversation'}${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
+      accessibilityRole="button"
     >
       <View style={[styles.avatar, item.type === 'support' ? styles.avatarSupport : null]}>
         <MaterialCommunityIcons
           name={getConversationIcon(item.type) as any}
           size={22}
-          color={item.type === 'support' ? '#7c3aed' : theme.colors.primary}
+          color={item.type === 'support' ? SUPPORT_ICON_COLOR : theme.colors.primary}
         />
       </View>
 
@@ -118,11 +124,11 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable onPress={onBack} style={styles.backBtn}>
+        <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Messages</Text>
-        <Pressable onPress={onContactSupport} style={styles.supportBtn}>
+        <Pressable onPress={onContactSupport} style={styles.supportBtn} accessibilityLabel="Contact support" accessibilityRole="button">
           <MaterialCommunityIcons name="headset" size={22} color={theme.colors.primary} />
         </Pressable>
       </View>
@@ -131,7 +137,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
       {error && (
         <View style={styles.errorBar}>
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={fetchConversations}>
+          <Pressable onPress={fetchConversations} accessibilityLabel="Retry" accessibilityRole="button">
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
@@ -145,13 +151,13 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
         </View>
       ) : conversations.length === 0 ? (
         <View style={styles.center}>
-          <MaterialCommunityIcons name="chat-outline" size={48} color="#94a3b8" />
+          <MaterialCommunityIcons name="chat-outline" size={48} color={theme.colors.textTertiary} />
           <Text style={styles.emptyTitle}>No conversations yet</Text>
           <Text style={styles.emptyText}>
             Start a chat with your supplier or contact support
           </Text>
-          <Pressable style={styles.supportCta} onPress={onContactSupport}>
-            <MaterialCommunityIcons name="headset" size={18} color="#fff" />
+          <Pressable style={styles.supportCta} onPress={onContactSupport} accessibilityLabel="Contact Support" accessibilityRole="button">
+            <MaterialCommunityIcons name="headset" size={18} color={theme.colors.textInverse} />
             <Text style={styles.supportCtaText}>Contact Support</Text>
           </Pressable>
         </View>
@@ -174,47 +180,47 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
-    backgroundColor: '#fff',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   backBtn: { padding: 4, marginRight: 8 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: theme.colors.textPrimary },
   supportBtn: { padding: 4 },
   errorBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 12, backgroundColor: '#fee2e2',
+    padding: 12, backgroundColor: theme.colors.errorSoft,
   },
-  errorText: { color: '#991b1b', fontSize: 13 },
-  retryText: { color: '#991b1b', fontWeight: '600', textDecorationLine: 'underline' },
+  errorText: { color: theme.colors.errorDark, fontSize: 13 },
+  retryText: { color: theme.colors.errorDark, fontWeight: '600', textDecorationLine: 'underline' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  loadingText: { marginTop: 12, color: '#64748b', fontSize: 14 },
-  emptyTitle: { marginTop: 12, fontSize: 16, fontWeight: '600', color: '#334155' },
-  emptyText: { marginTop: 4, fontSize: 13, color: '#64748b', textAlign: 'center' },
+  loadingText: { marginTop: 12, color: theme.colors.textTertiary, fontSize: 14 },
+  emptyTitle: { marginTop: 12, fontSize: 16, fontWeight: '600', color: theme.colors.textPrimary },
+  emptyText: { marginTop: 4, fontSize: 13, color: theme.colors.textTertiary, textAlign: 'center' },
   supportCta: {
     marginTop: 16, flexDirection: 'row', alignItems: 'center',
     backgroundColor: theme.colors.primary, paddingHorizontal: 16, paddingVertical: 10,
     borderRadius: 8, gap: 6,
   },
-  supportCtaText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  supportCtaText: { color: theme.colors.textInverse, fontWeight: '600', fontSize: 14 },
   list: { paddingBottom: 16 },
   conversationItem: {
     flexDirection: 'row', alignItems: 'center', padding: 14,
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9', backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: theme.colors.backgroundSecondary, backgroundColor: theme.colors.surface,
   },
   avatar: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#f0fdf4',
+    width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.successSoft,
     alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  avatarSupport: { backgroundColor: '#f5f3ff' },
+  avatarSupport: { backgroundColor: SUPPORT_BG_COLOR },
   conversationContent: { flex: 1 },
   conversationHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
-  conversationName: { fontSize: 15, fontWeight: '600', color: '#1e293b', flex: 1, marginRight: 8 },
-  timestamp: { fontSize: 11, color: '#94a3b8' },
+  conversationName: { fontSize: 15, fontWeight: '600', color: theme.colors.textPrimary, flex: 1, marginRight: 8 },
+  timestamp: { fontSize: 11, color: theme.colors.textTertiary },
   conversationFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  preview: { fontSize: 13, color: '#64748b', flex: 1, marginRight: 8 },
+  preview: { fontSize: 13, color: theme.colors.textTertiary, flex: 1, marginRight: 8 },
   badge: {
     minWidth: 20, height: 20, borderRadius: 10, backgroundColor: theme.colors.primary,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6,
   },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  badgeText: { color: theme.colors.textInverse, fontSize: 11, fontWeight: '700' },
 });

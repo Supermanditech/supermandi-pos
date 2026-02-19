@@ -78,6 +78,16 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
     ]);
   };
 
+  const statusBg = (status: string) =>
+    status === 'available' ? theme.colors.successSoft
+    : status === 'applied' ? theme.colors.primaryLight
+    : theme.colors.warningSoft;
+
+  const statusFg = (status: string) =>
+    status === 'available' ? theme.colors.successDark
+    : status === 'applied' ? theme.colors.primaryDark
+    : theme.colors.warningDark;
+
   const renderOffer = ({ item }: { item: CreditOffer }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -85,12 +95,8 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
           <MaterialCommunityIcons name="bank-outline" size={16} color={theme.colors.primary} />
           <Text style={styles.providerName}>{item.providerName}</Text>
         </View>
-        <View style={[styles.statusBadge, {
-          backgroundColor: item.status === 'available' ? '#ECFDF5' : item.status === 'applied' ? '#EFF6FF' : '#FEF3C7'
-        }]}>
-          <Text style={[styles.statusText, {
-            color: item.status === 'available' ? '#166534' : item.status === 'applied' ? '#1E40AF' : '#92400E'
-          }]}>{item.status}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusBg(item.status) }]}>
+          <Text style={[styles.statusText, { color: statusFg(item.status) }]}>{item.status}</Text>
         </View>
       </View>
 
@@ -114,8 +120,14 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
       </View>
 
       {item.status === 'available' && (
-        <Pressable style={styles.applyBtn} onPress={() => applyForCredit(item.id)}>
-          <MaterialCommunityIcons name="file-document-edit-outline" size={16} color="#fff" />
+        <Pressable
+          style={styles.applyBtn}
+          onPress={() => applyForCredit(item.id)}
+          accessibilityLabel="Apply Now"
+          accessibilityRole="button"
+          testID="credit-apply-btn"
+        >
+          <MaterialCommunityIcons name="file-document-edit-outline" size={16} color={theme.colors.textInverse} />
           <Text style={styles.applyBtnText}>Apply Now</Text>
         </Pressable>
       )}
@@ -129,7 +141,7 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable onPress={onBack} style={styles.backBtn}>
+        <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Bulk Purchase Credit</Text>
@@ -175,7 +187,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border, backgroundColor: theme.colors.surface,
   },
   backBtn: { padding: 4, marginRight: 8 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: theme.colors.textPrimary },
@@ -184,7 +196,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryLight, borderRadius: 8,
   },
   infoBannerText: { flex: 1, fontSize: 12, color: theme.colors.primary, lineHeight: 18 },
-  card: { backgroundColor: '#fff', borderRadius: 10, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  card: { backgroundColor: theme.colors.surface, borderRadius: 10, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.border },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   providerBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   providerName: { fontSize: 15, fontWeight: '600', color: theme.colors.textPrimary },
@@ -198,10 +210,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: theme.colors.primary, borderRadius: 8, paddingVertical: 10,
   },
-  applyBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  applyBtnText: { fontSize: 14, fontWeight: '600', color: theme.colors.textInverse },
   appliedText: { fontSize: 12, color: theme.colors.textTertiary, textAlign: 'center', fontStyle: 'italic' },
-  errorBar: { backgroundColor: '#FEE2E2', padding: 10, marginHorizontal: 12 },
-  errorText: { color: '#991B1B', fontSize: 13 },
+  errorBar: { backgroundColor: theme.colors.errorSoft, padding: 10, marginHorizontal: 12 },
+  errorText: { color: theme.colors.errorDark, fontSize: 13 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: theme.colors.textPrimary, marginTop: 12 },
   emptyDesc: { fontSize: 13, color: theme.colors.textTertiary, textAlign: 'center', marginTop: 4 },
