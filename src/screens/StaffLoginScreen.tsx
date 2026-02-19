@@ -1,6 +1,7 @@
 // SA-P1-001: Staff PIN login screen
 import React, { useState, useRef } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -66,18 +67,30 @@ export default function StaffLoginScreen({ storeName }: Props) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
+      testID="staff-login-screen"
+      accessibilityLabel="Staff login screen"
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-      <View style={styles.card}>
-        <View style={styles.iconWrap}>
+      <View style={styles.card} testID="staff-login-card">
+        <View style={styles.iconWrap} accessibilityElementsHidden>
           <MaterialCommunityIcons name="account-lock" size={48} color={theme.colors.primary} />
         </View>
 
-        <Text style={styles.title}>Staff Login</Text>
-        {storeName && <Text style={styles.storeName}>{storeName}</Text>}
+        <Text
+          style={styles.title}
+          testID="staff-login-title"
+          accessibilityRole="header"
+        >
+          Staff Login
+        </Text>
+        {storeName && (
+          <Text style={styles.storeName} testID="staff-login-store-name">
+            {storeName}
+          </Text>
+        )}
         <Text style={styles.subtitle}>Enter your phone number and PIN to continue</Text>
 
         <View style={styles.inputGroup}>
@@ -93,6 +106,8 @@ export default function StaffLoginScreen({ storeName }: Props) {
             autoFocus
             returnKeyType="next"
             onSubmitEditing={() => pinRef.current?.focus()}
+            testID="staff-login-phone-input"
+            accessibilityLabel="Phone number"
           />
         </View>
 
@@ -110,6 +125,8 @@ export default function StaffLoginScreen({ storeName }: Props) {
             maxLength={6}
             returnKeyType="done"
             onSubmitEditing={handleLogin}
+            testID="staff-login-pin-input"
+            accessibilityLabel="PIN"
           />
         </View>
 
@@ -117,10 +134,16 @@ export default function StaffLoginScreen({ storeName }: Props) {
           style={[styles.loginButton, loading && styles.loginButtonDisabled]}
           onPress={handleLogin}
           disabled={loading}
+          testID="staff-login-btn"
+          accessibilityLabel={loading ? "Logging in" : "Login"}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: loading }}
         >
-          <Text style={styles.loginButtonText}>
-            {loading ? "Logging in..." : "Login"}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color={theme.colors.textInverse} size="small" />
+          ) : (
+            <Text style={styles.loginButtonText}>Login</Text>
+          )}
         </Pressable>
       </View>
       </ScrollView>
@@ -136,72 +159,73 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing.lg,
   },
   card: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    borderRadius: theme.borderRadius.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 24,
+    padding: theme.spacing.lg,
     alignItems: "center",
   },
   iconWrap: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   title: {
-    fontSize: 22,
+    ...theme.typography.h4,
     fontWeight: "700",
     color: theme.colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   storeName: {
-    fontSize: 14,
+    ...theme.typography.caption,
     fontWeight: "600",
     color: theme.colors.primary,
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   subtitle: {
-    fontSize: 13,
+    ...theme.typography.caption,
     color: theme.colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: theme.spacing.lg,
     textAlign: "center",
   },
   inputGroup: {
     width: "100%",
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: 12,
+    ...theme.typography.caption,
     fontWeight: "600",
     color: theme.colors.textSecondary,
-    marginBottom: 6,
+    marginBottom: theme.spacing.sm,
   },
   input: {
     width: "100%",
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    ...theme.typography.bodySmall,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.background,
   },
   loginButton: {
     width: "100%",
     backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
     alignItems: "center",
-    marginTop: 8,
+    justifyContent: "center",
+    marginTop: theme.spacing.sm,
+    height: 52,
   },
   loginButtonDisabled: {
     opacity: 0.6,
   },
   loginButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...theme.typography.button,
     color: theme.colors.textInverse,
   },
 });
