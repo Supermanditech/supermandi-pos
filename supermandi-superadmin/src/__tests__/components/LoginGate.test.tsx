@@ -36,7 +36,7 @@ describe('LoginGate', () => {
 
     it('renders email input field', () => {
       render(<LoginGate onLogin={onLogin} />);
-      expect(screen.getByPlaceholderText('admin@supermandi.com')).toBeTruthy();
+      expect(screen.getByPlaceholderText('admin@supermandi.tech')).toBeTruthy();
     });
 
     it('renders send OTP button', () => {
@@ -68,7 +68,7 @@ describe('LoginGate', () => {
   describe('email validation', () => {
     it('shows error for email without @ symbol', async () => {
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'invalidemail' } });
 
       // Submit the form
@@ -80,7 +80,7 @@ describe('LoginGate', () => {
 
     it('shows error for empty email', async () => {
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: '   ' } });
 
       const form = emailInput.closest('form')!;
@@ -99,7 +99,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: '  Admin@Test.COM  ' } });
 
       const form = emailInput.closest('form')!;
@@ -116,7 +116,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockReturnValue(otpPromise);
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;
@@ -134,7 +134,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;
@@ -150,7 +150,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Rate limited'));
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;
@@ -165,7 +165,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockRejectedValue('string error');
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;
@@ -186,7 +186,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;
@@ -300,7 +300,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;
@@ -315,7 +315,7 @@ describe('LoginGate', () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;
@@ -326,14 +326,14 @@ describe('LoginGate', () => {
       });
 
       fireEvent.click(screen.getByText(/Change email/));
-      expect(screen.getByPlaceholderText('admin@supermandi.com')).toBeTruthy();
+      expect(screen.getByPlaceholderText('admin@supermandi.tech')).toBeTruthy();
     });
 
     it('shows resend OTP button with countdown', async () => {
       (authToken.sendAdminOtp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       render(<LoginGate onLogin={onLogin} />);
-      const emailInput = screen.getByPlaceholderText('admin@supermandi.com');
+      const emailInput = screen.getByPlaceholderText('admin@supermandi.tech');
       fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
 
       const form = emailInput.closest('form')!;

@@ -97,7 +97,7 @@ describe('ApplicationsTab', () => {
     const apps = [makeApp({ status: 'NEEDS_FIX' })];
     render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1 })} />);
     expect(screen.getByText('Awaiting applicant resubmission')).toBeTruthy();
-    expect(screen.getByText('Re-Reject')).toBeTruthy();
+    expect(screen.getByText('Update Rejection')).toBeTruthy();
   });
 
   it('shows count info', () => {
