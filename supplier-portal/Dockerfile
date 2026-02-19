@@ -11,12 +11,11 @@ RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files + lockfile
+COPY package.json pnpm-lock.yaml ./
 
-# Install all dependencies (including devDependencies for build)
-# Using npm install instead of npm ci since package-lock.json is gitignored
-RUN npm install
+# DEPLOY-388: Use pnpm for deterministic builds (lockfile exists)
+RUN corepack enable && pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -37,7 +36,7 @@ RUN if [ -f .env.production ]; then echo "Using .env.production"; \
     elif [ -f .env.production.example ]; then cp .env.production.example .env.production && echo "Using .env.production.example as .env.production"; \
     fi
 
-RUN npm run build
+RUN pnpm run build
 
 # =============================================================================
 # PRODUCTION STAGE
@@ -50,11 +49,11 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy package files
-COPY package*.json ./
+# Copy package files + lockfile
+COPY package.json pnpm-lock.yaml ./
 
-# Install production dependencies only
-RUN npm install --omit=dev
+# DEPLOY-388: Use pnpm for deterministic production deps
+RUN corepack enable && pnpm install --frozen-lockfile --prod
 
 # Copy built application from builder
 COPY --from=builder /app/.next ./.next
@@ -80,4 +79,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/supplier/ || exit 1
 
 # Start Next.js production server
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
