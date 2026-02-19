@@ -179,7 +179,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     // GO-LIVE: Fetch store name, code, and max_devices for enrollment response
     // FINDING-027: Get configurable max_devices per store
     const storeRes = await client.query(
-      `SELECT id::TEXT as id, name, code, (status = 'ACTIVE') as active, COALESCE(max_devices, $2) as max_devices FROM platform.stores WHERE id = $1::uuid`,
+      `SELECT id::TEXT as id, name, code, upi_vpa, (status = 'ACTIVE') as active, COALESCE(max_devices, $2) as max_devices FROM platform.stores WHERE id = $1::uuid`,
       [enrollment.store_id, DEFAULT_MAX_DEVICES_PER_STORE]
     );
     const store = storeRes.rows[0];
@@ -543,7 +543,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       storeCode: store.code ?? null, // GO-LIVE: Human-readable store code
       deviceToken,
       storeActive: Boolean(store.active),
-      reEnrolled: Boolean(existingDevice)
+      reEnrolled: Boolean(existingDevice),
+      upiVpa: store.upi_vpa || null, // #333: For payment setup prompt
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -660,6 +661,106 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
     log.error("[checkDuplicateLabel] Error:", error);
     // ISSUE-MICRO-090: Standardized error format (was flat string)
     return res.status(500).json({ error: { code: "LABEL_CHECK_FAILED", message: "Failed to check label" } });
+  }
+});
+
+// =============================================================================
+// #333: Phone-based activation code lookup
+// POS enters phone number → backend returns active enrollment code
+// =============================================================================
+
+const lookupBurstLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3 * rateLimitMultiplier,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "LOOKUP_RATE_LIMITED", message: "Too many lookup attempts. Please wait a minute." } }
+});
+
+const lookupSustainedLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10 * rateLimitMultiplier,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "LOOKUP_RATE_LIMITED", message: "Too many lookup attempts. Please try again in 15 minutes." } }
+});
+
+posEnrollRouter.post("/lookup-activation", lookupBurstLimiter, lookupSustainedLimiter, async (req, res) => {
+  const pool = getPool();
+  const rawPhone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+  if (!rawPhone) {
+    return res.status(400).json({ error: { code: "PHONE_REQUIRED", message: "Phone number is required." } });
+  }
+
+  // Normalize to 10-digit Indian mobile
+  const digits = rawPhone.replace(/\D/g, "");
+  let phone10: string;
+  if (digits.length === 12 && digits.startsWith("91")) {
+    phone10 = digits.slice(2);
+  } else if (digits.length === 10) {
+    phone10 = digits;
+  } else {
+    return res.status(400).json({ error: { code: "PHONE_INVALID", message: "Enter a valid 10-digit Indian mobile number." } });
+  }
+  if (!/^[6-9]/.test(phone10)) {
+    return res.status(400).json({ error: { code: "PHONE_INVALID", message: "Enter a valid Indian mobile number starting with 6-9." } });
+  }
+
+  // Try multiple phone formats since DB stores as-entered
+  const phoneVariants = [phone10, `91${phone10}`, `+91${phone10}`];
+
+  try {
+    // Find store by phone
+    const storeRes = await pool.query(
+      `SELECT s.id::TEXT as id, s.name, COALESCE(s.store_code, s.code) as code
+       FROM platform.stores s
+       WHERE s.phone = ANY($1::text[]) AND s.status != 'deleted'
+       ORDER BY s.created_at DESC LIMIT 1`,
+      [phoneVariants]
+    );
+
+    if (storeRes.rows.length === 0) {
+      log.info(`[LookupActivation] No store for phone=***${phone10.slice(-4)}`);
+      return res.status(404).json({
+        error: { code: "STORE_NOT_FOUND", message: "No store found for this phone number. Please register at supermandi.tech/retailer/register" }
+      });
+    }
+
+    const store = storeRes.rows[0];
+    const isDemo = isDemoStoreCode(store.code || "");
+
+    // Find active enrollment code
+    let enrollQuery: string;
+    if (isDemo) {
+      // Demo stores: bypass expiry/usage checks
+      enrollQuery = `SELECT code FROM pos_device_enrollments
+                     WHERE store_id = $1::uuid AND revoked_at IS NULL
+                     ORDER BY created_at DESC LIMIT 1`;
+    } else {
+      enrollQuery = `SELECT code FROM pos_device_enrollments
+                     WHERE store_id = $1::uuid
+                       AND revoked_at IS NULL
+                       AND expires_at > NOW()
+                       AND COALESCE(uses_count, 0) < COALESCE(max_uses, 1)
+                     ORDER BY created_at DESC LIMIT 1`;
+    }
+    const enrollRes = await pool.query(enrollQuery, [store.id]);
+
+    if (enrollRes.rows.length === 0) {
+      log.info(`[LookupActivation] No active code for store=${store.id}, phone=***${phone10.slice(-4)}`);
+      return res.status(404).json({
+        error: { code: "NO_ACTIVE_CODE", message: "No active activation code found. Contact support for a new code." }
+      });
+    }
+
+    log.info(`[LookupActivation] Found code for phone=***${phone10.slice(-4)}, store=${store.name}`);
+    return res.json({
+      code: enrollRes.rows[0].code,
+      storeName: store.name || "Your Store",
+    });
+  } catch (error) {
+    log.error("[LookupActivation] Error:", error);
+    return res.status(500).json({ error: { code: "LOOKUP_FAILED", message: "Lookup failed. Please try again." } });
   }
 });
 

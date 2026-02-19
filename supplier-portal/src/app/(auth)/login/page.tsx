@@ -121,7 +121,7 @@ export default function LoginPage() {
         return;
       }
       if (data.nextStep === 'ACCOUNT_SUSPENDED') {
-        setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
+        setError('Your account has been suspended. Please contact support at hello@supermandi.tech for assistance.');
         return;
       }
       if (data.nextStep === 'CONTACT_SUPPORT') {
@@ -191,7 +191,7 @@ export default function LoginPage() {
           setError('Your account has been locked. Please contact support.');
         } else if (err.code === 'ACCOUNT_SUSPENDED') {
           // SA-P1-005: Suspended supplier
-          setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
+          setError('Your account has been suspended. Please contact support at hello@supermandi.tech for assistance.');
         } else if (err.code === 'ACCOUNT_INACTIVE') {
           setError('Your account is not active. Please contact support.');
         } else if (err.code === 'USER_NOT_FOUND') {
@@ -263,7 +263,7 @@ export default function LoginPage() {
         } else if (err.code === 'ACCOUNT_LOCKED') {
           setError('Your account has been locked due to too many failed attempts. Please try again later.');
         } else if (err.code === 'ACCOUNT_SUSPENDED') {
-          setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
+          setError('Your account has been suspended. Please contact support at hello@supermandi.tech for assistance.');
         } else if (err.code === 'PASSWORD_NOT_SET') {
           setError('Your account uses OTP login. Please switch to "Sign in with OTP" or set a password via "Forgot Password".');
         } else {

@@ -133,7 +133,7 @@ retailerRegisterRouter.post(
         ownerUserId: result.ownerUserId,
         storeName: result.storeName,
         isExisting: result.isExisting,
-        enrollmentCode: result.enrollmentCode || undefined,  // DRX-003
+        // #330: enrollmentCode removed — codes now sent on admin approval
       });
     } catch (err: any) {
       log.error("[RetailerRegister] Registration failed:", err?.message);

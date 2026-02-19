@@ -10,6 +10,7 @@ import {
   isEmailServiceEnabled,
   type SendEmailResult,
 } from "./emailService";
+import { sendTextMessage, isWhatsAppConfigured } from "./whatsappService";
 import { getOnboardingConfig } from "../config/onboardingConfig";
 import { log } from "../lib/logger";
 
@@ -282,8 +283,11 @@ export async function sendOnboardingLinks(
   input: OnboardingNotificationInput
 ): Promise<OnboardingNotificationResult> {
   const config = getOnboardingConfig();
-  const portalUrl = config.portalBaseUrl || "https://supermandi.tech";
-  const posAppUrl = config.posAppDownloadUrl || "https://supermandi.tech/pos";
+  // portalBaseUrl = PORTAL_BASE_URL env var (e.g., "https://staging.supermandi.tech")
+  // Retailer portal lives at /retailer/ path on the main domain
+  const baseDomain = config.portalBaseUrl || "https://supermandi.tech";
+  const portalUrl = `${baseDomain}/retailer/`;
+  const posAppUrl = config.posAppDownloadUrl || PLAY_STORE_URL;
 
   const result: OnboardingNotificationResult = {
     smsSent: false,
@@ -432,4 +436,288 @@ export async function sendEnrollmentCode(
   }
 
   return result;
+}
+
+// =============================================================================
+// #330/#333: WELCOME NOTIFICATION (WhatsApp + SMS + Email) — no activation code
+// Activation code auto-fetched by POS via phone lookup, not sent in message.
+//
+// URLs are env-configurable for GCP parity (staging vs production).
+// PORTAL_BASE_URL and POS_APP_DOWNLOAD_URL are set in deploy.yml per environment.
+// =============================================================================
+
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.supermanditech.supermandipos";
+const APP_STORE_URL = process.env.APP_STORE_URL || ""; // Set after first iOS submission
+
+function getWelcomeUrls() {
+  // PORTAL_BASE_URL = "https://staging.supermandi.tech" (staging) or "https://supermandi.tech" (prod)
+  // Retailer portal lives at /retailer/ path on the main domain
+  const baseDomain = process.env.PORTAL_BASE_URL || "https://supermandi.tech";
+  return {
+    portalUrl: `${baseDomain}/retailer/`,
+    registerUrl: `${baseDomain}/retailer/register`,
+    websiteUrl: baseDomain,
+    playStoreUrl: PLAY_STORE_URL,
+    appStoreUrl: APP_STORE_URL,
+  };
+}
+
+export interface WelcomeNotificationInput {
+  phone: string;
+  email?: string;
+  ownerName: string;
+  storeName: string;
+  storeCode: string;
+}
+
+export interface WelcomeNotificationResult {
+  whatsappSent: boolean;
+  whatsappError?: string;
+  smsSent: boolean;
+  smsError?: string;
+  emailSent: boolean;
+  emailError?: string;
+}
+
+/**
+ * Send welcome message to retailer after SuperAdmin approval.
+ * Contains download links + portal URL. Activation code NOT included —
+ * POS fetches code automatically via phone number lookup.
+ */
+export async function sendWelcomeNotification(
+  input: WelcomeNotificationInput
+): Promise<WelcomeNotificationResult> {
+  const urls = getWelcomeUrls();
+  const result: WelcomeNotificationResult = {
+    whatsappSent: false,
+    smsSent: false,
+    emailSent: false,
+  };
+
+  // --- WhatsApp (primary channel) ---
+  if (isWhatsAppConfigured()) {
+    try {
+      const waMsg = buildWelcomeWhatsApp(input, urls);
+      const waResult = await sendTextMessage({ to: input.phone, body: waMsg });
+      result.whatsappSent = waResult.sent;
+      if (!waResult.sent) {
+        result.whatsappError = waResult.errorMessage;
+        log.warn(`[NotificationService] WhatsApp welcome not sent to ${input.phone}: ${waResult.errorMessage}`);
+      } else {
+        log.info(`[NotificationService] WhatsApp welcome sent to ${input.phone}`);
+      }
+    } catch (err) {
+      result.whatsappError = err instanceof Error ? err.message : "WhatsApp failed";
+      log.warn(`[NotificationService] WhatsApp exception for ${input.phone}:`, result.whatsappError);
+    }
+  }
+
+  // --- SMS (fallback) ---
+  if (isSmsServiceEnabled()) {
+    try {
+      const smsText = `SuperMandi: Congratulations! Your store "${input.storeName}" is approved. Download SuperMandi POS from Play Store and enter your registered phone number to activate. Visit ${urls.websiteUrl} for support.`;
+      const smsResult = await sendSms(input.phone, smsText);
+      result.smsSent = smsResult.sent;
+      if (!smsResult.sent) {
+        result.smsError = smsResult.errorMessage;
+      }
+    } catch (err) {
+      result.smsError = err instanceof Error ? err.message : "SMS failed";
+    }
+  }
+
+  // --- Email ---
+  if (input.email && isEmailServiceEnabled()) {
+    try {
+      const subject = `Congratulations! Your Store "${input.storeName}" is Approved — SuperMandi`;
+      const html = buildWelcomeEmailHtml(input, urls);
+      const text = buildWelcomeEmailText(input, urls);
+      const emailResult = await sendGenericEmail(input.email, subject, html, text);
+      result.emailSent = emailResult.sent;
+      if (!emailResult.sent) {
+        result.emailError = emailResult.errorMessage;
+      }
+    } catch (err) {
+      result.emailError = err instanceof Error ? err.message : "Email failed";
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp welcome message — professional, device-specific instructions
+// ---------------------------------------------------------------------------
+function buildWelcomeWhatsApp(
+  input: WelcomeNotificationInput,
+  urls: ReturnType<typeof getWelcomeUrls>
+): string {
+  const lines = [
+    `Dear ${input.ownerName},`,
+    ``,
+    `Congratulations! Your store *"${input.storeName}"* (${input.storeCode}) has been approved on SuperMandi.`,
+    ``,
+    `*How to activate your POS:*`,
+    ``,
+    `*Option A — Physical POS Device:*`,
+    `1. On your POS device, open the Google Play Store`,
+    `2. Search for "SuperMandi" and install the app`,
+    `3. Open the app and enter the phone number you registered with SuperMandi`,
+    `4. Your store will be activated automatically`,
+    ``,
+    `*Option B — Android or iOS Mobile Phone:*`,
+    `1. Download the SuperMandi POS app:`,
+    `   Android: ${urls.playStoreUrl}`,
+  ];
+  if (urls.appStoreUrl) {
+    lines.push(`   iOS: ${urls.appStoreUrl}`);
+  }
+  lines.push(
+    `2. Open the app and enter your registered phone number`,
+    `3. Your store will be activated automatically`,
+    ``,
+    `*Manage your store online:*`,
+    `${urls.portalUrl}`,
+    ``,
+    `For any assistance, please visit ${urls.websiteUrl}`,
+    ``,
+    `Warm regards,`,
+    `SuperMandi Tech Pvt Ltd`,
+  );
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Email (HTML) — professional layout with device-specific instructions
+// ---------------------------------------------------------------------------
+function buildWelcomeEmailHtml(
+  input: WelcomeNotificationInput,
+  urls: ReturnType<typeof getWelcomeUrls>
+): string {
+  const appStoreButton = urls.appStoreUrl
+    ? `<a href="${urls.appStoreUrl}" style="display:inline-block;margin-left:8px;padding:10px 20px;background:#000;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">Download for iOS</a>`
+    : "";
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:600px;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:32px;text-align:center;">
+          <h1 style="color:#fff;margin:0;font-size:28px;font-weight:700;">SuperMandi</h1>
+          <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Your Store is Approved!</p>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="padding:40px 32px;">
+          <h2 style="color:#1f2937;margin:0 0 16px;font-size:20px;font-weight:600;">Dear ${input.ownerName},</h2>
+          <p style="color:#4b5563;margin:0 0 24px;font-size:15px;line-height:1.6;">
+            Congratulations! Your store <strong>&ldquo;${input.storeName}&rdquo;</strong> (${input.storeCode}) has been approved on SuperMandi. You are now ready to start billing your customers digitally.
+          </p>
+
+          <!-- Option A: Physical POS Device -->
+          <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:20px;margin-bottom:16px;">
+            <h3 style="color:#166534;margin:0 0 12px;font-size:15px;font-weight:600;">Option A: Physical POS Device</h3>
+            <ol style="color:#4b5563;margin:0;padding-left:20px;font-size:14px;line-height:1.8;">
+              <li>On your POS device, open the <strong>Google Play Store</strong></li>
+              <li>Search for <strong>&ldquo;SuperMandi&rdquo;</strong> and install the app</li>
+              <li>Open the app and enter the phone number you registered with SuperMandi</li>
+              <li>Your store will be activated automatically</li>
+            </ol>
+          </div>
+
+          <!-- Option B: Mobile Phone -->
+          <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:20px;margin-bottom:24px;">
+            <h3 style="color:#1e40af;margin:0 0 12px;font-size:15px;font-weight:600;">Option B: Android or iOS Mobile Phone</h3>
+            <ol style="color:#4b5563;margin:0 0 16px;padding-left:20px;font-size:14px;line-height:1.8;">
+              <li>Download the SuperMandi POS app using the links below</li>
+              <li>Open the app and enter your registered phone number</li>
+              <li>Your store will be activated automatically</li>
+            </ol>
+            <div style="text-align:center;">
+              <a href="${urls.playStoreUrl}" style="display:inline-block;padding:10px 20px;background:#10b981;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">Download for Android</a>
+              ${appStoreButton}
+            </div>
+          </div>
+
+          <!-- Portal link -->
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;text-align:center;margin-bottom:24px;">
+            <p style="color:#4b5563;margin:0 0 8px;font-size:14px;">Manage your store, inventory, and orders online:</p>
+            <a href="${urls.portalUrl}" style="color:#10b981;font-weight:600;font-size:14px;text-decoration:none;">${urls.portalUrl}</a>
+          </div>
+
+          <!-- Support -->
+          <p style="color:#6b7280;margin:0;font-size:13px;line-height:1.6;">
+            For any assistance, please visit <a href="${urls.websiteUrl}" style="color:#10b981;text-decoration:none;">${urls.websiteUrl}</a>
+          </p>
+        </td></tr>
+
+        <!-- Sign-off -->
+        <tr><td style="padding:0 32px 32px;">
+          <p style="color:#4b5563;margin:0;font-size:14px;line-height:1.6;">
+            Warm regards,<br>
+            <strong>SuperMandi Tech Pvt Ltd</strong>
+          </p>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background-color:#f9fafb;padding:20px 32px;border-top:1px solid #e5e7eb;">
+          <p style="color:#9ca3af;margin:0;font-size:11px;text-align:center;line-height:1.5;">
+            &copy; ${year} SuperMandi Tech Pvt Ltd. All rights reserved.<br>
+            <a href="${urls.websiteUrl}" style="color:#9ca3af;">${urls.websiteUrl}</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Email (plain text) — fallback for clients that don't render HTML
+// ---------------------------------------------------------------------------
+function buildWelcomeEmailText(
+  input: WelcomeNotificationInput,
+  urls: ReturnType<typeof getWelcomeUrls>
+): string {
+  const appStoreLine = urls.appStoreUrl ? `   iOS: ${urls.appStoreUrl}\n` : "";
+  const year = new Date().getFullYear();
+  return `SUPERMANDI — Your Store is Approved!
+
+Dear ${input.ownerName},
+
+Congratulations! Your store "${input.storeName}" (${input.storeCode}) has been approved on SuperMandi. You are now ready to start billing your customers digitally.
+
+HOW TO ACTIVATE YOUR POS
+=========================
+
+Option A: Physical POS Device
+1. On your POS device, open the Google Play Store
+2. Search for "SuperMandi" and install the app
+3. Open the app and enter the phone number you registered with SuperMandi
+4. Your store will be activated automatically
+
+Option B: Android or iOS Mobile Phone
+1. Download the SuperMandi POS app:
+   Android: ${urls.playStoreUrl}
+${appStoreLine}2. Open the app and enter your registered phone number
+3. Your store will be activated automatically
+
+MANAGE YOUR STORE ONLINE
+=========================
+${urls.portalUrl}
+
+For any assistance, please visit ${urls.websiteUrl}
+
+Warm regards,
+SuperMandi Tech Pvt Ltd
+
+---
+© ${year} SuperMandi Tech Pvt Ltd. All rights reserved.
+${urls.websiteUrl}
+`;
 }

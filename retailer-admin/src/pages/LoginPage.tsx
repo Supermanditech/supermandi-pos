@@ -677,7 +677,10 @@ export default function LoginPage() {
       <footer className="login-footer">
         <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
-          <BuildStamp />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Link to="/retailer/help" style={{ color: '#94A3B8', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+            <BuildStamp />
+          </div>
         </div>
       </footer>
     </div>

@@ -4,7 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
 // T-081: Lucide SVG icons for navigation
 // T-088: Menu/X icons for mobile hamburger
-import { LayoutDashboard, Package, ClipboardList, Store, ShoppingCart, FileText, FileSpreadsheet, Settings, CreditCard, Smartphone, Receipt, CheckCircle, PenSquare, Menu, X, IndianRupee, Truck, BarChart3, Users, PackageCheck, Bell, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, Store, ShoppingCart, FileText, FileSpreadsheet, Settings, CreditCard, Smartphone, Receipt, CheckCircle, PenSquare, Menu, X, IndianRupee, Truck, BarChart3, Users, PackageCheck, Bell, HelpCircle, type LucideIcon } from 'lucide-react';
 // FLOW-001: Device Required Banner
 import DeviceRequiredBanner from './DeviceRequiredBanner';
 // REG-AUTH-301: LIMITED MODE Banner
@@ -98,6 +98,7 @@ export default function ProtectedLayout() {
     { path: 'customers', label: 'Customers', icon: Users }, // T-218
     { path: 'reorder', label: 'Reorder', icon: PackageCheck }, // T-230
     { path: 'notifications', label: 'Notifications', icon: Bell }, // Phase 8
+    { path: 'help', label: 'Help & Support', icon: HelpCircle }, // HELP-001
   ];
 
   // SM-024: Admin approval queue navigation
@@ -107,7 +108,7 @@ export default function ProtectedLayout() {
   ];
 
   // AUDIT-RET-057: Filter navigation in limited mode — only allow dashboard and settings
-  const limitedAllowedPaths = new Set(['', 'settings', 'devices']);
+  const limitedAllowedPaths = new Set(['', 'settings', 'devices', 'help']);
   const visibleNavItems = isLimitedMode
     ? navItems.filter((item) => limitedAllowedPaths.has(item.path))
     : navItems;

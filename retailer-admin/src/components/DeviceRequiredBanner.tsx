@@ -79,14 +79,14 @@ export default function DeviceRequiredBanner({ onStatusLoaded }: DeviceRequiredB
             color: '#92400e',
             fontSize: '0.95rem',
           }}>
-            Your store is incomplete
+            Activate Your POS
           </div>
           <div style={{
             color: '#a16207',
             fontSize: '0.85rem',
             marginTop: '0.25rem',
           }}>
-            Please activate a POS device to continue using all features.
+            Download the SuperMandi POS app and enter your phone number to activate and start billing.
           </div>
         </div>
       </div>

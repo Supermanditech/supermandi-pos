@@ -9,7 +9,7 @@ import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
-import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
+import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
   fetchAnalyticsOverview,
   fetchAnalyticsDevices,
@@ -464,6 +464,7 @@ export default function App() {
   const [enrollLoading, setEnrollLoading] = useState<boolean>(false);
   // SA-ENROLL-UX: Enrollment revocation and per-store enrollment state
   const [revokeLoading, setRevokeLoading] = useState<boolean>(false);
+  const [resendLoading, setResendLoading] = useState<boolean>(false);
   const [enrollmentForStoreLoading, setEnrollmentForStoreLoading] = useState<string>("");
   const [storeEnrollments, setStoreEnrollments] = useState<Record<string, EnrollmentRecord[]>>({});
   const [storeEnrollmentsLoading, setStoreEnrollmentsLoading] = useState<Record<string, boolean>>({});
@@ -674,6 +675,8 @@ export default function App() {
   const [appActionLoading, setAppActionLoading] = useState<Record<string, boolean>>({});
   const [appRejectReason, setAppRejectReason] = useState<Record<string, string>>({});
   const [appEntityFilter, setAppEntityFilter] = useState<string>("");
+  // #331: Activation code shown after approval
+  const [approvalResult, setApprovalResult] = useState<{ activationCode: string; codeSentTo: string; codeSentVia: string[] } | null>(null);
   const applicationsInFlightRef = useRef(false);
 
   // Filters (apply to event table + payments view)
@@ -1653,9 +1656,17 @@ export default function App() {
     setAppActionLoading((prev) => ({ ...prev, [appId]: true }));
     setApplicationsError("");
     try {
-      await approveApplication(appId);
+      const result = await approveApplication(appId);
       setApplications((prev) => prev.filter((a) => a.id !== appId));
       setApplicationsTotal((prev) => Math.max(0, prev - 1));
+      // #331: Show activation code if returned (retailer approval)
+      if (result.activationCode) {
+        setApprovalResult({
+          activationCode: result.activationCode,
+          codeSentTo: result.codeSentTo || "",
+          codeSentVia: result.codeSentVia || [],
+        });
+      }
     } catch (e: any) {
       setApplicationsError(e?.message ? String(e.message) : "Failed to approve application");
     } finally {
@@ -2511,6 +2522,23 @@ export default function App() {
     }
   }
 
+  // #329-332: Resend welcome message (download links + activation instructions)
+  async function handleResendCode(code: string) {
+    setResendLoading(true);
+    try {
+      const result = await resendEnrollmentCode(code);
+      if (result.sent) {
+        alert(`Welcome message resent${result.sentTo ? ` to ${result.sentTo}` : ""} via ${result.channels.join(", ")}`);
+      } else {
+        alert("Resend request completed but no channels were available.");
+      }
+    } catch (e: any) {
+      setEnrollError(e?.message ? String(e.message) : "Failed to resend welcome message");
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
   // SA-ENROLL-UX G3: Generate enrollment from Stores tab
   async function handleCreateEnrollmentForStore(storeId: string) {
     setEnrollmentForStoreLoading(storeId);
@@ -3025,6 +3053,8 @@ export default function App() {
           storeEnrollmentsLoading={storeEnrollmentsLoading}
           handleRevokeEnrollment={handleRevokeEnrollment}
           revokeLoading={revokeLoading}
+          handleResendCode={handleResendCode}
+          resendLoading={resendLoading}
         />
       )}
 
@@ -3075,21 +3105,59 @@ export default function App() {
       )}
 
       {tab === "applications" && (
-        <ApplicationsTab
-          applications={applications}
-          applicationsTotal={applicationsTotal}
-          applicationsLoading={applicationsLoading}
-          applicationsError={applicationsError}
-          appEntityFilter={appEntityFilter}
-          setAppEntityFilter={setAppEntityFilter}
-          appActionLoading={appActionLoading}
-          appRejectReason={appRejectReason}
-          setAppRejectReason={setAppRejectReason}
-          refreshApplications={refreshApplications}
-          handleApproveApplication={confirmedApproveApplication}
-          handleRejectApplication={confirmedRejectApplication}
-          onLoadMore={loadMoreApplications}
-        />
+        <>
+          <ApplicationsTab
+            applications={applications}
+            applicationsTotal={applicationsTotal}
+            applicationsLoading={applicationsLoading}
+            applicationsError={applicationsError}
+            appEntityFilter={appEntityFilter}
+            setAppEntityFilter={setAppEntityFilter}
+            appActionLoading={appActionLoading}
+            appRejectReason={appRejectReason}
+            setAppRejectReason={setAppRejectReason}
+            refreshApplications={refreshApplications}
+            handleApproveApplication={confirmedApproveApplication}
+            handleRejectApplication={confirmedRejectApplication}
+            onLoadMore={loadMoreApplications}
+          />
+          {/* #331: Activation code success modal */}
+          {approvalResult && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+              <div style={{ background: "#fff", borderRadius: 12, padding: 32, maxWidth: 420, width: "90%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>&#10003;</div>
+                <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Store Approved!</h2>
+                <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                  Welcome message sent to the retailer. The POS app will auto-fetch this code when the retailer enters their phone number.
+                </p>
+                <div style={{ background: "#f0fdf4", border: "2px dashed #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: "#166534", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Activation Code</div>
+                  <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 700, letterSpacing: 4, color: "#15803d" }}>{approvalResult.activationCode}</div>
+                </div>
+                {approvalResult.codeSentTo && (
+                  <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
+                    Sent to: <strong>{approvalResult.codeSentTo}</strong>
+                    {approvalResult.codeSentVia.length > 0 && ` via ${approvalResult.codeSentVia.join(", ")}`}
+                  </p>
+                )}
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(approvalResult.activationCode); }}
+                    style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}
+                  >
+                    Copy Code
+                  </button>
+                  <button
+                    onClick={() => setApprovalResult(null)}
+                    style={{ padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {tab === "analytics" && (

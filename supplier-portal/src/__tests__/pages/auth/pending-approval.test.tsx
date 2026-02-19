@@ -43,9 +43,9 @@ describe('PendingApprovalPage', () => {
 
   it('renders support email link', () => {
     render(<PendingApprovalPage />);
-    const emailLink = screen.getByText('support@supermandi.com');
+    const emailLink = screen.getByText('hello@supermandi.tech');
     expect(emailLink).toBeInTheDocument();
-    expect(emailLink).toHaveAttribute('href', 'mailto:support@supermandi.com');
+    expect(emailLink).toHaveAttribute('href', 'mailto:hello@supermandi.tech');
   });
 
   it('renders Back to Login link', () => {

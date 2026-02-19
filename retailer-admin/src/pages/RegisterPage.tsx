@@ -1012,7 +1012,7 @@ export default function RegisterPage() {
 
                 <h2 style={{ ...styles.cardTitle, textAlign: 'center' }}>Application Submitted</h2>
                 <p style={{ ...styles.cardSubtitle, textAlign: 'center' }}>
-                  Your registration is pending verification. We'll review your documents and notify you once approved.
+                  Your registration is pending verification. We'll review your documents and notify you shortly.
                 </p>
 
                 {applicationId && (
@@ -1027,8 +1027,14 @@ export default function RegisterPage() {
                   </div>
                 )}
 
+                {/* #329-332: Updated success message — phone-based activation */}
                 <div style={styles.alertSuccess}>
-                  You will receive a notification once your application is approved. After approval, you can login to manage your store.
+                  <strong>What happens next?</strong>
+                  <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem', textAlign: 'left' }}>
+                    <li>We review your documents (usually 1-2 business days)</li>
+                    <li>Once approved, you'll receive a <strong>welcome message</strong> via WhatsApp and Email</li>
+                    <li>Download the SuperMandi POS app, enter your phone number, and your store activates automatically</li>
+                  </ol>
                 </div>
 
                 <Link
@@ -1048,9 +1054,12 @@ export default function RegisterPage() {
 
       {/* Footer */}
       <footer style={styles.footer}>
-        <div style={styles.footerInner}>
-          &copy; 2026 SuperManditech. All rights reserved.
-          <BuildStamp />
+        <div style={{ ...styles.footerInner, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Link to="/retailer/help" style={{ color: '#94A3B8', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+            <BuildStamp />
+          </div>
         </div>
       </footer>
     </div>

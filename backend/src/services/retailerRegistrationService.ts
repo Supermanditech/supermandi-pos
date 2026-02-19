@@ -12,7 +12,7 @@ import type { Pool, PoolClient } from "pg";
 import { randomUUID } from "crypto";
 import { generateStoreCode } from "./storeCodeService";
 import { sendOnboardingLinks } from "./notificationService";  // RO-008
-import { createEnrollmentCode } from "./enrollmentCodeService";  // DRX-003
+// #330: createEnrollmentCode import removed — codes now generated on admin approval
 import { log } from "../lib/logger";
 import type {
   RetailerRegistrationData,
@@ -189,18 +189,9 @@ export async function registerRetailer(
       log.warn("[registration] Onboarding notification failed:", err?.message);
     });
 
-    // Step 8: DRX-003 — Auto-generate enrollment code for POS sources
-    let enrollmentCode: string | undefined;
-    if (data.source === "POS_MOBILE" || data.source === "POS_DEVICE") {
-      try {
-        const enrollment = await createEnrollmentCode(storeId, storeCode, "registration");
-        enrollmentCode = enrollment.code;
-        log.info(`[registration] DRX-003: Auto-generated enrollment code ${enrollmentCode} for POS registration`);
-      } catch (err: any) {
-        log.warn("[registration] DRX-003: Failed to auto-generate enrollment code:", err?.message);
-        // Non-blocking: registration still succeeds without enrollment code
-      }
-    }
+    // #330: DRX-003 enrollment code generation removed from registration path.
+    // Activation codes are now generated on SuperAdmin approval (applications.ts).
+    // Registration via PORTAL source continues to work without enrollment code.
 
     return {
       outcome: "SUCCESS",
@@ -209,7 +200,6 @@ export async function registerRetailer(
       ownerUserId: userId,
       storeName: data.businessName,
       isExisting: false,
-      enrollmentCode,
     };
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});

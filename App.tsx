@@ -19,8 +19,9 @@ import i18n, { initI18n } from "./src/i18n";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/screens/SplashScreen";
 import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
-// RO-004: POS store registration screen
-import RegisterStoreScreen from "./src/screens/RegisterStoreScreen";
+// #329-332: PaymentSetup shown once after activation if no UPI VPA
+import PaymentSetupScreen from "./src/screens/PaymentSetupScreen";
+// #329: RegisterStoreScreen removed — registration happens on Retailer Web only
 import PosRootLayout from "./src/screens/PosRootLayout";
 import PaymentScreen from "./src/screens/PaymentScreen";
 import SuccessPrintScreen from "./src/screens/SuccessPrintScreenV2";
@@ -74,6 +75,8 @@ import ChatConversationScreen from "./src/screens/ChatConversationScreen";
 import AIInsightsScreen from "./src/screens/AIInsightsScreen";
 // T-288: Bulk Purchase Credit Screen
 import BulkPurchaseCreditScreen from "./src/screens/BulkPurchaseCreditScreen";
+// HELP-001: Help & Support screen
+import HelpScreen from "./src/screens/HelpScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -340,6 +343,12 @@ function BulkPurchaseCreditWrapper() {
   return <BulkPurchaseCreditScreen onBack={() => navigation.goBack()} />;
 }
 
+// HELP-001: Help & Support screen wrapper
+function HelpScreenWrapper() {
+  const navigation = useNavigation<any>();
+  return <HelpScreen onBack={() => navigation.goBack()} />;
+}
+
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
 // Phase 8: Push notification setup
@@ -436,8 +445,8 @@ export default function App() {
         >
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="EnrollDevice" component={EnrollDeviceScreen} />
-          {/* RO-004: POS store registration */}
-          <Stack.Screen name="RegisterStore" component={RegisterStoreScreen} />
+          <Stack.Screen name="PaymentSetup" component={PaymentSetupScreen} />
+          {/* #329: RegisterStore removed — registration on Retailer Web only */}
           <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
           {/* SA-P2-003: Force update screen for minimum app version enforcement */}
           <Stack.Screen name="ForceUpdate" component={ForceUpdateScreen} />
@@ -492,6 +501,8 @@ export default function App() {
           <Stack.Screen name="AIInsights" component={AIInsightsWrapper} />
           {/* T-288: Bulk Purchase Credit */}
           <Stack.Screen name="BulkPurchaseCredit" component={BulkPurchaseCreditWrapper} />
+          {/* HELP-001: Help & Support */}
+          <Stack.Screen name="Help" component={HelpScreenWrapper} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
         </ErrorBoundary>

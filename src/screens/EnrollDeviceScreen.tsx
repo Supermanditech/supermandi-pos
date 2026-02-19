@@ -1,3 +1,13 @@
+/**
+ * #329-332: POS Activation Screen with Phone Lookup
+ *
+ * After registration on Retailer Web + SuperAdmin approval:
+ * 1. Primary: Enter phone number → auto-fetch activation code → activate
+ * 2. Fallback: Manual code entry (for deep links, admin-shared codes)
+ *
+ * Post-activation: Routes to PaymentSetup if no UPI VPA set, else SellScan.
+ */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -13,15 +23,12 @@ import {
 } from "react-native";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-// expo-updates disabled for development - channel info not needed
-const Updates = { channel: null as string | null };
-
 import NetInfo from "@react-native-community/netinfo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { enrollDevice, checkDuplicateLabel, CheckDuplicateLabelResponse } from "../services/api/enrollApi";
+import { enrollDevice, lookupActivation } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
@@ -34,48 +41,10 @@ import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
 import { useProductsStore } from "../stores/productsStore";
 import { useSettingsStore } from "../stores/settingsStore";
 
-/**
- * POS-ENROLL-401-FIX: Integration Smoke Test Checklist
- *
- * Before Go-Live, verify these scenarios manually:
- *
- * 1. FRESH INSTALL / CLEARED STORAGE:
- *    - Clear app data (Settings > Apps > SuperMandi POS > Clear Data)
- *    - Open app → should show EnrollDeviceScreen
- *    - Enter valid enrollment code (e.g., SM-DEMO01)
- *    - Enter device label (e.g., Counter-1)
- *    - Tap "Enroll Device"
- *    - EXPECTED: Enrollment succeeds, navigates to SellScan
- *    - VERIFY LOGS:
- *      [api_debug] POST /api/v1/pos/enroll (no BLOCKED message)
- *      [Enroll] Success: token saved (len=...)
- *      [api_debug] X-Device-Token: <first 8 chars>...
- *
- * 2. PROTECTED ENDPOINT AFTER ENROLL:
- *    - After successful enrollment, app should call ui-status
- *    - VERIFY LOGS:
- *      [api_debug] GET /api/v1/pos/ui-status
- *      [api_debug] X-Device-Token: <first 8 chars>...(len=...)
- *      [api_debug] status: 200
- *
- * 3. WRONG/EXPIRED ENROLLMENT CODE:
- *    - Clear app data
- *    - Enter invalid code (e.g., "WRONG-CODE")
- *    - EXPECTED: Alert shows "Enrollment code is invalid"
- *    - App stays on EnrollDeviceScreen (no navigation)
- *    - No token stored (verify with subsequent attempt)
- *
- * 4. REINSTALL / TOKEN CLEARED:
- *    - Uninstall and reinstall app
- *    - Should show EnrollDeviceScreen (no crash)
- *    - Should be able to enroll again
- *
- * See: apiClient.ts for PUBLIC_ENDPOINT_PATTERNS and guard assertions
- */
-
 type RootStackParamList = {
-  EnrollDevice: { enrollmentCode?: string } | undefined;  // DRX-003: Optional pre-fill from registration
+  EnrollDevice: { enrollmentCode?: string } | undefined;
   SellScan: undefined;
+  PaymentSetup: undefined;
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
   DeviceBlocked: undefined;
 };
@@ -83,106 +52,51 @@ type RootStackParamList = {
 type Nav = NativeStackNavigationProp<RootStackParamList, "EnrollDevice">;
 type EnrollRoute = RouteProp<RootStackParamList, "EnrollDevice">;
 
-type DeviceType = "OEM_HANDHELD" | "SUPMANDI_PHONE" | "RETAILER_PHONE";
-type PrintingMode = "DIRECT_ESC_POS" | "SHARE_TO_PRINTER_APP" | "NONE";
-
-const DEVICE_TYPES: Array<{ value: DeviceType; label: string }> = [
-  { value: "OEM_HANDHELD", label: "OEM Handheld" },
-  { value: "SUPMANDI_PHONE", label: "SuperMandi Phone" },
-  { value: "RETAILER_PHONE", label: "Retailer Phone" }
-];
-
-const PRINTING_MODES: Array<{ value: PrintingMode; label: string }> = [
-  { value: "DIRECT_ESC_POS", label: "Direct ESC/POS" },
-  { value: "SHARE_TO_PRINTER_APP", label: "Share to Printer App" },
-  { value: "NONE", label: "None" }
-];
-
-// DEV-071: Error codes from backend (uppercase with underscores)
+// Error codes from backend
 const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> = {
-  // 400 Bad Request errors
-  CODE_REQUIRED: { message: "Enter or scan an enrollment code." },
-  LABEL_REQUIRED: { message: "Enter a device label (e.g., Counter-1)." },
-  DEVICE_TYPE_REQUIRED: { message: "Select a valid device type." },
-  DEVICE_TYPE_INVALID: { message: "Select a valid device type." },
-  PRINTING_MODE_INVALID: { message: "Select a valid printing mode." },
+  CODE_REQUIRED: { message: "Enter your activation code." },
   ENROLLMENT_CODE_INVALID: {
-    message: "Enrollment code is invalid.",
-    hint: "Check the code and try again, or ask your SuperAdmin for a new code."
+    message: "Activation code is invalid.",
+    hint: "Check the code and try again, or contact support for a new code."
   },
-
-  // 409 Conflict errors (code state issues)
   ENROLLMENT_CODE_EXPIRED: {
-    message: "This enrollment code has expired.",
-    hint: "Ask your SuperAdmin to generate a new enrollment code."
+    message: "This activation code has expired.",
+    hint: "Contact support to get a new activation code."
   },
   ENROLLMENT_CODE_USED: {
-    message: "This enrollment code has already been used.",
-    hint: "Ask your SuperAdmin to generate a new enrollment code."
+    message: "This activation code has already been used.",
+    hint: "Contact support to get a new activation code."
   },
   ENROLLMENT_CODE_REVOKED: {
-    message: "This enrollment code has been revoked.",
-    hint: "Ask your SuperAdmin to generate a new enrollment code."
+    message: "This activation code has been revoked.",
+    hint: "Contact support to get a new activation code."
   },
-
-  // 404 Not Found errors
   STORE_NOT_FOUND: {
-    message: "Store not found for this enrollment code.",
-    hint: "Verify the code with your SuperAdmin."
+    message: "Store not found for this code.",
+    hint: "Verify the code with support."
   },
-
-  // 503 Service Unavailable
   DATABASE_UNAVAILABLE: {
-    message: "Server database unavailable.",
+    message: "Server temporarily unavailable.",
     hint: "Wait a minute and try again."
   },
-
-  // 500 Internal Server Error
   ENROLLMENT_FAILED: {
-    message: "Server could not enroll the device.",
+    message: "Could not activate the device.",
     hint: "Try again. If the problem persists, contact support."
   },
-
-  // Rate limiting (429)
   ENROLLMENT_RATE_LIMITED: {
-    message: "Too many enrollment attempts.",
+    message: "Too many attempts.",
     hint: "Please wait 15 minutes before trying again."
   },
-
-  // Legacy error codes (for backwards compatibility)
-  enrollment_invalid: {
-    message: "Enrollment code is invalid or expired.",
-    hint: "Contact your SuperAdmin for a new enrollment code."
-  },
-  enrollment_expired: {
-    message: "This enrollment code has expired.",
-    hint: "Contact your SuperAdmin for a new enrollment code."
-  },
-  enrollment_used: {
-    message: "This enrollment code has already been used.",
-    hint: "Contact your SuperAdmin for a new enrollment code."
-  },
-  enrollment_revoked: {
-    message: "This enrollment code has been revoked.",
-    hint: "Contact your SuperAdmin for a new enrollment code."
-  },
-  device_already_enrolled: {
-    message: "This label is already active.",
-    hint: "Ask your SuperAdmin to reset the device token or use a different label."
-  },
-
-  // Network errors
-  network_error: {
-    message: "Could not connect to the server.",
-    hint: "Check your internet connection and try again."
-  },
-  timeout: {
-    message: "Request timed out.",
-    hint: "Check your connection and try again."
-  }
+  // Legacy error codes
+  enrollment_invalid: { message: "Activation code is invalid or expired.", hint: "Contact support for a new code." },
+  enrollment_expired: { message: "This activation code has expired.", hint: "Contact support for a new code." },
+  enrollment_used: { message: "This activation code has already been used.", hint: "Contact support for a new code." },
+  enrollment_revoked: { message: "This activation code has been revoked.", hint: "Contact support for a new code." },
+  network_error: { message: "Could not connect to the server.", hint: "Check your internet connection and try again." },
+  timeout: { message: "Request timed out.", hint: "Check your connection and try again." },
 };
 
-function parseEnrollmentCode(raw: string): string | null {
+function parseActivationCode(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   try {
@@ -200,93 +114,32 @@ function getAppVersion(): string {
   return typeof v === "string" && v.trim() ? v.trim() : "unknown";
 }
 
-function formatUnknownError(value: unknown): string {
-  if (value instanceof Error) {
-    return value.message || value.name || "unknown error";
-  }
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return "unknown error";
-  }
-}
+// expo-updates disabled for development
+const Updates = { channel: null as string | null };
+
+const PAYMENT_PROMPTED_KEY = "supermandi.payment_setup_prompted";
 
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();
-  const route = useRoute<EnrollRoute>();  // DRX-003
-  const [permission, requestPermission] = useCameraPermissions();
+  const route = useRoute<EnrollRoute>();
   const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || "");
-  const [labelInput, setLabelInput] = useState("");
-  const [deviceType, setDeviceType] = useState<DeviceType>("RETAILER_PHONE");
-  const [printingMode, setPrintingMode] = useState<PrintingMode>("NONE");
-  const [scanned, setScanned] = useState(false);
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  // GL-RJ-006: Duplicate label detection state
-  const [labelCheckResult, setLabelCheckResult] = useState<CheckDuplicateLabelResponse | null>(null);
-  const [checkingLabel, setCheckingLabel] = useState(false);
-  const labelCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // P3-001: Use expo-device for reliable device metadata capture
-  const deviceMeta = useMemo(() => {
-    return {
-      manufacturer: Device.manufacturer ?? null,
-      model: Device.modelName ?? Device.deviceName ?? Constants.deviceName ?? null,
-      androidVersion: Platform.OS === "android" ? String(Platform.Version) : Device.osVersion ?? null,
-      appVersion: getAppVersion(),
-      label: labelInput.trim() || null,
-      deviceType,
-      printingMode
-    };
-  }, [labelInput, deviceType, printingMode]);
+  // Phone lookup state
+  const [phoneInput, setPhoneInput] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupStoreName, setLookupStoreName] = useState("");
+  const [lookupError, setLookupError] = useState("");
+  const autoActivateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // GL-RJ-006: Debounced duplicate label check
-  const doLabelCheck = useCallback(async (label: string, code: string) => {
-    if (!label.trim() || !code.trim()) {
-      setLabelCheckResult(null);
-      return;
-    }
+  const deviceMeta = useMemo(() => ({
+    manufacturer: Device.manufacturer ?? null,
+    model: Device.modelName ?? Device.deviceName ?? Constants.deviceName ?? null,
+    androidVersion: Platform.OS === "android" ? String(Platform.Version) : Device.osVersion ?? null,
+    appVersion: getAppVersion(),
+  }), []);
 
-    setCheckingLabel(true);
-    try {
-      const result = await checkDuplicateLabel({
-        enrollmentCode: code,
-        label: label.trim(),
-      });
-      setLabelCheckResult(result);
-    } catch (error) {
-      console.warn("[EnrollDeviceScreen] Label check failed:", error);
-      setLabelCheckResult(null);
-    } finally {
-      setCheckingLabel(false);
-    }
-  }, []);
-
-  // GL-RJ-006: Trigger label check when label or code changes
-  useEffect(() => {
-    if (labelCheckTimerRef.current) {
-      clearTimeout(labelCheckTimerRef.current);
-    }
-
-    const enrollmentCode = parseEnrollmentCode(codeInput);
-    if (!labelInput.trim() || !enrollmentCode) {
-      setLabelCheckResult(null);
-      return;
-    }
-
-    // Debounce by 500ms
-    labelCheckTimerRef.current = setTimeout(() => {
-      void doLabelCheck(labelInput, enrollmentCode);
-    }, 500);
-
-    return () => {
-      if (labelCheckTimerRef.current) {
-        clearTimeout(labelCheckTimerRef.current);
-      }
-    };
-  }, [labelInput, codeInput, doLabelCheck]);
-
+  // Check existing session on mount — skip to SellScan if already enrolled
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -294,19 +147,15 @@ export default function EnrollDeviceScreen() {
       if (cancelled || !session) return;
       navigation.replace("SellScan");
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [navigation]);
 
+  // Deep link support
   useEffect(() => {
     const handleUrl = (url: string | null) => {
       if (!url) return;
-      const code = parseEnrollmentCode(url);
-      if (!code) return;
-      setCodeInput(code);
-      setScannerOpen(false);
-      setScanned(true);
+      const code = parseActivationCode(url);
+      if (code) setCodeInput(code);
     };
 
     Linking.getInitialURL().then(handleUrl).catch(() => undefined);
@@ -314,143 +163,178 @@ export default function EnrollDeviceScreen() {
     return () => subscription.remove();
   }, []);
 
-  const handleEnroll = async () => {
-    const enrollmentCode = parseEnrollmentCode(codeInput);
-    if (!enrollmentCode) {
-      Alert.alert("Missing Code", "Enter or scan an enrollment code.");
-      return;
+  // Cleanup auto-activate timer
+  useEffect(() => {
+    return () => {
+      if (autoActivateTimer.current) clearTimeout(autoActivateTimer.current);
+    };
+  }, []);
+
+  const handleLookup = useCallback(async () => {
+    // Strip non-digit chars and validate
+    const digits = phoneInput.replace(/\D/g, "");
+    let phone10 = digits;
+    if (digits.length === 12 && digits.startsWith("91")) {
+      phone10 = digits.slice(2);
+    } else if (digits.length === 13 && digits.startsWith("+91")) {
+      phone10 = digits.slice(3);
     }
-    if (!labelInput.trim()) {
-      Alert.alert("Missing Label", "Enter a device label (e.g., Counter-1).");
+    if (phone10.length !== 10 || !/^[6-9]/.test(phone10)) {
+      setLookupError("Enter a valid 10-digit mobile number");
       return;
     }
 
-    // SCR-AUDIT-312: Block enrollment while label check is in-flight to prevent race condition
-    if (checkingLabel) {
-      Alert.alert("Please Wait", "Label availability check is in progress. Please wait a moment.");
+    // Offline check
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        setLookupError("No internet connection. Connect and try again.");
+        return;
+      }
+    } catch {
+      // proceed
+    }
+
+    setLookupLoading(true);
+    setLookupError("");
+    setLookupStoreName("");
+
+    try {
+      const result = await lookupActivation(phone10);
+      setCodeInput(result.code);
+      setLookupStoreName(result.storeName);
+      // Auto-trigger activation after short delay
+      autoActivateTimer.current = setTimeout(() => {
+        handleActivateRef.current?.();
+      }, 800);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.message === "STORE_NOT_FOUND") {
+          setLookupError("No store found for this phone number. Register at supermandi.tech/retailer/register first.");
+        } else if (err.message === "NO_ACTIVE_CODE") {
+          setLookupError("Your store is pending approval. Contact SuperMandi support.");
+        } else if (err.status === 429) {
+          setLookupError("Too many attempts. Please wait a few minutes.");
+        } else {
+          setLookupError(err.message || "Lookup failed. Try entering the code manually.");
+        }
+      } else {
+        setLookupError("Network error. Check your connection and try again.");
+      }
+    } finally {
+      setLookupLoading(false);
+    }
+  }, [phoneInput]);
+
+  // Ref for auto-activate callback (avoids stale closure in timer)
+  const handleActivateRef = useRef<(() => void) | null>(null);
+
+  const handleActivate = useCallback(async () => {
+    const activationCode = parseActivationCode(codeInput);
+    if (!activationCode) {
+      Alert.alert("Missing Code", "Enter your phone number above to look up the code, or enter it manually.");
       return;
     }
 
-    // S3-1: Offline detection before enrollment attempt
+    // Offline detection
     try {
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
         Alert.alert(
           "No Internet",
-          "Enrollment requires a network connection. Please connect to the internet and try again."
+          "Activation requires a network connection. Please connect to the internet and try again."
         );
         return;
       }
     } catch {
-      // NetInfo failed — proceed anyway (best effort)
-    }
-
-    // GL-RJ-006: Block enrollment if duplicate label detected
-    if (labelCheckResult?.isDuplicate) {
-      const suggestions = labelCheckResult.suggestions?.slice(0, 3).join(", ");
-      Alert.alert(
-        "Duplicate Label",
-        `A device with label "${labelInput.trim()}" already exists for this store.\n\n` +
-        (suggestions ? `Suggestions: ${suggestions}\n\n` : "") +
-        "Please use a unique label.",
-        [{ text: "OK" }]
-      );
-      return;
+      // NetInfo failed — proceed anyway
     }
 
     setLoading(true);
     try {
-      // DEV-071: Debug logging for enrollment payload
       if (__DEV__) {
-        console.log("[Enroll] Payload:", { enrollmentCode, deviceMeta });
+        console.log("[Activate] Payload:", { activationCode, deviceMeta });
       }
 
       const previousSession = await getDeviceSession();
       const previousStoreId = previousSession?.storeId ?? null;
-      const res = await enrollDevice({ enrollmentCode, deviceMeta });
+      const res = await enrollDevice({ enrollmentCode: activationCode, deviceMeta });
       const storeChanged = previousStoreId !== res.storeId;
+
       if (storeChanged) {
         useCartStore.getState().resetForStore();
         usePurchaseDraftStore.getState().resetForStore();
         useProductsStore.getState().resetForStore();
       }
+
       await saveDeviceSession({
         deviceId: res.deviceId,
         storeId: res.storeId,
         deviceToken: res.deviceToken,
-        deviceType
+        deviceType: "RETAILER_PHONE",
       });
-      console.log(`[Enroll] Success: token saved (len=${res.deviceToken?.length ?? 0})`);
+      console.log(`[Activate] Success: token saved (len=${res.deviceToken?.length ?? 0})`);
 
-      // GO-LIVE INVARIANT CHECK: Immediately verify token works after enrollment
-      // This prevents silent failures where token is saved but doesn't actually work
+      // Go-Live invariant check
       try {
-        console.log("[Enroll] Running Go-Live invariant check: calling ui-status...");
+        console.log("[Activate] Running invariant check: calling ui-status...");
         const uiStatus = await fetchUiStatus();
-        // If we get here, token worked. Check for inactive store
         if (uiStatus.storeActive === false) {
-          console.log("[Enroll] Invariant check passed but store is inactive");
-          // Will show inactive alert below
+          console.log("[Activate] Store is inactive");
         } else {
-          console.log("[Enroll] Invariant check PASSED: ui-status returned successfully");
+          console.log("[Activate] Invariant check PASSED");
         }
       } catch (invariantError) {
-        // Token didn't work! This is the critical bug we're trying to prevent
-        console.error("[Enroll] INVARIANT CHECK FAILED:", invariantError);
-
-        // Check if it's a 401 (token invalid) or DEVICE_SESSION_MISSING
+        console.error("[Activate] INVARIANT CHECK FAILED:", invariantError);
         const is401 = invariantError instanceof ApiError &&
           (invariantError.status === 401 || invariantError.message === "DEVICE_SESSION_MISSING" || invariantError.message === "device_unauthorized");
-
         if (is401) {
-          // Critical: Token was saved but doesn't work! Clear it and block enrollment
           await clearDeviceSession();
           Alert.alert(
-            "Enrollment Failed",
-            "Token was saved but is not valid. This is a critical error.\n\nPlease try enrolling again. If this persists, contact support.",
+            "Activation Failed",
+            "Token was saved but is not valid. Please try again. If this persists, contact support.",
             [{ text: "OK" }]
           );
-          return; // Block navigation to SellScan
+          return;
         }
-        // Other errors (network, etc.) - log but don't block
-        console.warn("[Enroll] Non-critical invariant check error:", invariantError);
+        console.warn("[Activate] Non-critical invariant check error:", invariantError);
       }
 
-      // GO-LIVE: Persist store name for offline display (SuperAdmin source of truth)
+      // Persist store info
       const { setStoreName, setStoreCode } = useSettingsStore.getState();
-      if (res.storeName) {
-        setStoreName(res.storeName);
-      }
-      if (res.storeCode) {
-        setStoreCode(res.storeCode);
-      }
+      if (res.storeName) setStoreName(res.storeName);
+      if (res.storeCode) setStoreCode(res.storeCode);
 
       if (storeChanged) {
         void logPosEvent("STORE_SWITCH", {
           previousStoreId,
           nextStoreId: res.storeId,
-          reason: "enroll"
+          reason: "activation",
         });
       }
-      // ISSUE-MICRO-030: Warn operator if multiple POS devices are active for this store
+
       if (typeof res.activeDeviceCount === "number" && res.activeDeviceCount > 1) {
         Alert.alert(
           "Multiple Devices",
-          `This store has ${res.activeDeviceCount} active POS devices. Multiple devices on the same store may cause duplicate sales. Contact your SuperAdmin if this is unexpected.`
+          `This store has ${res.activeDeviceCount} active POS devices. Contact support if this is unexpected.`
         );
       }
       if (!res.storeActive) {
         Alert.alert("Store Inactive", POS_MESSAGES.storeInactive);
       }
-      navigation.replace("SellScan");
+
+      // #329-332: Route to PaymentSetup if no UPI VPA set (prompted once)
+      const needsPaymentSetup = !res.upiVpa;
+      const alreadyPrompted = await AsyncStorage.getItem(PAYMENT_PROMPTED_KEY);
+      if (needsPaymentSetup && !alreadyPrompted) {
+        navigation.replace("PaymentSetup");
+      } else {
+        navigation.replace("SellScan");
+      }
     } catch (error) {
-      // POS-ENROLL-401-FIX Acceptance #3: Wrong enrollment code
-      // On error, we reach this catch block BEFORE saveDeviceSession is called,
-      // so no token is stored. User stays on EnrollDeviceScreen.
-      let errorKey = "enrollment_failed";
+      let errorKey = "ENROLLMENT_FAILED";
       let rawMessage = "";
 
-      // Detect network errors
       if (error instanceof TypeError && error.message?.includes("Network")) {
         errorKey = "network_error";
         rawMessage = error.message;
@@ -461,38 +345,27 @@ export default function EnrollDeviceScreen() {
         rawMessage = error.message || "unknown_error";
         errorKey = rawMessage;
       } else {
-        rawMessage = formatUnknownError(error);
+        rawMessage = error instanceof Error ? error.message : "unknown error";
       }
 
       const errorInfo = ENROLL_ERROR_MESSAGES[errorKey];
-      const message = errorInfo?.message ?? "Unable to enroll device.";
-      const hint = errorInfo?.hint ?? "Try again or contact your SuperAdmin.";
+      const message = errorInfo?.message ?? "Unable to activate device.";
+      const hint = errorInfo?.hint ?? "Try again or contact support.";
 
-      // Build debug info for dev troubleshooting
       const debugParts: string[] = [];
-      if (error instanceof ApiError && error.status) {
-        debugParts.push(`status: ${error.status}`);
-      }
+      if (error instanceof ApiError && error.status) debugParts.push(`status: ${error.status}`);
       debugParts.push(`code: ${rawMessage || errorKey}`);
       debugParts.push(`api: ${API_BASE_URL}`);
       if (Updates.channel) debugParts.push(`channel: ${Updates.channel}`);
 
-      Alert.alert(
-        "Enrollment Failed",
-        `${message}\n\n${hint}\n\n(${debugParts.join(", ")})`
-      );
+      Alert.alert("Activation Failed", `${message}\n\n${hint}\n\n(${debugParts.join(", ")})`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [codeInput, deviceMeta, navigation]);
 
-  const handleScanValue = (value: string) => {
-    const code = parseEnrollmentCode(value);
-    if (!code) return;
-    setCodeInput(code);
-    setScanned(true);
-    setScannerOpen(false);
-  };
+  // Keep ref current for auto-activate timer
+  handleActivateRef.current = handleActivate;
 
   return (
     <ScrollView
@@ -500,231 +373,165 @@ export default function EnrollDeviceScreen() {
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
       testID="enroll-device-screen"
-      accessibilityLabel="Enroll POS device screen"
+      accessibilityLabel="Activate POS device screen"
     >
-      <Text style={styles.title} testID="enroll-title" accessibilityRole="header">Enroll POS Device</Text>
-      <Text style={styles.subtitle} testID="enroll-subtitle">Scan the QR code or enter the enrollment code.</Text>
+      {/* Header */}
+      <View style={styles.headerSection}>
+        <Text style={styles.title} testID="enroll-title" accessibilityRole="header">
+          Activate Your POS
+        </Text>
+        <Text style={styles.subtitle} testID="enroll-subtitle">
+          Enter your registered phone number to activate, or enter the code manually.
+        </Text>
+      </View>
 
-      {scannerOpen && (
-        <View style={styles.cameraWrap}>
-          {permission?.granted ? (
-            <CameraView
-              style={styles.camera}
-              facing="back"
-              barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-              onBarcodeScanned={scanned ? undefined : (event) => handleScanValue(event.data)}
-            />
-          ) : (
-            <View style={styles.permissionBox}>
-              <Text
-                style={styles.permissionText}
-                testID="enroll-camera-permission-text"
-                accessibilityLabel="Camera permission is required to scan QR codes"
-              >
-                {permission?.canAskAgain === false
-                  ? "Camera permission was denied. Please enable it in Settings."
-                  : "Camera permission is required to scan QR codes."}
-              </Text>
-              {/* S3-4: Recovery path for denied camera permission */}
-              {permission?.canAskAgain === false ? (
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() => Linking.openSettings()}
-                  testID="enroll-open-settings-button"
-                  accessibilityLabel="Open device settings to enable camera"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.secondaryButtonText}>Open Settings</Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() => requestPermission()}
-                  testID="enroll-allow-camera-button"
-                  accessibilityLabel="Allow camera access"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.secondaryButtonText}>Allow Camera</Text>
-                </Pressable>
-              )}
-            </View>
-          )}
-        </View>
-      )}
-
-      <View style={styles.controls}>
-        <Text style={styles.label}>Enrollment Code</Text>
+      {/* Phone Lookup Section */}
+      <View style={styles.inputSection}>
+        <Text style={styles.label}>Registered Phone Number</Text>
         <TextInput
-          style={styles.input}
+          style={styles.phoneInput}
+          placeholder="+91 98765 43210"
+          keyboardType="phone-pad"
+          value={phoneInput}
+          onChangeText={(t) => {
+            setPhoneInput(t);
+            if (lookupError) setLookupError("");
+            if (lookupStoreName) {
+              setLookupStoreName("");
+              setCodeInput("");
+            }
+          }}
+          testID="enroll-phone-input"
+          accessibilityLabel="Registered phone number"
+          autoFocus={!codeInput}
+          editable={!lookupLoading && !loading}
+        />
+
+        {lookupStoreName ? (
+          <View style={styles.lookupSuccess}>
+            <Text style={styles.lookupSuccessText}>
+              Store found: {lookupStoreName} ✓
+            </Text>
+          </View>
+        ) : null}
+
+        {lookupError ? (
+          <Text style={styles.lookupErrorText}>{lookupError}</Text>
+        ) : null}
+
+        <Pressable
+          style={[styles.lookupButton, (lookupLoading || loading) && styles.buttonDisabled]}
+          onPress={handleLookup}
+          disabled={lookupLoading || loading}
+          testID="enroll-lookup-button"
+          accessibilityLabel={lookupLoading ? "Looking up code" : "Look up my code"}
+          accessibilityRole="button"
+        >
+          {lookupLoading ? (
+            <View style={styles.activatingRow}>
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: spacing.xs }} />
+              <Text style={styles.lookupButtonText}>Looking up...</Text>
+            </View>
+          ) : (
+            <Text style={styles.lookupButtonText}>Look Up My Code</Text>
+          )}
+        </Pressable>
+      </View>
+
+      {/* Divider */}
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or enter code manually</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      {/* Manual Code Input */}
+      <View style={styles.inputSection}>
+        <Text style={styles.label}>Activation Code</Text>
+        <TextInput
+          style={styles.codeInput}
           placeholder="SM-XXXXXX"
           autoCapitalize="characters"
           value={codeInput}
           onChangeText={setCodeInput}
           testID="enroll-code-input"
-          accessibilityLabel="Enrollment code"
+          accessibilityLabel="Activation code"
+          returnKeyType="done"
+          onSubmitEditing={handleActivate}
+          editable={!loading}
         />
 
-        <Text style={styles.label}>Device Label (required)</Text>
-        <TextInput
-          style={[
-            styles.input,
-            labelCheckResult?.isDuplicate && styles.inputError
-          ]}
-          placeholder="Counter-1"
-          value={labelInput}
-          onChangeText={setLabelInput}
-          testID="enroll-label-input"
-          accessibilityLabel="Device label"
-        />
-        {/* GL-RJ-006: Duplicate label warning */}
-        {checkingLabel && (
-          <Text style={styles.labelHint}>Checking label availability...</Text>
-        )}
-        {labelCheckResult?.isDuplicate && (
-          <View style={styles.duplicateWarning}>
-            <Text style={styles.duplicateWarningText}>
-              This label is already in use. Please choose a different label.
-            </Text>
-            {labelCheckResult.suggestions && labelCheckResult.suggestions.length > 0 && (
-              <View style={styles.suggestions}>
-                <Text style={styles.suggestionsLabel}>Suggestions:</Text>
-                <View style={styles.suggestionPills}>
-                  {labelCheckResult.suggestions.slice(0, 3).map((suggestion) => (
-                    <Pressable
-                      key={suggestion}
-                      style={styles.suggestionPill}
-                      onPress={() => setLabelInput(suggestion)}
-                    >
-                      <Text style={styles.suggestionPillText}>{suggestion}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-        {!checkingLabel && !labelCheckResult?.isDuplicate && labelInput.trim() && parseEnrollmentCode(codeInput) && (
-          <Text style={styles.labelAvailable}>Label available</Text>
-        )}
-
-        <Text style={styles.label}>Device Type</Text>
-        <View style={styles.pillRow}>
-          {DEVICE_TYPES.map((item) => (
-            <Pressable
-              key={item.value}
-              style={[
-                styles.pill,
-                deviceType === item.value && styles.pillActive
-              ]}
-              onPress={() => setDeviceType(item.value)}
-            >
-              <Text
-                style={[
-                  styles.pillText,
-                  deviceType === item.value && styles.pillTextActive
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.label}>Printing Mode (optional)</Text>
-        <View style={styles.pillRow}>
-          {PRINTING_MODES.map((item) => (
-            <Pressable
-              key={item.value}
-              style={[
-                styles.pill,
-                printingMode === item.value && styles.pillActive
-              ]}
-              onPress={() => setPrintingMode(item.value)}
-            >
-              <Text
-                style={[
-                  styles.pillText,
-                  printingMode === item.value && styles.pillTextActive
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
         <Pressable
-          style={styles.secondaryButton}
-          onPress={() => {
-            setScannerOpen((prev) => !prev);
-            setScanned(false);
-          }}
-          testID="enroll-scan-button"
-          accessibilityLabel={scannerOpen ? "Hide QR scanner" : "Open QR scanner"}
-          accessibilityRole="button"
-        >
-          <Text style={styles.secondaryButtonText}>
-            {scannerOpen ? "Hide Scanner" : "Scan QR"}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
-          onPress={handleEnroll}
+          style={[styles.activateButton, loading && styles.activateButtonDisabled]}
+          onPress={handleActivate}
           disabled={loading}
           testID="enroll-submit-button"
-          accessibilityLabel={loading ? "Enrolling device" : "Enroll device"}
+          accessibilityLabel={loading ? "Activating device" : "Activate device"}
           accessibilityRole="button"
           accessibilityState={{ disabled: loading }}
         >
           {loading ? (
-            <View style={styles.enrollingRow}>
+            <View style={styles.activatingRow}>
               <ActivityIndicator size="small" color={colors.textInverse} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.primaryButtonText}>Enrolling...</Text>
+              <Text style={styles.activateButtonText}>Activating...</Text>
             </View>
           ) : (
-            <Text style={styles.primaryButtonText}>Enroll Device</Text>
+            <Text style={styles.activateButtonText}>Activate POS</Text>
           )}
         </Pressable>
-
-        {/* DEV-only Test Store Shortcuts */}
-        {__DEV__ && (
-          <View style={styles.devSection}>
-            <Text style={styles.devSectionLabel}>DEV MODE</Text>
-
-            <View style={styles.devInfoRow}>
-              <Text style={styles.devInfoLabel}>API:</Text>
-              <Text style={styles.devInfoValue} numberOfLines={1}>{API_BASE_URL}</Text>
-            </View>
-
-            <View style={styles.devInfoRow}>
-              <Text style={styles.devInfoLabel}>Build:</Text>
-              <Text style={styles.devInfoValue}>{BUILD_INFO.gitSha} @ {BUILD_INFO.buildTime}</Text>
-            </View>
-
-            {TEST_STORE_CONFIG?.phone && TEST_STORE_CONFIG?.pin ? (
-              <Pressable
-                style={styles.devButton}
-                onPress={() => {
-                  // For enrollment, we can't auto-fill phone/PIN since enrollment uses code
-                  // Just show info that test credentials are loaded
-                  Alert.alert(
-                    "Test Store Ready",
-                    `Phone: ${TEST_STORE_CONFIG?.phone}\nPIN: ${TEST_STORE_CONFIG?.pin}\n\nUse these credentials after enrollment for quick login.`
-                  );
-                }}
-              >
-                <Text style={styles.devButtonText}>View Test Credentials</Text>
-              </Pressable>
-            ) : (
-              <Text style={styles.devWarning}>
-                Test credentials not set.{"\n"}
-                Set EXPO_PUBLIC_TEST_PHONE and EXPO_PUBLIC_TEST_PIN in .env.local
-              </Text>
-            )}
-          </View>
-        )}
       </View>
+
+      {/* Help Text */}
+      <View style={styles.helpSection}>
+        <Text style={styles.helpText}>
+          Don't have a store yet? Register at{" "}
+          <Text style={styles.helpLink} onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}>
+            supermandi.tech/retailer/register
+          </Text>
+        </Text>
+        <Text style={styles.helpTextSmall}>
+          After registration, SuperMandi will review your application. Once approved, enter your phone number above to activate.
+        </Text>
+        <Text style={styles.helpTextSmall}>
+          Need help?{" "}
+          <Text style={styles.helpLink} onPress={() => Linking.openURL("mailto:hello@supermandi.tech")}>
+            hello@supermandi.tech
+          </Text>
+        </Text>
+      </View>
+
+      {/* DEV-only section */}
+      {__DEV__ && (
+        <View style={styles.devSection}>
+          <Text style={styles.devSectionLabel}>DEV MODE</Text>
+          <View style={styles.devInfoRow}>
+            <Text style={styles.devInfoLabel}>API:</Text>
+            <Text style={styles.devInfoValue} numberOfLines={1}>{API_BASE_URL}</Text>
+          </View>
+          <View style={styles.devInfoRow}>
+            <Text style={styles.devInfoLabel}>Build:</Text>
+            <Text style={styles.devInfoValue}>{BUILD_INFO.gitSha} @ {BUILD_INFO.buildTime}</Text>
+          </View>
+          {TEST_STORE_CONFIG?.phone && TEST_STORE_CONFIG?.pin ? (
+            <Pressable
+              style={styles.devButton}
+              onPress={() => {
+                Alert.alert(
+                  "Test Store Ready",
+                  `Phone: ${TEST_STORE_CONFIG?.phone}\nPIN: ${TEST_STORE_CONFIG?.pin}\n\nUse these credentials after activation for quick login.`
+                );
+              }}
+            >
+              <Text style={styles.devButtonText}>View Test Credentials</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.devWarning}>
+              Test credentials not set.{"\n"}
+              Set EXPO_PUBLIC_TEST_PHONE and EXPO_PUBLIC_TEST_PIN in .env.local
+            </Text>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -738,166 +545,138 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxxl,
   },
+  headerSection: {
+    marginBottom: spacing.xl,
+  },
   title: {
     ...typography.h4,
     color: colors.textPrimary,
   },
   subtitle: {
     ...typography.caption,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
     color: colors.textSecondary,
+    lineHeight: 20,
   },
-  cameraWrap: {
-    marginTop: spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  camera: {
-    height: 220,
-    width: "100%"
-  },
-  permissionBox: {
-    padding: spacing.md,
-    alignItems: "center",
+  inputSection: {
     gap: spacing.sm,
-  },
-  permissionText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  controls: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
+    marginBottom: spacing.xl,
   },
   label: {
     ...typography.caption,
     fontWeight: "600",
     color: colors.textSecondary,
   },
-  input: {
-    ...typography.bodySmall,
-    borderWidth: 1,
+  phoneInput: {
+    ...typography.body,
+    borderWidth: 2,
     borderColor: colors.border,
     borderRadius: theme.borderRadius.lg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     backgroundColor: colors.surfaceAlt,
     color: colors.textPrimary,
+    fontSize: 18,
   },
-  // GL-RJ-006: Duplicate label detection styles
-  inputError: {
-    borderColor: colors.error,
-    backgroundColor: colors.errorSoft
-  },
-  labelHint: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontStyle: "italic",
-  },
-  duplicateWarning: {
-    backgroundColor: colors.errorSoft,
-    padding: spacing.sm,
+  lookupSuccess: {
+    backgroundColor: colors.success + "15",
     borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  duplicateWarningText: {
-    ...typography.caption,
-    fontSize: 12,
-    color: colors.error,
-    fontWeight: "500",
-  },
-  suggestions: {
-    marginTop: spacing.sm,
-  },
-  suggestionsLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  suggestionPills: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  suggestionPill: {
-    backgroundColor: colors.primarySoft,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.primary
   },
-  suggestionPillText: {
-    ...typography.caption,
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.primaryDark,
-  },
-  labelAvailable: {
-    fontSize: 11,
+  lookupSuccessText: {
     color: colors.success,
-    fontWeight: "500",
-  },
-  pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  pill: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface
-  },
-  pillActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.accentSoft
-  },
-  pillText: {
-    ...typography.caption,
-    fontSize: 12,
     fontWeight: "600",
-    color: colors.textSecondary,
+    fontSize: 13,
   },
-  pillTextActive: {
-    color: colors.primaryDark
+  lookupErrorText: {
+    color: colors.error,
+    fontSize: 12,
+    lineHeight: 16,
   },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
+  lookupButton: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: "transparent",
+    paddingVertical: spacing.md,
     borderRadius: theme.borderRadius.lg,
     alignItems: "center",
   },
-  primaryButtonDisabled: {
+  lookupButtonText: {
+    ...typography.button,
+    color: colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginHorizontal: spacing.sm,
+    fontSize: 12,
+  },
+  codeInput: {
+    ...typography.h4,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+    textAlign: "center",
+    letterSpacing: 3,
+  },
+  activateButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    alignItems: "center",
+    marginTop: spacing.xs,
+  },
+  activateButtonDisabled: {
     backgroundColor: colors.border,
     opacity: 0.6,
   },
-  primaryButtonText: {
+  activateButtonText: {
     ...typography.button,
     color: colors.textInverse,
   },
-  primaryButtonTextDisabled: {
-    color: colors.textSecondary
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: spacing.sm,
+  activatingRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
-  secondaryButtonText: {
-    ...typography.bodySmall,
+  helpSection: {
+    backgroundColor: colors.surfaceAlt,
+    padding: spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  helpText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  helpLink: {
     color: colors.primary,
     fontWeight: "600",
+  },
+  helpTextSmall: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    lineHeight: 16,
   },
   devSection: {
     marginTop: spacing.lg,
@@ -906,7 +685,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.warning,
-    borderStyle: "dashed"
+    borderStyle: "dashed",
   },
   devSectionLabel: {
     fontSize: 11,
@@ -923,13 +702,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: colors.textSecondary,
-    width: 45
+    width: 45,
   },
   devInfoValue: {
     flex: 1,
     fontSize: 11,
     fontFamily: "monospace",
-    color: colors.textPrimary
+    color: colors.textPrimary,
   },
   devButton: {
     marginTop: spacing.sm,
@@ -943,10 +722,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontWeight: "700",
     fontSize: 12,
-  },
-  enrollingRow: {
-    flexDirection: "row",
-    alignItems: "center",
   },
   devWarning: {
     marginTop: spacing.sm,

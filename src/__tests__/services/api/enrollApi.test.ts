@@ -49,16 +49,12 @@ jest.mock('../../../services/api/storage', () => ({
   clearAuthToken: jest.fn(),
 }));
 
-import { enrollDevice, checkDuplicateLabel } from '../../../services/api/enrollApi';
-import type { DeviceEnrollResponse, CheckDuplicateLabelResponse } from '../../../services/api/enrollApi';
+import { enrollDevice } from '../../../services/api/enrollApi';
+import type { DeviceEnrollResponse } from '../../../services/api/enrollApi';
 
 describe('enrollApi', () => {
   it('exports enrollDevice function', () => {
     expect(typeof enrollDevice).toBe('function');
-  });
-
-  it('exports checkDuplicateLabel function', () => {
-    expect(typeof checkDuplicateLabel).toBe('function');
   });
 
   it('DeviceEnrollResponse type has correct shape', () => {
@@ -72,24 +68,5 @@ describe('enrollApi', () => {
     };
     expect(response.deviceId).toBe('dev-1');
     expect(response.storeActive).toBe(true);
-  });
-
-  it('CheckDuplicateLabelResponse type has correct shape', () => {
-    const response: CheckDuplicateLabelResponse = {
-      isDuplicate: false,
-    };
-    expect(response.isDuplicate).toBe(false);
-
-    const duplicateResponse: CheckDuplicateLabelResponse = {
-      isDuplicate: true,
-      existingDevice: {
-        label: 'POS-1',
-        deviceId: 'dev-1',
-        status: 'active',
-      },
-      suggestions: ['POS-2', 'POS-3'],
-    };
-    expect(duplicateResponse.isDuplicate).toBe(true);
-    expect(duplicateResponse.existingDevice?.label).toBe('POS-1');
   });
 });

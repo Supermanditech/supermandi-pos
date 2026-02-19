@@ -15,6 +15,7 @@ export type DeviceEnrollResponse = {
   reEnrolled?: boolean;
   // ISSUE-MICRO-030: Number of active POS devices for this store (server may add this field)
   activeDeviceCount?: number;
+  upiVpa?: string | null; // #329-332: Payment setup — null means not set yet
 };
 
 export type DeviceMeta = {
@@ -77,43 +78,38 @@ export async function enrollDevice(input: {
   }
 }
 
-// =============================================================================
-// GL-RJ-006: Duplicate Label Detection
-// =============================================================================
+// #329: GL-RJ-006 checkDuplicateLabel removed — simplified activation flow has no device labels
 
-export type DeviceLabelInfo = {
-  label: string;
-  deviceId: string;
-  status: 'active' | 'inactive';
-  lastSeen?: string;
+// =============================================================================
+// Phone-based activation lookup (#329-332)
+// =============================================================================
+export type LookupActivationResponse = {
+  code: string;
+  storeName: string;
 };
 
-export type CheckDuplicateLabelResponse = {
-  isDuplicate: boolean;
-  existingDevice?: DeviceLabelInfo;
-  suggestions?: string[];
+export async function lookupActivation(phone: string): Promise<LookupActivationResponse> {
+  return apiClient.post<LookupActivationResponse>("/api/v1/pos/lookup-activation", { phone });
+}
+
+// =============================================================================
+// Payment settings (#329-332)
+// =============================================================================
+export type PaymentSettingsInput = {
+  upiVpa?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
 };
 
-/**
- * GL-RJ-006: Check if a device label already exists for the store
- * This is called before enrollment to prevent duplicate labels
- */
-export async function checkDuplicateLabel(input: {
-  enrollmentCode: string;
-  label: string;
-}): Promise<CheckDuplicateLabelResponse> {
-  try {
-    const response = await apiClient.post<CheckDuplicateLabelResponse>(
-      "/api/v1/pos/enroll/check-label",
-      {
-        code: input.enrollmentCode,
-        label: input.label.trim(),
-      }
-    );
-    return response;
-  } catch (error) {
-    // On error, allow enrollment to proceed (don't block on label check failure)
-    console.warn("[checkDuplicateLabel] Check failed, allowing enrollment:", error);
-    return { isDuplicate: false };
-  }
+export type PaymentSettingsResponse = {
+  success: boolean;
+  upiVpa: string | null;
+  bankAccountNumber: string | null;
+  bankIfsc: string | null;
+};
+
+export async function updatePaymentSettings(
+  input: PaymentSettingsInput
+): Promise<PaymentSettingsResponse> {
+  return apiClient.patch<PaymentSettingsResponse>("/api/v1/pos/store/payment-settings", input);
 }

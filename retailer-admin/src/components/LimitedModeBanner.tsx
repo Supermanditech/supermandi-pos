@@ -22,7 +22,7 @@ const STATUS_CONFIG: Record<string, { color: string; bgColor: string; borderColo
     bgColor: '#dbeafe',
     borderColor: '#60a5fa',
     label: 'Under Review',
-    message: 'Your documents are being reviewed. This usually takes 1-2 business days.',
+    message: 'Your documents are being reviewed. Once approved, download the SuperMandi POS app and enter your phone number to activate.',
   },
   PAYMENTS_SUBMITTED: {
     color: '#1e40af',

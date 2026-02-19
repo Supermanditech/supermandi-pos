@@ -84,6 +84,9 @@ interface StoresTabProps {
   storeEnrollmentsLoading: Record<string, boolean>;
   handleRevokeEnrollment: (code: string) => void;
   revokeLoading: boolean;
+  // #331: Resend welcome message (download links + activation instructions)
+  handleResendCode?: (code: string) => void;
+  resendLoading?: boolean;
 }
 
 export function StoresTab({
@@ -155,6 +158,8 @@ export function StoresTab({
   storeEnrollmentsLoading,
   handleRevokeEnrollment,
   revokeLoading,
+  handleResendCode,
+  resendLoading,
 }: StoresTabProps) {
   return (
     <section className="card">
@@ -533,13 +538,24 @@ export function StoresTab({
                                         {e.uses_count}/{e.max_uses} uses
                                       </span>
                                       {e.status === "ACTIVE" && (
-                                        <button
-                                          onClick={() => handleRevokeEnrollment(e.code)}
-                                          disabled={revokeLoading}
-                                          style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 11, textDecoration: "underline", padding: 0 }}
-                                        >
-                                          revoke
-                                        </button>
+                                        <>
+                                          <button
+                                            onClick={() => handleRevokeEnrollment(e.code)}
+                                            disabled={revokeLoading}
+                                            style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 11, textDecoration: "underline", padding: 0 }}
+                                          >
+                                            revoke
+                                          </button>
+                                          {handleResendCode && (
+                                            <button
+                                              onClick={() => handleResendCode(e.code)}
+                                              disabled={resendLoading}
+                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#2563eb", fontSize: 11, textDecoration: "underline", padding: 0 }}
+                                            >
+                                              resend
+                                            </button>
+                                          )}
+                                        </>
                                       )}
                                     </span>
                                   );
