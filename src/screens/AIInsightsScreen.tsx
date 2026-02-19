@@ -99,9 +99,9 @@ export default function AIInsightsScreen({ onBack }: Props) {
 
   const severityColor = (s: string) => {
     switch (s) {
-      case 'critical': return '#DC2626';
-      case 'warning': return '#F59E0B';
-      default: return '#0EA5E9';
+      case 'critical': return theme.colors.error;
+      case 'warning': return theme.colors.warning;
+      default: return theme.colors.info;
     }
   };
 
@@ -115,6 +115,8 @@ export default function AIInsightsScreen({ onBack }: Props) {
           setAlerts(prev => prev.map(a => a.id === item.id ? { ...a, isRead: false } : a));
         });
       }}
+      accessibilityLabel={`${item.severity} alert: ${item.title}`}
+      accessibilityRole="button"
     >
       <View style={[styles.severityDot, { backgroundColor: severityColor(item.severity) }]} />
       <View style={{ flex: 1 }}>
@@ -140,13 +142,16 @@ export default function AIInsightsScreen({ onBack }: Props) {
     </View>
   );
 
+  const trendBg = (trend: string) => trend === 'dead_stock' ? theme.colors.errorSoft : theme.colors.warningSoft;
+  const trendFg = (trend: string) => trend === 'dead_stock' ? theme.colors.errorDark : theme.colors.warningDark;
+
   const renderSlowMover = ({ item }: { item: aiApi.SlowMover }) => (
     <View style={styles.card}>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={styles.cardTitle}>{item.productName}</Text>
-          <View style={[styles.badge, { backgroundColor: item.trend === 'dead_stock' ? '#FEE2E2' : '#FEF3C7' }]}>
-            <Text style={{ fontSize: 10, color: item.trend === 'dead_stock' ? '#991B1B' : '#92400E' }}>
+          <View style={[styles.badge, { backgroundColor: trendBg(item.trend) }]}>
+            <Text style={[styles.badgeText, { color: trendFg(item.trend) }]}>
               {item.trend.replace('_', ' ')}
             </Text>
           </View>
@@ -157,11 +162,17 @@ export default function AIInsightsScreen({ onBack }: Props) {
     </View>
   );
 
+  const urgencyColor = (urgency: string) => {
+    switch (urgency) {
+      case 'expired': return theme.colors.error;
+      case 'critical': return theme.colors.warning;
+      default: return theme.colors.info;
+    }
+  };
+
   const renderExpiry = ({ item }: { item: aiApi.ExpiryItem }) => (
     <View style={styles.card}>
-      <View style={[styles.severityDot, {
-        backgroundColor: item.urgency === 'expired' ? '#DC2626' : item.urgency === 'critical' ? '#F59E0B' : '#0EA5E9'
-      }]} />
+      <View style={[styles.severityDot, { backgroundColor: urgencyColor(item.urgency) }]} />
       <View style={{ flex: 1 }}>
         <Text style={styles.cardTitle}>{item.productName}</Text>
         <Text style={styles.cardDesc}>
@@ -180,7 +191,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
           Current: {'\u20B9'}{(item.currentPrice / 100).toFixed(2)} | Best: {'\u20B9'}{(item.bestPrice / 100).toFixed(2)}
         </Text>
         {item.maxSavings > 0 && (
-          <Text style={[styles.cardMeta, { color: '#16A34A' }]}>
+          <Text style={[styles.cardMeta, { color: theme.colors.success }]}>
             Save {'\u20B9'}{(item.maxSavings / 100).toFixed(2)} ({item.maxSavingsPercent.toFixed(1)}%)
           </Text>
         )}
@@ -204,7 +215,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable onPress={onBack} style={styles.backBtn}>
+        <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>AI Insights</Text>
@@ -213,7 +224,14 @@ export default function AIInsightsScreen({ onBack }: Props) {
       {/* Tabs */}
       <View style={styles.tabBar}>
         {tabs.map(t => (
-          <Pressable key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.activeTab]}>
+          <Pressable
+            key={t.key}
+            onPress={() => setTab(t.key)}
+            style={[styles.tab, tab === t.key && styles.activeTab]}
+            accessibilityLabel={t.label}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === t.key }}
+          >
             <MaterialCommunityIcons
               name={t.icon as any}
               size={18}
@@ -257,13 +275,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border, backgroundColor: theme.colors.surface,
   },
   backBtn: { padding: 4, marginRight: 8 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: theme.colors.textPrimary },
   tabBar: {
-    flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0', paddingHorizontal: 4,
+    flexDirection: 'row', backgroundColor: theme.colors.surface, borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border, paddingHorizontal: 4,
   },
   tab: {
     flex: 1, alignItems: 'center', paddingVertical: 10, gap: 2,
@@ -272,19 +290,20 @@ const styles = StyleSheet.create({
   tabLabel: { fontSize: 11, color: theme.colors.textTertiary },
   activeTabLabel: { color: theme.colors.primary, fontWeight: '600' },
   card: {
-    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 8, padding: 12,
-    marginBottom: 8, borderWidth: 1, borderColor: '#e2e8f0', gap: 10,
+    flexDirection: 'row', backgroundColor: theme.colors.surface, borderRadius: 8, padding: 12,
+    marginBottom: 8, borderWidth: 1, borderColor: theme.colors.border, gap: 10,
   },
   unreadCard: { borderLeftWidth: 3, borderLeftColor: theme.colors.primary },
   severityDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
   cardTitle: { fontSize: 14, fontWeight: '500', color: theme.colors.textPrimary, marginBottom: 2 },
   cardDesc: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
   cardMeta: { fontSize: 11, color: theme.colors.textTertiary },
-  confidenceBar: { height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, marginTop: 4 },
+  confidenceBar: { height: 4, backgroundColor: theme.colors.backgroundTertiary, borderRadius: 2, marginTop: 4 },
   confidenceFill: { height: 4, backgroundColor: theme.colors.primary, borderRadius: 2 },
   badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  errorBar: { backgroundColor: '#FEE2E2', padding: 10 },
-  errorText: { color: '#991B1B', fontSize: 13 },
+  badgeText: { fontSize: 10 },
+  errorBar: { backgroundColor: theme.colors.errorSoft, padding: 10 },
+  errorText: { color: theme.colors.errorDark, fontSize: 13 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { fontSize: 14, color: theme.colors.textTertiary, marginTop: 8 },
 });

@@ -144,13 +144,13 @@ export default function ChatConversationScreen({
           {/* Attachment */}
           {item.messageType === 'image' && item.attachmentUrl && (
             <View style={styles.attachmentPreview}>
-              <MaterialCommunityIcons name="image" size={20} color="#64748b" />
+              <MaterialCommunityIcons name="image" size={20} color={theme.colors.textTertiary} />
               <Text style={styles.attachmentText}>{item.attachmentName || 'Photo'}</Text>
             </View>
           )}
           {item.messageType === 'document' && item.attachmentUrl && (
             <View style={styles.attachmentPreview}>
-              <MaterialCommunityIcons name="file-document" size={20} color="#64748b" />
+              <MaterialCommunityIcons name="file-document" size={20} color={theme.colors.textTertiary} />
               <Text style={styles.attachmentText}>{item.attachmentName || 'Document'}</Text>
             </View>
           )}
@@ -176,7 +176,7 @@ export default function ChatConversationScreen({
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable onPress={onBack} style={styles.backBtn}>
+        <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
         </Pressable>
         <View style={styles.headerInfo}>
@@ -191,12 +191,12 @@ export default function ChatConversationScreen({
       {error && (
         <View style={styles.errorBar}>
           <Text style={styles.errorText}>{error}</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 }}>
-            <Pressable onPress={() => { setError(null); fetchMessages(); }}>
-              <Text style={{ color: '#991b1b', fontSize: 12, fontWeight: '600' }}>Retry</Text>
+          <View style={styles.errorActions}>
+            <Pressable onPress={() => { setError(null); fetchMessages(); }} accessibilityLabel="Retry" accessibilityRole="button">
+              <Text style={styles.retryText}>Retry</Text>
             </Pressable>
-            <Pressable onPress={() => setError(null)}>
-              <Text style={{ color: '#64748b', fontSize: 12 }}>Dismiss</Text>
+            <Pressable onPress={() => setError(null)} accessibilityLabel="Dismiss error" accessibilityRole="button">
+              <Text style={styles.dismissText}>Dismiss</Text>
             </Pressable>
           </View>
         </View>
@@ -217,7 +217,7 @@ export default function ChatConversationScreen({
           contentContainerStyle={styles.messagesList}
           ListEmptyComponent={
             <View style={styles.emptyCenter}>
-              <MaterialCommunityIcons name="chat-processing-outline" size={40} color="#94a3b8" />
+              <MaterialCommunityIcons name="chat-processing-outline" size={40} color={theme.colors.textTertiary} />
               <Text style={styles.emptyText}>No messages yet. Say hello!</Text>
             </View>
           }
@@ -231,20 +231,25 @@ export default function ChatConversationScreen({
           value={text}
           onChangeText={setText}
           placeholder="Type a message..."
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={theme.colors.textTertiary}
           multiline
           maxLength={2000}
           editable={!sending}
+          accessibilityLabel="Message input"
+          testID="chat-message-input"
         />
         <Pressable
           style={[styles.sendBtn, (!text.trim() || sending) && styles.sendBtnDisabled]}
           onPress={handleSend}
           disabled={!text.trim() || sending}
+          accessibilityLabel="Send message"
+          accessibilityRole="button"
+          testID="chat-send-btn"
         >
           {sending ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={theme.colors.textInverse} />
           ) : (
-            <MaterialCommunityIcons name="send" size={20} color="#fff" />
+            <MaterialCommunityIcons name="send" size={20} color={theme.colors.textInverse} />
           )}
         </Pressable>
       </View>
@@ -253,31 +258,34 @@ export default function ChatConversationScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: theme.colors.surfaceAlt },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
-    backgroundColor: '#fff',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   backBtn: { padding: 4, marginRight: 8 },
   headerInfo: { flex: 1 },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: '#1e293b' },
-  headerSubtitle: { fontSize: 12, color: '#64748b' },
-  errorBar: { padding: 8, backgroundColor: '#fee2e2' },
-  errorText: { color: '#991b1b', fontSize: 12, textAlign: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '600', color: theme.colors.textPrimary },
+  headerSubtitle: { fontSize: 12, color: theme.colors.textTertiary },
+  errorBar: { padding: 8, backgroundColor: theme.colors.errorSoft },
+  errorText: { color: theme.colors.errorDark, fontSize: 12, textAlign: 'center' },
+  errorActions: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
+  retryText: { color: theme.colors.errorDark, fontSize: 12, fontWeight: '600' },
+  dismissText: { color: theme.colors.textTertiary, fontSize: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, transform: [{ scaleY: -1 }] },
-  emptyText: { marginTop: 8, color: '#64748b', fontSize: 14 },
+  emptyText: { marginTop: 8, color: theme.colors.textTertiary, fontSize: 14 },
   messagesList: { paddingHorizontal: 12, paddingVertical: 8 },
   dateSeparator: {
-    textAlign: 'center', fontSize: 11, color: '#94a3b8', marginVertical: 8,
-    backgroundColor: '#f1f5f9', alignSelf: 'center', paddingHorizontal: 12,
+    textAlign: 'center', fontSize: 11, color: theme.colors.textTertiary, marginVertical: 8,
+    backgroundColor: theme.colors.backgroundSecondary, alignSelf: 'center', paddingHorizontal: 12,
     paddingVertical: 3, borderRadius: 10, overflow: 'hidden',
   },
   systemMessage: { alignItems: 'center', marginVertical: 4 },
   systemText: {
-    fontSize: 12, color: '#64748b', fontStyle: 'italic',
-    backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 4,
+    fontSize: 12, color: theme.colors.textTertiary, fontStyle: 'italic',
+    backgroundColor: theme.colors.backgroundSecondary, paddingHorizontal: 12, paddingVertical: 4,
     borderRadius: 8, overflow: 'hidden',
   },
   bubble: {
@@ -285,30 +293,30 @@ const styles = StyleSheet.create({
     borderRadius: 16, marginVertical: 2,
   },
   ownBubble: { alignSelf: 'flex-end', backgroundColor: theme.colors.primary, borderBottomRightRadius: 4 },
-  otherBubble: { alignSelf: 'flex-start', backgroundColor: '#fff', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#e2e8f0' },
+  otherBubble: { alignSelf: 'flex-start', backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: theme.colors.border },
   messageText: { fontSize: 14, lineHeight: 20 },
-  ownText: { color: '#fff' },
-  otherText: { color: '#1e293b' },
+  ownText: { color: theme.colors.textInverse },
+  otherText: { color: theme.colors.textPrimary },
   time: { fontSize: 10, marginTop: 2 },
-  ownTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' },
-  otherTime: { color: '#94a3b8' },
+  ownTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' }, // Semi-transparent white on primary bg
+  otherTime: { color: theme.colors.textTertiary },
   attachmentPreview: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingVertical: 4, marginBottom: 4,
   },
-  attachmentText: { fontSize: 12, color: '#64748b' },
+  attachmentText: { fontSize: 12, color: theme.colors.textTertiary },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', padding: 8,
-    borderTopWidth: 1, borderTopColor: '#e2e8f0', backgroundColor: '#fff',
+    borderTopWidth: 1, borderTopColor: theme.colors.border, backgroundColor: theme.colors.surface,
   },
   input: {
-    flex: 1, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 20,
+    flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 8, fontSize: 14,
-    maxHeight: 100, color: '#1e293b', backgroundColor: '#f8fafc',
+    maxHeight: 100, color: theme.colors.textPrimary, backgroundColor: theme.colors.surfaceAlt,
   },
   sendBtn: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.primary,
     alignItems: 'center', justifyContent: 'center', marginLeft: 8,
   },
-  sendBtnDisabled: { backgroundColor: '#94a3b8' },
+  sendBtnDisabled: { backgroundColor: theme.colors.textTertiary },
 });
