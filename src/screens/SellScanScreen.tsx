@@ -2573,7 +2573,7 @@ export default function SellScanScreen({
           variant === "expanded" && styles.searchSegmentExpanded,
         ]}
       >
-        <MaterialCommunityIcons name="magnify" size={18} color="#000000" />
+        <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textPrimary} />
         <TextInput
           ref={addInputRef}
           style={styles.searchInput}
@@ -2605,7 +2605,8 @@ export default function SellScanScreen({
           onKeyPress={handleAddKeyPress}
           onSubmitEditing={handleAddSubmitEditing}
           placeholder={t('sell.searchProducts')}
-          placeholderTextColor="#000000"
+          placeholderTextColor={theme.colors.textTertiary}
+          testID="sell-search-input"
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
@@ -2622,7 +2623,7 @@ export default function SellScanScreen({
             <MaterialCommunityIcons
               name="close-circle"
               size={18}
-              color="#000000"
+              color={theme.colors.textPrimary}
             />
           </Pressable>
         ) : null}
@@ -2637,6 +2638,7 @@ export default function SellScanScreen({
         onPress={handleCameraPress}
         disabled={scanDisabled}
         accessibilityLabel="Open camera scanner"
+        testID="sell-scan-btn"
       >
         <MaterialCommunityIcons name="camera" size={18} color={theme.colors.textInverse} />
         {variant === "collapsed" ? (
@@ -3160,6 +3162,7 @@ export default function SellScanScreen({
           ]}
           onPress={handleOpenCart}
           accessibilityLabel="View cart"
+          testID="sell-cart-bar"
         >
           <View style={styles.cartBarLeft}>
             <View style={styles.cartBarIconWrap}>
@@ -3387,6 +3390,7 @@ export default function SellScanScreen({
                 onPress={handleCheckout}
                 disabled={!canPay}
                 accessibilityLabel={t("sell.checkout", "Checkout")}
+                testID="sell-checkout-btn"
               >
                 <ButtonText style={styles.totalCtaText}>{t("sell.checkout", "Checkout")}</ButtonText>
                 <PriceText style={styles.totalCtaAmount}>{totalLabel}</PriceText>
@@ -4031,7 +4035,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#000000",
+    color: theme.colors.textPrimary,
     paddingVertical: 0,
   },
   // VOICE-001: Floating voice button (FAB)
@@ -4479,7 +4483,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   discountBadgeTextFree: {
-    color: "#fff",
+    color: theme.colors.textInverse,
   },
   cartItemMainRow: {
     flexDirection: "row",
@@ -5270,7 +5274,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.warning,
   },
   editDiscountChipTextFree: {
-    color: "#fff",
+    color: theme.colors.textInverse,
   },
   editDiscountInput: {
     flex: 1,
