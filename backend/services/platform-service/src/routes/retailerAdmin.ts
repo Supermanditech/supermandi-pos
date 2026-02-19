@@ -28,6 +28,9 @@ import { generateSignedDownloadUrl } from '@supermandi/common';
 
 const router: Router = Router();
 
+// GCP-PARITY: Use env var for portal base URL (staging vs production)
+const PORTAL_BASE_URL = process.env.PORTAL_BASE_URL || 'https://supermandi.tech';
+
 // =============================================================================
 // ASYNC HANDLER
 // =============================================================================
@@ -117,7 +120,7 @@ router.post(
       data: {
         storeId,
         storeCode: store.code,
-        portalUrl: `https://supermandi.tech/s/${store.code}`,
+        portalUrl: `${PORTAL_BASE_URL}/s/${store.code}`,
         phone: normalizedPhone,
         maskedPhone: maskPhoneNumber(normalizedPhone),
         message: 'Retailer portal initialized. User will complete registration on first login.',
@@ -149,7 +152,7 @@ router.get(
         storeId,
         storeCode: store.code,
         portalEnabled: portalInfo?.retailer_portal_enabled || false,
-        portalUrl: portalInfo?.retailer_portal_enabled ? `https://supermandi.in/s/${store.code}` : null,
+        portalUrl: portalInfo?.retailer_portal_enabled ? `${PORTAL_BASE_URL}/s/${store.code}` : null,
         phone: portalInfo?.retailer_portal_phone || null,
         maskedPhone: portalInfo?.retailer_portal_phone
           ? maskPhoneNumber(portalInfo.retailer_portal_phone)
@@ -288,7 +291,7 @@ router.post(
       data: {
         storeId,
         storeCode: store.code,
-        portalUrl: `https://supermandi.tech/s/${store.code}`,
+        portalUrl: `${PORTAL_BASE_URL}/s/${store.code}`,
         expiresAt: tokenExpiresAt,
         impersonatedBy: adminUserId,
         message: 'Impersonation session created. Token generation requires auth-service integration.',

@@ -122,11 +122,11 @@ export function ApplicationsTab({
                 </div>
 
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Rejection Reason (required for reject):</label>
-                  <input
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Rejection Reason (required for reject, min 10 chars):</label>
+                  <textarea
                     className="tableInput"
-                    style={{ width: "100%", marginBottom: 8 }}
-                    placeholder="Reason for rejection (min 5 chars)..."
+                    style={{ width: "100%", marginBottom: 8, minHeight: 48, resize: "vertical" }}
+                    placeholder="Describe what the applicant needs to fix (min 10 characters)..."
                     value={appRejectReason[app.id] || ""}
                     onChange={(e) => setAppRejectReason((prev) => ({ ...prev, [app.id]: e.target.value }))}
                   />
@@ -140,13 +140,21 @@ export function ApplicationsTab({
                         Awaiting applicant resubmission
                       </span>
                       <button
+                        onClick={() => handleApproveApplication(app.id)}
+                        disabled={appActionLoading[app.id]}
+                        style={{ background: "#22c55e", color: "white" }}
+                        title={`Approve resubmitted ${app.entityType === 'retailer' ? 'store' : 'supplier'} application`}
+                      >
+                        {appActionLoading[app.id] ? "Approving..." : "Approve"}
+                      </button>
+                      <button
                         className="btnGhost"
                         onClick={() => handleRejectApplication(app.id)}
                         disabled={appActionLoading[app.id]}
                         style={{ color: "#ef4444" }}
-                        title="Update rejection reason"
+                        title="Update rejection reason and send back"
                       >
-                        {appActionLoading[app.id] ? "Rejecting..." : "Re-Reject"}
+                        {appActionLoading[app.id] ? "Updating..." : "Update Rejection"}
                       </button>
                     </>
                   ) : (

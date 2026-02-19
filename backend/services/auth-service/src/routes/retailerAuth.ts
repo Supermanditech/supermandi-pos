@@ -125,9 +125,9 @@ interface AuthUser {
 // DATABASE QUERIES
 // =============================================================================
 
-async function getStoreByCode(code: string): Promise<StoreWithPortal | null> {
-  const result = await query<StoreWithPortal>(
-    `SELECT id, code, name, retailer_portal_enabled, retailer_portal_phone
+async function getStoreByCode(code: string): Promise<(StoreWithPortal & { status: string }) | null> {
+  const result = await query<StoreWithPortal & { status: string }>(
+    `SELECT id, code, name, status, retailer_portal_enabled, retailer_portal_phone
      FROM platform.stores
      WHERE code = $1`,
     [code]
@@ -273,6 +273,14 @@ router.post(
 
     if (!store.retailer_portal_enabled) {
       throw ApiError.forbidden('Retailer portal is not enabled for this store');
+    }
+
+    // SEC-3: Check store status — reject login for suspended/deleted stores
+    if (store.status === 'suspended' || store.status === 'SUSPENDED') {
+      throw ApiError.forbidden('Your store account has been suspended. Contact support at hello@supermandi.tech');
+    }
+    if (store.status === 'deleted' || store.status === 'DELETED') {
+      throw ApiError.notFound('Store not found');
     }
 
     // 4. Verify phone matches store's retailer portal phone

@@ -641,6 +641,8 @@ export default function RegisterPage() {
                   <strong>Phone Verification Unavailable</strong>
                   <p style={{ marginTop: '0.25rem', marginBottom: 0 }}>
                     Registration requires phone verification which is currently unavailable.
+                    Please try again later or contact us at{' '}
+                    <a href="mailto:hello@supermandi.tech" style={{ color: '#1e40af', fontWeight: 500 }}>hello@supermandi.tech</a>.
                   </p>
                 </div>
               )}
@@ -847,8 +849,8 @@ export default function RegisterPage() {
                     style={{ marginTop: '0.25rem', width: '20px', height: '20px' }} />
                   <span>
                     I confirm that all the details provided are correct and accurate. I agree to the{' '}
-                    <span style={{ color: '#2563eb' }}>Terms of Service</span> and{' '}
-                    <span style={{ color: '#2563eb' }}>Privacy Policy</span>. *
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Privacy Policy</a>. *
                   </span>
                 </label>
                 {fieldErrors.agreement && <div style={styles.fieldError}>{fieldErrors.agreement}</div>}
@@ -1033,8 +1035,13 @@ export default function RegisterPage() {
                   <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem', textAlign: 'left' }}>
                     <li>We review your documents (usually 1-2 business days)</li>
                     <li>Once approved, you'll receive a <strong>welcome message</strong> via WhatsApp and Email</li>
-                    <li>Download the SuperMandi POS app, enter your phone number, and your store activates automatically</li>
+                    <li><a href="/pos" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 600 }}>Download the SuperMandi POS app</a>, enter your phone number, and your store activates automatically</li>
                   </ol>
+                </div>
+
+                <div style={{ fontSize: '0.8125rem', color: '#64748b', textAlign: 'center', margin: '0.5rem 0' }}>
+                  Need help? Contact us at{' '}
+                  <a href="mailto:hello@supermandi.tech" style={{ color: '#2563eb' }}>hello@supermandi.tech</a>
                 </div>
 
                 <Link

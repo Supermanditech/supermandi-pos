@@ -235,6 +235,15 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     const storeCode = store.code ?? "";
     const isDemo = isDemoStoreCode(storeCode) || isDemoCode(code);
 
+    // SEC-6: Reject enrollment for non-ACTIVE stores (demo stores bypass)
+    if (!store.active && !isDemo) {
+      await client.query("ROLLBACK");
+      log.info(`[Enroll] REJECT 403: Store ${store.id} is not active (status != ACTIVE)`);
+      return res.status(403).json({
+        error: { code: "STORE_INACTIVE", message: "This store is not active. Contact support at hello@supermandi.tech" }
+      });
+    }
+
     // Parse enrollment state
     const expiresAt = new Date(enrollment.expires_at);
     const isExpired = !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now();
@@ -787,8 +796,9 @@ posEnrollRouter.post("/lookup-activation", lookupBurstLimiter, lookupSustainedLi
  */
 function generateActivationCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed ambiguous: 0,O,I,1
-  const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  const part2 = Array.from({ length: 2 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const bytes = randomBytes(6);
+  const part1 = Array.from({ length: 4 }, (_, i) => chars[bytes[i]! % chars.length]).join("");
+  const part2 = Array.from({ length: 2 }, (_, i) => chars[bytes[i + 4]! % chars.length]).join("");
   return `SM-${part1}-${part2}`;
 }
 
