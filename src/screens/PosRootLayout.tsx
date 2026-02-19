@@ -1207,10 +1207,14 @@ export default function PosRootLayout() {
                 setSelectedMode(tab.id);
               }}
               disabled={isStoreDisabled}
-              testID={isReorder ? "tab-reorder" : isPurchase ? "tab-buy" : isCredit ? "tab-credit" : undefined}
+              testID={`tab-${tab.id.toLowerCase()}`}
               accessibilityLabel={
-                isReorder ? `Reorder ${reorderStatusLabel}` : tab.id === "MENU" ? "Menu" : undefined
+                isReorder ? `Reorder ${reorderStatusLabel}`
+                  : tab.id === "MENU" ? "Menu"
+                  : `${tabLabels[tab.id]} tab${active ? ", selected" : ""}`
               }
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active, disabled: isDisabled || isStoreDisabled }}
             >
               {tab.id === "MENU" ? (
                 <View style={styles.tabMenuContent}>
@@ -1360,7 +1364,13 @@ export default function PosRootLayout() {
                 <Text style={styles.cameraPermissionText}>
                   Camera permission is required to scan barcodes.
                 </Text>
-                <Pressable style={styles.cameraPermissionButton} onPress={() => requestCameraPermission()}>
+                <Pressable
+                  style={styles.cameraPermissionButton}
+                  onPress={() => requestCameraPermission()}
+                  testID="camera-allow-btn"
+                  accessibilityLabel="Allow camera access"
+                  accessibilityRole="button"
+                >
                   <Text style={styles.cameraPermissionButtonText}>Allow Camera</Text>
                 </Pressable>
               </View>
@@ -1374,7 +1384,12 @@ export default function PosRootLayout() {
                   </Text>
                 ) : null}
               </View>
-              <Pressable onPress={() => setScannerOpen(false)}>
+              <Pressable
+                onPress={() => setScannerOpen(false)}
+                testID="camera-close-btn"
+                accessibilityLabel="Close camera"
+                accessibilityRole="button"
+              >
                 <Text style={styles.cameraClose}>Close</Text>
               </Pressable>
             </View>
@@ -1545,11 +1560,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.overlayLight,
     justifyContent: "center",
-    padding: 16,
+    padding: theme.spacing.md,
   },
   cameraCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    borderRadius: theme.borderRadius.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: "hidden",
@@ -1586,9 +1601,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   cameraPermission: {
-    padding: 16,
+    padding: theme.spacing.md,
     alignItems: "center",
-    gap: 12,
+    gap: theme.spacing.sm,
   },
   cameraPermissionText: {
     color: theme.colors.textSecondary,
@@ -1597,9 +1612,9 @@ const styles = StyleSheet.create({
   cameraPermissionButton: {
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
   },
   cameraPermissionButtonText: {
     color: theme.colors.primary,
