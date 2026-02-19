@@ -54,6 +54,7 @@ type RootStackParamList = {
   ChatList: undefined; // T-294: Chat list screen
   AIInsights: undefined; // T-307: AI Insights screen
   BulkPurchaseCredit: undefined; // T-288: Bulk purchase credit screen
+  Help: undefined; // HELP-001: Help & Support screen
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -392,6 +393,7 @@ export default function MenuScreen() {
   const goToChat = () => navigation.navigate("ChatList"); // T-294
   const goToAIInsights = () => navigation.navigate("AIInsights"); // T-307
   const goToBulkPurchaseCredit = () => navigation.navigate("BulkPurchaseCredit"); // T-288
+  const goToHelp = () => navigation.navigate("Help"); // HELP-001
 
   return (
     <ScrollView
@@ -1015,6 +1017,18 @@ export default function MenuScreen() {
         <View style={styles.menuText}>
           <Text style={styles.menuTitle}>Printer Settings</Text>
           <Text style={styles.menuSubtitle}>Paper width, auto-print, copies</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* HELP-001: Help & Support */}
+      <Pressable style={styles.menuItem} onPress={goToHelp}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"help-circle-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Help &amp; Support</Text>
+          <Text style={styles.menuSubtitle}>Contact us, quick links</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>

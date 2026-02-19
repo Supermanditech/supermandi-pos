@@ -11,7 +11,7 @@ import Modal from '@/components/Modal';
 // REG-AUTH-302: LIMITED MODE Banner
 import LimitedModeBanner from '@/components/LimitedModeBanner';
 // T-082: Lucide SVG nav icons  |  T-087: Mobile hamburger icons
-import { LayoutDashboard, Package, FileSpreadsheet, ShoppingCart, ClipboardList, DollarSign, Receipt, Menu, X, Bell, MessageSquare, CreditCard, User } from 'lucide-react';
+import { LayoutDashboard, Package, FileSpreadsheet, ShoppingCart, ClipboardList, DollarSign, Receipt, Menu, X, Bell, MessageSquare, CreditCard, User, HelpCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // T-082: Lucide SVG icons replace emoji strings
@@ -27,6 +27,7 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },  // T-295
   { href: '/bnpl-orders', label: 'BNPL Orders', icon: CreditCard },  // T-280
   { href: '/profile', label: 'Profile', icon: User },  // UIUX-SUP-001: Profile page is fully implemented
+  { href: '/help', label: 'Help & Support', icon: HelpCircle },  // HELP-001
 ];
 
 export default function DashboardLayout({

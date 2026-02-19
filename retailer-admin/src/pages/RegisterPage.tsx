@@ -1054,9 +1054,12 @@ export default function RegisterPage() {
 
       {/* Footer */}
       <footer style={styles.footer}>
-        <div style={styles.footerInner}>
-          &copy; 2026 SuperManditech. All rights reserved.
-          <BuildStamp />
+        <div style={{ ...styles.footerInner, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Link to="/retailer/help" style={{ color: '#94A3B8', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+            <BuildStamp />
+          </div>
         </div>
       </footer>
     </div>

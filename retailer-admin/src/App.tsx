@@ -48,6 +48,9 @@ const SupplierQueuePage = lazy(() => import('./pages/admin/SupplierQueuePage'));
 const ProductQueuePage = lazy(() => import('./pages/admin/ProductQueuePage'));
 // T-115: Branded 404 page
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+// HELP-001: Help & Support pages (pre-login + post-login)
+const HelpPage = lazy(() => import('./pages/HelpPage'));
+const HelpDashboardPage = lazy(() => import('./pages/HelpDashboardPage'));
 
 // RET-AUD-048 + ISSUE-MICRO-106: Skeleton loading fallback for Suspense boundaries
 const PageLoadingFallback = () => (
@@ -279,6 +282,8 @@ function AppRoutes() {
         <Route path="/retailer/onboard" element={<Navigate to="/retailer/register" replace />} />
         {/* RET-CLEANUP-001: Forgot password page - accessible without auth */}
         <Route path="/retailer/forgot-password" element={<LazyPage><ForgotPasswordPage /></LazyPage>} />
+        {/* HELP-001: Help & Support page - accessible without auth */}
+        <Route path="/retailer/help" element={<LazyPage><HelpPage /></LazyPage>} />
 
         {/* Legacy routes - redirect to new paths */}
         <Route path="/s/:storeCode/login" element={<Navigate to="/retailer/login" replace />} />
@@ -329,6 +334,8 @@ function AppRoutes() {
           <Route path="admin/products" element={<LimitedModeGuard><AdminRoute><LazyPage><ProductQueuePage /></LazyPage></AdminRoute></LimitedModeGuard>} />
           {/* P2-RD-002: QA page hidden in production */}
           {import.meta.env.DEV && <Route path="_pages" element={<LazyPage><AllPagesPage /></LazyPage>} />}
+          {/* HELP-001: Help & Support page — allowed in limited mode */}
+          <Route path="help" element={<LazyPage><HelpDashboardPage /></LazyPage>} />
           {/* T-115: Store-scoped 404 — catches unknown paths under /s/:storeCode */}
           <Route path="*" element={<LazyPage><NotFoundPage /></LazyPage>} />
         </Route>

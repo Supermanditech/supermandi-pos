@@ -75,6 +75,8 @@ import ChatConversationScreen from "./src/screens/ChatConversationScreen";
 import AIInsightsScreen from "./src/screens/AIInsightsScreen";
 // T-288: Bulk Purchase Credit Screen
 import BulkPurchaseCreditScreen from "./src/screens/BulkPurchaseCreditScreen";
+// HELP-001: Help & Support screen
+import HelpScreen from "./src/screens/HelpScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -341,6 +343,12 @@ function BulkPurchaseCreditWrapper() {
   return <BulkPurchaseCreditScreen onBack={() => navigation.goBack()} />;
 }
 
+// HELP-001: Help & Support screen wrapper
+function HelpScreenWrapper() {
+  const navigation = useNavigation<any>();
+  return <HelpScreen onBack={() => navigation.goBack()} />;
+}
+
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
 // Phase 8: Push notification setup
@@ -493,6 +501,8 @@ export default function App() {
           <Stack.Screen name="AIInsights" component={AIInsightsWrapper} />
           {/* T-288: Bulk Purchase Credit */}
           <Stack.Screen name="BulkPurchaseCredit" component={BulkPurchaseCreditWrapper} />
+          {/* HELP-001: Help & Support */}
+          <Stack.Screen name="Help" component={HelpScreenWrapper} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
         </ErrorBoundary>

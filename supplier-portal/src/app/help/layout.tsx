@@ -1,14 +1,18 @@
 import { BuildStamp } from '@/components/BuildStamp';
 
-// UI-SPEC-004: Stripe-level calm infrastructure design for auth layout
-export default function AuthLayout({
+/**
+ * HELP-001: Standalone layout for Help & Support page.
+ * Matches auth layout style but with wider content area.
+ * Accessible both pre-login and post-login (top-level route avoids route group collision).
+ */
+export default function HelpLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F9FC]">
-      {/* T-095: Unified login header — shortmark + brand text + portal name */}
+      {/* Header — same as auth layout */}
       <header style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #E2E8F0', background: 'white' }}>
         <img src="/supplier/brand/logo-shortmark.svg" alt="" width={20} height={20} />
         <span style={{ marginLeft: 10, fontWeight: 600, fontSize: 18, color: '#2563EB' }}>SuperMandi</span>
@@ -16,19 +20,18 @@ export default function AuthLayout({
         <span style={{ color: '#64748B', fontSize: 16 }}>Supplier Portal</span>
       </header>
 
-      {/* Main Content - RET-AUD-057: Standardized padding (2rem 1rem = py-8 px-4) */}
-      <main className="flex-1 flex items-center justify-center py-8 px-4">
-        <div className="w-full max-w-[448px]">
-          {/* Auth Card - white with subtle shadow per spec */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">{children}</div>
+      {/* Main Content — wider than auth card for help content */}
+      <main className="flex-1 flex items-start justify-center py-8 px-4">
+        <div className="w-full max-w-xl">
+          {children}
         </div>
       </main>
 
-      {/* T-097: Unified footer — standard text + Help link + BuildStamp */}
+      {/* Footer */}
       <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/supplier/help" style={{ color: '#94A3B8', fontSize: 12, textDecoration: 'none' }}>Help</a>
+          <a href="/supplier/login" style={{ color: '#94A3B8', fontSize: 12, textDecoration: 'none' }}>Sign In</a>
           <BuildStamp />
         </div>
       </footer>

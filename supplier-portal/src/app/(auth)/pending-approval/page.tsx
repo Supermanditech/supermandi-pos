@@ -53,8 +53,8 @@ export default function PendingApprovalPage() {
           <p className="text-sm text-blue-800">
             <strong>Typical review time:</strong> 1-2 business days.
             For urgent requests, contact us at{' '}
-            <a href="mailto:support@supermandi.com" className="underline font-medium">
-              support@supermandi.com
+            <a href="mailto:hello@supermandi.tech" className="underline font-medium">
+              hello@supermandi.tech
             </a>
           </p>
         </div>

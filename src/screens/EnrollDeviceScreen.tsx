@@ -492,6 +492,12 @@ export default function EnrollDeviceScreen() {
         <Text style={styles.helpTextSmall}>
           After registration, SuperMandi will review your application. Once approved, enter your phone number above to activate.
         </Text>
+        <Text style={styles.helpTextSmall}>
+          Need help?{" "}
+          <Text style={styles.helpLink} onPress={() => Linking.openURL("mailto:hello@supermandi.tech")}>
+            hello@supermandi.tech
+          </Text>
+        </Text>
       </View>
 
       {/* DEV-only section */}
