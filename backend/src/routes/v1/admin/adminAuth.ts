@@ -303,7 +303,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
   // ISSUE-MICRO-025: Set HttpOnly cookie (XSS-safe) alongside JSON response
   res.cookie('admin_session', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV !== 'development',
     sameSite: 'strict',
     maxAge: 24 * 60 * 60 * 1000, // 24h
     path: '/api',
@@ -388,7 +388,7 @@ adminAuthRouter.post("/auth/refresh", (req: Request, res: Response) => {
     // Refresh the HttpOnly cookie too
     res.cookie('admin_session', newToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV !== 'development',
       sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000,
       path: '/api',

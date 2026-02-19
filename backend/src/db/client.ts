@@ -77,6 +77,7 @@ export function getPool(): Pool | undefined {
 
 // T-216: RLS store context helper
 // Sets app.current_store_id for the duration of a transaction/callback
+// SET LOCAL requires an active transaction — this wraps fn in BEGIN/COMMIT.
 // Usage: await withStoreContext(storeId, async (client) => { ... })
 export async function withStoreContext<T>(
   storeId: string,
@@ -86,10 +87,31 @@ export async function withStoreContext<T>(
   if (!p) throw new Error("Database pool not initialized");
   const client = await p.connect();
   try {
+    await client.query("BEGIN");
     await client.query("SET LOCAL app.current_store_id = $1", [storeId]);
-    return await fn(client);
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
   } finally {
-    // RESET clears session-level SET LOCAL automatically on release
     client.release();
   }
+}
+
+/**
+ * Execute a read query with RLS store context.
+ * Wraps a single query in a transaction with SET LOCAL app.current_store_id.
+ * Use this for store-scoped queries where RLS should enforce isolation.
+ */
+export async function queryInStore<T = Record<string, unknown>>(
+  storeId: string,
+  sql: string,
+  params?: unknown[]
+): Promise<T[]> {
+  return withStoreContext(storeId, async (client) => {
+    const result = await client.query(sql, params);
+    return result.rows as T[];
+  });
 }

@@ -76,7 +76,7 @@ export const config: PaymentConfig = {
   database: {
     connectionString: requireEnv(
       'DATABASE_URL',
-      'postgres://supermandi:supermandi123@localhost:5432/supermandi'
+      'postgres://localhost:5432/supermandi'
     ),
   },
 };

@@ -117,8 +117,9 @@ export async function updateDeviceStatus(
 export function generateEnrollmentCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars: 0,O,1,I
   let code = 'SM-'; // Prefix for SuperMandi
+  const randomBytes = crypto.randomBytes(6);
   for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(randomBytes[i] % chars.length);
   }
   return code;
 }
@@ -159,7 +160,7 @@ export async function createEnrollment(input: {
   const rows = await query<DeviceEnrollment>(
     `INSERT INTO public.pos_device_enrollments (
       store_id, code, enrollment_code_hash, label, expires_at, max_uses, uses_count
-    ) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '${expiresInMinutes} minutes', $5, 0)
+    ) VALUES ($1, $2, $3, $4, NOW() + make_interval(mins => $6), $5, 0)
     RETURNING
       id, store_id as "storeId", code, label,
       enrollment_code_hash as "enrollmentCodeHash",
@@ -170,7 +171,7 @@ export async function createEnrollment(input: {
       COALESCE(uses_count, 0) as "usesCount",
       created_at as "createdAt",
       updated_at as "updatedAt"`,
-    [input.storeId, code, codeHash, input.label || null, maxUses]
+    [input.storeId, code, codeHash, input.label || null, maxUses, expiresInMinutes]
   );
 
   return { ...rows[0], code };

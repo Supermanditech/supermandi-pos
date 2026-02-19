@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "crypto";
+import { createHash, randomBytes, randomUUID } from "crypto";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
@@ -10,6 +10,11 @@ import { asError } from "../../../lib/errorUtils";
 
 // DEV-071: Enhanced enrollment with multi-use codes, idempotent enrollment, and proper error codes
 // BUG-FIX: Demo stores get unlimited multi-use enrollment codes; production stores stay single-use
+
+/** Hash an enrollment code for secure lookup (matches deviceQueries.hashEnrollmentCode) */
+function hashCode(code: string): string {
+  return createHash('sha256').update(code.toUpperCase()).digest('hex');
+}
 
 // AUD-061-A FIX: Stricter burst rate limiter - 3 attempts per minute to prevent rapid-fire attacks
 // DEPLOY-OPS: Respect RATE_LIMIT_MULTIPLIER for local-prod/staging (production default=1)
@@ -147,6 +152,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     await client.query("BEGIN");
 
     // Fetch enrollment with row lock, including multi-use columns
+    const codeHash = hashCode(code);
     const enrollmentRes = await client.query(
       `
       SELECT
@@ -158,10 +164,10 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
         COALESCE(e.max_uses, 1) as max_uses,
         COALESCE(e.uses_count, CASE WHEN e.used_at IS NOT NULL THEN 1 ELSE 0 END) as uses_count
       FROM pos_device_enrollments e
-      WHERE e.code = $1
+      WHERE e.enrollment_code_hash = $1
       FOR UPDATE
       `,
-      [code]
+      [codeHash]
     );
 
     const enrollment = enrollmentRes.rows[0];
@@ -175,6 +181,9 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       await client.query("ROLLBACK");
       return res.status(409).json({ error: { code: "ENROLLMENT_CODE_REVOKED", message: "This enrollment code has been revoked" } });
     }
+
+    // Set RLS store context now that we know the store_id from enrollment
+    await client.query("SET LOCAL app.current_store_id = $1", [enrollment.store_id]);
 
     // GO-LIVE: Fetch store name, code, and max_devices for enrollment response
     // FINDING-027: Get configurable max_devices per store
@@ -255,9 +264,9 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
         UPDATE pos_device_enrollments
         SET last_used_at = NOW(),
             updated_at = NOW()
-        WHERE code = $1
+        WHERE enrollment_code_hash = $1
         `,
-        [code]
+        [codeHash]
       );
 
       // AUD-063-B FIX: Log re-enrollment with full context for audit trail
@@ -517,9 +526,9 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
           uses_count = COALESCE(uses_count, 0) + 1,
           last_used_at = NOW(),
           updated_at = NOW()
-        WHERE code = $1
+        WHERE enrollment_code_hash = $1
         `,
-        [code]
+        [codeHash]
       );
     }
 
@@ -583,8 +592,8 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
   try {
     // Get store ID from enrollment code
     const enrollmentRes = await pool.query(
-      `SELECT store_id FROM pos_device_enrollments WHERE code = $1`,
-      [code]
+      `SELECT store_id FROM pos_device_enrollments WHERE enrollment_code_hash = $1`,
+      [hashCode(code)]
     );
 
     if (enrollmentRes.rowCount === 0) {
