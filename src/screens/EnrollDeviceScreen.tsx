@@ -91,6 +91,18 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
     message: "Too many attempts.",
     hint: "Please wait 15 minutes before trying again."
   },
+  LABEL_REQUIRED: {
+    message: "Device name is required.",
+    hint: "Enter a name for this POS device (e.g., Counter-1)."
+  },
+  LABEL_DUPLICATE: {
+    message: "A device with this name already exists in your store.",
+    hint: "Choose a different name (e.g., Counter-2, Billing-2)."
+  },
+  DEVICE_LIMIT_EXCEEDED: {
+    message: "Maximum devices reached for this store.",
+    hint: "Contact support to increase your device limit."
+  },
   // Legacy error codes
   enrollment_invalid: { message: "Activation code is invalid or expired.", hint: "Contact support for a new code." },
   enrollment_expired: { message: "This activation code has expired.", hint: "Contact support for a new code." },
@@ -135,6 +147,11 @@ export default function EnrollDeviceScreen() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupStoreName, setLookupStoreName] = useState("");
   const [lookupError, setLookupError] = useState("");
+
+  // #404: Device label (required by backend for device identification)
+  // Default to device model name for convenience
+  const defaultLabel = Device.modelName || Device.deviceName || "";
+  const [labelInput, setLabelInput] = useState(defaultLabel);
   const autoActivateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const deviceMeta = useMemo(() => ({
@@ -142,6 +159,7 @@ export default function EnrollDeviceScreen() {
     model: Device.modelName ?? Device.deviceName ?? Constants.deviceName ?? null,
     androidVersion: Platform.OS === "android" ? String(Platform.Version) : Device.osVersion ?? null,
     appVersion: getAppVersion(),
+    // #404: label is set dynamically, not memoized — added at call site
   }), []);
 
   // Check existing session on mount — skip to SellScan if already enrolled
@@ -239,6 +257,13 @@ export default function EnrollDeviceScreen() {
       return;
     }
 
+    // #404: Validate label (required by backend)
+    const trimmedLabel = labelInput.trim();
+    if (!trimmedLabel) {
+      Alert.alert("Device Name Required", "Enter a name for this POS device (e.g., Counter-1, Billing-Main).");
+      return;
+    }
+
     // Offline detection
     try {
       const netState = await NetInfo.fetch();
@@ -261,7 +286,7 @@ export default function EnrollDeviceScreen() {
 
       const previousSession = await getDeviceSession();
       const previousStoreId = previousSession?.storeId ?? null;
-      const res = await enrollDevice({ enrollmentCode: activationCode, deviceMeta });
+      const res = await enrollDevice({ enrollmentCode: activationCode, deviceMeta: { ...deviceMeta, label: trimmedLabel } });
       const storeChanged = previousStoreId !== res.storeId;
 
       if (storeChanged) {
@@ -365,7 +390,7 @@ export default function EnrollDeviceScreen() {
     } finally {
       setLoading(false);
     }
-  }, [codeInput, deviceMeta, navigation]);
+  }, [codeInput, labelInput, deviceMeta, navigation]);
 
   // Keep ref current for auto-activate timer
   handleActivateRef.current = handleActivate;
@@ -460,10 +485,32 @@ export default function EnrollDeviceScreen() {
           onChangeText={setCodeInput}
           testID="enroll-code-input"
           accessibilityLabel="Activation code"
+          returnKeyType="next"
+          editable={!loading}
+        />
+      </View>
+
+      {/* #404: Device Label (required) */}
+      <View style={styles.inputSection}>
+        <Text style={styles.label}>
+          Device Name <Text style={styles.requiredMark}>*</Text>
+        </Text>
+        <TextInput
+          style={styles.labelInput}
+          placeholder="e.g., Counter-1, Billing-Main"
+          placeholderTextColor={colors.textTertiary}
+          value={labelInput}
+          onChangeText={setLabelInput}
+          testID="enroll-label-input"
+          accessibilityLabel="Device name for this POS"
           returnKeyType="done"
           onSubmitEditing={handleActivate}
           editable={!loading}
+          maxLength={50}
         />
+        <Text style={styles.labelHint}>
+          A name to identify this device in your store dashboard
+        </Text>
 
         <Pressable
           style={[styles.activateButton, loading && styles.activateButtonDisabled]}
@@ -640,6 +687,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: "center",
     letterSpacing: 3,
+  },
+  labelInput: {
+    ...typography.body,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+  },
+  labelHint: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    lineHeight: 14,
+  },
+  requiredMark: {
+    color: colors.error,
   },
   activateButton: {
     backgroundColor: colors.primary,
