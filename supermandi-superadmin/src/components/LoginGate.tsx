@@ -36,12 +36,16 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
     setLoading(true);
     setError("");
     try {
-      await sendAdminOtp(trimmedEmail);
+      const result = await sendAdminOtp(trimmedEmail);
+      if (!result.success) {
+        setError(result.error || "Failed to send OTP. Check your email and try again.");
+        return;
+      }
       setStep("otp");
       setOtp("");
       setCountdown(60);
-    } catch (err: any) {
-      setError(err?.message || "Failed to send OTP. Check your email and try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to send OTP. Check your email and try again.");
     } finally {
       setLoading(false);
     }
@@ -57,10 +61,14 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
     setLoading(true);
     setError("");
     try {
-      await verifyAdminOtp(email.trim().toLowerCase(), trimmedOtp);
+      const result = await verifyAdminOtp(email.trim().toLowerCase(), trimmedOtp);
+      if (!result.success) {
+        setError(result.error || "Invalid OTP. Check your email and try again.");
+        return;
+      }
       onLogin();
-    } catch (err: any) {
-      setError(err?.message || "Invalid OTP. Check your email and try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid OTP. Check your email and try again.");
     } finally {
       setLoading(false);
     }

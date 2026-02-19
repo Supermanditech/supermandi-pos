@@ -18,9 +18,10 @@ interface CookieConfig {
 }
 
 function getCookieConfig(): CookieConfig {
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Secure cookies in all environments except local development
+  const isSecure = process.env.NODE_ENV !== 'development' || process.env.COOKIE_SECURE === 'true';
   return {
-    secure: isProduction || process.env.COOKIE_SECURE === 'true',
+    secure: isSecure,
     domain: process.env.COOKIE_DOMAIN || undefined,
     sameSite: 'lax',
   };

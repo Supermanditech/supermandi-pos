@@ -252,10 +252,10 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   const rawBody = JSON.stringify(req.body);
   const signature = req.headers["x-razorpay-signature"] as string | undefined;
 
-  // ITER4-P0-006: Require webhook signature in production - never process unsigned webhooks
-  if (process.env.NODE_ENV === 'production') {
+  // Require webhook signature in all non-development environments
+  if (process.env.NODE_ENV !== 'development') {
     if (!signature) {
-      log.warn("[SM-018] Missing Razorpay webhook signature in production - rejecting");
+      log.warn("[SM-018] Missing Razorpay webhook signature - rejecting");
       return res.status(401).json({ error: "Missing signature" });
     }
     if (!verifyWebhookSignature(rawBody, signature)) {
@@ -376,9 +376,9 @@ webhooksRouter.post("/razorpay/payments", async (req: Request, res: Response) =>
       log.warn("[GL-AUD-002] Invalid Razorpay payment webhook signature");
       return res.status(401).json({ error: "Invalid signature" });
     }
-  } else if (process.env.NODE_ENV === 'production') {
-    // In production, signature is required
-    log.warn("[GL-AUD-002] Missing signature in production");
+  } else if (process.env.NODE_ENV !== 'development') {
+    // In non-development environments, signature is required
+    log.warn("[GL-AUD-002] Missing webhook signature - rejecting");
     return res.status(401).json({ error: "Missing signature" });
   }
 
