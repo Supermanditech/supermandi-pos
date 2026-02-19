@@ -103,6 +103,26 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
     message: "Maximum devices reached for this store.",
     hint: "Contact support to increase your device limit."
   },
+  DEVICE_FINGERPRINT_INVALID: {
+    message: "Device fingerprint is invalid.",
+    hint: "Reinstall the app and try again."
+  },
+  DEVICE_TYPE_REQUIRED: {
+    message: "Device type could not be detected.",
+    hint: "Reinstall the app and try again."
+  },
+  DEVICE_TYPE_INVALID: {
+    message: "Device type is not supported.",
+    hint: "Contact support for assistance."
+  },
+  PRINTING_MODE_INVALID: {
+    message: "Printing mode is not supported.",
+    hint: "Contact support for assistance."
+  },
+  DAILY_ENROLLMENT_LIMIT: {
+    message: "Daily activation limit reached for this store.",
+    hint: "Please try again tomorrow or contact support."
+  },
   // Legacy error codes
   enrollment_invalid: { message: "Activation code is invalid or expired.", hint: "Contact support for a new code." },
   enrollment_expired: { message: "This activation code has expired.", hint: "Contact support for a new code." },
@@ -152,7 +172,6 @@ export default function EnrollDeviceScreen() {
   // Default to device model name for convenience
   const defaultLabel = Device.modelName || Device.deviceName || "";
   const [labelInput, setLabelInput] = useState(defaultLabel);
-  const autoActivateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const deviceMeta = useMemo(() => ({
     manufacturer: Device.manufacturer ?? null,
@@ -184,13 +203,6 @@ export default function EnrollDeviceScreen() {
     Linking.getInitialURL().then(handleUrl).catch(() => undefined);
     const subscription = Linking.addEventListener("url", (event) => handleUrl(event.url));
     return () => subscription.remove();
-  }, []);
-
-  // Cleanup auto-activate timer
-  useEffect(() => {
-    return () => {
-      if (autoActivateTimer.current) clearTimeout(autoActivateTimer.current);
-    };
   }, []);
 
   const handleLookup = useCallback(async () => {

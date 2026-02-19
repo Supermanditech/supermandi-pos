@@ -99,8 +99,10 @@ export default function SplashScreen() {
           navigation.replace("DeviceBlocked");
           return;
         }
-      } catch {
-        // Network/parse error — proceed to SellScan (offline-first)
+      } catch (uiErr) {
+        // Network/parse error — proceed to SellScan (offline-first).
+        // Log for operator debugging when gate bypass occurs.
+        console.warn("[SplashScreen] fetchUiStatus failed, proceeding offline-first:", uiErr instanceof Error ? uiErr.message : uiErr);
       }
 
       navigation.replace("SellScan");

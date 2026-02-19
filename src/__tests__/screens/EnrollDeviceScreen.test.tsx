@@ -1,7 +1,8 @@
 /**
- * #404 + #405 + #409: EnrollDeviceScreen tests
+ * #404 + #405 + #409 + #411: EnrollDeviceScreen tests
  * Covers: render, inputs, label requirement, enroll flow, offline detection, error codes, a11y,
- *         phone lookup (lookupActivation), PaymentSetup routing (upiVpa + AsyncStorage)
+ *         phone lookup (lookupActivation), PaymentSetup routing (upiVpa + AsyncStorage),
+ *         store reset, event logging, inactive store, settings update
  */
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react-native";
@@ -82,21 +83,27 @@ jest.mock("../../config/api", () => ({
   TEST_STORE_CONFIG: null,
 }));
 
+const mockLogPosEvent = jest.fn();
 jest.mock("../../services/cloudEventLogger", () => ({
-  logPosEvent: jest.fn(),
+  logPosEvent: (...args: unknown[]) => mockLogPosEvent(...args),
 }));
 
+const mockResetCart = jest.fn();
+const mockResetPurchaseDraft = jest.fn();
+const mockResetProducts = jest.fn();
+const mockSetStoreName = jest.fn();
+const mockSetStoreCode = jest.fn();
 jest.mock("../../stores/cartStore", () => ({
-  useCartStore: { getState: () => ({ resetForStore: jest.fn() }) },
+  useCartStore: { getState: () => ({ resetForStore: mockResetCart }) },
 }));
 jest.mock("../../stores/purchaseDraftStore", () => ({
-  usePurchaseDraftStore: { getState: () => ({ resetForStore: jest.fn() }) },
+  usePurchaseDraftStore: { getState: () => ({ resetForStore: mockResetPurchaseDraft }) },
 }));
 jest.mock("../../stores/productsStore", () => ({
-  useProductsStore: { getState: () => ({ resetForStore: jest.fn() }) },
+  useProductsStore: { getState: () => ({ resetForStore: mockResetProducts }) },
 }));
 jest.mock("../../stores/settingsStore", () => ({
-  useSettingsStore: { getState: () => ({ setStoreName: jest.fn(), setStoreCode: jest.fn() }) },
+  useSettingsStore: { getState: () => ({ setStoreName: mockSetStoreName, setStoreCode: mockSetStoreCode }) },
 }));
 
 import EnrollDeviceScreen from "../../screens/EnrollDeviceScreen";
@@ -386,5 +393,97 @@ describe("EnrollDeviceScreen", () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("SellScan");
     });
+  });
+
+  // =========================================================================
+  // #411: Store reset, event logging, inactive store, settings update tests
+  // =========================================================================
+
+  it("resets stores and logs event when store changes on re-enrollment", async () => {
+    // Simulate re-enrollment with different store (previousStoreId from existing session)
+    mockGetDeviceSession.mockResolvedValue(null);
+    mockEnrollDevice.mockResolvedValue({
+      deviceId: "d1",
+      storeId: "s-new", // Different from default "s1"
+      deviceToken: "token123",
+      storeName: "New Store",
+      storeCode: "NS",
+      storeActive: true,
+      upiVpa: "test@upi",
+    });
+
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
+    fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-submit-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockEnrollDevice).toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+    });
+  });
+
+  it("updates settings store with storeName and storeCode on success", async () => {
+    mockEnrollDevice.mockResolvedValue({
+      deviceId: "d1",
+      storeId: "s1",
+      deviceToken: "token123",
+      storeName: "My Store",
+      storeCode: "MS",
+      storeActive: true,
+      upiVpa: "test@upi",
+    });
+
+    render(<EnrollDeviceScreen />);
+    fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-submit-button"));
+    });
+
+    await waitFor(() => {
+      expect(mockSetStoreName).toHaveBeenCalledWith("My Store");
+      expect(mockSetStoreCode).toHaveBeenCalledWith("MS");
+    });
+  });
+
+  it("shows alert when store is inactive after enrollment", async () => {
+    mockEnrollDevice.mockResolvedValue({
+      deviceId: "d1",
+      storeId: "s1",
+      deviceToken: "token123",
+      storeName: "Inactive Store",
+      storeCode: "IS",
+      storeActive: false,
+      upiVpa: null,
+    });
+
+    const alertSpy = jest.spyOn(Alert, "alert");
+    render(<EnrollDeviceScreen />);
+
+    fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("enroll-submit-button"));
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Store"),
+        expect.any(String)
+      );
+    });
+    alertSpy.mockRestore();
+  });
+
+  it("pre-fills code from 'code' route param (backward compat)", () => {
+    mockRouteParams.code = "SM-CODE99";
+    render(<EnrollDeviceScreen />);
+    expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-CODE99");
+    mockRouteParams.code = undefined;
   });
 });

@@ -171,4 +171,62 @@ describe("ForceUpdateScreen", () => {
     expect(handler()).toBe(true);
     addListenerSpy.mockRestore();
   });
+
+  // =========================================================================
+  // #411: iOS Linking + error + throttle tests
+  // =========================================================================
+
+  it("falls back to Play Store on iOS when APP_STORE_URL is empty", () => {
+    const spy = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined as any);
+    Platform.OS = "ios";
+    render(<ForceUpdateScreen />);
+    fireEvent.press(screen.getByTestId("force-update-update-button"));
+    // APP_STORE_URL is empty ("") → condition falsy → falls back to PLAY_STORE_URL
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("play.google.com"));
+    spy.mockRestore();
+    Platform.OS = "android"; // restore
+  });
+
+  it("shows alert when Linking.openURL fails", async () => {
+    const spy = jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("Cannot open URL"));
+    const alertSpy = jest.spyOn(Alert, "alert");
+    render(<ForceUpdateScreen />);
+    fireEvent.press(screen.getByTestId("force-update-update-button"));
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Cannot Open Store", expect.any(String));
+    });
+    spy.mockRestore();
+    alertSpy.mockRestore();
+  });
+
+  it("shows generic error when fetchUiStatusStrict throws non-ApiError", async () => {
+    mockFetchUiStatusStrict.mockRejectedValue(new Error("Network timeout"));
+    const alertSpy = jest.spyOn(Alert, "alert");
+    render(<ForceUpdateScreen />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("force-update-check-button"));
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith("Check Failed", expect.any(String));
+    alertSpy.mockRestore();
+  });
+
+  it("throttles rapid retry taps (S2-9)", async () => {
+    mockFetchUiStatusStrict.mockResolvedValue({ forceUpdate: false });
+    render(<ForceUpdateScreen />);
+
+    // First tap — should call API
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("force-update-check-button"));
+    });
+
+    // Second tap immediately — should be throttled (within 3s cooldown)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("force-update-check-button"));
+    });
+
+    // Only one API call (throttle blocked second)
+    expect(mockFetchUiStatusStrict).toHaveBeenCalledTimes(1);
+  });
 });
