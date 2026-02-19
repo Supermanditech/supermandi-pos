@@ -26,14 +26,21 @@ export const colors = {
 
   // Status
   success: "#16A34A",
+  successDark: "#166534",
   error: "#DC2626",
   warning: "#F59E0B",
+  warningDark: "#92400E",
   info: "#0EA5E9",
   successSoft: "#ECFDF5",
   warningSoft: "#FFF7ED",
   errorSoft: "#FEF2F2",
   accentSoft: "#ECFEFF",
   primarySoft: "#EFF6FF", // SM-022: Soft blue for credit screens
+
+  // Status borders (semantic tokens for alert/info boxes)
+  errorBorder: "#FECACA",
+  warningBorder: "#FDE68A",
+  successBorder: "#BBF7D0",
 
   // Borders
   border: "#E2E8F0",

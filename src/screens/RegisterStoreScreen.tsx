@@ -19,6 +19,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -329,6 +330,8 @@ export default function RegisterStoreScreen() {
                 keyboardType="phone-pad"
                 editable={!isLoading}
                 autoFocus
+                testID="register-phone-input"
+                accessibilityLabel="Phone number"
               />
 
               <Pressable
@@ -338,15 +341,23 @@ export default function RegisterStoreScreen() {
                 ]}
                 onPress={handleSendOtp}
                 disabled={isLoading}
+                testID="register-send-otp-btn"
+                accessibilityLabel={isLoading ? "Sending OTP" : "Send OTP"}
+                accessibilityRole="button"
               >
-                <Text style={styles.btnPrimaryText}>
-                  {isLoading ? "Sending OTP..." : "Send OTP"}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator color={theme.colors.textInverse} size="small" />
+                ) : (
+                  <Text style={styles.btnPrimaryText}>Send OTP</Text>
+                )}
               </Pressable>
 
               <Pressable
                 style={styles.linkBtn}
                 onPress={() => navigation.replace("EnrollDevice")}
+                testID="register-enroll-link"
+                accessibilityLabel="Already registered, enroll your device"
+                accessibilityRole="link"
               >
                 <Text style={styles.linkText}>
                   Already registered? Enroll your device
@@ -382,6 +393,8 @@ export default function RegisterStoreScreen() {
                 maxLength={6}
                 editable={!isLoading}
                 autoFocus
+                testID="register-otp-input"
+                accessibilityLabel="Verification code"
               />
 
               <Pressable
@@ -391,19 +404,33 @@ export default function RegisterStoreScreen() {
                 ]}
                 onPress={handleVerifyOtp}
                 disabled={isLoading || otp.length !== 6}
+                testID="register-verify-btn"
+                accessibilityLabel={isLoading ? "Verifying OTP" : "Verify OTP"}
+                accessibilityRole="button"
               >
-                <Text style={styles.btnPrimaryText}>
-                  {isLoading ? "Verifying..." : "Verify"}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator color={theme.colors.textInverse} size="small" />
+                ) : (
+                  <Text style={styles.btnPrimaryText}>Verify</Text>
+                )}
               </Pressable>
 
               <View style={styles.row}>
-                <Pressable onPress={handleChangePhone} disabled={isLoading}>
+                <Pressable
+                  onPress={handleChangePhone}
+                  disabled={isLoading}
+                  testID="register-change-phone-link"
+                  accessibilityLabel="Change phone number"
+                  accessibilityRole="link"
+                >
                   <Text style={styles.linkText}>Change Phone</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleResendOtp}
                   disabled={isLoading || resendCooldown > 0}
+                  testID="register-resend-otp-link"
+                  accessibilityLabel={resendCooldown > 0 ? `Resend OTP in ${resendCooldown} seconds` : "Resend OTP"}
+                  accessibilityRole="button"
                 >
                   <Text
                     style={[
@@ -443,6 +470,8 @@ export default function RegisterStoreScreen() {
                 onChangeText={setBusinessName}
                 editable={!isLoading}
                 autoFocus
+                testID="register-business-name-input"
+                accessibilityLabel="Business name, required"
               />
               {fieldErrors.businessName ? (
                 <Text style={styles.fieldError}>
@@ -458,6 +487,8 @@ export default function RegisterStoreScreen() {
                 value={ownerName}
                 onChangeText={setOwnerName}
                 editable={!isLoading}
+                testID="register-owner-name-input"
+                accessibilityLabel="Owner name, required"
               />
               {fieldErrors.ownerName ? (
                 <Text style={styles.fieldError}>{fieldErrors.ownerName}</Text>
@@ -476,6 +507,8 @@ export default function RegisterStoreScreen() {
                 maxLength={15}
                 autoCapitalize="characters"
                 editable={!isLoading}
+                testID="register-gstin-input"
+                accessibilityLabel="GSTIN number, optional"
               />
               {fieldErrors.gstin ? (
                 <Text style={styles.fieldError}>{fieldErrors.gstin}</Text>
@@ -494,6 +527,8 @@ export default function RegisterStoreScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 editable={!isLoading}
+                testID="register-email-input"
+                accessibilityLabel="Email address, optional"
               />
               {fieldErrors.email ? (
                 <Text style={styles.fieldError}>{fieldErrors.email}</Text>
@@ -514,6 +549,8 @@ export default function RegisterStoreScreen() {
                 keyboardType="number-pad"
                 maxLength={6}
                 editable={!isLoading}
+                testID="register-pincode-input"
+                accessibilityLabel="Pincode, optional"
               />
               {fieldErrors.pincode ? (
                 <Text style={styles.fieldError}>{fieldErrors.pincode}</Text>
@@ -527,10 +564,15 @@ export default function RegisterStoreScreen() {
                 ]}
                 onPress={handleRegister}
                 disabled={isLoading}
+                testID="register-create-store-btn"
+                accessibilityLabel={isLoading ? "Creating store" : "Create store"}
+                accessibilityRole="button"
               >
-                <Text style={styles.btnPrimaryText}>
-                  {isLoading ? "Creating store..." : "Create Store"}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator color={theme.colors.textInverse} size="small" />
+                ) : (
+                  <Text style={styles.btnPrimaryText}>Create Store</Text>
+                )}
               </Pressable>
             </>
           )}
@@ -556,10 +598,15 @@ export default function RegisterStoreScreen() {
               {/* Store Code */}
               <View style={styles.storeCodeBox}>
                 <Text style={styles.storeCodeLabel}>Your Store Code</Text>
-                <Text style={styles.storeCodeValue}>
+                <Text style={styles.storeCodeValue} testID="register-store-code">
                   {result.storeCode}
                 </Text>
-                <Pressable onPress={handleCopyStoreCode}>
+                <Pressable
+                  onPress={handleCopyStoreCode}
+                  testID="register-copy-code-btn"
+                  accessibilityLabel={copied ? "Store code copied" : "Copy store code to clipboard"}
+                  accessibilityRole="button"
+                >
                   <Text style={styles.linkText}>
                     {copied ? "Copied!" : "Copy to clipboard"}
                   </Text>
@@ -577,6 +624,9 @@ export default function RegisterStoreScreen() {
               <Pressable
                 style={styles.btnPrimary}
                 onPress={handleGoToEnroll}
+                testID="register-enroll-device-btn"
+                accessibilityLabel="Enroll this device"
+                accessibilityRole="button"
               >
                 <Text style={styles.btnPrimaryText}>
                   Enroll This Device
@@ -654,7 +704,7 @@ const styles = StyleSheet.create({
   },
   otpInput: {
     textAlign: "center",
-    fontSize: 24,
+    fontSize: theme.typography.h3.fontSize,
     letterSpacing: 8,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
@@ -695,7 +745,7 @@ const styles = StyleSheet.create({
   errorBox: {
     backgroundColor: theme.colors.errorSoft,
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: theme.colors.errorBorder,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
@@ -707,14 +757,14 @@ const styles = StyleSheet.create({
   warningBox: {
     backgroundColor: theme.colors.warningSoft,
     borderWidth: 1,
-    borderColor: "#fde68a",
+    borderColor: theme.colors.warningBorder,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
   },
   warningText: {
     ...theme.typography.caption,
-    color: "#92400e",
+    color: theme.colors.warningDark,
   },
   fieldError: {
     ...theme.typography.caption,
@@ -753,7 +803,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xs,
   },
   storeCodeValue: {
-    fontSize: 28,
+    fontSize: theme.typography.h2.fontSize,
     fontWeight: "700",
     color: theme.colors.textPrimary,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
@@ -763,7 +813,7 @@ const styles = StyleSheet.create({
   successInfoBox: {
     backgroundColor: theme.colors.successSoft,
     borderWidth: 1,
-    borderColor: "#bbf7d0",
+    borderColor: theme.colors.successBorder,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.sm,
     marginBottom: theme.spacing.md,
@@ -771,6 +821,6 @@ const styles = StyleSheet.create({
   },
   successInfoText: {
     ...theme.typography.caption,
-    color: "#166534",
+    color: theme.colors.successDark,
   },
 });
