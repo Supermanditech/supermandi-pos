@@ -575,7 +575,8 @@ jobs:
           FIREBASE_PROJECT_ID=supermandi-pos,\
           SMS_DISABLED=true,\
           SUPPLIER_PORTAL_URL=https://staging.supermandi.tech/supplier,\
-          RATE_LIMIT_MULTIPLIER=100,\
+          RETAILER_ADMIN_URL=https://staging.supermandi.tech/retailer,\
+          RATE_LIMIT_MULTIPLIER=5,\
           EMAIL_PROVIDER=smtp,\
           SMTP_HOST=smtp.gmail.com,\
           SMTP_PORT=587,\

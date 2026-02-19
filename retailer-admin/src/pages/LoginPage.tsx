@@ -131,7 +131,11 @@ export default function LoginPage() {
         return;
       }
       if (action === 'PENDING_APPROVAL') {
-        setError('Your application is under review. You will be able to login once approved.');
+        setError('Your application is under review (usually 1-2 business days). You will be notified via WhatsApp and email once approved.');
+        return;
+      }
+      if (action === 'ACCOUNT_SUSPENDED') {
+        setError('Your account has been suspended. Please contact support at hello@supermandi.tech for assistance.');
         return;
       }
       if (action === 'VERIFY_PHONE' || action === 'UPLOAD_DOCUMENTS' || action === 'FIX_REQUIRED') {
@@ -139,7 +143,7 @@ export default function LoginPage() {
         return;
       }
       if (action === 'CONTACT_SUPPORT') {
-        setError('Your application was not approved. Please contact support for assistance.');
+        setError('Your application was not approved. Please contact support at hello@supermandi.tech for assistance.');
         return;
       }
       if (action !== 'LOGIN_ALLOWED') {
@@ -579,7 +583,8 @@ export default function LoginPage() {
                     <div className="login-warning-icon">!</div>
                     <h3 style={{ color: '#d97706', marginBottom: '0.5rem' }}>No Store Assigned</h3>
                     <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                      Your account is not associated with any store. Please contact your administrator.
+                      Your account is not associated with any store. Please contact support at{' '}
+                      <a href="mailto:hello@supermandi.tech" style={{ color: '#2563eb' }}>hello@supermandi.tech</a>.
                     </p>
                     <button
                       onClick={() => {

@@ -204,14 +204,12 @@ export default function EnrollDeviceScreen() {
       const result = await lookupActivation(phone10);
       setCodeInput(result.code);
       setLookupStoreName(result.storeName);
-      // Auto-trigger activation after short delay
-      autoActivateTimer.current = setTimeout(() => {
-        handleActivateRef.current?.();
-      }, 800);
+      // POS-1: Show code + store name, let user confirm before activating
+      // (removed auto-activate — user must press "Activate" button)
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.message === "STORE_NOT_FOUND") {
-          setLookupError("No store found for this phone number. Register at supermandi.tech/retailer/register first.");
+          setLookupError("No store found for this phone number. Your registration may be pending approval, or register at supermandi.tech/retailer/register.");
         } else if (err.message === "NO_ACTIVE_CODE") {
           setLookupError("Your store is pending approval. Contact SuperMandi support.");
         } else if (err.status === 429) {
@@ -397,7 +395,8 @@ export default function EnrollDeviceScreen() {
           onChangeText={(t) => {
             setPhoneInput(t);
             if (lookupError) setLookupError("");
-            if (lookupStoreName) {
+            // POS-4: Only clear code if phone actually changed (not on focus)
+            if (lookupStoreName && t !== phoneInput) {
               setLookupStoreName("");
               setCodeInput("");
             }

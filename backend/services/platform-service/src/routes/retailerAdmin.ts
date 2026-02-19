@@ -149,7 +149,7 @@ router.get(
         storeId,
         storeCode: store.code,
         portalEnabled: portalInfo?.retailer_portal_enabled || false,
-        portalUrl: portalInfo?.retailer_portal_enabled ? `https://supermandi.in/s/${store.code}` : null,
+        portalUrl: portalInfo?.retailer_portal_enabled ? `https://supermandi.tech/s/${store.code}` : null,
         phone: portalInfo?.retailer_portal_phone || null,
         maskedPhone: portalInfo?.retailer_portal_phone
           ? maskPhoneNumber(portalInfo.retailer_portal_phone)
