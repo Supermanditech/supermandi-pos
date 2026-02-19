@@ -84,7 +84,7 @@ interface StoresTabProps {
   storeEnrollmentsLoading: Record<string, boolean>;
   handleRevokeEnrollment: (code: string) => void;
   revokeLoading: boolean;
-  // #331: Resend activation code
+  // #331: Resend welcome message (download links + activation instructions)
   handleResendCode?: (code: string) => void;
   resendLoading?: boolean;
 }

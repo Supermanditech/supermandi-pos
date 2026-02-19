@@ -17,7 +17,7 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
 import { createEnrollmentCode } from "../../../services/enrollmentCodeService";
-import { sendActivationCodeNotification } from "../../../services/notificationService";
+import { sendWelcomeNotification } from "../../../services/notificationService";
 import rateLimit from "express-rate-limit";
 import { log } from "../../../lib/logger";
 
@@ -425,22 +425,20 @@ adminApplicationsRouter.post(
 
           log.info(`[admin/applications] Activation code ${enrollment.code} generated for store ${storeCode}`);
 
-          // Send notifications (non-blocking)
-          sendActivationCodeNotification({
+          // Send welcome message (non-blocking) — code NOT included, POS fetches via phone lookup
+          sendWelcomeNotification({
             phone: app.phone,
             email: app.email || undefined,
             ownerName: app.owner_name || app.business_name,
             storeName: app.business_name,
             storeCode,
-            activationCode: enrollment.code,
-            expiresAt: enrollment.expiresAt,
           }).then((result) => {
             if (result.whatsappSent) codeSentVia.push('whatsapp');
             if (result.smsSent) codeSentVia.push('sms');
             if (result.emailSent) codeSentVia.push('email');
-            log.info(`[admin/applications] Activation code sent via: ${codeSentVia.join(', ') || 'none'}`);
+            log.info(`[admin/applications] Welcome message sent via: ${codeSentVia.join(', ') || 'none'}`);
           }).catch((err) => {
-            log.warn(`[admin/applications] Activation notification failed:`, err?.message);
+            log.warn(`[admin/applications] Welcome notification failed:`, err?.message);
           });
         } catch (err: any) {
           log.warn(`[admin/applications] Activation code generation failed:`, err?.message);

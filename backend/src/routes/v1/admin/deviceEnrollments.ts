@@ -3,7 +3,7 @@ import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { isDemoStoreCode } from "../../../services/storeCodeService";
-import { sendActivationCodeNotification } from "../../../services/notificationService";
+import { sendWelcomeNotification } from "../../../services/notificationService";
 import { log } from "../../../lib/logger";
 
 export const adminDeviceEnrollmentRouter = Router();
@@ -244,14 +244,13 @@ adminDeviceEnrollmentRouter.post("/device-enrollments/:code/resend", requireAdmi
       return res.status(400).json({ error: "No phone number found for this store" });
     }
 
-    const notifResult = await sendActivationCodeNotification({
+    // Resend welcome message (code NOT included — POS fetches via phone lookup)
+    const notifResult = await sendWelcomeNotification({
       phone: enrollment.store_phone,
       email: enrollment.store_email || undefined,
       ownerName: enrollment.contact_name || enrollment.store_name || "Retailer",
       storeName: enrollment.store_name || "Your Store",
       storeCode: enrollment.store_code || "",
-      activationCode: enrollment.code,
-      expiresAt: enrollment.expires_at,
     });
 
     const channels: string[] = [];
@@ -259,7 +258,7 @@ adminDeviceEnrollmentRouter.post("/device-enrollments/:code/resend", requireAdmi
     if (notifResult.smsSent) channels.push("sms");
     if (notifResult.emailSent) channels.push("email");
 
-    log.info(`[AdminEnrollment] Resent code=${code} via ${channels.join(", ") || "none"}`);
+    log.info(`[AdminEnrollment] Resent welcome message for code=${code} via ${channels.join(", ") || "none"}`);
     return res.json({ sent: true, channels, sentTo: enrollment.store_phone });
   } catch (error) {
     log.error("[AdminEnrollment] Error resending enrollment:", error);

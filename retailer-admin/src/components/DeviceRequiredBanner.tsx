@@ -86,7 +86,7 @@ export default function DeviceRequiredBanner({ onStatusLoaded }: DeviceRequiredB
             fontSize: '0.85rem',
             marginTop: '0.25rem',
           }}>
-            Download the SuperMandi POS app and enter your activation code to start billing.
+            Download the SuperMandi POS app and enter your phone number to activate and start billing.
           </div>
         </div>
       </div>

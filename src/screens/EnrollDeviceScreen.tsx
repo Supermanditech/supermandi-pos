@@ -1,14 +1,14 @@
 /**
- * #329: Simplified POS Activation Screen
+ * #329-332: POS Activation Screen with Phone Lookup
  *
- * After registration on Retailer Web + SuperAdmin approval, retailer receives
- * an activation code via WhatsApp/Email. This screen is the ONLY entry point
- * for POS devices — enter code → device activated → navigate to SellScan.
+ * After registration on Retailer Web + SuperAdmin approval:
+ * 1. Primary: Enter phone number → auto-fetch activation code → activate
+ * 2. Fallback: Manual code entry (for deep links, admin-shared codes)
  *
- * Removed: QR scanner, camera, device type/label/printing selectors, registration link.
+ * Post-activation: Routes to PaymentSetup if no UPI VPA set, else SellScan.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -26,8 +26,9 @@ import * as Device from "expo-device";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import NetInfo from "@react-native-community/netinfo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { enrollDevice } from "../services/api/enrollApi";
+import { enrollDevice, lookupActivation } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
@@ -43,6 +44,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 type RootStackParamList = {
   EnrollDevice: { enrollmentCode?: string } | undefined;
   SellScan: undefined;
+  PaymentSetup: undefined;
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
   DeviceBlocked: undefined;
 };
@@ -115,11 +117,20 @@ function getAppVersion(): string {
 // expo-updates disabled for development
 const Updates = { channel: null as string | null };
 
+const PAYMENT_PROMPTED_KEY = "supermandi.payment_setup_prompted";
+
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<EnrollRoute>();
   const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || "");
   const [loading, setLoading] = useState(false);
+
+  // Phone lookup state
+  const [phoneInput, setPhoneInput] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupStoreName, setLookupStoreName] = useState("");
+  const [lookupError, setLookupError] = useState("");
+  const autoActivateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const deviceMeta = useMemo(() => ({
     manufacturer: Device.manufacturer ?? null,
@@ -152,10 +163,76 @@ export default function EnrollDeviceScreen() {
     return () => subscription.remove();
   }, []);
 
+  // Cleanup auto-activate timer
+  useEffect(() => {
+    return () => {
+      if (autoActivateTimer.current) clearTimeout(autoActivateTimer.current);
+    };
+  }, []);
+
+  const handleLookup = useCallback(async () => {
+    // Strip non-digit chars and validate
+    const digits = phoneInput.replace(/\D/g, "");
+    let phone10 = digits;
+    if (digits.length === 12 && digits.startsWith("91")) {
+      phone10 = digits.slice(2);
+    } else if (digits.length === 13 && digits.startsWith("+91")) {
+      phone10 = digits.slice(3);
+    }
+    if (phone10.length !== 10 || !/^[6-9]/.test(phone10)) {
+      setLookupError("Enter a valid 10-digit mobile number");
+      return;
+    }
+
+    // Offline check
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        setLookupError("No internet connection. Connect and try again.");
+        return;
+      }
+    } catch {
+      // proceed
+    }
+
+    setLookupLoading(true);
+    setLookupError("");
+    setLookupStoreName("");
+
+    try {
+      const result = await lookupActivation(phone10);
+      setCodeInput(result.code);
+      setLookupStoreName(result.storeName);
+      // Auto-trigger activation after short delay
+      autoActivateTimer.current = setTimeout(() => {
+        handleActivateRef.current?.();
+      }, 800);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.message === "STORE_NOT_FOUND") {
+          setLookupError("No store found for this phone number. Register at portal.supermandi.tech first.");
+        } else if (err.message === "NO_ACTIVE_CODE") {
+          setLookupError("Your store is pending approval. Contact SuperMandi support.");
+        } else if (err.status === 429) {
+          setLookupError("Too many attempts. Please wait a few minutes.");
+        } else {
+          setLookupError(err.message || "Lookup failed. Try entering the code manually.");
+        }
+      } else {
+        setLookupError("Network error. Check your connection and try again.");
+      }
+    } finally {
+      setLookupLoading(false);
+    }
+  }, [phoneInput]);
+
+  // Ref for auto-activate callback (avoids stale closure in timer)
+  const handleActivateRef = useRef<(() => void) | null>(null);
+
   const handleActivate = useCallback(async () => {
     const activationCode = parseActivationCode(codeInput);
     if (!activationCode) {
-      Alert.alert("Missing Code", "Enter the activation code sent to you by SuperMandi.");
+      Alert.alert("Missing Code", "Enter your phone number above to look up the code, or enter it manually.");
       return;
     }
 
@@ -245,7 +322,15 @@ export default function EnrollDeviceScreen() {
       if (!res.storeActive) {
         Alert.alert("Store Inactive", POS_MESSAGES.storeInactive);
       }
-      navigation.replace("SellScan");
+
+      // #329-332: Route to PaymentSetup if no UPI VPA set (prompted once)
+      const needsPaymentSetup = !res.upiVpa;
+      const alreadyPrompted = await AsyncStorage.getItem(PAYMENT_PROMPTED_KEY);
+      if (needsPaymentSetup && !alreadyPrompted) {
+        navigation.replace("PaymentSetup");
+      } else {
+        navigation.replace("SellScan");
+      }
     } catch (error) {
       let errorKey = "ENROLLMENT_FAILED";
       let rawMessage = "";
@@ -279,6 +364,9 @@ export default function EnrollDeviceScreen() {
     }
   }, [codeInput, deviceMeta, navigation]);
 
+  // Keep ref current for auto-activate timer
+  handleActivateRef.current = handleActivate;
+
   return (
     <ScrollView
       style={styles.scrollView}
@@ -293,11 +381,71 @@ export default function EnrollDeviceScreen() {
           Activate Your POS
         </Text>
         <Text style={styles.subtitle} testID="enroll-subtitle">
-          Enter the activation code sent to you via WhatsApp or Email after your store was approved.
+          Enter your registered phone number to activate, or enter the code manually.
         </Text>
       </View>
 
-      {/* Code Input */}
+      {/* Phone Lookup Section */}
+      <View style={styles.inputSection}>
+        <Text style={styles.label}>Registered Phone Number</Text>
+        <TextInput
+          style={styles.phoneInput}
+          placeholder="+91 98765 43210"
+          keyboardType="phone-pad"
+          value={phoneInput}
+          onChangeText={(t) => {
+            setPhoneInput(t);
+            if (lookupError) setLookupError("");
+            if (lookupStoreName) {
+              setLookupStoreName("");
+              setCodeInput("");
+            }
+          }}
+          testID="enroll-phone-input"
+          accessibilityLabel="Registered phone number"
+          autoFocus={!codeInput}
+          editable={!lookupLoading && !loading}
+        />
+
+        {lookupStoreName ? (
+          <View style={styles.lookupSuccess}>
+            <Text style={styles.lookupSuccessText}>
+              Store found: {lookupStoreName} ✓
+            </Text>
+          </View>
+        ) : null}
+
+        {lookupError ? (
+          <Text style={styles.lookupErrorText}>{lookupError}</Text>
+        ) : null}
+
+        <Pressable
+          style={[styles.lookupButton, (lookupLoading || loading) && styles.buttonDisabled]}
+          onPress={handleLookup}
+          disabled={lookupLoading || loading}
+          testID="enroll-lookup-button"
+          accessibilityLabel={lookupLoading ? "Looking up code" : "Look up my code"}
+          accessibilityRole="button"
+        >
+          {lookupLoading ? (
+            <View style={styles.activatingRow}>
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: spacing.xs }} />
+              <Text style={styles.lookupButtonText}>Looking up...</Text>
+            </View>
+          ) : (
+            <Text style={styles.lookupButtonText}>Look Up My Code</Text>
+          )}
+        </Pressable>
+      </View>
+
+      {/* Divider */}
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or enter code manually</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      {/* Manual Code Input */}
       <View style={styles.inputSection}>
         <Text style={styles.label}>Activation Code</Text>
         <TextInput
@@ -308,9 +456,9 @@ export default function EnrollDeviceScreen() {
           onChangeText={setCodeInput}
           testID="enroll-code-input"
           accessibilityLabel="Activation code"
-          autoFocus={!codeInput}
           returnKeyType="done"
           onSubmitEditing={handleActivate}
+          editable={!loading}
         />
 
         <Pressable
@@ -336,13 +484,13 @@ export default function EnrollDeviceScreen() {
       {/* Help Text */}
       <View style={styles.helpSection}>
         <Text style={styles.helpText}>
-          Don't have an activation code? Register your store at{" "}
+          Don't have a store yet? Register at{" "}
           <Text style={styles.helpLink} onPress={() => Linking.openURL("https://portal.supermandi.tech")}>
             portal.supermandi.tech
           </Text>
         </Text>
         <Text style={styles.helpTextSmall}>
-          After registration, SuperMandi will review your application and send the activation code via WhatsApp.
+          After registration, SuperMandi will review your application. Once approved, enter your phone number above to activate.
         </Text>
       </View>
 
@@ -412,6 +560,64 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontWeight: "600",
     color: colors.textSecondary,
+  },
+  phoneInput: {
+    ...typography.body,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+    fontSize: 18,
+  },
+  lookupSuccess: {
+    backgroundColor: colors.success + "15",
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  lookupSuccessText: {
+    color: colors.success,
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  lookupErrorText: {
+    color: colors.error,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  lookupButton: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: "transparent",
+    paddingVertical: spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    alignItems: "center",
+  },
+  lookupButtonText: {
+    ...typography.button,
+    color: colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginHorizontal: spacing.sm,
+    fontSize: 12,
   },
   codeInput: {
     ...typography.h4,

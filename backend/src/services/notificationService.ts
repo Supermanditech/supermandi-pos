@@ -436,22 +436,24 @@ export async function sendEnrollmentCode(
 }
 
 // =============================================================================
-// #330: ACTIVATION CODE NOTIFICATION (WhatsApp + SMS + Email)
+// #330/#333: WELCOME NOTIFICATION (WhatsApp + SMS + Email) — no activation code
+// Activation code auto-fetched by POS via phone lookup, not sent in message.
 // =============================================================================
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.supermanditech.supermandipos";
+const APP_STORE_URL = ""; // Placeholder until iOS App Store submission
+const PORTAL_URL = "https://portal.supermandi.tech";
+const WEB_URL = "https://supermandi.tech";
 
-export interface ActivationCodeNotificationInput {
+export interface WelcomeNotificationInput {
   phone: string;
   email?: string;
   ownerName: string;
   storeName: string;
   storeCode: string;
-  activationCode: string;
-  expiresAt: string;
 }
 
-export interface ActivationCodeNotificationResult {
+export interface WelcomeNotificationResult {
   whatsappSent: boolean;
   whatsappError?: string;
   smsSent: boolean;
@@ -461,57 +463,53 @@ export interface ActivationCodeNotificationResult {
 }
 
 /**
- * #330: Send activation code to retailer via WhatsApp + SMS + Email after SuperAdmin approval.
- * Non-blocking: failures are logged, never thrown.
+ * Send welcome message to retailer after SuperAdmin approval.
+ * Contains download links + portal URL. Activation code NOT included —
+ * POS fetches code automatically via phone number lookup.
  */
-export async function sendActivationCodeNotification(
-  input: ActivationCodeNotificationInput
-): Promise<ActivationCodeNotificationResult> {
-  const result: ActivationCodeNotificationResult = {
+export async function sendWelcomeNotification(
+  input: WelcomeNotificationInput
+): Promise<WelcomeNotificationResult> {
+  const result: WelcomeNotificationResult = {
     whatsappSent: false,
     smsSent: false,
     emailSent: false,
   };
 
-  const expiresIn = Math.round(
-    (new Date(input.expiresAt).getTime() - Date.now()) / 60000
-  );
-  const expiresLabel = expiresIn > 60
-    ? `Expires in ${Math.round(expiresIn / 60)} hours.`
-    : expiresIn > 0
-      ? `Expires in ${expiresIn} minutes.`
-      : "Expires soon.";
-
-  const downloadUrl = PLAY_STORE_URL;
-
   // --- WhatsApp (primary channel) ---
   if (isWhatsAppConfigured()) {
     try {
-      const waMessage = [
+      const waLines = [
         `Welcome to SuperMandi!`,
         ``,
         `Your store "${input.storeName}" has been approved.`,
         ``,
-        `Your POS activation code: *${input.activationCode}*`,
+        `Download SuperMandi POS to start billing:`,
+        `Android: ${PLAY_STORE_URL}`,
+      ];
+      if (APP_STORE_URL) {
+        waLines.push(`iOS: ${APP_STORE_URL}`);
+      }
+      waLines.push(
         ``,
-        `Download SuperMandi POS:`,
-        downloadUrl,
+        `Manage your store online:`,
+        `${PORTAL_URL}`,
         ``,
-        `Steps:`,
+        `How to activate your POS:`,
         `1. Download the app from the link above`,
-        `2. Open it and enter your activation code`,
-        `3. Your store is ready to use!`,
+        `2. Open it and enter your registered phone number`,
+        `3. Your store will be activated automatically!`,
         ``,
-        `${expiresLabel} Contact support if you need a new code.`,
-      ].join("\n");
+        `Need help? Visit ${WEB_URL}`,
+      );
 
-      const waResult = await sendTextMessage({ to: input.phone, body: waMessage });
+      const waResult = await sendTextMessage({ to: input.phone, body: waLines.join("\n") });
       result.whatsappSent = waResult.sent;
       if (!waResult.sent) {
         result.whatsappError = waResult.errorMessage;
-        log.warn(`[NotificationService] WhatsApp activation code not sent to ${input.phone}: ${waResult.errorMessage}`);
+        log.warn(`[NotificationService] WhatsApp welcome not sent to ${input.phone}: ${waResult.errorMessage}`);
       } else {
-        log.info(`[NotificationService] WhatsApp activation code sent to ${input.phone}`);
+        log.info(`[NotificationService] WhatsApp welcome sent to ${input.phone}`);
       }
     } catch (err) {
       result.whatsappError = err instanceof Error ? err.message : "WhatsApp failed";
@@ -522,7 +520,7 @@ export async function sendActivationCodeNotification(
   // --- SMS (fallback) ---
   if (isSmsServiceEnabled()) {
     try {
-      const smsText = `SuperMandi: Your store "${input.storeName}" is approved! POS activation code: ${input.activationCode}. ${expiresLabel} Download: ${downloadUrl}`;
+      const smsText = `SuperMandi: Your store "${input.storeName}" is approved! Download POS: ${PLAY_STORE_URL} | Portal: ${PORTAL_URL}`;
       const smsResult = await sendSms(input.phone, smsText);
       result.smsSent = smsResult.sent;
       if (!smsResult.sent) {
@@ -536,9 +534,9 @@ export async function sendActivationCodeNotification(
   // --- Email ---
   if (input.email && isEmailServiceEnabled()) {
     try {
-      const subject = `SuperMandi — Your Store is Approved! Activation Code: ${input.activationCode}`;
-      const html = buildActivationEmailHtml(input, expiresLabel, downloadUrl);
-      const text = buildActivationEmailText(input, expiresLabel, downloadUrl);
+      const subject = `SuperMandi — Your Store "${input.storeName}" is Approved!`;
+      const html = buildWelcomeEmailHtml(input);
+      const text = buildWelcomeEmailText(input);
       const emailResult = await sendGenericEmail(input.email, subject, html, text);
       result.emailSent = emailResult.sent;
       if (!emailResult.sent) {
@@ -552,11 +550,10 @@ export async function sendActivationCodeNotification(
   return result;
 }
 
-function buildActivationEmailHtml(
-  input: ActivationCodeNotificationInput,
-  expiresLabel: string,
-  downloadUrl: string,
-): string {
+function buildWelcomeEmailHtml(input: WelcomeNotificationInput): string {
+  const appStoreLink = APP_STORE_URL
+    ? `<p style="color:#1f2937;margin:8px 0 0;font-size:14px;"><a href="${APP_STORE_URL}" style="color:#10b981;text-decoration:none;font-weight:600;">Download for iOS</a></p>`
+    : "";
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -573,34 +570,29 @@ function buildActivationEmailHtml(
           <p style="color:#4b5563;margin:0 0 24px;font-size:15px;line-height:1.6;">
             Great news! Your store <strong>"${input.storeName}"</strong> has been approved on SuperMandi.
           </p>
-          <div style="background-color:#f0fdf4;border:2px dashed #86efac;border-radius:8px;padding:24px;text-align:center;margin-bottom:24px;">
-            <p style="color:#166534;margin:0 0 8px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Your POS Activation Code</p>
-            <span style="font-family:'Courier New',monospace;font-size:36px;font-weight:700;letter-spacing:4px;color:#15803d;">
-              ${input.activationCode}
-            </span>
-          </div>
           <h3 style="color:#1f2937;margin:0 0 16px;font-size:16px;">Get Started in 3 Steps</h3>
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
             <tr><td style="padding:12px 16px;background-color:#f9fafb;border-radius:8px;">
-              <p style="color:#1f2937;margin:0;font-size:14px;"><strong>1.</strong> <a href="${downloadUrl}" style="color:#10b981;text-decoration:none;font-weight:600;">Download SuperMandi POS</a></p>
+              <p style="color:#1f2937;margin:0;font-size:14px;"><strong>1.</strong> <a href="${PLAY_STORE_URL}" style="color:#10b981;text-decoration:none;font-weight:600;">Download SuperMandi POS</a></p>
+              ${appStoreLink}
             </td></tr>
           </table>
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
             <tr><td style="padding:12px 16px;background-color:#f9fafb;border-radius:8px;">
-              <p style="color:#1f2937;margin:0;font-size:14px;"><strong>2.</strong> Open the app and enter code: <strong>${input.activationCode}</strong></p>
+              <p style="color:#1f2937;margin:0;font-size:14px;"><strong>2.</strong> Open the app and enter your registered phone number</p>
             </td></tr>
           </table>
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
             <tr><td style="padding:12px 16px;background-color:#f9fafb;border-radius:8px;">
-              <p style="color:#1f2937;margin:0;font-size:14px;"><strong>3.</strong> Your store is ready to use!</p>
+              <p style="color:#1f2937;margin:0;font-size:14px;"><strong>3.</strong> Your store will be activated automatically!</p>
             </td></tr>
           </table>
-          <div style="background-color:#fef3c7;border-left:4px solid #f59e0b;padding:16px;border-radius:0 8px 8px 0;">
-            <p style="color:#92400e;margin:0;font-size:13px;">${expiresLabel} Contact support if you need a new code.</p>
+          <div style="background-color:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;text-align:center;margin-bottom:24px;">
+            <p style="color:#166534;margin:0;font-size:14px;">Manage your store online at <a href="${PORTAL_URL}" style="color:#10b981;font-weight:600;">${PORTAL_URL}</a></p>
           </div>
         </td></tr>
         <tr><td style="background-color:#f9fafb;padding:24px 32px;border-top:1px solid #e5e7eb;">
-          <p style="color:#6b7280;margin:0;font-size:12px;text-align:center;">&copy; ${new Date().getFullYear()} SuperMandi. All rights reserved.</p>
+          <p style="color:#6b7280;margin:0;font-size:12px;text-align:center;">&copy; ${new Date().getFullYear()} SuperMandi. All rights reserved. | <a href="${WEB_URL}" style="color:#6b7280;">${WEB_URL}</a></p>
         </td></tr>
       </table>
     </td></tr>
@@ -609,25 +601,22 @@ function buildActivationEmailHtml(
 </html>`;
 }
 
-function buildActivationEmailText(
-  input: ActivationCodeNotificationInput,
-  expiresLabel: string,
-  downloadUrl: string,
-): string {
+function buildWelcomeEmailText(input: WelcomeNotificationInput): string {
+  const appStoreLine = APP_STORE_URL ? `iOS: ${APP_STORE_URL}\n` : "";
   return `SUPERMANDI - Your Store is Approved!
 
 Hello ${input.ownerName},
 
-Your store "${input.storeName}" has been approved.
-
-YOUR POS ACTIVATION CODE: ${input.activationCode}
+Your store "${input.storeName}" has been approved on SuperMandi.
 
 GET STARTED:
-1. Download SuperMandi POS: ${downloadUrl}
-2. Open the app and enter your activation code: ${input.activationCode}
-3. Your store is ready to use!
+1. Download SuperMandi POS: ${PLAY_STORE_URL}
+${appStoreLine}2. Open the app and enter your registered phone number
+3. Your store will be activated automatically!
 
-${expiresLabel} Contact support if you need a new code.
+Manage your store online: ${PORTAL_URL}
+
+Need help? Visit ${WEB_URL}
 
 ---
 © ${new Date().getFullYear()} SuperMandi. All rights reserved.

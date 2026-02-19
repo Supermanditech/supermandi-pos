@@ -2522,18 +2522,18 @@ export default function App() {
     }
   }
 
-  // #330: Resend activation code notification
+  // #329-332: Resend welcome message (download links + activation instructions)
   async function handleResendCode(code: string) {
     setResendLoading(true);
     try {
       const result = await resendEnrollmentCode(code);
       if (result.sent) {
-        alert(`Activation code resent${result.sentTo ? ` to ${result.sentTo}` : ""} via ${result.channels.join(", ")}`);
+        alert(`Welcome message resent${result.sentTo ? ` to ${result.sentTo}` : ""} via ${result.channels.join(", ")}`);
       } else {
         alert("Resend request completed but no channels were available.");
       }
     } catch (e: any) {
-      setEnrollError(e?.message ? String(e.message) : "Failed to resend activation code");
+      setEnrollError(e?.message ? String(e.message) : "Failed to resend welcome message");
     } finally {
       setResendLoading(false);
     }
@@ -3128,7 +3128,7 @@ export default function App() {
                 <div style={{ fontSize: 36, marginBottom: 8 }}>&#10003;</div>
                 <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Store Approved!</h2>
                 <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
-                  Activation code has been sent to the retailer.
+                  Welcome message sent to the retailer. The POS app will auto-fetch this code when the retailer enters their phone number.
                 </p>
                 <div style={{ background: "#f0fdf4", border: "2px dashed #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: "#166534", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Activation Code</div>

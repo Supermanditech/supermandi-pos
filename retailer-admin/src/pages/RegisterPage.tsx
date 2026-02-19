@@ -1027,13 +1027,13 @@ export default function RegisterPage() {
                   </div>
                 )}
 
-                {/* #332: Updated success message — activation code sent on approval */}
+                {/* #329-332: Updated success message — phone-based activation */}
                 <div style={styles.alertSuccess}>
                   <strong>What happens next?</strong>
                   <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem', textAlign: 'left' }}>
                     <li>We review your documents (usually 1-2 business days)</li>
-                    <li>Once approved, you'll receive a <strong>POS Activation Code</strong> via WhatsApp and Email</li>
-                    <li>Download the SuperMandi POS app and enter the code to activate your store</li>
+                    <li>Once approved, you'll receive a <strong>welcome message</strong> via WhatsApp and Email</li>
+                    <li>Download the SuperMandi POS app, enter your phone number, and your store activates automatically</li>
                   </ol>
                 </div>
 

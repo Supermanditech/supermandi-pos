@@ -15,6 +15,7 @@ export type DeviceEnrollResponse = {
   reEnrolled?: boolean;
   // ISSUE-MICRO-030: Number of active POS devices for this store (server may add this field)
   activeDeviceCount?: number;
+  upiVpa?: string | null; // #329-332: Payment setup — null means not set yet
 };
 
 export type DeviceMeta = {
@@ -78,3 +79,37 @@ export async function enrollDevice(input: {
 }
 
 // #329: GL-RJ-006 checkDuplicateLabel removed — simplified activation flow has no device labels
+
+// =============================================================================
+// Phone-based activation lookup (#329-332)
+// =============================================================================
+export type LookupActivationResponse = {
+  code: string;
+  storeName: string;
+};
+
+export async function lookupActivation(phone: string): Promise<LookupActivationResponse> {
+  return apiClient.post<LookupActivationResponse>("/api/v1/pos/lookup-activation", { phone });
+}
+
+// =============================================================================
+// Payment settings (#329-332)
+// =============================================================================
+export type PaymentSettingsInput = {
+  upiVpa?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+};
+
+export type PaymentSettingsResponse = {
+  success: boolean;
+  upiVpa: string | null;
+  bankAccountNumber: string | null;
+  bankIfsc: string | null;
+};
+
+export async function updatePaymentSettings(
+  input: PaymentSettingsInput
+): Promise<PaymentSettingsResponse> {
+  return apiClient.patch<PaymentSettingsResponse>("/api/v1/pos/store/payment-settings", input);
+}

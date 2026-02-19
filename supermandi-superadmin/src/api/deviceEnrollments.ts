@@ -94,7 +94,7 @@ export async function fetchStoreEnrollments(storeId: string): Promise<Enrollment
   return data.enrollments;
 }
 
-// #330: Resend activation code notification (WhatsApp + SMS + Email)
+// #329-332: Resend welcome message — download links + activation instructions (WhatsApp + SMS + Email)
 export async function resendEnrollmentCode(code: string): Promise<{ sent: boolean; channels: string[]; sentTo?: string }> {
   const base = requireApiBase();
 
