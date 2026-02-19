@@ -40,20 +40,36 @@ export class ErrorBoundary extends React.Component<
           <p style={{ color: '#64748b', marginBottom: '1rem', maxWidth: '400px' }}>
             An unexpected error occurred. Please try refreshing the page.
           </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '0.5rem 1.5rem',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 500,
-            }}
-          >
-            Refresh Page
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '0.5rem 1.5rem',
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Refresh Page
+            </button>
+            <button
+              onClick={() => { window.location.href = '/admin/'; }}
+              style={{
+                padding: '0.5rem 1.5rem',
+                background: '#64748b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Go Home
+            </button>
+          </div>
         </div>
       );
     }

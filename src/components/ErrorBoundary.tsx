@@ -3,6 +3,7 @@
 
 import React, { Component, ErrorInfo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { colors, typography, spacing } from "../theme";
 
 interface Props {
   children: React.ReactNode;
@@ -56,17 +57,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 32,
-    backgroundColor: "#f8fafc",
+    padding: spacing.xl,
+    backgroundColor: colors.background,
   },
-  icon: { fontSize: 48, marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: "700", color: "#0f172a", marginBottom: 8 },
-  message: { fontSize: 14, color: "#64748b", textAlign: "center", marginBottom: 24 },
+  icon: { fontSize: 48, marginBottom: spacing.md },
+  title: { fontSize: 20, fontWeight: "700", color: colors.textPrimary, marginBottom: spacing.xs },
+  message: { fontSize: 14, color: colors.textSecondary, textAlign: "center", marginBottom: spacing.lg },
   button: {
-    backgroundColor: "#3b82f6",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: 8,
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonText: { color: colors.surface, fontSize: 16, fontWeight: "600" },
 });

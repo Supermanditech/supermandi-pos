@@ -1,6 +1,6 @@
 // SCR-AUDIT-310: Production-grade DeviceBlocked with strict fetch + theme tokens + a11y
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator, BackHandler } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -28,6 +28,12 @@ const ICON_WRAP_SIZE = 52;
 export default function DeviceBlockedScreen() {
   const navigation = useNavigation<Nav>();
   const [checking, setChecking] = useState(false);
+
+  // DEPLOY-390: Prevent Android back gesture from bypassing device blocked gate
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
 
   const handleRetry = async () => {
     // Check network before API call

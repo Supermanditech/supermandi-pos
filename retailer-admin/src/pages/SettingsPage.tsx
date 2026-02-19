@@ -142,7 +142,7 @@ export default function SettingsPage() {
   };
 
   // Handle field changes
-  const handleChange = useCallback((field: keyof StoreSettings, value: string | number) => {
+  const handleChange = useCallback((field: keyof StoreSettings, value: string | number | boolean) => {
     setSettings(prev => ({ ...prev, [field]: value }));
     setSaveSuccess(false);
     setSaveError(null);
@@ -787,7 +787,7 @@ export default function SettingsPage() {
                 <input
                   type="checkbox"
                   checked={settings.showTaxBreakdown}
-                  onChange={(e) => handleChange('showTaxBreakdown', e.target.checked as any)}
+                  onChange={(e) => handleChange('showTaxBreakdown', e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: '#3b82f6', cursor: 'pointer' }}
                 />
                 Show Tax Breakdown on Receipt
