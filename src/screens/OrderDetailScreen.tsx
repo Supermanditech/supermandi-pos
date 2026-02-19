@@ -488,7 +488,7 @@ export default function OrderDetailScreen({
           <MaterialCommunityIcons
             name="whatsapp"
             size={18}
-            color="#FFFFFF"
+            color={theme.colors.textInverse}
           />
         </Pressable>
 

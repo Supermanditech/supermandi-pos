@@ -969,7 +969,7 @@ const PaymentScreen = () => {
                 </View>
               ) : loadingUpi ? (
                 <View style={{ alignItems: "center", padding: 16 }}>
-                  <ActivityIndicator size="large" color="#2563EB" />
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
                   <Text style={[styles.qrHint, { marginTop: 8 }]}>Generating QR...</Text>
                 </View>
               ) : (
@@ -987,7 +987,7 @@ const PaymentScreen = () => {
             {upiIntent && qrSecondsLeft !== null && qrSecondsLeft > 0 && (
               <Text style={{
                 fontSize: 13,
-                color: qrSecondsLeft <= 60 ? "#DC2626" : "#64748B",
+                color: qrSecondsLeft <= 60 ? theme.colors.error : theme.colors.textTertiary,
                 fontWeight: qrSecondsLeft <= 60 ? "700" : "500",
                 marginTop: 8,
                 textAlign: "center",
@@ -1021,9 +1021,9 @@ const PaymentScreen = () => {
 
       {/* FIX-039: Stale price warning banner */}
       {stalePriceCount > 0 && (
-        <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
-          <MaterialCommunityIcons name="alert-outline" size={18} color="#D97706" />
-          <Text style={{ color: "#92400E", fontSize: 13, marginLeft: 8, flex: 1 }}>
+        <View style={{ backgroundColor: theme.colors.warningSoft, paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
+          <MaterialCommunityIcons name="alert-outline" size={18} color={theme.colors.warning} />
+          <Text style={{ color: theme.colors.warningDark, fontSize: 13, marginLeft: 8, flex: 1 }}>
             {stalePriceCount} item(s) have prices loaded over 4 hours ago. Prices may have changed.
           </Text>
         </View>
