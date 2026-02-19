@@ -395,6 +395,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
                 app_version = $7,
                 printing_mode = $8,
                 device_fingerprint = COALESCE($9, device_fingerprint),
+                enrollment_code = $12,
                 last_seen_online = NOW(),
                 updated_at = NOW(),
                 re_enrolled = true,
@@ -414,7 +415,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               printingMode,
               deviceFingerprint,
               deviceId,
-              TOKEN_EXPIRY_DAYS
+              TOKEN_EXPIRY_DAYS,
+              code
             ]
           );
 
@@ -456,12 +458,13 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               app_version,
               printing_mode,
               device_fingerprint,
+              enrollment_code,
               last_seen_online,
               updated_at,
               token_expires_at,
               token_refreshed_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW() + ($12 * INTERVAL '1 day'), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW(), NOW() + ($13 * INTERVAL '1 day'), NOW())
             `,
             [
               deviceId,
@@ -475,6 +478,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               appVersion,
               printingMode,
               deviceFingerprint,
+              code,
               TOKEN_EXPIRY_DAYS
             ]
           );

@@ -56,7 +56,7 @@ adminDeviceEnrollmentRouter.get("/device-enrollments", requireAdminToken, async 
     const dataParams: (string | number)[] = [];
 
     if (storeId) {
-      whereClause = ` WHERE e.store_id = $1::text`;
+      whereClause = ` WHERE e.store_id = $1::uuid`;
       countParams.push(storeId);
       dataParams.push(storeId);
     }
@@ -89,7 +89,7 @@ adminDeviceEnrollmentRouter.get("/device-enrollments", requireAdminToken, async 
           ELSE 'ACTIVE'
         END as status
       FROM pos_device_enrollments e
-      LEFT JOIN platform.stores s ON e.store_id::uuid = s.id
+      LEFT JOIN platform.stores s ON e.store_id = s.id
       ${whereClause}
       ORDER BY e.created_at DESC
       LIMIT $${dataParams.length + 1} OFFSET $${dataParams.length + 2}
@@ -205,6 +205,123 @@ adminDeviceEnrollmentRouter.patch("/device-enrollments/:code/revoke", requireAdm
   }
 });
 
+// #369: PATCH /api/v1/admin/device-enrollments/:code/reinstate — Un-revoke a code
+adminDeviceEnrollmentRouter.patch("/device-enrollments/:code/reinstate", requireAdminToken, async (req, res) => {
+  try {
+    const code = typeof req.params.code === "string" ? req.params.code.trim() : "";
+    if (!code) {
+      return res.status(400).json({ error: "code is required" });
+    }
+
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const result = await pool.query(
+      `UPDATE pos_device_enrollments
+       SET revoked_at = NULL, updated_at = NOW()
+       WHERE code = $1 AND revoked_at IS NOT NULL
+       RETURNING code, store_id, expires_at, max_uses, uses_count, created_at`,
+      [code]
+    );
+
+    if (result.rowCount === 0) {
+      const check = await pool.query(`SELECT code, revoked_at FROM pos_device_enrollments WHERE code = $1`, [code]);
+      if (check.rowCount === 0) {
+        return res.status(404).json({ error: "enrollment code not found" });
+      }
+      return res.status(409).json({ error: "enrollment code is not revoked" });
+    }
+
+    log.info(`[AdminEnrollment] Reinstated code=${code}`);
+    return res.json({ success: true, enrollment: result.rows[0] });
+  } catch (error) {
+    log.error("[AdminEnrollment] Error reinstating enrollment:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to reinstate enrollment" });
+  }
+});
+
+// #369: GET /api/v1/admin/device-enrollments/:code/devices — List devices enrolled via code
+adminDeviceEnrollmentRouter.get("/device-enrollments/:code/devices", requireAdminToken, async (req, res) => {
+  try {
+    const code = typeof req.params.code === "string" ? req.params.code.trim() : "";
+    if (!code) {
+      return res.status(400).json({ error: "code is required" });
+    }
+
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    // Verify code exists
+    const enrollment = await pool.query(
+      `SELECT code, store_id, max_uses, uses_count, revoked_at FROM pos_device_enrollments WHERE code = $1`,
+      [code]
+    );
+    if (enrollment.rowCount === 0) {
+      return res.status(404).json({ error: "enrollment code not found" });
+    }
+
+    // Find devices enrolled with this code
+    const devices = await pool.query(
+      `SELECT id, label, device_fingerprint, active, last_seen_online,
+              app_version, created_at, token_revoked_at, re_enrolled
+       FROM pos_devices
+       WHERE enrollment_code = $1
+       ORDER BY created_at DESC`,
+      [code]
+    );
+
+    return res.json({
+      code,
+      enrollment: enrollment.rows[0],
+      devices: devices.rows
+    });
+  } catch (error) {
+    log.error("[AdminEnrollment] Error listing devices for code:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to list devices" });
+  }
+});
+
+// #369: POST /api/v1/admin/device-enrollments/:code/revoke-devices — Revoke all devices for code
+adminDeviceEnrollmentRouter.post("/device-enrollments/:code/revoke-devices", requireAdminToken, async (req, res) => {
+  try {
+    const code = typeof req.params.code === "string" ? req.params.code.trim() : "";
+    if (!code) {
+      return res.status(400).json({ error: "code is required" });
+    }
+
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    // Verify code exists and is revoked
+    const enrollment = await pool.query(
+      `SELECT code, revoked_at FROM pos_device_enrollments WHERE code = $1`,
+      [code]
+    );
+    if (enrollment.rowCount === 0) {
+      return res.status(404).json({ error: "enrollment code not found" });
+    }
+
+    // Deactivate all devices enrolled with this code
+    const result = await pool.query(
+      `UPDATE pos_devices
+       SET active = false, token_revoked_at = NOW(), updated_at = NOW()
+       WHERE enrollment_code = $1 AND active = true
+       RETURNING id, label`,
+      [code]
+    );
+
+    log.info(`[AdminEnrollment] Revoked ${result.rowCount} devices for code=${code}`);
+    return res.json({
+      success: true,
+      revokedCount: result.rowCount,
+      devices: result.rows
+    });
+  } catch (error) {
+    log.error("[AdminEnrollment] Error revoking devices for code:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to revoke devices" });
+  }
+});
+
 // #330: POST /api/v1/admin/device-enrollments/:code/resend — Re-send activation code notification
 adminDeviceEnrollmentRouter.post("/device-enrollments/:code/resend", requireAdminToken, async (req, res) => {
   try {
@@ -229,7 +346,7 @@ adminDeviceEnrollmentRouter.post("/device-enrollments/:code/resend", requireAdmi
         s.name as store_name, s.code as store_code, s.phone as store_phone, s.email as store_email,
         s.contact_name as contact_name
       FROM pos_device_enrollments e
-      LEFT JOIN platform.stores s ON e.store_id::uuid = s.id
+      LEFT JOIN platform.stores s ON e.store_id = s.id
       WHERE e.code = $1`,
       [code]
     );
