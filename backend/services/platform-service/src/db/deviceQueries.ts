@@ -44,40 +44,48 @@ export interface DeviceEnrollment extends BaseEntity {
 // =============================================================================
 
 export async function getDevicesForStore(storeId: string): Promise<Device[]> {
+  // GCP-PARITY-409: Map actual DB columns to interface fields
+  // device_id → id (no separate device_id column)
+  // status → computed from active boolean
+  // enrolled_at → created_at (enrollment time = row creation time)
+  // last_seen_at → last_seen_online (actual column name)
   return query<Device>(
     `SELECT
-      id, store_id as "storeId", device_id as "deviceId",
+      id, store_id as "storeId", id::TEXT as "deviceId",
       device_token as "deviceToken", label,
       device_type as "deviceType", printing_mode as "printingMode",
       manufacturer, model, android_version as "androidVersion",
       app_version as "appVersion",
-      status, active,
-      enrolled_at as "enrolledAt",
-      last_seen_at as "lastSeenAt",
+      CASE WHEN active THEN 'active' ELSE 'blocked' END as status,
+      active,
+      created_at as "enrolledAt",
+      last_seen_online as "lastSeenAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
     FROM public.pos_devices
     WHERE store_id = $1
-    ORDER BY enrolled_at DESC`,
+    ORDER BY created_at DESC`,
     [storeId]
   );
 }
 
 export async function getDeviceById(deviceId: string): Promise<Device | null> {
+  // GCP-PARITY-409: Map actual DB columns (see getDevicesForStore comment)
   const rows = await query<Device>(
     `SELECT
-      id, store_id as "storeId", device_id as "deviceId",
+      id, store_id as "storeId", id::TEXT as "deviceId",
       device_token as "deviceToken", label,
       device_type as "deviceType", printing_mode as "printingMode",
       manufacturer, model, android_version as "androidVersion",
       app_version as "appVersion",
-      status, active,
-      enrolled_at as "enrolledAt",
-      last_seen_at as "lastSeenAt",
+      CASE WHEN active THEN 'active' ELSE 'blocked' END as status,
+      active,
+      created_at as "enrolledAt",
+      last_seen_online as "lastSeenAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
     FROM public.pos_devices
-    WHERE id = $1 OR device_id = $1`,
+    WHERE id = $1`,
     [deviceId]
   );
   return rows[0] || null;
@@ -87,22 +95,24 @@ export async function updateDeviceStatus(
   deviceId: string,
   status: 'active' | 'blocked'
 ): Promise<Device | null> {
+  // GCP-PARITY-409: Only SET active (no status column in DB), map in RETURNING
   const rows = await query<Device>(
     `UPDATE public.pos_devices
-    SET status = $1, active = $2, updated_at = NOW()
-    WHERE id = $3 OR device_id = $3
+    SET active = $1, updated_at = NOW()
+    WHERE id = $2
     RETURNING
-      id, store_id as "storeId", device_id as "deviceId",
+      id, store_id as "storeId", id::TEXT as "deviceId",
       device_token as "deviceToken", label,
       device_type as "deviceType", printing_mode as "printingMode",
       manufacturer, model, android_version as "androidVersion",
       app_version as "appVersion",
-      status, active,
-      enrolled_at as "enrolledAt",
-      last_seen_at as "lastSeenAt",
+      CASE WHEN active THEN 'active' ELSE 'blocked' END as status,
+      active,
+      created_at as "enrolledAt",
+      last_seen_online as "lastSeenAt",
       created_at as "createdAt",
       updated_at as "updatedAt"`,
-    [status, status === 'active', deviceId]
+    [status === 'active', deviceId]
   );
   return rows[0] || null;
 }

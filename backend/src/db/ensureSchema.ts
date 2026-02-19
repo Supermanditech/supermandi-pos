@@ -313,6 +313,8 @@ export async function ensureCoreSchema(): Promise<void> {
       app_version TEXT NULL,
       printing_mode TEXT NULL,
       device_fingerprint TEXT NULL,
+      enrollment_id TEXT NULL,
+      enrollment_code TEXT NULL,
       last_seen_online TIMESTAMPTZ NULL,
       last_sync_at TIMESTAMPTZ NULL,
       pending_outbox_count INTEGER NOT NULL DEFAULT 0,
@@ -320,6 +322,10 @@ export async function ensureCoreSchema(): Promise<void> {
       re_enrolled BOOLEAN NOT NULL DEFAULT FALSE,
       re_enrolled_at TIMESTAMPTZ NULL,
       inventory_sync_status TEXT DEFAULT 'synced',
+      token_expires_at TIMESTAMPTZ NULL,
+      token_refreshed_at TIMESTAMPTZ NULL,
+      token_revoked_at TIMESTAMPTZ NULL,
+      last_active_at TIMESTAMPTZ NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -327,10 +333,18 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS pos_device_enrollments (
       code TEXT PRIMARY KEY,
       store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
+      enrollment_code_hash TEXT NULL,
+      label TEXT NULL,
       expires_at TIMESTAMPTZ NOT NULL,
       used_at TIMESTAMPTZ NULL,
+      used_device_id TEXT NULL,
+      revoked_at TIMESTAMPTZ NULL,
+      max_uses INTEGER NOT NULL DEFAULT 1,
+      uses_count INTEGER NOT NULL DEFAULT 0,
+      last_used_at TIMESTAMPTZ NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      created_by TEXT NOT NULL DEFAULT 'superadmin'
+      created_by TEXT NOT NULL DEFAULT 'superadmin',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS purchases (
