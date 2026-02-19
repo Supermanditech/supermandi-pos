@@ -501,7 +501,20 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS android_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS app_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS printing_mode TEXT NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS device_fingerprint TEXT NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS enrollment_id TEXT NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS enrollment_code TEXT NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS last_seen_online TIMESTAMPTZ NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS last_sync_at TIMESTAMPTZ NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS pending_outbox_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS scan_lookup_v2_enabled BOOLEAN NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS re_enrolled BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS re_enrolled_at TIMESTAMPTZ NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS inventory_sync_status TEXT DEFAULT 'synced';
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMPTZ NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS token_refreshed_at TIMESTAMPTZ NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS token_revoked_at TIMESTAMPTZ NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ NULL;
     ALTER TABLE pos_devices ALTER COLUMN store_id DROP NOT NULL;
   `);
 
