@@ -722,7 +722,7 @@ posEnrollRouter.post("/lookup-activation", lookupBurstLimiter, lookupSustainedLi
     if (storeRes.rows.length === 0) {
       log.info(`[LookupActivation] No store for phone=***${phone10.slice(-4)}`);
       return res.status(404).json({
-        error: { code: "STORE_NOT_FOUND", message: "No store found for this phone number. Register at portal.supermandi.tech" }
+        error: { code: "STORE_NOT_FOUND", message: "No store found for this phone number. Please register at supermandi.tech/retailer/register" }
       });
     }
 

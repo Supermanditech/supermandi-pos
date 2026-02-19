@@ -210,7 +210,7 @@ export default function EnrollDeviceScreen() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.message === "STORE_NOT_FOUND") {
-          setLookupError("No store found for this phone number. Register at portal.supermandi.tech first.");
+          setLookupError("No store found for this phone number. Register at supermandi.tech/retailer/register first.");
         } else if (err.message === "NO_ACTIVE_CODE") {
           setLookupError("Your store is pending approval. Contact SuperMandi support.");
         } else if (err.status === 429) {
@@ -485,8 +485,8 @@ export default function EnrollDeviceScreen() {
       <View style={styles.helpSection}>
         <Text style={styles.helpText}>
           Don't have a store yet? Register at{" "}
-          <Text style={styles.helpLink} onPress={() => Linking.openURL("https://portal.supermandi.tech")}>
-            portal.supermandi.tech
+          <Text style={styles.helpLink} onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}>
+            supermandi.tech/retailer/register
           </Text>
         </Text>
         <Text style={styles.helpTextSmall}>
