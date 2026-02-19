@@ -527,7 +527,7 @@ export default function PurchaseScreen({
           <MaterialCommunityIcons name="barcode" size={12} color={theme.colors.textTertiary} />
           <Text style={styles.barcodeText}>{item.barcode}</Text>
         </View>
-        <Pressable onPress={() => removeQuickItem(item.id)} hitSlop={8}>
+        <Pressable onPress={() => removeQuickItem(item.id)} hitSlop={8} accessibilityLabel="Remove item" accessibilityRole="button">
           <MaterialCommunityIcons name="close" size={16} color={theme.colors.error} />
         </Pressable>
       </View>
@@ -540,11 +540,11 @@ export default function PurchaseScreen({
       />
       <View style={styles.quickPriceRow}>
         <View style={styles.qtyWrap}>
-          <Pressable style={styles.qtyBtn} onPress={() => updateQuickItem(item.id, "quantity", Math.max(1, item.quantity - 1))}>
+          <Pressable style={styles.qtyBtn} onPress={() => updateQuickItem(item.id, "quantity", Math.max(1, item.quantity - 1))} accessibilityLabel="Decrease quantity" accessibilityRole="button">
             <MaterialCommunityIcons name="minus" size={14} color={theme.colors.textPrimary} />
           </Pressable>
           <Text style={styles.qtyText}>{item.quantity}</Text>
-          <Pressable style={styles.qtyBtn} onPress={() => updateQuickItem(item.id, "quantity", item.quantity + 1)}>
+          <Pressable style={styles.qtyBtn} onPress={() => updateQuickItem(item.id, "quantity", item.quantity + 1)} accessibilityLabel="Increase quantity" accessibilityRole="button">
             <MaterialCommunityIcons name="plus" size={14} color={theme.colors.textPrimary} />
           </Pressable>
         </View>
@@ -592,6 +592,9 @@ export default function PurchaseScreen({
               setExpandedSegment("quick");
               onOpenScanner?.();
             }}
+            accessibilityLabel="Open camera scanner"
+            accessibilityRole="button"
+            testID="purchase-scan-btn"
           >
             <MaterialCommunityIcons
               name="camera"
@@ -614,6 +617,9 @@ export default function PurchaseScreen({
                   setExpandedSegment("quick");
                   onOpenScanner?.();
                 }}
+                accessibilityLabel="Quick Purchase"
+                accessibilityRole="tab"
+                testID="purchase-quick-tab"
               >
                 <Text style={styles.halfSegmentText}>Quick Purchase</Text>
               </Pressable>
@@ -629,6 +635,9 @@ export default function PurchaseScreen({
                   setQuickItems([]);
                   setTimeout(() => searchInputRef.current?.focus(), 100);
                 }}
+                accessibilityLabel="Live Suppliers"
+                accessibilityRole="tab"
+                testID="purchase-suppliers-tab"
               >
                 <Text style={styles.halfSegmentText}>Live Suppliers</Text>
               </Pressable>
@@ -692,7 +701,7 @@ export default function PurchaseScreen({
                 </Pressable>
               )}
               {searchQuery.length > 0 && (
-                <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
+                <Pressable onPress={() => setSearchQuery("")} hitSlop={8} accessibilityLabel="Clear search" accessibilityRole="button">
                   <MaterialCommunityIcons
                     name="close-circle"
                     size={16}
@@ -811,6 +820,9 @@ export default function PurchaseScreen({
               ]}
               onPress={handleQuickSubmit}
               disabled={submitting}
+              accessibilityLabel={stockInReady ? "Stock In" : "Stock In Draft"}
+              accessibilityRole="button"
+              testID="purchase-stock-in-btn"
             >
               <Text style={styles.actionBtnText}>
                 {stockInReady ? "Stock In" : "Stock In (Draft)"}
@@ -921,6 +933,9 @@ export default function PurchaseScreen({
                   <Pressable
                     style={[styles.actionBtn, placingOrder && { opacity: 0.6 }]}
                     disabled={placingOrder}
+                    accessibilityLabel="Review Order"
+                    accessibilityRole="button"
+                    testID="purchase-review-order-btn"
                     onPress={() => {
                       const items = purchaseCart.items;
                       const summary = items
