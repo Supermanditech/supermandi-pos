@@ -1227,6 +1227,55 @@ jobs:
             echo "PASS: API did not return HTML error (Content-Type: $CONTENT_TYPE)"
           fi
 
+      # ---- Gate 12: Canary endpoint suite — critical path 5xx detection (BLOCKING) ----
+      # STAGE.OBS.HISTORICAL_5XX.001: Historical 5xx spikes on registration/admin paths
+      # went undetected until manual log review. This gate catches 5xx on critical paths
+      # before traffic cutover.
+      - name: "Gate 12: Canary endpoint 5xx detection (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          echo "=== Canary Endpoint Suite: Critical Path 5xx Detection ==="
+          # These endpoints historically produced 5xx on stale revisions.
+          # Any non-5xx response (400, 401, 403, 404) proves the backend is alive.
+          # A 5xx means the new revision is broken — block deploy.
+          CANARY_ENDPOINTS=(
+            "/api/v1/retailer-admin/registration/lookup?phone=0000000000"
+            "/api/v1/retailer-admin/auth/login"
+            "/api/v1/admin/monitoring/health"
+            "/api/v1/pos/health"
+            "/api/v1/supplier/auth/login"
+          )
+          FAIL=0
+          TOTAL=${#CANARY_ENDPOINTS[@]}
+          for endpoint in "${CANARY_ENDPOINTS[@]}"; do
+            PASS=false
+            for attempt in 1 2 3; do
+              STATUS=$(curl -s --max-time ${{ env.CURL_TIMEOUT }} -o /dev/null -w "%{http_code}" "$URL$endpoint" 2>/dev/null || echo "000")
+              if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ]; then
+                echo "  PASS: $endpoint → HTTP $STATUS"
+                PASS=true
+                break
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                echo "  Attempt $attempt: $endpoint → HTTP $STATUS (5xx/timeout). Retrying in ${{ env.RETRY_DELAY }}s..."
+                sleep ${{ env.RETRY_DELAY }}
+              fi
+            done
+            if [ "$PASS" = "false" ]; then
+              echo "  FAIL: $endpoint → HTTP $STATUS after 3 attempts (5xx)"
+              FAIL=$((FAIL + 1))
+            fi
+          done
+          echo ""
+          if [ $FAIL -gt 0 ]; then
+            echo "BLOCKED: $FAIL/$TOTAL canary endpoints returned 5xx"
+            echo "  This indicates the new revision has broken critical API paths."
+            echo "  Investigate main-backend and api-gateway logs before retrying."
+            exit 1
+          fi
+          echo "PASS: All $TOTAL canary endpoints healthy (no 5xx detected)"
+
       # ---- ZRP Parity Report — GitHub Step Summary ----
       - name: "ZRP: Staging Smoke Parity Report"
         if: always()
@@ -1248,8 +1297,9 @@ jobs:
           echo "| 9 | Security headers | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 10 | Health latency | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 11 | API error format | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 12 | Canary 5xx detection | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "*ZRP Parity Report v1.0*" >> "$GITHUB_STEP_SUMMARY"
+          echo "*ZRP Parity Report v1.1*" >> "$GITHUB_STEP_SUMMARY"
 
       # STAGE-007 + STAGE-021: Auto-rollback + delete failed revisions on smoke failure.
       # On failure: (1) rollback traffic to pre-deploy revisions, (2) delete ALL
