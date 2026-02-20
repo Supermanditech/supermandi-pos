@@ -560,7 +560,11 @@
     "gitDiscipline": {
       "requireCleanWorktreeBeforeStagingDeploy": true,
       "blockDetachedHead": true,
-      "blockConflictMarkers": true
+      "blockConflictMarkers": true,
+      "allowDirtyStagingBatchManifest": true,
+      "allowedDirtyFilesBeforeStagingDeploy": [
+        "workflow/state/staging_batch.json"
+      ]
     },
     "monitoringRules": {
       "enableTicketMonitor": true,

@@ -855,6 +855,77 @@ function validateOperatorProductionBoundary(state, actionName) {
   return errors;
 }
 
+function normalizeRepoPath(filePath) {
+  if (!isNonEmptyString(filePath)) {
+    return '';
+  }
+  return filePath
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\/+/, '')
+    .replace(/^"+|"+$/g, '');
+}
+
+function extractPathsFromPorcelainLine(line) {
+  if (!isNonEmptyString(line) || line.length < 4) {
+    return [];
+  }
+  const raw = line.slice(3).trim();
+  if (!raw) {
+    return [];
+  }
+  const normalizedRaw = normalizeRepoPath(raw);
+  if (normalizedRaw.includes(' -> ')) {
+    return normalizedRaw
+      .split(' -> ')
+      .map((part) => normalizeRepoPath(part))
+      .filter(Boolean);
+  }
+  return [normalizedRaw];
+}
+
+function getAllowedDirtyPathsForStaging(state) {
+  const rules = state?.rules?.gitDiscipline || {};
+  const allowed = new Set();
+  const configured = Array.isArray(rules.allowedDirtyFilesBeforeStagingDeploy)
+    ? rules.allowedDirtyFilesBeforeStagingDeploy
+    : [];
+  for (const entry of configured) {
+    if (isNonEmptyString(entry)) {
+      allowed.add(normalizeRepoPath(entry));
+    }
+  }
+  const allowDirtyBatchManifest = rules.allowDirtyStagingBatchManifest !== false;
+  if (allowDirtyBatchManifest) {
+    const batchPath = state?.paths?.stagingBatchFile || path.relative(ROOT_DIR, STAGING_BATCH_FILE).replace(/\\/g, '/');
+    allowed.add(normalizeRepoPath(batchPath));
+  }
+  return allowed;
+}
+
+function collectBlockingDirtyLines(statusOutput, allowedDirtyPaths) {
+  const blocking = [];
+  if (!isNonEmptyString(statusOutput)) {
+    return blocking;
+  }
+  const lines = statusOutput
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter(Boolean);
+  for (const line of lines) {
+    const paths = extractPathsFromPorcelainLine(line);
+    if (paths.length === 0) {
+      blocking.push(line);
+      continue;
+    }
+    const allAllowed = paths.every((entry) => allowedDirtyPaths.has(entry));
+    if (!allAllowed) {
+      blocking.push(line);
+    }
+  }
+  return blocking;
+}
+
 function validateGitWorkspaceForStaging(state) {
   const errors = [];
   const rules = state?.rules?.gitDiscipline || {};
@@ -882,7 +953,12 @@ function validateGitWorkspaceForStaging(state) {
     if (!status.ok) {
       errors.push('git discipline: failed to read git status');
     } else if (isNonEmptyString(status.output)) {
-      errors.push('git discipline: worktree must be clean before staging deploy');
+      const allowedDirtyPaths = getAllowedDirtyPathsForStaging(state);
+      const blocking = collectBlockingDirtyLines(status.output, allowedDirtyPaths);
+      if (blocking.length > 0) {
+        errors.push('git discipline: worktree must be clean before staging deploy');
+        errors.push(`git discipline: blocking changes:\n  ${blocking.join('\n  ')}`);
+      }
     }
   }
 

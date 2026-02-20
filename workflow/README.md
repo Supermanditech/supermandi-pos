@@ -68,6 +68,7 @@ This directory enforces the Live Fix -> Freeze -> Production workflow with machi
   - POS + backend together batch: max `1` screen
 - Enforces staged deploy manifest existence before `pre-staging-deploy` passes.
 - Enforces git discipline before staging deploy: clean worktree, no detached HEAD, no merge conflict markers.
+  - Exception: `workflow/state/staging_batch.json` may be dirty for deploy-intent updates when `allowDirtyStagingBatchManifest=true`.
 - Enforces staging batch deployment binding (`targetEnvironment`, `targetProject`, `targetRegion`, `commitSha`, `deploymentRef`).
 - Enforces migration safety in staging batches when DB/migration risk flags are set.
 - Enforces immutable artifact intent in staging batch (`immutableImagesPinned=true`, `secretVersionsPinned=true`).
