@@ -83,7 +83,9 @@ export default function ChatPage() {
       // Mark as read
       authFetch(`/api/v1/chat/conversations/${convId}/read`, accessToken, { method: 'PATCH' }).catch(() => {});
     } catch {
+      // RET-C4-005: Show error on message fetch failure
       setMessages([]);
+      setError('Failed to load messages. Please try again.');
     }
   };
 
@@ -101,6 +103,8 @@ export default function ChatPage() {
         body: JSON.stringify({ content: text.trim(), messageType: 'text' }),
       });
       if (!res.ok) throw new Error(`${res.status}`);
+      // RET-C4-003: Clear error after successful send
+      setError(null);
       setText('');
       selectConversation(selectedId);
       fetchConversations();

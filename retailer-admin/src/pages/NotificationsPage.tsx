@@ -48,10 +48,12 @@ export default function NotificationsPage() {
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
+  // RET-C4-007: Validate response before optimistic UI update
   const markAsRead = async (id: string) => {
     if (!accessToken) return;
     try {
-      await authFetch(`/api/v1/retailer-admin/notifications/${id}/read`, accessToken, { method: 'PUT' });
+      const res = await authFetch(`/api/v1/retailer-admin/notifications/${id}/read`, accessToken, { method: 'PUT' });
+      if (!res.ok) throw new Error(`${res.status}`);
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
     } catch {
       setError('Failed to mark notification as read');
@@ -61,7 +63,8 @@ export default function NotificationsPage() {
   const markAllAsRead = async () => {
     if (!accessToken) return;
     try {
-      await authFetch('/api/v1/retailer-admin/notifications/read-all', accessToken, { method: 'PUT' });
+      const res = await authFetch('/api/v1/retailer-admin/notifications/read-all', accessToken, { method: 'PUT' });
+      if (!res.ok) throw new Error(`${res.status}`);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
     } catch {
       setError('Failed to mark all as read');
