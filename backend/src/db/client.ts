@@ -34,10 +34,13 @@ export function getDb(): NodePgDatabase | undefined {
 
   // ITER4-P1-006: Configure connection pool with bounded limits
   // GO-LIVE-076: Enhanced pool configuration for production scale
-  // T1-009: SSL configuration for Cloud SQL (required for non-Unix-socket connections)
-  const sslConfig = process.env.DB_SSL === 'false' ? false
-    : process.env.NODE_ENV === 'development' ? false
-    : { rejectUnauthorized: false }; // Cloud SQL proxy handles cert verification
+  // RET-B1-001: SSL must be opt-IN, not opt-OUT. Cloud SQL via VPC connector / Unix socket
+  // does NOT support SSL — the proxy already handles encryption. Previous logic forced SSL
+  // for all non-dev environments, breaking ALL 136 DB-dependent routes on Cloud Run.
+  // Now consistent with common pool (pool.ts) which also defaults to no-SSL.
+  const sslConfig = process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: false }
+    : false;
 
   pool = new Pool({
     connectionString: url,
