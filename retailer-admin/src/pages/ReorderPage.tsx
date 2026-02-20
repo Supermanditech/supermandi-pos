@@ -263,7 +263,10 @@ export default function ReorderPage() {
             </button>
           </div>
           {pendingError && <div className="error-banner" style={{ marginBottom: 12 }}>{pendingError}</div>}
-          {!pendingLoading && pending.length === 0 ? (
+          {/* RET-C4-018: Show loading state for pending tab */}
+          {pendingLoading && pending.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>Loading pending reorders...</div>
+          ) : !pendingLoading && pending.length === 0 ? (
             <EmptyState icon={<PackageCheck size={32} />} title="No pending reorders" description="Pending reorder requests will appear here when the system detects low stock." />
           ) : (
             <div className="table-container">
@@ -318,26 +321,27 @@ export default function ReorderPage() {
                 <h3 style={{ margin: 0 }}>Reorder Settings</h3>
               </div>
               <div style={{ display: 'grid', gap: 16 }}>
+                {/* RET-C4-015: Disable all inputs during save */}
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="checkbox" checked={editEnabled} onChange={(e) => setEditEnabled(e.target.checked)} />
+                  <input type="checkbox" checked={editEnabled} onChange={(e) => setEditEnabled(e.target.checked)} disabled={settingsSaving} />
                   <span>Enable reorder suggestions</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="checkbox" checked={editRequireApproval} onChange={(e) => setEditRequireApproval(e.target.checked)} />
+                  <input type="checkbox" checked={editRequireApproval} onChange={(e) => setEditRequireApproval(e.target.checked)} disabled={settingsSaving} />
                   <span>Require approval before creating POs</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="checkbox" checked={editNotifyLowStock} onChange={(e) => setEditNotifyLowStock(e.target.checked)} />
+                  <input type="checkbox" checked={editNotifyLowStock} onChange={(e) => setEditNotifyLowStock(e.target.checked)} disabled={settingsSaving} />
                   <span>Notify on low stock</span>
                 </label>
                 <div>
                   <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Auto-approve threshold (amount in ₹, leave blank to disable)</label>
-                  <input type="number" min={0} value={editAutoApproveThreshold} onChange={(e) => setEditAutoApproveThreshold(e.target.value)} placeholder="No auto-approve" style={{ width: 180 }} />
+                  <input type="number" min={0} value={editAutoApproveThreshold} onChange={(e) => setEditAutoApproveThreshold(e.target.value)} placeholder="No auto-approve" style={{ width: 180 }} disabled={settingsSaving} />
                   <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>Orders below this value auto-approve</span>
                 </div>
                 <div>
                   <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Default lead time (days)</label>
-                  <input type="number" min={1} max={90} value={editDefaultLeadDays} onChange={(e) => setEditDefaultLeadDays(Number(e.target.value))} style={{ width: 120 }} />
+                  <input type="number" min={1} max={90} value={editDefaultLeadDays} onChange={(e) => setEditDefaultLeadDays(Number(e.target.value))} style={{ width: 120 }} disabled={settingsSaving} />
                 </div>
                 <button onClick={saveSettings} disabled={settingsSaving} className="btn-primary" style={{ width: 'fit-content' }}>
                   {settingsSaving ? 'Saving...' : 'Save Settings'}

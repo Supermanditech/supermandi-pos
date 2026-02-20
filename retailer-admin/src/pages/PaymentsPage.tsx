@@ -35,31 +35,32 @@ export default function PaymentsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [statusTransitioned, setStatusTransitioned] = useState(false);
 
+  // RET-C3-013: Extract loadSettings so retry button can call it
+  const fetchSettings = useCallback(async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const response = await authFetch('/api/v1/retailer-admin/settings', accessToken);
+      if (response.ok) {
+        const data = await safeJson(response);
+        setSettings({
+          upiVpa: data.settings?.upiVpa || '',
+          bankAccount: data.settings?.bankAccount || '',
+          ifscCode: data.settings?.ifscCode || '',
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load payment settings:', err);
+      setLoadError('Failed to load payment settings.');
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
   // Load current settings on mount
   useEffect(() => {
-    if (!accessToken) return;
-
-    const loadSettings = async () => {
-      setLoading(true);
-      try {
-        const response = await authFetch('/api/v1/retailer-admin/settings', accessToken);
-        if (response.ok) {
-          const data = await safeJson(response);
-          setSettings({
-            upiVpa: data.settings?.upiVpa || '',
-            bankAccount: data.settings?.bankAccount || '',
-            ifscCode: data.settings?.ifscCode || '',
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load payment settings:', err);
-        setLoadError('Failed to load payment settings. Please refresh the page.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSettings();
+    fetchSettings();
   }, [accessToken]);
 
   // Handle UPI VPA change
@@ -84,7 +85,7 @@ export default function PaymentsPage() {
     setSaveError(null);
   }, []);
 
-  // Validate form
+  // Validate form — RET-C3-014: Add IFSC/bank account validation
   const validateForm = (): boolean => {
     const upiError = validateUpiVpa(settings.upiVpa);
     if (!settings.upiVpa) {
@@ -93,6 +94,14 @@ export default function PaymentsPage() {
     }
     if (upiError) {
       setSaveError(upiError);
+      return false;
+    }
+    if (settings.bankAccount && !settings.ifscCode) {
+      setSaveError('IFSC code is required when bank account is provided');
+      return false;
+    }
+    if (settings.ifscCode && settings.ifscCode.length !== 11) {
+      setSaveError('IFSC code must be exactly 11 characters');
       return false;
     }
     return true;
@@ -138,7 +147,8 @@ export default function PaymentsPage() {
         if (!bankResponse.ok) {
           const data = await safeJson(bankResponse);
           const errMsg = data.error?.errors?.bankAccount || data.error?.errors?.ifscCode || data.error?.message || 'Failed to save bank details';
-          setSaveError(errMsg);
+          // RET-C3-012: Warn user that UPI was saved even though bank failed
+          setSaveError(`UPI updated successfully, but bank details failed: ${errMsg}`);
           setSaving(false);
           return;
         }
@@ -201,10 +211,11 @@ export default function PaymentsPage() {
         </p>
       </div>
 
-      {/* Load Error Banner */}
+      {/* RET-C3-013: Load Error Banner with retry button */}
       {loadError && (
-        <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '1rem', color: '#991b1b', fontSize: '0.9rem' }}>
-          {loadError}
+        <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '1rem', color: '#991b1b', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{loadError}</span>
+          <button onClick={fetchSettings} className="btn btn-secondary" style={{ fontSize: '0.8rem', marginLeft: '1rem' }}>Retry</button>
         </div>
       )}
 

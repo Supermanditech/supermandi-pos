@@ -93,7 +93,8 @@ export default function CreditDashboardPage() {
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
-  const utilization = balance ? Math.round((balance.usedMinor / Math.max(balance.totalCreditLimitMinor, 1)) * 100) : 0;
+  // RET-C3-006: Clamp utilization to 0–100 to handle inconsistent API data
+  const utilization = balance ? Math.min(Math.round((balance.usedMinor / Math.max(balance.totalCreditLimitMinor, 1)) * 100), 100) : 0;
 
   return (
     <>
@@ -164,8 +165,8 @@ export default function CreditDashboardPage() {
               )}
             </div>
 
-            {/* Per-Provider Breakdown */}
-            {balance.perProvider && balance.perProvider.length > 1 && (
+            {/* RET-C3-008: Show per-provider breakdown for 1+ providers */}
+            {balance.perProvider && balance.perProvider.length > 0 && (
               <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
                 <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>By Provider</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
@@ -179,14 +180,14 @@ export default function CreditDashboardPage() {
               </div>
             )}
 
-            {/* Upcoming EMIs */}
-            {emis.length > 0 && (
-              <div className="card" style={{ marginBottom: '1.5rem' }}>
-                <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Clock size={16} /> Upcoming Payments (30 days)
-                  </h3>
-                </div>
+            {/* RET-C3-007: Always show EMI section with empty state */}
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Clock size={16} /> Upcoming Payments (30 days)
+                </h3>
+              </div>
+              {emis.length > 0 ? (
                 <table className="table">
                   <thead>
                     <tr>
@@ -207,8 +208,12 @@ export default function CreditDashboardPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
+              ) : (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                  No upcoming EMI payments in the next 30 days.
+                </div>
+              )}
+            </div>
 
             {/* Active Drawdowns */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

@@ -314,20 +314,21 @@ export default function InventoryPage() {
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
                     <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>
-                    {/* GO-LIVE-021: Retry button for ledger load failure */}
+                    {/* GO-LIVE-021 + RET-C2-006: Retry button with loading state */}
                     <button
                       onClick={() => fetchLedger()}
+                      disabled={loading}
                       style={{
                         padding: '0.5rem 1rem',
-                        background: 'var(--primary)',
+                        background: loading ? '#94a3b8' : 'var(--primary)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
-                        cursor: 'pointer',
+                        cursor: loading ? 'not-allowed' : 'pointer',
                         fontSize: '0.875rem',
                       }}
                     >
-                      Retry
+                      {loading ? 'Retrying...' : 'Retry'}
                     </button>
                   </td>
                 </tr>
@@ -344,7 +345,9 @@ export default function InventoryPage() {
                         : 'No ledger entries yet'
                       }
                       description={
-                        filter === 'INWARD' ? 'These will appear when you receive stock from suppliers or record purchase receipts.'
+                        /* RET-C2-005: Account for date range in empty state message */
+                        (startDate || endDate) ? 'No entries found for the selected date range. Try adjusting the filters.'
+                        : filter === 'INWARD' ? 'These will appear when you receive stock from suppliers or record purchase receipts.'
                         : filter === 'OUTWARD' ? 'Outward entries will appear when items are sold through POS.'
                         : filter === 'ADJUSTMENT' ? 'Use this to track manual stock corrections, damage, or expired goods.'
                         : 'Stock movements will appear here once you start selling or receiving inventory.'

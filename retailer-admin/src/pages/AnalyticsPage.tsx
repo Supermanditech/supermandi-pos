@@ -79,6 +79,13 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* RET-C4-010: Warn if date range is invalid */}
+      {from && to && from > to && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-amber-800 text-sm">
+          Start date is after end date. Please adjust the date range.
+        </div>
+      )}
+
       {/* Error state */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">

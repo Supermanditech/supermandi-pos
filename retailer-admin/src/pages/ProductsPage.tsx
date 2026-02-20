@@ -689,6 +689,8 @@ export default function ProductsPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to preview products.');
+      // RET-C2-002: Clear stale preview on error to avoid count/table mismatch
+      setBulkPreview([]);
     } finally {
       setIsBulkSubmitting(false);
     }
