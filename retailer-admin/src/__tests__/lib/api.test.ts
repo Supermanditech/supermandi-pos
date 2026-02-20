@@ -113,7 +113,8 @@ describe('authFetch', () => {
     unsubscribe();
   });
 
-  it('does NOT notify auth failure on 401 for non-retailer requests', async () => {
+  // RET-C4-001: Broadened 401 handling — all /api/ paths now trigger logout
+  it('notifies auth failure on 401 for any /api/ path (not just retailer-admin)', async () => {
     const mockRes = mockResponse({ error: 'Unauthorized' }, { status: 401 });
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
 
@@ -121,6 +122,19 @@ describe('authFetch', () => {
     const unsubscribe = onAuthFailure(listener);
 
     await authFetch('/api/v1/some-other-service/data', 'token');
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('does NOT notify auth failure on 401 for non-api paths', async () => {
+    const mockRes = mockResponse({ error: 'Unauthorized' }, { status: 401 });
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
+
+    const listener = vi.fn();
+    const unsubscribe = onAuthFailure(listener);
+
+    await authFetch('/some-external-url', 'token');
 
     expect(listener).not.toHaveBeenCalled();
     unsubscribe();

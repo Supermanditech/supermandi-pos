@@ -189,13 +189,21 @@ export async function createSupportConversation(
 
 /**
  * List conversations for a user with unread counts.
+ * RET-C4-002: Added storeId param for store isolation — multi-store users
+ * only see conversations belonging to their current store.
  */
 export async function listConversations(
   pool: Pool,
   userId: string,
   limit = 50,
   offset = 0,
+  storeId?: string,
 ): Promise<{ conversations: ConversationWithParticipant[]; total: number }> {
+  // RET-C4-002: When storeId provided, filter conversations to that store
+  const storeFilter = storeId ? ' AND c.store_id = $4' : '';
+  const params: (string | number)[] = [userId, limit, offset];
+  if (storeId) params.push(storeId);
+
   const result = await pool.query(
     `SELECT c.*, cp.unread_count, cp.is_muted,
             (SELECT cp2.display_name FROM chat.conversation_participants cp2
@@ -203,17 +211,21 @@ export async function listConversations(
              LIMIT 1) AS other_participant_name
      FROM chat.conversations c
      JOIN chat.conversation_participants cp ON cp.conversation_id = c.id
-     WHERE cp.user_id = $1 AND cp.left_at IS NULL AND c.is_active = true
+     WHERE cp.user_id = $1 AND cp.left_at IS NULL AND c.is_active = true${storeFilter}
      ORDER BY c.last_message_at DESC NULLS LAST
      LIMIT $2 OFFSET $3`,
-    [userId, limit, offset]
+    params
   );
+
+  const countParams: string[] = [userId];
+  const countStoreFilter = storeId ? ' AND c.store_id = $2' : '';
+  if (storeId) countParams.push(storeId);
 
   const countResult = await pool.query(
     `SELECT COUNT(*) AS total FROM chat.conversations c
      JOIN chat.conversation_participants cp ON cp.conversation_id = c.id
-     WHERE cp.user_id = $1 AND cp.left_at IS NULL AND c.is_active = true`,
-    [userId]
+     WHERE cp.user_id = $1 AND cp.left_at IS NULL AND c.is_active = true${countStoreFilter}`,
+    countParams
   );
 
   return {

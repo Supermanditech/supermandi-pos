@@ -78,17 +78,19 @@ export default function SettingsPage() {
         const response = await authFetch('/api/v1/retailer-admin/settings', accessToken);
         if (response.ok) {
           const data = await safeJson(response);
+          // RET-C5-001: Backend returns { success, settings: { ... } } — unwrap envelope
+          const s = data.settings || data || {};
           // T-156: Extract receipt settings from nested JSONB or top-level
-          const rs = data.receiptSettings || data.receipt_settings || {};
+          const rs = s.receiptSettings || s.receipt_settings || {};
           setSettings({
-            upiVpa: data.upiVpa || '',
-            taxRate: data.taxRate ?? 18,
-            storeName: data.storeName || store?.name || '',
-            operatingHours: data.operatingHours || { open: '09:00', close: '21:00' },
-            receiptFooter: data.receiptFooter || 'Thank you for shopping with us!',
-            gstNumber: data.gstNumber || '',
-            address: data.address || '',
-            phone: data.phone || '',
+            upiVpa: s.upiVpa || '',
+            taxRate: s.taxRate ?? 18,
+            storeName: s.storeName || store?.name || '',
+            operatingHours: s.operatingHours || { open: '09:00', close: '21:00' },
+            receiptFooter: s.receiptFooter || 'Thank you for shopping with us!',
+            gstNumber: s.gstNumber || '',
+            address: s.address || '',
+            phone: s.phone || '',
             // T-156: Receipt customization
             receiptGstin: rs.gstin || '',
             receiptCustomFooter: rs.customFooter || '',

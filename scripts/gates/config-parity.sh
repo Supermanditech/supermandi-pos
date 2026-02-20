@@ -77,12 +77,18 @@ fi
 echo ""
 echo "--- ZRP-D-004: CORS origin matches domain ---"
 
-CORS_VALUE=$(grep -oP 'CORS_ALLOWED_ORIGINS=\K[^,"\s]+' "$DEPLOY_YML" 2>/dev/null | head -1 || echo "")
-ALLOWED_VALUE=$(grep -oP 'ALLOWED_ORIGINS=\K[^,"\s]+' "$DEPLOY_YML" 2>/dev/null | head -1 || echo "")
+# Capture full comma-separated origin list inside --set-env-vars string.
+# Stop at ';' (next env var) or '"' (end of env var payload).
+CORS_VALUE=$(grep -oP 'CORS_ALLOWED_ORIGINS=\K[^;"]+' "$DEPLOY_YML" 2>/dev/null | head -1 || echo "")
+ALLOWED_VALUE=$(grep -oP 'ALLOWED_ORIGINS=\K[^;"]+' "$DEPLOY_YML" 2>/dev/null | head -1 || echo "")
 
 if [ -n "$CORS_VALUE" ]; then
   if echo "$CORS_VALUE" | grep -qE '^https://'; then
-    gate_pass "ZRP-D-004" "CORS origin is HTTPS ($CORS_VALUE)"
+    if echo "$CORS_VALUE" | grep -qE 'https://supermandi\.tech|https://www\.supermandi\.tech'; then
+      gate_fail "ZRP-D-004" "CORS origin" "Staging CORS includes production origin(s): $CORS_VALUE"
+    else
+      gate_pass "ZRP-D-004" "CORS origin is HTTPS and staging-only ($CORS_VALUE)"
+    fi
   else
     gate_fail "ZRP-D-004" "CORS origin" "CORS_ALLOWED_ORIGINS is not HTTPS: $CORS_VALUE"
   fi

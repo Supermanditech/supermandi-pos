@@ -98,6 +98,33 @@ Acceptable proof per service:
 
 If any service remains on stale version for the wave, deployment is incomplete and ticket cannot progress to `locked`.
 
+## 2E. 100% Production Completion Gate (No Score-Based Stops)
+
+For live testing and fix cycles, percentage scores (for example `78%`, `83%`) are progress telemetry only and are never acceptance criteria.
+
+Claude must continue iterating until all required user-facing micro checks are either:
+
+1. `PASS` with evidence, or
+2. explicitly `BLOCKED` with owner, reason, and unblock plan
+
+Mandatory no-stop conditions:
+
+- A cycle cannot close because of average page score.
+- A surface cannot be marked complete while any required field/component/flow remains unverified.
+- A deploy cannot be triggered while any open `P0`/`P1` issue exists for the active surface batch.
+- `ready_for_operator_test` is allowed only after 100% required micro-check coverage for the batch.
+
+Required per-page completion record:
+
+1. UI
+2. UX
+3. wiring
+4. navigation
+5. API contract
+6. backend behavior
+7. DB/migration impact
+8. GCP staging parity
+
 ## 2C. Tracking Protocol (Codex + Claude)
 
 At each retry, Claude must publish a short checkpoint containing:
@@ -155,4 +182,5 @@ No silent retries.
 - For `FIX-001` staging deploy attempts, Claude must re-read this file before each retry and follow Section 2A exactly.
 - For this active wave, Claude must also enforce Section 2B and Section 2C on every deploy attempt.
 - For deployment completion, Claude must enforce Section 2D and prove all 6 staging services are on the target wave version.
+- For live testing completion, Claude must enforce Section 2E and reject score-based completion claims.
 - Claude must read `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md` in every FIX-001 session before attempting deploy.

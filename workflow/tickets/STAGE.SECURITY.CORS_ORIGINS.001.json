@@ -1,0 +1,281 @@
+{
+  "operatorChecks": {
+    "blockingIssueCount": 1,
+    "noBlockingIssueRemaining": false,
+    "stagingTestExecuted": true,
+    "evidenceAttached": true,
+    "nonBlockingIssueCount": 0,
+    "testedOnRedmi": false,
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ],
+    "testedOnLaptopBrowser": true,
+    "issuesReproduced": true,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/version"
+    ],
+    "testedOnRealTarget": false,
+    "validatedDeploymentRef": "github://run/22240364165",
+    "fixVerified": false
+  },
+  "severity": "P1",
+  "title": "Staging CORS allows production origins",
+  "claudeChecks": {
+    "stagingDeploymentRef": "github://run/22240364165",
+    "screenVisualizedWithOperator": false,
+    "migrationSafetyChecked": false,
+    "stagingDeployPassed": false,
+    "envAndBasePathChecked": false,
+    "navigationChecked": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01",
+    "cloudWorkspaceValidated": false,
+    "rollbackPlanReady": false,
+    "regressionChecklistPassed": false,
+    "codeQualityChecksPassed": false,
+    "apiContractChecked": false
+  },
+  "truthDeclaration": {
+    "productionDataTested": true,
+    "evidence": [
+      "curl smoke checks",
+      "gcloud run services describe",
+      "gcloud logging read"
+    ],
+    "notes": "Evidence gathered from live staging runtime and GCP control plane.",
+    "mockApisUsed": false,
+    "disclosedToOperator": true,
+    "mockDataUsed": false,
+    "mockUsageApproved": false
+  },
+  "buildMapping": {
+    "urlMappingValidated": true,
+    "expectedBasePath": "/api",
+    "actualCloudRunServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/version"
+    ],
+    "expectedSurface": "shared",
+    "expectedPrimaryService": "api-gateway",
+    "correctBuildTargetValidated": true
+  },
+  "operator": {
+    "reportedBy": "codex_live_audit_2026-02-20",
+    "signoffAt": "",
+    "reproSteps": [
+      "Run gcloud run services describe main-backend --format yaml.",
+      "Inspect ALLOWED_ORIGINS and CORS_ALLOWED_ORIGINS env vars.",
+      "Observe production domains listed alongside staging domains."
+    ],
+    "finalSignoff": false
+  },
+  "parentTicketId": null,
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "parityProof": [
+      "ALLOWED_ORIGINS=https://staging.supermandi.tech,...,https://supermandi.tech,https://www.supermandi.tech",
+      "CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech,...,https://supermandi.tech,https://www.supermandi.tech",
+      "Patched .github/workflows/deploy.yml: staging ALLOWED_ORIGINS/CORS_ALLOWED_ORIGINS now staging-only",
+      "Patched scripts/gates/routing-spec-validate.sh and scripts/gates/config-parity.sh to fail on production origins in staging config"
+    ],
+    "apiProof": [
+      "curl -I https://staging.supermandi.tech/api/v1/health",
+      "curl -H \"Origin: https://supermandi.tech\" -I https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "impact": {
+    "impactRetestStatus": "pending",
+    "impactedServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "impactedScreens": [
+      "RETAILER.LOGIN",
+      "SUPPLIER.LOGIN",
+      "SUPERADMIN.LOGIN",
+      "LANDING"
+    ],
+    "impactRetestRequired": true
+  },
+  "gcpParity": {
+    "cloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ],
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/version"
+    ],
+    "envParityChecked": false,
+    "basePathChecked": true,
+    "routingChecked": true,
+    "artifactDigestPinned": true,
+    "stagingValidated": true,
+    "dbConnectivityChecked": true,
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "apiContractChecked": true
+  },
+  "statusHistory": [],
+  "orderInScreen": 1,
+  "productionInvariants": {
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    }
+  },
+  "subTicketIds": [],
+  "screenId": "STAGE.SECURITY.CORS",
+  "readiness": {
+    "pendingInternal": [
+      "Patch env config for staging-only origin list",
+      "Regression test CORS preflight matrix"
+    ],
+    "blocked": true,
+    "pendingOps": [
+      "Deploy updated env vars to main-backend and verify via curl"
+    ],
+    "pendingExternal": [
+      "Security signoff"
+    ],
+    "summary": "Code hardening applied; pending staging deploy run evidence to close.",
+    "productionGradeClaimed": false
+  },
+  "ticketId": "STAGE.SECURITY.CORS_ORIGINS.001",
+  "externalIntegrations": {
+    "allValidated": true,
+    "touched": false,
+    "operatorDisclosureDone": true,
+    "items": []
+  },
+  "layers": {
+    "ui": "na",
+    "professional_polish": "na",
+    "migration": "na",
+    "gcp_parity": "fail",
+    "navigation": "na",
+    "db": "na",
+    "ux": "na",
+    "api": "fail",
+    "wiring": "na",
+    "backend": "fail"
+  },
+  "gitDiscipline": {
+    "noMixedScope": false,
+    "changeScope": "STAGE.SECURITY.CORS_ORIGINS.001",
+    "evidence": [
+      "git rev-parse --short HEAD",
+      "gcloud run services describe",
+      "gcloud logging read",
+      "pnpm workflow:validate PASS",
+      "pnpm workflow:monitor PASS"
+    ],
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "workBranch": "staging-audit/ticketization",
+    "lastValidatedCommit": "8892f92"
+  },
+  "timestamps": {
+    "createdAt": "2026-02-20T22:25:16Z",
+    "lockedAt": null,
+    "updatedAt": "2026-02-20T22:33:39Z"
+  },
+  "dependencyDisclosure": {
+    "externalDependencies": [
+      "Security policy decision for cross-environment CORS trust"
+    ],
+    "pendingDependencies": [
+      "Define and apply staging-only CORS allowlist"
+    ],
+    "operatorAcknowledged": false,
+    "notes": "Current config increases blast radius of origin-based abuse and test contamination.",
+    "disclosedToOperator": true,
+    "blockers": [
+      "Policy approval required before narrowing origins"
+    ],
+    "internalDependencies": [
+      "backend",
+      "backend/services/api-gateway"
+    ]
+  },
+  "riskClass": "high",
+  "status": "todo",
+  "sessionBoot": {
+    "runbookVersion": "workflow-v1.2",
+    "bootstrappedAt": "2026-02-20T22:25:16Z",
+    "bootstrappedBy": "claude",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/freeze_manifest.json",
+      "workflow/README.md",
+      "workflow/production_boundary_iam.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md"
+    ],
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md"
+  },
+  "description": "main-backend ALLOWED_ORIGINS and CORS_ALLOWED_ORIGINS include production domains (supermandi.tech) in staging runtime, creating cross-environment origin trust.",
+  "surface": "shared"
+}

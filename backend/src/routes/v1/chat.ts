@@ -70,9 +70,11 @@ chatRouter.get('/conversations', async (req, res) => {
     const { userId } = getUser(req);
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const offset = parseInt(req.query.offset as string) || 0;
+    // RET-C4-002: Store isolation — x-actor-id is store ID for retailers
+    const storeId = req.headers['x-actor-id'] ? String(req.headers['x-actor-id']) : undefined;
 
     const pool = getPool();
-    const result = await chatService.listConversations(pool, userId, limit, offset);
+    const result = await chatService.listConversations(pool, userId, limit, offset, storeId);
 
     res.json({
       conversations: result.conversations,

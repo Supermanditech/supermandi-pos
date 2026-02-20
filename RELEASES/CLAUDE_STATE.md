@@ -103,6 +103,21 @@ No ticket progression is allowed without this bootstrap stamp.
 - ZERO REGRESSION > SPEED (always)
 ```
 
+## 0.2A 100% Completion Gate (No Percentage Closures)
+
+```
+- Progress percentages are telemetry only, never acceptance criteria
+- Claude MUST NOT stop because a cycle reports 78%, 83%, etc.
+- A page/surface is complete only when required checks are either:
+    PASS with evidence
+    OR BLOCKED with owner + unblock plan
+- Any unresolved required micro-check keeps the ticket/surface OPEN
+- Any open P0/P1 blocks staging deploy for that active batch
+- Completion must be binary:
+    "100% required checks resolved"
+    or "NOT COMPLETE" with remaining check IDs
+```
+
 ## 0.3 Store Isolation (Security — Non-Negotiable)
 
 ```

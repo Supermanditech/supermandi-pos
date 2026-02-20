@@ -1,0 +1,273 @@
+{
+  "operatorChecks": {
+    "blockingIssueCount": 1,
+    "noBlockingIssueRemaining": false,
+    "stagingTestExecuted": true,
+    "evidenceAttached": true,
+    "nonBlockingIssueCount": 0,
+    "testedOnRedmi": false,
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ],
+    "testedOnLaptopBrowser": true,
+    "issuesReproduced": true,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/api/v1/retailer-admin/auth/login"
+    ],
+    "testedOnRealTarget": false,
+    "validatedDeploymentRef": "github://run/22240364165",
+    "fixVerified": false
+  },
+  "severity": "P2",
+  "title": "Audit probes still hit deprecated retailer auth path",
+  "claudeChecks": {
+    "stagingDeploymentRef": "github://run/22240364165",
+    "screenVisualizedWithOperator": false,
+    "migrationSafetyChecked": false,
+    "stagingDeployPassed": false,
+    "envAndBasePathChecked": false,
+    "navigationChecked": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01",
+    "cloudWorkspaceValidated": false,
+    "rollbackPlanReady": false,
+    "regressionChecklistPassed": false,
+    "codeQualityChecksPassed": false,
+    "apiContractChecked": false
+  },
+  "truthDeclaration": {
+    "productionDataTested": true,
+    "evidence": [
+      "curl smoke checks",
+      "gcloud run services describe",
+      "gcloud logging read"
+    ],
+    "notes": "Evidence gathered from live staging runtime and GCP control plane.",
+    "mockApisUsed": false,
+    "disclosedToOperator": true,
+    "mockDataUsed": false,
+    "mockUsageApproved": false
+  },
+  "buildMapping": {
+    "urlMappingValidated": true,
+    "expectedBasePath": "/retailer",
+    "actualCloudRunServices": [
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/api/v1/retailer-admin/auth/login"
+    ],
+    "expectedSurface": "retailer_web",
+    "expectedPrimaryService": "retailer-admin",
+    "correctBuildTargetValidated": true
+  },
+  "operator": {
+    "reportedBy": "codex_live_audit_2026-02-20",
+    "signoffAt": "",
+    "reproSteps": [
+      "POST {} to /api/v1/retailer/auth/login and observe 404.",
+      "POST {} to /api/v1/retailer-admin/auth/login and observe 400 validation response.",
+      "Search retailer-admin code for endpoint constants and confirm only /retailer-admin/auth is used."
+    ],
+    "finalSignoff": false
+  },
+  "parentTicketId": null,
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "parityProof": [
+      "retailer-admin/src/pages/LoginPage.tsx uses /api/v1/retailer-admin/auth/login",
+      "backend/services/api-gateway/src/config.ts routes /api/v1/retailer-admin/auth"
+    ],
+    "apiProof": [
+      "curl -X POST https://staging.supermandi.tech/api/v1/retailer/auth/login => 404",
+      "curl -X POST https://staging.supermandi.tech/api/v1/retailer-admin/auth/login => 400"
+    ]
+  },
+  "impact": {
+    "impactRetestStatus": "pending",
+    "impactedServices": [
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "impactedScreens": [
+      "RETAILER.LOGIN",
+      "RETAILER.REGISTER",
+      "RETAILER.FORGOT_PASSWORD"
+    ],
+    "impactRetestRequired": true
+  },
+  "gcpParity": {
+    "cloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ],
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/api/v1/retailer-admin/auth/login"
+    ],
+    "envParityChecked": true,
+    "basePathChecked": true,
+    "routingChecked": true,
+    "artifactDigestPinned": true,
+    "stagingValidated": true,
+    "dbConnectivityChecked": true,
+    "cloudRunServices": [
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "apiContractChecked": true
+  },
+  "statusHistory": [],
+  "orderInScreen": 1,
+  "productionInvariants": {
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    }
+  },
+  "subTicketIds": [],
+  "screenId": "RETAILER.AUTH.PROBE",
+  "readiness": {
+    "pendingInternal": [
+      "Patch probe scripts and docs",
+      "Add contract check that fails on deprecated route use"
+    ],
+    "blocked": false,
+    "pendingOps": [
+      "Re-run smoke suite after path correction"
+    ],
+    "pendingExternal": [],
+    "summary": "Non-blocking for runtime, but should be fixed to keep triage signal clean.",
+    "productionGradeClaimed": false
+  },
+  "ticketId": "RETAILER.AUTH.PROBE_PATH.001",
+  "externalIntegrations": {
+    "allValidated": true,
+    "touched": false,
+    "operatorDisclosureDone": true,
+    "items": []
+  },
+  "layers": {
+    "ui": "na",
+    "professional_polish": "na",
+    "migration": "na",
+    "gcp_parity": "fail",
+    "navigation": "na",
+    "db": "na",
+    "ux": "na",
+    "api": "fail",
+    "wiring": "fail",
+    "backend": "na"
+  },
+  "gitDiscipline": {
+    "noMixedScope": false,
+    "changeScope": "RETAILER.AUTH.PROBE_PATH.001",
+    "evidence": [
+      "git rev-parse --short HEAD",
+      "gcloud run services describe",
+      "gcloud logging read"
+    ],
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "workBranch": "staging-audit/ticketization",
+    "lastValidatedCommit": "8892f92"
+  },
+  "timestamps": {
+    "createdAt": "2026-02-20T22:25:16Z",
+    "lockedAt": null,
+    "updatedAt": "2026-02-20T22:25:16Z"
+  },
+  "dependencyDisclosure": {
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Normalize all smoke tests and runbooks to retailer-admin auth path"
+    ],
+    "operatorAcknowledged": false,
+    "notes": "This is a test-harness correctness issue, not a live runtime outage.",
+    "disclosedToOperator": true,
+    "blockers": [
+      "False alarms consume triage bandwidth and hide real regressions"
+    ],
+    "internalDependencies": [
+      "retailer-admin",
+      "backend/services/api-gateway",
+      "test scripts"
+    ]
+  },
+  "riskClass": "medium",
+  "status": "todo",
+  "sessionBoot": {
+    "runbookVersion": "workflow-v1.2",
+    "bootstrappedAt": "2026-02-20T22:25:16Z",
+    "bootstrappedBy": "claude",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/freeze_manifest.json",
+      "workflow/README.md",
+      "workflow/production_boundary_iam.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md"
+    ],
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md"
+  },
+  "description": "Probe scripts and manual checks used /api/v1/retailer/auth/* (404) instead of /api/v1/retailer-admin/auth/* (400 on validation), creating false blocker signals.",
+  "surface": "retailer_web"
+}

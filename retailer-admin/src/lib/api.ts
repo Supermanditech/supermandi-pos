@@ -19,7 +19,6 @@ export const API_GATEWAY_BASE = _rawApiBase;
  */
 type AuthFailureListener = () => void;
 const authFailureListeners: AuthFailureListener[] = [];
-const RETAILER_ADMIN_PATH = '/api/v1/retailer-admin';
 const RETAILER_ADMIN_AUTH_PATH = '/api/v1/retailer-admin/auth';
 
 export function onAuthFailure(listener: AuthFailureListener) {
@@ -32,10 +31,6 @@ export function onAuthFailure(listener: AuthFailureListener) {
 
 function notifyAuthFailure() {
   authFailureListeners.forEach(listener => listener());
-}
-
-function isRetailerAdminRequest(url: string) {
-  return url.includes(RETAILER_ADMIN_PATH);
 }
 
 function isRetailerAdminAuthRequest(url: string) {
@@ -102,8 +97,10 @@ export async function authFetch(
     clearTimeout(timeoutId);
   }
 
-  // Handle 401 Unauthorized - trigger logout for non-auth retailer requests
-  if (response.status === 401 && !isAuthRequest && isRetailerAdminRequest(url)) {
+  // Handle 401 Unauthorized - trigger logout for non-auth API requests
+  // RET-C4-001: Broadened from /retailer-admin/ only to all /api/ paths
+  // Covers /api/v1/chat/, /api/v1/admin/, /api/v1/retailer-admin/ etc.
+  if (response.status === 401 && !isAuthRequest && url.includes('/api/')) {
     notifyAuthFailure();
   }
 
@@ -248,7 +245,13 @@ export async function createRetailerApplication(
   // AUDIT-RET-041/052: Use safeJson + throw proper Error
   const json = await safeJson(response);
   if (!response.ok) {
-    throw new Error(json?.error?.message || `Registration failed (${response.status})`);
+    const err = new Error(json?.error?.message || `Registration failed (${response.status})`);
+    // RET-C1-001: Preserve structured error fields (code, applicationId, applicationStatus)
+    // so RegisterPage catch block can auto-resume existing applications on 409
+    if (json?.error && typeof json.error === 'object') {
+      Object.assign(err, json.error);
+    }
+    throw err;
   }
   return json;
 }
