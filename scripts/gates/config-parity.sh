@@ -206,13 +206,14 @@ echo "--- ZRP-D-015: Deprecated retailer auth path check ---"
 DEPRECATED_HITS=$(grep -rn '/api/v1/retailer/auth/' \
   scripts/ e2e-tests/ .github/workflows/ backend/scripts/ \
   --include='*.sh' --include='*.ps1' --include='*.js' --include='*.ts' --include='*.yml' \
+  --exclude='config-parity.sh' \
   2>/dev/null || true)
 
 if [ -z "$DEPRECATED_HITS" ]; then
-  gate_pass "ZRP-D-015" "No deprecated /api/v1/retailer/auth/ path found in scripts"
+  gate_pass "ZRP-D-015" "No deprecated /retailer/auth/ path in scripts"
 else
   echo "$DEPRECATED_HITS"
-  gate_fail "ZRP-D-015" "Deprecated auth path" "Scripts still reference /api/v1/retailer/auth/ — use /api/v1/retailer-admin/auth/ instead"
+  gate_fail "ZRP-D-015" "Deprecated auth path" "Use /retailer-admin/auth/ instead of /retailer/auth/"
 fi
 
 # =============================================================================
