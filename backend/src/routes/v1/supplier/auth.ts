@@ -15,6 +15,7 @@ import { logLoginSuccess, logLoginFailed, logAccountLocked } from "../../../serv
 import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from "../../../utils/authCookies";
 // T-184: Redis token blacklist for immediate revocation at gateway level
 import { blacklistToken } from "../../../db/redis";
+import { log } from "../../../lib/logger";
 
 // GO-LIVE-LOGIN: Import Firebase verification for phone-based auth
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -27,7 +28,6 @@ try {
 } catch {
   log.warn("[SupplierAuth] Firebase verification not available");
 }
-import { log } from "../../../lib/logger";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
