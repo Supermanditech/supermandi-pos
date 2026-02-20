@@ -46,8 +46,9 @@ COPY nginx-local-prod.conf /etc/nginx/conf.d/default.conf
 # Add health check
 RUN echo "OK" > /usr/share/nginx/html/health.txt
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/health.txt || exit 1
+# Cloud Run read-only filesystem: redirect nginx writable paths to /tmp
+RUN sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf && \
+    printf 'client_body_temp_path /tmp/client_temp;\nproxy_temp_path /tmp/proxy_temp;\nfastcgi_temp_path /tmp/fastcgi_temp;\nuwsgi_temp_path /tmp/uwsgi_temp;\nscgi_temp_path /tmp/scgi_temp;\n' > /etc/nginx/conf.d/cloud-run-paths.conf
 
 EXPOSE 80
 
