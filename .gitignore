@@ -111,6 +111,7 @@ COMMIT_STATUS_SUMMARY.txt
 
 # Claude Code
 .claude/
+skills/
 # Claude temp files/folders (cover both patterns)
 tmpclaude-*-cwd
 tmpclaude-*-cwd/
