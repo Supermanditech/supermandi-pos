@@ -1,0 +1,589 @@
+{
+  "schemaVersion": "1.0.0",
+  "updatedAt": "2026-02-20T12:50:52.147Z",
+  "workflowMode": "LIVE_FIX",
+  "machineEnforcement": {
+    "enabled": true,
+    "guardScript": "scripts/workflow/guard.js",
+    "blockedActionsWhenInvalid": [
+      "start_ticket",
+      "lock_ticket",
+      "certify_screen",
+      "enter_freeze",
+      "promote_production"
+    ]
+  },
+  "regressionObjective": {
+    "target": "0.00%",
+    "policy": "block_on_any_unverified_change",
+    "note": "Zero regression is an enforcement target. Any unknown risk is treated as regression risk and blocks progression."
+  },
+  "roles": {
+    "operator": {
+      "responsibilities": [
+        "real_device_and_browser_testing_only",
+        "issue_reporting_with_repro_steps",
+        "final_ticket_signoff",
+        "freeze_signoff"
+      ],
+      "cannot": [
+        "edit_code",
+        "force_close_ticket_without_evidence",
+        "promote_production_without_freeze"
+      ],
+      "identity": {
+        "allowedPrincipals": [
+          "operator-release@supermandi-backend.iam.gserviceaccount.com"
+        ],
+        "principalSourceOrder": [
+          "WORKFLOW_OPERATOR_PRINCIPAL",
+          "gcloud_active_account"
+        ]
+      },
+      "productionPolicy": {
+        "requiredExecutionContext": "pipeline",
+        "requiredPipelineSignals": [
+          "GITHUB_ACTIONS",
+          "CLOUD_BUILD_BUILD_ID",
+          "WORKFLOW_PIPELINE_RUN_ID"
+        ]
+      }
+    },
+    "claude": {
+      "responsibilities": [
+        "code_changes_in_cloud_workspace_only",
+        "ticket_layer_completion",
+        "staging_deploy_and_fix_loop",
+        "impact_retest_execution",
+        "evidence_attachment"
+      ],
+      "cannot": [
+        "mark_ticket_locked_without_operator_signoff",
+        "skip_gcp_parity_checks",
+        "promote_production_without_approved_freeze"
+      ]
+    }
+  },
+  "gcpTopology": {
+    "codingWorkspace": {
+      "service": "Cloud Workstations",
+      "project": "supermandi-backend",
+      "region": "asia-south1",
+      "rule": "Do not code inside Cloud Run containers."
+    },
+    "webBackendDeployFlow": [
+      "Cloud Workstations",
+      "Cloud Build",
+      "Artifact Registry (asia-south1-docker.pkg.dev/supermandi-backend/supermandi)",
+      "Cloud Run staging services"
+    ],
+    "cloudRunStagingServices": [
+      "api-gateway-staging",
+      "main-backend-staging",
+      "retailer-admin-staging",
+      "supplier-portal-staging",
+      "superadmin-staging",
+      "landing-staging"
+    ],
+    "cloudRunProductionServices": [
+      "api-gateway",
+      "main-backend",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "dataPlane": {
+      "cloudSql": "supermandi-staging",
+      "cloudSqlEngine": "PostgreSQL",
+      "redis": "supermandi-redis-staging",
+      "networking": "Cloud Run via VPC connector"
+    },
+    "liveTestSurfaces": {
+      "web": "staging domain or load balancer paths: /retailer, /supplier, /admin",
+      "pos": "Redmi physical device against staging API"
+    },
+    "freezeToProd": {
+      "releaseSystem": "Cloud Deploy",
+      "required": [
+        "freeze image digests",
+        "freeze cloud run revision ids",
+        "freeze db migration state",
+        "approval gate before promote",
+        "promote same frozen artifacts without rebuild"
+      ]
+    },
+    "posCloudPath": {
+      "androidBuild": "Cloud Build (or EAS cloud workers)",
+      "distribution": "Firebase App Distribution",
+      "deviceTesting": "Firebase Test Lab"
+    }
+  },
+  "criticalContradictions": [
+    {
+      "id": "CC-001",
+      "title": "Ticket closed without full production-layer completion",
+      "mustResolveBeforeFirstTicket": true,
+      "status": "resolved",
+      "resolvedAt": "2026-02-20T00:00:00Z",
+      "resolutionEvidence": [
+        "workflow/schemas/ticket.schema.json",
+        "scripts/workflow/guard.js"
+      ]
+    },
+    {
+      "id": "CC-002",
+      "title": "Screen closed without impact re-test after cross-screen changes",
+      "mustResolveBeforeFirstTicket": true,
+      "status": "resolved",
+      "resolvedAt": "2026-02-20T00:00:00Z",
+      "resolutionEvidence": [
+        "workflow/schemas/screen_state.schema.json",
+        "scripts/workflow/guard.js"
+      ]
+    },
+    {
+      "id": "CC-003",
+      "title": "GCP parity claims without staging evidence",
+      "mustResolveBeforeFirstTicket": true,
+      "status": "resolved",
+      "resolvedAt": "2026-02-20T00:00:00Z",
+      "resolutionEvidence": [
+        "workflow/schemas/ticket.schema.json",
+        "scripts/workflow/guard.js"
+      ]
+    },
+    {
+      "id": "CC-004",
+      "title": "Freeze without immutable artifact and migration lock",
+      "mustResolveBeforeFirstTicket": true,
+      "status": "resolved",
+      "resolvedAt": "2026-02-20T00:00:00Z",
+      "resolutionEvidence": [
+        "workflow/schemas/freeze_manifest.schema.json",
+        "scripts/workflow/guard.js"
+      ]
+    },
+    {
+      "id": "CC-005",
+      "title": "Role ambiguity between operator and claude",
+      "mustResolveBeforeFirstTicket": true,
+      "status": "resolved",
+      "resolvedAt": "2026-02-20T00:00:00Z",
+      "resolutionEvidence": [
+        "workflow/state/workflow_state.json"
+      ]
+    },
+    {
+      "id": "CC-006",
+      "title": "Production promotion without approval-gated freeze",
+      "mustResolveBeforeFirstTicket": true,
+      "status": "resolved",
+      "resolvedAt": "2026-02-20T00:00:00Z",
+      "resolutionEvidence": [
+        "scripts/workflow/guard.js",
+        "scripts/promote-to-prod.sh"
+      ]
+    }
+  ],
+  "rules": {
+    "ticketStateMachine": {
+      "transitions": [
+        {
+          "from": "todo",
+          "to": "in_progress",
+          "actor": "claude"
+        },
+        {
+          "from": "in_progress",
+          "to": "ready_for_operator_test",
+          "actor": "claude"
+        },
+        {
+          "from": "ready_for_operator_test",
+          "to": "operator_failed",
+          "actor": "operator"
+        },
+        {
+          "from": "ready_for_operator_test",
+          "to": "ready_for_impact_retest",
+          "actor": "operator"
+        },
+        {
+          "from": "operator_failed",
+          "to": "in_progress",
+          "actor": "claude"
+        },
+        {
+          "from": "ready_for_impact_retest",
+          "to": "impact_retest_failed",
+          "actor": "operator"
+        },
+        {
+          "from": "ready_for_impact_retest",
+          "to": "ready_for_lock",
+          "actor": "operator"
+        },
+        {
+          "from": "impact_retest_failed",
+          "to": "in_progress",
+          "actor": "claude"
+        },
+        {
+          "from": "ready_for_lock",
+          "to": "locked",
+          "actor": "operator"
+        },
+        {
+          "from": "locked",
+          "to": "in_progress",
+          "actor": "operator"
+        },
+        {
+          "from": "todo",
+          "to": "cancelled",
+          "actor": "claude"
+        },
+        {
+          "from": "in_progress",
+          "to": "cancelled",
+          "actor": "claude"
+        },
+        {
+          "from": "operator_failed",
+          "to": "cancelled",
+          "actor": "claude"
+        },
+        {
+          "from": "impact_retest_failed",
+          "to": "cancelled",
+          "actor": "claude"
+        }
+      ]
+    },
+    "screenStateMachine": {
+      "transitions": [
+        {
+          "from": "not_started",
+          "to": "in_audit",
+          "actor": "claude"
+        },
+        {
+          "from": "in_audit",
+          "to": "in_fix",
+          "actor": "claude"
+        },
+        {
+          "from": "in_fix",
+          "to": "ready_for_certification",
+          "actor": "claude"
+        },
+        {
+          "from": "ready_for_certification",
+          "to": "certified",
+          "actor": "operator"
+        },
+        {
+          "from": "certified",
+          "to": "reopened",
+          "actor": "operator"
+        },
+        {
+          "from": "reopened",
+          "to": "in_fix",
+          "actor": "claude"
+        }
+      ]
+    },
+    "ticketRules": {
+      "maxActiveTicketsPerScreen": 1,
+      "maxWipTicketsGlobal": 1,
+      "maxWipScreensGlobal": 1,
+      "enforceTopLevelOrder": true,
+      "maxSubTicketsPerParent": 10,
+      "blockSubTicketStartIfParentNotActive": true,
+      "requiredLayerChecklist": [
+        "ui",
+        "ux",
+        "professional_polish",
+        "wiring",
+        "navigation",
+        "api",
+        "backend",
+        "db",
+        "migration",
+        "gcp_parity"
+      ],
+      "lockRequires": [
+        "all_layer_checks_not_fail",
+        "operator_final_signoff",
+        "impact_retest_passed_or_na",
+        "staging_parity_evidence_attached"
+      ]
+    },
+    "failureModeRules": {
+      "claude": [
+        {
+          "id": "CL-001",
+          "risk": "coding_without_operator_screen_visualization",
+          "detection": "ticket.claudeChecks.screenVisualizedWithOperator == false",
+          "block": [
+            "ready_for_operator_test",
+            "staging_deploy"
+          ]
+        },
+        {
+          "id": "CL-002",
+          "risk": "claim_fix_without_staging_deploy_evidence",
+          "detection": "ticket.claudeChecks.stagingDeployPassed == false",
+          "block": [
+            "ready_for_operator_test",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-003",
+          "risk": "missing_env_basepath_contract_checks",
+          "detection": "ticket.claudeChecks.envAndBasePathChecked == false OR ticket.claudeChecks.apiContractChecked == false",
+          "block": [
+            "ready_for_operator_test"
+          ]
+        },
+        {
+          "id": "CL-004",
+          "risk": "unsafe_db_or_migration_change",
+          "detection": "ticket.layers.migration == pass AND ticket.claudeChecks.migrationSafetyChecked == false",
+          "block": [
+            "ready_for_operator_test",
+            "lock_ticket",
+            "enter_freeze"
+          ]
+        },
+        {
+          "id": "CL-005",
+          "risk": "lock_ticket_with_open_regression_impact",
+          "detection": "ticket.impact.impactRetestRequired == true AND ticket.impact.impactRetestStatus != passed",
+          "block": [
+            "lock_ticket",
+            "certify_screen"
+          ]
+        },
+        {
+          "id": "CL-006",
+          "risk": "no_rollback_plan_for_ticket",
+          "detection": "ticket.claudeChecks.rollbackPlanReady == false",
+          "block": [
+            "ready_for_operator_test",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-007",
+          "risk": "hidden_mock_data_or_mock_api_usage",
+          "detection": "ticket.truthDeclaration.mockDataUsed == true OR ticket.truthDeclaration.mockApisUsed == true",
+          "block": [
+            "ready_for_operator_test",
+            "ready_for_lock",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-008",
+          "risk": "external_integration_not_contract_validated",
+          "detection": "ticket.externalIntegrations.touched == true AND ticket.externalIntegrations.allValidated == false",
+          "block": [
+            "ready_for_operator_test",
+            "ready_for_lock",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-009",
+          "risk": "wrong_surface_build_or_url_mapping",
+          "detection": "ticket.buildMapping.urlMappingValidated == false OR ticket.buildMapping.correctBuildTargetValidated == false",
+          "block": [
+            "ready_for_operator_test",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-010",
+          "risk": "pending_dependencies_not_disclosed",
+          "detection": "ticket.dependencyDisclosure.pendingDependencies.length > 0 OR ticket.dependencyDisclosure.disclosedToOperator == false",
+          "block": [
+            "ready_for_operator_test",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-011",
+          "risk": "coding_not_done_in_cloud_workspace",
+          "detection": "ticket.claudeChecks.cloudWorkspaceValidated == false",
+          "block": [
+            "ready_for_operator_test",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-012",
+          "risk": "git_discipline_missing_or_mixed_changes",
+          "detection": "ticket.gitDiscipline.noMixedScope == false OR ticket.gitDiscipline.noConflictMarkers == false",
+          "block": [
+            "ready_for_operator_test",
+            "staging_deploy",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-013",
+          "risk": "missing_session_bootstrap_or_required_file_read",
+          "detection": "ticket.sessionBoot.requiredFilesRead missing required workflow files OR ticket.sessionBoot.bootstrappedBy != claude",
+          "block": [
+            "ready_for_operator_test",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "CL-014",
+          "risk": "production_invariants_not_verified",
+          "detection": "any required productionInvariants status != pass OR any productionInvariants status == fail/pending at ready status",
+          "block": [
+            "ready_for_operator_test",
+            "ready_for_lock",
+            "lock_ticket",
+            "certify_screen"
+          ]
+        }
+      ],
+      "operator": [
+        {
+          "id": "OP-001",
+          "risk": "signoff_without_real_staging_test",
+          "detection": "ticket.operatorChecks.stagingTestExecuted == false OR ticket.operatorChecks.testedOnRealTarget == false",
+          "block": [
+            "ready_for_impact_retest",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "OP-002",
+          "risk": "passing_ticket_while_blocking_issues_exist",
+          "detection": "ticket.operatorChecks.blockingIssueCount > 0",
+          "block": [
+            "ready_for_impact_retest",
+            "ready_for_lock",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "OP-003",
+          "risk": "screen_certification_without_full_ticket_lock",
+          "detection": "screen.certification.allTicketsLocked == false",
+          "block": [
+            "certify_screen",
+            "enter_freeze"
+          ]
+        },
+        {
+          "id": "OP-004",
+          "risk": "freeze_approval_without_full_signoff",
+          "detection": "freeze.approvals.operatorApproved == false OR freeze.verification.operatorFullSignoff == false",
+          "block": [
+            "enter_freeze",
+            "promote_production"
+          ]
+        },
+        {
+          "id": "OP-005",
+          "risk": "operator_tests_wrong_deployment_revision",
+          "detection": "ticket.operatorChecks.validatedDeploymentRef != ticket.claudeChecks.stagingDeploymentRef",
+          "block": [
+            "ready_for_impact_retest",
+            "ready_for_lock",
+            "lock_ticket"
+          ]
+        },
+        {
+          "id": "OP-006",
+          "risk": "operator_signoff_without_dependency_acknowledgement",
+          "detection": "ticket.dependencyDisclosure.operatorAcknowledged == false",
+          "block": [
+            "ready_for_lock",
+            "lock_ticket"
+          ]
+        }
+      ]
+    },
+    "screenCertificationRules": {
+      "required": [
+        "all_screen_tickets_locked",
+        "impact_retest_passed",
+        "operator_screen_signoff",
+        "staging_parity_proof"
+      ],
+      "reopenOnAnyNewIssue": true
+    },
+    "freezeRules": {
+      "requiresAllScreensCertified": true,
+      "requiresNoActiveTickets": true,
+      "requiresFreezeManifestLock": true,
+      "requiresImageDigestsAndRevisions": true,
+      "requiresDbMigrationLock": true
+    },
+    "deploymentRules": {
+      "allowedStagingModes": [
+        "LIVE_FIX",
+        "FREEZE_CANDIDATE",
+        "FREEZE_READY"
+      ],
+      "productionModeRequires": "FREEZE_READY",
+      "claudeMaxBoundary": "staging",
+      "productionPromotionActor": "operator",
+      "requireDistinctStagingAndProductionTargets": true,
+      "requireImmutableImageDigest": true,
+      "requirePinnedSecretVersions": true,
+      "failClosedIfStagingVerificationUnavailable": true,
+      "requireMigrationSafetyForDbChanges": true
+    },
+    "deploymentBatchPolicy": {
+      "baseScreensPerBatch": 3,
+      "hardMaxTicketsPerBatch": 25,
+      "maxScreensWhenBackendOrSharedApiChanged": 2,
+      "maxScreensWhenDbOrMigrationOrUrlMapChanged": 1,
+      "maxScreensWhenPosAndBackendChangedTogether": 1,
+      "requireBatchManifestForStagingDeploy": true
+    },
+    "sessionRules": {
+      "requireSessionIdForTransitions": true,
+      "sessionIdEnvVar": "WORKFLOW_SESSION_ID"
+    },
+    "gitDiscipline": {
+      "requireCleanWorktreeBeforeStagingDeploy": true,
+      "blockDetachedHead": true,
+      "blockConflictMarkers": true
+    },
+    "monitoringRules": {
+      "enableTicketMonitor": true,
+      "defaultIntervalSeconds": 30,
+      "maxErrorLinesPerTicket": 8,
+      "reportOutputFile": "workflow/state/live_monitor_report.json"
+    }
+  },
+  "paths": {
+    "ticketsDir": "workflow/tickets",
+    "screensDir": "workflow/screens",
+    "freezeManifestFile": "workflow/state/freeze_manifest.json",
+    "stagingBatchFile": "workflow/state/staging_batch.json"
+  },
+  "progress": {
+    "firstTicketStarted": false
+  },
+  "summary": {
+    "totalTickets": 0,
+    "activeTickets": 0,
+    "wipTickets": 0,
+    "lockedTickets": 0,
+    "totalScreens": 0,
+    "certifiedScreens": 0
+  }
+}

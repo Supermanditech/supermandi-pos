@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "batchId": "",
+  "targetEnvironment": "staging",
+  "targetProject": "supermandi-backend",
+  "targetRegion": "asia-south1",
+  "commitSha": "",
+  "deploymentRef": "",
+  "createdAt": "",
+  "screenIds": [],
+  "ticketIds": [],
+  "riskFlags": {
+    "touchesBackend": false,
+    "touchesSharedApi": false,
+    "touchesDb": false,
+    "touchesMigration": false,
+    "touchesUrlMapOrIngress": false,
+    "touchesPos": false
+  },
+  "expectedCloudRunServices": [],
+  "operatorReady": false,
+  "claudeReady": false,
+  "immutableImagesPinned": false,
+  "secretVersionsPinned": false,
+  "migrationSafety": {
+    "required": false,
+    "planRef": "",
+    "dryRunEvidence": [],
+    "backupId": "",
+    "operatorApproved": false,
+    "completed": false
+  },
+  "notes": "Populate before each staging deploy. Guard enforces screen limits by risk."
+}

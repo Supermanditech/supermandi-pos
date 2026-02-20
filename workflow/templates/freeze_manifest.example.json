@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1.0.0",
+  "freezeId": "FREEZE-2026-02-20-RC1",
+  "createdAt": "2026-02-20T12:00:00Z",
+  "source": {
+    "gitSha": "abc1234",
+    "workflowStateVersion": "1.0.0"
+  },
+  "services": [
+    {
+      "service": "api-gateway",
+      "image": "asia-south1-docker.pkg.dev/supermandi-backend/supermandi/api-gateway:abc1234",
+      "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "stagingRevision": "api-gateway-00010-abc",
+      "productionTarget": "api-gateway"
+    },
+    {
+      "service": "main-backend",
+      "image": "asia-south1-docker.pkg.dev/supermandi-backend/supermandi/main-backend:abc1234",
+      "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "stagingRevision": "main-backend-00010-abc",
+      "productionTarget": "main-backend"
+    },
+    {
+      "service": "retailer-admin",
+      "image": "asia-south1-docker.pkg.dev/supermandi-backend/supermandi/retailer-admin:abc1234",
+      "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "stagingRevision": "retailer-admin-00010-abc",
+      "productionTarget": "retailer-admin"
+    },
+    {
+      "service": "supplier-portal",
+      "image": "asia-south1-docker.pkg.dev/supermandi-backend/supermandi/supplier-portal:abc1234",
+      "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "stagingRevision": "supplier-portal-00010-abc",
+      "productionTarget": "supplier-portal"
+    },
+    {
+      "service": "superadmin",
+      "image": "asia-south1-docker.pkg.dev/supermandi-backend/supermandi/superadmin:abc1234",
+      "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "stagingRevision": "superadmin-00010-abc",
+      "productionTarget": "superadmin"
+    },
+    {
+      "service": "landing",
+      "image": "asia-south1-docker.pkg.dev/supermandi-backend/supermandi/landing:abc1234",
+      "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "stagingRevision": "landing-00010-abc",
+      "productionTarget": "landing"
+    }
+  ],
+  "database": {
+    "cloudSqlInstance": "supermandi-staging",
+    "migrationVersion": "2026022001",
+    "migrationChecksum": "checksum-value",
+    "backupId": "backup-id"
+  },
+  "cache": {
+    "redisInstance": "supermandi-redis-staging",
+    "verified": true
+  },
+  "pos": {
+    "androidArtifactUri": "gs://supermandi-builds/pos/abc1234.apk",
+    "versionCode": "31010",
+    "versionName": "3.10.10",
+    "distributionChannel": "firebase_app_distribution",
+    "runtimeChannel": "staging"
+  },
+  "cloudDeploy": {
+    "deliveryPipeline": "supermandi-pipeline",
+    "stagingTarget": "supermandi-staging",
+    "productionTarget": "supermandi-production",
+    "releaseName": "release-abc1234",
+    "rolloutName": "rollout-abc1234",
+    "promotionApproved": true
+  },
+  "approvals": {
+    "operatorApproved": true,
+    "operatorPrincipal": "operator-release@supermandi-backend.iam.gserviceaccount.com",
+    "releaseManagerApproved": true,
+    "releaseManagerPrincipal": "release-manager@supermandi-backend.iam.gserviceaccount.com",
+    "approvedAt": "2026-02-20T12:30:00Z"
+  },
+  "verification": {
+    "stagingSmokePassed": true,
+    "operatorFullSignoff": true
+  },
+  "lockStatus": "locked",
+  "notes": "Example only."
+}

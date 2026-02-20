@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1.0.0",
+  "freezeId": "",
+  "createdAt": "",
+  "source": {
+    "gitSha": "draft",
+    "workflowStateVersion": "1.0.0"
+  },
+  "services": [
+    {
+      "service": "api-gateway",
+      "image": "",
+      "digest": "",
+      "stagingRevision": "",
+      "productionTarget": "api-gateway"
+    },
+    {
+      "service": "main-backend",
+      "image": "",
+      "digest": "",
+      "stagingRevision": "",
+      "productionTarget": "main-backend"
+    },
+    {
+      "service": "retailer-admin",
+      "image": "",
+      "digest": "",
+      "stagingRevision": "",
+      "productionTarget": "retailer-admin"
+    },
+    {
+      "service": "supplier-portal",
+      "image": "",
+      "digest": "",
+      "stagingRevision": "",
+      "productionTarget": "supplier-portal"
+    },
+    {
+      "service": "superadmin",
+      "image": "",
+      "digest": "",
+      "stagingRevision": "",
+      "productionTarget": "superadmin"
+    },
+    {
+      "service": "landing",
+      "image": "",
+      "digest": "",
+      "stagingRevision": "",
+      "productionTarget": "landing"
+    }
+  ],
+  "database": {
+    "cloudSqlInstance": "supermandi-staging",
+    "migrationVersion": "",
+    "migrationChecksum": "",
+    "backupId": ""
+  },
+  "cache": {
+    "redisInstance": "supermandi-redis-staging",
+    "verified": false
+  },
+  "pos": {
+    "androidArtifactUri": "",
+    "versionCode": "",
+    "versionName": "",
+    "distributionChannel": "firebase_app_distribution",
+    "runtimeChannel": ""
+  },
+  "cloudDeploy": {
+    "deliveryPipeline": "",
+    "stagingTarget": "",
+    "productionTarget": "",
+    "releaseName": "",
+    "rolloutName": "",
+    "promotionApproved": false
+  },
+  "approvals": {
+    "operatorApproved": false,
+    "operatorPrincipal": "",
+    "releaseManagerApproved": false,
+    "releaseManagerPrincipal": "",
+    "approvedAt": ""
+  },
+  "verification": {
+    "stagingSmokePassed": false,
+    "operatorFullSignoff": false
+  },
+  "lockStatus": "draft",
+  "notes": "Populate and lock this file in FREEZE_CANDIDATE before production promotion."
+}

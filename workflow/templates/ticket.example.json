@@ -1,0 +1,217 @@
+{
+  "ticketId": "RETAILER.DASHBOARD.001",
+  "screenId": "RETAILER.DASHBOARD",
+  "orderInScreen": 1,
+  "surface": "retailer_web",
+  "riskClass": "medium",
+  "title": "Fix dashboard totals mismatch",
+  "description": "Totals should match API values after refresh.",
+  "status": "todo",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "pass",
+    "ux": "pass",
+    "professional_polish": "pass",
+    "wiring": "pass",
+    "navigation": "pass",
+    "api": "pass",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "pass"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/"
+    ],
+    "cloudRunServices": [
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": []
+  },
+  "impact": {
+    "impactedScreens": [
+      "RETAILER.DASHBOARD"
+    ],
+    "impactedServices": [
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "operator",
+    "reproSteps": [
+      "Open dashboard",
+      "Compare totals with API payload"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "deploy-run-id",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-20T00:00:00Z",
+    "runbookVersion": "workflow-v1.1",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/retailer/"
+    ],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "deploy-run-id",
+    "validatedCloudRunRevisionIds": []
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-20T00:00:00Z",
+    "updatedAt": "2026-02-20T00:00:00Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": false,
+    "disclosedToOperator": false,
+    "notes": "No mock data usage.",
+    "evidence": []
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "retailer_web",
+    "expectedBasePath": "/retailer",
+    "expectedPrimaryService": "retailer-admin",
+    "actualCloudRunServices": [
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "No open dependencies."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "Not ready for production claim yet."
+  },
+  "gitDiscipline": {
+    "workBranch": "live-fix/retailer-dashboard",
+    "changeScope": "RETAILER.DASHBOARD.001",
+    "lastValidatedCommit": "09d1c28",
+    "noMixedScope": false,
+    "noConflictMarkers": false,
+    "ciGateStatus": "pending",
+    "evidence": []
+  }
+}

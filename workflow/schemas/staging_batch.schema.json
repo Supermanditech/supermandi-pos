@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://supermandi.tech/schemas/staging_batch.schema.json",
+  "title": "SuperMandi Staging Batch Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "batchId",
+    "targetEnvironment",
+    "targetProject",
+    "targetRegion",
+    "commitSha",
+    "deploymentRef",
+    "screenIds",
+    "ticketIds",
+    "riskFlags",
+    "expectedCloudRunServices",
+    "operatorReady",
+    "claudeReady",
+    "immutableImagesPinned",
+    "secretVersionsPinned",
+    "migrationSafety"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string"
+    },
+    "batchId": {
+      "type": "string"
+    },
+    "targetEnvironment": {
+      "type": "string",
+      "enum": [
+        "staging"
+      ]
+    },
+    "targetProject": {
+      "type": "string"
+    },
+    "targetRegion": {
+      "type": "string"
+    },
+    "commitSha": {
+      "type": "string",
+      "minLength": 7
+    },
+    "deploymentRef": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "screenIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "ticketIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "riskFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "touchesBackend",
+        "touchesSharedApi",
+        "touchesDb",
+        "touchesMigration",
+        "touchesUrlMapOrIngress",
+        "touchesPos"
+      ],
+      "properties": {
+        "touchesBackend": {
+          "type": "boolean"
+        },
+        "touchesSharedApi": {
+          "type": "boolean"
+        },
+        "touchesDb": {
+          "type": "boolean"
+        },
+        "touchesMigration": {
+          "type": "boolean"
+        },
+        "touchesUrlMapOrIngress": {
+          "type": "boolean"
+        },
+        "touchesPos": {
+          "type": "boolean"
+        }
+      }
+    },
+    "expectedCloudRunServices": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "operatorReady": {
+      "type": "boolean"
+    },
+    "claudeReady": {
+      "type": "boolean"
+    },
+    "immutableImagesPinned": {
+      "type": "boolean"
+    },
+    "secretVersionsPinned": {
+      "type": "boolean"
+    },
+    "migrationSafety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "planRef",
+        "dryRunEvidence",
+        "backupId",
+        "operatorApproved",
+        "completed"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "planRef": {
+          "type": "string"
+        },
+        "dryRunEvidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "backupId": {
+          "type": "string"
+        },
+        "operatorApproved": {
+          "type": "boolean"
+        },
+        "completed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

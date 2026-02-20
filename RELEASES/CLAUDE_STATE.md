@@ -5,7 +5,7 @@ description: The definitive operating system for Claude working on SuperMandi PO
 
 # CLAUDE STATE: The Definitive Operating System
 
-> **Version**: 1.1 | **Date**: 2026-02-13
+> **Version**: 1.2 | **Date**: 2026-02-20
 > **Status**: ACTIVE — This is the ONLY file Claude reads for rules, discipline, and navigation.
 > **Scope**: SuperMandi POS — all platforms (Retailer, Supplier, SuperAdmin, POS App, Backend, Gateway)
 
@@ -28,7 +28,7 @@ This file **replaces and supersedes** ALL of the following. Claude MUST NOT foll
 | `RELEASES/RELEASE_POLICY.md` | Release Policy |
 | `RELEASES/ROLLBACK_PLAYBOOK.md` | Rollback Playbook |
 
-**Everything Claude needs is in THIS file. No other file is authoritative for Claude's behavior.**
+**Everything Claude needs is in THIS file plus the machine-enforced workflow artifacts referenced by this file.**
 
 ---
 
@@ -47,19 +47,50 @@ BEFORE Claude responds to ANY operator message, Claude MUST:
      → Know current ticket, phase, queue, blocked items
      → Know last 5 actions
 
-  3. RUN: git log --oneline -10 && git status
+  3. READ the memory sync pack (RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md)
+     → Load authoritative workflow artifacts and startup commands
+     → Load updated file list and contradiction remediations
+
+  4. RUN: git log --oneline -10 && git status
      → Verify git matches state file
      → If mismatch → reconcile (git is truth)
 
-  4. ANNOUNCE resumption:
+  5. RUN workflow guards:
+     → pnpm workflow:validate
+     → pnpm workflow:monitor
+
+  6. ANNOUNCE resumption:
      "Session started. Current: [ticket] at [step]. Phase: [N], Progress: [X/Y]."
 
-  5. ONLY THEN respond to operator's message or begin work
+  7. ONLY THEN respond to operator's message or begin work
 ```
 
 **Claude NEVER skips this boot sequence.**
 **Claude NEVER responds to operator before completing it.**
 **Claude NEVER starts coding without knowing current state.**
+
+## 0.1A Machine-Enforced Workflow Artifacts (Mandatory Reads)
+
+For every coding session, Claude MUST load and use these files before ticket execution:
+
+- `workflow/state/workflow_state.json`
+- `workflow/state/staging_batch.json`
+- `workflow/state/freeze_manifest.json`
+- `workflow/schemas/ticket.schema.json`
+- `workflow/schemas/screen_state.schema.json`
+- `workflow/schemas/staging_batch.schema.json`
+- `workflow/schemas/freeze_manifest.schema.json`
+- `workflow/README.md`
+- `workflow/production_boundary_iam.md`
+- `scripts/workflow/guard.js`
+- `scripts/workflow/session-boot.js`
+- `scripts/workflow/ticket-monitor.js`
+
+Before changing a ticket from `todo` to `in_progress`, Claude MUST run:
+
+`pnpm workflow:session-boot -- --file workflow/tickets/<ticket>.json`
+
+No ticket progression is allowed without this bootstrap stamp.
 
 ## 0.2 Prime Directive (Absolute, Every Action)
 
@@ -1117,10 +1148,12 @@ Every new Claude session, EXACTLY this sequence:
 ```
 1. Read RELEASES/CLAUDE_STATE.md           (this file — rules)
 2. Read RELEASES/CLAUDE_CURRENT_STATE.json (live state)
-3. git log --oneline -10 && git status     (verify git matches state)
-4. Reconcile any differences (git is truth)
-5. Announce: "Resuming [ticket] at [step]. Phase: [N], Progress: [X/Y]"
-6. Continue work
+3. Read RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md (memory sync pack)
+4. Run pnpm workflow:validate && pnpm workflow:monitor
+5. git log --oneline -10 && git status     (verify git matches state)
+6. Reconcile any differences (git is truth)
+7. Announce: "Resuming [ticket] at [step]. Phase: [N], Progress: [X/Y]"
+8. Continue work
 ```
 
 **Claude NEVER asks "what should I work on?" — the state file tells it.**

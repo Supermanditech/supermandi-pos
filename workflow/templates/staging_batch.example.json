@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "batchId": "STAGING-BATCH-2026-02-20-01",
+  "targetEnvironment": "staging",
+  "targetProject": "supermandi-backend",
+  "targetRegion": "asia-south1",
+  "commitSha": "09d1c28",
+  "deploymentRef": "STAGE-DEPLOY-2026-02-20-01",
+  "createdAt": "2026-02-20T13:00:00Z",
+  "screenIds": [
+    "RETAILER.DASHBOARD",
+    "SUPPLIER.ORDERS"
+  ],
+  "ticketIds": [
+    "RETAILER.DASHBOARD.001",
+    "SUPPLIER.ORDERS.002"
+  ],
+  "riskFlags": {
+    "touchesBackend": true,
+    "touchesSharedApi": true,
+    "touchesDb": false,
+    "touchesMigration": false,
+    "touchesUrlMapOrIngress": false,
+    "touchesPos": false
+  },
+  "expectedCloudRunServices": [
+    "api-gateway",
+    "main-backend",
+    "retailer-admin",
+    "supplier-portal"
+  ],
+  "operatorReady": true,
+  "claudeReady": true,
+  "immutableImagesPinned": true,
+  "secretVersionsPinned": true,
+  "migrationSafety": {
+    "required": false,
+    "planRef": "",
+    "dryRunEvidence": [],
+    "backupId": "",
+    "operatorApproved": false,
+    "completed": false
+  },
+  "notes": "Backend/shared API batch capped at max 2 screens."
+}

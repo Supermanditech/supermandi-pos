@@ -303,7 +303,6 @@ jobs:
   test-tier3:
     name: "Tier 3: Full-Stack Integration"
     runs-on: ubuntu-latest
-    continue-on-error: true
     services:
       postgres:
         image: postgres:15
@@ -580,12 +579,11 @@ jobs:
           echo "Local smoke test PASSED"
 
   # ==========================================================================
-  # JOB 6: ZRP Category A — Git & Ticket Discipline (PR events only)
+  # JOB 6: ZRP Category A — Git & Ticket Discipline (PR + push)
   # ==========================================================================
   git-discipline:
     name: "ZRP: Git & Ticket Discipline"
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -594,11 +592,11 @@ jobs:
 
       - name: Run git discipline gate
         env:
-          IS_PR: "true"
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          BRANCH: ${{ github.head_ref }}
-          BASE_REF: origin/${{ github.base_ref }}
+          IS_PR: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+          PR_TITLE: ${{ github.event.pull_request.title || '' }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}
         run: |
           chmod +x scripts/gates/git-discipline.sh
           bash scripts/gates/git-discipline.sh
@@ -944,7 +942,6 @@ jobs:
   portal-tests:
     name: Portal Unit Tests
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -994,6 +991,25 @@ jobs:
           retention-days: 14
 
   # ==========================================================================
+  # Workflow governance: machine-enforced state/ticket/screen checks
+  # ==========================================================================
+  workflow-governance:
+    name: "Workflow Governance Guard"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Validate workflow state machine
+        run: |
+          node scripts/workflow/guard.js validate-state
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
@@ -1002,14 +1018,15 @@ jobs:
     needs: [typecheck, lint, test, test-tier3, build-verify, local-smoke,
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
-            routing-validation, semgrep, gitleaks, contract-tests, portal-tests]
+            routing-validation, semgrep, gitleaks, contract-tests, portal-tests,
+            workflow-governance]
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
           # Core CI gates (must pass)
           CORE_FAILED=0
-          for job in typecheck lint test build-verify local-smoke; do
+          for job in typecheck lint test build-verify local-smoke workflow-governance; do
             RESULT=""
             case "$job" in
               typecheck)     RESULT="${{ needs.typecheck.result }}" ;;
@@ -1017,6 +1034,7 @@ jobs:
               test)          RESULT="${{ needs.test.result }}" ;;
               build-verify)  RESULT="${{ needs.build-verify.result }}" ;;
               local-smoke)   RESULT="${{ needs.local-smoke.result }}" ;;
+              workflow-governance) RESULT="${{ needs.workflow-governance.result }}" ;;
             esac
             if [ "$RESULT" != "success" ]; then
               echo "FAIL: $job = $RESULT"
@@ -1026,13 +1044,13 @@ jobs:
             fi
           done
 
-          # ZRP gates (must pass, except git-discipline which is skipped on push)
+          # ZRP gates (must pass)
           ZRP_FAILED=0
 
-          # git-discipline: required on PRs, skipped on push-to-main
+          # git-discipline is required on both PR and push
           GD_RESULT="${{ needs.git-discipline.result }}"
-          if [ "$GD_RESULT" = "success" ] || [ "$GD_RESULT" = "skipped" ]; then
-            echo "PASS: git-discipline ($GD_RESULT)"
+          if [ "$GD_RESULT" = "success" ]; then
+            echo "PASS: git-discipline"
           else
             echo "FAIL: git-discipline = $GD_RESULT"
             ZRP_FAILED=$((ZRP_FAILED + 1))
@@ -1058,18 +1076,20 @@ jobs:
             fi
           done
 
-          # TQ-004: Tier 3 full-stack integration (non-blocking, informational)
+          # TQ-004: Tier 3 full-stack integration (blocking)
           TIER3_RESULT="${{ needs.test-tier3.result }}"
           if [ "$TIER3_RESULT" != "success" ]; then
-            echo "WARN: test-tier3 = $TIER3_RESULT (non-blocking)"
+            echo "FAIL: test-tier3 = $TIER3_RESULT"
+            CORE_FAILED=$((CORE_FAILED + 1))
           else
             echo "PASS: test-tier3 (full-stack integration)"
           fi
 
-          # Semgrep SAST (code quality + security)
+          # Semgrep SAST (blocking security/code-quality gate)
           SEMGREP_RESULT="${{ needs.semgrep.result }}"
           if [ "$SEMGREP_RESULT" != "success" ]; then
-            echo "WARN: semgrep = $SEMGREP_RESULT (non-blocking)"
+            echo "FAIL: semgrep = $SEMGREP_RESULT"
+            ZRP_FAILED=$((ZRP_FAILED + 1))
           else
             echo "PASS: semgrep (SAST code quality)"
           fi
@@ -1102,7 +1122,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (6 core + 10 ZRP + Semgrep)"
+          echo "ALL CI GATES PASSED (7 core + 10 ZRP + Semgrep)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."

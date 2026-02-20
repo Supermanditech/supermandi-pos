@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://supermandi.tech/schemas/screen_state.schema.json",
+  "title": "SuperMandi Screen State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "screenId",
+    "surface",
+    "status",
+    "ticketIds",
+    "certification",
+    "statusHistory",
+    "timestamps"
+  ],
+  "properties": {
+    "screenId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9._-]+$"
+    },
+    "surface": {
+      "type": "string",
+      "enum": [
+        "pos",
+        "retailer_web",
+        "supplier_web",
+        "superadmin_web",
+        "shared"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_audit",
+        "in_fix",
+        "ready_for_certification",
+        "certified",
+        "reopened"
+      ]
+    },
+    "ticketIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "certification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allTicketsLocked",
+        "impactRetestPassed",
+        "operatorSignoff",
+        "stagingParityProof"
+      ],
+      "properties": {
+        "allTicketsLocked": {
+          "type": "boolean"
+        },
+        "impactRetestPassed": {
+          "type": "boolean"
+        },
+        "operatorSignoff": {
+          "type": "boolean"
+        },
+        "stagingParityProof": {
+          "type": "boolean"
+        },
+        "certifiedBy": {
+          "type": "string"
+        },
+        "certifiedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reopenReason": {
+          "type": "string"
+        },
+        "regressionMatrixEvidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "statusHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "actor",
+          "sessionId",
+          "at",
+          "reason",
+          "prevHash",
+          "hash"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "enum": [
+              "claude",
+              "operator"
+            ]
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3
+          },
+          "prevHash": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hash": {
+            "type": "string",
+            "minLength": 16
+          }
+        }
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

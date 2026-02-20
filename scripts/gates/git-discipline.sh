@@ -2,7 +2,7 @@
 # =============================================================================
 # ZRP Category A: Git & Ticket Discipline Gate
 # Gates: ZRP-A-001 through ZRP-A-012
-# Runs on PR events only. 100% pass required.
+# Runs on PR and push events. 100% pass required.
 # =============================================================================
 set -euo pipefail
 

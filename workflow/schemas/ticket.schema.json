@@ -1,0 +1,987 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://supermandi.tech/schemas/ticket.schema.json",
+  "title": "SuperMandi Live Fix Ticket",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ticketId",
+    "screenId",
+    "orderInScreen",
+    "surface",
+    "riskClass",
+    "title",
+    "status",
+    "severity",
+    "layers",
+    "gcpParity",
+    "impact",
+    "operator",
+    "claudeChecks",
+    "sessionBoot",
+    "operatorChecks",
+    "statusHistory",
+    "evidence",
+    "timestamps",
+    "truthDeclaration",
+    "externalIntegrations",
+    "buildMapping",
+    "dependencyDisclosure",
+    "productionInvariants",
+    "readiness",
+    "gitDiscipline"
+  ],
+  "properties": {
+    "ticketId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9._-]+$"
+    },
+    "screenId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9._-]+$"
+    },
+    "orderInScreen": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "surface": {
+      "type": "string",
+      "enum": [
+        "pos",
+        "retailer_web",
+        "supplier_web",
+        "superadmin_web",
+        "backend",
+        "shared"
+      ]
+    },
+    "riskClass": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5
+    },
+    "description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "todo",
+        "in_progress",
+        "ready_for_operator_test",
+        "operator_failed",
+        "ready_for_impact_retest",
+        "impact_retest_failed",
+        "ready_for_lock",
+        "locked",
+        "cancelled"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ]
+    },
+    "parentTicketId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "subTicketIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ui",
+        "ux",
+        "professional_polish",
+        "wiring",
+        "navigation",
+        "api",
+        "backend",
+        "db",
+        "migration",
+        "gcp_parity"
+      ],
+      "properties": {
+        "ui": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "ux": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "professional_polish": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "wiring": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "navigation": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "api": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "backend": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "db": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "migration": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "gcp_parity": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        }
+      }
+    },
+    "gcpParity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stagingValidated",
+        "stagingUrls",
+        "cloudRunServices",
+        "basePathChecked",
+        "envParityChecked",
+        "routingChecked",
+        "apiContractChecked",
+        "dbConnectivityChecked",
+        "artifactDigestPinned"
+      ],
+      "properties": {
+        "stagingValidated": {
+          "type": "boolean"
+        },
+        "stagingUrls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cloudRunServices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "basePathChecked": {
+          "type": "boolean"
+        },
+        "envParityChecked": {
+          "type": "boolean"
+        },
+        "routingChecked": {
+          "type": "boolean"
+        },
+        "apiContractChecked": {
+          "type": "boolean"
+        },
+        "dbConnectivityChecked": {
+          "type": "boolean"
+        },
+        "artifactDigestPinned": {
+          "type": "boolean"
+        },
+        "cloudRunRevisionIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impactedScreens",
+        "impactedServices",
+        "impactRetestRequired",
+        "impactRetestStatus"
+      ],
+      "properties": {
+        "impactedScreens": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "impactedServices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "impactRetestRequired": {
+          "type": "boolean"
+        },
+        "impactRetestStatus": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "passed",
+            "failed",
+            "na"
+          ]
+        }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reportedBy",
+        "reproSteps",
+        "finalSignoff"
+      ],
+      "properties": {
+        "reportedBy": {
+          "type": "string"
+        },
+        "reproSteps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "finalSignoff": {
+          "type": "boolean"
+        },
+        "signoffAt": {
+          "type": "string"
+        }
+      }
+    },
+    "claudeChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "screenVisualizedWithOperator",
+        "codeQualityChecksPassed",
+        "regressionChecklistPassed",
+        "apiContractChecked",
+        "navigationChecked",
+        "envAndBasePathChecked",
+        "migrationSafetyChecked",
+        "rollbackPlanReady",
+        "stagingDeployPassed",
+        "stagingDeploymentRef",
+        "cloudWorkspaceValidated",
+        "cloudWorkspaceRef"
+      ],
+      "properties": {
+        "screenVisualizedWithOperator": {
+          "type": "boolean"
+        },
+        "codeQualityChecksPassed": {
+          "type": "boolean"
+        },
+        "regressionChecklistPassed": {
+          "type": "boolean"
+        },
+        "apiContractChecked": {
+          "type": "boolean"
+        },
+        "navigationChecked": {
+          "type": "boolean"
+        },
+        "envAndBasePathChecked": {
+          "type": "boolean"
+        },
+        "migrationSafetyChecked": {
+          "type": "boolean"
+        },
+        "rollbackPlanReady": {
+          "type": "boolean"
+        },
+        "stagingDeployPassed": {
+          "type": "boolean"
+        },
+        "stagingDeploymentRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cloudWorkspaceValidated": {
+          "type": "boolean"
+        },
+        "cloudWorkspaceRef": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sessionBoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bootstrappedBy",
+        "bootstrappedAt",
+        "runbookVersion",
+        "memoryStateRef",
+        "requiredFilesRead"
+      ],
+      "properties": {
+        "bootstrappedBy": {
+          "type": "string",
+          "enum": [
+            "claude"
+          ]
+        },
+        "bootstrappedAt": {
+          "type": "string"
+        },
+        "runbookVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "memoryStateRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requiredFilesRead": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "operatorChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stagingTestExecuted",
+        "testedOnRealTarget",
+        "testedOnLaptopBrowser",
+        "testedOnRedmi",
+        "stagingUrlsTested",
+        "issuesReproduced",
+        "fixVerified",
+        "blockingIssueCount",
+        "nonBlockingIssueCount",
+        "noBlockingIssueRemaining",
+        "evidenceAttached",
+        "validatedDeploymentRef",
+        "validatedCloudRunRevisionIds"
+      ],
+      "properties": {
+        "stagingTestExecuted": {
+          "type": "boolean"
+        },
+        "testedOnRealTarget": {
+          "type": "boolean"
+        },
+        "testedOnLaptopBrowser": {
+          "type": "boolean"
+        },
+        "testedOnRedmi": {
+          "type": "boolean"
+        },
+        "stagingUrlsTested": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "issuesReproduced": {
+          "type": "boolean"
+        },
+        "fixVerified": {
+          "type": "boolean"
+        },
+        "blockingIssueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nonBlockingIssueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "noBlockingIssueRemaining": {
+          "type": "boolean"
+        },
+        "evidenceAttached": {
+          "type": "boolean"
+        },
+        "validatedDeploymentRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "validatedCloudRunRevisionIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "statusHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "actor",
+          "sessionId",
+          "at",
+          "reason",
+          "prevHash",
+          "hash"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "enum": [
+              "claude",
+              "operator"
+            ]
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3
+          },
+          "prevHash": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hash": {
+            "type": "string",
+            "minLength": 16
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "beforeVisual",
+        "afterVisual",
+        "apiProof",
+        "parityProof"
+      ],
+      "properties": {
+        "beforeVisual": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "afterVisual": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "apiProof": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parityProof": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "lockedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "truthDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mockDataUsed",
+        "mockApisUsed",
+        "mockUsageApproved",
+        "productionDataTested",
+        "disclosedToOperator",
+        "notes",
+        "evidence"
+      ],
+      "properties": {
+        "mockDataUsed": {
+          "type": "boolean"
+        },
+        "mockApisUsed": {
+          "type": "boolean"
+        },
+        "mockUsageApproved": {
+          "type": "boolean"
+        },
+        "productionDataTested": {
+          "type": "boolean"
+        },
+        "disclosedToOperator": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "externalIntegrations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "touched",
+        "items",
+        "operatorDisclosureDone",
+        "allValidated"
+      ],
+      "properties": {
+        "touched": {
+          "type": "boolean"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "integrationKey",
+              "provider",
+              "environment",
+              "baseUrl",
+              "credentialSecretRef",
+              "apiVersion",
+              "contractEvidence",
+              "stagingEvidence",
+              "validated"
+            ],
+            "properties": {
+              "integrationKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "provider": {
+                "type": "string",
+                "minLength": 1
+              },
+              "environment": {
+                "type": "string",
+                "enum": [
+                  "staging",
+                  "production"
+                ]
+              },
+              "baseUrl": {
+                "type": "string",
+                "pattern": "^https://"
+              },
+              "credentialSecretRef": {
+                "type": "string",
+                "minLength": 1
+              },
+              "apiVersion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contractEvidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stagingEvidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "validated": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "operatorDisclosureDone": {
+          "type": "boolean"
+        },
+        "allValidated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "buildMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expectedSurface",
+        "expectedBasePath",
+        "expectedPrimaryService",
+        "actualCloudRunServices",
+        "urlMappingValidated",
+        "correctBuildTargetValidated",
+        "stagingRouteEvidence"
+      ],
+      "properties": {
+        "expectedSurface": {
+          "type": "string"
+        },
+        "expectedBasePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedPrimaryService": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actualCloudRunServices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "urlMappingValidated": {
+          "type": "boolean"
+        },
+        "correctBuildTargetValidated": {
+          "type": "boolean"
+        },
+        "stagingRouteEvidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "dependencyDisclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "internalDependencies",
+        "externalDependencies",
+        "pendingDependencies",
+        "blockers",
+        "disclosedToOperator",
+        "operatorAcknowledged",
+        "notes"
+      ],
+      "properties": {
+        "internalDependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "externalDependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pendingDependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disclosedToOperator": {
+          "type": "boolean"
+        },
+        "operatorAcknowledged": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "productionInvariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sellPurchaseIsolation",
+        "deterministicScanIntentResolution",
+        "frontendBackendStateParity",
+        "offlineFirstSafeSync",
+        "idempotentTransactionProcessing",
+        "atomicDatabaseWrites",
+        "strictSchemaValidation",
+        "zeroSilentFailures",
+        "structuredAuditLogging"
+      ],
+      "properties": {
+        "sellPurchaseIsolation": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "deterministicScanIntentResolution": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "frontendBackendStateParity": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "offlineFirstSafeSync": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "idempotentTransactionProcessing": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "atomicDatabaseWrites": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "strictSchemaValidation": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "zeroSilentFailures": {
+          "$ref": "#/$defs/invariantCheck"
+        },
+        "structuredAuditLogging": {
+          "$ref": "#/$defs/invariantCheck"
+        }
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "productionGradeClaimed",
+        "pendingInternal",
+        "pendingExternal",
+        "pendingOps",
+        "blocked",
+        "summary"
+      ],
+      "properties": {
+        "productionGradeClaimed": {
+          "type": "boolean"
+        },
+        "pendingInternal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pendingExternal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pendingOps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocked": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "gitDiscipline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workBranch",
+        "changeScope",
+        "lastValidatedCommit",
+        "noMixedScope",
+        "noConflictMarkers",
+        "ciGateStatus",
+        "evidence"
+      ],
+      "properties": {
+        "workBranch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changeScope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastValidatedCommit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "noMixedScope": {
+          "type": "boolean"
+        },
+        "noConflictMarkers": {
+          "type": "boolean"
+        },
+        "ciGateStatus": {
+          "type": "string",
+          "enum": [
+            "not_required",
+            "pending",
+            "passed",
+            "failed"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "invariantCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence",
+        "notes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

@@ -176,3 +176,6 @@ razorpay_*.txt
 razorpayx_*.txt
 rbi_*.txt
 tmp_*.txt
+
+# Workflow monitor runtime output
+workflow/state/live_monitor_report.json

@@ -7,6 +7,7 @@
 # 2. Uses digest-pinned images (not mutable tags)
 # 3. Blocks ':latest' tag
 # 4. Records promotion in BATCH_LEDGER.md
+# 5. Requires operator principal allowlist + pipeline execution context
 #
 # SAME IMAGE SHA: staging-tested → production (no rebuild)
 
@@ -18,6 +19,19 @@ DRY_RUN=""
 PROJECT="${GCP_PROJECT:-supermandi-backend}"
 REGION="${GCP_REGION:-asia-south1}"
 AR_REPO="${REGION}-docker.pkg.dev/${PROJECT}/supermandi"
+WORKFLOW_ACTOR="${WORKFLOW_ACTOR:-}"
+
+STAGING_PREFIX="${CLOUD_RUN_STAGING_PREFIX:-}"
+STAGING_SUFFIX="${CLOUD_RUN_STAGING_SUFFIX:--staging}"
+PRODUCTION_PREFIX="${CLOUD_RUN_PRODUCTION_PREFIX:-}"
+PRODUCTION_SUFFIX="${CLOUD_RUN_PRODUCTION_SUFFIX:-}"
+STAGING_GATEWAY_SERVICE="${CLOUD_RUN_STAGING_GATEWAY_SERVICE:-${STAGING_PREFIX}api-gateway${STAGING_SUFFIX}}"
+PRODUCTION_GATEWAY_SERVICE="${CLOUD_RUN_PRODUCTION_GATEWAY_SERVICE:-${PRODUCTION_PREFIX}api-gateway${PRODUCTION_SUFFIX}}"
+REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+WORKFLOW_STATE_FILE="${WORKFLOW_STATE_FILE:-${REPO_ROOT}/workflow/state/workflow_state.json}"
+
+# Shared production boundary checks (identity + pipeline context).
+source "${REPO_ROOT}/scripts/workflow/production-identity-guard.sh"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -55,7 +69,29 @@ if [ "$SHA" = "latest" ]; then
   exit 1
 fi
 
-REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+if [ "$WORKFLOW_ACTOR" != "operator" ]; then
+  echo "ERROR: Production promotion is operator-only. Explicitly set WORKFLOW_ACTOR=operator."
+  exit 1
+fi
+
+workflow_guard_require_production_boundary "production promotion" "$WORKFLOW_STATE_FILE"
+
+if [ "$STAGING_GATEWAY_SERVICE" = "$PRODUCTION_GATEWAY_SERVICE" ]; then
+  echo "ERROR: Staging and production gateway services resolve to same target ($STAGING_GATEWAY_SERVICE)."
+  echo "Set CLOUD_RUN_STAGING_* and CLOUD_RUN_PRODUCTION_* mappings to distinct services."
+  exit 1
+fi
+
+PROMOTE_MODE_SET="no"
+
+rollback_mode_on_error() {
+  if [ "$PROMOTE_MODE_SET" = "yes" ]; then
+    echo ""
+    echo "Promotion failed. Reverting workflow mode to FREEZE_READY..."
+    node "$REPO_ROOT/scripts/workflow/guard.js" mode --set FREEZE_READY || true
+  fi
+}
+trap rollback_mode_on_error ERR
 
 echo "============================================="
 echo "  PRODUCTION PROMOTION"
@@ -66,37 +102,54 @@ echo "============================================="
 echo ""
 
 # =============================================================================
+# STEP 0: Workflow guard (machine-enforced freeze gate)
+# =============================================================================
+echo "--- Step 0: Workflow guard pre-promote checks..."
+node "$REPO_ROOT/scripts/workflow/guard.js" pre-promote --sha "$SHA"
+
+if [ -z "$DRY_RUN" ]; then
+  node "$REPO_ROOT/scripts/workflow/guard.js" mode --set PROD_PROMOTE
+  PROMOTE_MODE_SET="yes"
+fi
+
+# =============================================================================
 # STEP 1: Verify staging has this SHA
 # =============================================================================
 echo "--- Step 1: Verify staging SHA..."
 
 # INFRA-010: Service names match existing GCP Cloud Run services (no prefix)
-STAGING_GW_URL=$(gcloud run services describe "api-gateway" \
+STAGING_GW_URL=$(gcloud run services describe "$STAGING_GATEWAY_SERVICE" \
   --region="$REGION" \
   --format="value(status.url)" 2>/dev/null || echo "")
 
 if [ -z "$STAGING_GW_URL" ]; then
-  echo "  WARN: Could not get staging gateway URL"
-  echo "  Skipping staging verification (staging may not be deployed)"
-else
-  STAGING_VERSION=$(curl -sf "$STAGING_GW_URL/version" 2>/dev/null || echo "{}")
-  STAGING_SHA=$(echo "$STAGING_VERSION" | grep -o '"sha":"[^"]*"' | cut -d'"' -f4 || echo "unknown")
-
-  echo "  Staging /version: $STAGING_VERSION"
-  echo "  Staging SHA: $STAGING_SHA"
-  echo "  Requested SHA: $SHA"
-
-  if [ "$STAGING_SHA" != "$SHA" ]; then
-    echo ""
-    echo "  ERROR: SHA MISMATCH!"
-    echo "  Staging has SHA '$STAGING_SHA' but you requested '$SHA'"
-    echo ""
-    echo "  CD-201: Production must use the SAME SHA as staging."
-    echo "  Deploy $SHA to staging first, test it, then promote."
-    exit 1
-  fi
-  echo "  OK: SHA matches staging"
+  echo "  ERROR: Staging gateway URL is unavailable for service $STAGING_GATEWAY_SERVICE."
+  echo "  Promotion is fail-closed until staging verification is reachable."
+  exit 1
 fi
+
+STAGING_VERSION=$(curl -sf "$STAGING_GW_URL/version" 2>/dev/null || echo "")
+if [ -z "$STAGING_VERSION" ]; then
+  echo "  ERROR: Could not read staging /version from $STAGING_GW_URL"
+  exit 1
+fi
+
+STAGING_SHA=$(echo "$STAGING_VERSION" | grep -o '"sha":"[^"]*"' | cut -d'"' -f4 || echo "unknown")
+echo "  Staging service: $STAGING_GATEWAY_SERVICE"
+echo "  Staging /version: $STAGING_VERSION"
+echo "  Staging SHA: $STAGING_SHA"
+echo "  Requested SHA: $SHA"
+
+if [ "$STAGING_SHA" != "$SHA" ]; then
+  echo ""
+  echo "  ERROR: SHA MISMATCH!"
+  echo "  Staging has SHA '$STAGING_SHA' but you requested '$SHA'"
+  echo ""
+  echo "  CD-201: Production must use the SAME SHA as staging."
+  echo "  Deploy $SHA to staging first, test it, then promote."
+  exit 1
+fi
+echo "  OK: SHA matches staging"
 
 # =============================================================================
 # STEP 2: Verify images exist in Artifact Registry
@@ -147,7 +200,8 @@ if [ -n "$DRY_RUN" ]; then
   exit 0
 fi
 
-"$REPO_ROOT/scripts/deploy-cloud-run.sh" --env production --sha "$SHA" --confirm
+WORKFLOW_ACTOR=operator ENABLE_PRODUCTION_DEPLOY=true \
+  "$REPO_ROOT/scripts/deploy-cloud-run.sh" --env production --sha "$SHA" --confirm
 
 # =============================================================================
 # STEP 4: Record promotion
@@ -177,7 +231,7 @@ fi
 echo ""
 echo "--- Step 5: Post-deploy verification..."
 
-PROD_GW_URL=$(gcloud run services describe "api-gateway" \
+PROD_GW_URL=$(gcloud run services describe "$PRODUCTION_GATEWAY_SERVICE" \
   --region="$REGION" \
   --format="value(status.url)" 2>/dev/null || echo "")
 
@@ -192,6 +246,17 @@ if [ -n "$PROD_GW_URL" ]; then
 else
   echo "  WARN: Could not get production gateway URL"
 fi
+
+# =============================================================================
+# STEP 6: Lock workflow state to PROD_LOCKED
+# =============================================================================
+if [ "$PROMOTE_MODE_SET" = "yes" ]; then
+  echo ""
+  echo "--- Step 6: Lock workflow mode..."
+  node "$REPO_ROOT/scripts/workflow/guard.js" mode --set PROD_LOCKED
+  PROMOTE_MODE_SET="no"
+fi
+trap - ERR
 
 echo ""
 echo "============================================="

@@ -19,7 +19,7 @@ const path = require('path');
 // =============================================================================
 
 const ROOT_DIR = path.join(__dirname, '..');
-const CHECKS = ['git', 'branch', 'fingerprint', 'urls', 'flags', 'boundaries', 'build', 'ui-reachability'];
+const CHECKS = ['git', 'branch', 'fingerprint', 'urls', 'flags', 'boundaries', 'build', 'ui-reachability', 'workflow'];
 
 // Colors
 const COLORS = {
@@ -65,7 +65,7 @@ function readFile(filePath) {
 // =============================================================================
 
 function checkGit(verbose) {
-  console.log(colorize('\n[1/8] Git Status Check', 'blue'));
+  console.log(colorize('\n[1/9] Git Status Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -108,7 +108,7 @@ function checkGit(verbose) {
 }
 
 function checkFingerprint(verbose) {
-  console.log(colorize('\n[3/8] Build Fingerprint Check', 'blue'));
+  console.log(colorize('\n[3/9] Build Fingerprint Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -192,7 +192,7 @@ function checkFingerprint(verbose) {
 }
 
 function checkBranch(verbose) {
-  console.log(colorize('\n[2/8] Branch & Tag Check', 'blue'));
+  console.log(colorize('\n[2/9] Branch & Tag Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -225,7 +225,7 @@ function checkBranch(verbose) {
 }
 
 function checkUrls(verbose) {
-  console.log(colorize('\n[4/8] Backend URL Check', 'blue'));
+  console.log(colorize('\n[4/9] Backend URL Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -273,7 +273,7 @@ function checkUrls(verbose) {
 }
 
 function checkFlags(verbose) {
-  console.log(colorize('\n[5/8] Feature Flags Check', 'blue'));
+  console.log(colorize('\n[5/9] Feature Flags Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -303,7 +303,7 @@ function checkFlags(verbose) {
 }
 
 function checkBoundaries(verbose) {
-  console.log(colorize('\n[6/8] SELL/BUY Boundary Check', 'blue'));
+  console.log(colorize('\n[6/9] SELL/BUY Boundary Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -361,7 +361,7 @@ function checkBoundaries(verbose) {
 }
 
 function checkUiReachability(verbose) {
-  console.log(colorize('\n[8/8] UI Reachability Check', 'blue'));
+  console.log(colorize('\n[8/9] UI Reachability Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -387,8 +387,41 @@ function checkUiReachability(verbose) {
   return results;
 }
 
+function checkWorkflow(verbose) {
+  console.log(colorize('\n[9/9] Workflow Governance Check', 'blue'));
+
+  const results = { pass: true, messages: [] };
+  const guardScript = path.join(__dirname, 'workflow', 'guard.js');
+
+  if (!fs.existsSync(guardScript)) {
+    results.messages.push('Workflow guard not configured (scripts/workflow/guard.js not found)');
+    return results;
+  }
+
+  const run = spawnSync('node', [guardScript, 'validate-state'], {
+    cwd: ROOT_DIR,
+    encoding: 'utf-8',
+  });
+
+  if (run.status !== 0) {
+    results.pass = false;
+    const combinedOutput = `${run.stdout || ''}\n${run.stderr || ''}`.trim();
+    if (combinedOutput) {
+      combinedOutput.split('\n').forEach(line => {
+        if (line.trim()) results.messages.push(line.trim());
+      });
+    } else {
+      results.messages.push('Workflow guard failed without output');
+    }
+    return results;
+  }
+
+  results.messages.push('Workflow state, ticket, and screen guard checks passed');
+  return results;
+}
+
 function checkBuild(verbose) {
-  console.log(colorize('\n[7/8] Build Readiness Check', 'blue'));
+  console.log(colorize('\n[7/9] Build Readiness Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -476,6 +509,9 @@ async function main() {
         break;
       case 'ui-reachability':
         result = checkUiReachability(verbose);
+        break;
+      case 'workflow':
+        result = checkWorkflow(verbose);
         break;
       default:
         console.log(colorize(`Unknown check: ${check}`, 'yellow'));

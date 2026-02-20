@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "1.0.0",
+  "updatedAt": "2026-02-20T13:10:00Z",
+  "purpose": "Marks legacy rules/state/CI-CD paths that do not serve the new Live Fix -> Freeze -> Production workflow.",
+  "items": [
+    {
+      "id": "LEG-001",
+      "category": "state_file",
+      "path": ".release-status.json",
+      "conflict": "Local/VM APK release state is not source-of-truth for GCP staging workflow.",
+      "impact": "parallel state source causes drift",
+      "requiredAction": "deprecate_as_authoritative_state",
+      "enforcement": "warn",
+      "status": "open"
+    },
+    {
+      "id": "LEG-002",
+      "category": "state_file",
+      "path": "scripts/mandatory-fixes.json",
+      "conflict": "WIP/APK local gate does not represent staging parity state machine.",
+      "impact": "ticket completion mismatch",
+      "requiredAction": "scope_to_pos_local_only_or_deprecate",
+      "enforcement": "warn",
+      "status": "open"
+    },
+    {
+      "id": "LEG-003",
+      "category": "rulebook",
+      "path": "tickets/INDEX.md",
+      "conflict": "Contains VM-first guidance and legacy deployment contracts not aligned to Cloud Run staging-first workflow.",
+      "impact": "operator/claude process confusion",
+      "requiredAction": "annotate_legacy_sections_and_link_new_workflow",
+      "enforcement": "warn",
+      "status": "open"
+    },
+    {
+      "id": "LEG-004",
+      "category": "deploy_script",
+      "path": "scripts/deploy-vm.sh",
+      "conflict": "VM deployment path bypasses new staging batch/state guards.",
+      "impact": "non-parity release path",
+      "requiredAction": "mark_deprecated_for_live_fix_mode",
+      "enforcement": "warn",
+      "status": "open"
+    },
+    {
+      "id": "LEG-005",
+      "category": "deploy_script",
+      "path": "scripts/deploy-vm.js",
+      "conflict": "VM deployment path bypasses workflow state machine.",
+      "impact": "non-governed deploy path",
+      "requiredAction": "mark_deprecated_for_live_fix_mode",
+      "enforcement": "warn",
+      "status": "open"
+    },
+    {
+      "id": "LEG-006",
+      "category": "deploy_script",
+      "path": "scripts/deploy-production.sh",
+      "conflict": "Legacy production script may not consume freeze manifest + Cloud Deploy approval path.",
+      "impact": "production drift risk",
+      "requiredAction": "wrap_with_freeze_guard_or_deprecate",
+      "enforcement": "warn",
+      "status": "open"
+    },
+    {
+      "id": "LEG-007",
+      "category": "deploy_script",
+      "path": "scripts/deploy-atomic.sh",
+      "conflict": "Atomic symlink deployment is VM-style and outside Cloud Run artifact promotion path.",
+      "impact": "alternate production channel",
+      "requiredAction": "disable_for_gcp_live_fix_program",
+      "enforcement": "warn",
+      "status": "open"
+    },
+    {
+      "id": "LEG-008",
+      "category": "ci_cd",
+      "path": ".github/workflows/ci-gates.yml",
+      "conflict": "git-discipline is PR-only and skipped on push.",
+      "impact": "push path can bypass full git policy intent",
+      "requiredAction": "extend_git_discipline_for_push_or_protect_main",
+      "enforcement": "resolved",
+      "status": "resolved",
+      "resolvedBy": [
+        ".github/workflows/ci-gates.yml git-discipline job now runs on push and PR",
+        ".github/workflows/ci-gates.yml gate-check requires success (not skipped)"
+      ]
+    },
+    {
+      "id": "LEG-009",
+      "category": "ci_cd",
+      "path": ".github/workflows/ci-gates.yml",
+      "conflict": "test-tier3 and portal-tests are marked continue-on-error.",
+      "impact": "regression signals can be non-blocking",
+      "requiredAction": "make_blocking_or_move_to_required_status_checks",
+      "enforcement": "resolved",
+      "status": "resolved",
+      "resolvedBy": [
+        ".github/workflows/ci-gates.yml removed continue-on-error from test-tier3 and portal-tests",
+        ".github/workflows/ci-gates.yml gate-check now blocks on test-tier3 failure"
+      ]
+    },
+    {
+      "id": "LEG-010",
+      "category": "ci_cd",
+      "path": ".github/workflows/ci-gates.yml",
+      "conflict": "Semgrep is treated as non-blocking in final gate logic.",
+      "impact": "security/code-quality risk acceptance without explicit waiver",
+      "requiredAction": "promote_to_blocking_or_add_exception_process",
+      "enforcement": "resolved",
+      "status": "resolved",
+      "resolvedBy": [
+        ".github/workflows/ci-gates.yml gate-check now fails when semgrep result is not success"
+      ]
+    },
+    {
+      "id": "LEG-011",
+      "category": "ci_cd",
+      "path": ".github/workflows/deploy.yml",
+      "conflict": "workflow_dispatch route may be used to bypass desired batch discipline if operator does not maintain staging_batch manifest.",
+      "impact": "process drift",
+      "requiredAction": "keep_guard_mandatory_and_document_dispatch_rules",
+      "enforcement": "resolved",
+      "status": "resolved",
+      "resolvedBy": [
+        "scripts/deploy-cloud-run.sh pre-staging guard",
+        "scripts/workflow/guard.js validate-batch in pre-staging-deploy"
+      ]
+    },
+    {
+      "id": "LEG-012",
+      "category": "claude_rulebook",
+      "path": ".claude/settings.json",
+      "conflict": "Permissions file does not encode new state-machine discipline by itself.",
+      "impact": "agent action policy depends on external guard invocation",
+      "requiredAction": "retain_guard_as_source_of_truth_and keep settings as runtime permissions only",
+      "enforcement": "resolved",
+      "status": "resolved"
+    }
+  ]
+}

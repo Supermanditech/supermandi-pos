@@ -1,0 +1,22 @@
+{
+  "screenId": "RETAILER.DASHBOARD",
+  "surface": "retailer_web",
+  "title": "Retailer Dashboard",
+  "status": "not_started",
+  "ticketIds": [],
+  "certification": {
+    "allTicketsLocked": false,
+    "impactRetestPassed": false,
+    "operatorSignoff": false,
+    "stagingParityProof": false,
+    "certifiedBy": "",
+    "certifiedAt": null,
+    "reopenReason": "",
+    "regressionMatrixEvidence": []
+  },
+  "statusHistory": [],
+  "timestamps": {
+    "createdAt": "2026-02-20T00:00:00Z",
+    "updatedAt": "2026-02-20T00:00:00Z"
+  }
+}

@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://supermandi.tech/schemas/freeze_manifest.schema.json",
+  "title": "SuperMandi Freeze Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "freezeId",
+    "source",
+    "services",
+    "database",
+    "cache",
+    "pos",
+    "cloudDeploy",
+    "approvals",
+    "verification",
+    "lockStatus"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string"
+    },
+    "freezeId": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gitSha",
+        "workflowStateVersion"
+      ],
+      "properties": {
+        "gitSha": {
+          "type": "string",
+          "minLength": 7
+        },
+        "workflowStateVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "service",
+          "image",
+          "digest",
+          "stagingRevision",
+          "productionTarget"
+        ],
+        "properties": {
+          "service": {
+            "type": "string",
+            "enum": [
+              "api-gateway",
+              "main-backend",
+              "retailer-admin",
+              "supplier-portal",
+              "superadmin",
+              "landing"
+            ]
+          },
+          "image": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "stagingRevision": {
+            "type": "string"
+          },
+          "productionTarget": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cloudSqlInstance",
+        "migrationVersion",
+        "migrationChecksum",
+        "backupId"
+      ],
+      "properties": {
+        "cloudSqlInstance": {
+          "type": "string"
+        },
+        "migrationVersion": {
+          "type": "string"
+        },
+        "migrationChecksum": {
+          "type": "string"
+        },
+        "backupId": {
+          "type": "string"
+        }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "redisInstance",
+        "verified"
+      ],
+      "properties": {
+        "redisInstance": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "pos": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "androidArtifactUri",
+        "versionCode",
+        "versionName",
+        "distributionChannel"
+      ],
+      "properties": {
+        "androidArtifactUri": {
+          "type": "string"
+        },
+        "versionCode": {
+          "type": "string"
+        },
+        "versionName": {
+          "type": "string"
+        },
+        "distributionChannel": {
+          "type": "string",
+          "enum": [
+            "firebase_app_distribution",
+            "play_internal",
+            "play_production"
+          ]
+        },
+        "runtimeChannel": {
+          "type": "string"
+        }
+      }
+    },
+    "cloudDeploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deliveryPipeline",
+        "stagingTarget",
+        "productionTarget",
+        "releaseName",
+        "rolloutName",
+        "promotionApproved"
+      ],
+      "properties": {
+        "deliveryPipeline": {
+          "type": "string"
+        },
+        "stagingTarget": {
+          "type": "string"
+        },
+        "productionTarget": {
+          "type": "string"
+        },
+        "releaseName": {
+          "type": "string"
+        },
+        "rolloutName": {
+          "type": "string"
+        },
+        "promotionApproved": {
+          "type": "boolean"
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operatorApproved",
+        "operatorPrincipal",
+        "releaseManagerApproved",
+        "releaseManagerPrincipal"
+      ],
+      "properties": {
+        "operatorApproved": {
+          "type": "boolean"
+        },
+        "operatorPrincipal": {
+          "type": "string"
+        },
+        "releaseManagerApproved": {
+          "type": "boolean"
+        },
+        "releaseManagerPrincipal": {
+          "type": "string"
+        },
+        "approvedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stagingSmokePassed",
+        "operatorFullSignoff"
+      ],
+      "properties": {
+        "stagingSmokePassed": {
+          "type": "boolean"
+        },
+        "operatorFullSignoff": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lockStatus": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "locked"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}
