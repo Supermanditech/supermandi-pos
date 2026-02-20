@@ -1,4 +1,45 @@
-# CLAUDE NEXT ACTION: FIX-001 (Deploy-First)
+# CLAUDE NEXT ACTION: FIX-001 (Live Iteration Batch-First)
+
+## Priority Override (Effective 2026-02-21, Immediate)
+
+This override is ACTIVE now and takes precedence over older deploy-first wording in this file if any conflict exists.
+
+### Agent Quality Rule (Hard)
+
+- Use only `Claude Opus` agents for parallel audit/fix support.
+- Parallel agent count has no fixed cap, but all agents must be `Claude Opus`.
+- Do NOT use Haiku or mixed-model fanout for quality-critical testing.
+- If these rules are violated, the pass is invalid and must be rerun.
+
+### Prompt-Length / Context Control (Hard)
+
+- Work in small page batches to keep prompt/context bounded.
+- Keep only active-surface context; archive old logs into concise checkpoints.
+- Update machine state after each page batch before continuing.
+- If `prompt too long` or context drift occurs, resume strictly from last checkpoint (no memory-based continuation).
+
+### No-Skip Coverage Rule
+
+- No sampling, no skipping fields/components/states.
+- Test each micro ingredient one-by-one:
+  - fields/inputs, dropdowns, toggles/radios, CTAs
+  - table columns/actions, modals/drawers, empty/loading/error states
+  - navigation guards, API payload/response mapping, DB parity, migration impact
+- Ticket cannot close unless mapped checks are PASS (or BLOCKED with evidence + owner).
+- Surface deploy is blocked unless per-page micro coverage is 100% and no open P0/P1 blockers.
+
+### 100% Completion Rule (Hard Stop Against Score-Only Reporting)
+
+- Do not stop on percentage summaries such as `78%`, `83%`, or `Cycle score`.
+- Percentage is allowed only as interim telemetry; it is never completion.
+- Continue iterating until each required micro check is resolved to:
+  - `PASS` with evidence, or
+  - `BLOCKED` with owner + unblock action.
+- Any unresolved required check means the page remains open.
+- Any open `P0`/`P1` on the active batch blocks deploy.
+- Acceptance statement must be binary:
+  - `100% required checks resolved for this batch` or
+  - `NOT COMPLETE` with remaining check IDs.
 
 ## Effective Date
 2026-02-20
