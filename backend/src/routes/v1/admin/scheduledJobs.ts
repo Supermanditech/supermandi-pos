@@ -137,9 +137,10 @@ adminScheduledJobsRouter.get('/monitoring/health', async (_req: Request, res: Re
 
   // Redis check
   try {
-    const { default: Redis } = await import('ioredis');
+    const ioredis = await import('ioredis');
+    const RedisClass = ioredis.default as unknown as new (url: string, opts: Record<string, unknown>) => InstanceType<typeof ioredis.default>;
     const redisUrl = process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || '127.0.0.1'}:${process.env.REDIS_PORT || '6379'}`;
-    const redis = new Redis(redisUrl, { connectTimeout: 3000, lazyConnect: true });
+    const redis = new RedisClass(redisUrl, { connectTimeout: 3000, lazyConnect: true });
     const redisStart = Date.now();
     await redis.ping();
     checks.redis = { status: 'healthy', latencyMs: Date.now() - redisStart };

@@ -18,6 +18,7 @@ Use this file to sync Claude memory/rules with the latest machine-enforced workf
 7. `workflow/state/freeze_manifest.json`
 8. `workflow/README.md`
 9. `workflow/production_boundary_iam.md`
+10. `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md`
 
 ## 2. Mandatory Session Commands
 
@@ -117,6 +118,7 @@ No silent retries.
 - `package.json`
 - `RELEASES/CLAUDE_STATE.md`
 - `RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md`
+- `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md`
 - `scripts/deploy-cloud-run.sh`
 - `scripts/gates/git-discipline.sh`
 - `scripts/promote-to-prod.sh`
@@ -153,3 +155,4 @@ No silent retries.
 - For `FIX-001` staging deploy attempts, Claude must re-read this file before each retry and follow Section 2A exactly.
 - For this active wave, Claude must also enforce Section 2B and Section 2C on every deploy attempt.
 - For deployment completion, Claude must enforce Section 2D and prove all 6 staging services are on the target wave version.
+- Claude must read `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md` in every FIX-001 session before attempting deploy.

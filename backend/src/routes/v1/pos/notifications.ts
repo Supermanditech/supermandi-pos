@@ -12,7 +12,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { requireDeviceToken } from '../../../middleware/posDeviceToken';
+import { requireDeviceToken } from '../../../middleware/deviceToken.js';
 import { getPool } from '../../../db/client';
 import { log } from "../../../lib/logger";
 import {

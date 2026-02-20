@@ -40,7 +40,7 @@ export async function runStoreAlerts(storeId: string): Promise<number> {
 /**
  * Run alerts for ALL active stores (scheduled job)
  */
-export async function runAllStoreAlerts(): Promise<{ storesProcessed: number; totalAlerts: number }> {
+export async function runAllStoreAlerts(): Promise<{ storesProcessed: number; totalAlerts: number; errors: number }> {
   const pool = getPool();
   if (!pool) return { storesProcessed: 0, totalAlerts: 0 };
 

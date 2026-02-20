@@ -351,9 +351,10 @@ async function translateWithGoogleCloud(
     return text;
   } catch (_error: unknown) {
     const error = asError(_error);
+    const errorCode = (error as any).code;
     // GO-LIVE-179: Handle timeout and deadline exceeded errors
     // gRPC error codes: 4 = DEADLINE_EXCEEDED, 14 = UNAVAILABLE
-    if (error.code === 4) {
+    if (errorCode === 4) {
       log.error("[translationService] Translation API timeout (DEADLINE_EXCEEDED)");
       // Re-throw timeout errors so callers can handle appropriately
       const timeoutError = new Error(`Translation API timeout: ${error.message || 'DEADLINE_EXCEEDED'}`);
@@ -362,7 +363,7 @@ async function translateWithGoogleCloud(
       throw timeoutError;
     }
 
-    if (error.code === 14) {
+    if (errorCode === 14) {
       log.error("[translationService] Translation API unavailable (UNAVAILABLE)");
       // Re-throw unavailable errors
       const unavailableError = new Error(`Translation API unavailable: ${error.message || 'UNAVAILABLE'}`);
@@ -372,13 +373,13 @@ async function translateWithGoogleCloud(
     }
 
     // Handle specific GCP errors
-    if (error.code === 7) {
+    if (errorCode === 7) {
       // PERMISSION_DENIED
       log.error("[translationService] GCP permission denied. Check service account.");
-    } else if (error.code === 8) {
+    } else if (errorCode === 8) {
       // RESOURCE_EXHAUSTED (quota)
       log.warn("[translationService] Translation API quota exceeded. Using glossary only.");
-    } else if (error.code === 5) {
+    } else if (errorCode === 5) {
       // NOT_FOUND (glossary doesn't exist)
       log.warn("[translationService] Glossary not found. Retrying without glossary.");
       // Retry without glossary

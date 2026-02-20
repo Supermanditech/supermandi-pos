@@ -182,7 +182,7 @@ chatRouter.post('/conversations/:id/messages', async (req, res) => {
     // T-299: Send FCM push to offline participants
     try {
       const participants = await chatService.getNotifiableParticipants(pool, conversationId, userId);
-      const { sendToUser } = await import('../../services/fcmService');
+      const { sendToUser } = await import('../../services/fcmService.js');
 
       for (const participant of participants) {
         if (!socketManager.isUserOnline(participant.userId)) {
@@ -287,7 +287,7 @@ chatRouter.post('/conversations/:id/upload', upload.single('file'), async (req, 
     // Try GCS upload, fallback to local
     let attachmentUrl: string;
     try {
-      const { uploadBuffer } = await import('../../../packages/common/src/storage/gcsStorageService');
+      const { uploadBuffer } = await import('../../../packages/common/src/storage/gcsStorageService.js');
       const bucket = process.env.GCS_CHAT_BUCKET || process.env.GCS_BUCKET || 'supermandi-chat';
       const key = `chat/${conversationId}/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       await uploadBuffer(bucket, key, file.buffer, file.mimetype);
