@@ -227,14 +227,14 @@
     "sellPurchaseIsolation": {
       "status": "pass",
       "evidence": [
-        "backend/services/inventory-service/dist/routes/inventory.js"
+        "backend/services/inventory-service/src/routes/inventory.ts"
       ],
       "notes": "Deploy ticket — invariant verified at code level in 500+ prior tickets."
     },
     "deterministicScanIntentResolution": {
       "status": "pass",
       "evidence": [
-        "backend/services/catalog-service/dist/routes/catalog.js"
+        "backend/services/catalog-service/src/routes/catalog.ts"
       ],
       "notes": "Deploy ticket — invariant verified at code level in prior tickets."
     },
