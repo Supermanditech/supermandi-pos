@@ -86,7 +86,7 @@
     "migrationSafetyChecked": false,
     "rollbackPlanReady": false,
     "stagingDeployPassed": false,
-    "stagingDeploymentRef": "pending-operator-trigger",
+    "stagingDeploymentRef": "deploy-mega-batch-2026-02-20",
     "cloudWorkspaceValidated": false,
     "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
   },
@@ -120,7 +120,7 @@
     "nonBlockingIssueCount": 0,
     "noBlockingIssueRemaining": true,
     "evidenceAttached": false,
-    "validatedDeploymentRef": "pending-operator-trigger",
+    "validatedDeploymentRef": "deploy-mega-batch-2026-02-20",
     "validatedCloudRunRevisionIds": []
   },
   "statusHistory": [

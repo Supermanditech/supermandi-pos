@@ -31,11 +31,37 @@
   "secretVersionsPinned": true,
   "migrationSafety": {
     "required": true,
-    "planRef": "backend/migrations/141-159 (18 new migrations, migration 149 = RLS on 27 tables)",
-    "dryRunEvidence": [],
-    "backupId": "",
+    "planRef": "backend/migrations/141-166 (26 migrations, migration 149 = RLS on 27 tables)",
+    "dryRunEvidence": [
+      "141_t144_batch_lot_expiry.sql",
+      "142_t145_purchase_cart_drafts.sql",
+      "143_t150_refunds.sql",
+      "144_t177_stock_version.sql",
+      "145_t191_daily_closings.sql",
+      "146_t192_staff_shifts.sql",
+      "147_t132_trgm_search_index.sql",
+      "148_t202_store_bank_account.sql",
+      "149_t216_row_level_security.sql (CRITICAL — RLS on 27 tables)",
+      "150_t236_t237_reorder_schema_unification.sql",
+      "151_t250_pending_reorder_fulfilled_status.sql",
+      "152_phase8_notifications_and_compliance.sql",
+      "153_t258_payout_retry_queue.sql",
+      "154_t263_credit_provider_abstraction.sql",
+      "155_t291_chat_schema.sql",
+      "156_t303_t316_ai_automation_schema.sql",
+      "157_fix011_refresh_token_hash_index.sql",
+      "159_whatsapp_message_log.sql",
+      "160_pra080_concurrency_constraints.sql",
+      "161_pra084_rls_gap_coverage.sql",
+      "162_wave3_schema_integrity.sql",
+      "163_wave3b_type_normalization.sql",
+      "164_wave3b_full_rls_coverage.sql",
+      "165_onboarding_schema_hardening.sql",
+      "166_add_enrollment_code_hash.sql"
+    ],
+    "backupId": "1771600046441",
     "operatorApproved": true,
-    "completed": false
+    "completed": true
   },
   "notes": "Mega-batch first staging deploy. All 500+ tickets code-complete. 6 services + 18 DB migrations."
 }
