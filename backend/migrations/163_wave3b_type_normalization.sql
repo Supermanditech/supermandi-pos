@@ -9,12 +9,37 @@
 BEGIN;
 
 -- =============================================================================
--- PRE-STEP: Drop views that reference columns we're about to ALTER TYPE on.
--- PostgreSQL forbids ALTER TYPE on columns used by views.
--- sync_health_summary (from M091) references failed_sync_events.store_id
--- and pos_devices.store_id — both converted below.
+-- PRE-STEP: Dynamically find and drop ALL views that depend on columns of
+-- tables we're about to ALTER TYPE on. PostgreSQL forbids ALTER TYPE on
+-- columns used by views or rules. Instead of guessing which views exist,
+-- query pg_depend to discover them all.
 -- =============================================================================
-DROP VIEW IF EXISTS sync_health_summary;
+DO $$
+DECLARE
+  rec RECORD;
+BEGIN
+  FOR rec IN
+    SELECT DISTINCT
+      nsp.nspname AS schema_name,
+      cls.relname AS view_name,
+      nsp.nspname || '.' || cls.relname AS full_name
+    FROM pg_depend dep
+    JOIN pg_rewrite rw ON dep.objid = rw.oid
+    JOIN pg_class cls ON rw.ev_class = cls.oid
+    JOIN pg_namespace nsp ON cls.relnamespace = nsp.oid
+    JOIN pg_class src ON dep.refobjid = src.oid
+    WHERE cls.relkind = 'v'
+      AND src.relname IN (
+        'pos_devices', 'pos_device_enrollments', 'scan_events', 'pos_events',
+        'retailer_variants', 'accounts_receivable', 'failed_sync_events',
+        'store_products', 'store_inventory', 'inventory_ledger',
+        'sales', 'sale_items', 'collections', 'sync_locks', 'processed_sync_events'
+      )
+  LOOP
+    RAISE NOTICE 'WAVE3B: Dropping dependent view: %', rec.full_name;
+    EXECUTE 'DROP VIEW IF EXISTS ' || rec.full_name || ' CASCADE';
+  END LOOP;
+END $$;
 
 -- =============================================================================
 -- PART A: store_id TEXT → UUID (10 tables)
