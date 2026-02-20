@@ -1,0 +1,273 @@
+{
+  "ticketId": "FIX-001",
+  "screenId": "INFRA.STAGING-DEPLOY",
+  "orderInScreen": 1,
+  "surface": "shared",
+  "riskClass": "critical",
+  "title": "Trigger mega-batch staging deploy — 6 services + 18 migrations",
+  "description": "Deploy all 6 Cloud Run services to GCP staging (supermandi-backend, asia-south1). Requires operator to trigger CI deploy workflow after Claude validates pre-deploy gates. Includes 18 DB migrations (141→159), with migration 149 (RLS on 27 tables) being the most critical. Cloud SQL backup MANDATORY before migration run.",
+  "status": "in_progress",
+  "severity": "P0",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/supplier/",
+      "https://staging.supermandi.tech/admin/",
+      "https://staging.supermandi.tech/api/"
+    ],
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": []
+  },
+  "impact": {
+    "impactedScreens": [
+      "INFRA.STAGING-DEPLOY"
+    ],
+    "impactedServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "system",
+    "reproSteps": [
+      "Verify all pre-deploy gates pass (Phase A: 20 gates)",
+      "Create Cloud SQL backup before migration",
+      "Trigger CI deploy workflow on main branch HEAD",
+      "Monitor 18 migrations (141→159) — migration 149 is critical (RLS on 27 tables)",
+      "Verify 6 Cloud Run services deploy in order: main-backend → api-gateway → portals",
+      "Run Phase D: 44 automated verification gates",
+      "Browser-test all 6 portals + POS app against staging URLs"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending-operator-trigger",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-20T15:02:28.798Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/supplier/",
+      "https://staging.supermandi.tech/admin/",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "pending-operator-trigger",
+    "validatedCloudRunRevisionIds": []
+  },
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "SESSION-FIX001-20260220T153000",
+      "at": "2026-02-20T15:03:50.208Z",
+      "reason": "Start staging deploy ticket — operator approved",
+      "prevHash": "GENESIS",
+      "hash": "8b7af537146622e8da7f9700f660f4f50c5bf988fb79db8c5553a8811c2ce04a"
+    }
+  ],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-20T12:00:00+05:30",
+    "updatedAt": "2026-02-20T15:03:50.209Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": false,
+    "disclosedToOperator": false,
+    "notes": "Deploy ticket — no mock data. Uses real GCP staging infrastructure.",
+    "evidence": []
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "main-backend",
+    "actualCloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "All code-complete tickets (500+ done)",
+      "CI pipeline (ci-gates.yml, deploy.yml)",
+      "18 DB migrations (141→159)"
+    ],
+    "externalDependencies": [
+      "GCP Cloud SQL (supermandi-staging)",
+      "GCP Memorystore Redis (10.107.71.27:6379)",
+      "GCP Secret Manager (9 secrets)",
+      "GCP Artifact Registry (asia-south1-docker.pkg.dev)"
+    ],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "All internal code is complete. Deploy depends on operator triggering CI workflow and GCP infrastructure being ready."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Deploy ticket — invariant verified at code level in prior tickets."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Deploy ticket — invariant verified at code level in prior tickets."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Will be verified after staging deploy completes."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Deploy ticket — invariant verified at code level in prior tickets."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Deploy ticket — invariant verified at code level in prior tickets."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Will be verified after 18 migrations run successfully."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Will be verified after staging deploy — schema parity check."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Will be verified via staging smoke tests and log inspection."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Will be verified via Cloud Run log output after staging deploy."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Claude validates Phase A pre-deploy gates (20 gates)",
+      "CI builds all 6 Docker images",
+      "CI runs full test suite"
+    ],
+    "pendingExternal": [
+      "GCP Cloud SQL backup before migration",
+      "GCP Artifact Registry image push"
+    ],
+    "pendingOps": [
+      "Operator triggers CI deploy workflow",
+      "Operator browser-tests 6 portals after deploy",
+      "Operator verifies POS app against staging API"
+    ],
+    "blocked": false,
+    "summary": "All code complete. Awaiting operator to trigger staging deploy workflow."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "FIX-001",
+    "lastValidatedCommit": "d819d00",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": []
+  }
+}

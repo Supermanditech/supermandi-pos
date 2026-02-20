@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-20T12:50:52.147Z",
+  "updatedAt": "2026-02-20T15:03:50.212Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -576,12 +576,12 @@
     "stagingBatchFile": "workflow/state/staging_batch.json"
   },
   "progress": {
-    "firstTicketStarted": false
+    "firstTicketStarted": true
   },
   "summary": {
-    "totalTickets": 0,
-    "activeTickets": 0,
-    "wipTickets": 0,
+    "totalTickets": 1,
+    "activeTickets": 1,
+    "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
     "certifiedScreens": 0
