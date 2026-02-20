@@ -118,6 +118,22 @@ No ticket progression is allowed without this bootstrap stamp.
     or "NOT COMPLETE" with remaining check IDs
 ```
 
+## 0.2B Deploy-Then-Live Ticketization Gate (Mandatory)
+
+```
+- For active cumulative fix windows, Claude deploys once to staging before further implementation.
+- After deploy, Claude must run full live testing across:
+    retailer web, supplier web, superadmin web, POS app, and cross-function matrix flows.
+- Claude must create/update micro tickets for every discovered issue:
+    one issue per ticket, page/component/field granularity.
+- Each new ticket must include live staging evidence:
+    staging URL/flow, timestamp, runtime proof, and relevant Cloud Run revision IDs.
+- Implementation starts only after:
+    full-surface coverage map is complete
+    AND all discovered issues are ticketized.
+- No sampling and no page skipping are allowed.
+```
+
 ## 0.3 Store Isolation (Security — Non-Negotiable)
 
 ```

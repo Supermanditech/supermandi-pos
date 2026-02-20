@@ -41,6 +41,29 @@ This override is ACTIVE now and takes precedence over older deploy-first wording
   - `100% required checks resolved for this batch` or
   - `NOT COMPLETE` with remaining check IDs.
 
+### Deploy-Then-Ticketize Rule (Hard)
+
+- After CI-green cumulative fixes, Claude must deploy one staging wave for the full cumulative batch.
+- After that deploy, Claude must run full live testing before starting new code implementation.
+- Live testing must cover all pages/surfaces:
+  - retailer web
+  - supplier web
+  - superadmin web
+  - POS app
+  - cross-function matrix flows
+- For every failure/gap found in live testing, Claude must create/update micro tickets (page/component/field granularity; one issue per ticket).
+- Implementation may start only after full-surface coverage map is complete and all discovered issues are ticketized.
+
+### Live Ticket Origin Rule (Hard)
+
+- New tickets must be created from live GCP staging observations only.
+- Every ticket must include:
+  - staging URL/flow
+  - observation timestamp
+  - runtime evidence (response/log/screenshot)
+  - relevant Cloud Run revision ID(s)
+- Local-only or code-only assumption tickets are not valid for completion flow.
+
 ## Effective Date
 2026-02-20
 
@@ -65,7 +88,7 @@ No new feature ticket coding is allowed until FIX-001 deployment evidence is com
 2. Run:
    - `pnpm workflow:validate`
    - `pnpm workflow:monitor`
-3. Run deploy gate attempt:
+3. Run deploy gate attempt for the cumulative active fix batch:
    - `pnpm workflow:pre-staging:attempt`
 4. If gate passes, trigger staging deploy pipeline for `main` and monitor to completion.
 5. Publish evidence for completion:
@@ -77,6 +100,18 @@ No new feature ticket coding is allowed until FIX-001 deployment evidence is com
    - traffic proof that target revision is active for all 6 services
    - `https://staging.supermandi.tech/api/health` response
    - operator handoff status (laptop + Redmi)
+6. After deploy evidence, execute full-surface live testing (all pages + cross-function matrix) with per-page micro checks:
+   - UI
+   - UX
+   - wiring
+   - navigation
+   - API contract
+   - backend behavior
+   - DB/migration impact
+   - GCP staging parity
+7. Create/update micro tickets for all discovered failures before coding new fixes.
+   - each ticket must include live staging evidence + revision IDs
+8. Start implementation only after full coverage + ticketization is complete.
 
 ## Hard Stop Rule
 If any of the above evidence is missing, FIX-001 remains `ready_for_operator_test` and no ticket may move to `in_progress`.

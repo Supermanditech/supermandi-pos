@@ -125,6 +125,39 @@ Required per-page completion record:
 7. DB/migration impact
 8. GCP staging parity
 
+## 2F. Deploy-Then-Live Ticketization Protocol (Mandatory)
+
+For active FIX-001 live-iteration cycles, Claude must execute this sequence:
+
+1. Merge CI-green cumulative fixes from the active work window.
+2. Run one staging deploy wave for those cumulative fixes (follow Section 2A exactly).
+3. Perform full live testing on staging across all surfaces:
+   - retailer web
+   - supplier web
+   - superadmin web
+   - POS app
+   - cross-function matrix flows
+4. Create/update micro-level tickets for every discovered issue:
+   - one issue per ticket
+   - page/component/field-level granularity
+5. Start implementation only after full-surface coverage is enumerated and ticketized.
+
+No sampling and no page skipping are allowed.
+If coverage or ticketization is incomplete, implementation must not start.
+
+## 2G. Live Ticket Origin Rule (Mandatory)
+
+All new tickets for active live-iteration cycles must come from live GCP staging evidence.
+
+Required evidence in each new ticket:
+
+1. staging URL/page/flow where issue was observed
+2. timestamp (IST or UTC) of observation
+3. runtime evidence (HTTP response, API payload, log line, or screenshot/video)
+4. active Cloud Run revision ID(s) relevant to the issue
+
+Tickets created from local-only assumptions, static code reading alone, or non-staging environments are invalid for closure flow and must be replaced with live-evidence tickets.
+
 ## 2C. Tracking Protocol (Codex + Claude)
 
 At each retry, Claude must publish a short checkpoint containing:
@@ -183,4 +216,6 @@ No silent retries.
 - For this active wave, Claude must also enforce Section 2B and Section 2C on every deploy attempt.
 - For deployment completion, Claude must enforce Section 2D and prove all 6 staging services are on the target wave version.
 - For live testing completion, Claude must enforce Section 2E and reject score-based completion claims.
+- For active live-iteration sessions, Claude must enforce Section 2F: cumulative deploy first, then full micro ticketization, then implementation.
+- For ticket intake quality, Claude must enforce Section 2G: new tickets must be sourced from live GCP staging evidence.
 - Claude must read `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md` in every FIX-001 session before attempting deploy.
