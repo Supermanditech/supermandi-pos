@@ -52,5 +52,4 @@ RUN sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf && \
 
 EXPOSE 80
 
-USER nginx
 CMD ["nginx", "-g", "daemon off;"]
