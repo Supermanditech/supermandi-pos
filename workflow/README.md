@@ -21,6 +21,7 @@ This directory enforces the Live Fix -> Freeze -> Production workflow with machi
 - `pnpm workflow:validate`
 - `pnpm workflow:sync`
 - `pnpm workflow:pre-staging`
+- `pnpm workflow:pre-staging:attempt`
 - `pnpm workflow:pre-promote -- --sha <SHA>`
 - `pnpm workflow:validate-batch`
 - `node scripts/workflow/guard.js legacy-audit`
@@ -70,6 +71,8 @@ This directory enforces the Live Fix -> Freeze -> Production workflow with machi
 - Enforces git discipline before staging deploy: clean worktree, no detached HEAD, no merge conflict markers.
   - Exception: `workflow/state/staging_batch.json` may be dirty for deploy-intent updates when `allowDirtyStagingBatchManifest=true`.
 - Enforces staging batch deployment binding (`targetEnvironment`, `targetProject`, `targetRegion`, `commitSha`, `deploymentRef`).
+- Enforces full-surface deploy intent for wave completion: no stale mixed-version services across
+  `main-backend`, `api-gateway`, `retailer-admin`, `supplier-portal`, `superadmin`, `landing`.
 - Enforces migration safety in staging batches when DB/migration risk flags are set.
 - Enforces immutable artifact intent in staging batch (`immutableImagesPinned=true`, `secretVersionsPinned=true`).
 - Enforces operator-only production mode transitions and pre-promote checks via `WORKFLOW_ACTOR=operator`.

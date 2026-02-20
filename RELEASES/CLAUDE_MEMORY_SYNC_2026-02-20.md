@@ -47,7 +47,7 @@ Required retry order:
 3. Verify `git status --short` shows only:
    `M workflow/state/staging_batch.json`
 4. Run:
-   `pnpm workflow:pre-staging`
+   `pnpm workflow:pre-staging:attempt`
 
 Do not bypass this sequence.
 
@@ -75,6 +75,27 @@ Minimum completion evidence per attempt:
 6. Operator test handoff status (laptop + Redmi)
 
 If any evidence item is missing, status remains `ready_for_operator_test` (not `locked`).
+
+## 2D. Full-Surface Version Consistency (No Stale Services)
+
+When deploying new work (including the last 10-day mega-batch), staging must not run mixed versions.
+
+After deploy, all 6 services must point to the target release version for the deployment wave:
+
+- `main-backend`
+- `api-gateway`
+- `retailer-admin`
+- `supplier-portal`
+- `superadmin`
+- `landing`
+
+Acceptable proof per service:
+
+1. active revision ID
+2. active image digest/tag
+3. traffic split shows target revision serving production traffic for staging (no stale older revision active for this wave)
+
+If any service remains on stale version for the wave, deployment is incomplete and ticket cannot progress to `locked`.
 
 ## 2C. Tracking Protocol (Codex + Claude)
 
@@ -104,6 +125,7 @@ No silent retries.
 - `scripts/workflow/production-identity-guard.sh`
 - `scripts/workflow/session-boot.js`
 - `scripts/workflow/ticket-monitor.js`
+- `scripts/workflow/pre-staging-attempt.js`
 - `workflow/README.md`
 - `workflow/legacy_conflicts.json`
 - `workflow/production_boundary_iam.md`
@@ -130,3 +152,4 @@ No silent retries.
 - No production promote without `FREEZE_READY` and principal-bound operator approval.
 - For `FIX-001` staging deploy attempts, Claude must re-read this file before each retry and follow Section 2A exactly.
 - For this active wave, Claude must also enforce Section 2B and Section 2C on every deploy attempt.
+- For deployment completion, Claude must enforce Section 2D and prove all 6 staging services are on the target wave version.

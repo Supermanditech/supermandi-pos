@@ -33,6 +33,7 @@
     "workflow:validate": "node scripts/workflow/guard.js validate-state",
     "workflow:sync": "node scripts/workflow/guard.js sync-state",
     "workflow:pre-staging": "node scripts/workflow/guard.js pre-staging-deploy",
+    "workflow:pre-staging:attempt": "node scripts/workflow/pre-staging-attempt.js",
     "workflow:pre-promote": "node scripts/workflow/guard.js pre-promote",
     "workflow:validate-batch": "node scripts/workflow/guard.js validate-batch",
     "workflow:legacy-audit": "node scripts/workflow/guard.js legacy-audit",
