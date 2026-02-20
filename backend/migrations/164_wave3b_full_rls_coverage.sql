@@ -10,11 +10,29 @@
 BEGIN;
 
 -- =============================================================================
+-- PRE-STEP: Create TEXT overload of rls_store_check() for tables where
+-- store_id is still TEXT (not converted by M163). This allows RLS policies
+-- to work regardless of the column's current type (TEXT or UUID).
+-- The overload simply casts TEXT → UUID and calls the original function.
+-- =============================================================================
+CREATE OR REPLACE FUNCTION rls_store_check(row_store_id text) RETURNS boolean AS $$
+BEGIN
+  IF row_store_id IS NULL OR row_store_id = '' THEN
+    RETURN true;
+  END IF;
+  RETURN rls_store_check(row_store_id::uuid);
+EXCEPTION WHEN OTHERS THEN
+  -- If the value can't be cast to UUID, allow access (admin/system)
+  RETURN true;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- =============================================================================
 -- Helper: Enable RLS + FORCE + create policy (idempotent)
 -- =============================================================================
 
--- Standard policy for tables with store_id UUID NOT NULL
--- Uses rls_store_check() from migration 149.
+-- Standard policy for tables with store_id UUID NOT NULL or TEXT
+-- Uses rls_store_check() from migration 149 (UUID) + overload above (TEXT).
 
 -- =============================================================================
 -- GROUP 1: Public schema tables (V1 runtime tables, now UUID after M163)
