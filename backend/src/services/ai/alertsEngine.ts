@@ -42,7 +42,7 @@ export async function runStoreAlerts(storeId: string): Promise<number> {
  */
 export async function runAllStoreAlerts(): Promise<{ storesProcessed: number; totalAlerts: number; errors: number }> {
   const pool = getPool();
-  if (!pool) return { storesProcessed: 0, totalAlerts: 0 };
+  if (!pool) return { storesProcessed: 0, totalAlerts: 0, errors: 0 };
 
   const storesResult = await pool.query(
     `SELECT id FROM platform.stores WHERE status = 'active' LIMIT 1000`
