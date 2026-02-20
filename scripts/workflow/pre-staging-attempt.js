@@ -223,6 +223,7 @@ function main() {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env,
+    shell: true,
   });
 
   const preOutput = `${pre.stdout || ''}${pre.stderr || ''}`.trim();
