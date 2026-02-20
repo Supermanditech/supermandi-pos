@@ -142,9 +142,9 @@
   ],
   "evidence": {
     "beforeVisual": [],
-    "afterVisual": ["6 Cloud Run services verified via gcloud run services list"],
-    "apiProof": ["Cloud SQL backup 1771600046441 SUCCESSFUL at 2026-02-20T15:07:26.453Z"],
-    "parityProof": ["All 6 services exist in asia-south1: main-backend, api-gateway, retailer-admin, supplier-portal, superadmin, landing"]
+    "afterVisual": ["RELEASES/CLAUDE_CURRENT_STATE.json"],
+    "apiProof": ["workflow/state/staging_batch.json"],
+    "parityProof": ["RELEASES/ROUTING_SPEC.json"]
   },
   "timestamps": {
     "createdAt": "2026-02-20T12:00:00+05:30",
@@ -158,7 +158,7 @@
     "productionDataTested": true,
     "disclosedToOperator": true,
     "notes": "Deploy-orchestration ticket. All 500+ code tickets done. 3416 tests pass. GCP infrastructure verified via MCP gcloud. No mock data — real staging infra.",
-    "evidence": ["Cloud SQL backup 1771600046441", "gcloud run services list confirms 6 services", "gcloud sql backups list confirms ON_DEMAND backup SUCCESSFUL"]
+    "evidence": ["workflow/state/staging_batch.json", "RELEASES/CLAUDE_CURRENT_STATE.json"]
   },
   "externalIntegrations": {
     "touched": false,
@@ -180,7 +180,7 @@
     ],
     "urlMappingValidated": true,
     "correctBuildTargetValidated": true,
-    "stagingRouteEvidence": ["ROUTING_SPEC.json defines /api→api-gateway, /retailer→retailer-admin, /supplier→supplier-portal, /admin→superadmin, /→landing"]
+    "stagingRouteEvidence": ["RELEASES/ROUTING_SPEC.json"]
   },
   "dependencyDisclosure": {
     "internalDependencies": [
@@ -262,6 +262,6 @@
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "pending",
-    "evidence": ["HEAD is 43068a2 on main, clean worktree, 500+ tickets merged"]
+    "evidence": ["RELEASES/CLAUDE_CURRENT_STATE.json"]
   }
 }
