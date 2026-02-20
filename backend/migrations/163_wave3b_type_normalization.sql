@@ -9,6 +9,14 @@
 BEGIN;
 
 -- =============================================================================
+-- PRE-STEP: Drop views that reference columns we're about to ALTER TYPE on.
+-- PostgreSQL forbids ALTER TYPE on columns used by views.
+-- sync_health_summary (from M091) references failed_sync_events.store_id
+-- and pos_devices.store_id — both converted below.
+-- =============================================================================
+DROP VIEW IF EXISTS sync_health_summary;
+
+-- =============================================================================
 -- PART A: store_id TEXT → UUID (10 tables)
 -- All these columns receive UUID-formatted strings from JWT tokens.
 -- Converting enables FK constraints to platform.stores(id).
@@ -363,5 +371,47 @@ DO $$ BEGIN
     RAISE NOTICE 'WAVE3B: Added enrollment_code column + index to pos_devices';
   END IF;
 END $$;
+
+-- =============================================================================
+-- POST-STEP: Recreate sync_health_summary view (dropped in PRE-STEP).
+-- Now that store_id columns are UUID, casts are redundant but kept for clarity.
+-- =============================================================================
+CREATE OR REPLACE VIEW sync_health_summary AS
+SELECT
+  s.id as store_id,
+  s.name as store_name,
+  COALESCE(pending.count, 0) as pending_sync_events,
+  COALESCE(failed.count, 0) as failed_sync_events,
+  COALESCE(stale_devices.count, 0) as devices_with_stale_data,
+  COALESCE(inv_pending.count, 0) as pending_inventory_syncs
+FROM platform.stores s
+LEFT JOIN (
+  SELECT store_id, COUNT(*) as count
+  FROM processed_sync_events
+  WHERE processed_at > NOW() - INTERVAL '1 hour'
+  GROUP BY store_id
+) pending ON pending.store_id = s.id
+LEFT JOIN (
+  SELECT store_id, COUNT(*) as count
+  FROM failed_sync_events
+  WHERE resolution_status = 'unresolved'
+  GROUP BY store_id
+) failed ON failed.store_id = s.id
+LEFT JOIN (
+  SELECT store_id, COUNT(*) as count
+  FROM public.pos_devices
+  WHERE last_seen_online < NOW() - INTERVAL '1 hour'
+    AND pending_outbox_count > 0
+  GROUP BY store_id
+) stale_devices ON stale_devices.store_id = s.id
+LEFT JOIN (
+  SELECT store_id, COUNT(*) as count
+  FROM inventory_sync_guarantees
+  WHERE sync_status = 'pending'
+  GROUP BY store_id
+) inv_pending ON inv_pending.store_id = s.id;
+
+COMMENT ON VIEW sync_health_summary IS
+'GO-LIVE Batch 7: Dashboard view for monitoring offline sync health across stores.';
 
 COMMIT;
