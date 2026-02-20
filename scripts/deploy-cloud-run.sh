@@ -224,6 +224,7 @@ run_deploy() {
   local image_ref
   local previous_revision
   local auth_flag
+  local ingress_mode
   local min_instances=0
   local max_instances=3
 
@@ -239,6 +240,11 @@ run_deploy() {
   auth_flag="--no-allow-unauthenticated"
   if [ "$allow_unauth" = "true" ]; then
     auth_flag="--allow-unauthenticated"
+  fi
+  ingress_mode="all"
+  if [ "$ENV" = "staging" ]; then
+    # Enforce staging edge boundary via LB; avoid direct run.app access.
+    ingress_mode="internal-and-cloud-load-balancing"
   fi
 
   if [ "$ENV" = "production" ]; then
@@ -261,6 +267,7 @@ run_deploy() {
     --image="$image_ref" \
     --region="$REGION" \
     --platform=managed \
+    --ingress="$ingress_mode" \
     --memory="$memory" \
     --cpu=1 \
     --min-instances="$min_instances" \

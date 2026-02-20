@@ -1,0 +1,277 @@
+{
+  "operatorChecks": {
+    "blockingIssueCount": 1,
+    "noBlockingIssueRemaining": false,
+    "stagingTestExecuted": true,
+    "evidenceAttached": true,
+    "nonBlockingIssueCount": 0,
+    "testedOnRedmi": false,
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ],
+    "testedOnLaptopBrowser": true,
+    "issuesReproduced": true,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/api/v1/retailer-admin/registration/lookup",
+      "https://staging.supermandi.tech/api/v1/admin/monitoring/health"
+    ],
+    "testedOnRealTarget": false,
+    "validatedDeploymentRef": "github://run/22240364165",
+    "fixVerified": false
+  },
+  "severity": "P2",
+  "title": "Historical 5xx spikes on retired revisions need guardrails",
+  "claudeChecks": {
+    "stagingDeploymentRef": "github://run/22240364165",
+    "screenVisualizedWithOperator": false,
+    "migrationSafetyChecked": false,
+    "stagingDeployPassed": false,
+    "envAndBasePathChecked": false,
+    "navigationChecked": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01",
+    "cloudWorkspaceValidated": false,
+    "rollbackPlanReady": false,
+    "regressionChecklistPassed": false,
+    "codeQualityChecksPassed": false,
+    "apiContractChecked": false
+  },
+  "truthDeclaration": {
+    "productionDataTested": true,
+    "evidence": [
+      "curl smoke checks",
+      "gcloud run services describe",
+      "gcloud logging read"
+    ],
+    "notes": "Evidence gathered from live staging runtime and GCP control plane.",
+    "mockApisUsed": false,
+    "disclosedToOperator": true,
+    "mockDataUsed": false,
+    "mockUsageApproved": false
+  },
+  "buildMapping": {
+    "urlMappingValidated": true,
+    "expectedBasePath": "/api",
+    "actualCloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "landing"
+    ],
+    "stagingRouteEvidence": [
+      "gcloud logging read resource.type=cloud_run_revision ... httpRequest.status>=500",
+      "https://staging.supermandi.tech/api/v1/version"
+    ],
+    "expectedSurface": "backend",
+    "expectedPrimaryService": "main-backend",
+    "correctBuildTargetValidated": true
+  },
+  "operator": {
+    "reportedBy": "codex_live_audit_2026-02-20",
+    "signoffAt": "",
+    "reproSteps": [
+      "Run gcloud logging read with httpRequest.status>=500 for main-backend/api-gateway/landing over last 24h.",
+      "Observe errors concentrated on older revisions and registration/admin paths.",
+      "Re-check same endpoints on latest revisions and confirm no active 5xx now."
+    ],
+    "finalSignoff": false
+  },
+  "parentTicketId": null,
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "parityProof": [
+      "Historical 5xx seen on main-backend-00063-dss and api-gateway-00046-x2q",
+      "Active revisions main-backend-00065-n22 and api-gateway-00048-6kg show errors_6h=0"
+    ],
+    "apiProof": [
+      "GET /api/v1/retailer-admin/registration/lookup?phone=... now returns 200",
+      "GET /api/v1/admin/monitoring/health now returns 401 (auth required), not 500"
+    ]
+  },
+  "impact": {
+    "impactRetestStatus": "pending",
+    "impactedServices": [
+      "main-backend",
+      "api-gateway",
+      "landing"
+    ],
+    "impactedScreens": [
+      "RETAILER.REGISTRATION",
+      "SUPERADMIN.MONITORING",
+      "LANDING.PRIVACY"
+    ],
+    "impactRetestRequired": true
+  },
+  "gcpParity": {
+    "cloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ],
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/retailer-admin/registration/lookup",
+      "https://staging.supermandi.tech/api/v1/admin/monitoring/health"
+    ],
+    "envParityChecked": true,
+    "basePathChecked": true,
+    "routingChecked": true,
+    "artifactDigestPinned": true,
+    "stagingValidated": true,
+    "dbConnectivityChecked": true,
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "landing"
+    ],
+    "apiContractChecked": false
+  },
+  "statusHistory": [],
+  "orderInScreen": 1,
+  "productionInvariants": {
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "notes": "Pending verification in live fix execution.",
+      "evidence": []
+    }
+  },
+  "subTicketIds": [],
+  "screenId": "STAGE.OBS.5XX",
+  "readiness": {
+    "pendingInternal": [
+      "Implement canary endpoint suite in deploy workflow",
+      "Fail deploy when canary 5xx > threshold"
+    ],
+    "blocked": true,
+    "pendingOps": [
+      "Monitor next deploy cycle with new guardrail enabled"
+    ],
+    "pendingExternal": [],
+    "summary": "Active outage cleared, but deployment process remains vulnerable until canary gate is added.",
+    "productionGradeClaimed": false
+  },
+  "ticketId": "STAGE.OBS.HISTORICAL_5XX.001",
+  "externalIntegrations": {
+    "allValidated": true,
+    "touched": false,
+    "operatorDisclosureDone": true,
+    "items": []
+  },
+  "layers": {
+    "ui": "na",
+    "professional_polish": "na",
+    "migration": "na",
+    "gcp_parity": "fail",
+    "navigation": "na",
+    "db": "na",
+    "ux": "na",
+    "api": "fail",
+    "wiring": "na",
+    "backend": "fail"
+  },
+  "gitDiscipline": {
+    "noMixedScope": false,
+    "changeScope": "STAGE.OBS.HISTORICAL_5XX.001",
+    "evidence": [
+      "git rev-parse --short HEAD",
+      "gcloud run services describe",
+      "gcloud logging read"
+    ],
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "workBranch": "staging-audit/ticketization",
+    "lastValidatedCommit": "8892f92"
+  },
+  "timestamps": {
+    "createdAt": "2026-02-20T22:25:16Z",
+    "lockedAt": null,
+    "updatedAt": "2026-02-20T22:25:16Z"
+  },
+  "dependencyDisclosure": {
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Add pre-traffic canary checks for registration/admin critical endpoints",
+      "Capture error budget gate before traffic cutover"
+    ],
+    "operatorAcknowledged": false,
+    "notes": "Current state is healthy, but absence of guardrail leaves high recurrence risk.",
+    "disclosedToOperator": true,
+    "blockers": [
+      "No automated protection against replay of this failure mode during future deploy waves"
+    ],
+    "internalDependencies": [
+      "backend/services/api-gateway",
+      "backend",
+      "ci smoke gates"
+    ]
+  },
+  "riskClass": "high",
+  "status": "todo",
+  "sessionBoot": {
+    "runbookVersion": "workflow-v1.2",
+    "bootstrappedAt": "2026-02-20T22:25:16Z",
+    "bootstrappedBy": "claude",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/freeze_manifest.json",
+      "workflow/README.md",
+      "workflow/production_boundary_iam.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md"
+    ],
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md"
+  },
+  "description": "Last-24h logs show 500/503 bursts on prior revisions (api-gateway-00045/00046, main-backend-00062/00063, landing-00038) for registration and admin endpoints. Active revisions are currently clean.",
+  "surface": "backend"
+}

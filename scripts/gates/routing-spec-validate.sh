@@ -120,7 +120,12 @@ fi
 echo ""
 echo "--- L-007: ALLOWED_ORIGINS ---"
 if grep -q "ALLOWED_ORIGINS=https://staging.supermandi.tech" "$DEPLOY_YML" 2>/dev/null; then
-  gate_pass "L-007" "ALLOWED_ORIGINS matches staging domain"
+  # Staging must not trust production domains.
+  if grep -qE "ALLOWED_ORIGINS=.*https://supermandi\.tech|ALLOWED_ORIGINS=.*https://www\.supermandi\.tech" "$DEPLOY_YML"; then
+    gate_fail "L-007" "ALLOWED_ORIGINS" "Production domain found in staging origin list"
+  else
+    gate_pass "L-007" "ALLOWED_ORIGINS is staging-only"
+  fi
 elif grep -q "ALLOWED_ORIGINS" "$DEPLOY_YML" 2>/dev/null; then
   gate_fail "L-007" "ALLOWED_ORIGINS" "Set but doesn't match staging domain"
 else
@@ -133,7 +138,11 @@ fi
 echo ""
 echo "--- L-008: CORS_ALLOWED_ORIGINS ---"
 if grep -q "CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech" "$DEPLOY_YML" 2>/dev/null; then
-  gate_pass "L-008" "CORS_ALLOWED_ORIGINS matches staging domain"
+  if grep -qE "CORS_ALLOWED_ORIGINS=.*https://supermandi\.tech|CORS_ALLOWED_ORIGINS=.*https://www\.supermandi\.tech" "$DEPLOY_YML"; then
+    gate_fail "L-008" "CORS_ALLOWED_ORIGINS" "Production domain found in staging CORS list"
+  else
+    gate_pass "L-008" "CORS_ALLOWED_ORIGINS is staging-only"
+  fi
 elif grep -q "CORS_ALLOWED_ORIGINS" "$DEPLOY_YML" 2>/dev/null; then
   gate_fail "L-008" "CORS_ALLOWED_ORIGINS" "Set but doesn't match staging domain"
 else
