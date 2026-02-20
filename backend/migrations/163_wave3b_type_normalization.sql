@@ -42,6 +42,162 @@ BEGIN
 END $$;
 
 -- =============================================================================
+-- PRE-STEP 2: Clean up non-UUID data before type conversion.
+-- Demo/seed data may contain non-UUID values (e.g., "demo-device-001").
+-- Delete rows with non-UUID primary keys; NULL-ify non-UUID foreign keys.
+-- This is safe for staging (no production data loss).
+-- UUID pattern: 8-4-4-4-12 hex characters
+-- =============================================================================
+DO $$
+DECLARE
+  del_count INTEGER;
+  upd_count INTEGER;
+  uuid_pattern TEXT := '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+BEGIN
+  -- Clean pos_devices.id (PK — delete non-UUID rows)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'pos_devices'
+    AND column_name = 'id' AND data_type = 'text'
+  ) THEN
+    DELETE FROM public.pos_devices WHERE id !~ uuid_pattern;
+    GET DIAGNOSTICS del_count = ROW_COUNT;
+    IF del_count > 0 THEN
+      RAISE NOTICE 'WAVE3B-CLEANUP: Deleted % non-UUID pos_devices rows', del_count;
+    END IF;
+  END IF;
+
+  -- Clean pos_devices.store_id (FK — NULL-ify non-UUID values)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'pos_devices'
+    AND column_name = 'store_id' AND data_type = 'text'
+  ) THEN
+    UPDATE public.pos_devices SET store_id = NULL WHERE store_id IS NOT NULL AND store_id !~ uuid_pattern;
+    GET DIAGNOSTICS upd_count = ROW_COUNT;
+    IF upd_count > 0 THEN
+      RAISE NOTICE 'WAVE3B-CLEANUP: Nullified % non-UUID pos_devices.store_id', upd_count;
+    END IF;
+  END IF;
+
+  -- Clean device_id columns across tables (NULL-ify non-UUID)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'scan_events') THEN
+    UPDATE public.scan_events SET device_id = NULL WHERE device_id IS NOT NULL AND device_id !~ uuid_pattern;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pos_events') THEN
+    UPDATE public.pos_events SET device_id = NULL WHERE device_id IS NOT NULL AND device_id !~ uuid_pattern;
+  END IF;
+
+  -- Clean sales.id (PK — delete non-UUID rows)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'sales'
+    AND column_name = 'id' AND data_type = 'character varying'
+  ) THEN
+    -- Delete sale_items for non-UUID sales first (FK)
+    DELETE FROM public.sale_items WHERE sale_id IN (
+      SELECT id FROM public.sales WHERE id !~ uuid_pattern
+    );
+    DELETE FROM public.sales WHERE id !~ uuid_pattern;
+    GET DIAGNOSTICS del_count = ROW_COUNT;
+    IF del_count > 0 THEN
+      RAISE NOTICE 'WAVE3B-CLEANUP: Deleted % non-UUID sales rows', del_count;
+    END IF;
+  END IF;
+
+  -- Clean sales.device_id (nullable FK — NULL-ify non-UUID)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'sales'
+    AND column_name = 'device_id' AND data_type = 'character varying'
+  ) THEN
+    UPDATE public.sales SET device_id = NULL WHERE device_id IS NOT NULL AND device_id !~ uuid_pattern;
+  END IF;
+
+  -- Clean collections.id (PK — delete non-UUID rows)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'collections'
+    AND column_name = 'id' AND data_type = 'character varying'
+  ) THEN
+    DELETE FROM public.collections WHERE id !~ uuid_pattern;
+    GET DIAGNOSTICS del_count = ROW_COUNT;
+    IF del_count > 0 THEN
+      RAISE NOTICE 'WAVE3B-CLEANUP: Deleted % non-UUID collections rows', del_count;
+    END IF;
+  END IF;
+
+  -- Clean collections.device_id (nullable FK — NULL-ify non-UUID)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'collections'
+    AND column_name = 'device_id' AND data_type = 'character varying'
+  ) THEN
+    UPDATE public.collections SET device_id = NULL WHERE device_id IS NOT NULL AND device_id !~ uuid_pattern;
+  END IF;
+
+  -- Clean store_id TEXT columns (NULL-ify non-UUID across all tables)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'pos_device_enrollments'
+    AND column_name = 'store_id' AND data_type = 'text'
+  ) THEN
+    UPDATE public.pos_device_enrollments SET store_id = NULL WHERE store_id IS NOT NULL AND store_id !~ uuid_pattern;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'failed_sync_events'
+    AND column_name = 'store_id' AND data_type = 'text'
+  ) THEN
+    UPDATE public.failed_sync_events SET store_id = NULL WHERE store_id IS NOT NULL AND store_id !~ uuid_pattern;
+  END IF;
+
+  -- Clean sync_locks.device_id, processed_sync_events.device_id, failed_sync_events.device_id
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sync_locks') THEN
+    UPDATE public.sync_locks SET device_id = NULL WHERE device_id IS NOT NULL AND device_id !~ uuid_pattern;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'processed_sync_events') THEN
+    UPDATE public.processed_sync_events SET device_id = NULL WHERE device_id IS NOT NULL AND device_id !~ uuid_pattern;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'failed_sync_events') THEN
+    UPDATE public.failed_sync_events SET device_id = NULL WHERE device_id IS NOT NULL AND device_id !~ uuid_pattern;
+  END IF;
+
+  -- Clean sale_items.sale_id (FK — NULL-ify non-UUID)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'sale_items'
+    AND column_name = 'sale_id' AND data_type = 'character varying'
+  ) THEN
+    UPDATE public.sale_items SET sale_id = NULL WHERE sale_id IS NOT NULL AND sale_id !~ uuid_pattern;
+  END IF;
+
+  -- Clean accounts_receivable.sale_id (FK — NULL-ify non-UUID)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts_receivable') THEN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'accounts_receivable'
+      AND column_name = 'sale_id' AND data_type = 'text'
+    ) THEN
+      UPDATE public.accounts_receivable SET sale_id = NULL WHERE sale_id IS NOT NULL AND sale_id !~ uuid_pattern;
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'accounts_receivable'
+      AND column_name = 'store_id' AND data_type = 'text'
+    ) THEN
+      UPDATE public.accounts_receivable SET store_id = NULL WHERE store_id IS NOT NULL AND store_id !~ uuid_pattern;
+    END IF;
+  END IF;
+
+  -- Clean retailer_variants, store_products, store_inventory, inventory_ledger store_id
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'retailer_variants') THEN
+    UPDATE public.retailer_variants SET store_id = NULL WHERE store_id IS NOT NULL AND store_id !~ uuid_pattern;
+  END IF;
+END $$;
+
+-- =============================================================================
 -- PART A: store_id TEXT → UUID (10 tables)
 -- All these columns receive UUID-formatted strings from JWT tokens.
 -- Converting enables FK constraints to platform.stores(id).
