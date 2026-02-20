@@ -51,6 +51,44 @@ Required retry order:
 
 Do not bypass this sequence.
 
+## 2B. Active Objective (Current Wave)
+
+Current objective is a zero-regression GCP staging deployment of work completed in the last 10 days across:
+
+- Retailer web frontend
+- Supplier web frontend
+- Superadmin web frontend
+- POS app frontend
+- Backend services + API gateway
+- DB migrations and staging infra parity
+
+For this wave, Claude must treat `FIX-001` as deploy-orchestration for the full scope above.
+Claude must not claim deployment complete until Cloud Run staging evidence is real (no placeholders).
+
+Minimum completion evidence per attempt:
+
+1. `commitSha` used for deploy
+2. GitHub Actions / Cloud Build run URL
+3. Migration execution result summary
+4. Cloud Run revision IDs for all 6 staging services
+5. `https://staging.supermandi.tech/api/health` response
+6. Operator test handoff status (laptop + Redmi)
+
+If any evidence item is missing, status remains `ready_for_operator_test` (not `locked`).
+
+## 2C. Tracking Protocol (Codex + Claude)
+
+At each retry, Claude must publish a short checkpoint containing:
+
+- `Attempt #`
+- `HEAD SHA`
+- `staging_batch.commitSha`
+- `git status --short` summary
+- `pnpm workflow:pre-staging` result
+- next blocking item (if failed)
+
+No silent retries.
+
 ## 3. Updated Files To Keep In Memory
 
 - `.github/workflows/ci-gates.yml`
@@ -91,3 +129,4 @@ Do not bypass this sequence.
 - No freeze without pinned image digests, revision IDs, and migration lock.
 - No production promote without `FREEZE_READY` and principal-bound operator approval.
 - For `FIX-001` staging deploy attempts, Claude must re-read this file before each retry and follow Section 2A exactly.
+- For this active wave, Claude must also enforce Section 2B and Section 2C on every deploy attempt.
