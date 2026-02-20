@@ -949,12 +949,25 @@ function validateGitWorkspaceForStaging(state) {
   }
 
   if (requireClean) {
-    const status = tryExec('git status --porcelain');
-    if (!status.ok) {
+    // Use execSync directly instead of tryExec because tryExec.trim() destroys
+    // the leading whitespace in porcelain format (e.g. ' M file' becomes 'M file',
+    // causing extractPathsFromPorcelainLine to mis-parse the path).
+    let rawStatus = '';
+    let statusOk = true;
+    try {
+      rawStatus = execSync('git status --porcelain', {
+        cwd: ROOT_DIR,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }) || '';
+    } catch (_e) {
+      statusOk = false;
+    }
+    if (!statusOk) {
       errors.push('git discipline: failed to read git status');
-    } else if (isNonEmptyString(status.output)) {
+    } else if (isNonEmptyString(rawStatus.trimEnd())) {
       const allowedDirtyPaths = getAllowedDirtyPathsForStaging(state);
-      const blocking = collectBlockingDirtyLines(status.output, allowedDirtyPaths);
+      const blocking = collectBlockingDirtyLines(rawStatus, allowedDirtyPaths);
       if (blocking.length > 0) {
         errors.push('git discipline: worktree must be clean before staging deploy');
         errors.push(`git discipline: blocking changes:\n  ${blocking.join('\n  ')}`);
