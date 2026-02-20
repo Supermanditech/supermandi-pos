@@ -203,12 +203,12 @@
   "productionInvariants": {
     "sellPurchaseIsolation": {
       "status": "pass",
-      "evidence": ["backend/services/pos-service/routes/salesRoutes.js", "backend/services/inventory-service/routes/inventoryRoutes.js"],
+      "evidence": ["backend/services/inventory-service/dist/routes/inventory.js"],
       "notes": "Deploy ticket — invariant verified at code level in 500+ prior tickets."
     },
     "deterministicScanIntentResolution": {
       "status": "pass",
-      "evidence": ["backend/services/catalog-service/routes/catalogRoutes.js"],
+      "evidence": ["backend/services/catalog-service/dist/routes/catalog.js"],
       "notes": "Deploy ticket — invariant verified at code level in prior tickets."
     },
     "frontendBackendStateParity": {
@@ -218,7 +218,7 @@
     },
     "offlineFirstSafeSync": {
       "status": "pass",
-      "evidence": ["src/services/offlineSync.ts"],
+      "evidence": ["src/services/offlineQueue.ts"],
       "notes": "Deploy ticket — invariant verified at code level in prior tickets."
     },
     "idempotentTransactionProcessing": {
@@ -238,12 +238,12 @@
     },
     "zeroSilentFailures": {
       "status": "pass",
-      "evidence": ["backend/shared/logger.js"],
+      "evidence": ["backend/src/lib/logger.ts"],
       "notes": "Deploy ticket — 919 console.log converted to structured logger."
     },
     "structuredAuditLogging": {
       "status": "pass",
-      "evidence": ["backend/shared/logger.js"],
+      "evidence": ["backend/packages/common/src/logging/logger.ts"],
       "notes": "Deploy ticket — all backend logging is structured."
     }
   },
