@@ -273,6 +273,8 @@ function AppRoutes() {
       <Routes>
         {/* GO-LIVE-RET-AUTH-001: Root redirects to /retailer/login (OTP first, store selection after) */}
         <Route path="/" element={<Navigate to="/retailer/login" replace />} />
+        {/* FIX-001: /retailer base path redirect — nginx serves SPA at /retailer/ but React Router needs a matching route */}
+        <Route path="/retailer" element={<Navigate to="/retailer/login" replace />} />
 
         {/* Auth pages - accessible without authentication */}
         <Route path="/retailer/login" element={<LoginPage />} />
