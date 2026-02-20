@@ -32,6 +32,25 @@ Before a ticket moves from `todo` to `in_progress`:
 pnpm workflow:session-boot -- --file workflow/tickets/<ticket>.json
 ```
 
+## 2A. Staging Deploy Hotfix (2026-02-20)
+
+When running `pnpm workflow:pre-staging`:
+
+- `workflow/state/staging_batch.json` is the only file allowed to be dirty for deploy-intent `commitSha` updates.
+- If any other file is dirty, staging gate must fail.
+- `staging_batch.commitSha` MUST match current `git rev-parse --short HEAD`.
+
+Required retry order:
+
+1. Commit and push any non-batch dirty files first.
+2. Set `workflow/state/staging_batch.json.commitSha` to current HEAD.
+3. Verify `git status --short` shows only:
+   `M workflow/state/staging_batch.json`
+4. Run:
+   `pnpm workflow:pre-staging`
+
+Do not bypass this sequence.
+
 ## 3. Updated Files To Keep In Memory
 
 - `.github/workflows/ci-gates.yml`
@@ -71,3 +90,4 @@ pnpm workflow:session-boot -- --file workflow/tickets/<ticket>.json
 - No screen certification without linked ticket locks and impact re-test pass.
 - No freeze without pinned image digests, revision IDs, and migration lock.
 - No production promote without `FREEZE_READY` and principal-bound operator approval.
+- For `FIX-001` staging deploy attempts, Claude must re-read this file before each retry and follow Section 2A exactly.
