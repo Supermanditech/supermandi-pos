@@ -435,10 +435,62 @@ END $$;
 -- Sale IDs are always randomUUID(). Drop FK from sale_items first.
 -- =============================================================================
 
--- C1: Drop FK from sale_items.sale_id → sales.id
-DO $$ BEGIN
+-- C1: Drop ALL foreign keys referencing sales.id (dynamically discovered)
+-- This handles sale_items_sale_id_fkey AND any other FKs (payments, etc.)
+DO $$
+DECLARE
+  fk_rec RECORD;
+BEGIN
+  FOR fk_rec IN
+    SELECT
+      tc.table_schema AS fk_schema,
+      tc.table_name AS fk_table,
+      tc.constraint_name AS fk_name
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.referential_constraints rc
+      ON tc.constraint_name = rc.constraint_name
+      AND tc.constraint_schema = rc.constraint_schema
+    JOIN information_schema.table_constraints pk
+      ON rc.unique_constraint_name = pk.constraint_name
+      AND rc.unique_constraint_schema = pk.constraint_schema
+    WHERE pk.table_schema = 'public'
+      AND pk.table_name = 'sales'
+      AND tc.constraint_type = 'FOREIGN KEY'
+  LOOP
+    RAISE NOTICE 'WAVE3B-C1: Dropping FK %.%.%', fk_rec.fk_schema, fk_rec.fk_table, fk_rec.fk_name;
+    EXECUTE 'ALTER TABLE ' || fk_rec.fk_schema || '.' || fk_rec.fk_table ||
+            ' DROP CONSTRAINT IF EXISTS ' || fk_rec.fk_name;
+  END LOOP;
+
+  -- Also drop by known names as fallback
   ALTER TABLE public.sale_items DROP CONSTRAINT IF EXISTS sale_items_sale_id_fkey;
-EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
+
+-- C1b: Also drop FKs referencing collections.id (same pattern)
+DO $$
+DECLARE
+  fk_rec RECORD;
+BEGIN
+  FOR fk_rec IN
+    SELECT
+      tc.table_schema AS fk_schema,
+      tc.table_name AS fk_table,
+      tc.constraint_name AS fk_name
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.referential_constraints rc
+      ON tc.constraint_name = rc.constraint_name
+      AND tc.constraint_schema = rc.constraint_schema
+    JOIN information_schema.table_constraints pk
+      ON rc.unique_constraint_name = pk.constraint_name
+      AND rc.unique_constraint_schema = pk.constraint_schema
+    WHERE pk.table_schema = 'public'
+      AND pk.table_name = 'collections'
+      AND tc.constraint_type = 'FOREIGN KEY'
+  LOOP
+    RAISE NOTICE 'WAVE3B-C1b: Dropping FK %.%.%', fk_rec.fk_schema, fk_rec.fk_table, fk_rec.fk_name;
+    EXECUTE 'ALTER TABLE ' || fk_rec.fk_schema || '.' || fk_rec.fk_table ||
+            ' DROP CONSTRAINT IF EXISTS ' || fk_rec.fk_name;
+  END LOOP;
 END $$;
 
 -- C2: Convert sales.id
@@ -465,10 +517,98 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- C4: Re-add FK
-ALTER TABLE public.sale_items
-  ADD CONSTRAINT sale_items_sale_id_fkey
-  FOREIGN KEY (sale_id) REFERENCES public.sales(id) ON DELETE CASCADE;
+-- C3b: Convert payments.sale_id (VARCHAR → UUID)
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'payments'
+    AND column_name = 'sale_id' AND data_type = 'character varying'
+  ) THEN
+    -- Clean non-UUID values
+    UPDATE public.payments SET sale_id = NULL
+    WHERE sale_id IS NOT NULL AND sale_id !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+    ALTER TABLE public.payments ALTER COLUMN sale_id TYPE UUID USING sale_id::uuid;
+    RAISE NOTICE 'WAVE3B: payments.sale_id → UUID';
+  END IF;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+-- C3c: Convert orders.khata_entries.sale_id (VARCHAR → UUID)
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'orders' AND table_name = 'khata_entries'
+    AND column_name = 'sale_id' AND data_type = 'character varying'
+  ) THEN
+    UPDATE orders.khata_entries SET sale_id = NULL
+    WHERE sale_id IS NOT NULL AND sale_id !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+    ALTER TABLE orders.khata_entries ALTER COLUMN sale_id TYPE UUID USING sale_id::uuid;
+    RAISE NOTICE 'WAVE3B: orders.khata_entries.sale_id → UUID';
+  END IF;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+-- C3d: Convert orders.refunds.sale_id (VARCHAR → UUID)
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'orders' AND table_name = 'refunds'
+    AND column_name = 'sale_id' AND data_type = 'character varying'
+  ) THEN
+    UPDATE orders.refunds SET sale_id = NULL
+    WHERE sale_id IS NOT NULL AND sale_id !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+    ALTER TABLE orders.refunds ALTER COLUMN sale_id TYPE UUID USING sale_id::uuid;
+    RAISE NOTICE 'WAVE3B: orders.refunds.sale_id → UUID';
+  END IF;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+-- C3e: Convert inventory_sync_guarantees.sale_id (VARCHAR → UUID, no FK)
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'inventory_sync_guarantees'
+    AND column_name = 'sale_id' AND data_type = 'character varying'
+  ) THEN
+    UPDATE public.inventory_sync_guarantees SET sale_id = NULL
+    WHERE sale_id IS NOT NULL AND sale_id !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+    ALTER TABLE public.inventory_sync_guarantees ALTER COLUMN sale_id TYPE UUID USING sale_id::uuid;
+    RAISE NOTICE 'WAVE3B: inventory_sync_guarantees.sale_id → UUID';
+  END IF;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+-- C4: Re-add FKs that were dynamically dropped in C1
+DO $$ BEGIN
+  ALTER TABLE public.sale_items
+    ADD CONSTRAINT sale_items_sale_id_fkey
+    FOREIGN KEY (sale_id) REFERENCES public.sales(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public.payments
+    ADD CONSTRAINT payments_sale_id_fkey
+    FOREIGN KEY (sale_id) REFERENCES public.sales(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+  WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE orders.khata_entries
+    ADD CONSTRAINT khata_entries_sale_id_fkey
+    FOREIGN KEY (sale_id) REFERENCES public.sales(id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+  WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE orders.refunds
+    ADD CONSTRAINT refunds_sale_id_fkey
+    FOREIGN KEY (sale_id) REFERENCES public.sales(id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+  WHEN undefined_table THEN NULL;
+END $$;
 
 -- C5: Convert collections.id if VARCHAR
 DO $$ BEGIN
