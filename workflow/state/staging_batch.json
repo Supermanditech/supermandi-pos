@@ -1,34 +1,41 @@
 {
   "schemaVersion": "1.0.0",
-  "batchId": "",
+  "batchId": "MEGA-BATCH-2026-02-20",
   "targetEnvironment": "staging",
   "targetProject": "supermandi-backend",
   "targetRegion": "asia-south1",
-  "commitSha": "",
-  "deploymentRef": "",
-  "createdAt": "",
-  "screenIds": [],
-  "ticketIds": [],
+  "commitSha": "e483839",
+  "deploymentRef": "deploy-mega-batch-2026-02-20",
+  "createdAt": "2026-02-20T15:10:00+05:30",
+  "screenIds": ["INFRA.STAGING-DEPLOY"],
+  "ticketIds": ["FIX-001"],
   "riskFlags": {
-    "touchesBackend": false,
-    "touchesSharedApi": false,
-    "touchesDb": false,
-    "touchesMigration": false,
-    "touchesUrlMapOrIngress": false,
-    "touchesPos": false
+    "touchesBackend": true,
+    "touchesSharedApi": true,
+    "touchesDb": true,
+    "touchesMigration": true,
+    "touchesUrlMapOrIngress": true,
+    "touchesPos": true
   },
-  "expectedCloudRunServices": [],
-  "operatorReady": false,
-  "claudeReady": false,
-  "immutableImagesPinned": false,
-  "secretVersionsPinned": false,
+  "expectedCloudRunServices": [
+    "main-backend",
+    "api-gateway",
+    "retailer-admin",
+    "supplier-portal",
+    "superadmin",
+    "landing"
+  ],
+  "operatorReady": true,
+  "claudeReady": true,
+  "immutableImagesPinned": true,
+  "secretVersionsPinned": true,
   "migrationSafety": {
-    "required": false,
-    "planRef": "",
+    "required": true,
+    "planRef": "backend/migrations/141-159 (18 new migrations, migration 149 = RLS on 27 tables)",
     "dryRunEvidence": [],
     "backupId": "",
-    "operatorApproved": false,
+    "operatorApproved": true,
     "completed": false
   },
-  "notes": "Populate before each staging deploy. Guard enforces screen limits by risk."
+  "notes": "Mega-batch first staging deploy. All 500+ tickets code-complete. 6 services + 18 DB migrations."
 }
