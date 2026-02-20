@@ -287,7 +287,7 @@ chatRouter.post('/conversations/:id/upload', upload.single('file'), async (req, 
     // Try GCS upload, fallback to local
     let attachmentUrl: string;
     try {
-      const { uploadBuffer } = await import('../../../packages/common/src/storage/gcsStorageService.js');
+      const { uploadBuffer } = await import('@supermandi/common/storage/gcsStorageService.js');
       const bucket = process.env.GCS_CHAT_BUCKET || process.env.GCS_BUCKET || 'supermandi-chat';
       const key = `chat/${conversationId}/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       await uploadBuffer(bucket, key, file.buffer, file.mimetype);
