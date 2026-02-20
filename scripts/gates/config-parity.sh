@@ -196,6 +196,27 @@ else
 fi
 
 # =============================================================================
+# ZRP-D-015: No deprecated retailer auth path in scripts
+# RETAILER.AUTH.PROBE_PATH.001: Probe scripts must use /retailer-admin/auth/
+# not the deprecated /retailer/auth/ (which returns 404 and creates false alarms)
+# =============================================================================
+echo ""
+echo "--- ZRP-D-015: Deprecated retailer auth path check ---"
+
+DEPRECATED_HITS=$(grep -rn '/api/v1/retailer/auth/' \
+  scripts/ e2e-tests/ .github/workflows/ backend/scripts/ \
+  --include='*.sh' --include='*.ps1' --include='*.js' --include='*.ts' --include='*.yml' \
+  --exclude='config-parity.sh' \
+  2>/dev/null || true)
+
+if [ -z "$DEPRECATED_HITS" ]; then
+  gate_pass "ZRP-D-015" "No deprecated /retailer/auth/ path in scripts"
+else
+  echo "$DEPRECATED_HITS"
+  gate_fail "ZRP-D-015" "Deprecated auth path" "Use /retailer-admin/auth/ instead of /retailer/auth/"
+fi
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 echo ""
