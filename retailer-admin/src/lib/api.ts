@@ -77,7 +77,8 @@ export async function authFetch(
   }
 
   // Add Content-Type for JSON if body exists and not already set
-  if (options.body && !headers['Content-Type']) {
+  // RET-B1-006: Skip for FormData — browser must auto-set multipart boundary
+  if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 

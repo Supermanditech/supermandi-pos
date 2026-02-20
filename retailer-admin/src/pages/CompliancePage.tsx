@@ -101,8 +101,6 @@ export default function CompliancePage() {
       const response = await authFetch('/api/v1/retailer-admin/compliance', accessToken, {
         method: 'POST',
         body: formData,
-        // Don't set Content-Type header - browser will set it with boundary for FormData
-        headers: {},
       });
 
       if (response.status === 401) return;
