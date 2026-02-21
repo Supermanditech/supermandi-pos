@@ -241,6 +241,9 @@ app.use(createHealthRouter(healthChecker));
 // RET-AUD-025: Also mount health endpoints under /api/v1/ for nginx proxy compatibility
 app.use('/api/v1', createHealthRouter(healthChecker));
 
+// FIX-001: Mount health under /api/ so /api/health returns 200 (LB routes /api/* → api-gateway)
+app.use('/api', createHealthRouter(healthChecker));
+
 // CR-VERSION-001: Version endpoint for Cloud Run deploy verification
 app.get('/version', (_req, res) => {
   res.json({

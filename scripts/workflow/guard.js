@@ -11,6 +11,7 @@ const STATE_FILE = path.join(WORKFLOW_DIR, 'state', 'workflow_state.json');
 const FREEZE_FILE = path.join(WORKFLOW_DIR, 'state', 'freeze_manifest.json');
 const STAGING_BATCH_FILE = path.join(WORKFLOW_DIR, 'state', 'staging_batch.json');
 const LEGACY_CONFLICTS_FILE = path.join(WORKFLOW_DIR, 'legacy_conflicts.json');
+const CLAUDE_CURRENT_STATE_FILE = path.join(ROOT_DIR, 'RELEASES', 'CLAUDE_CURRENT_STATE.json');
 const TICKETS_DIR = path.join(WORKFLOW_DIR, 'tickets');
 const SCREENS_DIR = path.join(WORKFLOW_DIR, 'screens');
 
@@ -164,6 +165,15 @@ function readJson(filePath) {
     return JSON.parse(raw);
   } catch (error) {
     fail(`Cannot read JSON file ${path.relative(ROOT_DIR, filePath)}: ${error.message}`);
+  }
+}
+
+function readJsonSafe(filePath) {
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return { value: JSON.parse(raw), error: '' };
+  } catch (error) {
+    return { value: null, error: error.message };
   }
 }
 
@@ -469,6 +479,119 @@ function getLiveIterationProgress(state) {
       lastUpdatedAt: isNonEmptyString(implementation.lastUpdatedAt) ? implementation.lastUpdatedAt.trim() : '',
     },
   };
+}
+
+function normalizeLowerStringArray(value) {
+  return normalizeStringArray(value).map((item) => item.toLowerCase());
+}
+
+function getClaudeCurrentStateSyncRules(state) {
+  const rules = state?.rules?.claudeCurrentStateSyncRules || {};
+  const requireNextActionContains = normalizeLowerStringArray(rules.requireNextActionContains);
+  const forbidNextActionContains = normalizeLowerStringArray(rules.forbidNextActionContains);
+  const forbidLastActionsContains = normalizeLowerStringArray(rules.forbidLastActionsContains);
+  return {
+    enabled: rules.enabled !== false,
+    file: isNonEmptyString(rules.file) ? rules.file.trim() : 'RELEASES/CLAUDE_CURRENT_STATE.json',
+    enforceWhenTicketizationIncomplete: rules.enforceWhenTicketizationIncomplete !== false,
+    requireNextActionContains: requireNextActionContains.length > 0
+      ? requireNextActionContains
+      : ['not complete', 'ticketization'],
+    forbidNextActionContains: forbidNextActionContains.length > 0
+      ? forbidNextActionContains
+      : ['next: commit', 'commit brand changes', 'verify on staging', 'ready for deploy'],
+    forbidLastActionsContains: forbidLastActionsContains.length > 0
+      ? forbidLastActionsContains
+      : ['all 7 live', 'ticket states updated in claude_current_state.json'],
+  };
+}
+
+function validateClaudeCurrentStateSync(context) {
+  const errors = [];
+  const state = context.state;
+  const rules = getClaudeCurrentStateSyncRules(state);
+  if (!rules.enabled) {
+    return errors;
+  }
+
+  const relativeFile = rules.file.replace(/\\/g, '/');
+  const filePath = path.join(ROOT_DIR, relativeFile.replace(/\//g, path.sep));
+  if (!fs.existsSync(filePath)) {
+    errors.push(`rules.claudeCurrentStateSyncRules.file not found: ${relativeFile}`);
+    return errors;
+  }
+
+  const parsed = readJsonSafe(filePath);
+  if (parsed.error) {
+    errors.push(`failed to read ${relativeFile}: ${parsed.error}`);
+    return errors;
+  }
+  const claudeState = parsed.value;
+  if (!claudeState || typeof claudeState !== 'object') {
+    errors.push(`${relativeFile} must be a JSON object`);
+    return errors;
+  }
+
+  const progress = getLiveIterationProgress(state);
+  if (!(rules.enforceWhenTicketizationIncomplete && progress.ticketization.complete !== true)) {
+    return errors;
+  }
+  if (progress.phase !== 'ticketization') {
+    return errors;
+  }
+
+  const nextAction = isNonEmptyString(claudeState.nextAction) ? claudeState.nextAction.trim() : '';
+  if (!nextAction) {
+    errors.push(`${relativeFile}: nextAction must be set while ticketization is incomplete`);
+  } else {
+    const normalizedNext = nextAction.toLowerCase();
+    for (const token of rules.requireNextActionContains) {
+      if (!normalizedNext.includes(token)) {
+        errors.push(
+          `${relativeFile}: nextAction must contain "${token}" while ticketization is incomplete`
+        );
+      }
+    }
+    for (const token of rules.forbidNextActionContains) {
+      if (normalizedNext.includes(token)) {
+        errors.push(
+          `${relativeFile}: nextAction cannot contain "${token}" while ticketization is incomplete`
+        );
+      }
+    }
+  }
+
+  const lastActions = Array.isArray(claudeState.lastActions) ? claudeState.lastActions : [];
+  for (let idx = 0; idx < lastActions.length; idx += 1) {
+    const entry = isNonEmptyString(lastActions[idx]) ? lastActions[idx].trim().toLowerCase() : '';
+    if (!entry) {
+      continue;
+    }
+    for (const token of rules.forbidLastActionsContains) {
+      if (entry.includes(token)) {
+        errors.push(
+          `${relativeFile}: lastActions[${idx}] cannot contain "${token}" while ticketization is incomplete`
+        );
+      }
+    }
+  }
+
+  const ticketStatus = claudeState.ticketStatus && typeof claudeState.ticketStatus === 'object'
+    ? claudeState.ticketStatus
+    : {};
+  for (const [ticketId, ticket] of context.ticketMap.entries()) {
+    const mirrored = ticketStatus[ticketId];
+    if (!isNonEmptyString(mirrored)) {
+      continue;
+    }
+    if (!isClosedTicketStatus(ticket.status) && mirrored.trim().toUpperCase().startsWith('DONE')) {
+      errors.push(
+        `${relativeFile}: ticketStatus.${ticketId}=${mirrored} conflicts with workflow ticket status=${ticket.status}`
+      );
+    }
+  }
+
+  return errors;
 }
 
 function isLiveExecutionRuleActiveForMode(state, rules) {
@@ -2703,6 +2826,7 @@ function validateState(context, options = {}) {
   }
 
   errors.push(...validateLiveIterationExecutionState(context));
+  errors.push(...validateClaudeCurrentStateSync(context));
 
   const sessionRules = state?.rules?.sessionRules || {};
   if (sessionRules.requireSessionIdForTransitions === true && !isNonEmptyString(sessionRules.sessionIdEnvVar)) {
@@ -2738,6 +2862,25 @@ function validateState(context, options = {}) {
   }
   if (requiredSessionFiles.beforeReady.length === 0) {
     errors.push('rules.sessionRules: ready-status required files cannot resolve to an empty list');
+  }
+
+  const claudeStateSyncRules = state?.rules?.claudeCurrentStateSyncRules;
+  if (
+    claudeStateSyncRules !== undefined &&
+    (claudeStateSyncRules === null || typeof claudeStateSyncRules !== 'object' || Array.isArray(claudeStateSyncRules))
+  ) {
+    errors.push('rules.claudeCurrentStateSyncRules must be an object when provided');
+  } else if (claudeStateSyncRules && typeof claudeStateSyncRules === 'object') {
+    const arrayFields = ['requireNextActionContains', 'forbidNextActionContains', 'forbidLastActionsContains'];
+    for (const field of arrayFields) {
+      if (
+        claudeStateSyncRules[field] !== undefined &&
+        (!Array.isArray(claudeStateSyncRules[field]) ||
+          claudeStateSyncRules[field].some((item) => !isNonEmptyString(item)))
+      ) {
+        errors.push(`rules.claudeCurrentStateSyncRules.${field} must be an array of non-empty strings when provided`);
+      }
+    }
   }
 
   const liveTicketIntakeRules = state?.rules?.liveTicketIntakeRules;
