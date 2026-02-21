@@ -63,7 +63,8 @@ jobs:
         working-directory: backend
         run: |
           pnpm install --frozen-lockfile
-          pnpm run typecheck || pnpm exec tsc --noEmit
+          pnpm --filter @supermandi/common run build
+          pnpm run typecheck
 
   # ==========================================================================
   # JOB 2: Lint all projects

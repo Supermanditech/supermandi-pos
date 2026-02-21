@@ -26,13 +26,12 @@ describe('ForgotPasswordPage', () => {
     global.fetch = vi.fn();
   });
 
-  it('renders initial phone step', () => {
+  it('renders channel selector on initial load', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
     expect(screen.getByText('Reset Password')).toBeInTheDocument();
-    expect(screen.getByText(/Enter your phone number/)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/9876543210/)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/MYSTORE/)).toBeInTheDocument();
-    expect(screen.getByText('Verify Account')).toBeInTheDocument();
+    expect(screen.getByText(/Choose how you want to reset your password/)).toBeInTheDocument();
+    expect(screen.getByText('Reset via mobile OTP')).toBeInTheDocument();
+    expect(screen.getByText('Reset via email link')).toBeInTheDocument();
   });
 
   it('shows header with branding', () => {
@@ -47,33 +46,37 @@ describe('ForgotPasswordPage', () => {
     expect(screen.getByText(/Remember your password/)).toBeInTheDocument();
   });
 
-  it('shows validation error for invalid phone', async () => {
+  it('navigates to OTP channel and shows phone input', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
-    const phoneInput = screen.getByPlaceholderText(/9876543210/);
-    const storeInput = screen.getByPlaceholderText(/MYSTORE/);
+    fireEvent.click(screen.getByText('Reset via mobile OTP'));
+    expect(screen.getByText(/Enter your registered phone number/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/98765 43210/)).toBeInTheDocument();
+    expect(screen.getByText('Send OTP')).toBeInTheDocument();
+  });
+
+  it('shows validation error for invalid phone on OTP channel', async () => {
+    render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
+    fireEvent.click(screen.getByText('Reset via mobile OTP'));
+    const phoneInput = screen.getByPlaceholderText(/98765 43210/);
     fireEvent.change(phoneInput, { target: { value: '123' } });
-    fireEvent.change(storeInput, { target: { value: 'TEST' } });
-    fireEvent.click(screen.getByText('Verify Account'));
+    fireEvent.click(screen.getByText('Send OTP'));
     await waitFor(() => {
       expect(screen.getByText(/valid phone number/)).toBeInTheDocument();
     });
   });
 
-  it('shows validation error for empty store code', async () => {
+  it('navigates to email channel and shows email input', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
-    const phoneInput = screen.getByPlaceholderText(/9876543210/);
-    fireEvent.change(phoneInput, { target: { value: '9876543210' } });
-    // Use fireEvent.submit on the form to ensure onSubmit fires
-    const form = phoneInput.closest('form')!;
-    fireEvent.submit(form);
-    await waitFor(() => {
-      expect(screen.getByText(/Please enter your store code/)).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByText('Reset via email link'));
+    expect(screen.getByText(/Enter your registered email address/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/you@example.com/)).toBeInTheDocument();
+    expect(screen.getByText('Send Reset Link')).toBeInTheDocument();
   });
 
   it('renders footer with copyright', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
-    expect(screen.getByText(/SuperMandi Tech Pvt Ltd. All rights reserved/)).toBeInTheDocument();
+    expect(screen.getByText(/SuperMandi Tech Pvt Ltd/)).toBeInTheDocument();
+    expect(screen.getByText(/Made in India/)).toBeInTheDocument();
   });
 
   it('renders build stamp', () => {
