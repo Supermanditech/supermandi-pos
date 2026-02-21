@@ -1,7 +1,7 @@
 {
-  "version": "42.0",
-  "lastUpdated": "2026-02-22T23:00:00.000Z",
-  "currentPhase": "DEPLOY APPROVED. Staging deploy of SHA 55aad06a authorized by operator. 10 batch tickets todo (code on main, CI green). Guard PASS. Deploying to GCP staging.",
+  "version": "43.0",
+  "lastUpdated": "2026-02-22T23:30:00.000Z",
+  "currentPhase": "DEPLOY COMPLETE. SHA 7b3a4ee8 deployed to GCP staging. All 6 services serving 100% on new revisions. All health checks PASS. GCP ticketization NOT started (separate run).",
   "currentTicket": null,
   "ticketQueue": [
     "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001",
@@ -1725,7 +1725,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "DEPLOY IN PROGRESS. Operator approved staging deploy of SHA 55aad06a. Running pre-staging gate → deploy pipeline → publish evidence. No ticketization in this run.",
+  "nextAction": "DEPLOY COMPLETE. SHA 7b3a4ee8 deployed to staging (run 22264213051). All 6 services healthy. GCP ticketization NOT started — requires separate run. Operator handoff: browser-check 6 portals on staging.supermandi.tech.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -1740,10 +1740,10 @@
     "pr": "#288"
   },
   "lastActions": [
-    "STATE RECONCILIATION SESSION 4: All 10 batch tickets downgraded ready_for_operator_test → todo with statusHistory entries (hash-chained). Reason: staging deploy of 55aad06a pending, no operator evidence for fix code, WIP limit 1 requires non-WIP status.",
-    "Guard now PASS: 27 tickets, 0 failures, 0 screen failures. ciGateStatus fixed to 'passed' (was invalid custom value).",
-    "Added ready_for_operator_test → todo transition to state machine (claude actor, reconciliation path).",
-    "PARKED AT GIT — no staging deploy triggered. Deploy hold ACTIVE. Staging baseline remains run 22260688109 on SHA 5db6c84.",
+    "DEPLOY COMPLETE: SHA 7b3a4ee8 deployed to GCP staging via run 22264213051. All 6 services serving 100% on new revisions. All smoke gates PASS. Health checks 200 on /api/health and /api/v1/health.",
+    "Deploy sequence: 3 CI runs passed (25cc7551, d66ffce8, 7b3a4ee8) → 3 deploys triggered → final deploy 22264213051 is the active staging baseline.",
+    "Cloud Run revisions: main-backend-00087-zkd, api-gateway-00068-52v, retailer-admin-00068-7hr, supplier-portal-00063-sp8, superadmin-00061-wwz, landing-00061-7bs.",
+    "GCP ticketization NOT started — operator instructed deploy-only in this run.",
     "GCP STAGING HARDENING — 13/15 tickets DONE, 2 BLOCKED.",
     "Cloud SQL: public IP removed, private IP 10.33.48.3 via VPC peering. All services healthy.",
     "Firewall: 8 world-open rules disabled (RDP, SSH, HTTP/S, ICMP, app ports, vpc-connector-egress).",

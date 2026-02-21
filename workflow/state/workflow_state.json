@@ -744,10 +744,16 @@
       ],
       "requireValidatedDeploymentRef": true,
       "requireDeploymentRefMatch": true,
-      "lastSuccessfulStagingDeployRef": "github://run/22260688109",
-      "lastSuccessfulStagingDeployAt": "2026-02-21T15:30:00Z",
-      "lastSuccessfulStagingCommitSha": "5db6c84",
+      "allowInfraAuditDeploymentRef": false,
+      "lastSuccessfulStagingDeployRef": "github://run/22264213051",
+      "lastSuccessfulStagingDeployAt": "2026-02-22T21:21:00Z",
+      "lastSuccessfulStagingCommitSha": "7b3a4ee8",
       "requireStagingCommitShaEvidence": false,
+      "requireStagingHostEvidence": true,
+      "rejectNonStagingHostEvidence": true,
+      "allowedStagingHosts": [
+        "staging.supermandi.tech"
+      ],
       "requireCloudRunRevisionIds": true,
       "requireRuntimeEvidence": true,
       "requireProductionDataTested": true
@@ -771,7 +777,29 @@
         "superadmin_web",
         "pos_app",
         "cross_function_matrix"
-      ]
+      ],
+      "pageByPageGate": {
+        "enabled": true,
+        "manifestFile": "workflow/state/live_page_manifest.json",
+        "progressFile": "workflow/state/live_ticketization_progress.json",
+        "unresolvedStatuses": [
+          "PENDING",
+          "PENDING_NO_ROUTE_EVIDENCE",
+          "BROWSER_EVIDENCE_REQUIRED",
+          "RUNTIME_EVIDENCE_REQUIRED",
+          "IN_PROGRESS"
+        ],
+        "resolvedStatuses": [
+          "CODE_AUDIT_VERIFIED",
+          "RUNTIME_VERIFIED",
+          "PASS",
+          "VERIFIED"
+        ],
+        "requireIssueDetectedTicketId": true,
+        "enforceSequentialCompletion": true,
+        "requireCurrentPageIdMatchFirstIncomplete": true,
+        "currentPageIdField": "progress.liveIteration.ticketization.currentPageId"
+      }
     },
     "claudeCurrentStateSyncRules": {
       "enabled": true,
@@ -807,6 +835,7 @@
         "complete": true,
         "statement": "100% micro-ingredient ticketization complete. Total=696, verified=645, issues=51, tickets=[LIVE.SECURITY.XPOWEREDBY.001, LIVE.SECURITY.CACHE_HEADERS.001, LIVE.SECURITY.CSP_API.001]. All 3 security tickets implemented and VERIFIED ON STAGING (PR #421 + #422, deploy run 22257577143, SHA 686c0b3).",
         "requiredCoverageSource": "workflow/state/live_page_manifest.json",
+        "currentPageId": "COMPLETE",
         "coverageBySurface": {
           "retailer_web": true,
           "supplier_web": true,
