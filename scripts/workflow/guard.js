@@ -14,6 +14,7 @@ const LEGACY_CONFLICTS_FILE = path.join(WORKFLOW_DIR, 'legacy_conflicts.json');
 const CLAUDE_CURRENT_STATE_FILE = path.join(ROOT_DIR, 'RELEASES', 'CLAUDE_CURRENT_STATE.json');
 const TICKETS_DIR = path.join(WORKFLOW_DIR, 'tickets');
 const SCREENS_DIR = path.join(WORKFLOW_DIR, 'screens');
+const DEFAULT_ALLOWED_STAGING_HOSTS = ['staging.supermandi.tech'];
 
 const MODES = new Set([
   'LIVE_FIX',
@@ -406,6 +407,68 @@ function isHttpsUrl(value) {
   return isNonEmptyString(value) && /^https:\/\//i.test(value);
 }
 
+function normalizeStagingHostList(hosts) {
+  const source = Array.isArray(hosts) && hosts.length > 0 ? hosts : DEFAULT_ALLOWED_STAGING_HOSTS;
+  const normalized = source
+    .filter((item) => isNonEmptyString(item))
+    .map((item) => item.trim().toLowerCase())
+    .map((item) => item.replace(/^https?:\/\//, ''))
+    .map((item) => item.replace(/\/.*$/, ''))
+    .map((item) => item.replace(/:\d+$/, ''))
+    .filter((item) => item.length > 0);
+  return [...new Set(normalized)];
+}
+
+function parseUrlHost(value) {
+  if (!isUrlLike(value)) {
+    return '';
+  }
+  try {
+    return new URL(value).hostname.toLowerCase();
+  } catch (_error) {
+    return '';
+  }
+}
+
+function isAllowedStagingHostUrl(value, allowedHosts) {
+  const host = parseUrlHost(value);
+  if (!host) {
+    return false;
+  }
+  for (const allowedHost of allowedHosts) {
+    if (host === allowedHost || host.endsWith(`.${allowedHost}`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function extractUrlsFromText(value) {
+  if (!isNonEmptyString(value)) {
+    return [];
+  }
+  const matches = value.match(/https?:\/\/[^\s"'<>]+/gi);
+  return Array.isArray(matches) ? matches : [];
+}
+
+function collectUrlsFromEvidenceValues(values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return [];
+  }
+  const urls = [];
+  for (const value of values) {
+    if (!isNonEmptyString(value)) {
+      continue;
+    }
+    if (isUrlLike(value)) {
+      urls.push(value.trim());
+      continue;
+    }
+    urls.push(...extractUrlsFromText(value));
+  }
+  return [...new Set(urls)];
+}
+
 function parseIsoTimestamp(value) {
   if (!isNonEmptyString(value)) {
     return null;
@@ -421,6 +484,19 @@ const LIVE_EXECUTION_PHASE_VALUES = new Set(['ticketization', 'implementation', 
 const LIVE_EXECUTION_DEFAULT_BLOCKED_STATUSES = [
   'in_progress',
   'ready_for_operator_test',
+];
+const LIVE_PAGE_GATE_DEFAULT_UNRESOLVED_STATUSES = [
+  'PENDING',
+  'PENDING_NO_ROUTE_EVIDENCE',
+  'BROWSER_EVIDENCE_REQUIRED',
+  'RUNTIME_EVIDENCE_REQUIRED',
+  'IN_PROGRESS',
+];
+const LIVE_PAGE_GATE_DEFAULT_RESOLVED_STATUSES = [
+  'CODE_AUDIT_VERIFIED',
+  'RUNTIME_VERIFIED',
+  'PASS',
+  'VERIFIED',
 ];
 const PRODUCTION_ETHICS_DEFAULT_STATUSES = [
   'ready_for_operator_test',
@@ -459,6 +535,110 @@ function getLiveIterationExecutionRules(state) {
       ? requiredSurfaces
       : ['retailer_web', 'supplier_web', 'superadmin_web', 'pos_app', 'cross_function_matrix'],
   };
+}
+
+function getLivePageByPageGateRules(state) {
+  const liveRules = getLiveIterationExecutionRules(state);
+  const raw = state?.rules?.liveIterationExecutionRules?.pageByPageGate || {};
+  const unresolvedStatuses = normalizeStringArray(raw.unresolvedStatuses);
+  const resolvedStatuses = normalizeStringArray(raw.resolvedStatuses);
+
+  return {
+    enabled: raw.enabled !== false,
+    progressFile: isNonEmptyString(raw.progressFile)
+      ? raw.progressFile.trim()
+      : 'workflow/state/live_ticketization_progress.json',
+    manifestFile: isNonEmptyString(raw.manifestFile)
+      ? raw.manifestFile.trim()
+      : liveRules.requiredManifestFile,
+    unresolvedStatuses: unresolvedStatuses.length > 0
+      ? unresolvedStatuses
+      : LIVE_PAGE_GATE_DEFAULT_UNRESOLVED_STATUSES,
+    resolvedStatuses: resolvedStatuses.length > 0
+      ? resolvedStatuses
+      : LIVE_PAGE_GATE_DEFAULT_RESOLVED_STATUSES,
+    requireIssueDetectedTicketId: raw.requireIssueDetectedTicketId !== false,
+    enforceSequentialCompletion: raw.enforceSequentialCompletion !== false,
+    requireCurrentPageIdMatchFirstIncomplete: raw.requireCurrentPageIdMatchFirstIncomplete !== false,
+    currentPageIdField: isNonEmptyString(raw.currentPageIdField)
+      ? raw.currentPageIdField.trim()
+      : 'progress.liveIteration.ticketization.currentPageId',
+    requiredSurfaceCoverage: liveRules.requiredSurfaceCoverage,
+  };
+}
+
+function readNestedValue(source, dottedPath) {
+  if (!source || typeof source !== 'object' || !isNonEmptyString(dottedPath)) {
+    return undefined;
+  }
+  const parts = dottedPath.split('.').map((part) => part.trim()).filter(Boolean);
+  let cursor = source;
+  for (const part of parts) {
+    if (!cursor || typeof cursor !== 'object' || !(part in cursor)) {
+      return undefined;
+    }
+    cursor = cursor[part];
+  }
+  return cursor;
+}
+
+function buildLiveManifestPageOrder(manifest, requiredSurfaceCoverage = []) {
+  const pages = [];
+  const seen = new Set();
+
+  function pushPage(surface, route, url) {
+    if (!isNonEmptyString(surface) || !isNonEmptyString(route)) {
+      return;
+    }
+    const normalizedSurface = surface.trim();
+    const normalizedRoute = route.trim();
+    const key = `${normalizedSurface}|${normalizedRoute}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    pages.push({
+      key,
+      surface: normalizedSurface,
+      route: normalizedRoute,
+      url: isNonEmptyString(url) ? url.trim() : '',
+    });
+  }
+
+  for (const surface of requiredSurfaceCoverage) {
+    if (surface === 'pos_app') {
+      const endpoints = Array.isArray(manifest?.pos_app?.criticalEndpoints)
+        ? manifest.pos_app.criticalEndpoints
+        : [];
+      for (const endpoint of endpoints) {
+        pushPage('pos_app', String(endpoint || ''), String(endpoint || ''));
+      }
+      continue;
+    }
+
+    if (surface === 'cross_function_matrix') {
+      const flows = Array.isArray(manifest?.crossFunctionMatrix) ? manifest.crossFunctionMatrix : [];
+      for (const flow of flows) {
+        if (!flow || typeof flow !== 'object') {
+          continue;
+        }
+        const flowId = isNonEmptyString(flow.flowId) ? flow.flowId : '';
+        const route = flowId || String(flow.entryUrl || '');
+        pushPage('cross_function_matrix', route, String(flow.entryUrl || ''));
+      }
+      continue;
+    }
+
+    const entries = Array.isArray(manifest?.surfaces?.[surface]) ? manifest.surfaces[surface] : [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+      pushPage(surface, String(entry.route || ''), String(entry.url || ''));
+    }
+  }
+
+  return pages;
 }
 
 function getLiveIterationProgress(state) {
@@ -724,6 +904,10 @@ function validateLiveTicketIntakeGate(ticket, label, state) {
   if (!rules || rules.enabled !== true) {
     return errors;
   }
+  const allowedStagingHosts = normalizeStagingHostList(rules.allowedStagingHosts);
+  const requireStagingHostEvidence = rules.requireStagingHostEvidence === true;
+  const rejectNonStagingHostEvidence = rules.rejectNonStagingHostEvidence === true;
+  const allowInfraAuditDeploymentRef = rules.allowInfraAuditDeploymentRef === true;
 
   const statuses = Array.isArray(rules.enforceForStatuses) && rules.enforceForStatuses.length > 0
     ? new Set(rules.enforceForStatuses)
@@ -772,7 +956,7 @@ function validateLiveTicketIntakeGate(ticket, label, state) {
     } else if (actualRef !== requiredRef) {
       // Allow gcp:// refs for infrastructure audit tickets (not deploy-sourced)
       const isInfraAuditRef = actualRef.startsWith('gcp://');
-      if (!isInfraAuditRef) {
+      if (!(allowInfraAuditDeploymentRef && isInfraAuditRef)) {
         errors.push(
           `${label}: live ticket intake requires operatorChecks.validatedDeploymentRef=${requiredRef} (found ${actualRef})`
         );
@@ -814,6 +998,41 @@ function validateLiveTicketIntakeGate(ticket, label, state) {
 
   if (rules.requireProductionDataTested === true && ticket?.truthDeclaration?.productionDataTested !== true) {
     errors.push(`${label}: live ticket intake requires truthDeclaration.productionDataTested=true`);
+  }
+
+  const urlEvidenceByField = [
+    ['gcpParity.stagingUrls', Array.isArray(ticket?.gcpParity?.stagingUrls) ? ticket.gcpParity.stagingUrls : []],
+    ['operatorChecks.stagingUrlsTested', Array.isArray(ticket?.operatorChecks?.stagingUrlsTested) ? ticket.operatorChecks.stagingUrlsTested : []],
+    ['buildMapping.stagingRouteEvidence', Array.isArray(ticket?.buildMapping?.stagingRouteEvidence) ? ticket.buildMapping.stagingRouteEvidence : []],
+    ['evidence.apiProof', Array.isArray(ticket?.evidence?.apiProof) ? ticket.evidence.apiProof : []],
+    ['evidence.parityProof', Array.isArray(ticket?.evidence?.parityProof) ? ticket.evidence.parityProof : []],
+    ['truthDeclaration.evidence', Array.isArray(ticket?.truthDeclaration?.evidence) ? ticket.truthDeclaration.evidence : []],
+  ];
+
+  const allEvidenceUrls = [];
+  for (const [_field, values] of urlEvidenceByField) {
+    allEvidenceUrls.push(...collectUrlsFromEvidenceValues(values));
+  }
+  const uniqueEvidenceUrls = [...new Set(allEvidenceUrls)];
+  const stagingHostUrls = uniqueEvidenceUrls.filter((url) => isAllowedStagingHostUrl(url, allowedStagingHosts));
+
+  if (requireStagingHostEvidence && stagingHostUrls.length === 0) {
+    errors.push(
+      `${label}: live ticket intake requires URL evidence from allowed staging host(s): ${allowedStagingHosts.join(', ')}`
+    );
+  }
+
+  if (rejectNonStagingHostEvidence) {
+    for (const [fieldName, values] of urlEvidenceByField) {
+      const fieldUrls = collectUrlsFromEvidenceValues(values);
+      for (const url of fieldUrls) {
+        if (!isAllowedStagingHostUrl(url, allowedStagingHosts)) {
+          errors.push(
+            `${label}: ${fieldName} must use allowed staging host(s) ${allowedStagingHosts.join(', ')} (found ${url})`
+          );
+        }
+      }
+    }
   }
 
   return errors;
@@ -2942,6 +3161,186 @@ function validateLiveIterationExecutionState(context) {
   return errors;
 }
 
+function validateLivePageByPageTicketization(context) {
+  const errors = [];
+  const state = context.state;
+  const progress = getLiveIterationProgress(state);
+  const pageGateRules = getLivePageByPageGateRules(state);
+
+  if (!pageGateRules.enabled || progress.phase !== 'ticketization') {
+    return errors;
+  }
+
+  const manifestPath = path.join(ROOT_DIR, pageGateRules.manifestFile.replace(/\//g, path.sep));
+  if (!fs.existsSync(manifestPath)) {
+    errors.push(`live page gate: manifest not found: ${pageGateRules.manifestFile}`);
+    return errors;
+  }
+  const progressPath = path.join(ROOT_DIR, pageGateRules.progressFile.replace(/\//g, path.sep));
+  if (!fs.existsSync(progressPath)) {
+    errors.push(`live page gate: progress file not found: ${pageGateRules.progressFile}`);
+    return errors;
+  }
+
+  const manifest = readJson(manifestPath);
+  const progressJson = readJson(progressPath);
+  const queue = Array.isArray(progressJson.queueStatus) ? progressJson.queueStatus : [];
+  if (queue.length === 0) {
+    errors.push(`live page gate: ${pageGateRules.progressFile} queueStatus must be non-empty`);
+    return errors;
+  }
+
+  const pageOrder = buildLiveManifestPageOrder(manifest, pageGateRules.requiredSurfaceCoverage);
+  if (pageOrder.length === 0) {
+    errors.push(
+      `live page gate: no pages could be derived from manifest ${pageGateRules.manifestFile} for required surfaces`
+    );
+    return errors;
+  }
+
+  const unresolvedStatuses = new Set(pageGateRules.unresolvedStatuses);
+  const resolvedStatuses = new Set(pageGateRules.resolvedStatuses);
+  const queueByPage = new Map();
+  const unknownStatuses = new Set();
+
+  function getPageKey(row) {
+    if (!row || typeof row !== 'object') {
+      return '';
+    }
+    if (!isNonEmptyString(row.surface) || !isNonEmptyString(row.route)) {
+      return '';
+    }
+    return `${row.surface.trim()}|${row.route.trim()}`;
+  }
+
+  function isIssueDetectedResolved(row) {
+    if (row.status !== 'ISSUE_DETECTED') {
+      return false;
+    }
+    if (!pageGateRules.requireIssueDetectedTicketId) {
+      return true;
+    }
+    return isNonEmptyString(row.ticketId);
+  }
+
+  function isCheckResolved(row) {
+    const status = isNonEmptyString(row.status) ? row.status.trim() : '';
+    if (!status) {
+      return false;
+    }
+    if (unresolvedStatuses.has(status)) {
+      return false;
+    }
+    if (status === 'ISSUE_DETECTED') {
+      return isIssueDetectedResolved(row);
+    }
+    if (resolvedStatuses.has(status)) {
+      return true;
+    }
+    unknownStatuses.add(status);
+    return false;
+  }
+
+  for (const row of queue) {
+    const key = getPageKey(row);
+    if (!key) {
+      continue;
+    }
+    if (!queueByPage.has(key)) {
+      queueByPage.set(key, []);
+    }
+    queueByPage.get(key).push(row);
+  }
+
+  const missingPages = [];
+  let firstIncompletePage = '';
+  let firstIncompleteIndex = -1;
+  let firstIncompleteDetails = '';
+
+  for (let idx = 0; idx < pageOrder.length; idx += 1) {
+    const page = pageOrder[idx];
+    const checks = queueByPage.get(page.key) || [];
+    if (checks.length === 0) {
+      missingPages.push(page.key);
+      continue;
+    }
+
+    const unresolvedChecks = [];
+    for (const check of checks) {
+      if (check.status === 'ISSUE_DETECTED' && pageGateRules.requireIssueDetectedTicketId && !isNonEmptyString(check.ticketId)) {
+        errors.push(
+          `live page gate: ${page.key} has ISSUE_DETECTED check without ticketId (${isNonEmptyString(check.checkId) ? check.checkId : 'unknown-check'})`
+        );
+      }
+      if (!isCheckResolved(check)) {
+        unresolvedChecks.push(isNonEmptyString(check.checkId) ? check.checkId : page.key);
+      }
+    }
+
+    if (firstIncompleteIndex === -1 && unresolvedChecks.length > 0) {
+      firstIncompleteIndex = idx;
+      firstIncompletePage = page.key;
+      firstIncompleteDetails = unresolvedChecks.slice(0, 3).join(', ');
+    }
+  }
+
+  if (missingPages.length > 0) {
+    errors.push(
+      `live page gate: queue is missing manifest page checks for: ${missingPages.slice(0, 8).join(', ')}${missingPages.length > 8 ? ', ...' : ''}`
+    );
+  }
+
+  if (unknownStatuses.size > 0) {
+    errors.push(
+      `live page gate: unknown check status values found in ${pageGateRules.progressFile}: ${[...unknownStatuses].join(', ')}`
+    );
+  }
+
+  if (pageGateRules.enforceSequentialCompletion && firstIncompleteIndex >= 0) {
+    const violatingPages = [];
+    for (let idx = firstIncompleteIndex + 1; idx < pageOrder.length; idx += 1) {
+      const page = pageOrder[idx];
+      const checks = queueByPage.get(page.key) || [];
+      const hasResolvedCheck = checks.some((check) => {
+        if (check.status === 'ISSUE_DETECTED') {
+          return isIssueDetectedResolved(check);
+        }
+        return resolvedStatuses.has(check.status);
+      });
+      if (hasResolvedCheck) {
+        violatingPages.push(page.key);
+      }
+    }
+    if (violatingPages.length > 0) {
+      errors.push(
+        `live page gate: first incomplete page is ${firstIncompletePage}${firstIncompleteDetails ? ` (${firstIncompleteDetails})` : ''}; later pages already have resolved checks (page skipping). Resolve this page before moving ahead: ${violatingPages.slice(0, 8).join(', ')}${violatingPages.length > 8 ? ', ...' : ''}`
+      );
+    }
+  }
+
+  if (pageGateRules.requireCurrentPageIdMatchFirstIncomplete) {
+    const currentPageIdValue = readNestedValue(state, pageGateRules.currentPageIdField);
+    const currentPageId = isNonEmptyString(currentPageIdValue) ? currentPageIdValue.trim() : '';
+    if (firstIncompletePage) {
+      if (!currentPageId) {
+        errors.push(
+          `live page gate: ${pageGateRules.currentPageIdField} must be set to current required page (${firstIncompletePage})`
+        );
+      } else if (currentPageId !== firstIncompletePage) {
+        errors.push(
+          `live page gate: ${pageGateRules.currentPageIdField}=${currentPageId} but next required page is ${firstIncompletePage}`
+        );
+      }
+    } else if (currentPageId && currentPageId !== 'COMPLETE') {
+      errors.push(
+        `live page gate: all pages are complete; ${pageGateRules.currentPageIdField} must be \"COMPLETE\" or empty`
+      );
+    }
+  }
+
+  return errors;
+}
+
 function validateState(context, options = {}) {
   const state = context.state;
   const errors = [...context.errors];
@@ -2960,6 +3359,7 @@ function validateState(context, options = {}) {
   }
 
   errors.push(...validateLiveIterationExecutionState(context));
+  errors.push(...validateLivePageByPageTicketization(context));
   errors.push(...validateClaudeCurrentStateSync(context));
 
   const sessionRules = state?.rules?.sessionRules || {};
@@ -3077,6 +3477,27 @@ function validateState(context, options = {}) {
     }
     if (liveTicketIntakeRules.requireDeploymentRefMatch === true && !isNonEmptyString(liveTicketIntakeRules.lastSuccessfulStagingDeployRef)) {
       errors.push('rules.liveTicketIntakeRules.lastSuccessfulStagingDeployRef is required when requireDeploymentRefMatch=true');
+    }
+    if (liveTicketIntakeRules.allowInfraAuditDeploymentRef !== undefined && !isBoolean(liveTicketIntakeRules.allowInfraAuditDeploymentRef)) {
+      errors.push('rules.liveTicketIntakeRules.allowInfraAuditDeploymentRef must be boolean when provided');
+    }
+    if (liveTicketIntakeRules.requireStagingHostEvidence !== undefined && !isBoolean(liveTicketIntakeRules.requireStagingHostEvidence)) {
+      errors.push('rules.liveTicketIntakeRules.requireStagingHostEvidence must be boolean when provided');
+    }
+    if (liveTicketIntakeRules.rejectNonStagingHostEvidence !== undefined && !isBoolean(liveTicketIntakeRules.rejectNonStagingHostEvidence)) {
+      errors.push('rules.liveTicketIntakeRules.rejectNonStagingHostEvidence must be boolean when provided');
+    }
+    if (liveTicketIntakeRules.allowedStagingHosts !== undefined) {
+      if (!Array.isArray(liveTicketIntakeRules.allowedStagingHosts) || liveTicketIntakeRules.allowedStagingHosts.length === 0) {
+        errors.push('rules.liveTicketIntakeRules.allowedStagingHosts must be a non-empty array when provided');
+      } else {
+        for (const host of liveTicketIntakeRules.allowedStagingHosts) {
+          if (!isNonEmptyString(host)) {
+            errors.push('rules.liveTicketIntakeRules.allowedStagingHosts must contain only non-empty strings');
+            break;
+          }
+        }
+      }
     }
   }
 

@@ -9,6 +9,20 @@ const SWEEP_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'live_http_sweep_lat
 const QUEUE_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'live_micro_check_queue.json');
 const PROGRESS_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'live_ticketization_progress.json');
 const STATE_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'workflow_state.json');
+const DEFAULT_REQUIRED_SURFACES = [
+  'retailer_web',
+  'supplier_web',
+  'superadmin_web',
+  'pos_app',
+  'cross_function_matrix',
+];
+const UNRESOLVED_STATUSES = new Set([
+  'PENDING',
+  'PENDING_NO_ROUTE_EVIDENCE',
+  'BROWSER_EVIDENCE_REQUIRED',
+  'RUNTIME_EVIDENCE_REQUIRED',
+  'IN_PROGRESS',
+]);
 
 function readJson(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8');
@@ -21,6 +35,83 @@ function writeJson(filePath, payload) {
 
 function normalizeRouteUrl(routeUrl) {
   return String(routeUrl || '').replace(/\{storeCode\}/g, 'TEST001');
+}
+
+function buildPageOrder(manifest, requiredSurfaces = DEFAULT_REQUIRED_SURFACES) {
+  const pages = [];
+  const seen = new Set();
+  const pushPage = (surface, route, url = '') => {
+    const normalizedSurface = String(surface || '').trim();
+    const normalizedRoute = String(route || '').trim();
+    if (!normalizedSurface || !normalizedRoute) return;
+    const key = `${normalizedSurface}|${normalizedRoute}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    pages.push({
+      key,
+      surface: normalizedSurface,
+      route: normalizedRoute,
+      url: String(url || '').trim(),
+    });
+  };
+
+  for (const surface of requiredSurfaces) {
+    if (surface === 'pos_app') {
+      const endpoints = Array.isArray(manifest?.pos_app?.criticalEndpoints) ? manifest.pos_app.criticalEndpoints : [];
+      for (const endpoint of endpoints) {
+        pushPage('pos_app', endpoint, endpoint);
+      }
+      continue;
+    }
+    if (surface === 'cross_function_matrix') {
+      const flows = Array.isArray(manifest?.crossFunctionMatrix) ? manifest.crossFunctionMatrix : [];
+      for (const flow of flows) {
+        const flowId = String(flow?.flowId || '').trim();
+        const route = flowId || String(flow?.entryUrl || '').trim();
+        pushPage('cross_function_matrix', route, flow?.entryUrl || '');
+      }
+      continue;
+    }
+    const entries = Array.isArray(manifest?.surfaces?.[surface]) ? manifest.surfaces[surface] : [];
+    for (const entry of entries) {
+      pushPage(surface, entry?.route || '', entry?.url || '');
+    }
+  }
+  return pages;
+}
+
+function isCheckResolved(check) {
+  const status = String(check?.status || '').trim();
+  if (!status) return false;
+  if (UNRESOLVED_STATUSES.has(status)) return false;
+  if (status === 'ISSUE_DETECTED') return Boolean(String(check?.ticketId || '').trim());
+  return true;
+}
+
+function getCurrentPageId(pageOrder, queue) {
+  const queueByPage = new Map();
+  for (const check of queue) {
+    const surface = String(check?.surface || '').trim();
+    const route = String(check?.route || '').trim();
+    if (!surface || !route) continue;
+    const key = `${surface}|${route}`;
+    if (!queueByPage.has(key)) {
+      queueByPage.set(key, []);
+    }
+    queueByPage.get(key).push(check);
+  }
+
+  for (const page of pageOrder) {
+    const checks = queueByPage.get(page.key) || [];
+    if (checks.length === 0) {
+      return page.key;
+    }
+    const incomplete = checks.some((check) => !isCheckResolved(check));
+    if (incomplete) {
+      return page.key;
+    }
+  }
+  return 'COMPLETE';
 }
 
 function buildQueue(manifest) {
@@ -180,7 +271,7 @@ function countByStatus(queue) {
   return counts;
 }
 
-function updateWorkflowState(progressSummary) {
+function updateWorkflowState(progressSummary, manifest, queue) {
   const state = readJson(STATE_FILE);
   const now = new Date().toISOString();
   const liveIteration = state?.progress?.liveIteration;
@@ -199,6 +290,11 @@ function updateWorkflowState(progressSummary) {
   ticketization.complete = false;
   ticketization.statement = `NOT COMPLETE - ticketization tracker refreshed: unresolved=${unresolved}, issues=${issues}, browser_pending=${browserPending}, runtime_pending=${runtimePending}`;
   ticketization.requiredCoverageSource = 'workflow/state/live_page_manifest.json';
+  const requiredSurfaces = Array.isArray(state?.rules?.liveIterationExecutionRules?.requiredSurfaceCoverage)
+    ? state.rules.liveIterationExecutionRules.requiredSurfaceCoverage
+    : DEFAULT_REQUIRED_SURFACES;
+  const pageOrder = buildPageOrder(manifest, requiredSurfaces);
+  ticketization.currentPageId = getCurrentPageId(pageOrder, queue);
   ticketization.remainingCheckIds = [
     `queue:workflow/state/live_micro_check_queue.json:${progressSummary.totalChecks}`,
     `issues:${issues}`,
@@ -252,12 +348,17 @@ function main() {
 
   const summaryBySurface = summarizeBySurface(enrichedQueue);
   const statusCounts = countByStatus(enrichedQueue);
+  const unresolvedChecks = (statusCounts.PENDING || 0)
+    + (statusCounts.PENDING_NO_ROUTE_EVIDENCE || 0)
+    + (statusCounts.BROWSER_EVIDENCE_REQUIRED || 0)
+    + (statusCounts.RUNTIME_EVIDENCE_REQUIRED || 0)
+    + (statusCounts.ISSUE_DETECTED || 0);
   const progress = {
     generatedAt: new Date().toISOString(),
     sourceManifest: path.relative(ROOT_DIR, MANIFEST_FILE).replace(/\\/g, '/'),
     sourceSweep: path.relative(ROOT_DIR, SWEEP_FILE).replace(/\\/g, '/'),
     totalChecks: enrichedQueue.length,
-    unresolvedChecks: enrichedQueue.length,
+    unresolvedChecks,
     issueDetectedChecks: statusCounts.ISSUE_DETECTED || 0,
     browserEvidenceRequiredChecks: statusCounts.BROWSER_EVIDENCE_REQUIRED || 0,
     runtimeEvidenceRequiredChecks: statusCounts.RUNTIME_EVIDENCE_REQUIRED || 0,
@@ -271,7 +372,7 @@ function main() {
     queueStatus: enrichedQueue,
   });
 
-  updateWorkflowState(progress);
+  updateWorkflowState(progress, manifest, enrichedQueue);
 
   console.log(`Updated ${path.relative(ROOT_DIR, QUEUE_FILE)}`);
   console.log(`Updated ${path.relative(ROOT_DIR, PROGRESS_FILE)}`);

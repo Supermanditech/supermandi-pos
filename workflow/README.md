@@ -66,6 +66,8 @@ This directory enforces the Live Fix -> Freeze -> Production workflow with machi
 - `workflow:session-boot` auto-stamps ticket bootstrap metadata and validates ticket integrity immediately.
 - Enforces production invariants per ticket (sell/purchase isolation, deterministic scan intent, state parity, offline sync safety, idempotency, atomic writes, strict schema validation, zero silent failures, structured audit logging).
 - Enforces production-grade coding ethics (`rules.productionGradeCodingEthics`): no partial closure, no sub-100% progress claims, and fail-layer blocking for enforced ticket statuses (with optional all-layers-pass mode).
+- Enforces sequential live ticketization page gate (`rules.liveIterationExecutionRules.pageByPageGate`): during `ticketization`, Claude must complete every micro-check on the current manifest page before any later page can have resolved checks.
+- Enforces `progress.liveIteration.ticketization.currentPageId` to match the first incomplete manifest page, enabling automatic next-page targeting and no-skip progression.
 - `pnpm workflow:monitor` reports ticket-by-ticket guard failures and writes `workflow/state/live_monitor_report.json`.
 - Enforces staging batch cap from `workflow/state/workflow_state.json`:
   - frontend-only batch: max `3` screens

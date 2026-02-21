@@ -13,6 +13,7 @@ Use this template for each new micro ticket discovered during live staging testi
 ## Required Live Evidence (Section 2G)
 
 - Staging URL or flow:
+- Must include at least one live URL under `https://staging.supermandi.tech/...` (no localhost, no local env, no non-staging host).
 - Observation timestamp (UTC/IST):
 - Runtime evidence:
   - HTTP response/status:
@@ -53,4 +54,3 @@ Use this template for each new micro ticket discovered during live staging testi
 
 - Why this is production-impacting:
 - Rollback-safe fix hint:
-

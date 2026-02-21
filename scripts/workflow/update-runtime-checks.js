@@ -8,8 +8,23 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
+const MANIFEST_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'live_page_manifest.json');
 const PROGRESS_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'live_ticketization_progress.json');
 const STATE_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'workflow_state.json');
+const DEFAULT_REQUIRED_SURFACES = [
+  'retailer_web',
+  'supplier_web',
+  'superadmin_web',
+  'pos_app',
+  'cross_function_matrix',
+];
+const UNRESOLVED_STATUSES = new Set([
+  'PENDING',
+  'PENDING_NO_ROUTE_EVIDENCE',
+  'BROWSER_EVIDENCE_REQUIRED',
+  'RUNTIME_EVIDENCE_REQUIRED',
+  'IN_PROGRESS',
+]);
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -20,6 +35,83 @@ function writeJson(filePath, payload) {
 }
 
 const REV = 'rev:api-gw-00061-qjt|mb-00078-ljm|ret-00061-wt5|sup-00056-wk6|sa-00054-547|land-00054-2l6';
+
+function buildPageOrder(manifest, requiredSurfaces = DEFAULT_REQUIRED_SURFACES) {
+  const pages = [];
+  const seen = new Set();
+  const pushPage = (surface, route, url = '') => {
+    const normalizedSurface = String(surface || '').trim();
+    const normalizedRoute = String(route || '').trim();
+    if (!normalizedSurface || !normalizedRoute) return;
+    const key = `${normalizedSurface}|${normalizedRoute}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    pages.push({
+      key,
+      surface: normalizedSurface,
+      route: normalizedRoute,
+      url: String(url || '').trim(),
+    });
+  };
+
+  for (const surface of requiredSurfaces) {
+    if (surface === 'pos_app') {
+      const endpoints = Array.isArray(manifest?.pos_app?.criticalEndpoints) ? manifest.pos_app.criticalEndpoints : [];
+      for (const endpoint of endpoints) {
+        pushPage('pos_app', endpoint, endpoint);
+      }
+      continue;
+    }
+    if (surface === 'cross_function_matrix') {
+      const flows = Array.isArray(manifest?.crossFunctionMatrix) ? manifest.crossFunctionMatrix : [];
+      for (const flow of flows) {
+        const flowId = String(flow?.flowId || '').trim();
+        const route = flowId || String(flow?.entryUrl || '').trim();
+        pushPage('cross_function_matrix', route, flow?.entryUrl || '');
+      }
+      continue;
+    }
+    const entries = Array.isArray(manifest?.surfaces?.[surface]) ? manifest.surfaces[surface] : [];
+    for (const entry of entries) {
+      pushPage(surface, entry?.route || '', entry?.url || '');
+    }
+  }
+  return pages;
+}
+
+function isCheckResolved(check) {
+  const status = String(check?.status || '').trim();
+  if (!status) return false;
+  if (UNRESOLVED_STATUSES.has(status)) return false;
+  if (status === 'ISSUE_DETECTED') return Boolean(String(check?.ticketId || '').trim());
+  return true;
+}
+
+function getCurrentPageId(pageOrder, queue) {
+  const queueByPage = new Map();
+  for (const check of queue) {
+    const surface = String(check?.surface || '').trim();
+    const route = String(check?.route || '').trim();
+    if (!surface || !route) continue;
+    const key = `${surface}|${route}`;
+    if (!queueByPage.has(key)) {
+      queueByPage.set(key, []);
+    }
+    queueByPage.get(key).push(check);
+  }
+
+  for (const page of pageOrder) {
+    const checks = queueByPage.get(page.key) || [];
+    if (checks.length === 0) {
+      return page.key;
+    }
+    const incomplete = checks.some((check) => !isCheckResolved(check));
+    if (incomplete) {
+      return page.key;
+    }
+  }
+  return 'COMPLETE';
+}
 
 function getEvidence(surface, route, check) {
   // Only process RUNTIME_EVIDENCE_REQUIRED checks
@@ -165,6 +257,14 @@ function main() {
     const issues = statusCounts.ISSUE_DETECTED || 0;
 
     ticketization.statement = `NOT COMPLETE - runtime verified=${verified}, issues=${issues}, browser_pending=${browser}, runtime_remaining=${runtime}`;
+    if (fs.existsSync(MANIFEST_FILE)) {
+      const manifest = readJson(MANIFEST_FILE);
+      const requiredSurfaces = Array.isArray(state?.rules?.liveIterationExecutionRules?.requiredSurfaceCoverage)
+        ? state.rules.liveIterationExecutionRules.requiredSurfaceCoverage
+        : DEFAULT_REQUIRED_SURFACES;
+      const pageOrder = buildPageOrder(manifest, requiredSurfaces);
+      ticketization.currentPageId = getCurrentPageId(pageOrder, queue);
+    }
     ticketization.lastUpdatedAt = new Date().toISOString();
     state.updatedAt = new Date().toISOString();
     writeJson(STATE_FILE, state);

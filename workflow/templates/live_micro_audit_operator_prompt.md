@@ -15,6 +15,7 @@ Mandatory source of truth:
 Hard rules:
 - No local-only assumptions. No code-audit-only closure. Evidence must come from staging runtime/browser.
 - No sampling and no page skipping.
+- Page-by-page gate is mandatory: complete all micro-checks for current page (`progress.liveIteration.ticketization.currentPageId`) before touching the next page.
 - Cover every route/flow/component/action from manifest.
 - One issue = one atomic ticket.
 - Do not start implementation or deploy.
@@ -27,6 +28,11 @@ Execution order (strict):
 4) POS app
 5) Cross-function matrix
 6) Ticket quality gate
+
+Page cursor control:
+- Start with `pnpm workflow:ticketization:refresh` to initialize queue and set current page pointer.
+- After finishing each page, refresh/update progress so `currentPageId` advances automatically.
+- `pnpm workflow:validate` must stay PASS; any page-skip violation means stop and return to the first incomplete page.
 
 For each micro-check, validate all 8 layers:
 - ui
@@ -63,4 +69,3 @@ Output format required at end:
 
 Do not move to implementation/deploy in this run.
 ```
-
