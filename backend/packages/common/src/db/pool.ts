@@ -65,7 +65,8 @@ export function getPool(config?: DbConfig): Pool {
         min: parseInt(process.env['DB_POOL_MIN'] || '2', 10),
         max: parseInt(process.env['DB_POOL_MAX'] || '10', 10),
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        // Cloud SQL Unix socket cold start can take 15-20s; 5s was causing unhandled rejections
+        connectionTimeoutMillis: 30000,
       };
     } else {
       envConfig = {
@@ -78,7 +79,8 @@ export function getPool(config?: DbConfig): Pool {
         min: parseInt(process.env['DB_POOL_MIN'] || '2', 10),
         max: parseInt(process.env['DB_POOL_MAX'] || '10', 10),
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        // Cloud SQL Unix socket cold start can take 15-20s; 5s was causing unhandled rejections
+        connectionTimeoutMillis: 30000,
       };
     }
     pool = new Pool(envConfig);
@@ -93,7 +95,7 @@ export function getPool(config?: DbConfig): Pool {
       min: config.poolMin ?? 2,
       max: config.poolMax ?? 10,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 30000,
     };
     pool = new Pool(poolConfig);
   }
