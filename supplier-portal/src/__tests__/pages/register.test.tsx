@@ -68,9 +68,9 @@ describe('RegisterPageWrapper (Registration Page)', () => {
     jest.clearAllMocks();
   });
 
-  it('renders Register as Supplier heading', () => {
+  it('renders registration heading', () => {
     render(<RegisterPageWrapper />);
-    expect(screen.getByText('Register as Supplier')).toBeInTheDocument();
+    expect(screen.getByText('Register your account')).toBeInTheDocument();
   });
 
   it('renders registration subtitle', () => {
@@ -87,7 +87,7 @@ describe('RegisterPageWrapper (Registration Page)', () => {
 
   it('renders phone number input on first step', () => {
     render(<RegisterPageWrapper />);
-    expect(screen.getByText('Verify Your Phone Number')).toBeInTheDocument();
+    expect(screen.getByText('Verify your phone number')).toBeInTheDocument();
     expect(screen.getByLabelText(/Phone Number/)).toBeInTheDocument();
   });
 

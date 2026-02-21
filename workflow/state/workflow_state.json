@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-21T12:43:04.761Z",
+  "updatedAt": "2026-02-21T17:36:46.703Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -282,6 +282,11 @@
         {
           "from": "blocked",
           "to": "in_progress",
+          "actor": "claude"
+        },
+        {
+          "from": "blocked",
+          "to": "todo",
           "actor": "claude"
         },
         {
@@ -685,9 +690,9 @@
       ],
       "requireValidatedDeploymentRef": true,
       "requireDeploymentRefMatch": true,
-      "lastSuccessfulStagingDeployRef": "github://run/22257577143",
-      "lastSuccessfulStagingDeployAt": "2026-02-21T13:33:50Z",
-      "lastSuccessfulStagingCommitSha": "686c0b3",
+      "lastSuccessfulStagingDeployRef": "github://run/22260688109",
+      "lastSuccessfulStagingDeployAt": "2026-02-21T15:30:00Z",
+      "lastSuccessfulStagingCommitSha": "5db6c84",
       "requireStagingCommitShaEvidence": false,
       "requireCloudRunRevisionIds": true,
       "requireRuntimeEvidence": true,
@@ -761,7 +766,7 @@
       },
       "implementation": {
         "complete": false,
-        "summary": "13/15 STAGE tickets DONE. 2 BLOCKED (IAM_EDITOR_ROLE needs dedicated SA, BRAND needs operator input). RETAILER.AUTH.PROBE_PATH.001 verified already implemented.",
+        "summary": "13/15 STAGE tickets DONE. IAM_EDITOR_ROLE remains BLOCKED (needs dedicated SA). BRAND is OPERATOR-APPROVED and moved to pending execution in next staging deploy cycle after deploy run 22260688109 (SHA 5db6c84). RETAILER.AUTH.PROBE_PATH.001 verified already implemented.",
         "remainingTicketIds": [
           "STAGE.BRAND.LOGO_CONSISTENCY.001",
           "STAGE.SECURITY.IAM_EDITOR_ROLE.001"
@@ -782,13 +787,13 @@
           "STAGE.COST.BUDGET_ALERTS.001",
           "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001"
         ],
-        "lastUpdatedAt": "2026-02-21T14:40:00.000Z"
+        "lastUpdatedAt": "2026-02-21T15:30:00.000Z"
       }
     }
   },
   "summary": {
     "totalTickets": 17,
-    "activeTickets": 17,
+    "activeTickets": 3,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,

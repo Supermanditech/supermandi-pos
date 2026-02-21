@@ -650,12 +650,12 @@ function RegisterPage() {
     <div className="space-y-8">
       {/* Page Title */}
       <div className="text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-          {step === 'success' ? 'Application Submitted' : 'Register as Supplier'}
+        <h2 className="text-[1.75rem] font-bold text-slate-900">
+          {step === 'success' ? 'Application Submitted' : 'Register your account'}
         </h2>
         {step !== 'success' && (
           <p className="text-slate-600 mt-2">
-            Complete the registration form to join SuperMandi as a supplier partner
+            Complete the registration form to join SuperMandi
           </p>
         )}
       </div>
@@ -691,7 +691,7 @@ function RegisterPage() {
                       )}
                     </div>
                     <span
-                      className={`ml-3 text-sm font-medium hidden sm:block ${
+                      className={`ml-3 text-sm font-medium ${
                         isActive ? 'text-primary-600' : isCompleted ? 'text-green-600' : 'text-slate-500'
                       }`}
                     >
@@ -734,10 +734,10 @@ function RegisterPage() {
 
       {/* Step 1: Phone Number - Centered card for phone entry */}
       {step === 'phone' && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Verify Your Phone Number</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Verify your phone number</h3>
           <p className="text-slate-600 text-sm mb-6">
-            We&apos;ll send a one-time password (OTP) to verify your phone number
+            We&apos;ll send a verification code to confirm your identity.
           </p>
 
           <form onSubmit={handleSendOtp} className="space-y-6">
@@ -788,7 +788,7 @@ function RegisterPage() {
 
       {/* Step 1b: OTP Verification - Centered card */}
       {step === 'otp' && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
           <h3 className="text-lg font-semibold text-slate-900 mb-2">Enter Verification Code</h3>
           <p className="text-slate-600 text-sm mb-6">
             Enter the 6-digit code sent to <strong>{phone}</strong>
@@ -1098,7 +1098,14 @@ function RegisterPage() {
                 disabled={isLoading}
               />
               <span className="text-slate-700">
-                I confirm that all the details provided are correct and accurate. I agree to the Terms of Service and Privacy Policy. *
+                I confirm that all the details provided are correct and accurate. I agree to the{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-600 underline">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary-600 underline">
+                  Privacy Policy
+                </a>. *
               </span>
             </label>
           </div>
@@ -1322,22 +1329,27 @@ function RegisterPage() {
 
       {/* Step 4: Success */}
       {step === 'success' && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 sm:p-12 max-w-xl mx-auto text-center">
-          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-amber-600 mb-3">
-            Pending Verification
+          <h3 className="text-2xl font-semibold text-slate-900 mb-2">
+            Application Submitted
           </h3>
-          <p className="text-slate-600 mb-6 text-lg">
-            Your supplier application has been submitted for review.
-            You will receive a notification once your account is approved.
+          <p className="text-slate-600 mb-6 text-sm">
+            Your registration is pending verification. We&apos;ll review your documents and notify you shortly.
           </p>
-          <div className="bg-slate-50 rounded-lg p-4 mb-8">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-slate-500">Application ID</p>
             <p className="font-mono text-slate-900">{applicationId}</p>
+          </div>
+          <div className="text-[13px] text-slate-500 mb-4">
+            Need help? Contact us at{' '}
+            <a href="mailto:hello@supermandi.tech" className="text-primary-600">
+              hello@supermandi.tech
+            </a>
           </div>
           <button
             className="btn btn-primary w-full py-4 text-base font-semibold"

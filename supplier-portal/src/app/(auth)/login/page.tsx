@@ -313,7 +313,7 @@ export default function LoginPage() {
 
       {step === 'phone' && authMode === 'password' && (
         <p className="text-slate-600 text-sm mb-6">
-          Sign in with your email and password
+          Sign in with your account and password
         </p>
       )}
 
@@ -382,7 +382,7 @@ export default function LoginPage() {
               className="text-primary-600 hover:text-primary-700 font-medium"
               onClick={() => { setAuthMode('password'); setError(''); }}
             >
-              Sign in with email &amp; password instead
+              Sign in with password instead
             </button>
           </p>
         </form>
@@ -443,7 +443,7 @@ export default function LoginPage() {
               className="text-primary-600 hover:text-primary-700 font-medium"
               onClick={() => { setAuthMode('otp'); setError(''); setEmail(''); setPassword(''); }}
             >
-              Sign in with phone OTP instead
+              Sign in with OTP instead
             </button>
           </p>
         </form>

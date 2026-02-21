@@ -6,7 +6,7 @@
   "riskClass": "high",
   "title": "Unify SuperMandi logo treatment across landing, retailer, supplier, superadmin, and POS activation/login gates",
   "description": "Brand consistency rollout: selected v3-c3 stacked shortmark with full wordmark in white over blue background. Apply across all pre-login and post-login entry points (web + POS) and carry into staging verification flow under FIX-001.",
-  "status": "blocked",
+  "status": "todo",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -99,7 +99,7 @@
     "migrationSafetyChecked": true,
     "rollbackPlanReady": true,
     "stagingDeployPassed": false,
-    "stagingDeploymentRef": "github://run/22240364165",
+    "stagingDeploymentRef": "github://run/22260688109",
     "cloudWorkspaceValidated": true,
     "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
   },
@@ -163,7 +163,7 @@
     "nonBlockingIssueCount": 0,
     "noBlockingIssueRemaining": false,
     "evidenceAttached": false,
-    "validatedDeploymentRef": "github://run/22240364165",
+    "validatedDeploymentRef": "github://run/22260688109",
     "validatedCloudRunRevisionIds": [
       "main-backend-00065-n22",
       "api-gateway-00048-6kg",
@@ -183,6 +183,16 @@
       "sessionId": "session-staging-hardening-2026-02-21",
       "prevHash": "GENESIS",
       "hash": "c94764b8a0004530a967bb7b770fad6ddaa18ed15da49904f8277a8c1b002999"
+    },
+    {
+      "from": "blocked",
+      "to": "todo",
+      "actor": "claude",
+      "sessionId": "session-brand-unblock-2026-02-21",
+      "at": "2026-02-21T17:36:46.694Z",
+      "reason": "Operator approved final brand direction; queue for next staging deploy cycle.",
+      "prevHash": "c94764b8a0004530a967bb7b770fad6ddaa18ed15da49904f8277a8c1b002999",
+      "hash": "0c17d59d0df5d87134363c3db2c9fbacd0899feee94e4e007d45f378777016de"
     }
   ],
   "evidence": {
@@ -211,13 +221,14 @@
     ],
     "apiProof": [],
     "parityProof": [
-      "BLOCKED: Requires operator design input for logo/brand consistency",
-      "No automated fix possible — brand assets require human decision"
+      "OPERATOR APPROVED: finalized logo direction provided.",
+      "Deploy reference baseline: github://run/22260688109 (commit 5db6c84).",
+      "Pending execution in next staging deploy cycle with post-deploy parity evidence capture."
     ]
   },
   "timestamps": {
-    "createdAt": "2026-02-21T01:22:30.503Z",
-    "updatedAt": "2026-02-21T14:41:03.429Z",
+    "createdAt": "2026-02-21T15:31:00.000Z",
+    "updatedAt": "2026-02-21T17:36:46.695Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -275,9 +286,7 @@
       "Staging deploy evidence for updated branding",
       "Operator signoff (laptop + Redmi)"
     ],
-    "blockers": [
-      "BLOCKED: Needs operator design input for brand asset consistency."
-    ],
+    "blockers": [],
     "disclosedToOperator": true,
     "operatorAcknowledged": true,
     "notes": "No third-party dependency required; closure waits on staging deploy and operator evidence."
@@ -340,8 +349,8 @@
       "Collect Cloud Run revision and URL evidence",
       "Operator cross-device signoff"
     ],
-    "blocked": true,
-    "summary": "BLOCKED: Needs operator design input for brand asset consistency."
+    "blocked": false,
+    "summary": "OPERATOR APPROVED: brand consistency rollout is queued for the next staging deploy cycle; pending deploy evidence and operator cross-device signoff."
   },
   "gitDiscipline": {
     "workBranch": "main",

@@ -359,7 +359,7 @@ export default function LoginPage() {
             )}
 
             {step === 'phone' && authMode === 'password' && (
-              <p className="login-card-subtitle">Sign in with your phone number and password</p>
+              <p className="login-card-subtitle">Sign in with your account and password</p>
             )}
 
             {step === 'otp' && (

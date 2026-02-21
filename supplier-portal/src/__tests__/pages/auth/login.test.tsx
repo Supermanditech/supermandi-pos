@@ -88,13 +88,13 @@ describe('LoginPage', () => {
 
   it('shows toggle to password login', () => {
     render(<LoginPage />);
-    const toggle = screen.getByText(/Sign in with email/);
+    const toggle = screen.getByText('Sign in with password instead');
     expect(toggle).toBeInTheDocument();
   });
 
   it('switches to password login mode', () => {
     render(<LoginPage />);
-    fireEvent.click(screen.getByText(/Sign in with email/));
+    fireEvent.click(screen.getByText('Sign in with password instead'));
     expect(screen.getByLabelText('Email Address')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByText('Sign In')).toBeInTheDocument();
@@ -102,14 +102,14 @@ describe('LoginPage', () => {
 
   it('switches back to OTP mode', () => {
     render(<LoginPage />);
-    fireEvent.click(screen.getByText(/Sign in with email/));
-    fireEvent.click(screen.getByText(/Sign in with phone OTP/));
+    fireEvent.click(screen.getByText('Sign in with password instead'));
+    fireEvent.click(screen.getByText('Sign in with OTP instead'));
     expect(screen.getByLabelText('Phone Number')).toBeInTheDocument();
   });
 
   it('validates empty email in password mode', async () => {
     render(<LoginPage />);
-    fireEvent.click(screen.getByText(/Sign in with email/));
+    fireEvent.click(screen.getByText('Sign in with password instead'));
     fireEvent.click(screen.getByText('Sign In'));
     await waitFor(() => {
       expect(screen.getByText('Please enter your email address')).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('LoginPage', () => {
 
   it('validates empty password in password mode', async () => {
     render(<LoginPage />);
-    fireEvent.click(screen.getByText(/Sign in with email/));
+    fireEvent.click(screen.getByText('Sign in with password instead'));
     fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
     fireEvent.click(screen.getByText('Sign In'));
     await waitFor(() => {

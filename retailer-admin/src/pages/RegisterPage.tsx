@@ -597,10 +597,10 @@ export default function RegisterPage() {
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.5rem' }}>
-              Register as Retailer
+              Register your account
             </h1>
             <p style={{ color: '#64748b', fontSize: '0.9375rem' }}>
-              Complete the registration form to join SuperMandi as a retail partner
+              Complete the registration form to join SuperMandi
             </p>
           </div>
 

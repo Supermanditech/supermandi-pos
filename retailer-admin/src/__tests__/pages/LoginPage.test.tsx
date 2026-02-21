@@ -170,7 +170,7 @@ describe('Password login mode', () => {
 
     fireEvent.click(screen.getByText('Sign in with password instead'));
 
-    expect(screen.getByText('Sign in with your phone number and password')).toBeInTheDocument();
+    expect(screen.getByText('Sign in with your account and password')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g. MYSTORE')).toBeInTheDocument();
   });
@@ -278,7 +278,7 @@ describe('Password login mode', () => {
     renderLoginPage();
 
     fireEvent.click(screen.getByText('Sign in with password instead'));
-    expect(screen.getByText('Sign in with your phone number and password')).toBeInTheDocument();
+    expect(screen.getByText('Sign in with your account and password')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Sign in with OTP instead'));
     expect(screen.getByText(/Enter your registered phone number/)).toBeInTheDocument();

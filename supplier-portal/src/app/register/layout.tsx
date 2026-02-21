@@ -11,29 +11,32 @@ export default function RegisterLayout({
     <div className="min-h-screen bg-[#F7F9FC]">
       {/* Top Header Bar - 64px height per spec */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 h-16 flex items-center">
-        <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div className="max-w-[720px] w-full mx-auto px-6 flex items-center">
           <div className="flex items-center gap-3">
-            <img src="/supplier/brand/logo-shortmark.svg" alt="" width={24} height={24} />
             <h1 className="text-2xl font-semibold text-white bg-[#2563EB] rounded-full px-3 py-1 leading-none">
               SuperMandi
             </h1>
             <span className="text-slate-400">|</span>
             <span className="text-slate-600 text-sm font-medium">Supplier Portal</span>
           </div>
-{/* REG-SUP-001: "Already registered? Sign In" link removed per requirement */}
         </div>
       </header>
 
-      {/* Main Content - Wide Container (960-1120px per spec) */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content - Retailer parity width */}
+      <main className="max-w-[720px] mx-auto px-4 py-8">
         {children}
       </main>
 
       {/* Footer - minimal, muted per spec */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-[13px] text-slate-500">
-          &copy; 2026 SuperMandi Tech Pvt Ltd. All rights reserved.
-          <BuildStamp />
+        <div className="max-w-[720px] mx-auto px-4 py-4 text-[13px] text-slate-500 flex items-center justify-between">
+          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <div className="flex items-center gap-4">
+            <a href="/supplier/help" className="text-slate-400 text-xs no-underline hover:underline">
+              Help
+            </a>
+            <BuildStamp />
+          </div>
         </div>
       </footer>
 
