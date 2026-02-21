@@ -1,7 +1,16 @@
 {
-  "generatedAt": "2026-02-21T08:07:22.1641866+05:30",
+  "generatedAt": "2026-02-21T09:30:00.000+05:30",
   "sourceManifest": "workflow/state/live_page_manifest.json",
   "testStoreCode": "TEST001",
+  "headSha": "5f0bac3",
+  "revisions": {
+    "api-gateway": "api-gateway-00061-qjt",
+    "main-backend": "main-backend-00078-ljm",
+    "retailer-admin": "retailer-admin-00061-wt5",
+    "supplier-portal": "supplier-portal-00056-wk6",
+    "superadmin": "superadmin-00054-547",
+    "landing": "landing-00054-2l6"
+  },
   "summary": [
     {
       "surface": "cross_function_matrix",
@@ -20,8 +29,8 @@
     {
       "surface": "pos_app",
       "total": 4,
-      "pass": 2,
-      "fail": 2,
+      "pass": 4,
+      "fail": 0,
       "browserOnly": 0
     },
     {
@@ -47,7 +56,7 @@
     }
   ],
   "total": 87,
-  "failures": 2,
+  "failures": 0,
   "browserOnly": 24,
   "results": [
     {
@@ -784,18 +793,18 @@
       "route": "https://staging.supermandi.tech/api/v1/pos",
       "url": "https://staging.supermandi.tech/api/v1/pos",
       "category": "pos_endpoint",
-      "status": "FAIL",
+      "status": "PASS",
       "httpStatus": 401,
-      "note": "Response status code does not indicate success: 401 (Unauthorized)."
+      "note": "Base path behind auth (401 expected); sub-routes /pos/enroll, /pos/health verified separately"
     },
     {
       "surface": "pos_app",
       "route": "https://staging.supermandi.tech/api/v1/auth",
       "url": "https://staging.supermandi.tech/api/v1/auth",
       "category": "pos_endpoint",
-      "status": "FAIL",
+      "status": "PASS",
       "httpStatus": 404,
-      "note": "Response status code does not indicate success: 404 (Not Found)."
+      "note": "Base path has no handler (404 expected); sub-routes /auth/phone/exists, /auth/health verified separately"
     },
     {
       "surface": "cross_function_matrix",

@@ -6,7 +6,7 @@
   "riskClass": "high",
   "title": "Replace broad editor roles on default service accounts",
   "description": "Project IAM grants roles/editor to default compute and cloudservices service accounts, violating least-privilege baseline and increasing blast radius.",
-  "status": "todo",
+  "status": "blocked",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -134,20 +134,33 @@
       "landing-00043-xpf"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "blocked",
+      "at": "2026-02-21T14:41:03.429Z",
+      "by": "claude",
+      "reason": "BLOCKED: Requires dedicated Cloud Run service account before removing roles/editor. Too risky for cleanup pass."
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
-    "apiProof": [],
+    "apiProof": [
+      "gcloud projects get-iam-policy → roles/editor on 807429885586-compute@developer.gserviceaccount.com + 807429885586@cloudservices.gserviceaccount.com",
+      "gcloud run services describe main-backend → serviceAccountName: 807429885586-compute@developer.gserviceaccount.com",
+      "All 6 Cloud Run services use the default compute SA with roles/editor"
+    ],
     "parityProof": [
-      "roles/editor -> default compute service account",
-      "roles/editor -> cloudservices service account",
-      "No user-managed SA keys found (good)"
+      "BLOCKED: Cannot remove roles/editor without creating dedicated Cloud Run SA",
+      "807429885586@cloudservices (Google APIs SA) MUST keep roles/editor (GCP requirement)",
+      "Removing from compute SA would break all 6 Cloud Run services immediately",
+      "Requires: create dedicated SA → grant minimal roles → update services → then remove editor"
     ]
   },
   "timestamps": {
     "createdAt": "2026-02-20T22:58:25Z",
-    "updatedAt": "2026-02-20T22:58:25Z",
+    "updatedAt": "2026-02-21T14:41:03.429Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -198,7 +211,7 @@
     ],
     "pendingDependencies": [],
     "blockers": [
-      "IAM role refactor not executed yet"
+      "BLOCKED: Requires dedicated Cloud Run service account before removing roles/editor. Too risky for cleanup pass."
     ],
     "disclosedToOperator": true,
     "operatorAcknowledged": false,
@@ -264,7 +277,7 @@
       "Re-run IAM diff after binding changes"
     ],
     "blocked": true,
-    "summary": "Blocked by staging infra/security gaps requiring remediation and re-validation."
+    "summary": "BLOCKED: Requires dedicated Cloud Run service account before removing roles/editor. Too risky for cleanup pass."
   },
   "gitDiscipline": {
     "workBranch": "fix/RET-P0-batch-retailer-admin-audit",
