@@ -1,6 +1,6 @@
 {
-  "version": "33.0",
-  "lastUpdated": "2026-02-21T02:02:41.881Z",
+  "version": "37.0",
+  "lastUpdated": "2026-02-21T14:45:00.000Z",
   "currentPhase": "LIVE-ITERATION QUALITY MODE — cumulative staging deploy, then full-surface micro ticketization, then ticket-wise implementation.",
   "currentTicket": "FIX-001",
   "ticketQueue": [
@@ -12,7 +12,9 @@
     "LIVE.SECURITY.CACHE_HEADERS.001",
     "LIVE.RETAILER.SPA_SHELL.001",
     "LIVE.SUPPLIER.FAVICON_PATH.001",
-    "STAGE.BRAND.LOGO_CONSISTENCY.001"
+    "STAGE.BRAND.LOGO_CONSISTENCY.001",
+    "LIVE.SECURITY.XPOWEREDBY.001",
+    "LIVE.SECURITY.CSP_API.001"
   ],
   "ticketStatus": {
     "T-054": "DONE",
@@ -422,10 +424,26 @@
     "LIVE.BACKEND.PROXY_404.001": "DONE_GCP_INFRA",
     "LIVE.BACKEND.CONN_TIMEOUT.001": "DONE_CODE_MERGED",
     "LIVE.BACKEND.POS_HEALTH.001": "DONE_CODE_MERGED",
-    "LIVE.SECURITY.CACHE_HEADERS.001": "DONE_IN_NGINX_CONFIG",
+    "LIVE.SECURITY.CACHE_HEADERS.001": "DONE_VERIFIED_ON_STAGING",
     "LIVE.RETAILER.SPA_SHELL.001": "DONE_VERIFIED_ON_STAGING",
     "LIVE.SUPPLIER.FAVICON_PATH.001": "DONE_CODE_MERGED",
-    "STAGE.BRAND.LOGO_CONSISTENCY.001": "IN_PROGRESS"
+    "STAGE.BRAND.LOGO_CONSISTENCY.001": "BLOCKED_OPERATOR_INPUT",
+    "LIVE.SECURITY.XPOWEREDBY.001": "DONE_VERIFIED_ON_STAGING",
+    "LIVE.SECURITY.CSP_API.001": "DONE_VERIFIED_ON_STAGING",
+    "STAGE.SECURITY.POSTURE_API_COVERAGE.001": "DONE_GCP_INFRA",
+    "STAGE.SECURITY.AUDIT_LOG_DATA_ACCESS.001": "DONE_GCP_INFRA",
+    "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001": "DONE_GCP_INFRA",
+    "STAGE.NETWORK.VPC_BASELINE.001": "DONE_GCP_INFRA",
+    "STAGE.SECURITY.SECRET_ROTATION.001": "DONE_GCP_INFRA",
+    "STAGE.NETWORK.FIREWALL_WORLD_OPEN.001": "DONE_GCP_INFRA",
+    "STAGE.DB.CLOUDSQL_PUBLIC_IP.001": "DONE_GCP_INFRA",
+    "STAGE.ENV.BOUNDARY.ISOLATION.001": "DONE_GCP_INFRA",
+    "STAGE.COST.BUDGET_ALERTS.001": "DONE_GCP_INFRA",
+    "STAGE.OBS.ALERTING_UPTIME.001": "DONE_GCP_INFRA",
+    "STAGE.SECURITY.CORS_ORIGINS.001": "DONE_VERIFIED_ON_STAGING",
+    "STAGE.SECURITY.INGRESS_BOUNDARY.001": "DONE_VERIFIED_ON_STAGING",
+    "STAGE.OBS.HISTORICAL_5XX.001": "DONE_VERIFIED_ON_STAGING",
+    "STAGE.SECURITY.IAM_EDITOR_ROLE.001": "BLOCKED_NEEDS_DEDICATED_SA"
   },
   "executionPhases": [
     {
@@ -1437,10 +1455,18 @@
   },
   "infraStatus": {
     "A1_WIF": "DONE",
-    "A2_SECRETS": "DONE — 9 secrets in GCP Secret Manager (5 original + 4 WhatsApp)",
+    "A2_SECRETS": "DONE — 9 secrets in GCP Secret Manager (5 original + 4 WhatsApp) + rotation labels",
     "A3_DEPLOY": "DEPLOY-READY — Part 18 discipline written. Awaiting operator trigger.",
-    "Cloud_SQL": "HARDENED",
+    "Cloud_SQL": "HARDENED — private IP only (10.33.48.3), public IP removed, VPC peering active",
     "Redis": "HARDENED",
+    "Firewall": "HARDENED — 8 world-open rules disabled, 2 kept (internal + scoped SSH)",
+    "CertBoundary": "ISOLATED — staging proxy has staging cert only",
+    "AuditLogging": "ENABLED — cloudsql, run, secretmanager, iam (ADMIN_READ + DATA_READ + DATA_WRITE)",
+    "SecurityAPIs": "ENABLED — securitycenter, containeranalysis, binaryauthorization",
+    "Budget": "ACTIVE — ₹5000/month, 50%/80%/100% thresholds, project-scoped",
+    "UptimeChecks": "ACTIVE — 5 checks (api, landing, retailer, admin, supplier) + alert policy",
+    "VPCBaseline": "HARDENED — Private Google Access + Flow Logs (0.5 sampling) on asia-south1",
+    "StorageBucket": "HARDENED — uniform bucket-level access + public access prevention",
     "ZRP_Protocol": "ENFORCED — 185 gates active",
     "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
   },
@@ -1690,7 +1716,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "P0/P1 staging remediations DONE. PR #418 merged (68039c9). GCP infra fixes applied: URL map /s/* routes, VPC egress all-traffic, min-instances=1. 47-endpoint sweep zero 404s (3 runs). Brand consistency (STAGE.BRAND.LOGO_CONSISTENCY.001) in progress. Next: commit brand changes, deploy, verify on staging.",
+  "nextAction": "GCP STAGING HARDENING COMPLETE. 13/15 STAGE tickets DONE, 2 BLOCKED. Cloud SQL private IP (10.33.48.3, public removed). 8 firewall rules disabled. Cert boundary isolated. Audit logging on 4 services. 5 uptime checks + alert policy. Budget ₹5000/month. Staging verified healthy after all changes. BLOCKED: IAM_EDITOR_ROLE (needs dedicated SA), BRAND (needs operator input). All ticket JSONs updated with evidence. Next: commit state changes, produce final A-E summary, then await operator for production promotion.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -1705,15 +1731,23 @@
     "pr": "#288"
   },
   "lastActions": [
-    "PR #418 merged as 68039c9 — POS health endpoint + supplier favicon path + DB connection timeout 30s.",
-    "LIVE.URLMAP.STORE_ROUTES.001 FIXED: GCP URL map updated with /s, /s/* → retailer-backend (fingerprint wUxvs8rsXJY=).",
-    "LIVE.BACKEND.PROXY_404.001 FIXED: api-gateway VPC egress changed to all-traffic (revision api-gateway-00055-8qs). Root cause: Cloud Run ingress internal-and-cloud-load-balancing + private-ranges-only egress = 404 for Cloud Run-to-Cloud Run calls.",
-    "LIVE.BACKEND.CONN_TIMEOUT.001 FIXED: connectionTimeoutMillis increased to 30s in both client.ts and pool.ts (3 locations). Cloud SQL cold start takes 15-20s.",
-    "main-backend min-instances set to 1 (revision main-backend-00072-s9z) to prevent scale-to-zero cold start delays.",
-    "Full HTTP sweep: 47 endpoints tested, zero 404s. 3 stability runs (02:23:27Z, 02:24:00Z, 02:32:37Z) all pass.",
-    "GCP state file updated: memory/GCP_STAGING_STATE.md reflects URL map, VPC egress, min-instances changes.",
-    "STAGE.BRAND.LOGO_CONSISTENCY.001 in progress: brand SVGs updated to stacking-layer v3-c3, shared BrandShortmark component, cross-portal consistency.",
-    "All 7 LIVE.* tickets resolved (5 code+infra, 2 verified on staging). Ticket states updated in CLAUDE_CURRENT_STATE.json."
+    "GCP STAGING HARDENING — 13/15 tickets DONE, 2 BLOCKED.",
+    "Cloud SQL: public IP removed, private IP 10.33.48.3 via VPC peering. All services healthy.",
+    "Firewall: 8 world-open rules disabled (RDP, SSH, HTTP/S, ICMP, app ports, vpc-connector-egress).",
+    "Cert boundary: staging proxy now only has staging cert (prod cert removed).",
+    "Audit logging: ADMIN_READ + DATA_READ + DATA_WRITE on cloudsql, run, secretmanager, iam.",
+    "Security APIs: securitycenter, containeranalysis, binaryauthorization enabled.",
+    "Storage: uniform bucket-level access + public access prevention on cloudbuild bucket.",
+    "VPC: Private Google Access + Flow Logs (0.5 sampling) on asia-south1 subnet.",
+    "Secrets: 10/10 labeled with rotation governance (cadence=90d, owner=operator).",
+    "Budget: ₹5000/month with 50%/80%/100% thresholds.",
+    "Monitoring: 5 uptime checks (api, landing, retailer, admin, supplier) + alert policy.",
+    "CORS verified: production origins rejected, staging origins accepted.",
+    "Ingress verified: internal-and-cloud-load-balancing on api-gateway.",
+    "5XX canary: deploy.yml Gate 12 verified working.",
+    "BLOCKED: IAM_EDITOR_ROLE (all 6 Cloud Run services use default compute SA with roles/editor).",
+    "BLOCKED: BRAND (needs operator design input).",
+    "All 15 ticket JSONs updated with evidence and status."
   ],
   "liveDeployTicketizationControl": {
     "status": "ACTIVE",
@@ -1771,9 +1805,9 @@
     "status": "ACTIVE",
     "requiredBeforeTicketIntake": true,
     "enforceFrom": "2026-02-21T00:00:00Z",
-    "lastSuccessfulStagingDeployRef": "github://run/22240364165",
-    "lastSuccessfulStagingDeployAt": "2026-02-20T19:18:24Z",
-    "lastSuccessfulStagingCommitSha": "1332ec8",
+    "lastSuccessfulStagingDeployRef": "github://run/22257577143",
+    "lastSuccessfulStagingDeployAt": "2026-02-21T13:33:50Z",
+    "lastSuccessfulStagingCommitSha": "686c0b3",
     "requiredPerTicket": [
       "operatorChecks.validatedDeploymentRef matches deploy ref",
       "timestamps.createdAt after successful deploy timestamp",

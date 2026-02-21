@@ -67,6 +67,9 @@ Machine-state contract (mandatory):
   - `ticketization.complete` + statement + per-surface coverage + remaining checks
   - `implementation.complete` + remaining ticket IDs
 - `pnpm workflow:pre-staging` must fail unless phase is `deploy` and both ticketization + implementation are complete.
+- `RELEASES/CLAUDE_CURRENT_STATE.json` must stay narrative-aligned:
+  - include `NOT COMPLETE` + `ticketization` in `nextAction` while ticketization is incomplete
+  - no deploy/closure claims until machine gates are satisfied
 
 ### 100% Completion Rule (Hard Stop Against Score-Only Reporting)
 

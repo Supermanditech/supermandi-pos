@@ -446,7 +446,8 @@ export async function sendEnrollmentCode(
 // PORTAL_BASE_URL and POS_APP_DOWNLOAD_URL are set in deploy.yml per environment.
 // =============================================================================
 
-const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.supermanditech.supermandipos";
+const DEFAULT_PLAY_STORE_URL = "https://play.google.com/apps/testing/com.supermanditech.supermandipos";
+const PLAY_STORE_URL = process.env.POS_APP_DOWNLOAD_URL || DEFAULT_PLAY_STORE_URL;
 const APP_STORE_URL = process.env.APP_STORE_URL || ""; // Set after first iOS submission
 
 function getWelcomeUrls() {

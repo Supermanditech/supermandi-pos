@@ -256,6 +256,37 @@ Mandatory rules:
 5. Coverage source for this gate is mandatory:
    - `workflow/state/live_page_manifest.json`
 
+## 2M. Claude Current State Narrative Sync Gate (Machine-Enforced)
+
+When `progress.liveIteration.phase = ticketization` and ticketization is `NOT COMPLETE`:
+
+1. `RELEASES/CLAUDE_CURRENT_STATE.json.nextAction` must explicitly contain `NOT COMPLETE` and `ticketization`.
+2. `nextAction` must not contain deploy/commit-forward closure language.
+3. `lastActions` must not include global closure claims (for example "all LIVE tickets resolved") while ticketization is incomplete.
+4. Any `ticketStatus.<ticketId>` in `RELEASES/CLAUDE_CURRENT_STATE.json` cannot be `DONE*` if the corresponding workflow ticket is still active.
+
+## 2N. Locked Brand Asset Sync (Play Store + Facebook/OG) (Machine-Enforced)
+
+For active branding and store-profile sync cycles, Claude must treat these files as canonical and locked:
+
+1. `supermandi-landing/playstore-assets/developer-icon-512.png`
+2. `supermandi-landing/playstore-assets/developer-header-4096x2304.jpg`
+3. `supermandi-landing/playstore-assets/preview-local.html`
+
+Mandatory rules:
+
+1. Claude must update only canonical filenames above (no final-v* references in final output paths).
+2. `preview-local.html` must reference canonical filenames only.
+3. Play Console dimensions and limits must remain valid:
+   - icon: `512x512`, PNG/JPEG, `< 1 MB`
+   - header: `4096x2304`, PNG/JPEG, `< 1 MB`
+4. Staging propagation path is `supermandi-landing/` image build + deploy via `.github/workflows/deploy.yml` (`landing` service).
+5. Facebook/OpenGraph parity must be kept in sync with locked branding:
+   - `supermandi-landing/og-image.png` (recommended `1200x630`)
+   - OG meta tags in `supermandi-landing/index.html`
+   - OG meta tags in `supermandi-landing/pos.html`
+6. Claude cannot mark brand sync complete until staging deploy evidence for `landing` is captured (run/ref + timestamp).
+
 ## 2C. Tracking Protocol (Codex + Claude)
 
 At each retry, Claude must publish a short checkpoint containing:
@@ -305,6 +336,13 @@ No silent retries.
 - `workflow/templates/staging_batch.example.json`
 - `workflow/templates/ticket.example.json`
 - `workflow/tickets/.gitkeep`
+- `supermandi-landing/playstore-assets/developer-icon-512.png`
+- `supermandi-landing/playstore-assets/developer-header-4096x2304.jpg`
+- `supermandi-landing/playstore-assets/preview-local.html`
+- `supermandi-landing/og-image.png`
+- `supermandi-landing/index.html`
+- `supermandi-landing/pos.html`
+- `.github/workflows/deploy.yml`
 
 ## 4. Guardrails
 
@@ -321,4 +359,6 @@ No silent retries.
 - For ticket intake quality, Claude must enforce Section 2G: new tickets must be sourced from live GCP staging evidence.
 - For ticket intake timing, Claude must enforce Section 2H: no new ticket intake before successful staging deploy evidence.
 - For active live-iteration execution order, Claude must enforce Section 2L machine phase gates (ticketization -> implementation -> deploy) with no bypass.
+- For active ticketization phases, Claude must also enforce Section 2M narrative sync checks for `RELEASES/CLAUDE_CURRENT_STATE.json` (no premature closure language).
+- For locked Play/Facebook brand assets, Claude must enforce Section 2N canonical file sync and staging `landing` deploy evidence.
 - Claude must read `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md` in every FIX-001 session before attempting deploy.
