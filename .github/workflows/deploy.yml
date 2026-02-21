@@ -396,6 +396,7 @@ jobs:
           service_account: ${{ secrets.GCP_SA_EMAIL }}
 
       # ISSUE-MICRO-038: Verify all images exist in AR before deploying
+      # Retries 3 times with 30s delay — AR metadata API can lag behind docker push
       - name: Verify image digests in Artifact Registry
         run: |
           echo "Verifying all 6 images exist in AR before deploy..."
@@ -403,23 +404,36 @@ jobs:
             api-gateway main-backend
             retailer-admin supplier-portal superadmin landing
           )
-          FAILED=0
-          for img in "${IMAGES[@]}"; do
-            FULL_IMAGE="${{ env.AR_REPO }}/${img}:${{ env.SHA }}"
-            DIGEST=$(gcloud artifacts docker images describe "$FULL_IMAGE" \
-              --format="value(image_summary.digest)" 2>/dev/null || echo "")
-            if [ -z "$DIGEST" ]; then
-              echo "FAIL: $FULL_IMAGE not found in Artifact Registry"
-              FAILED=$((FAILED + 1))
-            else
-              echo "OK: ${img}:${{ env.SHA }} → ${DIGEST}"
+          MAX_ATTEMPTS=3
+          DELAY=30
+          for attempt in $(seq 1 $MAX_ATTEMPTS); do
+            echo ""
+            echo "=== Attempt $attempt/$MAX_ATTEMPTS ==="
+            FAILED=0
+            for img in "${IMAGES[@]}"; do
+              FULL_IMAGE="${{ env.AR_REPO }}/${img}:${{ env.SHA }}"
+              DIGEST=$(gcloud artifacts docker images describe "$FULL_IMAGE" \
+                --format="value(image_summary.digest)" 2>&1 || echo "")
+              if echo "$DIGEST" | grep -q "^sha256:"; then
+                echo "OK: ${img}:${{ env.SHA }} → ${DIGEST}"
+              else
+                echo "MISS: ${img}:${{ env.SHA }} (not yet indexed)"
+                FAILED=$((FAILED + 1))
+              fi
+            done
+            if [ $FAILED -eq 0 ]; then
+              echo ""
+              echo "All 6 images verified in Artifact Registry."
+              exit 0
+            fi
+            if [ $attempt -lt $MAX_ATTEMPTS ]; then
+              echo "Waiting ${DELAY}s for AR metadata propagation..."
+              sleep $DELAY
             fi
           done
-          if [ $FAILED -gt 0 ]; then
-            echo "BLOCKED: $FAILED images missing from AR. Cannot deploy."
-            exit 1
-          fi
-          echo "All 6 images verified in Artifact Registry."
+          echo ""
+          echo "BLOCKED: $FAILED images still missing after $MAX_ATTEMPTS attempts. Cannot deploy."
+          exit 1
 
       # STAGE-020: GCP CLI Parity Gate — validate gcloud run deploy flags
       # BEFORE any deploy. Prevents pipeline failures from invalid flag syntax.
