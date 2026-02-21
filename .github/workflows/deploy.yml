@@ -1025,11 +1025,11 @@ jobs:
           MAX_RETRIES=3
           FAILED=0
           for portal in retailer-admin supplier-portal superadmin landing; do
-            PATH="${PORTAL_PATHS[$portal]}"
+            BASE_PATH="${PORTAL_PATHS[$portal]}"
             PORTAL_PASS=false
             for attempt in $(seq 1 $MAX_RETRIES); do
-              STATUS=$(curl -sL --max-time ${{ env.CURL_TIMEOUT }} -o /dev/null -w "%{http_code}" "${{ env.STAGING_URL }}${PATH}" 2>/dev/null || echo "000")
-              echo "  $portal attempt $attempt: HTTP $STATUS (${{ env.STAGING_URL }}${PATH})"
+              STATUS=$(curl -sL --max-time ${{ env.CURL_TIMEOUT }} -o /dev/null -w "%{http_code}" "${{ env.STAGING_URL }}${BASE_PATH}" 2>/dev/null || echo "000")
+              echo "  $portal attempt $attempt: HTTP $STATUS (${{ env.STAGING_URL }}${BASE_PATH})"
               if [ "$STATUS" = "200" ]; then
                 echo "  PASS: $portal — HTTP 200"
                 PORTAL_PASS=true
