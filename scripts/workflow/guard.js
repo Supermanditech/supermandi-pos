@@ -422,6 +422,12 @@ const LIVE_EXECUTION_DEFAULT_BLOCKED_STATUSES = [
   'in_progress',
   'ready_for_operator_test',
 ];
+const PRODUCTION_ETHICS_DEFAULT_STATUSES = [
+  'ready_for_operator_test',
+  'ready_for_impact_retest',
+  'ready_for_lock',
+  'locked',
+];
 
 function normalizeStringArray(value) {
   if (!Array.isArray(value)) {
@@ -485,6 +491,51 @@ function getLiveIterationProgress(state) {
 
 function normalizeLowerStringArray(value) {
   return normalizeStringArray(value).map((item) => item.toLowerCase());
+}
+
+function getProductionGradeCodingEthicsRules(state) {
+  const rules = state?.rules?.productionGradeCodingEthics || {};
+  const enforceStatuses = normalizeStringArray(rules.enforceStatuses);
+  const progressPercentScanFields = normalizeStringArray(rules.progressPercentScanFields);
+  const exemptTicketIds = normalizeStringArray(rules.exemptTicketIds);
+  return {
+    enabled: rules.enabled !== false,
+    enforceStatuses: enforceStatuses.length > 0
+      ? enforceStatuses
+      : PRODUCTION_ETHICS_DEFAULT_STATUSES,
+    exemptTicketIds,
+    forbidLayerFailInEnforcedStatuses: rules.forbidLayerFailInEnforcedStatuses !== false,
+    requireAllRequiredLayersPass: rules.requireAllRequiredLayersPass !== false,
+    requiredLayersSource: isNonEmptyString(rules.requiredLayersSource)
+      ? rules.requiredLayersSource.trim()
+      : 'rules.ticketRules.requiredLayerChecklist',
+    requireNoPendingReadinessItems: rules.requireNoPendingReadinessItems !== false,
+    requireNoBlockingOperatorIssues: rules.requireNoBlockingOperatorIssues !== false,
+    disallowProgressPercentBelow100: rules.disallowProgressPercentBelow100 !== false,
+    progressPercentScanFields: progressPercentScanFields.length > 0
+      ? progressPercentScanFields
+      : ['description', 'readiness.summary'],
+  };
+}
+
+function getRequiredTicketLayersFromState(state) {
+  const configured = normalizeStringArray(state?.rules?.ticketRules?.requiredLayerChecklist);
+  return configured.length > 0 ? configured : [...REQUIRED_LAYERS];
+}
+
+function readNestedStringField(source, dottedPath) {
+  if (!source || typeof source !== 'object' || !isNonEmptyString(dottedPath)) {
+    return '';
+  }
+  const parts = dottedPath.split('.').map((part) => part.trim()).filter(Boolean);
+  let cursor = source;
+  for (const part of parts) {
+    if (!cursor || typeof cursor !== 'object' || !(part in cursor)) {
+      return '';
+    }
+    cursor = cursor[part];
+  }
+  return typeof cursor === 'string' ? cursor : '';
 }
 
 function getClaudeCurrentStateSyncRules(state) {
@@ -1743,6 +1794,86 @@ function validateReadinessSection(ticket, label, status) {
   return errors;
 }
 
+function validateProductionGradeCodingEthics(ticket, label, state) {
+  const errors = [];
+  const rules = getProductionGradeCodingEthicsRules(state);
+  if (!rules.enabled) {
+    return errors;
+  }
+  if (rules.exemptTicketIds.includes(ticket.ticketId)) {
+    return errors;
+  }
+  if (!rules.enforceStatuses.includes(ticket.status)) {
+    return errors;
+  }
+
+  const layers = ticket.layers || {};
+  const requiredLayers = getRequiredTicketLayersFromState(state);
+  if (rules.forbidLayerFailInEnforcedStatuses) {
+    for (const layer of requiredLayers) {
+      if (layers[layer] === 'fail') {
+        errors.push(
+          `${label}: status ${ticket.status} cannot keep layers.${layer}=fail (production-grade tickets cannot be partial)`
+        );
+      }
+    }
+  }
+  if (rules.requireAllRequiredLayersPass) {
+    for (const layer of requiredLayers) {
+      if (layers[layer] !== 'pass') {
+        errors.push(
+          `${label}: status ${ticket.status} requires layers.${layer}=pass (production-grade 100% completion; no partial closure)`
+        );
+      }
+    }
+  }
+
+  if (rules.requireNoPendingReadinessItems) {
+    const readiness = ticket.readiness || {};
+    const pendingInternal = Array.isArray(readiness.pendingInternal) ? readiness.pendingInternal : [];
+    const pendingExternal = Array.isArray(readiness.pendingExternal) ? readiness.pendingExternal : [];
+    const pendingOps = Array.isArray(readiness.pendingOps) ? readiness.pendingOps : [];
+    if (pendingInternal.length > 0 || pendingExternal.length > 0 || pendingOps.length > 0) {
+      errors.push(
+        `${label}: status ${ticket.status} requires readiness.pendingInternal/pendingExternal/pendingOps to be empty (no partial work)`
+      );
+    }
+    if (readiness.blocked === true) {
+      errors.push(`${label}: status ${ticket.status} requires readiness.blocked=false`);
+    }
+  }
+
+  if (rules.requireNoBlockingOperatorIssues) {
+    const blockingIssueCount = ticket?.operatorChecks?.blockingIssueCount;
+    if (!Number.isInteger(blockingIssueCount) || blockingIssueCount > 0) {
+      errors.push(`${label}: status ${ticket.status} requires operatorChecks.blockingIssueCount=0`);
+    }
+    if (ticket?.operatorChecks?.noBlockingIssueRemaining !== true) {
+      errors.push(`${label}: status ${ticket.status} requires operatorChecks.noBlockingIssueRemaining=true`);
+    }
+  }
+
+  if (rules.disallowProgressPercentBelow100) {
+    for (const fieldPath of rules.progressPercentScanFields) {
+      const text = readNestedStringField(ticket, fieldPath);
+      if (!isNonEmptyString(text)) {
+        continue;
+      }
+      const matches = text.matchAll(/(\d+(?:\.\d+)?)\s*%/g);
+      for (const match of matches) {
+        const value = Number.parseFloat(match[1]);
+        if (!Number.isNaN(value) && value < 100) {
+          errors.push(
+            `${label}: ${fieldPath} contains ${match[0]} but enforced statuses require explicit 100% production-grade completion`
+          );
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
 function validateGitDisciplineSection(ticket, label, status) {
   const errors = [];
   const section = ticket.gitDiscipline;
@@ -2327,6 +2458,7 @@ function validateTicketObject(ticket, label, state) {
   }
 
   errors.push(...validateTicketGatesByStatus(ticket, label, state));
+  errors.push(...validateProductionGradeCodingEthics(ticket, label, state));
   errors.push(...validateLiveTicketIntakeGate(ticket, label, state));
 
   const ticketTransitions = getTicketTransitions(state);
@@ -2881,6 +3013,49 @@ function validateState(context, options = {}) {
           claudeStateSyncRules[field].some((item) => !isNonEmptyString(item)))
       ) {
         errors.push(`rules.claudeCurrentStateSyncRules.${field} must be an array of non-empty strings when provided`);
+      }
+    }
+  }
+
+  const productionEthicsRules = state?.rules?.productionGradeCodingEthics;
+  if (
+    productionEthicsRules !== undefined &&
+    (productionEthicsRules === null || typeof productionEthicsRules !== 'object' || Array.isArray(productionEthicsRules))
+  ) {
+    errors.push('rules.productionGradeCodingEthics must be an object when provided');
+  } else if (productionEthicsRules && typeof productionEthicsRules === 'object') {
+    if (
+      productionEthicsRules.enforceStatuses !== undefined &&
+      (!Array.isArray(productionEthicsRules.enforceStatuses) ||
+        productionEthicsRules.enforceStatuses.some((status) => !TICKET_STATUS_VALUES.has(status)))
+    ) {
+      errors.push('rules.productionGradeCodingEthics.enforceStatuses must be an array of valid ticket statuses');
+    }
+    if (
+      productionEthicsRules.progressPercentScanFields !== undefined &&
+      (!Array.isArray(productionEthicsRules.progressPercentScanFields) ||
+        productionEthicsRules.progressPercentScanFields.some((item) => !isNonEmptyString(item)))
+    ) {
+      errors.push('rules.productionGradeCodingEthics.progressPercentScanFields must be an array of non-empty strings');
+    }
+    if (
+      productionEthicsRules.exemptTicketIds !== undefined &&
+      (!Array.isArray(productionEthicsRules.exemptTicketIds) ||
+        productionEthicsRules.exemptTicketIds.some((item) => !isNonEmptyString(item)))
+    ) {
+      errors.push('rules.productionGradeCodingEthics.exemptTicketIds must be an array of non-empty strings');
+    }
+    const boolFields = [
+      'enabled',
+      'forbidLayerFailInEnforcedStatuses',
+      'requireAllRequiredLayersPass',
+      'requireNoPendingReadinessItems',
+      'requireNoBlockingOperatorIssues',
+      'disallowProgressPercentBelow100',
+    ];
+    for (const field of boolFields) {
+      if (productionEthicsRules[field] !== undefined && !isBoolean(productionEthicsRules[field])) {
+        errors.push(`rules.productionGradeCodingEthics.${field} must be boolean when provided`);
       }
     }
   }

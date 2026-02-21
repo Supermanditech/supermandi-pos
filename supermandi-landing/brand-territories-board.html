@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SuperMandi Brand Territories</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(circle at 10% -20%, #dbeafe 0%, #eef2ff 22%, var(--bg) 55%);
+      color: var(--text);
+      font-family: Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: -0.03em;
+    }
+    .sub {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+    }
+    .chip {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      background: #eef2ff;
+      color: #4338ca;
+    }
+    h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+    .tone {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 36px;
+    }
+    .hero {
+      min-height: 80px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .name {
+      font-family: "Space Grotesk", Manrope, sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      color: #334155;
+    }
+    .meta > div {
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 8px;
+      background: #f8fafc;
+    }
+    .swatches {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .sw {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+    .footer {
+      margin-top: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+    }
+    code {
+      font-size: 12px;
+      background: #eef2ff;
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Different Approach: Brand Territories First</h1>
+  <p class="sub">
+    Instead of random logo rounds, choose a <strong>territory</strong>. Then I’ll craft one final production logo system from that territory.
+  </p>
+
+  <div class="grid">
+    <section class="card">
+      <span class="chip">T1</span>
+      <h2>Control Plane Infrastructure</h2>
+      <p class="tone">SuperMandi as the mission-critical commerce operating system (serious, reliable, enterprise).</p>
+      <div class="hero">
+        <svg width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="#1D4ED8"/>
+          <circle cx="16" cy="16" r="3.2" fill="#fff"/>
+          <circle cx="8.5" cy="9.5" r="1.4" fill="#93c5fd"/>
+          <circle cx="23.5" cy="9.5" r="1.4" fill="#93c5fd"/>
+          <circle cx="8.5" cy="22.5" r="1.4" fill="#93c5fd"/>
+          <circle cx="23.5" cy="22.5" r="1.4" fill="#93c5fd"/>
+        </svg>
+        <div class="name">SuperMandi</div>
+      </div>
+      <div class="meta">
+        <div>
+          <strong>Typography</strong><br />
+          Space Grotesk + Manrope
+        </div>
+        <div>
+          <strong>Shape Logic</strong><br />
+          Structured grid / control nodes
+        </div>
+        <div>
+          <strong>Brand Voice</strong><br />
+          Precise, dependable, scalable
+        </div>
+        <div>
+          <strong>Color System</strong>
+          <div class="swatches">
+            <span class="sw" style="background:#1D4ED8"></span>
+            <span class="sw" style="background:#2563EB"></span>
+            <span class="sw" style="background:#0F172A"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <span class="chip">T2</span>
+      <h2>Live Commerce Flow Network</h2>
+      <p class="tone">Manufacturer selling and retailer buying in one real-time movement (dynamic, connected, modern).</p>
+      <div class="hero">
+        <svg width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="#0284C7"/>
+          <path d="M8 11.5c2.6 0 2.6 3.2 5.2 3.2s2.6-3.2 5.2-3.2 2.6 3.2 5.2 3.2" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M8 20.5c2.6 0 2.6-3.2 5.2-3.2s2.6 3.2 5.2 3.2 2.6-3.2 5.2-3.2" stroke="#bae6fd" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </svg>
+        <div class="name">SuperMandi</div>
+      </div>
+      <div class="meta">
+        <div>
+          <strong>Typography</strong><br />
+          Space Grotesk + Manrope
+        </div>
+        <div>
+          <strong>Shape Logic</strong><br />
+          Twin-flow ribbons / bridge
+        </div>
+        <div>
+          <strong>Brand Voice</strong><br />
+          Real-time, connected, active
+        </div>
+        <div>
+          <strong>Color System</strong>
+          <div class="swatches">
+            <span class="sw" style="background:#0284C7"></span>
+            <span class="sw" style="background:#0EA5E9"></span>
+            <span class="sw" style="background:#0F172A"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <span class="chip">T3</span>
+      <h2>AI Trade Intelligence Layer</h2>
+      <p class="tone">Future-facing AI/ML decision engine powering B2B2C supply chain automation (smart, global, forward).</p>
+      <div class="hero">
+        <svg width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="14" fill="#4338CA"/>
+          <circle cx="16" cy="16" r="9.5" fill="none" stroke="#c7d2fe" stroke-width="1.2"/>
+          <path d="M9.2 11.2h6.2a2.2 2.2 0 0 1 0 4.4h-2.8a2.2 2.2 0 0 0 0 4.4h6.2" stroke="#fff" stroke-width="1.9" stroke-linecap="round" fill="none"/>
+          <circle cx="24.5" cy="14.8" r="1.1" fill="#fff"/>
+        </svg>
+        <div class="name">SuperMandi</div>
+      </div>
+      <div class="meta">
+        <div>
+          <strong>Typography</strong><br />
+          Space Grotesk + Manrope
+        </div>
+        <div>
+          <strong>Shape Logic</strong><br />
+          Orbit, signal, intelligence node
+        </div>
+        <div>
+          <strong>Brand Voice</strong><br />
+          Predictive, global, advanced
+        </div>
+        <div>
+          <strong>Color System</strong>
+          <div class="swatches">
+            <span class="sw" style="background:#4338CA"></span>
+            <span class="sw" style="background:#6366F1"></span>
+            <span class="sw" style="background:#0F172A"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer">
+    Choose territory: <strong>Approve T1</strong>, <strong>Approve T2</strong>, or <strong>Approve T3</strong>.<br />
+    File: <code>supermandi-landing/brand-territories-board.html</code>
+  </div>
+</body>
+</html>

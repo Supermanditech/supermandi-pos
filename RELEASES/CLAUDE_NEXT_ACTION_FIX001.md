@@ -1,5 +1,35 @@
 # CLAUDE NEXT ACTION: FIX-001 (Live Iteration Batch-First)
 
+## Deploy Hold Override (Effective 2026-02-21, Immediate)
+
+This override is ACTIVE and takes precedence over older deploy-now wording in this file.
+
+### Operator-Approved Execution Scope (Only These Tickets)
+
+Claude must execute only this batch, in implementation mode:
+
+1. `LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001`
+2. `LIVE.AUTH.PARITY.FORGOT_PASSWORD_CHANNELS.001`
+3. `LIVE.AUTH.PARITY.RESET_PASSWORD_EXECUTION.001`
+4. `LIVE.AUTH.PARITY.LOGIN_COPY_LINKS.001`
+5. `LIVE.AUTH.PARITY.LOGIN_CONTAINER.001`
+6. `LIVE.AUTH.PARITY.REGISTER_HEADER_COPY.001`
+7. `LIVE.AUTH.PARITY.REGISTER_CARD_WIDTH.001`
+8. `LIVE.AUTH.PARITY.REGISTER_SUCCESS_LEGAL.001`
+9. `LIVE.AUTH.PARITY.AUTH_FOOTER_BUILDSTAMP.001`
+10. `STAGE.BRAND.LOGO_CONSISTENCY.001`
+
+### Deploy Approved (Effective 2026-02-22)
+
+- All 10 tickets implemented on `main` at SHA `55aad06a`, CI green (PRs #424 + #425 merged).
+- Operator has approved staging deploy for SHA `55aad06a`.
+- Run `pnpm workflow:pre-staging:attempt` to trigger deploy.
+
+### Baseline Context
+
+- Previous staging deploy: `github://run/22260688109` on SHA `5db6c84`
+- Current deploy target: SHA `55aad06a` (includes auth parity + brand consistency)
+
 ## Priority Override (Effective 2026-02-21, Immediate)
 
 This override is ACTIVE now and takes precedence over older deploy-first wording in this file if any conflict exists.

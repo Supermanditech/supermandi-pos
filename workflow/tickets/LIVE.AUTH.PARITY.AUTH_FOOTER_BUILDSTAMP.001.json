@@ -159,7 +159,18 @@
       "landing-00043-xpf"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "ready_for_operator_test",
+      "to": "todo",
+      "actor": "claude",
+      "sessionId": "SESSION-RECONCILE-2026-02-22",
+      "at": "2026-02-22T22:00:00Z",
+      "reason": "State reconciliation: downgrade from ready_for_operator_test to todo — staging deploy of 55aad06a is pending; code is CI-green but no staging/operator evidence exists for the fix commit; WIP limit 1 requires non-WIP status for parked tickets",
+      "prevHash": "GENESIS",
+      "hash": "2e2483e3fc7a8c344ca4d7f1f570fcd6ae097245f6cc9ef3ae7a25454ff81c91"
+    }
+  ],
   "evidence": {
     "beforeVisual": [
       "https://staging.supermandi.tech/supplier/login/",
@@ -169,20 +180,20 @@
     ],
     "afterVisual": [],
     "apiProof": [
-      "deploy_ref=github://run/22260688109",
-      "staging_commit=5db6c84",
+      "observation_deploy_ref=github_run_22260688109",
+      "observation_commit=5db6c84",
       "api_health_200=https://staging.supermandi.tech/api/health"
     ],
     "parityProof": [
       "staging_visual_review_at=2026-02-22T00:15:00Z",
-      "observed_on_commit=5db6c84",
+      "observed_on_staging_commit_5db6c84",
       "compare_supplier_vs_retailer_auth_surfaces",
       "rescan_2026-02-21_footer_buildstamp_locked"
     ]
   },
   "timestamps": {
     "createdAt": "2026-02-22T00:15:00Z",
-    "updatedAt": "2026-02-21T18:41:31Z",
+    "updatedAt": "2026-02-22T22:00:00Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -195,7 +206,7 @@
     "evidence": [
       "https://staging.supermandi.tech/supplier/login/",
       "https://staging.supermandi.tech/retailer/login",
-      "staging_commit=5db6c84"
+      "observation_commit=5db6c84_staging_baseline"
     ]
   },
   "externalIntegrations": {
@@ -302,16 +313,15 @@
   },
   "gitDiscipline": {
     "workBranch": "main",
-    "changeScope": "LIVE.AUTH.PARITY.AUTH_FOOTER_BUILDSTAMP.001",
-    "lastValidatedCommit": "8fecebec",
-    "noMixedScope": false,
+    "changeScope": "LIVE-AUTH-PARITY-BATCH-10-TICKETS",
+    "lastValidatedCommit": "55aad06a",
+    "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "git rev-parse --short HEAD",
-      "pnpm workflow:validate",
-      "pnpm workflow:monitor",
-      "deploy_ref=github://run/22260688109"
+      "ci_pr_424_merged=https://github.com/Supermanditech/supermandi-pos/pull/424",
+      "ci_pr_425_merged=https://github.com/Supermanditech/supermandi-pos/pull/425",
+      "all_22_gates_green_on_55aad06a"
     ]
   }
 }

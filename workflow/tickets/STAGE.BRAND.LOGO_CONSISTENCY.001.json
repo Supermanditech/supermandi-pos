@@ -175,24 +175,14 @@
   },
   "statusHistory": [
     {
-      "from": "todo",
-      "to": "blocked",
-      "at": "2026-02-21T14:41:03.429Z",
-      "reason": "BLOCKED: Needs operator design input for brand asset consistency.",
-      "actor": "claude",
-      "sessionId": "session-staging-hardening-2026-02-21",
-      "prevHash": "GENESIS",
-      "hash": "c94764b8a0004530a967bb7b770fad6ddaa18ed15da49904f8277a8c1b002999"
-    },
-    {
-      "from": "blocked",
+      "from": "ready_for_operator_test",
       "to": "todo",
       "actor": "claude",
-      "sessionId": "session-brand-unblock-2026-02-21",
-      "at": "2026-02-21T17:36:46.694Z",
-      "reason": "Operator approved final brand direction; queue for next staging deploy cycle.",
-      "prevHash": "c94764b8a0004530a967bb7b770fad6ddaa18ed15da49904f8277a8c1b002999",
-      "hash": "0c17d59d0df5d87134363c3db2c9fbacd0899feee94e4e007d45f378777016de"
+      "sessionId": "SESSION-RECONCILE-2026-02-22",
+      "at": "2026-02-22T22:00:00Z",
+      "reason": "State reconciliation: downgrade from ready_for_operator_test to todo — staging deploy of 55aad06a is pending; code is CI-green but no staging/operator evidence exists for the fix commit; WIP limit 1 requires non-WIP status for parked tickets",
+      "prevHash": "GENESIS",
+      "hash": "2e2483e3fc7a8c344ca4d7f1f570fcd6ae097245f6cc9ef3ae7a25454ff81c91"
     }
   ],
   "evidence": {
@@ -228,7 +218,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-21T15:31:00.000Z",
-    "updatedAt": "2026-02-21T17:36:46.695Z",
+    "updatedAt": "2026-02-22T22:00:00Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -354,16 +344,15 @@
   },
   "gitDiscipline": {
     "workBranch": "main",
-    "changeScope": "STAGE.BRAND.LOGO_CONSISTENCY.001",
-    "lastValidatedCommit": "eee590d",
-    "noMixedScope": false,
+    "changeScope": "LIVE-AUTH-PARITY-BATCH-10-TICKETS",
+    "lastValidatedCommit": "55aad06a",
+    "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "git status --short",
-      "node scripts/workflow/guard.js sync-state",
-      "pnpm workflow:validate",
-      "pnpm workflow:monitor"
+      "ci_pr_424_merged=https://github.com/Supermanditech/supermandi-pos/pull/424",
+      "ci_pr_425_merged=https://github.com/Supermanditech/supermandi-pos/pull/425",
+      "all_22_gates_green_on_55aad06a"
     ]
   }
 }

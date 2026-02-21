@@ -1,0 +1,264 @@
+{
+  "schemaVersion": "1.0.0",
+  "stateMachineId": "LIVE_STAGING_MICRO_AUDIT",
+  "updatedAt": "2026-02-21T00:00:00Z",
+  "owner": "codex",
+  "purpose": "Exhaustive staging-only micro audit and ticketization across retailer, supplier, superadmin, POS, and cross-function flows with no screen skipping.",
+  "sourceOfTruth": {
+    "environment": "gcp_staging",
+    "baseUrl": "https://staging.supermandi.tech",
+    "manifestFile": "workflow/state/live_page_manifest.json",
+    "queueFile": "workflow/state/live_micro_check_queue.json",
+    "progressFile": "workflow/state/live_ticketization_progress.json",
+    "ticketDirectory": "workflow/tickets"
+  },
+  "executionPolicy": {
+    "stagingOnlyEvidence": true,
+    "allowCodeAuditOnlyEvidence": false,
+    "allowLocalOnlyEvidence": false,
+    "allowAssumptionOnlyEvidence": false,
+    "noSampling": true,
+    "noScreenSkipping": true,
+    "noComponentSkipping": true,
+    "oneIssueOneTicket": true,
+    "ticketizationBeforeImplementation": true,
+    "implementationBeforeDeploy": true,
+    "deployHoldUntilOperatorApproval": true,
+    "operatorIntent": "park_at_git_until_batch_deploy"
+  },
+  "requiredChecksPerMicroItem": [
+    "ui",
+    "ux",
+    "wiring",
+    "navigation",
+    "api_contract",
+    "backend_behavior",
+    "db_migration_impact",
+    "gcp_staging_parity"
+  ],
+  "requiredSurfacesInOrder": [
+    "retailer_web",
+    "supplier_web",
+    "superadmin_web",
+    "pos_app",
+    "cross_function_matrix"
+  ],
+  "authMicroFlows": {
+    "retailer_web": [
+      "login_password",
+      "login_otp",
+      "forgot_password",
+      "register_full_form_with_documents",
+      "post_register_success"
+    ],
+    "supplier_web": [
+      "login_email_password",
+      "login_otp",
+      "forgot_password",
+      "register_full_form_with_documents",
+      "post_register_success"
+    ],
+    "superadmin_web": [
+      "login_email_otp",
+      "unauthorized_access_copy",
+      "otp_request_validation"
+    ],
+    "pos_app": [
+      "auth_bootstrap",
+      "device_registration",
+      "scan_to_cart",
+      "checkout_and_payment_handoff",
+      "offline_online_recovery"
+    ]
+  },
+  "phaseStateMachine": {
+    "initialState": "manifest_sync",
+    "terminalStates": [
+      "ticketization_complete",
+      "blocked"
+    ],
+    "states": [
+      {
+        "id": "manifest_sync",
+        "allowedNext": [
+          "retailer_web_audit",
+          "blocked"
+        ],
+        "entryCriteria": [
+          "workflow/state/live_page_manifest.json exists",
+          "workflow/state/live_micro_check_queue.json exists",
+          "workflow/state/live_ticketization_progress.json exists"
+        ],
+        "exitCriteria": [
+          "all manifest routes and flows loaded as audit checklist",
+          "coverage counters initialized for each required surface"
+        ]
+      },
+      {
+        "id": "retailer_web_audit",
+        "allowedNext": [
+          "supplier_web_audit",
+          "blocked"
+        ],
+        "entryCriteria": [
+          "manifest_sync complete"
+        ],
+        "exitCriteria": [
+          "every retailer route from manifest has all 8 checks marked PASS, ISSUE_TICKETED, or BLOCKED",
+          "retailer auth micro flows tested end-to-end using browser with runtime evidence",
+          "all retailer issues ticketized atomically"
+        ]
+      },
+      {
+        "id": "supplier_web_audit",
+        "allowedNext": [
+          "superadmin_web_audit",
+          "blocked"
+        ],
+        "entryCriteria": [
+          "retailer_web_audit complete"
+        ],
+        "exitCriteria": [
+          "every supplier route from manifest has all 8 checks marked PASS, ISSUE_TICKETED, or BLOCKED",
+          "supplier auth micro flows tested end-to-end using browser with runtime evidence",
+          "all supplier issues ticketized atomically"
+        ]
+      },
+      {
+        "id": "superadmin_web_audit",
+        "allowedNext": [
+          "pos_app_audit",
+          "blocked"
+        ],
+        "entryCriteria": [
+          "supplier_web_audit complete"
+        ],
+        "exitCriteria": [
+          "every superadmin route/section from manifest has all 8 checks marked PASS, ISSUE_TICKETED, or BLOCKED",
+          "superadmin auth micro flows tested end-to-end with runtime evidence",
+          "all superadmin issues ticketized atomically"
+        ]
+      },
+      {
+        "id": "pos_app_audit",
+        "allowedNext": [
+          "cross_function_audit",
+          "blocked"
+        ],
+        "entryCriteria": [
+          "superadmin_web_audit complete"
+        ],
+        "exitCriteria": [
+          "all POS critical endpoints and flows from manifest validated",
+          "POS-runtime evidence captured from staging API plus app flow evidence",
+          "all POS issues ticketized atomically"
+        ]
+      },
+      {
+        "id": "cross_function_audit",
+        "allowedNext": [
+          "ticket_quality_gate",
+          "blocked"
+        ],
+        "entryCriteria": [
+          "pos_app_audit complete"
+        ],
+        "exitCriteria": [
+          "all cross-function matrix flows validated with runtime evidence",
+          "inter-surface regressions ticketized atomically"
+        ]
+      },
+      {
+        "id": "ticket_quality_gate",
+        "allowedNext": [
+          "ticketization_complete",
+          "blocked"
+        ],
+        "entryCriteria": [
+          "all required surfaces audited"
+        ],
+        "exitCriteria": [
+          "no remaining unchecked micro item in manifest-derived queue",
+          "each ISSUE_DETECTED check has exactly one linked ticket",
+          "each new ticket contains required evidence contract fields",
+          "progress statement starts with '100% micro-ingredient ticketization complete'"
+        ]
+      },
+      {
+        "id": "ticketization_complete",
+        "allowedNext": [],
+        "entryCriteria": [
+          "ticket_quality_gate complete"
+        ],
+        "exitCriteria": []
+      },
+      {
+        "id": "blocked",
+        "allowedNext": [
+          "manifest_sync",
+          "retailer_web_audit",
+          "supplier_web_audit",
+          "superadmin_web_audit",
+          "pos_app_audit",
+          "cross_function_audit",
+          "ticket_quality_gate"
+        ],
+        "entryCriteria": [
+          "hard blocker with explicit owner and unblock plan recorded"
+        ],
+        "exitCriteria": [
+          "blocker resolved with evidence"
+        ]
+      }
+    ]
+  },
+  "ticketEvidenceContract": {
+    "requiredFields": [
+      "ticketId",
+      "title",
+      "surface",
+      "urlOrFlowId",
+      "observedAtUtc",
+      "deployRef",
+      "commitSha",
+      "cloudRunRevisionIds",
+      "runtimeEvidence",
+      "reproSteps",
+      "expectedBehavior",
+      "actualBehavior",
+      "severity",
+      "owner",
+      "status"
+    ],
+    "runtimeEvidenceTypes": [
+      "http_response",
+      "api_payload",
+      "browser_screenshot",
+      "browser_video",
+      "log_line"
+    ]
+  },
+  "completionContract": {
+    "mustProduce": [
+      "surface_coverage_matrix",
+      "new_ticket_list",
+      "remaining_check_ids",
+      "explicit_completion_statement"
+    ],
+    "completionStatementAllowed": [
+      "100% micro-ingredient ticketization complete",
+      "NOT COMPLETE"
+    ],
+    "ifNotCompleteMustInclude": [
+      "remainingCheckIds",
+      "blockerOwner",
+      "unblockPlan"
+    ]
+  },
+  "postTicketizationRules": {
+    "executionMode": "implementation",
+    "deploymentMode": "hold",
+    "deployCondition": "operator_approved_batch_only",
+    "note": "After ticketization, execute approved tickets only, keep changes parked in git, and deploy in one cumulative batch."
+  }
+}

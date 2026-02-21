@@ -5,14 +5,18 @@ This directory enforces the Live Fix -> Freeze -> Production workflow with machi
 ## Files
 
 - `workflow/state/workflow_state.json`: global state machine and policy rules.
+- `workflow/state/live_micro_audit_state_machine.json`: strict phase-order contract for exhaustive staging-only micro audit + ticketization.
 - `workflow/state/freeze_manifest.json`: immutable freeze record before production promotion.
 - `workflow/state/staging_batch.json`: required staging deploy batch manifest.
+- `workflow/state/live_micro_check_queue.json`: manifest-derived micro-check queue across all surfaces.
+- `workflow/state/live_ticketization_progress.json`: per-check evidence and issue-detection status ledger.
 - `workflow/schemas/ticket.schema.json`: required production-layer ticket structure.
 - `workflow/schemas/screen_state.schema.json`: screen certification structure.
 - `workflow/schemas/freeze_manifest.schema.json`: freeze manifest structure.
 - `workflow/schemas/staging_batch.schema.json`: staging batch manifest structure.
 - `workflow/legacy_conflicts.json`: legacy rule/state/CI-CD conflicts and remediation tracking.
 - `workflow/production_boundary_iam.md`: IAM boundary checklist for staging-vs-production principals.
+- `workflow/templates/live_micro_audit_operator_prompt.md`: copy-paste prompt to run exhaustive staging micro audit with no screen skipping.
 - `workflow/tickets/*.json`: ticket records.
 - `workflow/screens/*.json`: screen records.
 
@@ -61,6 +65,7 @@ This directory enforces the Live Fix -> Freeze -> Production workflow with machi
 - Enforces Claude session bootstrap proof (`sessionBoot`) so required workflow files are acknowledged before ticket progression.
 - `workflow:session-boot` auto-stamps ticket bootstrap metadata and validates ticket integrity immediately.
 - Enforces production invariants per ticket (sell/purchase isolation, deterministic scan intent, state parity, offline sync safety, idempotency, atomic writes, strict schema validation, zero silent failures, structured audit logging).
+- Enforces production-grade coding ethics (`rules.productionGradeCodingEthics`): no partial closure, no sub-100% progress claims, and fail-layer blocking for enforced ticket statuses (with optional all-layers-pass mode).
 - `pnpm workflow:monitor` reports ticket-by-ticket guard failures and writes `workflow/state/live_monitor_report.json`.
 - Enforces staging batch cap from `workflow/state/workflow_state.json`:
   - frontend-only batch: max `3` screens

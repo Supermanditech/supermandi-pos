@@ -1,20 +1,19 @@
 {
-  "version": "37.0",
-  "lastUpdated": "2026-02-21T17:40:00.000Z",
-  "currentPhase": "LIVE-ITERATION QUALITY MODE — cumulative staging deploy, then full-surface micro ticketization, then ticket-wise implementation.",
-  "currentTicket": "FIX-001",
+  "version": "42.0",
+  "lastUpdated": "2026-02-22T23:00:00.000Z",
+  "currentPhase": "DEPLOY APPROVED. Staging deploy of SHA 55aad06a authorized by operator. 10 batch tickets todo (code on main, CI green). Guard PASS. Deploying to GCP staging.",
+  "currentTicket": null,
   "ticketQueue": [
-    "FIX-001",
-    "LIVE.URLMAP.STORE_ROUTES.001",
-    "LIVE.BACKEND.PROXY_404.001",
-    "LIVE.BACKEND.CONN_TIMEOUT.001",
-    "LIVE.BACKEND.POS_HEALTH.001",
-    "LIVE.SECURITY.CACHE_HEADERS.001",
-    "LIVE.RETAILER.SPA_SHELL.001",
-    "LIVE.SUPPLIER.FAVICON_PATH.001",
-    "STAGE.BRAND.LOGO_CONSISTENCY.001",
-    "LIVE.SECURITY.XPOWEREDBY.001",
-    "LIVE.SECURITY.CSP_API.001"
+    "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001",
+    "LIVE.AUTH.PARITY.FORGOT_PASSWORD_CHANNELS.001",
+    "LIVE.AUTH.PARITY.RESET_PASSWORD_EXECUTION.001",
+    "LIVE.AUTH.PARITY.LOGIN_COPY_LINKS.001",
+    "LIVE.AUTH.PARITY.LOGIN_CONTAINER.001",
+    "LIVE.AUTH.PARITY.REGISTER_HEADER_COPY.001",
+    "LIVE.AUTH.PARITY.REGISTER_CARD_WIDTH.001",
+    "LIVE.AUTH.PARITY.REGISTER_SUCCESS_LEGAL.001",
+    "LIVE.AUTH.PARITY.AUTH_FOOTER_BUILDSTAMP.001",
+    "STAGE.BRAND.LOGO_CONSISTENCY.001"
   ],
   "ticketStatus": {
     "T-054": "DONE",
@@ -427,7 +426,16 @@
     "LIVE.SECURITY.CACHE_HEADERS.001": "DONE_VERIFIED_ON_STAGING",
     "LIVE.RETAILER.SPA_SHELL.001": "DONE_VERIFIED_ON_STAGING",
     "LIVE.SUPPLIER.FAVICON_PATH.001": "DONE_CODE_MERGED",
-    "STAGE.BRAND.LOGO_CONSISTENCY.001": "TODO_OPERATOR_APPROVED_NEXT_STAGING_DEPLOY",
+    "STAGE.BRAND.LOGO_CONSISTENCY.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.LOGIN_CONTAINER.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.LOGIN_COPY_LINKS.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.REGISTER_HEADER_COPY.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.REGISTER_CARD_WIDTH.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.REGISTER_SUCCESS_LEGAL.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.AUTH_FOOTER_BUILDSTAMP.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.FORGOT_PASSWORD_CHANNELS.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
+    "LIVE.AUTH.PARITY.RESET_PASSWORD_EXECUTION.001": "TODO_CODE_ON_MAIN_55aad06a_CI_GREEN_AWAITING_STAGING_DEPLOY",
     "LIVE.SECURITY.XPOWEREDBY.001": "DONE_VERIFIED_ON_STAGING",
     "LIVE.SECURITY.CSP_API.001": "DONE_VERIFIED_ON_STAGING",
     "STAGE.SECURITY.POSTURE_API_COVERAGE.001": "DONE_GCP_INFRA",
@@ -443,7 +451,8 @@
     "STAGE.SECURITY.CORS_ORIGINS.001": "DONE_VERIFIED_ON_STAGING",
     "STAGE.SECURITY.INGRESS_BOUNDARY.001": "DONE_VERIFIED_ON_STAGING",
     "STAGE.OBS.HISTORICAL_5XX.001": "DONE_VERIFIED_ON_STAGING",
-    "STAGE.SECURITY.IAM_EDITOR_ROLE.001": "BLOCKED_NEEDS_DEDICATED_SA"
+    "STAGE.SECURITY.IAM_EDITOR_ROLE.001": "BLOCKED_NEEDS_DEDICATED_SA",
+    "LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001": "TODO_PARKED"
   },
   "executionPhases": [
     {
@@ -1716,7 +1725,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Staging deploy run github://run/22260688109 succeeded on commit 5db6c84 (all gates green). STAGE.BRAND.LOGO_CONSISTENCY.001 is now OPERATOR-APPROVED and moved to pending (todo) for execution in the next staging deploy cycle. Remaining blocker: STAGE.SECURITY.IAM_EDITOR_ROLE.001 (dedicated SA migration). Next: implement + deploy brand consistency, capture Cloud Run revision evidence, then operator laptop+Redmi signoff.",
+  "nextAction": "DEPLOY IN PROGRESS. Operator approved staging deploy of SHA 55aad06a. Running pre-staging gate → deploy pipeline → publish evidence. No ticketization in this run.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -1731,6 +1740,10 @@
     "pr": "#288"
   },
   "lastActions": [
+    "STATE RECONCILIATION SESSION 4: All 10 batch tickets downgraded ready_for_operator_test → todo with statusHistory entries (hash-chained). Reason: staging deploy of 55aad06a pending, no operator evidence for fix code, WIP limit 1 requires non-WIP status.",
+    "Guard now PASS: 27 tickets, 0 failures, 0 screen failures. ciGateStatus fixed to 'passed' (was invalid custom value).",
+    "Added ready_for_operator_test → todo transition to state machine (claude actor, reconciliation path).",
+    "PARKED AT GIT — no staging deploy triggered. Deploy hold ACTIVE. Staging baseline remains run 22260688109 on SHA 5db6c84.",
     "GCP STAGING HARDENING — 13/15 tickets DONE, 2 BLOCKED.",
     "Cloud SQL: public IP removed, private IP 10.33.48.3 via VPC peering. All services healthy.",
     "Firewall: 8 world-open rules disabled (RDP, SSH, HTTP/S, ICMP, app ports, vpc-connector-egress).",
@@ -1748,7 +1761,11 @@
     "BLOCKED: IAM_EDITOR_ROLE (all 6 Cloud Run services use default compute SA with roles/editor).",
     "Operator approved final brand direction; STAGE.BRAND.LOGO_CONSISTENCY.001 moved blocked -> todo (pending next staging deploy cycle).",
     "Deploy run github://run/22260688109 succeeded; staging live on commit 5db6c84 with all listed deploy/smoke gates passed.",
-    "All 15 ticket JSONs updated with evidence and status."
+    "All 15 ticket JSONs updated with evidence and status.",
+    "Brand consistency commit 8fecebec pushed to main; CI passed all 19 gates.",
+    "Auto-triggered deploy after 8fecebec was cancelled per operator instruction.",
+    "Execution scope narrowed: only 9 LIVE.AUTH.PARITY.* tickets plus STAGE.BRAND.LOGO_CONSISTENCY.001 in current batch.",
+    "Deploy hold active: no staging deploy until current batch implementation is complete and operator approves cumulative deploy."
   ],
   "liveDeployTicketizationControl": {
     "status": "ACTIVE",

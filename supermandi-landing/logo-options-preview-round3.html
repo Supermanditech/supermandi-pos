@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SuperMandi Round 3 — Identity System Concepts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 90% -10%, #dbeafe 0%, transparent 35%),
+        radial-gradient(circle at 0% 0%, #eef2ff 0%, transparent 40%),
+        var(--bg);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 27px;
+      letter-spacing: -0.03em;
+    }
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 920px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+    }
+    .chip {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .title {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+    .desc {
+      margin: 0 0 10px;
+      min-height: 36px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .header-mock {
+      min-height: 58px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      margin-bottom: 8px;
+    }
+    .brand {
+      font-family: "Space Grotesk", Manrope, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .apps {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .app-chip {
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      background: #f8fafc;
+    }
+    .meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #334155;
+      font-weight: 600;
+    }
+    .footer {
+      margin-top: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+    }
+    code {
+      font-size: 12px;
+      background: #eef2ff;
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+    svg { display: block; }
+  </style>
+</head>
+<body>
+  <h1>Round 3: Different Approach (Identity Systems)</h1>
+  <p class="sub">Each option is a full brand-system direction: core mark + header behavior + app family language. Reply with <strong>Approve R3-1</strong> … <strong>Approve R3-5</strong>.</p>
+
+  <div class="grid">
+    <section class="card">
+      <span class="chip">R3-1</span>
+      <h2 class="title">Wordmark-Led Infrastructure</h2>
+      <p class="desc">Primary identity is typography; icon is secondary utility. Premium and global.</p>
+      <div class="header-mock">
+        <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="3" y="3" width="26" height="26" rx="8" fill="#1d4ed8"/>
+          <path d="M10 11.5h5.5a2.2 2.2 0 0 1 0 4.4h-2.2a2.2 2.2 0 0 0 0 4.4H19" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="brand" style="font-family:Manrope, sans-serif;font-weight:800;letter-spacing:-0.03em;">SuperMandi</span>
+      </div>
+      <div class="apps">
+        <span class="app-chip">Retailer</span><span class="app-chip">Supplier</span><span class="app-chip">POS</span><span class="app-chip">Consumer</span><span class="app-chip">Admin</span>
+      </div>
+      <div class="meta">Best when trust + international readability is top priority.</div>
+    </section>
+
+    <section class="card">
+      <span class="chip">R3-2</span>
+      <h2 class="title">Ledger Stripe System</h2>
+      <p class="desc">Identity based on transaction stripes (goods, payments, credit, logistics).</p>
+      <div class="header-mock">
+        <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="#0284c7"/>
+          <path d="M7 10.5h18M7 16h18M7 21.5h18" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="10.5" r="1.1" fill="#bae6fd"/>
+          <circle cx="20" cy="16" r="1.1" fill="#bae6fd"/>
+          <circle cx="15.5" cy="21.5" r="1.1" fill="#bae6fd"/>
+        </svg>
+        <span class="brand">SuperMandi</span>
+      </div>
+      <div class="apps">
+        <span class="app-chip">Trade</span><span class="app-chip">Finance</span><span class="app-chip">Credit</span><span class="app-chip">Logistics</span>
+      </div>
+      <div class="meta">Best for showing commerce operations + flow.</div>
+    </section>
+
+    <section class="card">
+      <span class="chip">R3-3</span>
+      <h2 class="title">Control Tower Badge</h2>
+      <p class="desc">Monolithic control badge for centralized multi-app governance.</p>
+      <div class="header-mock">
+        <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 2.5L29.5 16 16 29.5 2.5 16z" fill="#4338ca"/>
+          <circle cx="16" cy="16" r="3" fill="#fff"/>
+          <path d="M16 13V8.8M16 23.2V19M13 16H8.8M23.2 16H19" stroke="#c7d2fe" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span class="brand">SuperMandi</span>
+      </div>
+      <div class="apps">
+        <span class="app-chip">Central Control</span><span class="app-chip">Policy</span><span class="app-chip">Visibility</span>
+      </div>
+      <div class="meta">Best for enterprise platform positioning.</div>
+    </section>
+
+    <section class="card">
+      <span class="chip">R3-4</span>
+      <h2 class="title">AI Signal Ring</h2>
+      <p class="desc">Core identity is an adaptive signal loop for AI/ML future direction.</p>
+      <div class="header-mock">
+        <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="14" fill="#0ea5e9"/>
+          <circle cx="16" cy="16" r="9.5" fill="none" stroke="#e0f2fe" stroke-width="1.2"/>
+          <path d="M8.8 18.8c2.4 0 2.4-3.6 4.8-3.6s2.4 3.6 4.8 3.6 2.4-3.6 4.8-3.6" stroke="#fff" stroke-width="1.9" stroke-linecap="round" fill="none"/>
+          <circle cx="24.4" cy="15.2" r="1.1" fill="#fff"/>
+        </svg>
+        <span class="brand">SuperMandi</span>
+      </div>
+      <div class="apps">
+        <span class="app-chip">Forecast</span><span class="app-chip">Automation</span><span class="app-chip">Optimization</span>
+      </div>
+      <div class="meta">Best “AI era” storytelling option.</div>
+    </section>
+
+    <section class="card">
+      <span class="chip">R3-5</span>
+      <h2 class="title">Route Map Monogram</h2>
+      <p class="desc">Geographic route-map idea: India-first infrastructure with global lanes.</p>
+      <div class="header-mock">
+        <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="#1d4ed8"/>
+          <path d="M8.6 12.2h5.8a2.2 2.2 0 0 1 0 4.4h-2.5a2.2 2.2 0 0 0 0 4.4h5.8" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M18.2 21.6V11.1l2.2 2.5 2.2-2.5v10.5" stroke="#bfdbfe" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M7.4 8.6L24.6 24.2" stroke="#93c5fd" stroke-width="1" stroke-dasharray="2 2"/>
+        </svg>
+        <span class="brand">SuperMandi</span>
+      </div>
+      <div class="apps">
+        <span class="app-chip">India</span><span class="app-chip">Global</span><span class="app-chip">B2B2C</span>
+      </div>
+      <div class="meta">Best if expansion narrative is key.</div>
+    </section>
+  </div>
+
+  <div class="footer">File: <code>supermandi-landing/logo-options-preview-round3.html</code></div>
+</body>
+</html>

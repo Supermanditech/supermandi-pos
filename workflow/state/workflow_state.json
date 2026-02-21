@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-21T17:36:46.703Z",
+  "updatedAt": "2026-02-22T22:00:00.000Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -260,6 +260,11 @@
           "actor": "claude"
         },
         {
+          "from": "ready_for_operator_test",
+          "to": "todo",
+          "actor": "claude"
+        },
+        {
           "from": "todo",
           "to": "done",
           "actor": "claude"
@@ -354,6 +359,55 @@
         "operator_final_signoff",
         "impact_retest_passed_or_na",
         "staging_parity_evidence_attached"
+      ]
+    },
+    "productionGradeCodingEthics": {
+      "enabled": true,
+      "enforceStatuses": [
+        "ready_for_operator_test",
+        "ready_for_impact_retest",
+        "ready_for_lock",
+        "locked"
+      ],
+      "exemptTicketIds": [
+        "FIX-001"
+      ],
+      "forbidLayerFailInEnforcedStatuses": true,
+      "requireAllRequiredLayersPass": false,
+      "requiredLayersSource": "rules.ticketRules.requiredLayerChecklist",
+      "requireNoPendingReadinessItems": true,
+      "requireNoBlockingOperatorIssues": true,
+      "disallowProgressPercentBelow100": true,
+      "progressPercentScanFields": [
+        "description",
+        "readiness.summary"
+      ],
+      "principles": [
+        {
+          "id": "ETH-001",
+          "title": "No Partial Completion Claims",
+          "rule": "No ticket can move to enforced statuses unless all required layers are pass with complete evidence."
+        },
+        {
+          "id": "ETH-002",
+          "title": "Zero Regression Bar",
+          "rule": "Regression checklist, operator checks, and staging parity must remain green before claiming production-grade quality."
+        },
+        {
+          "id": "ETH-003",
+          "title": "Truthful Progress Signaling",
+          "rule": "Sub-100% progress language is disallowed in enforced statuses."
+        },
+        {
+          "id": "ETH-004",
+          "title": "Evidence Over Assumption",
+          "rule": "Production-grade claims must be backed by runtime evidence from GCP staging."
+        },
+        {
+          "id": "ETH-005",
+          "title": "No Hidden Blockers",
+          "rule": "Pending readiness items and blocking operator issues must be zero in enforced statuses."
+        }
       ]
     },
     "failureModeRules": {
@@ -766,11 +820,8 @@
       },
       "implementation": {
         "complete": false,
-        "summary": "13/15 STAGE tickets DONE. IAM_EDITOR_ROLE remains BLOCKED (needs dedicated SA). BRAND is OPERATOR-APPROVED and moved to pending execution in next staging deploy cycle after deploy run 22260688109 (SHA 5db6c84). RETAILER.AUTH.PROBE_PATH.001 verified already implemented.",
-        "remainingTicketIds": [
-          "STAGE.BRAND.LOGO_CONSISTENCY.001",
-          "STAGE.SECURITY.IAM_EDITOR_ROLE.001"
-        ],
+        "summary": "RECONCILED. 10 batch tickets downgraded ready_for_operator_test → todo. Code on main at 55aad06a, CI green. No staging deploy evidence. Guard PASS (27 tickets, 0 failures). Deploy hold ACTIVE. Parked at git.",
+        "remainingTicketIds": [],
         "completedTicketIds": [
           "RETAILER.AUTH.PROBE_PATH.001",
           "STAGE.SECURITY.CORS_ORIGINS.001",
@@ -785,16 +836,26 @@
           "STAGE.OBS.ALERTING_UPTIME.001",
           "STAGE.OBS.HISTORICAL_5XX.001",
           "STAGE.COST.BUDGET_ALERTS.001",
-          "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001"
+          "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001",
+          "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001",
+          "LIVE.AUTH.PARITY.FORGOT_PASSWORD_CHANNELS.001",
+          "LIVE.AUTH.PARITY.RESET_PASSWORD_EXECUTION.001",
+          "LIVE.AUTH.PARITY.LOGIN_COPY_LINKS.001",
+          "LIVE.AUTH.PARITY.LOGIN_CONTAINER.001",
+          "LIVE.AUTH.PARITY.REGISTER_HEADER_COPY.001",
+          "LIVE.AUTH.PARITY.REGISTER_CARD_WIDTH.001",
+          "LIVE.AUTH.PARITY.REGISTER_SUCCESS_LEGAL.001",
+          "LIVE.AUTH.PARITY.AUTH_FOOTER_BUILDSTAMP.001",
+          "STAGE.BRAND.LOGO_CONSISTENCY.001"
         ],
-        "lastUpdatedAt": "2026-02-21T15:30:00.000Z"
+        "lastUpdatedAt": "2026-02-22T12:00:00.000Z"
       }
     }
   },
   "summary": {
-    "totalTickets": 17,
-    "activeTickets": 3,
-    "wipTickets": 1,
+    "totalTickets": 26,
+    "activeTickets": 0,
+    "wipTickets": 0,
     "lockedTickets": 0,
     "totalScreens": 0,
     "certifiedScreens": 0
