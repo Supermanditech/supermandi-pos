@@ -31,6 +31,8 @@ if (isNextBuild && process.env.NEXT_PUBLIC_API_BASE_URL === undefined) {
 }
 
 const nextConfig = {
+  // LIVE.SECURITY.XPOWEREDBY.001: Suppress x-powered-by: Next.js header
+  poweredByHeader: false,
   // CONSOLE-STRIP-001: Strip console.log/debug from production builds (keep error+warn)
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production'
