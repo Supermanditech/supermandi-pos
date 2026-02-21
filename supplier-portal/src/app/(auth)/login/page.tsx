@@ -382,7 +382,7 @@ export default function LoginPage() {
               className="text-primary-600 hover:text-primary-700 font-medium"
               onClick={() => { setAuthMode('password'); setError(''); }}
             >
-              Sign in with password instead
+              Sign in with email & password instead
             </button>
           </p>
         </form>
@@ -401,7 +401,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input"
-              placeholder="you@company.com"
+              placeholder="you@example.com"
               disabled={isLoading}
               autoFocus
             />

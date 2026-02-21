@@ -651,11 +651,11 @@ function RegisterPage() {
       {/* Page Title */}
       <div className="text-center">
         <h2 className="text-[1.75rem] font-bold text-slate-900">
-          {step === 'success' ? 'Application Submitted' : 'Register your account'}
+          {step === 'success' ? 'Application Submitted' : 'Register as Supplier'}
         </h2>
         {step !== 'success' && (
           <p className="text-slate-600 mt-2">
-            Complete the registration form to join SuperMandi
+            Complete the registration form to join SuperMandi as a supplier partner
           </p>
         )}
       </div>
@@ -1344,6 +1344,14 @@ function RegisterPage() {
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-slate-500">Application ID</p>
             <p className="font-mono text-slate-900">{applicationId}</p>
+          </div>
+          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 text-sm text-left">
+            <strong>What happens next?</strong>
+            <ol className="mt-2 ml-4 list-decimal space-y-1">
+              <li>We review your documents (usually 1-2 business days)</li>
+              <li>Once approved, you&apos;ll receive a <strong>welcome message</strong> via WhatsApp and Email</li>
+              <li>Sign in to the Supplier Portal to manage your products and orders</li>
+            </ol>
           </div>
           <div className="text-[13px] text-slate-500 mb-4">
             Need help? Contact us at{' '}

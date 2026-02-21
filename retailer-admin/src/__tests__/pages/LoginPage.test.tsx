@@ -107,7 +107,7 @@ describe('LoginPage phone step', () => {
 
   it('renders toggle to password login', () => {
     renderLoginPage();
-    expect(screen.getByText('Sign in with password instead')).toBeInTheDocument();
+    expect(screen.getByText('Sign in with email & password instead')).toBeInTheDocument();
   });
 
   it('shows firebase warning when firebase is not ready', () => {
@@ -165,54 +165,36 @@ describe('Phone validation', () => {
 // ── Password Login ───────────────────────────────────────────────────────
 
 describe('Password login mode', () => {
-  it('switches to password mode', () => {
+  it('switches to password mode with email field', () => {
     renderLoginPage();
 
-    fireEvent.click(screen.getByText('Sign in with password instead'));
+    fireEvent.click(screen.getByText('Sign in with email & password instead'));
 
     expect(screen.getByText('Sign in with your account and password')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('e.g. MYSTORE')).toBeInTheDocument();
   });
 
-  it('validates empty fields in password mode', async () => {
+  it('validates empty email in password mode', async () => {
     renderLoginPage();
 
-    fireEvent.click(screen.getByText('Sign in with password instead'));
+    fireEvent.click(screen.getByText('Sign in with email & password instead'));
 
     const signInBtn = screen.getByText('Sign In');
     fireEvent.click(signInBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Please enter your phone number')).toBeInTheDocument();
-    });
-  });
-
-  it('validates missing store code', async () => {
-    renderLoginPage();
-
-    fireEvent.click(screen.getByText('Sign in with password instead'));
-
-    const phoneInput = screen.getByPlaceholderText('+91 98765 43210');
-    fireEvent.change(phoneInput, { target: { value: '9876543210' } });
-
-    fireEvent.click(screen.getByText('Sign In'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Please enter your store code')).toBeInTheDocument();
+      expect(screen.getByText('Please enter your email address')).toBeInTheDocument();
     });
   });
 
   it('validates missing password', async () => {
     renderLoginPage();
 
-    fireEvent.click(screen.getByText('Sign in with password instead'));
+    fireEvent.click(screen.getByText('Sign in with email & password instead'));
 
-    const phoneInput = screen.getByPlaceholderText('+91 98765 43210');
-    fireEvent.change(phoneInput, { target: { value: '9876543210' } });
-
-    const storeInput = screen.getByPlaceholderText('e.g. MYSTORE');
-    fireEvent.change(storeInput, { target: { value: 'STORE1' } });
+    const emailInput = screen.getByPlaceholderText('you@example.com');
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
 
     fireEvent.click(screen.getByText('Sign In'));
 
@@ -221,7 +203,7 @@ describe('Password login mode', () => {
     });
   });
 
-  it('submits password login and navigates on success', async () => {
+  it('submits email+password login and navigates on success', async () => {
     const loginResponse = {
       success: true,
       token: 'jwt-token',
@@ -235,10 +217,9 @@ describe('Password login mode', () => {
 
     renderLoginPage();
 
-    fireEvent.click(screen.getByText('Sign in with password instead'));
+    fireEvent.click(screen.getByText('Sign in with email & password instead'));
 
-    fireEvent.change(screen.getByPlaceholderText('+91 98765 43210'), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText('e.g. MYSTORE'), { target: { value: 'STORE1' } });
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'test@example.com' } });
     fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'password123' } });
 
     fireEvent.click(screen.getByText('Sign In'));
@@ -256,28 +237,27 @@ describe('Password login mode', () => {
 
   it('shows error on failed password login', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      new Response(JSON.stringify({ error: { message: 'Invalid credentials' } }), { status: 401 })
+      new Response(JSON.stringify({ error: { message: 'Invalid email or password' } }), { status: 401 })
     );
 
     renderLoginPage();
 
-    fireEvent.click(screen.getByText('Sign in with password instead'));
+    fireEvent.click(screen.getByText('Sign in with email & password instead'));
 
-    fireEvent.change(screen.getByPlaceholderText('+91 98765 43210'), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText('e.g. MYSTORE'), { target: { value: 'STORE1' } });
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'test@example.com' } });
     fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'wrong' } });
 
     fireEvent.click(screen.getByText('Sign In'));
 
     await waitFor(() => {
-      expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
+      expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
     });
   });
 
   it('switches back to OTP mode', () => {
     renderLoginPage();
 
-    fireEvent.click(screen.getByText('Sign in with password instead'));
+    fireEvent.click(screen.getByText('Sign in with email & password instead'));
     expect(screen.getByText('Sign in with your account and password')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Sign in with OTP instead'));

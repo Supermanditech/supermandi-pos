@@ -1009,6 +1009,136 @@ router.post("/auth/reset-password", async (req: Request, res: Response, next: Ne
   }
 });
 
+/**
+ * POST /api/v1/supplier/auth/forgot-password/otp-verify
+ * AUTH-PARITY-002: Verify supplier phone exists (for OTP password reset channel)
+ *
+ * Request body:
+ * - phone: Phone number
+ */
+router.post("/auth/forgot-password/otp-verify", passwordResetRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phone } = req.body as { phone?: string };
+
+    if (!phone) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Phone number is required' }
+      });
+      return;
+    }
+
+    const phoneNormalized = normalizePhoneNumber(phone);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Find supplier by phone
+    const result = await pool.query(
+      `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
+      [phoneNormalized]
+    );
+
+    // Always return success to prevent phone enumeration
+    if (!result.rows[0]) {
+      res.json({ data: { success: true, message: 'If an account exists with this phone, you can proceed to verify OTP.' } });
+      return;
+    }
+
+    res.json({ data: { success: true, message: 'Account found. Please verify your phone with OTP to reset password.' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/forgot-password/otp-reset
+ * AUTH-PARITY-002: Reset supplier password with Firebase OTP verification
+ *
+ * Request body:
+ * - idToken: Firebase ID token (proves phone ownership)
+ * - newPassword: New password
+ */
+router.post("/auth/forgot-password/otp-reset", passwordResetRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken, newPassword } = req.body as { idToken?: string; newPassword?: string };
+
+    if (!idToken || !newPassword) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'ID token and new password are required' }
+      });
+      return;
+    }
+
+    // Validate password
+    const otpResetPwError = validatePasswordStrength(newPassword);
+    if (otpResetPwError) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: otpResetPwError }
+      });
+      return;
+    }
+
+    // Verify Firebase token
+    if (!verifyFirebaseIdToken) {
+      if (process.env.NODE_ENV === 'production') {
+        res.status(503).json({
+          error: { code: 'SERVICE_UNAVAILABLE', message: 'Authentication service unavailable' }
+        });
+        return;
+      }
+      res.status(400).json({
+        error: { code: 'FIREBASE_REQUIRED', message: 'Firebase verification required' }
+      });
+      return;
+    }
+
+    const verifyResult = await verifyFirebaseIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      res.status(401).json({
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired verification. Please verify your phone again.' }
+      });
+      return;
+    }
+
+    const phoneNormalized = normalizePhoneNumber(verifyResult.payload.phone_number);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Find supplier by phone
+    const result = await pool.query(
+      `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
+      [phoneNormalized]
+    );
+
+    if (!result.rows[0]) {
+      res.status(404).json({
+        error: { code: 'USER_NOT_FOUND', message: 'No account found for this phone number' }
+      });
+      return;
+    }
+
+    // Hash and update password
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await pool.query(
+      `UPDATE supplier.suppliers SET password_hash = $1 WHERE id = $2`,
+      [newHash, result.rows[0].id]
+    );
+
+    log.info(`[SupplierAuth] AUTH-PARITY-002: OTP password reset for supplier ${result.rows[0].id}`);
+
+    res.json({ data: { success: true, message: 'Password reset successfully. You can now login.' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // =============================================================================
 // GL-WF-034: Email Verification Flow
 // =============================================================================

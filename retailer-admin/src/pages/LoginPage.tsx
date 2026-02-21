@@ -55,8 +55,8 @@ export default function LoginPage() {
 
   // T-003: Dual auth -- password + OTP toggle
   const [authMode, setAuthMode] = useState<AuthMode>('otp');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [storeCode, setStoreCode] = useState('');
 
   // T-021: Setup reCAPTCHA when in OTP phone step (initialize early for combined lookup+send)
   useEffect(() => {
@@ -250,18 +250,13 @@ export default function LoginPage() {
     }
   };
 
-  // T-003: Password login handler
+  // T-003 + AUTH-PARITY-001: Email+password login (parity with supplier)
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const cleanedPhone = phone.replace(/[\s-]/g, '');
-    if (!cleanedPhone) {
-      setError('Please enter your phone number');
-      return;
-    }
-    if (!storeCode.trim()) {
-      setError('Please enter your store code');
+    if (!email.trim()) {
+      setError('Please enter your email address');
       return;
     }
     if (!password) {
@@ -274,7 +269,7 @@ export default function LoginPage() {
       const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanedPhone, password, storeCode: storeCode.trim() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
         credentials: 'include',
       });
 
@@ -320,8 +315,8 @@ export default function LoginPage() {
     setStep('phone');
     setOtp('');
     setError('');
+    setEmail('');
     setPassword('');
-    setStoreCode('');
     recaptchaInitialized.current = false;
     sessionStorage.removeItem('supermandi_retailer_reg_state');
   };
@@ -416,7 +411,7 @@ export default function LoginPage() {
                 {/* T-003: Toggle to password login */}
                 <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
                   <button type="button" onClick={() => { setAuthMode('password'); setError(''); }} className="login-text-link">
-                    Sign in with password instead
+                    Sign in with email & password instead
                   </button>
                 </div>
 
@@ -436,30 +431,19 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* T-003: Password Login Form */}
+            {/* AUTH-PARITY-001: Email+Password Login Form (parity with supplier) */}
             {step === 'phone' && authMode === 'password' && (
               <form onSubmit={handlePasswordLogin}>
                 <div className="login-form-group">
-                  <label className="login-form-label">Phone Number</label>
+                  <label className="login-form-label">Email Address</label>
                   <input
-                    type="tel"
+                    type="email"
                     className="login-form-input"
-                    placeholder="+91 98765 43210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
                     autoFocus
-                  />
-                </div>
-                <div className="login-form-group">
-                  <label className="login-form-label">Store Code</label>
-                  <input
-                    type="text"
-                    className="login-form-input"
-                    placeholder="e.g. MYSTORE"
-                    value={storeCode}
-                    onChange={(e) => setStoreCode(e.target.value.toUpperCase())}
-                    disabled={isLoading}
                   />
                 </div>
                 <div className="login-form-group">
@@ -489,7 +473,7 @@ export default function LoginPage() {
 
                 {/* Toggle back to OTP */}
                 <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
-                  <button type="button" onClick={() => { setAuthMode('otp'); setError(''); setPassword(''); setStoreCode(''); }} className="login-text-link">
+                  <button type="button" onClick={() => { setAuthMode('otp'); setError(''); setEmail(''); setPassword(''); }} className="login-text-link">
                     Sign in with OTP instead
                   </button>
                 </div>

@@ -597,44 +597,49 @@ export default function RegisterPage() {
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.5rem' }}>
-              Register your account
+              Register as Retailer
             </h1>
             <p style={{ color: '#64748b', fontSize: '0.9375rem' }}>
-              Complete the registration form to join SuperMandi
+              Complete the registration form to join SuperMandi as a retailer partner
             </p>
           </div>
 
-          {/* Progress Indicator */}
+          {/* Progress Indicator — AUTH-PARITY-007: Stepper geometry matching supplier */}
           {step !== 'success' && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
-              {PROGRESS_LABELS.map((label, i) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    opacity: progressStep >= i ? 1 : 0.4,
-                  }}>
-                    <div style={{
-                      width: '28px', height: '28px', borderRadius: '50%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.8125rem', fontWeight: 600,
-                      background: progressStep > i ? '#22c55e' : progressStep === i ? '#2563eb' : '#e2e8f0',
-                      color: progressStep >= i ? 'white' : '#64748b',
-                    }}>
-                      {progressStep > i ? '\u2713' : i + 1}
+            <div style={{ ...styles.card, marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                {PROGRESS_LABELS.map((label, i) => (
+                  <div key={label} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{
+                        width: '34px', height: '34px', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.8125rem', fontWeight: 600,
+                        background: progressStep > i ? '#22c55e' : progressStep === i ? '#2563eb' : '#e2e8f0',
+                        color: progressStep >= i ? 'white' : '#64748b',
+                        transition: 'background 0.15s, color 0.15s',
+                      }}>
+                        {progressStep > i ? (
+                          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : i + 1}
+                      </div>
+                      <span style={{
+                        marginLeft: '0.75rem', fontSize: '0.875rem', fontWeight: 500,
+                        color: progressStep === i ? '#2563eb' : progressStep > i ? '#22c55e' : '#64748b',
+                      }}>{label}</span>
                     </div>
-                    <span style={{
-                      fontSize: '0.8125rem', fontWeight: progressStep === i ? 600 : 400,
-                      color: progressStep >= i ? '#0F172A' : '#94a3b8',
-                    }}>{label}</span>
+                    {i < PROGRESS_LABELS.length - 1 && (
+                      <div style={{
+                        flex: 1, height: '4px', margin: '0 1rem',
+                        borderRadius: '999px',
+                        background: progressStep > i ? '#22c55e' : '#e2e8f0',
+                      }} />
+                    )}
                   </div>
-                  {i < PROGRESS_LABELS.length - 1 && (
-                    <div style={{
-                      width: '40px', height: '2px',
-                      background: progressStep > i ? '#22c55e' : '#e2e8f0',
-                    }} />
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 

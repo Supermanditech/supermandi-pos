@@ -1,22 +1,152 @@
 'use client';
 
-// T-002: Supplier forgot password — email-based token reset
-// Step 1: Enter email → POST /api/v1/supplier/auth/forgot-password
-// Step 2: Show "check your email" message with link to reset page
+// AUTH-PARITY-002: Dual-channel forgot password (OTP + Email)
+// Channel 1: Phone → OTP verify → new password → POST /api/v1/supplier/auth/forgot-password/otp-reset
+// Channel 2: Email → reset link → token form → new password (existing flow)
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
+import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 
-type Step = 'email' | 'sent';
+type Step = 'choose' | 'phone' | 'otp' | 'newPassword' | 'success' | 'email' | 'emailSent' | 'emailReset';
+type Channel = 'otp' | 'email';
 
 export default function ForgotPasswordPage() {
-  const [step, setStep] = useState<Step>('email');
+  const [step, setStep] = useState<Step>('choose');
+  const [channel, setChannel] = useState<Channel>('otp');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [otp, setOtpVal] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
+  const [idToken, setIdToken] = useState('');
+  const recaptchaInitialized = useRef(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Setup reCAPTCHA when on phone step
+  useEffect(() => {
+    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && channel === 'otp') {
+      try {
+        setupRecaptcha('send-otp-button');
+        recaptchaInitialized.current = true;
+      } catch (err) {
+        console.error('Failed to setup reCAPTCHA:', err);
+      }
+    }
+    return () => {
+      cleanup();
+      recaptchaInitialized.current = false;
+    };
+  }, [step, channel]);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    if (otpExpirySeconds > 0) {
+      const timer = setTimeout(() => setOtpExpirySeconds(otpExpirySeconds - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpExpirySeconds]);
+
+  // Password validation rules (shared across both channels)
+  const validatePassword = (): string | null => {
+    if (newPassword.length < 8) return 'Password must be at least 8 characters';
+    if (!/[A-Z]/.test(newPassword)) return 'Password must contain at least one uppercase letter';
+    if (!/[a-z]/.test(newPassword)) return 'Password must contain at least one lowercase letter';
+    if (!/\d/.test(newPassword)) return 'Password must contain at least one digit';
+    if (newPassword !== confirmPassword) return 'Passwords do not match';
+    return null;
+  };
+
+  // OTP Channel: Verify phone exists then send OTP
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const cleanedPhone = phone.replace(/[\s-]/g, '');
+    if (!/^(\+91)?[6-9]\d{9}$/.test(cleanedPhone) && !/^\+?[0-9]{10,13}$/.test(cleanedPhone)) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Verify account exists (anti-enumeration: always returns 200)
+      await apiFetch<{ success: boolean }>('/api/v1/supplier/auth/forgot-password/otp-verify', {
+        method: 'POST',
+        body: JSON.stringify({ phone: cleanedPhone }),
+      });
+
+      // Send OTP via Firebase
+      if (!isFirebaseReady()) {
+        throw new Error('Firebase is not configured. Phone verification is required.');
+      }
+
+      let normalizedPhone = cleanedPhone;
+      if (!normalizedPhone.startsWith('+')) {
+        normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+      }
+      await sendOtp(normalizedPhone);
+      setStep('otp');
+      setResendCooldown(60);
+      setOtpExpirySeconds(300);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // OTP Channel: Verify OTP
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      const token = await verifyOtp(otp);
+      setIdToken(token);
+      setStep('newPassword');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'OTP verification failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // OTP Channel: Reset password with Firebase token
+  const handleOtpResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const pwError = validatePassword();
+    if (pwError) { setError(pwError); return; }
+
+    setIsLoading(true);
+    try {
+      await apiFetch<{ success: boolean }>('/api/v1/supplier/auth/forgot-password/otp-reset', {
+        method: 'POST',
+        body: JSON.stringify({ idToken, newPassword }),
+      });
+      setStep('success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Password reset failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Email Channel: Request reset link
+  const handleEmailRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -38,17 +168,356 @@ export default function ForgotPasswordPage() {
           body: JSON.stringify({ email: email.trim().toLowerCase() }),
         }
       );
-      setStep('sent');
+      setStep('emailSent');
     } catch {
       // Always show success to prevent email enumeration
-      // Backend returns 200 even for non-existent emails
-      setStep('sent');
+      setStep('emailSent');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (step === 'sent') {
+  // Email Channel: Reset password with token
+  const handleEmailReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!resetToken.trim()) {
+      setError('Please enter the reset token from your email');
+      return;
+    }
+
+    const pwError = validatePassword();
+    if (pwError) { setError(pwError); return; }
+
+    setIsLoading(true);
+    try {
+      await apiFetch<{ success: boolean }>('/api/v1/supplier/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          token: resetToken.trim(),
+          newPassword,
+          confirmPassword,
+        }),
+      });
+      setStep('success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Password reset failed. The token may be expired or invalid.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setError('');
+    setIsLoading(true);
+    try {
+      cleanup();
+      recaptchaInitialized.current = false;
+      setupRecaptcha('resend-otp-button');
+      recaptchaInitialized.current = true;
+      const cleanedPhone = phone.replace(/[\s-]/g, '');
+      let normalizedPhone = cleanedPhone;
+      if (!normalizedPhone.startsWith('+')) {
+        normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+      }
+      await sendOtp(normalizedPhone);
+      setResendCooldown(60);
+      setOtpExpirySeconds(300);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Channel Selector
+  if (step === 'choose') {
+    return (
+      <>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Reset Password</h2>
+        <p className="text-slate-600 text-sm mb-6">Choose how you want to reset your password</p>
+        <div className="space-y-3">
+          <button
+            onClick={() => { setChannel('otp'); setStep('phone'); setError(''); }}
+            className="btn btn-primary w-full py-3"
+          >
+            Reset via mobile OTP
+          </button>
+          <button
+            onClick={() => { setChannel('email'); setStep('email'); setError(''); }}
+            className="btn btn-outline w-full py-3"
+          >
+            Reset via email link
+          </button>
+        </div>
+        <div className="mt-6 pt-4 border-t border-slate-200 text-center">
+          <p className="text-slate-600 text-sm">
+            Remember your password?{' '}
+            <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  // OTP Channel: Phone Entry
+  if (step === 'phone' && channel === 'otp') {
+    return (
+      <>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Reset Password</h2>
+        <p className="text-slate-600 text-sm mb-6">Enter your registered phone number to receive an OTP</p>
+
+        {error && (
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+        )}
+
+        <form onSubmit={handleSendOtp} className="space-y-4">
+          <div>
+            <label htmlFor="phone" className="label">Phone Number</label>
+            <input
+              type="tel"
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="input"
+              placeholder="+91 98765 43210"
+              disabled={isLoading}
+              autoFocus
+            />
+          </div>
+          <button
+            id="send-otp-button"
+            type="submit"
+            className="btn btn-primary w-full py-3"
+            disabled={isLoading || !isFirebaseReady()}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Sending OTP...
+              </span>
+            ) : (
+              'Send OTP'
+            )}
+          </button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <button type="button" onClick={() => setStep('choose')} className="text-primary-600 hover:text-primary-700 font-medium text-sm">
+            Use a different method
+          </button>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-slate-200 text-center">
+          <p className="text-slate-600 text-sm">
+            Remember your password?{' '}
+            <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  // OTP Channel: OTP Verification
+  if (step === 'otp') {
+    return (
+      <>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Reset Password</h2>
+        <p className="text-slate-600 text-sm mb-6">Enter the 6-digit code sent to {phone}</p>
+
+        {error && (
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+        )}
+
+        <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <div>
+            <label htmlFor="otp" className="label">Verification Code</label>
+            <input
+              type="text"
+              id="otp"
+              value={otp}
+              onChange={(e) => setOtpVal(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              className="input text-center text-2xl tracking-[0.5em] font-mono"
+              placeholder="000000"
+              maxLength={6}
+              disabled={isLoading}
+              autoFocus
+            />
+          </div>
+
+          {otpExpirySeconds > 0 && (
+            <p className={`text-xs text-center ${otpExpirySeconds <= 60 ? 'text-amber-600' : 'text-slate-500'}`}>
+              Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
+            </p>
+          )}
+          {otpExpirySeconds === 0 && (
+            <p className="text-xs text-center text-red-600">Code expired. Please resend OTP.</p>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary w-full py-3"
+            disabled={isLoading || otp.length !== 6}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Verifying...
+              </span>
+            ) : (
+              'Verify OTP'
+            )}
+          </button>
+
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => { setStep('phone'); setOtpVal(''); setError(''); recaptchaInitialized.current = false; }}
+              className="text-primary-600 hover:text-primary-700 font-medium text-sm"
+              disabled={isLoading}
+            >
+              Change Phone
+            </button>
+            <button
+              id="resend-otp-button"
+              type="button"
+              onClick={handleResendOtp}
+              className={`font-medium text-sm ${resendCooldown > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-primary-600 hover:text-primary-700'}`}
+              disabled={isLoading || resendCooldown > 0}
+            >
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+            </button>
+          </div>
+        </form>
+      </>
+    );
+  }
+
+  // OTP Channel: New Password
+  if (step === 'newPassword') {
+    return (
+      <>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Reset Password</h2>
+        <p className="text-slate-600 text-sm mb-6">Phone verified. Enter your new password below.</p>
+
+        {error && (
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+        )}
+
+        <form onSubmit={handleOtpResetPassword} className="space-y-4">
+          <div>
+            <label htmlFor="newPassword" className="label">New Password</label>
+            <input
+              type="password"
+              id="newPassword"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="input"
+              placeholder="Enter new password"
+              disabled={isLoading}
+              autoFocus
+            />
+            <p className="text-xs text-slate-500 mt-1">Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+          </div>
+          <div>
+            <label htmlFor="confirmPassword" className="label">Confirm Password</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="input"
+              placeholder="Confirm new password"
+              disabled={isLoading}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary w-full py-3" disabled={isLoading}>
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Resetting...
+              </span>
+            ) : (
+              'Reset Password'
+            )}
+          </button>
+        </form>
+      </>
+    );
+  }
+
+  // Email Channel: Email Entry
+  if (step === 'email') {
+    return (
+      <>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Reset Password</h2>
+        <p className="text-slate-600 text-sm mb-6">
+          Enter your registered email address and we&apos;ll send you a password reset link.
+        </p>
+
+        {error && (
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+        )}
+
+        <form onSubmit={handleEmailRequest} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="label">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input"
+              placeholder="you@example.com"
+              disabled={isLoading}
+              autoFocus
+            />
+          </div>
+          <button type="submit" className="btn btn-primary w-full py-3" disabled={isLoading}>
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Sending...
+              </span>
+            ) : (
+              'Send Reset Link'
+            )}
+          </button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <button type="button" onClick={() => setStep('choose')} className="text-primary-600 hover:text-primary-700 font-medium text-sm">
+            Use a different method
+          </button>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-slate-200 text-center space-y-2">
+          <p className="text-slate-600 text-sm">
+            Remember your password?{' '}
+            <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              Sign In
+            </Link>
+          </p>
+          <p className="text-slate-600 text-sm">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+              Register
+            </Link>
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  // Email Channel: Check Your Email
+  if (step === 'emailSent') {
     return (
       <>
         <div className="text-center">
@@ -99,68 +568,95 @@ export default function ForgotPasswordPage() {
     );
   }
 
+  // Email Channel: Token + New Password
+  if (step === 'emailReset') {
+    return (
+      <>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Set New Password</h2>
+        <p className="text-slate-600 text-sm mb-6">Enter the reset token from your email and choose a new password.</p>
+
+        {error && (
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+        )}
+
+        <form onSubmit={handleEmailReset} className="space-y-4">
+          <div>
+            <label htmlFor="resetEmail" className="label">Email Address</label>
+            <input
+              type="email"
+              id="resetEmail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input"
+              placeholder="you@example.com"
+              disabled={isLoading}
+            />
+          </div>
+          <div>
+            <label htmlFor="resetToken" className="label">Reset Token</label>
+            <input
+              type="text"
+              id="resetToken"
+              value={resetToken}
+              onChange={(e) => setResetToken(e.target.value)}
+              className="input font-mono text-sm"
+              placeholder="Paste the token from your email"
+              disabled={isLoading}
+            />
+          </div>
+          <div>
+            <label htmlFor="newPasswordEmail" className="label">New Password</label>
+            <input
+              type="password"
+              id="newPasswordEmail"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="input"
+              placeholder="Enter new password"
+              disabled={isLoading}
+            />
+            <p className="text-xs text-slate-500 mt-1">Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+          </div>
+          <div>
+            <label htmlFor="confirmPasswordEmail" className="label">Confirm Password</label>
+            <input
+              type="password"
+              id="confirmPasswordEmail"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="input"
+              placeholder="Confirm new password"
+              disabled={isLoading}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary w-full py-3" disabled={isLoading}>
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Resetting...
+              </span>
+            ) : (
+              'Reset Password'
+            )}
+          </button>
+        </form>
+      </>
+    );
+  }
+
+  // Success (shared by both channels)
   return (
-    <>
-      <h2 className="text-2xl font-semibold text-slate-900 mb-2">
-        Reset Password
-      </h2>
-      <p className="text-slate-600 text-sm mb-6">
-        Enter your registered email address and we&apos;ll send you a password reset link.
-      </p>
-
-      {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="label">
-            Email Address
-          </label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input"
-            placeholder="you@company.com"
-            disabled={isLoading}
-            autoFocus
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="btn btn-primary w-full py-3"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              Sending...
-            </span>
-          ) : (
-            'Send Reset Link'
-          )}
-        </button>
-      </form>
-
-      <div className="mt-6 pt-4 border-t border-slate-200 text-center space-y-2">
-        <p className="text-slate-600 text-sm">
-          Remember your password?{' '}
-          <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-            Sign In
-          </Link>
-        </p>
-        <p className="text-slate-600 text-sm">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-            Register
-          </Link>
-        </p>
+    <div className="text-center">
+      <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <span className="text-2xl text-green-600">&#10003;</span>
       </div>
-    </>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Password Reset Successful</h2>
+      <p className="text-slate-600 text-sm mb-6">
+        Your password has been reset. You can now sign in with your new password.
+      </p>
+      <Link href="/login" className="btn btn-primary w-full py-3 block text-center">
+        Sign In
+      </Link>
+    </div>
   );
 }

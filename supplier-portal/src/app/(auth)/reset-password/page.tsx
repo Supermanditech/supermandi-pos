@@ -46,6 +46,18 @@ function ResetPasswordInner() {
       setError('Password must be at least 8 characters');
       return;
     }
+    if (!/[A-Z]/.test(newPassword)) {
+      setError('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setError('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!/\d/.test(newPassword)) {
+      setError('Password must contain at least one digit');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -126,7 +138,7 @@ function ResetPasswordInner() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="input"
-            placeholder="you@company.com"
+            placeholder="you@example.com"
             disabled={isLoading}
             autoFocus={!email}
           />
@@ -162,7 +174,7 @@ function ResetPasswordInner() {
             disabled={isLoading}
             autoFocus={!!email && !!token}
           />
-          <p className="text-xs text-slate-500 mt-1">Minimum 8 characters</p>
+          <p className="text-xs text-slate-500 mt-1">Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
         </div>
 
         <div>

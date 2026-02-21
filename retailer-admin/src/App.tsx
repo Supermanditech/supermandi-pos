@@ -43,6 +43,7 @@ const ReorderPage = lazy(() => import('./pages/ReorderPage'));  // T-230
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));  // Phase 8: Notifications
 // RET-CLEANUP-001: Forgot password page
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 // SM-024: Admin approval queue pages
 const SupplierQueuePage = lazy(() => import('./pages/admin/SupplierQueuePage'));
 const ProductQueuePage = lazy(() => import('./pages/admin/ProductQueuePage'));
@@ -284,6 +285,7 @@ function AppRoutes() {
         <Route path="/retailer/onboard" element={<Navigate to="/retailer/register" replace />} />
         {/* RET-CLEANUP-001: Forgot password page - accessible without auth */}
         <Route path="/retailer/forgot-password" element={<LazyPage><ForgotPasswordPage /></LazyPage>} />
+        <Route path="/retailer/reset-password" element={<LazyPage><ResetPasswordPage /></LazyPage>} />
         {/* HELP-001: Help & Support page - accessible without auth */}
         <Route path="/retailer/help" element={<LazyPage><HelpPage /></LazyPage>} />
 

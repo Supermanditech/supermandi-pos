@@ -795,31 +795,30 @@ router.post("/auth/register", enhancedAuthProtection(), authRateLimiter, async (
 
 /**
  * POST /api/v1/retailer-admin/auth/login
- * GO-LIVE-LOGIN: Password-based login for retailers
+ * AUTH-PARITY-001: Email+password login for retailers (parity with supplier)
+ * Returns stores[] for post-auth store picker (same shape as OTP login)
  *
  * Request body:
- * - phone: Phone number
+ * - email: Email address
  * - password: Password
- * - storeCode: Store code
  */
 router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phone, password, storeCode } = req.body as {
-      phone?: string;
+    const { email, password } = req.body as {
+      email?: string;
       password?: string;
-      storeCode?: string;
     };
 
     // Validate inputs
-    if (!phone || !password || !storeCode) {
+    if (!email || !password) {
       res.status(400).json({
-        error: { code: "MISSING_FIELDS", message: "Phone, password, and store code are required" }
+        error: { code: "MISSING_FIELDS", message: "Email and password are required" }
       });
       return;
     }
 
-    const phoneNormalized = normalizePhoneNumber(phone);
-    const loginKey = `${storeCode.toUpperCase()}:${phoneNormalized}`;
+    const emailNormalized = email.trim().toLowerCase();
+    const loginKey = `retailer-pw:${emailNormalized}`;
 
     // Check if locked out
     const attemptCheck = checkLoginAttempts(loginKey);
@@ -839,39 +838,17 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       return;
     }
 
-    // Get store by code
-    const storeResult = await pool.query(
-      `SELECT id, code, name, status, retailer_portal_enabled
-       FROM platform.stores
-       WHERE code = $1`,
-      [storeCode.toUpperCase()]
-    );
-
-    const store = storeResult.rows[0];
-    if (!store) {
-      recordLoginAttempt(loginKey, false);
-      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid phone, password, or store code" } });
-      return;
-    }
-
-    if (!store.retailer_portal_enabled) {
-      res.status(403).json({ error: { code: "PORTAL_DISABLED", message: "Retailer portal is not enabled for this store" } });
-      return;
-    }
-
-    // Find user by phone and store
+    // Find user by email
     const userResult = await pool.query(
-      `SELECT u.id, u.phone, u.email, u.name, u.password_hash, su.role
-       FROM auth.users u
-       JOIN auth.store_users su ON su.user_id = u.id
-       WHERE u.phone = $1 AND su.store_id = $2 AND u.status = 'active' AND su.is_active = true`,
-      [phoneNormalized, store.id]
+      `SELECT id, phone, email, name, password_hash FROM auth.users
+       WHERE LOWER(email) = $1 AND status = 'active'`,
+      [emailNormalized]
     );
 
     const user = userResult.rows[0];
     if (!user) {
       recordLoginAttempt(loginKey, false);
-      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid phone, password, or store code" } });
+      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } });
       return;
     }
 
@@ -880,7 +857,7 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       res.status(401).json({
         error: {
           code: "PASSWORD_NOT_SET",
-          message: "Your account uses phone OTP login. Go back and log in with your phone number and OTP instead, or use 'Forgot Password' to set a password."
+          message: "Your account uses phone OTP login. Switch to \"Sign in with OTP\" or use \"Forgot Password\" to set a password."
         }
       });
       return;
@@ -889,19 +866,30 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
     const passwordValid = await bcrypt.compare(password, user.password_hash);
     if (!passwordValid) {
       recordLoginAttempt(loginKey, false);
-      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid phone, password, or store code" } });
+      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } });
       return;
     }
 
     // Login successful - clear attempts
     recordLoginAttempt(loginKey, true);
 
-    // Generate JWT tokens
+    // Get all stores this user has access to (same as OTP flow)
+    const storesResult = await pool.query(
+      `SELECT s.id, s.code, s.name, s.status
+       FROM platform.stores s
+       INNER JOIN auth.store_users su ON s.id = su.store_id
+       WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true
+       ORDER BY s.name`,
+      [user.id]
+    );
+
+    const stores = storesResult.rows;
+
+    // Generate JWT tokens (generic, without specific store — same as OTP flow)
     const jti = randomUUID();
     const jwtPayload = {
       sub: user.id,
       actorType: 'STORE',
-      actorId: store.id,
       permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
       jti,
     };
@@ -916,7 +904,6 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       sub: user.id,
       type: 'refresh',
       actorType: 'STORE',             // PRA-079: Prevent cross-platform refresh token reuse
-      storeId: store.id,
       jti: refreshJti,
     };
 
@@ -929,8 +916,7 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
     logLoginSuccess({
       actorType: 'retailer',
       actorId: user.id,
-      phone: phoneNormalized,
-      storeId: store.id,
+      phone: user.phone,
       ipAddress: req.ip || undefined,
       userAgent: req.get('user-agent'),
     }).catch(() => {});
@@ -938,36 +924,38 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
     // RCAT-FIX-005: Fetch application status for limited-mode gating
     const pwAppStatusResult = await pool.query(
       `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
-      [phoneNormalized]
+      [user.phone]
     );
     let pwApplicationStatus = pwAppStatusResult.rows[0]?.status || 'ACTIVE';
 
     // PRA-070: Store operational status overrides application status for limited-mode gating
-    if (store.status && store.status !== 'ACTIVE') {
-      pwApplicationStatus = store.status;
+    if (stores.length > 0 && stores[0].status && stores[0].status !== 'ACTIVE') {
+      pwApplicationStatus = stores[0].status;
     }
 
-    log.info(`[RetailerAuth] GO-LIVE-LOGIN: Password login successful for store ${storeCode}`);
+    log.info(`[RetailerAuth] AUTH-PARITY-001: Email+password login successful for ${emailNormalized}, ${stores.length} stores`);
 
+    // AUTH-SESSION-169: Set HttpOnly cookies for session persistence
+    setAuthCookies(res, accessToken, refreshToken, 86400, 7 * 86400);
+
+    // Return same shape as OTP login for frontend parity
     res.json({
       success: true,
-      data: {
-        accessToken,
-        refreshToken,
-        expiresIn: 86400,
-        tokenType: 'Bearer',
-        user: {
-          id: user.id,
-          phone: maskPhoneNumber(phoneNormalized),
-          role: user.role || "RETAILER_ADMIN",
-          applicationStatus: pwApplicationStatus,
-        },
-        store: {
-          storeId: store.id,
-          storeCode: store.code,
-          storeName: store.name,
-        },
+      token: accessToken,
+      refreshToken,
+      expiresIn: 86400,
+      tokenType: 'Bearer',
+      user: {
+        id: user.id,
+        phone: user.phone ? maskPhoneNumber(user.phone) : undefined,
+        role: "RETAILER_ADMIN",
+        applicationStatus: pwApplicationStatus,
       },
+      stores: stores.map(s => ({
+        id: s.id,
+        code: s.code,
+        name: s.name,
+      })),
     });
   } catch (error) {
     next(error);
@@ -980,15 +968,14 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
  *
  * Request body:
  * - phone: Phone number
- * - storeCode: Store code
  */
 router.post("/auth/forgot-password/request", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phone, storeCode } = req.body as { phone?: string; storeCode?: string };
+    const { phone } = req.body as { phone?: string };
 
-    if (!phone || !storeCode) {
+    if (!phone) {
       res.status(400).json({
-        error: { code: "MISSING_FIELDS", message: "Phone and store code are required" }
+        error: { code: "MISSING_FIELDS", message: "Phone number is required" }
       });
       return;
     }
@@ -1001,20 +988,17 @@ router.post("/auth/forgot-password/request", authRateLimiter, async (req: Reques
       return;
     }
 
-    // Get store and user
+    // AUTH-PARITY-002: Find user by phone only (no storeCode — user-level reset)
     const result = await pool.query(
-      `SELECT u.id FROM auth.users u
-       JOIN auth.store_users su ON su.user_id = u.id
-       JOIN platform.stores s ON s.id = su.store_id
-       WHERE u.phone = $1 AND s.code = $2 AND u.status = 'active'`,
-      [phoneNormalized, storeCode.toUpperCase()]
+      `SELECT u.id FROM auth.users u WHERE u.phone = $1 AND u.status = 'active'`,
+      [phoneNormalized]
     );
 
     if (!result.rows[0]) {
-      // Don't reveal if user exists - always return success
+      // Don't reveal if user exists — always return success
       res.json({
         success: true,
-        message: "If an account exists with this phone and store, you can proceed to verify OTP.",
+        message: "If an account exists with this phone, you can proceed to verify OTP.",
       });
       return;
     }
@@ -1030,24 +1014,22 @@ router.post("/auth/forgot-password/request", authRateLimiter, async (req: Reques
 
 /**
  * POST /api/v1/retailer-admin/auth/forgot-password/reset
- * GO-LIVE-LOGIN: Reset password with verified Firebase token
+ * AUTH-PARITY-002: Reset password with verified Firebase token (no storeCode)
  *
  * Request body:
  * - idToken: Firebase ID token (proves phone ownership)
  * - newPassword: New password
- * - storeCode: Store code
  */
 router.post("/auth/forgot-password/reset", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { idToken, newPassword, storeCode } = req.body as {
+    const { idToken, newPassword } = req.body as {
       idToken?: string;
       newPassword?: string;
-      storeCode?: string;
     };
 
-    if (!idToken || !newPassword || !storeCode) {
+    if (!idToken || !newPassword) {
       res.status(400).json({
-        error: { code: "MISSING_FIELDS", message: "All fields are required" }
+        error: { code: "MISSING_FIELDS", message: "ID token and new password are required" }
       });
       return;
     }
@@ -1092,18 +1074,15 @@ router.post("/auth/forgot-password/reset", authRateLimiter, async (req: Request,
       return;
     }
 
-    // Find user by phone and store
+    // Find user by phone (no store check — user-level password)
     const userResult = await pool.query(
-      `SELECT u.id FROM auth.users u
-       JOIN auth.store_users su ON su.user_id = u.id
-       JOIN platform.stores s ON s.id = su.store_id
-       WHERE u.phone = $1 AND s.code = $2 AND u.status = 'active'`,
-      [phoneNormalized, storeCode.toUpperCase()]
+      `SELECT u.id FROM auth.users u WHERE u.phone = $1 AND u.status = 'active'`,
+      [phoneNormalized]
     );
 
     if (!userResult.rows[0]) {
       res.status(404).json({
-        error: { code: "USER_NOT_FOUND", message: "No account found for this phone and store" }
+        error: { code: "USER_NOT_FOUND", message: "No account found for this phone number" }
       });
       return;
     }
@@ -1118,7 +1097,160 @@ router.post("/auth/forgot-password/reset", authRateLimiter, async (req: Request,
       [passwordHash, userId]
     );
 
-    log.info(`[RetailerAuth] GO-LIVE-LOGIN: Password reset for user ${userId}, store ${storeCode}`);
+    log.info(`[RetailerAuth] AUTH-PARITY-002: OTP password reset for user ${userId}`);
+
+    res.json({
+      success: true,
+      message: "Password reset successful. Please login with your new password.",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/forgot-password/email-request
+ * AUTH-PARITY-002: Email-based password reset (parity with supplier)
+ * Generates a signed JWT reset token.
+ *
+ * Request body:
+ * - email: Email address
+ */
+router.post("/auth/forgot-password/email-request", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body as { email?: string };
+
+    if (!email) {
+      res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "Email is required" }
+      });
+      return;
+    }
+
+    const emailNormalized = email.trim().toLowerCase();
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Find user by email
+    const result = await pool.query(
+      `SELECT id FROM auth.users WHERE LOWER(email) = $1 AND status = 'active'`,
+      [emailNormalized]
+    );
+
+    // Always return success to prevent email enumeration
+    if (!result.rows[0]) {
+      res.json({
+        success: true,
+        message: "If an account exists with this email, a reset link will be sent.",
+      });
+      return;
+    }
+
+    const userId = result.rows[0].id;
+
+    // Generate signed JWT reset token (no DB column needed)
+    const resetToken = jwt.sign(
+      { sub: userId, purpose: 'password-reset' },
+      JWT_SECRET,
+      { issuer: JWT_ISSUER, expiresIn: '1h' }
+    );
+
+    log.info(`[RetailerAuth] AUTH-PARITY-002: Email password reset requested for ${emailNormalized}`);
+
+    res.json({
+      success: true,
+      message: "If an account exists with this email, a reset link will be sent.",
+      // DEV ONLY: Return token for testing
+      ...(process.env.NODE_ENV !== 'production' && { devToken: resetToken }),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/forgot-password/email-reset
+ * AUTH-PARITY-002: Reset password using email JWT token
+ *
+ * Request body:
+ * - email: Email address
+ * - token: JWT reset token
+ * - newPassword: New password
+ */
+router.post("/auth/forgot-password/email-reset", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, token, newPassword } = req.body as {
+      email?: string;
+      token?: string;
+      newPassword?: string;
+    };
+
+    if (!email || !token || !newPassword) {
+      res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "Email, token, and new password are required" }
+      });
+      return;
+    }
+
+    // Validate password
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      res.status(400).json({
+        error: { code: "INVALID_PASSWORD", message: passwordError }
+      });
+      return;
+    }
+
+    // Verify JWT reset token
+    let decoded: { sub?: string; purpose?: string };
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { sub?: string; purpose?: string };
+    } catch {
+      res.status(400).json({
+        error: { code: "INVALID_TOKEN", message: "Invalid or expired reset token. Please request a new one." }
+      });
+      return;
+    }
+
+    if (decoded.purpose !== 'password-reset' || !decoded.sub) {
+      res.status(400).json({
+        error: { code: "INVALID_TOKEN", message: "Invalid reset token" }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Verify email matches the token's user
+    const userResult = await pool.query(
+      `SELECT id FROM auth.users WHERE id = $1 AND LOWER(email) = $2 AND status = 'active'`,
+      [decoded.sub, email.trim().toLowerCase()]
+    );
+
+    if (!userResult.rows[0]) {
+      res.status(400).json({
+        error: { code: "INVALID_TOKEN", message: "Invalid or expired reset token" }
+      });
+      return;
+    }
+
+    // Hash and update password
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+
+    await pool.query(
+      `UPDATE auth.users SET password_hash = $1, tokens_revoked_at = NOW() WHERE id = $2`,
+      [passwordHash, decoded.sub]
+    );
+
+    log.info(`[RetailerAuth] AUTH-PARITY-002: Email token password reset for user ${decoded.sub}`);
 
     res.json({
       success: true,

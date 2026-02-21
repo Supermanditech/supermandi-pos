@@ -4,149 +4,32 @@ import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
 
-// T-002: Real forgot password flow (OTP-based via Firebase)
-// Step 1: Enter phone + store code → verify account exists
-// Step 2: Send OTP via Firebase
-// Step 3: Enter OTP → verify → get Firebase idToken
-// Step 4: Enter new password → POST /api/v1/retailer-admin/auth/forgot-password/reset
+// AUTH-PARITY-002: Dual-channel forgot password (OTP + Email)
+// Channel 1: Phone → OTP verify → new password
+// Channel 2: Email → reset link → token form → new password
 
-type Step = 'phone' | 'otp' | 'newPassword' | 'success';
-
-const styles = {
-  pageContainer: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    background: '#F7F9FC',
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  header: {
-    background: 'white',
-    borderBottom: '1px solid #e2e8f0',
-    height: '64px',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  headerInner: {
-    maxWidth: '1152px',
-    width: '100%',
-    margin: '0 auto',
-    padding: '0 1.5rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  logoText: {
-    fontSize: '1.5rem',
-    fontWeight: 700,
-    color: '#ffffff',
-    background: '#2563eb',
-    borderRadius: '999px',
-    padding: '0.25rem 0.75rem',
-    lineHeight: 1,
-  },
-  logoSeparator: { color: '#94a3b8' },
-  logoSubtext: { color: '#475569', fontSize: '0.875rem', fontWeight: 500 },
-  main: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem 1rem',
-  },
-  cardContainer: { width: '100%', maxWidth: '448px' },
-  card: {
-    background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0',
-    padding: '2rem',
-  },
-  cardTitle: { fontSize: '1.5rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' },
-  cardSubtitle: { color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' },
-  formGroup: { marginBottom: '1rem' },
-  label: { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '0.5rem' },
-  input: {
-    width: '100%',
-    height: '42px',
-    padding: '0 1rem',
-    fontSize: '0.9375rem',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-  },
-  btnPrimary: {
-    width: '100%',
-    height: '46px',
-    padding: '0 1.5rem',
-    fontSize: '0.9375rem',
-    fontWeight: 500,
-    color: 'white',
-    background: '#2563eb',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'background 0.15s',
-    marginBottom: '1rem',
-  },
-  btnPrimaryDisabled: { background: '#93c5fd', cursor: 'not-allowed' },
-  alertError: {
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    color: '#991b1b',
-    padding: '0.875rem 1rem',
-    borderRadius: '6px',
-    fontSize: '0.875rem',
-    marginBottom: '1rem',
-  },
-  textLink: {
-    color: '#2563eb',
-    textDecoration: 'none',
-    fontWeight: 500,
-    fontSize: '0.875rem',
-    cursor: 'pointer',
-    background: 'none',
-    border: 'none',
-    padding: 0,
-  },
-  divider: { borderTop: '1px solid #e5e7eb', margin: '1.5rem 0', paddingTop: '1rem' },
-  footer: { background: 'white', borderTop: '1px solid #e2e8f0' },
-  footerInner: {
-    maxWidth: '1152px',
-    margin: '0 auto',
-    padding: '1rem 1.5rem',
-    textAlign: 'center' as const,
-    fontSize: '0.8125rem',
-    color: '#64748b',
-  },
-  passwordHint: { fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' },
-};
+type Step = 'choose' | 'phone' | 'otp' | 'newPassword' | 'success' | 'emailSent' | 'emailReset';
+type Channel = 'otp' | 'email';
 
 export default function ForgotPasswordPage() {
-  const [step, setStep] = useState<Step>('phone');
+  const [step, setStep] = useState<Step>('choose');
+  const [channel, setChannel] = useState<Channel>('otp');
   const [phone, setPhone] = useState('');
-  const [storeCode, setStoreCode] = useState('');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const [idToken, setIdToken] = useState('');
   const recaptchaInitialized = useRef(false);
-  const [accountVerified, setAccountVerified] = useState(false);
 
-  // Setup reCAPTCHA when account is verified
+  // Setup reCAPTCHA when on phone step
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && accountVerified) {
+    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -158,7 +41,7 @@ export default function ForgotPasswordPage() {
       cleanup();
       recaptchaInitialized.current = false;
     };
-  }, [step, accountVerified]);
+  }, [step]);
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -174,8 +57,8 @@ export default function ForgotPasswordPage() {
     }
   }, [otpExpirySeconds]);
 
-  // Step 1: Verify account exists
-  const handleVerifyAccount = async (e: React.FormEvent) => {
+  // OTP Channel: Verify phone exists then send OTP
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -184,19 +67,16 @@ export default function ForgotPasswordPage() {
       setError('Please enter a valid phone number');
       return;
     }
-    if (!storeCode.trim()) {
-      setError('Please enter your store code');
-      return;
-    }
 
     setIsLoading(true);
     try {
+      // Verify account exists
       const response = await fetch(
         `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/request`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: cleanedPhone, storeCode: storeCode.trim() }),
+          body: JSON.stringify({ phone: cleanedPhone }),
           credentials: 'include',
         }
       );
@@ -204,24 +84,12 @@ export default function ForgotPasswordPage() {
       if (!response.ok) {
         throw new Error(data.error?.message || data.message || 'Account verification failed');
       }
-      setAccountVerified(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to verify account. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Step 1b: Send OTP via Firebase
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    try {
+      // Send OTP via Firebase
       if (!isFirebaseReady()) {
         throw new Error('Firebase is not configured. Phone verification is required.');
       }
-      const cleanedPhone = phone.replace(/[\s-]/g, '');
+
       let normalizedPhone = cleanedPhone;
       if (!normalizedPhone.startsWith('+')) {
         normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
@@ -237,7 +105,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Step 2: Verify OTP
+  // OTP Channel: Verify OTP
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -253,8 +121,8 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Step 3: Reset password
-  const handleResetPassword = async (e: React.FormEvent) => {
+  // OTP Channel: Reset password with Firebase token
+  const handleOtpResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -286,7 +154,7 @@ export default function ForgotPasswordPage() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken, newPassword, storeCode: storeCode.trim() }),
+          body: JSON.stringify({ idToken, newPassword }),
           credentials: 'include',
         }
       );
@@ -297,6 +165,94 @@ export default function ForgotPasswordPage() {
       setStep('success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Password reset failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Email Channel: Request reset link
+  const handleEmailRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/email-request`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+          credentials: 'include',
+        }
+      );
+      await safeJson(response);
+      setStep('emailSent');
+    } catch {
+      // Always show success to prevent email enumeration
+      setStep('emailSent');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Email Channel: Reset password with token
+  const handleEmailReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!resetToken.trim()) {
+      setError('Please enter the reset token from your email');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      setError('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setError('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!/\d/.test(newPassword)) {
+      setError('Password must contain at least one digit');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/email-reset`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim().toLowerCase(), token: resetToken.trim(), newPassword }),
+          credentials: 'include',
+        }
+      );
+      const data = await safeJson(response);
+      if (!response.ok) {
+        throw new Error(data.error?.message || data.message || 'Password reset failed');
+      }
+      setStep('success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Password reset failed. The token may be expired or invalid.');
     } finally {
       setIsLoading(false);
     }
@@ -326,219 +282,276 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  const selectChannel = (ch: Channel) => {
+    setChannel(ch);
+    setStep(ch === 'otp' ? 'phone' : 'phone');
+    setError('');
+  };
+
   return (
-    <div style={styles.pageContainer}>
-      <header style={styles.header}>
-        <div style={styles.headerInner}>
-          <div style={styles.logo}>
-            <span style={styles.logoText}>SuperMandi</span>
-            <span style={styles.logoSeparator}>|</span>
-            <span style={styles.logoSubtext}>Retailer Portal</span>
+    <div className="login-page-container">
+      <header className="login-header">
+        <div className="login-header-inner">
+          <div className="login-logo">
+            <img src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <span className="login-logo-text">SuperMandi</span>
+            <span className="login-logo-separator">|</span>
+            <span className="login-logo-subtext">Retailer Portal</span>
           </div>
         </div>
       </header>
 
-      <main style={styles.main}>
-        <div style={styles.cardContainer}>
-          <div style={styles.card}>
-            {step !== 'success' && (
+      <main className="login-main">
+        <div className="login-card-container">
+          <div className="login-card-box">
+            {/* Channel Selector */}
+            {step === 'choose' && (
               <>
-                <h1 style={styles.cardTitle}>Reset Password</h1>
-                <p style={styles.cardSubtitle}>
-                  {step === 'phone' && !accountVerified && 'Enter your phone number and store code to verify your account.'}
-                  {step === 'phone' && accountVerified && 'Account verified. Click "Send OTP" to receive a verification code.'}
-                  {step === 'otp' && `Enter the 6-digit code sent to ${phone}`}
-                  {step === 'newPassword' && 'Phone verified. Enter your new password below.'}
-                </p>
+                <h2 className="login-card-title">Reset Password</h2>
+                <p className="login-card-subtitle">Choose how you want to reset your password</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => selectChannel('otp')}
+                    className="login-btn-primary"
+                  >
+                    Reset via mobile OTP
+                  </button>
+                  <button
+                    onClick={() => { setChannel('email'); setStep('phone'); setError(''); }}
+                    className="login-btn-secondary"
+                  >
+                    Reset via email link
+                  </button>
+                </div>
+                <div className="login-divider">
+                  <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
+                    Remember your password?{' '}
+                    <Link to="/retailer/login" className="login-text-link">Sign In</Link>
+                  </p>
+                </div>
               </>
             )}
 
-            {error && <div style={styles.alertError}>{error}</div>}
-
-            {/* Step 1: Phone + Store Code */}
-            {step === 'phone' && !accountVerified && (
-              <form onSubmit={handleVerifyAccount}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone Number</label>
-                  <input
-                    type="tel"
-                    style={styles.input}
-                    placeholder="+91 9876543210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={isLoading}
-                    autoFocus
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Store Code</label>
-                  <input
-                    type="text"
-                    style={styles.input}
-                    placeholder="e.g. MYSTORE"
-                    value={storeCode}
-                    onChange={(e) => setStoreCode(e.target.value.toUpperCase())}
-                    disabled={isLoading}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  style={{ ...styles.btnPrimary, ...(isLoading ? styles.btnPrimaryDisabled : {}) }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Verifying...' : 'Verify Account'}
-                </button>
-              </form>
+            {/* OTP Channel: Phone Entry */}
+            {step === 'phone' && channel === 'otp' && (
+              <>
+                <h2 className="login-card-title">Reset Password</h2>
+                <p className="login-card-subtitle">Enter your registered phone number to receive an OTP</p>
+                {error && <div className="login-alert-error">{error}</div>}
+                <form onSubmit={handleSendOtp}>
+                  <div className="login-form-group">
+                    <label className="login-form-label">Phone Number</label>
+                    <input
+                      type="tel"
+                      className="login-form-input"
+                      placeholder="+91 98765 43210"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={isLoading}
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    id="send-otp-button"
+                    type="submit"
+                    className="login-btn-primary"
+                    disabled={isLoading || !isFirebaseReady()}
+                  >
+                    {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                  </button>
+                  <div style={{ textAlign: 'center' }}>
+                    <button type="button" onClick={() => setStep('choose')} className="login-text-link">
+                      Use a different method
+                    </button>
+                  </div>
+                </form>
+              </>
             )}
 
-            {/* Step 1b: Send OTP */}
-            {step === 'phone' && accountVerified && (
-              <form onSubmit={handleSendOtp}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone Number</label>
-                  <input type="tel" style={{ ...styles.input, background: '#f8fafc' }} value={phone} disabled />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Store Code</label>
-                  <input type="text" style={{ ...styles.input, background: '#f8fafc' }} value={storeCode} disabled />
-                </div>
-                <button
-                  id="send-otp-button"
-                  type="submit"
-                  style={{ ...styles.btnPrimary, ...(isLoading || !isFirebaseReady() ? styles.btnPrimaryDisabled : {}) }}
-                  disabled={isLoading || !isFirebaseReady()}
-                >
-                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
-                </button>
+            {/* Email Channel: Email Entry */}
+            {step === 'phone' && channel === 'email' && (
+              <>
+                <h2 className="login-card-title">Reset Password</h2>
+                <p className="login-card-subtitle">Enter your registered email address and we'll send you a password reset link.</p>
+                {error && <div className="login-alert-error">{error}</div>}
+                <form onSubmit={handleEmailRequest}>
+                  <div className="login-form-group">
+                    <label className="login-form-label">Email Address</label>
+                    <input
+                      type="email"
+                      className="login-form-input"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
+                      autoFocus
+                    />
+                  </div>
+                  <button type="submit" className="login-btn-primary" disabled={isLoading}>
+                    {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                  <div style={{ textAlign: 'center' }}>
+                    <button type="button" onClick={() => setStep('choose')} className="login-text-link">
+                      Use a different method
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {/* Email Channel: Check Email */}
+            {step === 'emailSent' && (
+              <>
                 <div style={{ textAlign: 'center' }}>
+                  <div style={{ width: '4rem', height: '4rem', background: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#2563eb' }}>
+                    &#9993;
+                  </div>
+                  <h2 className="login-card-title">Check Your Email</h2>
+                  <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
+                    If an account exists with <strong>{email}</strong>, we've sent a password reset link.
+                    Please check your inbox and spam folder.
+                  </p>
                   <button
-                    type="button"
-                    style={styles.textLink}
-                    onClick={() => { setAccountVerified(false); setError(''); }}
-                    disabled={isLoading}
+                    onClick={() => setStep('emailReset')}
+                    className="login-btn-primary"
                   >
-                    Change phone number
+                    I Have a Reset Token
                   </button>
+                  <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+                    <button type="button" onClick={() => { setStep('phone'); setChannel('email'); setError(''); }} className="login-text-link">
+                      Try a different email
+                    </button>
+                  </div>
                 </div>
-              </form>
+              </>
             )}
 
-            {/* Step 2: OTP Verification */}
+            {/* Email Channel: Token + New Password */}
+            {step === 'emailReset' && (
+              <>
+                <h2 className="login-card-title">Set New Password</h2>
+                <p className="login-card-subtitle">Enter the reset token from your email and choose a new password.</p>
+                {error && <div className="login-alert-error">{error}</div>}
+                <form onSubmit={handleEmailReset}>
+                  <div className="login-form-group">
+                    <label className="login-form-label">Email Address</label>
+                    <input type="email" className="login-form-input" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
+                  </div>
+                  <div className="login-form-group">
+                    <label className="login-form-label">Reset Token</label>
+                    <input type="text" className="login-form-input" style={{ fontFamily: 'monospace', fontSize: '0.875rem' }} placeholder="Paste the token from your email" value={resetToken} onChange={(e) => setResetToken(e.target.value)} disabled={isLoading} />
+                  </div>
+                  <div className="login-form-group">
+                    <label className="login-form-label">New Password</label>
+                    <input type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+                  </div>
+                  <div className="login-form-group">
+                    <label className="login-form-label">Confirm Password</label>
+                    <input type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                  </div>
+                  <button type="submit" className="login-btn-primary" disabled={isLoading}>
+                    {isLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* OTP Channel: OTP Verification */}
             {step === 'otp' && (
-              <form onSubmit={handleVerifyOtp}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Verification Code</label>
-                  <input
-                    type="text"
-                    style={{ ...styles.input, textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
-                    placeholder="123456"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    maxLength={6}
-                    disabled={isLoading}
-                    autoFocus
-                  />
-                </div>
-                {otpExpirySeconds > 0 && (
-                  <p style={{ fontSize: '0.75rem', textAlign: 'center', color: otpExpirySeconds <= 60 ? '#dc2626' : '#64748b', marginBottom: '0.75rem' }}>
-                    Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
-                  </p>
-                )}
-                {otpExpirySeconds === 0 && (
-                  <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#dc2626', marginBottom: '0.75rem' }}>
-                    Code expired. Please resend OTP.
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  style={{ ...styles.btnPrimary, ...(isLoading || otp.length !== 6 ? styles.btnPrimaryDisabled : {}) }}
-                  disabled={isLoading || otp.length !== 6}
-                >
-                  {isLoading ? 'Verifying...' : 'Verify OTP'}
-                </button>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    style={styles.textLink}
-                    onClick={() => { setStep('phone'); setOtp(''); setError(''); setAccountVerified(false); recaptchaInitialized.current = false; }}
-                    disabled={isLoading}
-                  >
-                    Change Phone
+              <>
+                <h2 className="login-card-title">Reset Password</h2>
+                <p className="login-card-subtitle">Enter the 6-digit code sent to {phone}</p>
+                {error && <div className="login-alert-error">{error}</div>}
+                <form onSubmit={handleVerifyOtp}>
+                  <div className="login-form-group">
+                    <label className="login-form-label">Verification Code</label>
+                    <input
+                      type="text"
+                      className="login-form-input login-form-input--otp"
+                      placeholder="Enter 6-digit PIN"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      maxLength={6}
+                      disabled={isLoading}
+                      autoFocus
+                    />
+                  </div>
+                  {otpExpirySeconds > 0 && (
+                    <p className={`login-otp-expiry ${otpExpirySeconds <= 60 ? 'login-otp-expiry--warning' : 'login-otp-expiry--normal'}`}>
+                      Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
+                    </p>
+                  )}
+                  {otpExpirySeconds === 0 && step === 'otp' && (
+                    <p className="login-otp-expiry login-otp-expiry--warning">Code expired. Please resend OTP.</p>
+                  )}
+                  <button type="submit" className="login-btn-primary" disabled={isLoading || otp.length !== 6}>
+                    {isLoading ? 'Verifying...' : 'Verify OTP'}
                   </button>
-                  <button
-                    id="resend-otp-button"
-                    type="button"
-                    style={{ ...styles.textLink, ...(resendCooldown > 0 ? { color: '#9ca3af', cursor: 'not-allowed' } : {}) }}
-                    onClick={handleResendOtp}
-                    disabled={isLoading || resendCooldown > 0}
-                  >
-                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
-                  </button>
-                </div>
-              </form>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <button type="button" onClick={() => { setStep('phone'); setOtp(''); setError(''); recaptchaInitialized.current = false; }} className="login-text-link" disabled={isLoading}>
+                      Change Phone
+                    </button>
+                    <button
+                      id="resend-otp-button"
+                      type="button"
+                      onClick={handleResendOtp}
+                      className="login-text-link"
+                      disabled={isLoading || resendCooldown > 0}
+                      style={resendCooldown > 0 ? { color: '#9ca3af', cursor: 'not-allowed' } : {}}
+                    >
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                    </button>
+                  </div>
+                </form>
+              </>
             )}
 
-            {/* Step 3: New Password */}
+            {/* OTP Channel: New Password */}
             {step === 'newPassword' && (
-              <form onSubmit={handleResetPassword}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>New Password</label>
-                  <input
-                    type="password"
-                    style={styles.input}
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={isLoading}
-                    autoFocus
-                  />
-                  <p style={styles.passwordHint}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Confirm Password</label>
-                  <input
-                    type="password"
-                    style={styles.input}
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  style={{ ...styles.btnPrimary, ...(isLoading ? styles.btnPrimaryDisabled : {}) }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Resetting...' : 'Reset Password'}
-                </button>
-              </form>
+              <>
+                <h2 className="login-card-title">Reset Password</h2>
+                <p className="login-card-subtitle">Phone verified. Enter your new password below.</p>
+                {error && <div className="login-alert-error">{error}</div>}
+                <form onSubmit={handleOtpResetPassword}>
+                  <div className="login-form-group">
+                    <label className="login-form-label">New Password</label>
+                    <input type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+                  </div>
+                  <div className="login-form-group">
+                    <label className="login-form-label">Confirm Password</label>
+                    <input type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                  </div>
+                  <button type="submit" className="login-btn-primary" disabled={isLoading}>
+                    {isLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </form>
+              </>
             )}
 
-            {/* Step 4: Success */}
+            {/* Success */}
             {step === 'success' && (
               <div style={{ textAlign: 'center' }}>
                 <div style={{ width: '4rem', height: '4rem', background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#22c55e' }}>
                   &#10003;
                 </div>
-                <h2 style={styles.cardTitle}>Password Reset Successful</h2>
-                <p style={{ ...styles.cardSubtitle, marginBottom: '1.5rem' }}>
+                <h2 className="login-card-title">Password Reset Successful</h2>
+                <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
                   Your password has been reset. You can now sign in with your new password.
                 </p>
-                <Link
-                  to="/retailer/login"
-                  style={{ ...styles.btnPrimary, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
+                <Link to="/retailer/login" className="login-btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                   Sign In
                 </Link>
               </div>
             )}
 
-            {step !== 'success' && (
-              <div style={styles.divider}>
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+            {/* Back to login */}
+            {step !== 'success' && step !== 'choose' && step !== 'emailSent' && (
+              <div className="login-divider">
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
                   Remember your password?{' '}
-                  <Link to="/retailer/login" style={styles.textLink}>Sign In</Link>
+                  <Link to="/retailer/login" className="login-text-link">Sign In</Link>
                 </p>
               </div>
             )}
@@ -546,10 +559,13 @@ export default function ForgotPasswordPage() {
         </div>
       </main>
 
-      <footer style={styles.footer}>
-        <div style={styles.footerInner}>
-          &copy; 2026 SuperMandi Tech Pvt Ltd. All rights reserved.
-          <BuildStamp />
+      <footer className="login-footer">
+        <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Link to="/retailer/help" style={{ color: '#94A3B8', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+            <BuildStamp />
+          </div>
         </div>
       </footer>
     </div>

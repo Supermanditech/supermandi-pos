@@ -1,0 +1,311 @@
+{
+  "ticketId": "LIVE.AUTH.PARITY.LOGIN_CONTAINER.001",
+  "screenId": "AUTH.PARITY.SUPPLIER_RETAILER",
+  "orderInScreen": 1,
+  "surface": "supplier_web",
+  "riskClass": "medium",
+  "title": "Lock supplier login shell metrics to retailer baseline (pixel parity)",
+  "description": "Execution contract: supplier and retailer login shells must be visually equivalent on desktop and mobile. Required metrics: header height 64px; auth card max-width 448px; card padding 32px; input height 42px; primary button height 46px; identical vertical spacing rhythm between title/subtitle/fields/actions; footer alignment with left legal text and right Help + BuildStamp block. No alternate spacing system is allowed.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "na",
+    "navigation": "pass",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/supplier/login/",
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "cloudRunServices": [
+      "supplier-portal",
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "SUPPLIER.LOGIN",
+      "RETAILER.LOGIN"
+    ],
+    "impactedServices": [
+      "supplier-portal",
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "operator_live_visual_review_2026-02-21",
+    "reproSteps": [
+      "Open /supplier/login/ and /retailer/login with same viewport (1365x768 and 390x844).",
+      "Measure header height, card width, field/button heights, and spacing intervals; compare pixel-to-pixel.",
+      "Update supplier auth layout/tokens until all listed metrics match retailer baseline in both OTP and password modes."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22260688109",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-22T00:10:00Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/supplier/login/",
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22260688109",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/supplier/login/",
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22260688109",
+      "staging_commit=5db6c84",
+      "api_health_200=https://staging.supermandi.tech/api/health"
+    ],
+    "parityProof": [
+      "staging_visual_review_at=2026-02-22T00:10:00Z",
+      "observed_on_commit=5db6c84",
+      "compare_supplier_vs_retailer_auth_surfaces",
+      "rescan_2026-02-21_auth_shell_metrics_locked"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-22T00:10:00Z",
+    "updatedAt": "2026-02-21T18:41:31Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket created from live GCP staging observation for supplier-vs-retailer parity.",
+    "evidence": [
+      "https://staging.supermandi.tech/supplier/login/",
+      "https://staging.supermandi.tech/retailer/login",
+      "staging_commit=5db6c84"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "supplier_web",
+    "expectedBasePath": "/supplier",
+    "expectedPrimaryService": "supplier-portal",
+    "actualCloudRunServices": [
+      "supplier-portal",
+      "retailer-admin",
+      "api-gateway"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/supplier/login/",
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/api/health"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "supplier-portal",
+      "retailer-admin",
+      "shared auth UI components"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Operator approval of this atomic ticket",
+      "Next staging deploy wave with parity verification"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Codex locked the execution contract in this ticket. Claude must implement exactly the listed acceptance criteria; no product-level decisions are allowed in execution."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/auth parity scope only."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/auth parity scope only."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Frontend auth shell contract must be deterministic and visually equivalent between supplier and retailer, with no one-sided layout tokens."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Web auth parity scope only."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/auth parity scope only."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/auth parity scope only."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No schema mutation in this ticket."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-deploy auth flow check."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No logging contract change in this ticket."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Apply exact retailer login shell metrics to supplier auth layout (header, card, field and button dimensions).",
+      "Keep desktop and mobile spacing rhythm identical for all auth states (OTP mode, password mode, error state).",
+      "Attach before/after parity captures at matching viewport sizes after implementation."
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Operator ticket approval",
+      "Staging deploy evidence refresh"
+    ],
+    "blocked": false,
+    "summary": "Execution scope fixed by Codex. Claude must execute exactly as directed once approved."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE.AUTH.PARITY.LOGIN_CONTAINER.001",
+    "lastValidatedCommit": "8fecebec",
+    "noMixedScope": false,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "git rev-parse --short HEAD",
+      "pnpm workflow:validate",
+      "pnpm workflow:monitor",
+      "deploy_ref=github://run/22260688109"
+    ]
+  }
+}
