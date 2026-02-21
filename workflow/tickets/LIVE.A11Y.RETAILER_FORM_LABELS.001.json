@@ -1,0 +1,270 @@
+{
+  "ticketId": "LIVE.A11Y.RETAILER_FORM_LABELS.001",
+  "screenId": "A11Y.RETAILER_AUTH",
+  "orderInScreen": 1,
+  "surface": "retailer_web",
+  "riskClass": "high",
+  "title": "Add missing htmlFor/id label associations and ARIA attributes to all retailer auth forms",
+  "description": "All retailer auth pages have zero htmlFor/id associations and zero ARIA attributes. WCAG 2.1 Level A violation. Supplier portal correctly uses htmlFor/id. Error messages lack role=alert, loading states lack aria-busy.",
+  "status": "todo",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/retailer/forgot-password"
+    ],
+    "cloudRunServices": [
+      "retailer-admin"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "RETAILER.LOGIN",
+      "RETAILER.REGISTER",
+      "RETAILER.FORGOT_PASSWORD",
+      "RETAILER.RESET_PASSWORD"
+    ],
+    "impactedServices": [
+      "retailer-admin"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude_gcp_staging_ticketization_2026-02-22",
+    "reproSteps": [
+      "Open /retailer/login and inspect any label -> no htmlFor",
+      "Inspect any input -> no id",
+      "Run Chrome accessibility audit -> label/input association failures",
+      "Compare with /supplier/login/ which uses htmlFor=phone, id=phone"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": true,
+    "navigationChecked": true,
+    "envAndBasePathChecked": true,
+    "migrationSafetyChecked": true,
+    "rollbackPlanReady": true,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22264213051",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-22T22:15:00.000Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/retailer/forgot-password"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22264213051",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/retailer/forgot-password"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22264213051",
+      "staging_commit=7b3a4ee8",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "staging_ticketization_at=2026-02-22T22:15:00.000Z",
+      "observed_on_staging_sha_7b3a4ee8"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-22T22:15:00.000Z",
+    "updatedAt": "2026-02-22T22:15:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket created from live GCP staging ticketization audit.",
+    "evidence": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/retailer/forgot-password"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "retailer_web",
+    "expectedBasePath": "/retailer",
+    "expectedPrimaryService": "retailer-admin",
+    "actualCloudRunServices": [
+      "retailer-admin"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/retailer/forgot-password"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "retailer-admin"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Operator approval",
+      "Staging deploy after implementation"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Discovered during GCP staging ticketization audit."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix staging verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix verification."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Add htmlFor/id to all label/input pairs",
+      "Add role=alert to error containers",
+      "Add aria-live to OTP countdown"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Operator ticket approval",
+      "Staging deploy evidence refresh"
+    ],
+    "blocked": false,
+    "summary": "Discovered during GCP staging ticketization. Pending implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE-STAGING-TICKETIZATION-2026-02-22",
+    "lastValidatedCommit": "9089afe1",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "staging_ticketization_audit_2026-02-22"
+    ]
+  }
+}

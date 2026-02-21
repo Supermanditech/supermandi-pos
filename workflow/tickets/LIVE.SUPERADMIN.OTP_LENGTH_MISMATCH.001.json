@@ -1,0 +1,255 @@
+{
+  "ticketId": "LIVE.SUPERADMIN.OTP_LENGTH_MISMATCH.001",
+  "screenId": "SUPERADMIN.AUTH",
+  "orderInScreen": 2,
+  "surface": "superadmin_web",
+  "riskClass": "low",
+  "title": "Fix SuperAdmin OTP input length validation mismatch (says 6-digit but allows 4-8)",
+  "description": "OTP input placeholder says \"Enter 6-digit code\" but maxLength=8 and validation checks length >= 4. Should enforce exactly 6 digits.",
+  "status": "todo",
+  "severity": "P3",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/admin/"
+    ],
+    "cloudRunServices": [
+      "superadmin"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "SUPERADMIN.AUTH"
+    ],
+    "impactedServices": [
+      "superadmin"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude_gcp_staging_ticketization_2026-02-22",
+    "reproSteps": [
+      "Open /admin/, enter email, get OTP step",
+      "Note placeholder says \"6-digit code\"",
+      "Enter 4 chars -> accepted despite saying 6-digit"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": true,
+    "navigationChecked": true,
+    "envAndBasePathChecked": true,
+    "migrationSafetyChecked": true,
+    "rollbackPlanReady": true,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22264213051",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-22T22:15:00.000Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/admin/"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22264213051",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/admin/"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22264213051",
+      "staging_commit=7b3a4ee8",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "staging_ticketization_at=2026-02-22T22:15:00.000Z",
+      "observed_on_staging_sha_7b3a4ee8"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-22T22:15:00.000Z",
+    "updatedAt": "2026-02-22T22:15:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket created from live GCP staging ticketization audit.",
+    "evidence": [
+      "https://staging.supermandi.tech/admin/"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "superadmin_web",
+    "expectedBasePath": "/admin",
+    "expectedPrimaryService": "superadmin",
+    "actualCloudRunServices": [
+      "superadmin"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/admin/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "superadmin"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Operator approval",
+      "Staging deploy after implementation"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Discovered during GCP staging ticketization audit."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix staging verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix verification."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Set maxLength=6 on OTP input",
+      "Validate exact 6-digit length"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Operator ticket approval",
+      "Staging deploy evidence refresh"
+    ],
+    "blocked": false,
+    "summary": "Discovered during GCP staging ticketization. Pending implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE-STAGING-TICKETIZATION-2026-02-22",
+    "lastValidatedCommit": "9089afe1",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "staging_ticketization_audit_2026-02-22"
+    ]
+  }
+}

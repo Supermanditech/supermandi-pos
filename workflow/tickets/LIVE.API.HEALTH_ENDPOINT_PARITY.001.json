@@ -1,0 +1,275 @@
+{
+  "ticketId": "LIVE.API.HEALTH_ENDPOINT_PARITY.001",
+  "screenId": "API.BACKEND_HEALTH",
+  "orderInScreen": 1,
+  "surface": "shared",
+  "riskClass": "medium",
+  "title": "Standardize health endpoint auth policy and add missing order/analytics health routes",
+  "description": "Gateway and POS health endpoints are public (200 OK), but catalog/supplier/inventory/voice health require auth (401). Order and analytics have no health endpoint (404). All service health should be public for monitoring.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "fail",
+    "backend": "fail",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/pos/health",
+      "https://staging.supermandi.tech/api/v1/catalog/health",
+      "https://staging.supermandi.tech/api/v1/order/health"
+    ],
+    "cloudRunServices": [
+      "api-gateway",
+      "main-backend"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "API.HEALTH_MONITORING"
+    ],
+    "impactedServices": [
+      "api-gateway",
+      "main-backend"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude_gcp_staging_ticketization_2026-02-22",
+    "reproSteps": [
+      "GET /api/v1/health -> 200 (public)",
+      "GET /api/v1/catalog/health -> 401 (auth-gated)",
+      "GET /api/v1/order/health -> 404 (no route)",
+      "GET /api/v1/analytics/health -> 404 (no route)"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": true,
+    "navigationChecked": true,
+    "envAndBasePathChecked": true,
+    "migrationSafetyChecked": true,
+    "rollbackPlanReady": true,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22264213051",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-22T22:15:00.000Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/pos/health",
+      "https://staging.supermandi.tech/api/v1/catalog/health",
+      "https://staging.supermandi.tech/api/v1/order/health"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22264213051",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/pos/health",
+      "https://staging.supermandi.tech/api/v1/catalog/health",
+      "https://staging.supermandi.tech/api/v1/order/health"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22264213051",
+      "staging_commit=7b3a4ee8",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "staging_ticketization_at=2026-02-22T22:15:00.000Z",
+      "observed_on_staging_sha_7b3a4ee8"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-22T22:15:00.000Z",
+    "updatedAt": "2026-02-22T22:15:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket created from live GCP staging ticketization audit.",
+    "evidence": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/pos/health",
+      "https://staging.supermandi.tech/api/v1/catalog/health",
+      "https://staging.supermandi.tech/api/v1/order/health"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "api-gateway",
+    "actualCloudRunServices": [
+      "api-gateway",
+      "main-backend"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/pos/health",
+      "https://staging.supermandi.tech/api/v1/catalog/health",
+      "https://staging.supermandi.tech/api/v1/order/health"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "api-gateway",
+      "main-backend"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Operator approval",
+      "Staging deploy after implementation"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Discovered during GCP staging ticketization audit."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix staging verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix verification."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Make all service health endpoints public",
+      "Add /api/v1/order/health and /api/v1/analytics/health routes"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Operator ticket approval",
+      "Staging deploy evidence refresh"
+    ],
+    "blocked": false,
+    "summary": "Discovered during GCP staging ticketization. Pending implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE-STAGING-TICKETIZATION-2026-02-22",
+    "lastValidatedCommit": "9089afe1",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "staging_ticketization_audit_2026-02-22"
+    ]
+  }
+}

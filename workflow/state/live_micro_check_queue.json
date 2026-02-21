@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-02-21T12:32:32.576Z",
+  "generatedAt": "2026-02-21T22:11:17.046Z",
   "sourceManifest": "workflow/state/live_page_manifest.json",
-  "totalChecks": 696,
-  "pendingChecks": 696,
+  "totalChecks": 704,
+  "pendingChecks": 704,
   "queue": [
     {
       "checkId": "retailer_web|/retailer|ui",
@@ -559,6 +559,86 @@
       "surface": "retailer_web",
       "route": "/retailer/register",
       "url": "https://staging.supermandi.tech/retailer/register",
+      "check": "gcp_staging_parity",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|ui",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
+      "check": "ui",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|ux",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
+      "check": "ux",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|wiring",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
+      "check": "wiring",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|navigation",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
+      "check": "navigation",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|api_contract",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
+      "check": "api_contract",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|backend_behavior",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
+      "check": "backend_behavior",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|db_migration_impact",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
+      "check": "db_migration_impact",
+      "status": "PENDING",
+      "ticketId": null,
+      "notes": ""
+    },
+    {
+      "checkId": "retailer_web|/retailer/reset-password|gcp_staging_parity",
+      "surface": "retailer_web",
+      "route": "/retailer/reset-password",
+      "url": "https://staging.supermandi.tech/retailer/reset-password",
       "check": "gcp_staging_parity",
       "status": "PENDING",
       "ticketId": null,

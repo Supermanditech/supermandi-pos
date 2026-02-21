@@ -40,12 +40,12 @@
     "dbConnectivityChecked": true,
     "artifactDigestPinned": true,
     "cloudRunRevisionIds": [
-      "main-backend-00065-n22",
-      "api-gateway-00048-6kg",
-      "retailer-admin-00050-jt8",
-      "supplier-portal-00046-z6s",
-      "superadmin-00043-6q8",
-      "landing-00043-xpf"
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
     ]
   },
   "impact": {
@@ -81,7 +81,7 @@
     "migrationSafetyChecked": false,
     "rollbackPlanReady": false,
     "stagingDeployPassed": false,
-    "stagingDeploymentRef": "github://run/22260688109",
+    "stagingDeploymentRef": "github://run/22264213051",
     "cloudWorkspaceValidated": false,
     "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
   },
@@ -143,14 +143,14 @@
     "nonBlockingIssueCount": 0,
     "noBlockingIssueRemaining": false,
     "evidenceAttached": true,
-    "validatedDeploymentRef": "github://run/22260688109",
+    "validatedDeploymentRef": "github://run/22264213051",
     "validatedCloudRunRevisionIds": [
-      "main-backend-00065-n22",
-      "api-gateway-00048-6kg",
-      "retailer-admin-00050-jt8",
-      "supplier-portal-00046-z6s",
-      "superadmin-00043-6q8",
-      "landing-00043-xpf"
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
     ]
   },
   "statusHistory": [
@@ -184,8 +184,8 @@
     ]
   },
   "timestamps": {
-    "createdAt": "2026-02-22T00:12:00Z",
-    "updatedAt": "2026-02-22T22:00:00Z",
+    "createdAt": "2026-02-22T23:50:00.000Z",
+    "updatedAt": "2026-02-22T23:50:00.000Z",
     "lockedAt": null
   },
   "truthDeclaration": {

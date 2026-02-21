@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-21T02:35:58.127Z",
+  "generatedAt": "2026-02-21T22:11:17.055Z",
   "generatedBy": "scripts/workflow/generate-live-page-manifest.js",
   "sourceEnvironment": "gcp_staging",
   "baseUrl": "https://staging.supermandi.tech",
@@ -98,6 +98,21 @@
       {
         "route": "/retailer/register",
         "url": "https://staging.supermandi.tech/retailer/register",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/retailer/reset-password",
+        "url": "https://staging.supermandi.tech/retailer/reset-password",
         "primaryService": "retailer-admin",
         "requiredChecks": [
           "ui",

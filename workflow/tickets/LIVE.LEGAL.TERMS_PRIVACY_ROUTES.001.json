@@ -1,0 +1,280 @@
+{
+  "ticketId": "LIVE.LEGAL.TERMS_PRIVACY_ROUTES.001",
+  "screenId": "LEGAL.CROSS_PORTAL",
+  "orderInScreen": 1,
+  "surface": "shared",
+  "riskClass": "high",
+  "title": "Fix broken /terms and /privacy routes on retailer register and supplier register/help pages",
+  "description": "Both retailer RegisterPage and supplier register/help pages link to /terms and /privacy which do not exist as routes. Clicking these links returns 404. Registration requires agreement to terms, making these links critical for legal compliance.",
+  "status": "todo",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "fail",
+    "navigation": "fail",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/supplier/register/",
+      "https://staging.supermandi.tech/supplier/help/",
+      "https://staging.supermandi.tech/api/v1/health"
+    ],
+    "cloudRunServices": [
+      "retailer-admin",
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "RETAILER.REGISTER",
+      "SUPPLIER.REGISTER",
+      "SUPPLIER.HELP"
+    ],
+    "impactedServices": [
+      "retailer-admin",
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude_gcp_staging_ticketization_2026-02-22",
+    "reproSteps": [
+      "Open retailer register page, click Terms/Privacy links -> 404",
+      "Open supplier register page, click Terms/Privacy links -> 404",
+      "Open supplier help page, click Terms/Privacy links -> 404"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": true,
+    "navigationChecked": true,
+    "envAndBasePathChecked": true,
+    "migrationSafetyChecked": true,
+    "rollbackPlanReady": true,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22264213051",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-22T22:15:00.000Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/supplier/register/",
+      "https://staging.supermandi.tech/supplier/help/",
+      "https://staging.supermandi.tech/api/v1/health"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22264213051",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/supplier/register/",
+      "https://staging.supermandi.tech/supplier/help/",
+      "https://staging.supermandi.tech/api/v1/health"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22264213051",
+      "staging_commit=7b3a4ee8",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "staging_ticketization_at=2026-02-22T22:15:00.000Z",
+      "observed_on_staging_sha_7b3a4ee8"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-22T22:15:00.000Z",
+    "updatedAt": "2026-02-22T22:15:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket created from live GCP staging ticketization audit.",
+    "evidence": [
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/supplier/register/",
+      "https://staging.supermandi.tech/supplier/help/",
+      "https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "api-gateway",
+    "actualCloudRunServices": [
+      "retailer-admin",
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/supplier/register/",
+      "https://staging.supermandi.tech/supplier/help/",
+      "https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "retailer-admin",
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Operator approval",
+      "Staging deploy after implementation"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Discovered during GCP staging ticketization audit."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix staging verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs post-fix verification."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI/UX scope only."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Create /terms and /privacy routes or redirect to landing page equivalents",
+      "Verify links resolve correctly on staging"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Operator ticket approval",
+      "Staging deploy evidence refresh"
+    ],
+    "blocked": false,
+    "summary": "Discovered during GCP staging ticketization. Pending implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE-STAGING-TICKETIZATION-2026-02-22",
+    "lastValidatedCommit": "9089afe1",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "staging_ticketization_audit_2026-02-22"
+    ]
+  }
+}
