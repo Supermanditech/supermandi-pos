@@ -19,6 +19,7 @@ Use this file to sync Claude memory/rules with the latest machine-enforced workf
 8. `workflow/README.md`
 9. `workflow/production_boundary_iam.md`
 10. `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md`
+11. `RELEASES/CLAUDE_NEXT_ACTION_GCP_TICKETIZATION.md`
 
 ## 2. Mandatory Session Commands
 
@@ -308,6 +309,7 @@ No silent retries.
 - `RELEASES/CLAUDE_STATE.md`
 - `RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md`
 - `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md`
+- `RELEASES/CLAUDE_NEXT_ACTION_GCP_TICKETIZATION.md`
 - `scripts/deploy-cloud-run.sh`
 - `scripts/gates/git-discipline.sh`
 - `scripts/promote-to-prod.sh`
@@ -362,3 +364,4 @@ No silent retries.
 - For active ticketization phases, Claude must also enforce Section 2M narrative sync checks for `RELEASES/CLAUDE_CURRENT_STATE.json` (no premature closure language).
 - For locked Play/Facebook brand assets, Claude must enforce Section 2N canonical file sync and staging `landing` deploy evidence.
 - Claude must read `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md` in every FIX-001 session before attempting deploy.
+- For active GCP staging ticketization cycles, Claude must read `RELEASES/CLAUDE_NEXT_ACTION_GCP_TICKETIZATION.md` and maintain its ticket intake ledger during the run.

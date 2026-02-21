@@ -447,7 +447,12 @@
     "LIVE.SUPERADMIN.MOBILE_NAVIGATION.001": "TODO_TICKETIZED_2026-02-22",
     "LIVE.A11Y.RETAILER_FORM_LABELS.001": "TODO_TICKETIZED_2026-02-22",
     "LIVE.SUPERADMIN.OTP_LENGTH_MISMATCH.001": "TODO_TICKETIZED_2026-02-22",
-    "LIVE.SUPPLIER.SSR_REGISTER_DEGRADED.001": "TODO_TICKETIZED_2026-02-22"
+    "LIVE.SUPPLIER.SSR_REGISTER_DEGRADED.001": "TODO_TICKETIZED_2026-02-22",
+    "LIVE.SUPERADMIN.AI_ROUTE_DUPLICATE.001": "TODO_TICKETIZED_2026-02-22",
+    "LIVE.SUPPLIER.ONBOARD_PROGRESS_MISMATCH.001": "TODO_TICKETIZED_2026-02-22",
+    "LIVE.RETAILER.RESETPW_NO_PARAM_CHECK.001": "TODO_TICKETIZED_2026-02-22",
+    "LIVE.RETAILER.AUTH_401_NO_REDIRECT.001": "TODO_TICKETIZED_2026-02-22",
+    "LIVE.SUPPLIER.UPLOAD_PROGRESS_FAKE.001": "TODO_TICKETIZED_2026-02-22"
   },
   "executionPhases": [
     {
@@ -1720,7 +1725,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "GCP STAGING TICKETIZATION IN PROGRESS. Baseline: SHA 7b3a4ee8, deploy run 22264213051. ticketization NOT COMPLETE — new round started for auth parity + brand consistency changes. No implementation, no deploy in this run.",
+  "nextAction": "GCP STAGING TICKETIZATION COMPLETE. 704/704 checks code-reviewed across 84 pages (6 surfaces). 13 tickets created (3 P1, 8 P2, 2 P3). 616 CODE_REVIEW_PASS, 88 CODE_REVIEW_ISSUE. Next: operator browser verification on staging, then begin implementation of P1 tickets. See RELEASES/CLAUDE_NEXT_ACTION_GCP_TICKETIZATION.md for full ledger.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",

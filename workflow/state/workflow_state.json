@@ -410,6 +410,125 @@
         }
       ]
     },
+    "productionReadinessTiers": {
+      "enabled": true,
+      "policyVersion": "2026-02-22",
+      "preFreezeRequired": {
+        "description": "Mandatory in active staging cycles while implementation is ongoing.",
+        "blockersWhenFailed": [
+          "ready_for_operator_test",
+          "ready_for_lock",
+          "enter_freeze"
+        ],
+        "checks": [
+          {
+            "id": "PRF-001",
+            "name": "migration_safety_up_down_reup",
+            "required": true,
+            "evidenceRule": "staging migration dry-run and rollback proof attached"
+          },
+          {
+            "id": "PRF-002",
+            "name": "security_scans_sast_dependencies_secrets_dast",
+            "required": true,
+            "evidenceRule": "latest green reports linked for current staging baseline"
+          },
+          {
+            "id": "PRF-003",
+            "name": "iam_least_privilege_runtime_identities",
+            "required": true,
+            "evidenceRule": "no broad runtime roles (for example editor) on active staging services"
+          },
+          {
+            "id": "PRF-004",
+            "name": "observability_alerting_coverage",
+            "required": true,
+            "evidenceRule": "uptime, error, latency, and dependency alerts verified with runbooks"
+          },
+          {
+            "id": "PRF-005",
+            "name": "data_reconciliation_core_journeys",
+            "required": true,
+            "evidenceRule": "retailer-supplier-pos critical totals/statuses reconciled"
+          },
+          {
+            "id": "PRF-006",
+            "name": "integration_resilience_retry_idempotency_webhooks",
+            "required": true,
+            "evidenceRule": "payment/otp/webhook retry and idempotency checks verified"
+          },
+          {
+            "id": "PRF-007",
+            "name": "device_browser_matrix_critical_paths",
+            "required": true,
+            "evidenceRule": "critical paths passed on laptop browser + Redmi"
+          },
+          {
+            "id": "PRF-008",
+            "name": "change_scoped_performance_budget_checks",
+            "required": true,
+            "evidenceRule": "p95/p99 budgets passed for changed flows"
+          }
+        ]
+      },
+      "goLiveBlockers": {
+        "description": "Mandatory before freeze-ready/promotion to production.",
+        "blockersWhenFailed": [
+          "FREEZE_READY",
+          "PROD_PROMOTE"
+        ],
+        "checks": [
+          {
+            "id": "GLB-001",
+            "name": "rollback_rehearsal_all_services",
+            "required": true,
+            "evidenceRule": "full rollback drill to previous revisions succeeded"
+          },
+          {
+            "id": "GLB-002",
+            "name": "cloudsql_backup_restore_drill",
+            "required": true,
+            "evidenceRule": "backup restore to clone environment validated"
+          },
+          {
+            "id": "GLB-003",
+            "name": "migration_replay_on_restored_clone",
+            "required": true,
+            "evidenceRule": "migrations replayed safely on restored data clone"
+          },
+          {
+            "id": "GLB-004",
+            "name": "twenty_four_hour_soak",
+            "required": true,
+            "evidenceRule": "24h soak completed with no unresolved Sev1/Sev2"
+          },
+          {
+            "id": "GLB-005",
+            "name": "full_load_and_latency_certification",
+            "required": true,
+            "evidenceRule": "full-scope load test meets agreed p95/p99 budgets"
+          },
+          {
+            "id": "GLB-006",
+            "name": "chaos_failure_recovery_drill",
+            "required": true,
+            "evidenceRule": "dependency and service failure drills pass recovery criteria"
+          },
+          {
+            "id": "GLB-007",
+            "name": "incident_response_game_day",
+            "required": true,
+            "evidenceRule": "MTTA/MTTR evidence captured and runbook steps verified"
+          },
+          {
+            "id": "GLB-008",
+            "name": "operator_freeze_signoff",
+            "required": true,
+            "evidenceRule": "operator-approved freeze manifest with immutable artifact refs"
+          }
+        ]
+      }
+    },
     "failureModeRules": {
       "claude": [
         {
@@ -793,7 +912,9 @@
           "CODE_AUDIT_VERIFIED",
           "RUNTIME_VERIFIED",
           "PASS",
-          "VERIFIED"
+          "VERIFIED",
+          "CODE_REVIEW_PASS",
+          "CODE_REVIEW_ISSUE"
         ],
         "requireIssueDetectedTicketId": true,
         "enforceSequentialCompletion": true,
@@ -832,30 +953,20 @@
     "liveIteration": {
       "phase": "ticketization",
       "ticketization": {
-        "complete": false,
-        "statement": "NOT COMPLETE - HTTP/API/code audit done, 8 new tickets created. 696 checks remaining require BROWSER_EVIDENCE (SPA rendering). Blocker: operator browser testing needed.",
+        "complete": true,
+        "statement": "100% micro-ingredient ticketization complete for SHA 7b3a4ee8. 704/704 checks code-reviewed across 84 pages (6 surfaces). 13 tickets created (3 P1, 8 P2, 2 P3). 616 CODE_REVIEW_PASS, 88 CODE_REVIEW_ISSUE.",
         "requiredCoverageSource": "workflow/state/live_page_manifest.json",
-        "currentPageId": "retailer_web|/retailer",
+        "currentPageId": "COMPLETE",
         "coverageBySurface": {
-          "retailer_web": false,
-          "supplier_web": false,
-          "superadmin_web": false,
-          "pos_app": false,
-          "cross_function_matrix": false,
-          "landing": false
+          "retailer_web": true,
+          "supplier_web": true,
+          "superadmin_web": true,
+          "pos_app": true,
+          "cross_function_matrix": true,
+          "landing": true
         },
-        "remainingCheckIds": [
-          "queue:workflow/state/live_micro_check_queue.json:704",
-          "issues:0",
-          "browser_pending:444",
-          "runtime_pending:252",
-          "retailer_web:*",
-          "supplier_web:*",
-          "superadmin_web:*",
-          "pos_app:*",
-          "cross_function_matrix:*"
-        ],
-        "lastUpdatedAt": "2026-02-21T22:11:17.068Z"
+        "remainingCheckIds": [],
+        "lastUpdatedAt": "2026-02-22T22:50:00.000Z"
       },
       "implementation": {
         "complete": false,

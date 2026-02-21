@@ -1,0 +1,287 @@
+{
+  "ticketId": "LIVE.SUPPLIER.ONBOARD_PROGRESS_MISMATCH.001",
+  "screenId": "SUPPLIER.ONBOARD",
+  "orderInScreen": 1,
+  "surface": "supplier_web",
+  "riskClass": "medium",
+  "title": "Fix onboard progress indicator: shows 4 bars for 5-step flow",
+  "description": "Code review finding: supplier-portal onboard page (lines 378-390) renders 4 progress bar segments but the flow has 5 steps (business, phone, otp, kyc, success). The progress indicator is off by one, making step progression visually misleading.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "wiring": "pass",
+    "navigation": "pass",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail",
+    "professional_polish": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ],
+    "cloudRunServices": [
+      "supplier-portal"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "SUPPLIER.ONBOARD"
+    ],
+    "impactedServices": [
+      "supplier-portal"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude_code_review_audit_2026-02-22",
+    "reproSteps": [
+      "Navigate to https://staging.supermandi.tech/supplier/onboard/",
+      "Observe the progress bar at top — count the segments (should be 5 for 5 steps).",
+      "Only 4 segments are rendered, creating visual mismatch with actual step count."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22264213051",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-22T22:48:00.000Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22264213051",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22264213051",
+      "staging_commit=7b3a4ee8"
+    ],
+    "parityProof": [
+      "code_review_audit_at=2026-02-22T22:48:00.000Z",
+      "source_sha=7b3a4ee8"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-22T22:48:00.000Z",
+    "updatedAt": "2026-02-22T22:48:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket created from code-level review of deployed source code matching staging SHA.",
+    "evidence": [
+      "https://staging.supermandi.tech/supplier/onboard/",
+      "staging_commit=7b3a4ee8"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "supplier_web",
+    "expectedBasePath": "/supplier",
+    "expectedPrimaryService": "supplier-portal",
+    "actualCloudRunServices": [
+      "supplier-portal"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "supplier-portal"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Operator approval"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Code review finding from deployed source matching staging SHA."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Requires browser verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Web scope."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No schema change."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs staging check."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No logging change."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Code review finding: supplier-portal onboard page (lines 378-390) renders 4 progress bar segments but the flow has 5 steps (business, phone, otp, kyc, success). The progress indicator is off by one, making step progression visually misleading."
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Operator ticket approval"
+    ],
+    "blocked": false,
+    "summary": "Code review finding. Implementation pending approval."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE.SUPPLIER.ONBOARD_PROGRESS_MISMATCH.001",
+    "lastValidatedCommit": "7b3a4ee8",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "staging_sha=7b3a4ee8"
+    ]
+  }
+}

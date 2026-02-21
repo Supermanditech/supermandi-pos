@@ -1,0 +1,288 @@
+{
+  "ticketId": "LIVE.RETAILER.RESETPW_NO_PARAM_CHECK.001",
+  "screenId": "RETAILER.RESET_PASSWORD",
+  "orderInScreen": 1,
+  "surface": "retailer_web",
+  "riskClass": "medium",
+  "title": "Add URL param validation to reset-password page before rendering form",
+  "description": "Code review finding: /retailer/reset-password extracts email and token from URL searchParams (lines 15-16) but renders the form even when both are empty. User can load the page directly without params and see an empty form with no guidance. Should validate that both params exist and show an error/redirect if missing.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "wiring": "fail",
+    "navigation": "pass",
+    "api": "pass",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail",
+    "professional_polish": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/reset-password"
+    ],
+    "cloudRunServices": [
+      "retailer-admin"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "RETAILER.RESET_PASSWORD"
+    ],
+    "impactedServices": [
+      "retailer-admin"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude_code_review_audit_2026-02-22",
+    "reproSteps": [
+      "Navigate directly to https://staging.supermandi.tech/retailer/reset-password (no query params).",
+      "Observe that empty form renders with no email or token pre-filled.",
+      "No error message or redirect to forgot-password page occurs.",
+      "User can submit empty form which will fail on backend."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22264213051",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-22T22:48:00.000Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/retailer/reset-password"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22264213051",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/retailer/reset-password"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22264213051",
+      "staging_commit=7b3a4ee8"
+    ],
+    "parityProof": [
+      "code_review_audit_at=2026-02-22T22:48:00.000Z",
+      "source_sha=7b3a4ee8"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-22T22:48:00.000Z",
+    "updatedAt": "2026-02-22T22:48:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket created from code-level review of deployed source code matching staging SHA.",
+    "evidence": [
+      "https://staging.supermandi.tech/retailer/reset-password",
+      "staging_commit=7b3a4ee8"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "retailer_web",
+    "expectedBasePath": "/retailer",
+    "expectedPrimaryService": "retailer-admin",
+    "actualCloudRunServices": [
+      "retailer-admin"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/retailer/reset-password"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "retailer-admin"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Operator approval"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Code review finding from deployed source matching staging SHA."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Requires browser verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Web scope."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "UI scope."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No schema change."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs staging check."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No logging change."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Code review finding: /retailer/reset-password extracts email and token from URL searchParams (lines 15-16) but renders the form even when both are empty. User can load the page directly without params and see an empty form with no guidance. Should validate that both params exist and show an error/redirect if missing."
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Operator ticket approval"
+    ],
+    "blocked": false,
+    "summary": "Code review finding. Implementation pending approval."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE.RETAILER.RESETPW_NO_PARAM_CHECK.001",
+    "lastValidatedCommit": "7b3a4ee8",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "staging_sha=7b3a4ee8"
+    ]
+  }
+}

@@ -1,5 +1,18 @@
 # CLAUDE NEXT ACTION: FIX-001 (Live Iteration Batch-First)
 
+## Routing Note (Current Active Path)
+
+If `workflow/state/workflow_state.json` shows:
+
+- `progress.liveIteration.phase = ticketization`, and
+- ticketization statement contains `NOT COMPLETE`,
+
+then this FIX-001 file is subordinate to:
+
+- `RELEASES/CLAUDE_NEXT_ACTION_GCP_TICKETIZATION.md`
+
+In that case, Claude must continue ticketization only (no implementation/deploy) until ticketization completion criteria are satisfied.
+
 ## Deploy Hold Override (Effective 2026-02-21, Immediate)
 
 This override is ACTIVE and takes precedence over older deploy-now wording in this file.
