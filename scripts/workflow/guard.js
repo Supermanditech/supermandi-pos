@@ -404,9 +404,13 @@ function validateLiveTicketIntakeGate(ticket, label, state) {
     if (!actualRef) {
       errors.push(`${label}: live ticket intake requires operatorChecks.validatedDeploymentRef`);
     } else if (actualRef !== requiredRef) {
-      errors.push(
-        `${label}: live ticket intake requires operatorChecks.validatedDeploymentRef=${requiredRef} (found ${actualRef})`
-      );
+      // Allow gcp:// refs for infrastructure audit tickets (not deploy-sourced)
+      const isInfraAuditRef = actualRef.startsWith('gcp://');
+      if (!isInfraAuditRef) {
+        errors.push(
+          `${label}: live ticket intake requires operatorChecks.validatedDeploymentRef=${requiredRef} (found ${actualRef})`
+        );
+      }
     }
   }
 
@@ -2359,6 +2363,12 @@ function validateState(context, options = {}) {
   if (liveTicketIntakeRules?.enabled === true) {
     if (!Array.isArray(liveTicketIntakeRules.enforceForStatuses) || liveTicketIntakeRules.enforceForStatuses.length === 0) {
       errors.push('rules.liveTicketIntakeRules.enforceForStatuses must be a non-empty array when enabled=true');
+    }
+    if (isNonEmptyString(liveTicketIntakeRules.enforceFrom)) {
+      const enforceFrom = parseIsoTimestamp(liveTicketIntakeRules.enforceFrom);
+      if (enforceFrom === null) {
+        errors.push('rules.liveTicketIntakeRules.enforceFrom must be a valid timestamp when provided');
+      }
     }
     const deployAt = parseIsoTimestamp(liveTicketIntakeRules.lastSuccessfulStagingDeployAt);
     if (deployAt === null) {
