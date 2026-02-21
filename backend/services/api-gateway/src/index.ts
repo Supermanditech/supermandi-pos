@@ -112,7 +112,13 @@ app.use(helmet({
     includeSubDomains: true,
   },
   frameguard: { action: 'deny' },
-  contentSecurityPolicy: false, // Requires per-portal tuning — deferred
+  // LIVE.SECURITY.CSP_API.001: API-only CSP — no resource loading, no framing
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
   crossOriginEmbedderPolicy: false, // Cross-origin assets (fonts, images)
 }));
 
