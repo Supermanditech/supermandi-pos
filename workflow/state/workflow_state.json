@@ -420,6 +420,9 @@
           "ready_for_lock",
           "enter_freeze"
         ],
+        "exemptTicketIds": [
+          "FIX-001"
+        ],
         "checks": [
           {
             "id": "PRF-001",
@@ -926,6 +929,9 @@
       "enabled": true,
       "file": "RELEASES/CLAUDE_CURRENT_STATE.json",
       "enforceWhenTicketizationIncomplete": true,
+      "enforceLiveStageTicketSetParity": true,
+      "enforceLiveStageTicketStatusParity": true,
+      "liveStageCanonicalStatusPrefix": "WORKFLOW_",
       "requireNextActionContains": [
         "NOT COMPLETE",
         "ticketization"
@@ -999,6 +1005,54 @@
           "STAGE.BRAND.LOGO_CONSISTENCY.001"
         ],
         "lastUpdatedAt": "2026-02-22T12:00:00.000Z"
+      }
+    },
+    "productionReadinessTiers": {
+      "preFreezeRequired": {
+        "statusByCheckId": {
+          "PRF-001": "pending",
+          "PRF-002": "pending",
+          "PRF-003": "pending",
+          "PRF-004": "pending",
+          "PRF-005": "pending",
+          "PRF-006": "pending",
+          "PRF-007": "pending",
+          "PRF-008": "pending"
+        },
+        "evidenceByCheckId": {
+          "PRF-001": [],
+          "PRF-002": [],
+          "PRF-003": [],
+          "PRF-004": [],
+          "PRF-005": [],
+          "PRF-006": [],
+          "PRF-007": [],
+          "PRF-008": []
+        },
+        "lastUpdatedAt": "2026-02-22T23:30:00.000Z"
+      },
+      "goLiveBlockers": {
+        "statusByCheckId": {
+          "GLB-001": "pending",
+          "GLB-002": "pending",
+          "GLB-003": "pending",
+          "GLB-004": "pending",
+          "GLB-005": "pending",
+          "GLB-006": "pending",
+          "GLB-007": "pending",
+          "GLB-008": "pending"
+        },
+        "evidenceByCheckId": {
+          "GLB-001": [],
+          "GLB-002": [],
+          "GLB-003": [],
+          "GLB-004": [],
+          "GLB-005": [],
+          "GLB-006": [],
+          "GLB-007": [],
+          "GLB-008": []
+        },
+        "lastUpdatedAt": "2026-02-22T23:30:00.000Z"
       }
     }
   },

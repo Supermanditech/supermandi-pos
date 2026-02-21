@@ -504,6 +504,20 @@ const PRODUCTION_ETHICS_DEFAULT_STATUSES = [
   'ready_for_lock',
   'locked',
 ];
+const PRODUCTION_READINESS_CHECK_STATUS_VALUES = new Set([
+  'pending',
+  'pass',
+  'blocked',
+  'fail',
+  'na',
+]);
+const PRODUCTION_READINESS_TIER_KEYS = ['preFreezeRequired', 'goLiveBlockers'];
+const FREEZE_ENTRY_MODES = new Set([
+  'FREEZE_CANDIDATE',
+  'FREEZE_READY',
+  'PROD_PROMOTE',
+  'PROD_LOCKED',
+]);
 
 function normalizeStringArray(value) {
   if (!Array.isArray(value)) {
@@ -698,6 +712,150 @@ function getProductionGradeCodingEthicsRules(state) {
   };
 }
 
+function normalizeProductionReadinessChecks(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const checks = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      checks.push({
+        id: '',
+        name: '',
+        required: true,
+        evidenceRule: '',
+      });
+      continue;
+    }
+    checks.push({
+      id: isNonEmptyString(raw.id) ? raw.id.trim() : '',
+      name: isNonEmptyString(raw.name) ? raw.name.trim() : '',
+      required: raw.required !== false,
+      evidenceRule: isNonEmptyString(raw.evidenceRule) ? raw.evidenceRule.trim() : '',
+    });
+  }
+  return checks;
+}
+
+function getProductionReadinessTierRules(state) {
+  const rawRules = state?.rules?.productionReadinessTiers || {};
+  const result = {
+    enabled: rawRules.enabled === true,
+  };
+
+  for (const tierKey of PRODUCTION_READINESS_TIER_KEYS) {
+    const tierRaw = rawRules?.[tierKey] || {};
+    result[tierKey] = {
+      description: isNonEmptyString(tierRaw.description) ? tierRaw.description.trim() : '',
+      blockersWhenFailed: normalizeStringArray(tierRaw.blockersWhenFailed),
+      exemptTicketIds: normalizeStringArray(tierRaw.exemptTicketIds),
+      checks: normalizeProductionReadinessChecks(tierRaw.checks),
+    };
+  }
+
+  return result;
+}
+
+function splitProductionReadinessBlockers(blockersWhenFailed) {
+  const ticketStatuses = new Set();
+  const workflowModes = new Set();
+  let enterFreeze = false;
+  const unknown = [];
+
+  for (const blocker of blockersWhenFailed) {
+    if (TICKET_STATUS_VALUES.has(blocker)) {
+      ticketStatuses.add(blocker);
+      continue;
+    }
+    if (MODES.has(blocker)) {
+      workflowModes.add(blocker);
+      continue;
+    }
+    if (blocker === 'enter_freeze') {
+      enterFreeze = true;
+      continue;
+    }
+    unknown.push(blocker);
+  }
+
+  return {
+    ticketStatuses,
+    workflowModes,
+    enterFreeze,
+    unknown,
+  };
+}
+
+function getProductionReadinessProgressByTier(state, tierRules, tierKey) {
+  const progressRoot = state?.progress?.productionReadinessTiers?.[tierKey];
+  const statusRaw = progressRoot && typeof progressRoot === 'object' && !Array.isArray(progressRoot)
+    ? (progressRoot.statusByCheckId && typeof progressRoot.statusByCheckId === 'object' && !Array.isArray(progressRoot.statusByCheckId)
+      ? progressRoot.statusByCheckId
+      : {})
+    : {};
+  const evidenceRaw = progressRoot && typeof progressRoot === 'object' && !Array.isArray(progressRoot)
+    ? (progressRoot.evidenceByCheckId && typeof progressRoot.evidenceByCheckId === 'object' && !Array.isArray(progressRoot.evidenceByCheckId)
+      ? progressRoot.evidenceByCheckId
+      : {})
+    : {};
+
+  const statusByCheckId = {};
+  const evidenceByCheckId = {};
+  for (const check of tierRules.checks) {
+    if (!isNonEmptyString(check.id)) {
+      continue;
+    }
+    const checkId = check.id;
+    statusByCheckId[checkId] = isNonEmptyString(statusRaw[checkId]) ? statusRaw[checkId].trim() : 'pending';
+    evidenceByCheckId[checkId] = Array.isArray(evidenceRaw[checkId])
+      ? evidenceRaw[checkId].filter((item) => isNonEmptyString(item)).map((item) => item.trim())
+      : [];
+  }
+
+  return {
+    statusByCheckId,
+    evidenceByCheckId,
+  };
+}
+
+function getProductionReadinessFailuresForTier(tierRules, tierProgress) {
+  const failures = [];
+  for (const check of tierRules.checks) {
+    if (!check.required || !isNonEmptyString(check.id)) {
+      continue;
+    }
+    const checkId = check.id;
+    const status = tierProgress.statusByCheckId[checkId] || 'pending';
+    const evidence = tierProgress.evidenceByCheckId[checkId] || [];
+
+    if (status !== 'pass') {
+      failures.push({
+        checkId,
+        status,
+        reason: 'status_not_pass',
+      });
+      continue;
+    }
+    if (evidence.length === 0) {
+      failures.push({
+        checkId,
+        status,
+        reason: 'missing_evidence',
+      });
+    }
+  }
+  return failures;
+}
+
+function summarizeProductionReadinessFailures(failures) {
+  if (!Array.isArray(failures) || failures.length === 0) {
+    return '';
+  }
+  return failures
+    .map((failure) => `${failure.checkId}(${failure.status}${failure.reason === 'missing_evidence' ? ',no_evidence' : ''})`)
+    .join(', ');
+}
+
 function getRequiredTicketLayersFromState(state) {
   const configured = normalizeStringArray(state?.rules?.ticketRules?.requiredLayerChecklist);
   return configured.length > 0 ? configured : [...REQUIRED_LAYERS];
@@ -727,6 +885,11 @@ function getClaudeCurrentStateSyncRules(state) {
     enabled: rules.enabled !== false,
     file: isNonEmptyString(rules.file) ? rules.file.trim() : 'RELEASES/CLAUDE_CURRENT_STATE.json',
     enforceWhenTicketizationIncomplete: rules.enforceWhenTicketizationIncomplete !== false,
+    enforceLiveStageTicketSetParity: rules.enforceLiveStageTicketSetParity !== false,
+    enforceLiveStageTicketStatusParity: rules.enforceLiveStageTicketStatusParity === true,
+    liveStageCanonicalStatusPrefix: isNonEmptyString(rules.liveStageCanonicalStatusPrefix)
+      ? rules.liveStageCanonicalStatusPrefix.trim()
+      : 'WORKFLOW_',
     requireNextActionContains: requireNextActionContains.length > 0
       ? requireNextActionContains
       : ['not complete', 'ticketization'],
@@ -737,6 +900,14 @@ function getClaudeCurrentStateSyncRules(state) {
       ? forbidLastActionsContains
       : ['all 7 live', 'ticket states updated in claude_current_state.json'],
   };
+}
+
+function getCanonicalClaudeTicketMirrorStatus(status, prefix = 'WORKFLOW_') {
+  if (!isNonEmptyString(status)) {
+    return '';
+  }
+  const normalized = status.trim().toUpperCase();
+  return `${prefix}${normalized}`;
 }
 
 function validateClaudeCurrentStateSync(context) {
@@ -766,61 +937,96 @@ function validateClaudeCurrentStateSync(context) {
   }
 
   const progress = getLiveIterationProgress(state);
-  if (!(rules.enforceWhenTicketizationIncomplete && progress.ticketization.complete !== true)) {
-    return errors;
-  }
-  if (progress.phase !== 'ticketization') {
-    return errors;
-  }
-
-  const nextAction = isNonEmptyString(claudeState.nextAction) ? claudeState.nextAction.trim() : '';
-  if (!nextAction) {
-    errors.push(`${relativeFile}: nextAction must be set while ticketization is incomplete`);
-  } else {
-    const normalizedNext = nextAction.toLowerCase();
-    for (const token of rules.requireNextActionContains) {
-      if (!normalizedNext.includes(token)) {
-        errors.push(
-          `${relativeFile}: nextAction must contain "${token}" while ticketization is incomplete`
-        );
-      }
-    }
-    for (const token of rules.forbidNextActionContains) {
-      if (normalizedNext.includes(token)) {
-        errors.push(
-          `${relativeFile}: nextAction cannot contain "${token}" while ticketization is incomplete`
-        );
-      }
-    }
-  }
-
-  const lastActions = Array.isArray(claudeState.lastActions) ? claudeState.lastActions : [];
-  for (let idx = 0; idx < lastActions.length; idx += 1) {
-    const entry = isNonEmptyString(lastActions[idx]) ? lastActions[idx].trim().toLowerCase() : '';
-    if (!entry) {
-      continue;
-    }
-    for (const token of rules.forbidLastActionsContains) {
-      if (entry.includes(token)) {
-        errors.push(
-          `${relativeFile}: lastActions[${idx}] cannot contain "${token}" while ticketization is incomplete`
-        );
-      }
-    }
-  }
-
   const ticketStatus = claudeState.ticketStatus && typeof claudeState.ticketStatus === 'object'
     ? claudeState.ticketStatus
     : {};
-  for (const [ticketId, ticket] of context.ticketMap.entries()) {
-    const mirrored = ticketStatus[ticketId];
-    if (!isNonEmptyString(mirrored)) {
-      continue;
+
+  const workflowLiveStageIds = [];
+  const workflowLiveStageSet = new Set();
+  const claudeLiveStageIds = Object.keys(ticketStatus).filter(
+    (ticketId) => ticketId.startsWith('LIVE.') || ticketId.startsWith('STAGE.')
+  );
+
+  for (const ticketId of context.ticketMap.keys()) {
+    if (ticketId.startsWith('LIVE.') || ticketId.startsWith('STAGE.')) {
+      workflowLiveStageIds.push(ticketId);
+      workflowLiveStageSet.add(ticketId);
     }
-    if (!isClosedTicketStatus(ticket.status) && mirrored.trim().toUpperCase().startsWith('DONE')) {
+  }
+
+  if (rules.enforceLiveStageTicketSetParity) {
+    const missingInClaude = [];
+    for (const ticketId of workflowLiveStageIds) {
+      if (!Object.prototype.hasOwnProperty.call(ticketStatus, ticketId)) {
+        missingInClaude.push(ticketId);
+      }
+    }
+    const extraInClaude = claudeLiveStageIds.filter((ticketId) => !workflowLiveStageSet.has(ticketId));
+
+    if (missingInClaude.length > 0) {
       errors.push(
-        `${relativeFile}: ticketStatus.${ticketId}=${mirrored} conflicts with workflow ticket status=${ticket.status}`
+        `${relativeFile}: ticketStatus is missing LIVE/STAGE ticket ids present in workflow/tickets: ${missingInClaude.slice(0, 20).join(', ')}${missingInClaude.length > 20 ? ', ...' : ''}`
       );
+    }
+    if (extraInClaude.length > 0) {
+      errors.push(
+        `${relativeFile}: ticketStatus has LIVE/STAGE ids not present in workflow/tickets: ${extraInClaude.slice(0, 20).join(', ')}${extraInClaude.length > 20 ? ', ...' : ''}`
+      );
+    }
+  }
+
+  for (const [ticketId, ticket] of context.ticketMap.entries()) {
+    const isLiveStage = ticketId.startsWith('LIVE.') || ticketId.startsWith('STAGE.');
+    const mirrored = ticketStatus[ticketId];
+    if (isLiveStage && rules.enforceLiveStageTicketStatusParity) {
+      const expected = getCanonicalClaudeTicketMirrorStatus(ticket.status, rules.liveStageCanonicalStatusPrefix);
+      if (!isNonEmptyString(mirrored) || mirrored.trim() !== expected) {
+        errors.push(
+          `${relativeFile}: ticketStatus.${ticketId} must equal ${expected} (workflow status=${ticket.status})`
+        );
+        continue;
+      }
+    }
+    if (isNonEmptyString(mirrored) && !isClosedTicketStatus(ticket.status) && mirrored.trim().toUpperCase().startsWith('DONE')) {
+      errors.push(`${relativeFile}: ticketStatus.${ticketId}=${mirrored} conflicts with workflow ticket status=${ticket.status}`);
+    }
+  }
+
+  if (rules.enforceWhenTicketizationIncomplete && progress.ticketization.complete !== true && progress.phase === 'ticketization') {
+    const nextAction = isNonEmptyString(claudeState.nextAction) ? claudeState.nextAction.trim() : '';
+    if (!nextAction) {
+      errors.push(`${relativeFile}: nextAction must be set while ticketization is incomplete`);
+    } else {
+      const normalizedNext = nextAction.toLowerCase();
+      for (const token of rules.requireNextActionContains) {
+        if (!normalizedNext.includes(token)) {
+          errors.push(
+            `${relativeFile}: nextAction must contain "${token}" while ticketization is incomplete`
+          );
+        }
+      }
+      for (const token of rules.forbidNextActionContains) {
+        if (normalizedNext.includes(token)) {
+          errors.push(
+            `${relativeFile}: nextAction cannot contain "${token}" while ticketization is incomplete`
+          );
+        }
+      }
+    }
+
+    const lastActions = Array.isArray(claudeState.lastActions) ? claudeState.lastActions : [];
+    for (let idx = 0; idx < lastActions.length; idx += 1) {
+      const entry = isNonEmptyString(lastActions[idx]) ? lastActions[idx].trim().toLowerCase() : '';
+      if (!entry) {
+        continue;
+      }
+      for (const token of rules.forbidLastActionsContains) {
+        if (entry.includes(token)) {
+          errors.push(
+            `${relativeFile}: lastActions[${idx}] cannot contain "${token}" while ticketization is incomplete`
+          );
+        }
+      }
     }
   }
 
@@ -2088,6 +2294,161 @@ function validateProductionGradeCodingEthics(ticket, label, state) {
         }
       }
     }
+  }
+
+  return errors;
+}
+
+function validateProductionReadinessTiersState(context) {
+  const errors = [];
+  const state = context.state;
+  const rules = getProductionReadinessTierRules(state);
+  const rawRules = state?.rules?.productionReadinessTiers;
+
+  if (rawRules !== undefined && (rawRules === null || typeof rawRules !== 'object' || Array.isArray(rawRules))) {
+    errors.push('rules.productionReadinessTiers must be an object when provided');
+    return errors;
+  }
+
+  if (!rules.enabled) {
+    return errors;
+  }
+
+  const progressRoot = state?.progress?.productionReadinessTiers;
+  if (!progressRoot || typeof progressRoot !== 'object' || Array.isArray(progressRoot)) {
+    errors.push('progress.productionReadinessTiers must be an object when rules.productionReadinessTiers.enabled=true');
+    return errors;
+  }
+
+  for (const tierKey of PRODUCTION_READINESS_TIER_KEYS) {
+    const tierRules = rules[tierKey];
+    const tierLabel = `rules.productionReadinessTiers.${tierKey}`;
+    if (!tierRules || typeof tierRules !== 'object') {
+      errors.push(`${tierLabel} must be an object`);
+      continue;
+    }
+
+    if (!Array.isArray(tierRules.checks) || tierRules.checks.length === 0) {
+      errors.push(`${tierLabel}.checks must be a non-empty array`);
+      continue;
+    }
+
+    const seenCheckIds = new Set();
+    for (const check of tierRules.checks) {
+      if (!isNonEmptyString(check.id)) {
+        errors.push(`${tierLabel}.checks[].id must be a non-empty string`);
+      } else if (seenCheckIds.has(check.id)) {
+        errors.push(`${tierLabel}.checks contains duplicate id ${check.id}`);
+      } else {
+        seenCheckIds.add(check.id);
+      }
+      if (!isNonEmptyString(check.name)) {
+        errors.push(`${tierLabel}.checks[${isNonEmptyString(check.id) ? check.id : '?'}].name must be set`);
+      }
+      if (!isBoolean(check.required)) {
+        errors.push(`${tierLabel}.checks[${isNonEmptyString(check.id) ? check.id : '?'}].required must be boolean`);
+      }
+      if (!isNonEmptyString(check.evidenceRule)) {
+        errors.push(`${tierLabel}.checks[${isNonEmptyString(check.id) ? check.id : '?'}].evidenceRule must be set`);
+      }
+    }
+
+    const blockersWhenFailed = Array.isArray(tierRules.blockersWhenFailed) ? tierRules.blockersWhenFailed : [];
+    if (blockersWhenFailed.length === 0) {
+      errors.push(`${tierLabel}.blockersWhenFailed must be a non-empty array`);
+      continue;
+    }
+
+    const blockerSets = splitProductionReadinessBlockers(blockersWhenFailed);
+    if (blockerSets.unknown.length > 0) {
+      errors.push(`${tierLabel}.blockersWhenFailed has unknown blocker values: ${blockerSets.unknown.join(', ')}`);
+    }
+
+    const tierProgress = getProductionReadinessProgressByTier(state, tierRules, tierKey);
+    for (const check of tierRules.checks) {
+      if (!isNonEmptyString(check.id)) {
+        continue;
+      }
+      const status = tierProgress.statusByCheckId[check.id] || 'pending';
+      if (!PRODUCTION_READINESS_CHECK_STATUS_VALUES.has(status)) {
+        errors.push(
+          `progress.productionReadinessTiers.${tierKey}.statusByCheckId.${check.id} must be one of ${[...PRODUCTION_READINESS_CHECK_STATUS_VALUES].join(', ')}`
+        );
+      }
+      if (status === 'pass' && (tierProgress.evidenceByCheckId[check.id] || []).length === 0) {
+        errors.push(
+          `progress.productionReadinessTiers.${tierKey}.evidenceByCheckId.${check.id} must contain evidence when statusByCheckId.${check.id}=pass`
+        );
+      }
+    }
+
+    const failures = getProductionReadinessFailuresForTier(tierRules, tierProgress);
+    if (failures.length === 0) {
+      continue;
+    }
+    const summary = summarizeProductionReadinessFailures(failures);
+
+    if (blockerSets.ticketStatuses.size > 0) {
+      const violatingTickets = [];
+      for (const ticket of context.ticketMap.values()) {
+        if (tierRules.exemptTicketIds.includes(ticket.ticketId)) {
+          continue;
+        }
+        if (blockerSets.ticketStatuses.has(ticket.status)) {
+          violatingTickets.push(`${ticket.ticketId}:${ticket.status}`);
+        }
+      }
+      if (violatingTickets.length > 0) {
+        errors.push(
+          `productionReadiness gate (${tierKey}) blocked by ticket status because required checks are incomplete: ${summary}. violating tickets: ${violatingTickets.join(', ')}`
+        );
+      }
+    }
+
+    if (blockerSets.workflowModes.has(state.workflowMode)) {
+      errors.push(
+        `productionReadiness gate (${tierKey}) blocked in workflowMode=${state.workflowMode} because required checks are incomplete: ${summary}`
+      );
+    }
+
+    if (blockerSets.enterFreeze && FREEZE_ENTRY_MODES.has(state.workflowMode)) {
+      errors.push(
+        `productionReadiness gate (${tierKey}) blocked for freeze flow (mode=${state.workflowMode}) because required checks are incomplete: ${summary}`
+      );
+    }
+  }
+
+  return errors;
+}
+
+function validateProductionReadinessTransitionGate(context, ticket, from, to, actor) {
+  const errors = [];
+  if (actor !== 'claude') {
+    return errors;
+  }
+
+  const rules = getProductionReadinessTierRules(context.state);
+  if (!rules.enabled) {
+    return errors;
+  }
+
+  for (const tierKey of PRODUCTION_READINESS_TIER_KEYS) {
+    const tierRules = rules[tierKey];
+    if (tierRules.exemptTicketIds.includes(ticket.ticketId)) {
+      continue;
+    }
+    const blockerSets = splitProductionReadinessBlockers(tierRules.blockersWhenFailed || []);
+    if (!blockerSets.ticketStatuses.has(to)) {
+      continue;
+    }
+    const tierProgress = getProductionReadinessProgressByTier(context.state, tierRules, tierKey);
+    const failures = getProductionReadinessFailuresForTier(tierRules, tierProgress);
+    if (failures.length === 0) {
+      continue;
+    }
+    errors.push(
+      `ticket-transition blocked by productionReadiness gate (${tierKey}): ${from} -> ${to} for ${ticket.ticketId} requires all required checks pass. Incomplete: ${summarizeProductionReadinessFailures(failures)}`
+    );
   }
 
   return errors;
@@ -3361,6 +3722,7 @@ function validateState(context, options = {}) {
   errors.push(...validateLiveIterationExecutionState(context));
   errors.push(...validateLivePageByPageTicketization(context));
   errors.push(...validateClaudeCurrentStateSync(context));
+  errors.push(...validateProductionReadinessTiersState(context));
 
   const sessionRules = state?.rules?.sessionRules || {};
   if (sessionRules.requireSessionIdForTransitions === true && !isNonEmptyString(sessionRules.sessionIdEnvVar)) {
@@ -3414,6 +3776,23 @@ function validateState(context, options = {}) {
       ) {
         errors.push(`rules.claudeCurrentStateSyncRules.${field} must be an array of non-empty strings when provided`);
       }
+    }
+    const boolFields = [
+      'enabled',
+      'enforceWhenTicketizationIncomplete',
+      'enforceLiveStageTicketSetParity',
+      'enforceLiveStageTicketStatusParity',
+    ];
+    for (const field of boolFields) {
+      if (claudeStateSyncRules[field] !== undefined && !isBoolean(claudeStateSyncRules[field])) {
+        errors.push(`rules.claudeCurrentStateSyncRules.${field} must be boolean when provided`);
+      }
+    }
+    if (
+      claudeStateSyncRules.liveStageCanonicalStatusPrefix !== undefined &&
+      !isNonEmptyString(claudeStateSyncRules.liveStageCanonicalStatusPrefix)
+    ) {
+      errors.push('rules.claudeCurrentStateSyncRules.liveStageCanonicalStatusPrefix must be a non-empty string when provided');
     }
   }
 
@@ -3718,6 +4097,10 @@ function commandTicketTransition(args) {
   const liveGateErrors = validateLiveIterationTransitionGate(context, ticket, from, to, actor);
   if (liveGateErrors.length > 0) {
     fail(`ticket-transition blocked by live iteration execution gate:\n- ${liveGateErrors.join('\n- ')}`);
+  }
+  const productionReadinessGateErrors = validateProductionReadinessTransitionGate(context, ticket, from, to, actor);
+  if (productionReadinessGateErrors.length > 0) {
+    fail(`ticket-transition blocked by production readiness gate:\n- ${productionReadinessGateErrors.join('\n- ')}`);
   }
 
   ticket.status = to;
