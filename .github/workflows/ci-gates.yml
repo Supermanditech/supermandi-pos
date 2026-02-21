@@ -64,6 +64,7 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm --filter @supermandi/common run build
+          pnpm --filter @supermandi/auth-service run build
           pnpm run typecheck
 
   # ==========================================================================
