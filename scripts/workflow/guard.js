@@ -44,6 +44,8 @@ const TICKET_STATUS_VALUES = new Set([
   'ready_for_lock',
   'locked',
   'cancelled',
+  'done',
+  'blocked',
 ]);
 const ACTIVE_TICKET_STATUSES = new Set([
   'todo',
@@ -1992,7 +1994,7 @@ function validateTicketGatesByStatus(ticket, label, state) {
     'stagingDeployPassed',
   ];
 
-  if (status !== 'todo' && claude.screenVisualizedWithOperator !== true) {
+  if (status !== 'todo' && status !== 'done' && status !== 'blocked' && claude.screenVisualizedWithOperator !== true) {
     errors.push(`${label}: status ${status} requires claudeChecks.screenVisualizedWithOperator=true`);
   }
 

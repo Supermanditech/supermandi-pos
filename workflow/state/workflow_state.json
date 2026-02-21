@@ -258,6 +258,36 @@
           "from": "impact_retest_failed",
           "to": "cancelled",
           "actor": "claude"
+        },
+        {
+          "from": "todo",
+          "to": "done",
+          "actor": "claude"
+        },
+        {
+          "from": "in_progress",
+          "to": "done",
+          "actor": "claude"
+        },
+        {
+          "from": "todo",
+          "to": "blocked",
+          "actor": "claude"
+        },
+        {
+          "from": "in_progress",
+          "to": "blocked",
+          "actor": "claude"
+        },
+        {
+          "from": "blocked",
+          "to": "in_progress",
+          "actor": "claude"
+        },
+        {
+          "from": "blocked",
+          "to": "done",
+          "actor": "claude"
         }
       ]
     },

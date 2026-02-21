@@ -29,6 +29,8 @@ useDefault = true
     '''__tests__/.*''',
     '''__mocks__/.*''',
     '''\.github/workflows/.*''',
+    '''workflow/tickets/.*''',
+    '''workflow/state/.*''',
   ]
   regexTarget = "line"
   regexes = [
