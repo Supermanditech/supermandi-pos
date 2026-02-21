@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'SuperMandi Supplier Portal',
   description: 'Manage your products and orders on SuperMandi',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/supplier/favicon.svg',
   },
 };
 

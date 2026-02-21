@@ -15,7 +15,8 @@ const POOL_CONFIG = {
   // Close idle connections after this many milliseconds
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
   // Connection timeout in milliseconds
-  connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT || '10000', 10),
+  // Cloud SQL Unix socket cold start can take 15-20s; 10s was causing unhandled rejections
+  connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT || '30000', 10),
   // How long a client is allowed to remain idle before being removed (30 seconds)
   allowExitOnIdle: false,
   // GO-LIVE-076: Statement timeout to prevent runaway queries (30 seconds)
