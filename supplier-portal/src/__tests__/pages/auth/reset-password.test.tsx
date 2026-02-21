@@ -82,8 +82,8 @@ describe('ResetPasswordPage', () => {
     render(<ResetPasswordPage />);
     fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: 'abc123' } });
-    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'password456' } });
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'Password123' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'Password456' } });
     fireEvent.click(screen.getByText('Reset Password'));
     await waitFor(() => {
       expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
@@ -95,8 +95,8 @@ describe('ResetPasswordPage', () => {
     render(<ResetPasswordPage />);
     fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: 'abc123' } });
-    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'newpassword123' } });
-    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'newpassword123' } });
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'NewPassword123' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'NewPassword123' } });
     fireEvent.click(screen.getByText('Reset Password'));
     await waitFor(() => {
       expect(screen.getByText('Password Reset Successful')).toBeInTheDocument();
@@ -108,8 +108,8 @@ describe('ResetPasswordPage', () => {
     render(<ResetPasswordPage />);
     fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: 'abc123' } });
-    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'newpassword123' } });
-    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'newpassword123' } });
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'NewPassword123' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'NewPassword123' } });
     fireEvent.click(screen.getByText('Reset Password'));
     await waitFor(() => {
       expect(screen.getByText('Token expired')).toBeInTheDocument();

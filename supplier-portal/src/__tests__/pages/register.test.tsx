@@ -70,7 +70,7 @@ describe('RegisterPageWrapper (Registration Page)', () => {
 
   it('renders registration heading', () => {
     render(<RegisterPageWrapper />);
-    expect(screen.getByText('Register your account')).toBeInTheDocument();
+    expect(screen.getByText('Register as Supplier')).toBeInTheDocument();
   });
 
   it('renders registration subtitle', () => {
