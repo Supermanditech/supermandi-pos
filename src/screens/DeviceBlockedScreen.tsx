@@ -11,6 +11,7 @@ import { clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { theme, colors, typography, spacing } from "../theme";
+import BrandShortmark from "../components/BrandShortmark";
 
 type RootStackParamList = {
   DeviceBlocked: undefined;
@@ -87,6 +88,16 @@ export default function DeviceBlockedScreen() {
       accessibilityLabel="Device disabled screen"
     >
       <View style={styles.card} testID="device-blocked-card">
+        <View style={styles.brandLockup}>
+          <BrandShortmark
+            size={30}
+            backgroundColor={colors.primary}
+            lineColor={colors.textInverse}
+            dotColor={colors.textInverse}
+            radius={8}
+          />
+          <Text style={styles.brandPillText}>SuperMandi</Text>
+        </View>
         <View style={styles.iconWrap} accessibilityElementsHidden>
           <MaterialCommunityIcons name="shield-alert" size={ICON_SIZE} color={colors.error} />
         </View>
@@ -144,6 +155,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  brandLockup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  brandPillText: {
+    backgroundColor: colors.primary,
+    color: colors.textInverse,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   iconWrap: {
     width: ICON_WRAP_SIZE,

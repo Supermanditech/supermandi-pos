@@ -12,6 +12,7 @@ import { fetchUiStatusStrict } from "../services/api/uiStatusApi";
 import { clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { theme, colors, typography, spacing } from "../theme";
+import BrandShortmark from "../components/BrandShortmark";
 
 type RootStackParamList = {
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
@@ -116,6 +117,16 @@ export default function ForceUpdateScreen() {
       accessibilityLabel="App update required screen"
     >
       <View style={styles.card} testID="force-update-card">
+        <View style={styles.brandLockup}>
+          <BrandShortmark
+            size={30}
+            backgroundColor={colors.primary}
+            lineColor={colors.textInverse}
+            dotColor={colors.textInverse}
+            radius={8}
+          />
+          <Text style={styles.brandPillText}>SuperMandi</Text>
+        </View>
         <View
           style={styles.iconWrap}
           accessibilityElementsHidden
@@ -205,6 +216,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  brandLockup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  brandPillText: {
+    backgroundColor: colors.primary,
+    color: colors.textInverse,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   iconWrap: {
     width: ICON_WRAP_SIZE,

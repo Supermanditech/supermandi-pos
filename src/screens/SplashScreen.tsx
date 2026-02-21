@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Pressable, BackHandler } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import Svg, { Path } from "react-native-svg";
 
 import { theme, colors, typography, spacing } from "../theme";
 import { startCloudEventLogger } from "../services/cloudEventLogger";
@@ -15,6 +14,7 @@ import { syncOutbox } from "../services/offline/sync";
 import { getDeviceSession } from "../services/deviceSession";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { getDeviceMeta } from "../services/deviceInfo";
+import BrandShortmark from "../components/BrandShortmark";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -31,28 +31,6 @@ const SPLASH_DURATION_MS = 1000;
 
 /** S1-3: Timeout for getDeviceSession() to prevent infinite hang */
 const SESSION_TIMEOUT_MS = 5000;
-
-/** T-107: Brand shortmark — S-curve icon rendered as inline SVG */
-function BrandShortmark({ size = 64, color = colors.textInverse }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 64 64" fill="none" accessibilityElementsHidden>
-      {/* S-curve path representing the SuperMandi brand shortmark */}
-      <Path
-        d="M44 16C44 16 40 12 32 12C24 12 18 17 18 23C18 29 24 31 32 33C40 35 46 37 46 43C46 49 40 52 32 52C24 52 20 48 20 48"
-        stroke={color}
-        strokeWidth={5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      {/* Top dot accent */}
-      <Path
-        d="M32 8C33.6569 8 35 6.65685 35 5C35 3.34315 33.6569 2 32 2C30.3431 2 29 3.34315 29 5C29 6.65685 30.3431 8 32 8Z"
-        fill={color}
-      />
-    </Svg>
-  );
-}
 
 export default function SplashScreen() {
   const navigation = useNavigation<NavProp>();
@@ -155,7 +133,13 @@ export default function SplashScreen() {
         testID="splash-error-screen"
         accessibilityLabel="Splash screen error"
       >
-        <BrandShortmark size={64} color={theme.colors.textInverse} />
+        <BrandShortmark
+          size={64}
+          backgroundColor={colors.primaryDark}
+          lineColor={theme.colors.textInverse}
+          dotColor={theme.colors.textInverse}
+          radius={10}
+        />
         <Text style={styles.brandName} accessibilityRole="header">SuperMandi</Text>
         <View style={styles.errorCard} testID="splash-error-card">
           <Text
@@ -196,7 +180,13 @@ export default function SplashScreen() {
       testID="splash-screen"
       accessibilityLabel="SuperMandi loading screen"
     >
-      <BrandShortmark size={64} color={theme.colors.textInverse} />
+      <BrandShortmark
+        size={64}
+        backgroundColor={colors.primaryDark}
+        lineColor={theme.colors.textInverse}
+        dotColor={theme.colors.textInverse}
+        radius={10}
+      />
       <Text
         style={styles.brandName}
         testID="splash-brand-name"

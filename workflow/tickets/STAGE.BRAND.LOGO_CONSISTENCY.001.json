@@ -1,0 +1,330 @@
+{
+  "ticketId": "STAGE.BRAND.LOGO_CONSISTENCY.001",
+  "screenId": "INFRA.STAGING-DEPLOY",
+  "orderInScreen": 2,
+  "surface": "shared",
+  "riskClass": "high",
+  "title": "Unify SuperMandi logo treatment across landing, retailer, supplier, superadmin, and POS activation/login gates",
+  "description": "Brand consistency rollout: selected v3-c3 stacked shortmark with full wordmark in white over blue background. Apply across all pre-login and post-login entry points (web + POS) and carry into staging verification flow under FIX-001.",
+  "status": "todo",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "pass",
+    "ux": "na",
+    "professional_polish": "pass",
+    "wiring": "na",
+    "navigation": "pass",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/supplier/",
+      "https://staging.supermandi.tech/admin/",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "LANDING.NAV",
+      "LANDING.FOOTER",
+      "RETAILER.AUTH",
+      "SUPPLIER.AUTH",
+      "SUPERADMIN.AUTH",
+      "POS.SPLASH",
+      "POS.ENROLL_DEVICE",
+      "POS.STAFF_LOGIN",
+      "POS.DEVICE_BLOCKED",
+      "POS.FORCE_UPDATE",
+      "POS.MENU"
+    ],
+    "impactedServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "operator_brand_direction_2026-02-21",
+    "reproSteps": [
+      "Open landing and auth surfaces on staging.",
+      "Verify old/legacy logo variants are removed.",
+      "Verify selected white-on-blue full wordmark and v3-c3 shortmark are applied consistently."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": true,
+    "navigationChecked": true,
+    "envAndBasePathChecked": true,
+    "migrationSafetyChecked": true,
+    "rollbackPlanReady": true,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22240364165",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-21T01:22:30.503Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/freeze_manifest.json",
+      "workflow/README.md",
+      "workflow/production_boundary_iam.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/supplier/",
+      "https://staging.supermandi.tech/admin/"
+    ],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22240364165",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00065-n22",
+      "api-gateway-00048-6kg",
+      "retailer-admin-00050-jt8",
+      "supplier-portal-00046-z6s",
+      "superadmin-00043-6q8",
+      "landing-00043-xpf"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "operator screenshot: old mixed/legacy logos across landing and POS flows"
+    ],
+    "afterVisual": [
+      "supermandi-landing/index.html",
+      "supermandi-landing/privacy.html",
+      "supermandi-landing/terms.html",
+      "supermandi-landing/pos.html",
+      "retailer-admin/src/pages/LoginPage.tsx",
+      "retailer-admin/src/pages/RegisterPage.tsx",
+      "retailer-admin/src/pages/RetailerOnboardingPage.tsx",
+      "retailer-admin/src/pages/ForgotPasswordPage.tsx",
+      "supplier-portal/src/app/(auth)/layout.tsx",
+      "supplier-portal/src/app/register/layout.tsx",
+      "supplier-portal/src/app/help/layout.tsx",
+      "supermandi-superadmin/src/components/LoginGate.tsx",
+      "src/screens/SplashScreen.tsx",
+      "src/screens/EnrollDeviceScreen.tsx",
+      "src/screens/StaffLoginScreen.tsx",
+      "src/screens/DeviceBlockedScreen.tsx",
+      "src/screens/ForceUpdateScreen.tsx",
+      "src/screens/MenuScreen.tsx"
+    ],
+    "apiProof": [
+      "supermandi-landing/index.html",
+      "supermandi-landing/privacy.html",
+      "supermandi-landing/terms.html",
+      "supermandi-landing/pos.html"
+    ],
+    "parityProof": [
+      "shared/brand/logo-full.svg",
+      "retailer-admin/public/brand/logo-full.svg",
+      "supplier-portal/public/brand/logo-full.svg",
+      "supermandi-superadmin/public/brand/logo-full.svg"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-21T01:22:30.503Z",
+    "updatedAt": "2026-02-21T01:50:42.282Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket originates from live staging UI observation and operator brand direction for selected locked logo variant. Local implementation now includes legal footer-name standardization and Facebook/OpenGraph site_name coverage for landing pages.",
+    "evidence": [
+      "staging URL visual checks",
+      "operator screenshot references",
+      "supermandi-landing/index.html",
+      "supermandi-landing/privacy.html",
+      "supermandi-landing/terms.html",
+      "supermandi-landing/pos.html"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": true
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "landing",
+    "actualCloudRunServices": [
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/supplier/",
+      "https://staging.supermandi.tech/admin/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "shared/brand assets",
+      "retailer-admin static branding",
+      "supplier-portal static branding",
+      "supermandi-superadmin static branding",
+      "POS React Native screens",
+      "landing static pages"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "Staging deploy evidence for updated branding",
+      "Operator signoff (laptop + Redmi)"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": true,
+    "notes": "No third-party dependency required; closure waits on staging deploy and operator evidence."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Needs staging parity verification across all portals."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    },
+    "zeroSilentFailures": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Brand-only change."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Capture post-deploy staging screenshots for all touched surfaces"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "Deploy branding update to staging under FIX-001 wave",
+      "Collect Cloud Run revision and URL evidence",
+      "Operator cross-device signoff"
+    ],
+    "blocked": true,
+    "summary": "Local branding + Facebook metadata updates are complete. Ticket remains blocked until FIX-001 deploy evidence and operator signoff are captured."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "STAGE.BRAND.LOGO_CONSISTENCY.001",
+    "lastValidatedCommit": "eee590d",
+    "noMixedScope": false,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "git status --short",
+      "node scripts/workflow/guard.js sync-state",
+      "pnpm workflow:validate",
+      "pnpm workflow:monitor"
+    ]
+  }
+}

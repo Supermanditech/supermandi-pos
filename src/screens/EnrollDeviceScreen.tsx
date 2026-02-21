@@ -40,6 +40,7 @@ import { useCartStore } from "../stores/cartStore";
 import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
 import { useProductsStore } from "../stores/productsStore";
 import { useSettingsStore } from "../stores/settingsStore";
+import BrandShortmark from "../components/BrandShortmark";
 
 type RootStackParamList = {
   EnrollDevice: { enrollmentCode?: string; code?: string } | undefined;
@@ -421,6 +422,16 @@ export default function EnrollDeviceScreen() {
     >
       {/* Header */}
       <View style={styles.headerSection}>
+        <View style={styles.brandLockup}>
+          <BrandShortmark
+            size={36}
+            backgroundColor={colors.primary}
+            lineColor={colors.textInverse}
+            dotColor={colors.textInverse}
+            radius={9}
+          />
+          <Text style={styles.brandPillText}>SuperMandi</Text>
+        </View>
         <Text style={styles.title} testID="enroll-title" accessibilityRole="header">
           Activate Your POS
         </Text>
@@ -614,6 +625,21 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     marginBottom: spacing.xl,
+  },
+  brandLockup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  brandPillText: {
+    backgroundColor: colors.primary,
+    color: colors.textInverse,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   title: {
     ...typography.h4,

@@ -2,7 +2,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Linking, ScrollView, StyleSheet, Text, Pressable, View, Alert, RefreshControl } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Svg, { Path } from "react-native-svg";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
@@ -26,6 +25,7 @@ import { subscribeNetworkStatus } from "../services/networkStatus";
 import { formatMoney } from "../utils/money";
 import { printerService, type PrinterStatus } from "../services/printerService";
 import { asError } from "../utils/errorUtils";
+import BrandShortmark from "../components/BrandShortmark";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -58,26 +58,6 @@ type RootStackParamList = {
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-/** T-108: Compact brand shortmark for menu header */
-function HeaderBrandIcon({ size = 24, color = theme.colors.textInverse }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <Path
-        d="M44 16C44 16 40 12 32 12C24 12 18 17 18 23C18 29 24 31 32 33C40 35 46 37 46 43C46 49 40 52 32 52C24 52 20 48 20 48"
-        stroke={color}
-        strokeWidth={5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <Path
-        d="M32 8C33.6569 8 35 6.65685 35 5C35 3.34315 33.6569 2 32 2C30.3431 2 29 3.34315 29 5C29 6.65685 30.3431 8 32 8Z"
-        fill={color}
-      />
-    </Svg>
-  );
-}
 
 export default function MenuScreen() {
   const { t } = useTranslation();
@@ -412,10 +392,14 @@ export default function MenuScreen() {
       {/* T-108: Brand identity header with shortmark icon */}
       <View style={styles.header}>
         <View style={styles.brandHeader}>
-          <View style={styles.brandIconCircle}>
-            <HeaderBrandIcon size={20} color={theme.colors.textInverse} />
-          </View>
-          <Text style={styles.title}>{t('menu.title')}</Text>
+          <BrandShortmark
+            size={24}
+            backgroundColor={theme.colors.primary}
+            lineColor={theme.colors.textInverse}
+            dotColor={theme.colors.textInverse}
+          />
+          <Text style={styles.brandPillText}>SuperMandi</Text>
+          <Text style={styles.menuLabel}>{t('menu.title')}</Text>
         </View>
         {/* GO-LIVE-244: Offline indicator */}
         {!isOnline && (
@@ -1118,18 +1102,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  brandIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 20,
+  brandPillText: {
+    fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary
+    color: theme.colors.textInverse,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    lineHeight: 18,
+  },
+  menuLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
   },
   // GO-LIVE-244: Offline indicator styles
   offlineIndicator: {

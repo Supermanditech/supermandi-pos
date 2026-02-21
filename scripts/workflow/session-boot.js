@@ -7,7 +7,7 @@ const { spawnSync } = require('child_process');
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const STATE_FILE = path.join(ROOT_DIR, 'workflow', 'state', 'workflow_state.json');
 const GUARD_SCRIPT = path.join(ROOT_DIR, 'scripts', 'workflow', 'guard.js');
-const REQUIRED_FILES = [
+const REQUIRED_BASELINE_FILES = [
   'workflow/state/workflow_state.json',
   'workflow/schemas/ticket.schema.json',
   'workflow/schemas/screen_state.schema.json',
@@ -40,6 +40,51 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function normalizeRequiredFileList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const normalized = [];
+  const seen = new Set();
+  for (const item of value) {
+    if (!isNonEmptyString(item)) {
+      continue;
+    }
+    const normalizedPath = item.trim().replace(/\\/g, '/');
+    if (!seen.has(normalizedPath)) {
+      seen.add(normalizedPath);
+      normalized.push(normalizedPath);
+    }
+  }
+  return normalized;
+}
+
+function mergeRequiredFileLists(...lists) {
+  const merged = [];
+  const seen = new Set();
+  for (const list of lists) {
+    for (const item of list) {
+      if (!seen.has(item)) {
+        seen.add(item);
+        merged.push(item);
+      }
+    }
+  }
+  return merged;
+}
+
+function resolveRequiredFilesFromState(state) {
+  const sessionRules = state?.rules?.sessionRules || {};
+  const baseline = normalizeRequiredFileList(REQUIRED_BASELINE_FILES);
+  const sessionStart = normalizeRequiredFileList(sessionRules.requiredFilesReadAtSessionStart);
+  const beforeReady = normalizeRequiredFileList(sessionRules.requiredFilesReadBeforeReadyStatuses);
+  return mergeRequiredFileLists(baseline, sessionStart, beforeReady);
+}
+
 function toRepoRelative(filePath) {
   return path.relative(ROOT_DIR, filePath).replace(/\\/g, '/');
 }
@@ -57,13 +102,14 @@ function main() {
   const ticket = readJson(ticketPath);
   const state = readJson(STATE_FILE);
   const runbookVersion = `workflow-v${state.schemaVersion || '1.0.0'}`;
+  const requiredFilesRead = resolveRequiredFilesFromState(state);
 
   ticket.sessionBoot = {
     bootstrappedBy: 'claude',
     bootstrappedAt: new Date().toISOString(),
     runbookVersion,
     memoryStateRef: 'workflow/state/workflow_state.json',
-    requiredFilesRead: [...REQUIRED_FILES],
+    requiredFilesRead,
   };
   if (!ticket.timestamps || typeof ticket.timestamps !== 'object') {
     ticket.timestamps = {};

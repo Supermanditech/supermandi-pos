@@ -1,0 +1,837 @@
+{
+  "generatedAt": "2026-02-21T08:07:22.1641866+05:30",
+  "sourceManifest": "workflow/state/live_page_manifest.json",
+  "testStoreCode": "TEST001",
+  "summary": [
+    {
+      "surface": "cross_function_matrix",
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "browserOnly": 0
+    },
+    {
+      "surface": "landing",
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "browserOnly": 0
+    },
+    {
+      "surface": "pos_app",
+      "total": 4,
+      "pass": 2,
+      "fail": 2,
+      "browserOnly": 0
+    },
+    {
+      "surface": "retailer_web",
+      "total": 31,
+      "pass": 31,
+      "fail": 0,
+      "browserOnly": 0
+    },
+    {
+      "surface": "superadmin_web",
+      "total": 25,
+      "pass": 1,
+      "fail": 0,
+      "browserOnly": 24
+    },
+    {
+      "surface": "supplier_web",
+      "total": 19,
+      "pass": 19,
+      "fail": 0,
+      "browserOnly": 0
+    }
+  ],
+  "total": 87,
+  "failures": 2,
+  "browserOnly": 24,
+  "results": [
+    {
+      "surface": "retailer_web",
+      "route": "/retailer",
+      "url": "https://staging.supermandi.tech/retailer",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/retailer/",
+      "url": "https://staging.supermandi.tech/retailer/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/retailer/forgot-password",
+      "url": "https://staging.supermandi.tech/retailer/forgot-password",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/retailer/help",
+      "url": "https://staging.supermandi.tech/retailer/help",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/retailer/login",
+      "url": "https://staging.supermandi.tech/retailer/login",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/retailer/onboard",
+      "url": "https://staging.supermandi.tech/retailer/onboard",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/retailer/register",
+      "url": "https://staging.supermandi.tech/retailer/register",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}",
+      "url": "https://staging.supermandi.tech/s/TEST001",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/admin/products",
+      "url": "https://staging.supermandi.tech/s/TEST001/admin/products",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/admin/suppliers",
+      "url": "https://staging.supermandi.tech/s/TEST001/admin/suppliers",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/analytics",
+      "url": "https://staging.supermandi.tech/s/TEST001/analytics",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/chat",
+      "url": "https://staging.supermandi.tech/s/TEST001/chat",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/compliance",
+      "url": "https://staging.supermandi.tech/s/TEST001/compliance",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/credit",
+      "url": "https://staging.supermandi.tech/s/TEST001/credit",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/customers",
+      "url": "https://staging.supermandi.tech/s/TEST001/customers",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/devices",
+      "url": "https://staging.supermandi.tech/s/TEST001/devices",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/help",
+      "url": "https://staging.supermandi.tech/s/TEST001/help",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/import",
+      "url": "https://staging.supermandi.tech/s/TEST001/import",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/inventory",
+      "url": "https://staging.supermandi.tech/s/TEST001/inventory",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/invoices",
+      "url": "https://staging.supermandi.tech/s/TEST001/invoices",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/login",
+      "url": "https://staging.supermandi.tech/s/TEST001/login",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/notifications",
+      "url": "https://staging.supermandi.tech/s/TEST001/notifications",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/products",
+      "url": "https://staging.supermandi.tech/s/TEST001/products",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/purchase-orders",
+      "url": "https://staging.supermandi.tech/s/TEST001/purchase-orders",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/reconciliation",
+      "url": "https://staging.supermandi.tech/s/TEST001/reconciliation",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/register",
+      "url": "https://staging.supermandi.tech/s/TEST001/register",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/reorder",
+      "url": "https://staging.supermandi.tech/s/TEST001/reorder",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/settings",
+      "url": "https://staging.supermandi.tech/s/TEST001/settings",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/settings/payments",
+      "url": "https://staging.supermandi.tech/s/TEST001/settings/payments",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/supplier-catalog",
+      "url": "https://staging.supermandi.tech/s/TEST001/supplier-catalog",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "retailer_web",
+      "route": "/s/{storeCode}/suppliers",
+      "url": "https://staging.supermandi.tech/s/TEST001/suppliers",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/",
+      "url": "https://staging.supermandi.tech/supplier/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/bnpl-orders/",
+      "url": "https://staging.supermandi.tech/supplier/bnpl-orders/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/chat/",
+      "url": "https://staging.supermandi.tech/supplier/chat/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/dashboard/",
+      "url": "https://staging.supermandi.tech/supplier/dashboard/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/earnings/",
+      "url": "https://staging.supermandi.tech/supplier/earnings/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/forgot-password/",
+      "url": "https://staging.supermandi.tech/supplier/forgot-password/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/help/",
+      "url": "https://staging.supermandi.tech/supplier/help/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/invoices/",
+      "url": "https://staging.supermandi.tech/supplier/invoices/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/kyc/",
+      "url": "https://staging.supermandi.tech/supplier/kyc/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/login/",
+      "url": "https://staging.supermandi.tech/supplier/login/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/notifications/",
+      "url": "https://staging.supermandi.tech/supplier/notifications/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/onboard/",
+      "url": "https://staging.supermandi.tech/supplier/onboard/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/orders/",
+      "url": "https://staging.supermandi.tech/supplier/orders/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/pending-approval/",
+      "url": "https://staging.supermandi.tech/supplier/pending-approval/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/products/",
+      "url": "https://staging.supermandi.tech/supplier/products/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/profile/",
+      "url": "https://staging.supermandi.tech/supplier/profile/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/register/",
+      "url": "https://staging.supermandi.tech/supplier/register/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/reset-password/",
+      "url": "https://staging.supermandi.tech/supplier/reset-password/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "supplier_web",
+      "route": "/supplier/upload/",
+      "url": "https://staging.supermandi.tech/supplier/upload/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/",
+      "url": "https://staging.supermandi.tech/admin/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#ai",
+      "url": "https://staging.supermandi.tech/admin/#ai",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#ai-insights",
+      "url": "https://staging.supermandi.tech/admin/#ai-insights",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#analytics",
+      "url": "https://staging.supermandi.tech/admin/#analytics",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#applications",
+      "url": "https://staging.supermandi.tech/admin/#applications",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#audit",
+      "url": "https://staging.supermandi.tech/admin/#audit",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#credit-providers",
+      "url": "https://staging.supermandi.tech/admin/#credit-providers",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#devices",
+      "url": "https://staging.supermandi.tech/admin/#devices",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#documents",
+      "url": "https://staging.supermandi.tech/admin/#documents",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#events",
+      "url": "https://staging.supermandi.tech/admin/#events",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#grn-alerts",
+      "url": "https://staging.supermandi.tech/admin/#grn-alerts",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#gst-compliance",
+      "url": "https://staging.supermandi.tech/admin/#gst-compliance",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#invoices",
+      "url": "https://staging.supermandi.tech/admin/#invoices",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#monitoring",
+      "url": "https://staging.supermandi.tech/admin/#monitoring",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#payments",
+      "url": "https://staging.supermandi.tech/admin/#payments",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#quality",
+      "url": "https://staging.supermandi.tech/admin/#quality",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#refunds",
+      "url": "https://staging.supermandi.tech/admin/#refunds",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#registrations",
+      "url": "https://staging.supermandi.tech/admin/#registrations",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#settings",
+      "url": "https://staging.supermandi.tech/admin/#settings",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#staff",
+      "url": "https://staging.supermandi.tech/admin/#staff",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#stores",
+      "url": "https://staging.supermandi.tech/admin/#stores",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#suppliers",
+      "url": "https://staging.supermandi.tech/admin/#suppliers",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#support",
+      "url": "https://staging.supermandi.tech/admin/#support",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#users",
+      "url": "https://staging.supermandi.tech/admin/#users",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "superadmin_web",
+      "route": "/admin/#whatsapp",
+      "url": "https://staging.supermandi.tech/admin/#whatsapp",
+      "category": "surface_route",
+      "status": "BROWSER_ONLY",
+      "httpStatus": null,
+      "note": "hash route requires browser runtime"
+    },
+    {
+      "surface": "landing",
+      "route": "/",
+      "url": "https://staging.supermandi.tech/",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "landing",
+      "route": "/pos",
+      "url": "https://staging.supermandi.tech/pos",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "landing",
+      "route": "/privacy",
+      "url": "https://staging.supermandi.tech/privacy",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "landing",
+      "route": "/terms",
+      "url": "https://staging.supermandi.tech/terms",
+      "category": "surface_route",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "pos_app",
+      "route": "https://staging.supermandi.tech/api/v1/health",
+      "url": "https://staging.supermandi.tech/api/v1/health",
+      "category": "pos_endpoint",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "pos_app",
+      "route": "https://staging.supermandi.tech/api/v1/version",
+      "url": "https://staging.supermandi.tech/api/v1/version",
+      "category": "pos_endpoint",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "pos_app",
+      "route": "https://staging.supermandi.tech/api/v1/pos",
+      "url": "https://staging.supermandi.tech/api/v1/pos",
+      "category": "pos_endpoint",
+      "status": "FAIL",
+      "httpStatus": 401,
+      "note": "Response status code does not indicate success: 401 (Unauthorized)."
+    },
+    {
+      "surface": "pos_app",
+      "route": "https://staging.supermandi.tech/api/v1/auth",
+      "url": "https://staging.supermandi.tech/api/v1/auth",
+      "category": "pos_endpoint",
+      "status": "FAIL",
+      "httpStatus": 404,
+      "note": "Response status code does not indicate success: 404 (Not Found)."
+    },
+    {
+      "surface": "cross_function_matrix",
+      "route": "XFN-001",
+      "url": "https://staging.supermandi.tech/retailer/login",
+      "category": "cross_flow",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "cross_function_matrix",
+      "route": "XFN-002",
+      "url": "https://staging.supermandi.tech/supplier/login/",
+      "category": "cross_flow",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "cross_function_matrix",
+      "route": "XFN-003",
+      "url": "https://staging.supermandi.tech/admin/",
+      "category": "cross_flow",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    },
+    {
+      "surface": "cross_function_matrix",
+      "route": "XFN-004",
+      "url": "https://staging.supermandi.tech/api/v1/health",
+      "category": "cross_flow",
+      "status": "PASS",
+      "httpStatus": 200,
+      "note": ""
+    }
+  ]
+}

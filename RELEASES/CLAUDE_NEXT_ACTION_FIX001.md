@@ -4,6 +4,31 @@
 
 This override is ACTIVE now and takes precedence over older deploy-first wording in this file if any conflict exists.
 
+### Ownership Override (Hard, Effective 2026-02-21 Live Report)
+
+- For the live blockers captured in `workflow/state/live_test_report_2026-02-21.md`, Claude owns execution on staging and must not defer as operator-only work.
+- Operator remains required only for final verification/signoff (laptop + Redmi) and production-bound approvals.
+- For staging infra/runtime remediation, Claude must execute via scripted/reproducible commands (prefer committed scripts or documented gcloud commands with evidence).
+- If Claude is blocked by IAM/permission, ticket state must be `BLOCKED` with exact failing command, principal, and unblock owner. Do not use generic "operator action required".
+- If remediation is a staging `gcloud` command (for example URL map path rules or Cloud Run min-instances), Claude executes it directly; do not hand off to operator.
+
+Mandatory Claude-owned remediation order from Step-5 report:
+1. `LIVE.URLMAP.STORE_ROUTES.001` (P0): add `/s` and `/s/*` path rules to retailer backend and prove route recovery.
+2. `LIVE.BACKEND.PROXY_404.001` (P0): resolve main-backend proxy 404 behavior and prove auth endpoint recovery.
+3. `LIVE.BACKEND.CONN_TIMEOUT.001` (P1): resolve startup timeout/unhandled rejection behavior with logs before/after.
+4. Re-run full HTTP sweep and update all `LIVE.*` tickets with runtime evidence and revision IDs.
+
+Transient-pass handling (mandatory):
+- A single green smoke run does not close prior P0/P1 runtime tickets.
+- Claude must prove stability with repeated evidence (minimum 3 successful runs over time, including at least one cold/warm transition window).
+- `LIVE.URLMAP.STORE_ROUTES.001` stays open until `/s` and `/s/*` routes are explicitly verified.
+- `LIVE.BACKEND.PROXY_404.001` stays open until proxied auth/POS endpoints remain stable across repeated runs.
+
+Git discipline for this override:
+- Repository may already be dirty from prior work.
+- Claude must stage only files changed for the active fix/ticket.
+- Claude must not stage unrelated modified/untracked files.
+
 ### Agent Quality Rule (Hard)
 
 - Use only `Claude Opus` agents for parallel audit/fix support.
@@ -27,6 +52,21 @@ This override is ACTIVE now and takes precedence over older deploy-first wording
   - navigation guards, API payload/response mapping, DB parity, migration impact
 - Ticket cannot close unless mapped checks are PASS (or BLOCKED with evidence + owner).
 - Surface deploy is blocked unless per-page micro coverage is 100% and no open P0/P1 blockers.
+
+### Full Micro-Ingredient Ticketization Override (Hard)
+
+- Claude must complete full GCP staging micro-ingredient testing across all pages/flows/components before implementation resumes.
+- For each discovered issue, create one micro ticket with live evidence (URL, timestamp, runtime proof, revision IDs).
+- Ticket volume must follow findings, not convenience; if coverage yields 1000-2000 tickets, Claude must create all required tickets.
+- Claude must not stop ticketization early due time, token, or batch-size pressure.
+- Implementation/deploy is blocked until exhaustive ticketization is complete and recorded in machine state.
+
+Machine-state contract (mandatory):
+- Update `workflow/state/workflow_state.json` under `progress.liveIteration`:
+  - `phase`: `ticketization` -> `implementation` -> `deploy`
+  - `ticketization.complete` + statement + per-surface coverage + remaining checks
+  - `implementation.complete` + remaining ticket IDs
+- `pnpm workflow:pre-staging` must fail unless phase is `deploy` and both ticketization + implementation are complete.
 
 ### 100% Completion Rule (Hard Stop Against Score-Only Reporting)
 
@@ -67,6 +107,7 @@ This override is ACTIVE now and takes precedence over older deploy-first wording
 ### Post-Deploy Ticket Intake Gate (Hard)
 
 - New ticket intake is blocked until a successful staging deploy is completed for the active wave.
+- Gate is machine-enforced via `rules.liveTicketIntakeRules` in `workflow/state/workflow_state.json`.
 - Every newly-intaked ticket must point to that successful deploy:
   - deployment ref/run URL
   - deploy timestamp
@@ -123,6 +164,7 @@ No new feature ticket coding is allowed until FIX-001 deployment evidence is com
    - GCP staging parity
 7. Create/update micro tickets for all discovered failures before coding new fixes.
    - each ticket must include live staging evidence + revision IDs
+   - include `STAGE.BRAND.LOGO_CONSISTENCY.001` in this wave and keep it open until all logo surfaces (landing, retailer, supplier, superadmin, POS pre/post activation) are verified on staging
 8. Start implementation only after full coverage + ticketization is complete.
 
 ## Hard Stop Rule
