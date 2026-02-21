@@ -571,6 +571,22 @@
       "defaultIntervalSeconds": 30,
       "maxErrorLinesPerTicket": 8,
       "reportOutputFile": "workflow/state/live_monitor_report.json"
+    },
+    "liveTicketIntakeRules": {
+      "enabled": true,
+      "enforceForStatuses": [
+        "todo",
+        "in_progress"
+      ],
+      "requireValidatedDeploymentRef": true,
+      "requireDeploymentRefMatch": true,
+      "lastSuccessfulStagingDeployRef": "github://run/22240364165",
+      "lastSuccessfulStagingDeployAt": "2026-02-20T19:18:24Z",
+      "lastSuccessfulStagingCommitSha": "1332ec8",
+      "requireStagingCommitShaEvidence": false,
+      "requireCloudRunRevisionIds": true,
+      "requireRuntimeEvidence": true,
+      "requireProductionDataTested": true
     }
   },
   "paths": {

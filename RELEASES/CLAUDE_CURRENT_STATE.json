@@ -1,6 +1,6 @@
 {
   "version": "33.0",
-  "lastUpdated": "2026-02-20T23:46:17Z",
+  "lastUpdated": "2026-02-21T00:00:27Z",
   "currentPhase": "LIVE-ITERATION QUALITY MODE \u2014 cumulative staging deploy, then full-surface micro ticketization, then ticket-wise implementation.",
   "currentTicket": "FIX-001",
   "ticketQueue": [
@@ -1674,7 +1674,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Complete cumulative staging deploy, run full live testing across all pages/surfaces, create only live-evidence micro tickets (URL+timestamp+runtime proof+revision IDs), then start ticket-wise implementation.",
+  "nextAction": "After successful staging deploy evidence is recorded, run pnpm workflow:manifest:live, use live_page_manifest.json for full-surface testing, create live-evidence micro tickets for all findings, then implement ticket-wise.",
   "productionHardeningDeferred": {
     "status": "DONE \u2014 PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -1689,6 +1689,8 @@
     "pr": "#288"
   },
   "lastActions": [
+    "Hard gate enabled: new live ticket intake is blocked until successful staging deploy evidence exists.",
+    "Added workflow:manifest:live helper to auto-generate full-surface page/flow checklist for live ticketization.",
     "Policy update: new tickets must originate from live GCP staging evidence (URL, timestamp, runtime proof, revision IDs).",
     "State policy updated: enforce deploy-then-live-ticketization sequence (full-surface micro ticketization before implementation).",
     "Codex created staging audit tickets for CORS/ingress/probe-path/historical-5xx risks in workflow/tickets.",
@@ -1731,5 +1733,27 @@
       "code_only_assumption_without_staging_runtime_evidence"
     ],
     "enforcement": "invalid_ticket_origin_blocks_completion_flow"
+  },
+  "liveManifestControl": {
+    "status": "ACTIVE",
+    "command": "pnpm workflow:manifest:live",
+    "manifestFile": "workflow/state/live_page_manifest.json",
+    "requiredBeforeLiveTicketization": true,
+    "purpose": "reduce manual load and prevent page skipping during full-surface live testing"
+  },
+  "postDeployTicketIntakeControl": {
+    "status": "ACTIVE",
+    "requiredBeforeTicketIntake": true,
+    "lastSuccessfulStagingDeployRef": "github://run/22240364165",
+    "lastSuccessfulStagingDeployAt": "2026-02-20T19:18:24Z",
+    "lastSuccessfulStagingCommitSha": "1332ec8",
+    "requiredPerTicket": [
+      "operatorChecks.validatedDeploymentRef matches deploy ref",
+      "timestamps.createdAt after successful deploy timestamp",
+      "gcpParity.cloudRunRevisionIds present",
+      "runtime evidence present",
+      "truthDeclaration.productionDataTested=true"
+    ],
+    "enforcement": "ticket intake blocked until successful staging deploy evidence is available"
   }
 }

@@ -27,6 +27,14 @@ pnpm workflow:validate
 pnpm workflow:monitor
 ```
 
+For live-ticketization sessions, also run:
+
+```bash
+pnpm workflow:manifest:live
+```
+
+Then use `workflow/state/live_page_manifest.json` as the required coverage checklist source.
+
 Before a ticket moves from `todo` to `in_progress`:
 
 ```bash
@@ -158,6 +166,19 @@ Required evidence in each new ticket:
 
 Tickets created from local-only assumptions, static code reading alone, or non-staging environments are invalid for closure flow and must be replaced with live-evidence tickets.
 
+## 2H. Post-Deploy Ticket Intake Gate (Mandatory)
+
+For active FIX-001 live-iteration sessions, new ticket intake is allowed only after a successful staging deploy has completed.
+
+Mandatory intake preconditions:
+
+1. successful staging deploy reference is available (`deploy run URL/ref`)
+2. successful staging deploy timestamp is recorded
+3. observed ticket timestamp is after that deploy timestamp
+4. ticket includes deploy ref + Cloud Run revision IDs + runtime evidence
+
+If no successful staging deploy evidence exists for the current wave, Claude must not create new intake tickets and must first complete deploy evidence collection.
+
 ## 2C. Tracking Protocol (Codex + Claude)
 
 At each retry, Claude must publish a short checkpoint containing:
@@ -184,6 +205,7 @@ No silent retries.
 - `scripts/promote-to-prod.sh`
 - `scripts/release-gate.js`
 - `scripts/workflow/guard.js`
+- `scripts/workflow/generate-live-page-manifest.js`
 - `scripts/workflow/production-identity-guard.sh`
 - `scripts/workflow/session-boot.js`
 - `scripts/workflow/ticket-monitor.js`
@@ -197,9 +219,11 @@ No silent retries.
 - `workflow/schemas/ticket.schema.json`
 - `workflow/screens/.gitkeep`
 - `workflow/state/freeze_manifest.json`
+- `workflow/state/live_page_manifest.json`
 - `workflow/state/staging_batch.json`
 - `workflow/state/workflow_state.json`
 - `workflow/templates/freeze_manifest.example.json`
+- `workflow/templates/live_ticket_intake.example.md`
 - `workflow/templates/screen.example.json`
 - `workflow/templates/staging_batch.example.json`
 - `workflow/templates/ticket.example.json`
@@ -218,4 +242,5 @@ No silent retries.
 - For live testing completion, Claude must enforce Section 2E and reject score-based completion claims.
 - For active live-iteration sessions, Claude must enforce Section 2F: cumulative deploy first, then full micro ticketization, then implementation.
 - For ticket intake quality, Claude must enforce Section 2G: new tickets must be sourced from live GCP staging evidence.
+- For ticket intake timing, Claude must enforce Section 2H: no new ticket intake before successful staging deploy evidence.
 - Claude must read `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md` in every FIX-001 session before attempting deploy.

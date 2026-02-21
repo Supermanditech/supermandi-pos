@@ -341,6 +341,114 @@ function isHttpsUrl(value) {
   return isNonEmptyString(value) && /^https:\/\//i.test(value);
 }
 
+function parseIsoTimestamp(value) {
+  if (!isNonEmptyString(value)) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function validateLiveTicketIntakeGate(ticket, label, state) {
+  const errors = [];
+  const rules = state?.rules?.liveTicketIntakeRules;
+  if (!rules || rules.enabled !== true) {
+    return errors;
+  }
+
+  const statuses = Array.isArray(rules.enforceForStatuses) && rules.enforceForStatuses.length > 0
+    ? new Set(rules.enforceForStatuses)
+    : new Set(['todo']);
+  if (!statuses.has(ticket.status)) {
+    return errors;
+  }
+
+  const enforceFromRaw = rules.enforceFrom;
+  const enforceFrom = parseIsoTimestamp(enforceFromRaw);
+  if (enforceFromRaw && enforceFrom === null) {
+    errors.push(`${label}: rules.liveTicketIntakeRules.enforceFrom must be a valid timestamp when provided`);
+    return errors;
+  }
+
+  const deployAtRaw = rules.lastSuccessfulStagingDeployAt;
+  const deployAt = parseIsoTimestamp(deployAtRaw);
+  if (deployAt === null) {
+    errors.push(`${label}: rules.liveTicketIntakeRules.lastSuccessfulStagingDeployAt must be a valid timestamp`);
+    return errors;
+  }
+
+  const createdAtRaw = ticket?.timestamps?.createdAt;
+  const createdAt = parseIsoTimestamp(createdAtRaw);
+  if (createdAt === null) {
+    errors.push(`${label}: timestamps.createdAt must be a valid timestamp for live ticket intake`);
+  } else if (enforceFrom !== null && createdAt < enforceFrom) {
+    return errors;
+  } else if (createdAt < deployAt) {
+    errors.push(
+      `${label}: live ticket intake requires timestamps.createdAt >= ${deployAtRaw} (ticket has ${createdAtRaw})`
+    );
+  }
+
+  if (rules.requireValidatedDeploymentRef === true) {
+    if (!isNonEmptyString(ticket?.operatorChecks?.validatedDeploymentRef)) {
+      errors.push(`${label}: live ticket intake requires operatorChecks.validatedDeploymentRef`);
+    }
+  }
+
+  const requiredRef = (rules.lastSuccessfulStagingDeployRef || '').trim();
+  if (rules.requireDeploymentRefMatch === true && requiredRef) {
+    const actualRef = (ticket?.operatorChecks?.validatedDeploymentRef || '').trim();
+    if (!actualRef) {
+      errors.push(`${label}: live ticket intake requires operatorChecks.validatedDeploymentRef`);
+    } else if (actualRef !== requiredRef) {
+      errors.push(
+        `${label}: live ticket intake requires operatorChecks.validatedDeploymentRef=${requiredRef} (found ${actualRef})`
+      );
+    }
+  }
+
+  const requiredSha = (rules.lastSuccessfulStagingCommitSha || '').trim();
+  if (rules.requireStagingCommitShaEvidence === true && requiredSha) {
+    const allEvidence = [
+      ...(Array.isArray(ticket?.evidence?.apiProof) ? ticket.evidence.apiProof : []),
+      ...(Array.isArray(ticket?.evidence?.parityProof) ? ticket.evidence.parityProof : []),
+      ...(Array.isArray(ticket?.truthDeclaration?.evidence) ? ticket.truthDeclaration.evidence : []),
+      ...(Array.isArray(ticket?.gitDiscipline?.evidence) ? ticket.gitDiscipline.evidence : []),
+    ]
+      .filter((item) => isNonEmptyString(item))
+      .join(' ')
+      .toLowerCase();
+    if (!allEvidence.includes(requiredSha.toLowerCase())) {
+      errors.push(`${label}: live ticket intake evidence must reference staging commit ${requiredSha}`);
+    }
+  }
+
+  if (rules.requireCloudRunRevisionIds === true) {
+    if (!Array.isArray(ticket?.gcpParity?.cloudRunRevisionIds) || ticket.gcpParity.cloudRunRevisionIds.length === 0) {
+      errors.push(`${label}: live ticket intake requires gcpParity.cloudRunRevisionIds`);
+    }
+  }
+
+  if (rules.requireRuntimeEvidence === true) {
+    const hasRuntimeEvidence =
+      (Array.isArray(ticket?.evidence?.apiProof) && ticket.evidence.apiProof.length > 0) ||
+      (Array.isArray(ticket?.evidence?.parityProof) && ticket.evidence.parityProof.length > 0) ||
+      (Array.isArray(ticket?.truthDeclaration?.evidence) && ticket.truthDeclaration.evidence.length > 0);
+    if (!hasRuntimeEvidence) {
+      errors.push(`${label}: live ticket intake requires runtime evidence in evidence.apiProof/parityProof or truthDeclaration.evidence`);
+    }
+  }
+
+  if (rules.requireProductionDataTested === true && ticket?.truthDeclaration?.productionDataTested !== true) {
+    errors.push(`${label}: live ticket intake requires truthDeclaration.productionDataTested=true`);
+  }
+
+  return errors;
+}
+
 function validateEvidenceRefsExist(evidenceRefs, label, fieldName) {
   const errors = [];
   if (!Array.isArray(evidenceRefs)) {
@@ -1888,6 +1996,7 @@ function validateTicketObject(ticket, label, state) {
   }
 
   errors.push(...validateTicketGatesByStatus(ticket, label));
+  errors.push(...validateLiveTicketIntakeGate(ticket, label, state));
 
   const ticketTransitions = getTicketTransitions(state);
   if (ticketTransitions.length > 0) {
@@ -2244,6 +2353,20 @@ function validateState(context, options = {}) {
   }
   if (state.machineEnforcement?.enabled !== true) {
     errors.push('machineEnforcement.enabled must be true');
+  }
+
+  const liveTicketIntakeRules = state?.rules?.liveTicketIntakeRules;
+  if (liveTicketIntakeRules?.enabled === true) {
+    if (!Array.isArray(liveTicketIntakeRules.enforceForStatuses) || liveTicketIntakeRules.enforceForStatuses.length === 0) {
+      errors.push('rules.liveTicketIntakeRules.enforceForStatuses must be a non-empty array when enabled=true');
+    }
+    const deployAt = parseIsoTimestamp(liveTicketIntakeRules.lastSuccessfulStagingDeployAt);
+    if (deployAt === null) {
+      errors.push('rules.liveTicketIntakeRules.lastSuccessfulStagingDeployAt must be a valid timestamp');
+    }
+    if (liveTicketIntakeRules.requireDeploymentRefMatch === true && !isNonEmptyString(liveTicketIntakeRules.lastSuccessfulStagingDeployRef)) {
+      errors.push('rules.liveTicketIntakeRules.lastSuccessfulStagingDeployRef is required when requireDeploymentRefMatch=true');
+    }
   }
 
   const allowedOperatorPrincipals = getAllowedOperatorPrincipals(state);

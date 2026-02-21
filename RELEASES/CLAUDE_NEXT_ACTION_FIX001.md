@@ -64,6 +64,16 @@ This override is ACTIVE now and takes precedence over older deploy-first wording
   - relevant Cloud Run revision ID(s)
 - Local-only or code-only assumption tickets are not valid for completion flow.
 
+### Post-Deploy Ticket Intake Gate (Hard)
+
+- New ticket intake is blocked until a successful staging deploy is completed for the active wave.
+- Every newly-intaked ticket must point to that successful deploy:
+  - deployment ref/run URL
+  - deploy timestamp
+  - observed-at timestamp after deploy
+  - runtime evidence + Cloud Run revision IDs
+- If deploy evidence is missing, do not intake tickets; finish deploy and publish evidence first.
+
 ## Effective Date
 2026-02-20
 
@@ -101,6 +111,8 @@ No new feature ticket coding is allowed until FIX-001 deployment evidence is com
    - `https://staging.supermandi.tech/api/health` response
    - operator handoff status (laptop + Redmi)
 6. After deploy evidence, execute full-surface live testing (all pages + cross-function matrix) with per-page micro checks:
+   - run `pnpm workflow:manifest:live`
+   - use `workflow/state/live_page_manifest.json` as the page/flow coverage source
    - UI
    - UX
    - wiring

@@ -40,6 +40,7 @@
     "workflow:session-boot": "node scripts/workflow/session-boot.js",
     "workflow:monitor": "node scripts/workflow/ticket-monitor.js --once",
     "workflow:monitor:watch": "node scripts/workflow/ticket-monitor.js --watch --interval 30",
+    "workflow:manifest:live": "node scripts/workflow/generate-live-page-manifest.js",
     "workflow:mode": "node scripts/workflow/guard.js mode",
     "workflow:ticket-transition": "node scripts/workflow/guard.js ticket-transition",
     "workflow:screen-transition": "node scripts/workflow/guard.js screen-transition",
