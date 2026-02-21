@@ -154,3 +154,20 @@ microserviceHealthRouter.get("/auth/health", async (_req: Request, res: Response
     deployment: 'monolith',
   });
 });
+
+/**
+ * GET /api/v1/pos/health
+ * Health check for POS service (logical microservice in monolith)
+ * LIVE.BACKEND.POS_HEALTH.001: Was missing — all other services had health endpoints
+ */
+microserviceHealthRouter.get("/pos/health", async (_req: Request, res: Response) => {
+  const dbHealthy = await checkDbConnection();
+  res.status(dbHealthy ? 200 : 503).json({
+    status: dbHealthy ? 'ok' : 'degraded',
+    service: 'pos-service',
+    version: VERSION,
+    gitSha: GIT_SHA,
+    database: dbHealthy ? 'connected' : 'disconnected',
+    deployment: 'monolith',
+  });
+});
