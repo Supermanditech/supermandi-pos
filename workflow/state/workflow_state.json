@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-20T15:15:54.529Z",
+  "updatedAt": "2026-02-21T02:39:30.000Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -555,7 +555,81 @@
     },
     "sessionRules": {
       "requireSessionIdForTransitions": true,
-      "sessionIdEnvVar": "WORKFLOW_SESSION_ID"
+      "sessionIdEnvVar": "WORKFLOW_SESSION_ID",
+      "requiredFilesReadAtSessionStart": [
+        ".github/workflows/ci-gates.yml",
+        ".gitignore",
+        "package.json",
+        "RELEASES/CLAUDE_STATE.md",
+        "RELEASES/CLAUDE_CURRENT_STATE.json",
+        "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+        "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+        "scripts/deploy-cloud-run.sh",
+        "scripts/gates/git-discipline.sh",
+        "scripts/promote-to-prod.sh",
+        "scripts/release-gate.js",
+        "scripts/workflow/guard.js",
+        "scripts/workflow/generate-live-page-manifest.js",
+        "scripts/workflow/production-identity-guard.sh",
+        "scripts/workflow/session-boot.js",
+        "scripts/workflow/ticket-monitor.js",
+        "scripts/workflow/pre-staging-attempt.js",
+        "workflow/README.md",
+        "workflow/legacy_conflicts.json",
+        "workflow/production_boundary_iam.md",
+        "workflow/schemas/freeze_manifest.schema.json",
+        "workflow/schemas/screen_state.schema.json",
+        "workflow/schemas/staging_batch.schema.json",
+        "workflow/schemas/ticket.schema.json",
+        "workflow/screens/.gitkeep",
+        "workflow/state/freeze_manifest.json",
+        "workflow/state/live_page_manifest.json",
+        "workflow/state/staging_batch.json",
+        "workflow/state/workflow_state.json",
+        "workflow/templates/freeze_manifest.example.json",
+        "workflow/templates/live_ticket_intake.example.md",
+        "workflow/templates/screen.example.json",
+        "workflow/templates/staging_batch.example.json",
+        "workflow/templates/ticket.example.json",
+        "workflow/tickets/.gitkeep"
+      ],
+      "requiredFilesReadBeforeReadyStatuses": [
+        ".github/workflows/ci-gates.yml",
+        ".gitignore",
+        "package.json",
+        "RELEASES/CLAUDE_STATE.md",
+        "RELEASES/CLAUDE_CURRENT_STATE.json",
+        "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+        "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+        "scripts/deploy-cloud-run.sh",
+        "scripts/gates/git-discipline.sh",
+        "scripts/promote-to-prod.sh",
+        "scripts/release-gate.js",
+        "scripts/workflow/guard.js",
+        "scripts/workflow/generate-live-page-manifest.js",
+        "scripts/workflow/production-identity-guard.sh",
+        "scripts/workflow/session-boot.js",
+        "scripts/workflow/ticket-monitor.js",
+        "scripts/workflow/pre-staging-attempt.js",
+        "workflow/README.md",
+        "workflow/legacy_conflicts.json",
+        "workflow/production_boundary_iam.md",
+        "workflow/schemas/freeze_manifest.schema.json",
+        "workflow/schemas/screen_state.schema.json",
+        "workflow/schemas/staging_batch.schema.json",
+        "workflow/schemas/ticket.schema.json",
+        "workflow/screens/.gitkeep",
+        "workflow/state/freeze_manifest.json",
+        "workflow/state/live_page_manifest.json",
+        "workflow/state/staging_batch.json",
+        "workflow/state/workflow_state.json",
+        "workflow/templates/freeze_manifest.example.json",
+        "workflow/templates/live_ticket_intake.example.md",
+        "workflow/templates/screen.example.json",
+        "workflow/templates/staging_batch.example.json",
+        "workflow/templates/ticket.example.json",
+        "workflow/tickets/.gitkeep"
+      ]
     },
     "gitDiscipline": {
       "requireCleanWorktreeBeforeStagingDeploy": true,
@@ -574,6 +648,7 @@
     },
     "liveTicketIntakeRules": {
       "enabled": true,
+      "enforceFrom": "2026-02-21T00:00:00Z",
       "enforceForStatuses": [
         "todo",
         "in_progress"
@@ -587,6 +662,27 @@
       "requireCloudRunRevisionIds": true,
       "requireRuntimeEvidence": true,
       "requireProductionDataTested": true
+    },
+    "liveIterationExecutionRules": {
+      "enabled": true,
+      "enforceModes": [
+        "LIVE_FIX"
+      ],
+      "enforceFrom": "2026-02-21T00:00:00Z",
+      "blockExecutionUntilTicketizationComplete": true,
+      "blockDeployUntilImplementationComplete": true,
+      "blockedStatusesBeforeTicketizationComplete": [
+        "in_progress",
+        "ready_for_operator_test"
+      ],
+      "requiredManifestFile": "workflow/state/live_page_manifest.json",
+      "requiredSurfaceCoverage": [
+        "retailer_web",
+        "supplier_web",
+        "superadmin_web",
+        "pos_app",
+        "cross_function_matrix"
+      ]
     }
   },
   "paths": {
@@ -596,11 +692,43 @@
     "stagingBatchFile": "workflow/state/staging_batch.json"
   },
   "progress": {
-    "firstTicketStarted": true
+    "firstTicketStarted": true,
+    "liveIteration": {
+      "phase": "ticketization",
+      "ticketization": {
+        "complete": false,
+        "statement": "NOT COMPLETE - started live ticketization with 87-route HTTP sweep and built 696-check queue (workflow/state/live_http_sweep_latest.json, workflow/state/live_micro_check_queue.json); micro ingredient checks and browser-only coverage remain pending",
+        "requiredCoverageSource": "workflow/state/live_page_manifest.json",
+        "coverageBySurface": {
+          "retailer_web": false,
+          "supplier_web": false,
+          "superadmin_web": false,
+          "pos_app": false,
+          "cross_function_matrix": false
+        },
+        "remainingCheckIds": [
+          "queue:workflow/state/live_micro_check_queue.json:696",
+          "retailer_web:*",
+          "supplier_web:*",
+          "superadmin_web:*",
+          "pos_app:*",
+          "cross_function_matrix:*"
+        ],
+        "lastUpdatedAt": "2026-02-21T02:39:30Z"
+      },
+      "implementation": {
+        "complete": false,
+        "summary": "Blocked until ticketization is marked 100% complete",
+        "remainingTicketIds": [
+          "ALL_OPEN_MICRO_TICKETS"
+        ],
+        "lastUpdatedAt": "2026-02-21T03:00:00Z"
+      }
+    }
   },
   "summary": {
-    "totalTickets": 1,
-    "activeTickets": 1,
+    "totalTickets": 17,
+    "activeTickets": 17,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,

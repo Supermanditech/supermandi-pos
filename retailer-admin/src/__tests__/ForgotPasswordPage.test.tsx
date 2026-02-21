@@ -37,7 +37,7 @@ describe('ForgotPasswordPage', () => {
 
   it('shows header with branding', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
-    expect(screen.getByText('SuperManditech')).toBeInTheDocument();
+    expect(screen.getByText('SuperMandi')).toBeInTheDocument();
     expect(screen.getByText('Retailer Portal')).toBeInTheDocument();
   });
 
@@ -73,7 +73,7 @@ describe('ForgotPasswordPage', () => {
 
   it('renders footer with copyright', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
-    expect(screen.getByText(/SuperManditech. All rights reserved/)).toBeInTheDocument();
+    expect(screen.getByText(/SuperMandi Tech Pvt Ltd. All rights reserved/)).toBeInTheDocument();
   });
 
   it('renders build stamp', () => {

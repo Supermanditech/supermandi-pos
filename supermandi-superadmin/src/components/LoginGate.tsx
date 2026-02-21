@@ -78,8 +78,8 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F7F9FC' }}>
       {/* T-095: Unified login header — shortmark + brand text + portal name */}
       <header style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #E2E8F0', background: 'white' }}>
-        <img src="/admin/brand/logo-shortmark.svg" alt="" width={20} height={20} />
-        <span style={{ marginLeft: 10, fontWeight: 600, fontSize: 18, color: '#2563EB' }}>SuperMandi</span>
+        <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} />
+        <span style={{ marginLeft: 10, fontWeight: 700, fontSize: 18, color: '#fff', background: '#2563EB', borderRadius: 999, padding: '4px 12px', lineHeight: 1 }}>SuperMandi</span>
         <span style={{ margin: '0 12px', color: '#CBD5E1' }}>|</span>
         <span style={{ color: '#64748B', fontSize: 16 }}>SuperAdmin</span>
       </header>

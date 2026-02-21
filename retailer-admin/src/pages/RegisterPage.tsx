@@ -100,7 +100,15 @@ const styles = {
     justifyContent: 'space-between',
   },
   logo: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
-  logoText: { fontSize: '1.5rem', fontWeight: 600, color: '#2563eb' },
+  logoText: {
+    fontSize: '1.5rem',
+    fontWeight: 700,
+    color: '#ffffff',
+    background: '#2563eb',
+    borderRadius: '999px',
+    padding: '0.25rem 0.75rem',
+    lineHeight: 1,
+  },
   logoSeparator: { color: '#94a3b8' },
   logoSubtext: { color: '#475569', fontSize: '0.875rem', fontWeight: 500 },
   main: {
@@ -576,7 +584,7 @@ export default function RegisterPage() {
       <header style={styles.header}>
         <div style={styles.headerInner}>
           <div style={styles.logo}>
-            <span style={styles.logoText}>SuperManditech</span>
+            <span style={styles.logoText}>SuperMandi</span>
             <span style={styles.logoSeparator}>|</span>
             <span style={styles.logoSubtext}>Retailer Portal</span>
           </div>

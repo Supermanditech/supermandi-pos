@@ -87,7 +87,7 @@ const LOCK_READY_STATUSES = new Set([
   'ready_for_lock',
   'locked',
 ]);
-const REQUIRED_SESSION_BOOT_FILES = [
+const REQUIRED_SESSION_BOOT_BASELINE_FILES = [
   'workflow/state/workflow_state.json',
   'workflow/schemas/ticket.schema.json',
   'workflow/schemas/screen_state.schema.json',
@@ -196,6 +196,59 @@ function isNonEmptyString(value) {
 
 function isBoolean(value) {
   return typeof value === 'boolean';
+}
+
+function normalizeRequiredFileList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const normalized = [];
+  const seen = new Set();
+  for (const item of value) {
+    if (!isNonEmptyString(item)) {
+      continue;
+    }
+    const normalizedPath = item.trim().replace(/\\/g, '/');
+    if (!seen.has(normalizedPath)) {
+      seen.add(normalizedPath);
+      normalized.push(normalizedPath);
+    }
+  }
+  return normalized;
+}
+
+function mergeRequiredFileLists(...lists) {
+  const merged = [];
+  const seen = new Set();
+  for (const list of lists) {
+    for (const item of list) {
+      if (!seen.has(item)) {
+        seen.add(item);
+        merged.push(item);
+      }
+    }
+  }
+  return merged;
+}
+
+function getSessionBootRequiredFiles(state) {
+  const rules = state?.rules?.sessionRules || {};
+  const baseline = normalizeRequiredFileList(REQUIRED_SESSION_BOOT_BASELINE_FILES);
+  const configuredSessionStart = normalizeRequiredFileList(rules.requiredFilesReadAtSessionStart);
+  const configuredBeforeReady = normalizeRequiredFileList(rules.requiredFilesReadBeforeReadyStatuses);
+
+  const sessionStart = configuredSessionStart.length > 0
+    ? mergeRequiredFileLists(baseline, configuredSessionStart)
+    : baseline;
+  const beforeReady = configuredBeforeReady.length > 0
+    ? mergeRequiredFileLists(sessionStart, configuredBeforeReady)
+    : sessionStart;
+
+  return {
+    baseline,
+    sessionStart,
+    beforeReady,
+  };
 }
 
 function isClosedTicketStatus(status) {
@@ -350,6 +403,143 @@ function parseIsoTimestamp(value) {
     return null;
   }
   return parsed;
+}
+
+const LIVE_EXECUTION_PHASE_VALUES = new Set(['ticketization', 'implementation', 'deploy']);
+const LIVE_EXECUTION_DEFAULT_BLOCKED_STATUSES = [
+  'in_progress',
+  'ready_for_operator_test',
+];
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((item) => isNonEmptyString(item))
+    .map((item) => item.trim());
+}
+
+function getLiveIterationExecutionRules(state) {
+  const rules = state?.rules?.liveIterationExecutionRules || {};
+  const enforceModes = normalizeStringArray(rules.enforceModes);
+  const blockedStatuses = normalizeStringArray(rules.blockedStatusesBeforeTicketizationComplete);
+  const requiredSurfaces = normalizeStringArray(rules.requiredSurfaceCoverage);
+  return {
+    enabled: rules.enabled === true,
+    enforceModes: enforceModes.length > 0 ? enforceModes : ['LIVE_FIX'],
+    enforceFrom: isNonEmptyString(rules.enforceFrom) ? rules.enforceFrom : '',
+    blockExecutionUntilTicketizationComplete: rules.blockExecutionUntilTicketizationComplete !== false,
+    blockDeployUntilImplementationComplete: rules.blockDeployUntilImplementationComplete !== false,
+    blockedStatusesBeforeTicketizationComplete: blockedStatuses.length > 0
+      ? blockedStatuses
+      : LIVE_EXECUTION_DEFAULT_BLOCKED_STATUSES,
+    requiredManifestFile: isNonEmptyString(rules.requiredManifestFile)
+      ? rules.requiredManifestFile
+      : 'workflow/state/live_page_manifest.json',
+    requiredSurfaceCoverage: requiredSurfaces.length > 0
+      ? requiredSurfaces
+      : ['retailer_web', 'supplier_web', 'superadmin_web', 'pos_app', 'cross_function_matrix'],
+  };
+}
+
+function getLiveIterationProgress(state) {
+  const progress = state?.progress?.liveIteration || {};
+  const ticketization = progress.ticketization || {};
+  const implementation = progress.implementation || {};
+  const phase = isNonEmptyString(progress.phase) ? progress.phase.trim() : 'ticketization';
+  return {
+    phase,
+    ticketization: {
+      complete: ticketization.complete === true,
+      statement: isNonEmptyString(ticketization.statement) ? ticketization.statement.trim() : '',
+      requiredCoverageSource: isNonEmptyString(ticketization.requiredCoverageSource)
+        ? ticketization.requiredCoverageSource.trim()
+        : '',
+      remainingCheckIds: normalizeStringArray(ticketization.remainingCheckIds),
+      coverageBySurface: ticketization.coverageBySurface && typeof ticketization.coverageBySurface === 'object'
+        ? ticketization.coverageBySurface
+        : {},
+      lastUpdatedAt: isNonEmptyString(ticketization.lastUpdatedAt) ? ticketization.lastUpdatedAt.trim() : '',
+    },
+    implementation: {
+      complete: implementation.complete === true,
+      summary: isNonEmptyString(implementation.summary) ? implementation.summary.trim() : '',
+      remainingTicketIds: normalizeStringArray(implementation.remainingTicketIds),
+      lastUpdatedAt: isNonEmptyString(implementation.lastUpdatedAt) ? implementation.lastUpdatedAt.trim() : '',
+    },
+  };
+}
+
+function isLiveExecutionRuleActiveForMode(state, rules) {
+  if (!rules.enabled) {
+    return false;
+  }
+  const mode = state?.workflowMode || '';
+  return rules.enforceModes.includes(mode);
+}
+
+function validateLiveIterationTransitionGate(context, ticket, from, to, actor) {
+  const errors = [];
+  const rules = getLiveIterationExecutionRules(context.state);
+  if (!isLiveExecutionRuleActiveForMode(context.state, rules)) {
+    return errors;
+  }
+
+  const enforceFrom = parseIsoTimestamp(rules.enforceFrom);
+  if (enforceFrom !== null && Date.now() < enforceFrom) {
+    return errors;
+  }
+
+  if (actor !== 'claude') {
+    return errors;
+  }
+
+  const progress = getLiveIterationProgress(context.state);
+  const blockedStatuses = new Set(rules.blockedStatusesBeforeTicketizationComplete);
+  if (
+    rules.blockExecutionUntilTicketizationComplete &&
+    progress.ticketization.complete !== true &&
+    blockedStatuses.has(to)
+  ) {
+    const remaining = progress.ticketization.remainingCheckIds;
+    const remainingSuffix = remaining.length > 0 ? ` remaining checks: ${remaining.join(', ')}` : '';
+    errors.push(
+      `live iteration gate: cannot transition ${ticket.ticketId} ${from} -> ${to} while ticketization is incomplete (${progress.ticketization.statement || 'NOT COMPLETE'}).${remainingSuffix}`
+    );
+  }
+
+  return errors;
+}
+
+function validateLiveIterationDeployGate(context) {
+  const errors = [];
+  const rules = getLiveIterationExecutionRules(context.state);
+  if (!isLiveExecutionRuleActiveForMode(context.state, rules)) {
+    return errors;
+  }
+
+  const enforceFrom = parseIsoTimestamp(rules.enforceFrom);
+  if (enforceFrom !== null && Date.now() < enforceFrom) {
+    return errors;
+  }
+
+  const progress = getLiveIterationProgress(context.state);
+  if (progress.ticketization.complete !== true) {
+    errors.push(
+      `live iteration gate: staging deploy blocked until micro ticketization is complete (current: ${progress.ticketization.statement || 'NOT COMPLETE'})`
+    );
+  }
+  if (rules.blockDeployUntilImplementationComplete && progress.implementation.complete !== true) {
+    errors.push(
+      `live iteration gate: staging deploy blocked until implementation.complete=true (summary: ${progress.implementation.summary || 'missing'})`
+    );
+  }
+  if (progress.phase !== 'deploy') {
+    errors.push(`live iteration gate: staging deploy requires progress.liveIteration.phase=deploy (current ${progress.phase})`);
+  }
+
+  return errors;
 }
 
 function validateLiveTicketIntakeGate(ticket, label, state) {
@@ -1479,7 +1669,7 @@ function validateGitDisciplineSection(ticket, label, status) {
   return errors;
 }
 
-function validateSessionBootSection(ticket, label, status) {
+function validateSessionBootSection(ticket, label, status, state) {
   const errors = [];
   const section = ticket.sessionBoot;
   if (!section || typeof section !== 'object') {
@@ -1507,14 +1697,21 @@ function validateSessionBootSection(ticket, label, status) {
   const readSet = new Set(
     section.requiredFilesRead
       .filter((item) => typeof item === 'string')
-      .map((item) => item.trim())
+      .map((item) => item.trim().replace(/\\/g, '/'))
       .filter(Boolean)
   );
-  for (const requiredFile of REQUIRED_SESSION_BOOT_FILES) {
-    if (!readSet.has(requiredFile)) {
-      errors.push(`${label}: sessionBoot.requiredFilesRead missing ${requiredFile}`);
+  const requiredFiles = getSessionBootRequiredFiles(state);
+  const missingFiles = new Set();
+  const requireFiles = (files, reason) => {
+    for (const requiredFile of files) {
+      if (!readSet.has(requiredFile) && !missingFiles.has(requiredFile)) {
+        missingFiles.add(requiredFile);
+        errors.push(`${label}: sessionBoot.requiredFilesRead missing ${requiredFile} (${reason})`);
+      }
     }
-  }
+  };
+
+  requireFiles(requiredFiles.baseline, 'baseline');
 
   if (status !== 'todo') {
     if (!isNonEmptyString(section.bootstrappedAt)) {
@@ -1526,6 +1723,11 @@ function validateSessionBootSection(ticket, label, status) {
     if (!isNonEmptyString(section.memoryStateRef)) {
       errors.push(`${label}: status ${status} requires sessionBoot.memoryStateRef`);
     }
+    requireFiles(requiredFiles.sessionStart, `status ${status}`);
+  }
+
+  if (READY_STATUSES.has(status)) {
+    requireFiles(requiredFiles.beforeReady, `ready status ${status}`);
   }
 
   return errors;
@@ -1615,7 +1817,7 @@ function validateProductionInvariants(ticket, label, status) {
   return errors;
 }
 
-function validateTicketGatesByStatus(ticket, label) {
+function validateTicketGatesByStatus(ticket, label, state) {
   const errors = [];
   const claude = ticket.claudeChecks || {};
   const operator = ticket.operatorChecks || {};
@@ -1641,7 +1843,7 @@ function validateTicketGatesByStatus(ticket, label) {
   errors.push(...validateDependencyDisclosure(ticket, label, status));
   errors.push(...validateReadinessSection(ticket, label, status));
   errors.push(...validateGitDisciplineSection(ticket, label, status));
-  errors.push(...validateSessionBootSection(ticket, label, status));
+  errors.push(...validateSessionBootSection(ticket, label, status, state));
   errors.push(...validateProductionInvariants(ticket, label, status));
 
   if (Number.isInteger(operator.blockingIssueCount) && operator.blockingIssueCount === 0) {
@@ -1999,7 +2201,7 @@ function validateTicketObject(ticket, label, state) {
     }
   }
 
-  errors.push(...validateTicketGatesByStatus(ticket, label));
+  errors.push(...validateTicketGatesByStatus(ticket, label, state));
   errors.push(...validateLiveTicketIntakeGate(ticket, label, state));
 
   const ticketTransitions = getTicketTransitions(state);
@@ -2342,6 +2544,147 @@ function loadWorkflowContext() {
   };
 }
 
+function validateLiveIterationExecutionState(context) {
+  const errors = [];
+  const state = context.state;
+  const rules = getLiveIterationExecutionRules(state);
+
+  const rawRules = state?.rules?.liveIterationExecutionRules;
+  if (rawRules !== undefined && (rawRules === null || typeof rawRules !== 'object' || Array.isArray(rawRules))) {
+    errors.push('rules.liveIterationExecutionRules must be an object when provided');
+    return errors;
+  }
+
+  if (!rules.enabled) {
+    return errors;
+  }
+
+  const invalidModes = rules.enforceModes.filter((mode) => !MODES.has(mode));
+  if (invalidModes.length > 0) {
+    errors.push(`rules.liveIterationExecutionRules.enforceModes contains invalid mode(s): ${invalidModes.join(', ')}`);
+  }
+
+  const enforceFromTs = parseIsoTimestamp(rules.enforceFrom);
+  if (isNonEmptyString(rules.enforceFrom) && enforceFromTs === null) {
+    errors.push('rules.liveIterationExecutionRules.enforceFrom must be a valid timestamp when provided');
+  }
+
+  const invalidStatuses = rules.blockedStatusesBeforeTicketizationComplete.filter((status) => !TICKET_STATUS_VALUES.has(status));
+  if (invalidStatuses.length > 0) {
+    errors.push(
+      `rules.liveIterationExecutionRules.blockedStatusesBeforeTicketizationComplete contains invalid status(es): ${invalidStatuses.join(', ')}`
+    );
+  }
+
+  const manifestPath = path.join(ROOT_DIR, rules.requiredManifestFile.replace(/\//g, path.sep));
+  if (!fs.existsSync(manifestPath)) {
+    errors.push(`rules.liveIterationExecutionRules.requiredManifestFile not found: ${rules.requiredManifestFile}`);
+  } else {
+    const manifest = readJson(manifestPath);
+    for (const surface of rules.requiredSurfaceCoverage) {
+      if (surface === 'pos_app') {
+        if (!manifest.pos_app || typeof manifest.pos_app !== 'object') {
+          errors.push(`live manifest missing required surface coverage section: ${surface}`);
+        }
+      } else if (surface === 'cross_function_matrix') {
+        if (!Array.isArray(manifest.crossFunctionMatrix) || manifest.crossFunctionMatrix.length === 0) {
+          errors.push(`live manifest missing required surface coverage section: ${surface}`);
+        }
+      } else if (!Array.isArray(manifest?.surfaces?.[surface]) || manifest.surfaces[surface].length === 0) {
+        errors.push(`live manifest missing required surface coverage section: ${surface}`);
+      }
+    }
+  }
+
+  const progress = getLiveIterationProgress(state);
+  if (!LIVE_EXECUTION_PHASE_VALUES.has(progress.phase)) {
+    errors.push(`progress.liveIteration.phase must be one of: ${[...LIVE_EXECUTION_PHASE_VALUES].join(', ')}`);
+  }
+
+  if (!isNonEmptyString(progress.ticketization.statement)) {
+    errors.push('progress.liveIteration.ticketization.statement must be set');
+  }
+  if (!isNonEmptyString(progress.ticketization.requiredCoverageSource)) {
+    errors.push('progress.liveIteration.ticketization.requiredCoverageSource must be set');
+  } else if (progress.ticketization.requiredCoverageSource !== rules.requiredManifestFile) {
+    errors.push(
+      `progress.liveIteration.ticketization.requiredCoverageSource must equal ${rules.requiredManifestFile}`
+    );
+  }
+
+  if (!isNonEmptyString(progress.implementation.summary)) {
+    errors.push('progress.liveIteration.implementation.summary must be set');
+  }
+
+  const coverage = progress.ticketization.coverageBySurface || {};
+  for (const surface of rules.requiredSurfaceCoverage) {
+    if (!isBoolean(coverage[surface])) {
+      errors.push(`progress.liveIteration.ticketization.coverageBySurface.${surface} must be boolean`);
+    }
+  }
+
+  if (progress.ticketization.complete) {
+    for (const surface of rules.requiredSurfaceCoverage) {
+      if (coverage[surface] !== true) {
+        errors.push(`ticketization.complete=true requires coverageBySurface.${surface}=true`);
+      }
+    }
+    if (progress.ticketization.remainingCheckIds.length > 0) {
+      errors.push('ticketization.complete=true requires remainingCheckIds to be empty');
+    }
+    if (!/^100%\s+micro-ingredient\s+ticketization\s+complete/i.test(progress.ticketization.statement)) {
+      errors.push(
+        'ticketization.complete=true requires statement starting with "100% micro-ingredient ticketization complete"'
+      );
+    }
+  } else if (!/NOT COMPLETE/i.test(progress.ticketization.statement)) {
+    errors.push('ticketization.complete=false requires statement to include "NOT COMPLETE"');
+  }
+
+  if (progress.implementation.complete && progress.implementation.remainingTicketIds.length > 0) {
+    errors.push('implementation.complete=true requires implementation.remainingTicketIds to be empty');
+  }
+  if (progress.phase === 'implementation' && progress.ticketization.complete !== true) {
+    errors.push('progress.liveIteration.phase=implementation requires ticketization.complete=true');
+  }
+  if (progress.phase === 'deploy') {
+    if (progress.ticketization.complete !== true) {
+      errors.push('progress.liveIteration.phase=deploy requires ticketization.complete=true');
+    }
+    if (progress.implementation.complete !== true) {
+      errors.push('progress.liveIteration.phase=deploy requires implementation.complete=true');
+    }
+  }
+
+  if (
+    rules.blockExecutionUntilTicketizationComplete &&
+    progress.ticketization.complete !== true &&
+    enforceFromTs !== null &&
+    isLiveExecutionRuleActiveForMode(state, rules)
+  ) {
+    const blocked = new Set(rules.blockedStatusesBeforeTicketizationComplete);
+    const violatingTickets = [];
+    for (const ticket of context.ticketMap.values()) {
+      if (!blocked.has(ticket.status)) {
+        continue;
+      }
+      const history = Array.isArray(ticket.statusHistory) ? ticket.statusHistory : [];
+      const last = history.length > 0 ? history[history.length - 1] : null;
+      const lastAt = parseIsoTimestamp(last?.at);
+      if (lastAt !== null && lastAt >= enforceFromTs) {
+        violatingTickets.push(ticket.ticketId);
+      }
+    }
+    if (violatingTickets.length > 0) {
+      errors.push(
+        `live execution gate violation: ticketization is incomplete but blocked statuses are active post-enforcement for ticket(s): ${violatingTickets.join(', ')}`
+      );
+    }
+  }
+
+  return errors;
+}
+
 function validateState(context, options = {}) {
   const state = context.state;
   const errors = [...context.errors];
@@ -2357,6 +2700,44 @@ function validateState(context, options = {}) {
   }
   if (state.machineEnforcement?.enabled !== true) {
     errors.push('machineEnforcement.enabled must be true');
+  }
+
+  errors.push(...validateLiveIterationExecutionState(context));
+
+  const sessionRules = state?.rules?.sessionRules || {};
+  if (sessionRules.requireSessionIdForTransitions === true && !isNonEmptyString(sessionRules.sessionIdEnvVar)) {
+    errors.push('rules.sessionRules.sessionIdEnvVar must be set when requireSessionIdForTransitions=true');
+  }
+  if (
+    sessionRules.requiredFilesReadAtSessionStart !== undefined &&
+    !Array.isArray(sessionRules.requiredFilesReadAtSessionStart)
+  ) {
+    errors.push('rules.sessionRules.requiredFilesReadAtSessionStart must be an array when provided');
+  }
+  if (
+    sessionRules.requiredFilesReadBeforeReadyStatuses !== undefined &&
+    !Array.isArray(sessionRules.requiredFilesReadBeforeReadyStatuses)
+  ) {
+    errors.push('rules.sessionRules.requiredFilesReadBeforeReadyStatuses must be an array when provided');
+  }
+  if (Array.isArray(sessionRules.requiredFilesReadAtSessionStart)) {
+    const invalidSessionStartItems = sessionRules.requiredFilesReadAtSessionStart.filter((item) => !isNonEmptyString(item));
+    if (invalidSessionStartItems.length > 0) {
+      errors.push('rules.sessionRules.requiredFilesReadAtSessionStart must only contain non-empty strings');
+    }
+  }
+  if (Array.isArray(sessionRules.requiredFilesReadBeforeReadyStatuses)) {
+    const invalidBeforeReadyItems = sessionRules.requiredFilesReadBeforeReadyStatuses.filter((item) => !isNonEmptyString(item));
+    if (invalidBeforeReadyItems.length > 0) {
+      errors.push('rules.sessionRules.requiredFilesReadBeforeReadyStatuses must only contain non-empty strings');
+    }
+  }
+  const requiredSessionFiles = getSessionBootRequiredFiles(state);
+  if (requiredSessionFiles.sessionStart.length === 0) {
+    errors.push('rules.sessionRules: session-start required files cannot resolve to an empty list');
+  }
+  if (requiredSessionFiles.beforeReady.length === 0) {
+    errors.push('rules.sessionRules: ready-status required files cannot resolve to an empty list');
   }
 
   const liveTicketIntakeRules = state?.rules?.liveTicketIntakeRules;
@@ -2593,6 +2974,11 @@ function commandTicketTransition(args) {
     fail(`illegal ticket transition ${from} -> ${to} by ${actor}`);
   }
 
+  const liveGateErrors = validateLiveIterationTransitionGate(context, ticket, from, to, actor);
+  if (liveGateErrors.length > 0) {
+    fail(`ticket-transition blocked by live iteration execution gate:\n- ${liveGateErrors.join('\n- ')}`);
+  }
+
   ticket.status = to;
   if (!Array.isArray(ticket.statusHistory)) {
     ticket.statusHistory = [];
@@ -2720,6 +3106,11 @@ function commandPreStagingDeploy() {
   const allowed = context.state.rules?.deploymentRules?.allowedStagingModes || [];
   if (!allowed.includes(mode)) {
     fail(`staging deploy is blocked for mode ${mode}. Allowed: ${allowed.join(', ')}`);
+  }
+
+  const liveIterationDeployErrors = validateLiveIterationDeployGate(context);
+  if (liveIterationDeployErrors.length > 0) {
+    fail(`staging deploy blocked by live iteration gate:\n- ${liveIterationDeployErrors.join('\n- ')}`);
   }
 
   const gitDisciplineErrors = validateGitWorkspaceForStaging(context.state);

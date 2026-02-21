@@ -1,0 +1,1301 @@
+{
+  "generatedAt": "2026-02-21T02:35:58.127Z",
+  "generatedBy": "scripts/workflow/generate-live-page-manifest.js",
+  "sourceEnvironment": "gcp_staging",
+  "baseUrl": "https://staging.supermandi.tech",
+  "surfaces": {
+    "retailer_web": [
+      {
+        "route": "/retailer",
+        "url": "https://staging.supermandi.tech/retailer",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/retailer/",
+        "url": "https://staging.supermandi.tech/retailer/",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/retailer/forgot-password",
+        "url": "https://staging.supermandi.tech/retailer/forgot-password",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/retailer/help",
+        "url": "https://staging.supermandi.tech/retailer/help",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/retailer/login",
+        "url": "https://staging.supermandi.tech/retailer/login",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/retailer/onboard",
+        "url": "https://staging.supermandi.tech/retailer/onboard",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/retailer/register",
+        "url": "https://staging.supermandi.tech/retailer/register",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}",
+        "url": "https://staging.supermandi.tech/s/{storeCode}",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/admin/products",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/admin/products",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/admin/suppliers",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/admin/suppliers",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/analytics",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/analytics",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/chat",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/chat",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/compliance",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/compliance",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/credit",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/credit",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/customers",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/customers",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/devices",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/devices",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/help",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/help",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/import",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/import",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/inventory",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/inventory",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/invoices",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/invoices",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/login",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/login",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/notifications",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/notifications",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/products",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/products",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/purchase-orders",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/purchase-orders",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/reconciliation",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/reconciliation",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/register",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/register",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/reorder",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/reorder",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/settings",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/settings",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/settings/payments",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/settings/payments",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/supplier-catalog",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/supplier-catalog",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/s/{storeCode}/suppliers",
+        "url": "https://staging.supermandi.tech/s/{storeCode}/suppliers",
+        "primaryService": "retailer-admin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      }
+    ],
+    "supplier_web": [
+      {
+        "route": "/supplier/",
+        "url": "https://staging.supermandi.tech/supplier/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/bnpl-orders/",
+        "url": "https://staging.supermandi.tech/supplier/bnpl-orders/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/chat/",
+        "url": "https://staging.supermandi.tech/supplier/chat/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/dashboard/",
+        "url": "https://staging.supermandi.tech/supplier/dashboard/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/earnings/",
+        "url": "https://staging.supermandi.tech/supplier/earnings/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/forgot-password/",
+        "url": "https://staging.supermandi.tech/supplier/forgot-password/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/help/",
+        "url": "https://staging.supermandi.tech/supplier/help/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/invoices/",
+        "url": "https://staging.supermandi.tech/supplier/invoices/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/kyc/",
+        "url": "https://staging.supermandi.tech/supplier/kyc/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/login/",
+        "url": "https://staging.supermandi.tech/supplier/login/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/notifications/",
+        "url": "https://staging.supermandi.tech/supplier/notifications/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/onboard/",
+        "url": "https://staging.supermandi.tech/supplier/onboard/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/orders/",
+        "url": "https://staging.supermandi.tech/supplier/orders/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/pending-approval/",
+        "url": "https://staging.supermandi.tech/supplier/pending-approval/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/products/",
+        "url": "https://staging.supermandi.tech/supplier/products/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/profile/",
+        "url": "https://staging.supermandi.tech/supplier/profile/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/register/",
+        "url": "https://staging.supermandi.tech/supplier/register/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/reset-password/",
+        "url": "https://staging.supermandi.tech/supplier/reset-password/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/supplier/upload/",
+        "url": "https://staging.supermandi.tech/supplier/upload/",
+        "primaryService": "supplier-portal",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      }
+    ],
+    "superadmin_web": [
+      {
+        "route": "/admin/",
+        "url": "https://staging.supermandi.tech/admin/",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#ai",
+        "url": "https://staging.supermandi.tech/admin/#ai",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#ai-insights",
+        "url": "https://staging.supermandi.tech/admin/#ai-insights",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#analytics",
+        "url": "https://staging.supermandi.tech/admin/#analytics",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#applications",
+        "url": "https://staging.supermandi.tech/admin/#applications",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#audit",
+        "url": "https://staging.supermandi.tech/admin/#audit",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#credit-providers",
+        "url": "https://staging.supermandi.tech/admin/#credit-providers",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#devices",
+        "url": "https://staging.supermandi.tech/admin/#devices",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#documents",
+        "url": "https://staging.supermandi.tech/admin/#documents",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#events",
+        "url": "https://staging.supermandi.tech/admin/#events",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#grn-alerts",
+        "url": "https://staging.supermandi.tech/admin/#grn-alerts",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#gst-compliance",
+        "url": "https://staging.supermandi.tech/admin/#gst-compliance",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#invoices",
+        "url": "https://staging.supermandi.tech/admin/#invoices",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#monitoring",
+        "url": "https://staging.supermandi.tech/admin/#monitoring",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#payments",
+        "url": "https://staging.supermandi.tech/admin/#payments",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#quality",
+        "url": "https://staging.supermandi.tech/admin/#quality",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#refunds",
+        "url": "https://staging.supermandi.tech/admin/#refunds",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#registrations",
+        "url": "https://staging.supermandi.tech/admin/#registrations",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#settings",
+        "url": "https://staging.supermandi.tech/admin/#settings",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#staff",
+        "url": "https://staging.supermandi.tech/admin/#staff",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#stores",
+        "url": "https://staging.supermandi.tech/admin/#stores",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#suppliers",
+        "url": "https://staging.supermandi.tech/admin/#suppliers",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#support",
+        "url": "https://staging.supermandi.tech/admin/#support",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#users",
+        "url": "https://staging.supermandi.tech/admin/#users",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/admin/#whatsapp",
+        "url": "https://staging.supermandi.tech/admin/#whatsapp",
+        "primaryService": "superadmin",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      }
+    ],
+    "landing": [
+      {
+        "route": "/",
+        "url": "https://staging.supermandi.tech/",
+        "primaryService": "landing",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/pos",
+        "url": "https://staging.supermandi.tech/pos",
+        "primaryService": "landing",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/privacy",
+        "url": "https://staging.supermandi.tech/privacy",
+        "primaryService": "landing",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      },
+      {
+        "route": "/terms",
+        "url": "https://staging.supermandi.tech/terms",
+        "primaryService": "landing",
+        "requiredChecks": [
+          "ui",
+          "ux",
+          "wiring",
+          "navigation",
+          "api_contract",
+          "backend_behavior",
+          "db_migration_impact",
+          "gcp_staging_parity"
+        ]
+      }
+    ]
+  },
+  "pos_app": {
+    "apiBase": "https://staging.supermandi.tech/api/v1/",
+    "requiredChecks": [
+      "ui",
+      "ux",
+      "wiring",
+      "navigation",
+      "api_contract",
+      "backend_behavior",
+      "db_migration_impact",
+      "gcp_staging_parity"
+    ],
+    "criticalEndpoints": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/api/v1/version",
+      "https://staging.supermandi.tech/api/v1/pos",
+      "https://staging.supermandi.tech/api/v1/auth"
+    ]
+  },
+  "crossFunctionMatrix": [
+    {
+      "flowId": "XFN-001",
+      "name": "Retailer auth to protected dashboard",
+      "entryUrl": "https://staging.supermandi.tech/retailer/login",
+      "expectedServices": [
+        "retailer-admin",
+        "api-gateway",
+        "main-backend"
+      ],
+      "requiredChecks": [
+        "ui",
+        "ux",
+        "wiring",
+        "navigation",
+        "api_contract",
+        "backend_behavior",
+        "db_migration_impact",
+        "gcp_staging_parity"
+      ]
+    },
+    {
+      "flowId": "XFN-002",
+      "name": "Supplier auth to orders workflow",
+      "entryUrl": "https://staging.supermandi.tech/supplier/login/",
+      "expectedServices": [
+        "supplier-portal",
+        "api-gateway",
+        "main-backend"
+      ],
+      "requiredChecks": [
+        "ui",
+        "ux",
+        "wiring",
+        "navigation",
+        "api_contract",
+        "backend_behavior",
+        "db_migration_impact",
+        "gcp_staging_parity"
+      ]
+    },
+    {
+      "flowId": "XFN-003",
+      "name": "Superadmin operational tabs and API wiring",
+      "entryUrl": "https://staging.supermandi.tech/admin/",
+      "expectedServices": [
+        "superadmin",
+        "api-gateway",
+        "main-backend"
+      ],
+      "requiredChecks": [
+        "ui",
+        "ux",
+        "wiring",
+        "navigation",
+        "api_contract",
+        "backend_behavior",
+        "db_migration_impact",
+        "gcp_staging_parity"
+      ]
+    },
+    {
+      "flowId": "XFN-004",
+      "name": "POS API contract and backend parity",
+      "entryUrl": "https://staging.supermandi.tech/api/v1/health",
+      "expectedServices": [
+        "api-gateway",
+        "main-backend"
+      ],
+      "requiredChecks": [
+        "ui",
+        "ux",
+        "wiring",
+        "navigation",
+        "api_contract",
+        "backend_behavior",
+        "db_migration_impact",
+        "gcp_staging_parity"
+      ]
+    }
+  ]
+}

@@ -12,6 +12,7 @@
     <meta property="og:description" content="The infrastructure layer powering retail and manufacturing operations worldwide.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://supermandi.tech">
+    <meta property="og:site_name" content="SuperMandi Tech Pvt Ltd">
     <meta property="fb:app_id" content="1715280472784199">
     <meta property="og:image" content="https://supermandi.tech/og-image.png">
     <meta property="og:image:secure_url" content="https://supermandi.tech/og-image.png">
@@ -21,12 +22,12 @@
     <meta property="og:image:alt" content="SuperMandi — Infrastructure for Global Retail">
 
     <!-- T-078: Brand shortmark favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 
     <style>
         *, *::before, *::after {
@@ -46,7 +47,8 @@
             --gray-500: #737373;
             --gray-600: #525252;
             --border: #eaeaea;
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-brand: 'Space Grotesk', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
         }
 
@@ -88,20 +90,35 @@
         .nav-logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             text-decoration: none;
             color: var(--foreground);
         }
 
         .logo-mark {
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
         }
 
         .logo-text {
-            font-weight: 600;
-            font-size: 16px;
-            letter-spacing: -0.02em;
+            font-family: var(--font-brand);
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.025em;
+            color: #FFFFFF;
+            display: inline-flex;
+            align-items: baseline;
+            background: #2563EB;
+            border-radius: 999px;
+            padding: 3px 11px 4px;
+        }
+
+        .logo-super {
+            color: #FFFFFF;
+        }
+
+        .logo-mandi {
+            color: #FFFFFF;
         }
 
         .nav-right {
@@ -264,10 +281,10 @@
             color: var(--foreground);
         }
 
-        .footer-logo svg {
+        .footer-logo img {
             width: 16px;
-            height: 14px;
-            fill: var(--foreground);
+            height: 16px;
+            display: block;
         }
 
         .footer-logo span {
@@ -374,8 +391,8 @@
         <!-- Navigation -->
         <nav>
             <a href="/" class="nav-logo">
-                <img src="/brand/logo-shortmark.svg" alt="SuperMandi" width="32" height="32" class="logo-mark">
-                <span class="logo-text">SuperMandi</span>
+                <img src="./brand/logo-shortmark.svg" alt="SuperMandi" width="32" height="32" class="logo-mark">
+                <span class="logo-text"><span class="logo-super">Super</span><span class="logo-mandi">Mandi</span></span>
             </a>
 
             <!-- GO-LIVE-UX-001: Single role entry system - all routes go to LOGIN pages -->
@@ -434,10 +451,8 @@
             <div class="footer-inner">
                 <div class="footer-left">
                     <a href="/" class="footer-logo">
-                        <svg viewBox="0 0 76 65" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/>
-                        </svg>
-                        <span>supermandi.tech</span>
+                        <img src="./brand/logo-shortmark.svg" alt="SuperMandi" width="16" height="16">
+                        <span>SuperMandi Tech Pvt Ltd</span>
                     </a>
                     <div class="footer-links">
                         <a href="/privacy">Privacy</a>

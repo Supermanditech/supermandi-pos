@@ -1,10 +1,18 @@
 {
   "version": "33.0",
-  "lastUpdated": "2026-02-21T00:00:27Z",
-  "currentPhase": "LIVE-ITERATION QUALITY MODE \u2014 cumulative staging deploy, then full-surface micro ticketization, then ticket-wise implementation.",
+  "lastUpdated": "2026-02-21T02:02:41.881Z",
+  "currentPhase": "LIVE-ITERATION QUALITY MODE — cumulative staging deploy, then full-surface micro ticketization, then ticket-wise implementation.",
   "currentTicket": "FIX-001",
   "ticketQueue": [
-    "FIX-001"
+    "FIX-001",
+    "LIVE.URLMAP.STORE_ROUTES.001",
+    "LIVE.BACKEND.PROXY_404.001",
+    "LIVE.BACKEND.CONN_TIMEOUT.001",
+    "LIVE.BACKEND.POS_HEALTH.001",
+    "LIVE.SECURITY.CACHE_HEADERS.001",
+    "LIVE.RETAILER.SPA_SHELL.001",
+    "LIVE.SUPPLIER.FAVICON_PATH.001",
+    "STAGE.BRAND.LOGO_CONSISTENCY.001"
   ],
   "ticketStatus": {
     "T-054": "DONE",
@@ -409,12 +417,20 @@
     "TQ-017": "DONE",
     "TQ-018": "DONE",
     "TQ-019": "DONE",
-    "TQ-020": "DONE"
+    "TQ-020": "DONE",
+    "LIVE.URLMAP.STORE_ROUTES.001": "DONE_GCP_INFRA",
+    "LIVE.BACKEND.PROXY_404.001": "DONE_GCP_INFRA",
+    "LIVE.BACKEND.CONN_TIMEOUT.001": "DONE_CODE_MERGED",
+    "LIVE.BACKEND.POS_HEALTH.001": "DONE_CODE_MERGED",
+    "LIVE.SECURITY.CACHE_HEADERS.001": "DONE_IN_NGINX_CONFIG",
+    "LIVE.RETAILER.SPA_SHELL.001": "DONE_VERIFIED_ON_STAGING",
+    "LIVE.SUPPLIER.FAVICON_PATH.001": "DONE_CODE_MERGED",
+    "STAGE.BRAND.LOGO_CONSISTENCY.001": "IN_PROGRESS"
   },
   "executionPhases": [
     {
       "phase": 1,
-      "name": "Retailer \u2192 POS Sync",
+      "name": "Retailer → POS Sync",
       "tickets": [
         "T-054",
         "T-055"
@@ -877,7 +893,7 @@
     },
     {
       "phase": 36,
-      "name": "9B: B2B Finance \u2014 Abstraction + Trade Credit (Tier 1)",
+      "name": "9B: B2B Finance — Abstraction + Trade Credit (Tier 1)",
       "tickets": [
         "T-263",
         "T-264",
@@ -885,11 +901,11 @@
         "T-266",
         "T-267"
       ],
-      "status": "DONE (T-263 done, T-264\u2192T-267 awaiting partnerships)"
+      "status": "DONE (T-263 done, T-264→T-267 awaiting partnerships)"
     },
     {
       "phase": 37,
-      "name": "9C: B2B Finance \u2014 Credit Lines (Tier 2) + Rajasthan NBFC (Tier 3) + LaaS (Tier 4)",
+      "name": "9C: B2B Finance — Credit Lines (Tier 2) + Rajasthan NBFC (Tier 3) + LaaS (Tier 4)",
       "tickets": [
         "T-268",
         "T-269",
@@ -902,7 +918,7 @@
     },
     {
       "phase": 38,
-      "name": "9D: B2B Finance \u2014 Supplier Invoice Discounting (Tier 5)",
+      "name": "9D: B2B Finance — Supplier Invoice Discounting (Tier 5)",
       "tickets": [
         "T-274",
         "T-275",
@@ -913,7 +929,7 @@
     },
     {
       "phase": 39,
-      "name": "9E: B2B Finance \u2014 Platform UI + Dashboards",
+      "name": "9E: B2B Finance — Platform UI + Dashboards",
       "tickets": [
         "T-278",
         "T-279",
@@ -929,7 +945,7 @@
         "T-289",
         "T-290"
       ],
-      "status": "DONE (10/13 done, T-283\u2192T-286 awaiting partnerships)"
+      "status": "DONE (10/13 done, T-283→T-286 awaiting partnerships)"
     },
     {
       "phase": 40,
@@ -948,11 +964,11 @@
         "T-301",
         "T-302"
       ],
-      "status": "DONE (9/12, T-296\u2192T-298 awaiting Meta WhatsApp API)"
+      "status": "DONE (9/12, T-296→T-298 awaiting Meta WhatsApp API)"
     },
     {
       "phase": 41,
-      "name": "9G: AI Automation \u2014 Voice + Core",
+      "name": "9G: AI Automation — Voice + Core",
       "tickets": [
         "T-305",
         "T-306",
@@ -966,7 +982,7 @@
     },
     {
       "phase": 42,
-      "name": "9H: AI Automation \u2014 Intelligence + Polish",
+      "name": "9H: AI Automation — Intelligence + Polish",
       "tickets": [
         "T-312",
         "T-313",
@@ -997,7 +1013,7 @@
     },
     {
       "phase": 44,
-      "name": "10B: Round 1 \u2014 Discovery",
+      "name": "10B: Round 1 — Discovery",
       "tickets": [
         "TEST-011",
         "TEST-012",
@@ -1022,7 +1038,7 @@
     },
     {
       "phase": 45,
-      "name": "10C: Round 2 \u2014 Regression",
+      "name": "10C: Round 2 — Regression",
       "tickets": [
         "TEST-029",
         "TEST-030",
@@ -1034,11 +1050,11 @@
         "TEST-036",
         "TEST-037"
       ],
-      "status": "DONE \u2014 3416 tests pass, 7 regression fixes"
+      "status": "DONE — 3416 tests pass, 7 regression fixes"
     },
     {
       "phase": 46,
-      "name": "10D: Round 3 \u2014 Stress + GO/NO-GO",
+      "name": "10D: Round 3 — Stress + GO/NO-GO",
       "tickets": [
         "TEST-038",
         "TEST-039",
@@ -1056,7 +1072,7 @@
         "TEST-051",
         "TEST-052"
       ],
-      "status": "DONE \u2014 22/48 auto-PASS, 26 MANUAL (staging)"
+      "status": "DONE — 22/48 auto-PASS, 26 MANUAL (staging)"
     },
     {
       "phase": 47,
@@ -1067,11 +1083,11 @@
         "FIX-003",
         "FIX-004"
       ],
-      "status": "DONE (3/4 \u2014 FIX-001 remaining)"
+      "status": "DONE (3/4 — FIX-001 remaining)"
     },
     {
       "phase": 48,
-      "name": "11B: Backend P0 \u2014 Store Isolation & Data Integrity",
+      "name": "11B: Backend P0 — Store Isolation & Data Integrity",
       "tickets": [
         "FIX-005",
         "FIX-006",
@@ -1082,7 +1098,7 @@
     },
     {
       "phase": 49,
-      "name": "11C: Backend P1 \u2014 Error Handling & Robustness",
+      "name": "11C: Backend P1 — Error Handling & Robustness",
       "tickets": [
         "FIX-009",
         "FIX-010",
@@ -1095,7 +1111,7 @@
     },
     {
       "phase": 50,
-      "name": "11D: Retailer Admin P1 \u2014 UX & Validation",
+      "name": "11D: Retailer Admin P1 — UX & Validation",
       "tickets": [
         "FIX-015",
         "FIX-016",
@@ -1109,7 +1125,7 @@
     },
     {
       "phase": 51,
-      "name": "11E: Supplier Portal P0-P1 \u2014 Critical Fixes",
+      "name": "11E: Supplier Portal P0-P1 — Critical Fixes",
       "tickets": [
         "FIX-022",
         "FIX-023",
@@ -1121,11 +1137,11 @@
         "FIX-029",
         "FIX-030"
       ],
-      "status": "DONE (9/9 \u2014 FIX-022,024,026,029 false positive)"
+      "status": "DONE (9/9 — FIX-022,024,026,029 false positive)"
     },
     {
       "phase": 52,
-      "name": "11F: POS App P0-P1 \u2014 Scanner, Offline, Data",
+      "name": "11F: POS App P0-P1 — Scanner, Offline, Data",
       "tickets": [
         "FIX-031",
         "FIX-032",
@@ -1140,11 +1156,11 @@
         "FIX-041",
         "FIX-042"
       ],
-      "status": "DONE (12/12 \u2014 FIX-031 false positive)"
+      "status": "DONE (12/12 — FIX-031 false positive)"
     },
     {
       "phase": 53,
-      "name": "11G: SuperAdmin P0-P1 \u2014 RBAC & Dashboard",
+      "name": "11G: SuperAdmin P0-P1 — RBAC & Dashboard",
       "tickets": [
         "FIX-043",
         "FIX-044",
@@ -1155,11 +1171,11 @@
         "FIX-049",
         "FIX-050"
       ],
-      "status": "DONE (8/8 \u2014 FIX-043,044,046 false positive)"
+      "status": "DONE (8/8 — FIX-043,044,046 false positive)"
     },
     {
       "phase": 54,
-      "name": "11H: P2 Polish \u2014 Cross-Platform",
+      "name": "11H: P2 Polish — Cross-Platform",
       "tickets": [
         "FIX-051",
         "FIX-052",
@@ -1179,7 +1195,7 @@
         "FIX-066",
         "FIX-067"
       ],
-      "status": "DONE (17/17 \u2014 4 code fixes + 13 false positive)"
+      "status": "DONE (17/17 — 4 code fixes + 13 false positive)"
     },
     {
       "phase": 55,
@@ -1187,11 +1203,11 @@
       "tickets": [
         "WA-001"
       ],
-      "status": "DONE \u2014 PR #243 merged, 105 tests, prestage tag applied"
+      "status": "DONE — PR #243 merged, 105 tests, prestage tag applied"
     },
     {
       "phase": 56,
-      "name": "12A: Critical Gap Closure \u2014 Auth, UI, CI",
+      "name": "12A: Critical Gap Closure — Auth, UI, CI",
       "tickets": [
         "TQ-001",
         "TQ-002",
@@ -1200,7 +1216,7 @@
         "TQ-005",
         "TQ-006"
       ],
-      "status": "DONE \u2014 6/6"
+      "status": "DONE — 6/6"
     },
     {
       "phase": 57,
@@ -1214,7 +1230,7 @@
         "TQ-012",
         "TQ-013"
       ],
-      "status": "DONE \u2014 7/7 (TQ-010,011 false positive)"
+      "status": "DONE — 7/7 (TQ-010,011 false positive)"
     },
     {
       "phase": 58,
@@ -1225,7 +1241,7 @@
         "TQ-016",
         "TQ-017"
       ],
-      "status": "DONE \u2014 4/4 (TQ-016 false positive)"
+      "status": "DONE — 4/4 (TQ-016 false positive)"
     },
     {
       "phase": 59,
@@ -1235,45 +1251,45 @@
         "TQ-019",
         "TQ-020"
       ],
-      "status": "DONE \u2014 3/3"
+      "status": "DONE — 3/3"
     }
   ],
   "completedPhase1": {
-    "range": "T-001 \u2192 T-053",
+    "range": "T-001 → T-053",
     "count": 53,
-    "status": "DONE \u2014 pushed to origin",
+    "status": "DONE — pushed to origin",
     "firstCommit": "570de4d",
     "lastCommit": "8ab4f4c",
     "commits": 10
   },
   "completedPhase2": {
-    "range": "T-054 \u2192 T-073",
+    "range": "T-054 → T-073",
     "count": 20,
-    "status": "DONE \u2014 pushed to origin",
+    "status": "DONE — pushed to origin",
     "firstCommit": "8d3d498",
     "lastCommit": "bbf45a4",
     "commits": 20
   },
   "completedPhase3_4": {
-    "range": "T-074 \u2192 T-127",
+    "range": "T-074 → T-127",
     "count": 54,
-    "status": "DONE \u2014 pushed to origin",
+    "status": "DONE — pushed to origin",
     "firstCommit": "679735a",
     "lastCommit": "d1548e2",
     "auditCommit": "1436371 (127/127 PASS)"
   },
   "completedPhase5": {
-    "range": "T-128 \u2192 T-199",
+    "range": "T-128 → T-199",
     "count": 72,
-    "status": "DONE \u2014 pushed to origin",
+    "status": "DONE — pushed to origin",
     "commit": "c397950",
     "lastCommit": "250cb0f",
     "summary": "72 production audit tickets: 10 schema migrations, P0 APIs, POS features, web portal features, auto-categorization"
   },
   "phase6_CTOAudit": {
-    "range": "T-200 \u2192 T-235",
+    "range": "T-200 → T-235",
     "count": 36,
-    "status": "DONE \u2014 36/36 DONE",
+    "status": "DONE — 36/36 DONE",
     "firstCommit": "a46ae13",
     "lastCommit": "8dbcb65",
     "auditMethod": "5 parallel deep-audit agents + 1 reconciliation agent",
@@ -1285,22 +1301,22 @@
     }
   },
   "phase7_B2BReorder": {
-    "range": "T-236 \u2192 T-252",
+    "range": "T-236 → T-252",
     "count": 17,
-    "status": "DONE \u2014 All 6 waves complete (17/17 tickets)",
+    "status": "DONE — All 6 waves complete (17/17 tickets)",
     "firstCommit": "b6c837c",
     "lastCommit": "42e4f19"
   },
   "phase8_FCMNotifications": {
     "range": "T-219, T-223, T-231, T-232, T-235",
     "count": 5,
-    "status": "DONE \u2014 All 5 deferred tickets implemented",
+    "status": "DONE — All 5 deferred tickets implemented",
     "commit": "ecbaf3b"
   },
   "phase9_PaymentsFinanceWhatsAppAI": {
-    "range": "T-253 \u2192 T-316",
+    "range": "T-253 → T-316",
     "count": 64,
-    "status": "DONE \u2014 45/64 codeable tickets complete, 19 awaiting external APIs/partnerships",
+    "status": "DONE — 45/64 codeable tickets complete, 19 awaiting external APIs/partnerships",
     "firstCommit": "e9c1481",
     "lastCommit": "931c40d",
     "breakdown": {
@@ -1311,12 +1327,12 @@
     }
   },
   "phase10_ProductionTesting": {
-    "range": "TEST-001 \u2192 TEST-052",
+    "range": "TEST-001 → TEST-052",
     "count": 52,
-    "status": "DONE \u2014 All 52 test tickets complete",
+    "status": "DONE — All 52 test tickets complete",
     "firstCommit": "c695231",
     "lastCommit": "e52adf7",
-    "methodology": "3 rounds: Discovery \u2192 Regression \u2192 Stress + GO/NO-GO",
+    "methodology": "3 rounds: Discovery → Regression → Stress + GO/NO-GO",
     "results": {
       "totalTests": 3416,
       "totalSuites": 248,
@@ -1326,13 +1342,13 @@
     }
   },
   "phase11_ProductionHardening": {
-    "range": "FIX-001 \u2192 FIX-067",
+    "range": "FIX-001 → FIX-067",
     "count": 67,
-    "status": "DONE \u2014 67/67 complete (52 code fixes + 14 false positive + FIX-001 deploy pending)",
+    "status": "DONE — 67/67 complete (52 code fixes + 14 false positive + FIX-001 deploy pending)",
     "firstCommit": "fc0d821",
     "lastCommit": "8e65008",
-    "mergedPRs": "PR #195 \u2192 #249 (50 PRs for 52 code-fix ticket IDs)",
-    "gitDiscipline": "COMPLETE \u2014 all code-fix tickets have branch + PR + prestage tag",
+    "mergedPRs": "PR #195 → #249 (50 PRs for 52 code-fix ticket IDs)",
+    "gitDiscipline": "COMPLETE — all code-fix tickets have branch + PR + prestage tag",
     "breakdown": {
       "codeFixes": 52,
       "falsePositives": 14,
@@ -1355,10 +1371,10 @@
       ]
     },
     "session2_PRs": {
-      "FIX-016": "PR #246 \u2014 ImportPage polling memory leak",
-      "FIX-063": "PR #247 \u2014 SuperAdmin CSP meta tag",
-      "FIX-064": "PR #248 \u2014 OTP cooldown sessionStorage persistence",
-      "FIX-065": "PR #249 \u2014 Document upload progress indicator (XHR)"
+      "FIX-016": "PR #246 — ImportPage polling memory leak",
+      "FIX-063": "PR #247 — SuperAdmin CSP meta tag",
+      "FIX-064": "PR #248 — OTP cooldown sessionStorage persistence",
+      "FIX-065": "PR #249 — Document upload progress indicator (XHR)"
     },
     "auditMethod": "5 parallel deep-scan agents (Retailer, Supplier, POS, SuperAdmin, Backend) + GCP MCP parity check",
     "backlogFile": "AUDIT_BACKLOG.md",
@@ -1375,7 +1391,7 @@
   },
   "wa001_WhatsAppCloudAPI": {
     "ticket": "WA-001",
-    "status": "DONE \u2014 merged to main",
+    "status": "DONE — merged to main",
     "mergeCommit": "41fb09b",
     "pr": "#243",
     "tag": "prestage-WA-001-2026-02-17_0147IST",
@@ -1393,15 +1409,15 @@
     ]
   },
   "phase12_TestQualityHardening": {
-    "range": "TQ-001 \u2192 TQ-020",
+    "range": "TQ-001 → TQ-020",
     "count": 20,
-    "status": "DONE \u2014 20/20 (17 code fixes + 3 false positive)",
+    "status": "DONE — 20/20 (17 code fixes + 3 false positive)",
     "auditMethod": "Full test-suite read of all 250+ test files across entire repo",
     "auditDate": "2026-02-17",
     "completedDate": "2026-02-18",
     "firstCommit": "d10f897",
     "lastCommit": "cad2273",
-    "mergedPRs": "PR #250 \u2192 #263 (14 PRs for 17 code-fix ticket IDs)",
+    "mergedPRs": "PR #250 → #263 (14 PRs for 17 code-fix ticket IDs)",
     "breakdown": {
       "codeFixes": 17,
       "falsePositives": 3,
@@ -1412,45 +1428,45 @@
       ]
     },
     "tiers": {
-      "12A_CriticalGaps": "6/6 DONE (TQ-001\u2192TQ-006)",
-      "12B_TheaterRemoval": "7/7 DONE (TQ-007\u2192TQ-013, TQ-010+011 false positive)",
-      "12C_InfrastructureFixes": "4/4 DONE (TQ-014\u2192TQ-017, TQ-016 false positive)",
-      "12D_StressResilience": "3/3 DONE (TQ-018\u2192TQ-020)"
+      "12A_CriticalGaps": "6/6 DONE (TQ-001→TQ-006)",
+      "12B_TheaterRemoval": "7/7 DONE (TQ-007→TQ-013, TQ-010+011 false positive)",
+      "12C_InfrastructureFixes": "4/4 DONE (TQ-014→TQ-017, TQ-016 false positive)",
+      "12D_StressResilience": "3/3 DONE (TQ-018→TQ-020)"
     },
     "backlogFile": "AUDIT_BACKLOG.md (Phase 12 section)"
   },
   "infraStatus": {
     "A1_WIF": "DONE",
-    "A2_SECRETS": "DONE \u2014 9 secrets in GCP Secret Manager (5 original + 4 WhatsApp)",
-    "A3_DEPLOY": "DEPLOY-READY \u2014 Part 18 discipline written. Awaiting operator trigger.",
+    "A2_SECRETS": "DONE — 9 secrets in GCP Secret Manager (5 original + 4 WhatsApp)",
+    "A3_DEPLOY": "DEPLOY-READY — Part 18 discipline written. Awaiting operator trigger.",
     "Cloud_SQL": "HARDENED",
     "Redis": "HARDENED",
-    "ZRP_Protocol": "ENFORCED \u2014 185 gates active",
-    "Routing_Spec": "ENFORCED \u2014 ROUTING_SPEC.json is source of truth"
+    "ZRP_Protocol": "ENFORCED — 185 gates active",
+    "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
   },
   "deployGateStatus": {
     "phaseA_preDeployAudit": {
-      "A001_cleanGit": "PASS \u2014 main branch, up to date with origin",
-      "A002_headSHA": "PASS \u2014 HEAD is 2b2424b (WIP save \u2014 37 commits past 61337c5 including screen hardening, GCP parity, production hardening, certification gaps)",
-      "A003_typecheck": "PASS \u2014 all 4 packages zero errors (backend, retailer, supplier, superadmin)",
-      "A004_build": "PENDING \u2014 CI does actual Docker builds",
-      "A005_tests": "PENDING \u2014 CI runs full test suite",
-      "A006_ciGates": "PENDING \u2014 CI-GATES workflow on deploy commit",
-      "A007_A015_secrets": "PASS \u2014 all 9 secrets verified in GCP Secret Manager",
-      "A016_cloudSQL": "PASS \u2014 supermandi-staging state=RUNNABLE",
-      "A017_vpcConnector": "PASS \u2014 supermandi-connector state=READY",
-      "A018_artifactRegistry": "PENDING \u2014 verified at deploy time",
-      "A019_cloudSQLBackup": "PENDING \u2014 create before migration",
-      "A020_redis": "PASS \u2014 Memorystore 10.107.71.27:6379 configured"
+      "A001_cleanGit": "PASS — main branch, up to date with origin",
+      "A002_headSHA": "PASS — HEAD is 2b2424b (WIP save — 37 commits past 61337c5 including screen hardening, GCP parity, production hardening, certification gaps)",
+      "A003_typecheck": "PASS — all 4 packages zero errors (backend, retailer, supplier, superadmin)",
+      "A004_build": "PENDING — CI does actual Docker builds",
+      "A005_tests": "PENDING — CI runs full test suite",
+      "A006_ciGates": "PENDING — CI-GATES workflow on deploy commit",
+      "A007_A015_secrets": "PASS — all 9 secrets verified in GCP Secret Manager",
+      "A016_cloudSQL": "PASS — supermandi-staging state=RUNNABLE",
+      "A017_vpcConnector": "PASS — supermandi-connector state=READY",
+      "A018_artifactRegistry": "PENDING — verified at deploy time",
+      "A019_cloudSQLBackup": "PENDING — create before migration",
+      "A020_redis": "PASS — Memorystore 10.107.71.27:6379 configured"
     },
     "phaseB_migrations": {
-      "status": "PENDING \u2014 18 new migrations (141\u2192159)",
+      "status": "PENDING — 18 new migrations (141→159)",
       "migrationCount": 18,
       "criticalMigration": "149_row_level_security (RLS on 27 tables)",
       "backupRequired": true
     },
     "phaseC_serviceDeployment": {
-      "status": "PENDING \u2014 6 services in dependency order",
+      "status": "PENDING — 6 services in dependency order",
       "order": [
         "main-backend",
         "api-gateway",
@@ -1461,14 +1477,14 @@
       ]
     },
     "phaseD_verification": {
-      "status": "PENDING \u2014 44 automated gates",
+      "status": "PENDING — 44 automated gates",
       "smokeTests": 11,
       "routingGates": 17,
       "deployVerify": 4,
       "featureVerify": 8
     },
     "phaseE_signoff": {
-      "status": "PENDING \u2014 operator browser verification"
+      "status": "PENDING — operator browser verification"
     }
   },
   "goLiveAudit": {
@@ -1478,11 +1494,11 @@
     "result": "127/127 PASS after 5 gap fixes"
   },
   "ctoAudit": {
-    "status": "COMPLETE \u2014 tickets created",
+    "status": "COMPLETE — tickets created",
     "date": "2026-02-15"
   },
   "phase11Audit": {
-    "status": "COMPLETE \u2014 67 tickets generated, 48 DONE",
+    "status": "COMPLETE — 67 tickets generated, 48 DONE",
     "date": "2026-02-16",
     "method": "5 parallel deep-scan agents + GCP MCP parity check",
     "platforms": [
@@ -1493,51 +1509,51 @@
       "Backend/GCP"
     ]
   },
-  "launchGeography": "India \u2014 INR, +91, IST, DD/MM/YYYY",
-  "gitDiscipline": "ON \u2014 one ticket = one branch = one PR = one tag",
+  "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
+  "gitDiscipline": "ON — one ticket = one branch = one PR = one tag",
   "phase13_ProductionReadinessAudit": {
-    "range": "PRA-001 \u2192 PRA-090",
+    "range": "PRA-001 → PRA-090",
     "count": 90,
-    "status": "COMPLETE \u2014 90/90 tickets audited. 5 PRs for code fixes (#266-#268, #270-#278, #279). PRA-007 gap FIXED.",
+    "status": "COMPLETE — 90/90 tickets audited. 5 PRs for code fixes (#266-#268, #270-#278, #279). PRA-007 gap FIXED.",
     "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
     "breakdown": {
       "A_RetailerAdmin": {
-        "range": "PRA-001\u2192PRA-015",
+        "range": "PRA-001→PRA-015",
         "count": 15,
         "P0": 4,
         "P1": 8,
         "P2": 3
       },
       "B_SupplierPortal": {
-        "range": "PRA-016\u2192PRA-028",
+        "range": "PRA-016→PRA-028",
         "count": 13,
         "P0": 4,
         "P1": 6,
         "P2": 3
       },
       "C_SuperAdmin": {
-        "range": "PRA-029\u2192PRA-044",
+        "range": "PRA-029→PRA-044",
         "count": 16,
         "P0": 4,
         "P1": 8,
         "P2": 4
       },
       "D_POSApp": {
-        "range": "PRA-045\u2192PRA-065",
+        "range": "PRA-045→PRA-065",
         "count": 21,
         "P0": 6,
         "P1": 11,
         "P2": 4
       },
       "E_CrossFunction": {
-        "range": "PRA-066\u2192PRA-080",
+        "range": "PRA-066→PRA-080",
         "count": 15,
         "P0": 7,
         "P1": 6,
         "P2": 2
       },
       "F_GatewayBackend": {
-        "range": "PRA-081\u2192PRA-090",
+        "range": "PRA-081→PRA-090",
         "count": 10,
         "P0": 6,
         "P1": 3,
@@ -1545,12 +1561,12 @@
       }
     },
     "executionWaves": 9,
-    "gitDiscipline": "ENFORCED \u2014 rules embedded in audit file header"
+    "gitDiscipline": "ENFORCED — rules embedded in audit file header"
   },
   "phase14_UIUXProductionAudit": {
-    "range": "UIUX-RET-001\u2192020, UIUX-SUP-001\u2192020, UIUX-SA-001\u2192027, UIUX-POS-001\u2192042, UIUX-XPLAT-001\u2192006",
+    "range": "UIUX-RET-001→020, UIUX-SUP-001→020, UIUX-SA-001→027, UIUX-POS-001→042, UIUX-XPLAT-001→006",
     "count": 115,
-    "status": "COMPLETE \u2014 All 5 waves merged (PRs #282-#286). 115 tickets audited, ~90 code fixes applied.",
+    "status": "COMPLETE — All 5 waves merged (PRs #282-#286). 115 tickets audited, ~90 code fixes applied.",
     "auditFile": "RELEASES/UIUX_PRODUCTION_AUDIT.md",
     "rawFindings": 176,
     "afterTriage": 115,
@@ -1564,35 +1580,35 @@
     },
     "breakdown": {
       "A_RetailerAdmin": {
-        "range": "UIUX-RET-001\u2192020",
+        "range": "UIUX-RET-001→020",
         "count": 20,
         "P0": 0,
         "P1": 3,
         "P2": 17
       },
       "B_SupplierPortal": {
-        "range": "UIUX-SUP-001\u2192020",
+        "range": "UIUX-SUP-001→020",
         "count": 20,
         "P0": 6,
         "P1": 9,
         "P2": 5
       },
       "C_SuperAdmin": {
-        "range": "UIUX-SA-001\u2192027",
+        "range": "UIUX-SA-001→027",
         "count": 27,
         "P0": 4,
         "P1": 10,
         "P2": 13
       },
       "D_POSApp": {
-        "range": "UIUX-POS-001\u2192042",
+        "range": "UIUX-POS-001→042",
         "count": 42,
         "P0": 3,
         "P1": 23,
         "P2": 16
       },
       "E_CrossPlatform": {
-        "range": "UIUX-XPLAT-001\u2192006",
+        "range": "UIUX-XPLAT-001→006",
         "count": 6,
         "P0": 2,
         "P1": 1,
@@ -1601,11 +1617,11 @@
     },
     "executionWaves": 5,
     "mergedPRs": {
-      "wave1_P0": "PR #282 \u2014 15 P0 critical fixes",
-      "wave2_P1_wiring": "PR #283 \u2014 16 P1 wiring fixes",
-      "wave3_P1_ux": "PR #284 \u2014 17 P1 UX safety fixes",
-      "wave4_P1_nav": "PR #285 \u2014 12 P1 UI/nav fixes",
-      "wave5_P2_polish": "PR #286 \u2014 35 P2 polish fixes"
+      "wave1_P0": "PR #282 — 15 P0 critical fixes",
+      "wave2_P1_wiring": "PR #283 — 16 P1 wiring fixes",
+      "wave3_P1_ux": "PR #284 — 17 P1 UX safety fixes",
+      "wave4_P1_nav": "PR #285 — 12 P1 UI/nav fixes",
+      "wave5_P2_polish": "PR #286 — 35 P2 polish fixes"
     },
     "tags": [
       "prestage-UIUX-W1-2026-02-18_1200IST",
@@ -1674,14 +1690,14 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "After successful staging deploy evidence is recorded, run pnpm workflow:manifest:live, use live_page_manifest.json for full-surface testing, create live-evidence micro tickets for all findings, then implement ticket-wise.",
+  "nextAction": "P0/P1 staging remediations DONE. PR #418 merged (68039c9). GCP infra fixes applied: URL map /s/* routes, VPC egress all-traffic, min-instances=1. 47-endpoint sweep zero 404s (3 runs). Brand consistency (STAGE.BRAND.LOGO_CONSISTENCY.001) in progress. Next: commit brand changes, deploy, verify on staging.",
   "productionHardeningDeferred": {
-    "status": "DONE \u2014 PR #288 merged (853a7d8)",
+    "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
     "scope": "176 files changed (+1669/-1441)",
     "items": [
-      "919 console.log \u2192 structured logger (142 backend files)",
-      "240 catch(e: any) \u2192 catch(unknown) + asError() (67 files)",
+      "919 console.log → structured logger (142 backend files)",
+      "240 catch(e: any) → catch(unknown) + asError() (67 files)",
       "5 dead code files removed (sessionService, authApi, transactionsApi + tests)",
       "CreditScreen TODO resolved (credit utilization computed from real data)",
       "7 broken import orderings fixed"
@@ -1689,15 +1705,15 @@
     "pr": "#288"
   },
   "lastActions": [
-    "Hard gate enabled: new live ticket intake is blocked until successful staging deploy evidence exists.",
-    "Added workflow:manifest:live helper to auto-generate full-surface page/flow checklist for live ticketization.",
-    "Policy update: new tickets must originate from live GCP staging evidence (URL, timestamp, runtime proof, revision IDs).",
-    "State policy updated: enforce deploy-then-live-ticketization sequence (full-surface micro ticketization before implementation).",
-    "Codex created staging audit tickets for CORS/ingress/probe-path/historical-5xx risks in workflow/tickets.",
-    "Codex patched deploy config to staging-only origins and added explicit ingress=internal-and-cloud-load-balancing for staging services.",
-    "Codex hardened routing/config parity gates to fail if staging CORS includes production origins.",
-    "Workflow checks after patch: pnpm workflow:validate PASS, pnpm workflow:monitor PASS.",
-    "Pending: run staging deploy to verify runtime effect and collect Cloud Run evidence for ticket closure."
+    "PR #418 merged as 68039c9 — POS health endpoint + supplier favicon path + DB connection timeout 30s.",
+    "LIVE.URLMAP.STORE_ROUTES.001 FIXED: GCP URL map updated with /s, /s/* → retailer-backend (fingerprint wUxvs8rsXJY=).",
+    "LIVE.BACKEND.PROXY_404.001 FIXED: api-gateway VPC egress changed to all-traffic (revision api-gateway-00055-8qs). Root cause: Cloud Run ingress internal-and-cloud-load-balancing + private-ranges-only egress = 404 for Cloud Run-to-Cloud Run calls.",
+    "LIVE.BACKEND.CONN_TIMEOUT.001 FIXED: connectionTimeoutMillis increased to 30s in both client.ts and pool.ts (3 locations). Cloud SQL cold start takes 15-20s.",
+    "main-backend min-instances set to 1 (revision main-backend-00072-s9z) to prevent scale-to-zero cold start delays.",
+    "Full HTTP sweep: 47 endpoints tested, zero 404s. 3 stability runs (02:23:27Z, 02:24:00Z, 02:32:37Z) all pass.",
+    "GCP state file updated: memory/GCP_STAGING_STATE.md reflects URL map, VPC egress, min-instances changes.",
+    "STAGE.BRAND.LOGO_CONSISTENCY.001 in progress: brand SVGs updated to stacking-layer v3-c3, shared BrandShortmark component, cross-portal consistency.",
+    "All 7 LIVE.* tickets resolved (5 code+infra, 2 verified on staging). Ticket states updated in CLAUDE_CURRENT_STATE.json."
   ],
   "liveDeployTicketizationControl": {
     "status": "ACTIVE",
@@ -1718,6 +1734,16 @@
     "microTicketizationRule": "one_issue_per_ticket_page_component_field_level",
     "implementationStartGate": "coverage_map_complete_and_all_discovered_issues_ticketized",
     "forbidSamplingOrPageSkipping": true
+  },
+  "exhaustiveMicroTicketizationControl": {
+    "status": "ACTIVE",
+    "requiredBeforeImplementation": true,
+    "requiredBeforeDeployReadinessClaim": true,
+    "coverageSource": "workflow/state/live_page_manifest.json",
+    "ticketCardinalityRule": "one_issue_one_ticket_no_truncation",
+    "allowHighVolumeTicketization": true,
+    "expectedVolumeRange": "1000-2000_possible_based_on_findings",
+    "completionStatementRule": "100% micro-ingredient ticketization complete OR NOT COMPLETE with remaining check IDs"
   },
   "liveTicketOriginControl": {
     "status": "ACTIVE",
@@ -1744,6 +1770,7 @@
   "postDeployTicketIntakeControl": {
     "status": "ACTIVE",
     "requiredBeforeTicketIntake": true,
+    "enforceFrom": "2026-02-21T00:00:00Z",
     "lastSuccessfulStagingDeployRef": "github://run/22240364165",
     "lastSuccessfulStagingDeployAt": "2026-02-20T19:18:24Z",
     "lastSuccessfulStagingCommitSha": "1332ec8",

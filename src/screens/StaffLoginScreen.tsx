@@ -18,6 +18,7 @@ import { theme } from "../theme";
 import { staffLogin } from "../services/api/staffApi";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
 import type { StaffRole } from "../stores/staffSessionStore";
+import BrandShortmark from "../components/BrandShortmark";
 
 type Props = {
   storeName: string | null;
@@ -75,6 +76,16 @@ export default function StaffLoginScreen({ storeName }: Props) {
         keyboardShouldPersistTaps="handled"
       >
       <View style={styles.card} testID="staff-login-card">
+        <View style={styles.brandLockup}>
+          <BrandShortmark
+            size={30}
+            backgroundColor={theme.colors.primary}
+            lineColor={theme.colors.textInverse}
+            dotColor={theme.colors.textInverse}
+            radius={8}
+          />
+          <Text style={styles.brandPillText}>SuperMandi</Text>
+        </View>
         <View style={styles.iconWrap} accessibilityElementsHidden>
           <MaterialCommunityIcons name="account-lock" size={48} color={theme.colors.primary} />
         </View>
@@ -168,6 +179,21 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     padding: theme.spacing.lg,
     alignItems: "center",
+  },
+  brandLockup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  brandPillText: {
+    backgroundColor: theme.colors.primary,
+    color: theme.colors.textInverse,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   iconWrap: {
     marginBottom: theme.spacing.md,

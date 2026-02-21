@@ -10,11 +10,12 @@
     <meta property="og:description" content="Download the SuperMandi POS app to manage your retail store.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://supermandi.tech/pos">
+    <meta property="og:site_name" content="SuperMandi Tech Pvt Ltd">
 
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,10 90,90 10,90' fill='%23000'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,6 +25,8 @@
             --gray-400: #a3a3a3; --gray-500: #737373; --gray-600: #525252;
             --border: #eaeaea;
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-brand: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --brand-blue: #2563EB;
         }
         html, body { height: 100%; }
         body {
@@ -39,10 +42,18 @@
             background: rgba(255,255,255,0.8); backdrop-filter: saturate(180%) blur(20px);
             border-bottom: 1px solid var(--border);
         }
-        .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--foreground); }
-        .logo-mark { width: 22px; height: 20px; }
-        .logo-mark svg { fill: var(--foreground); }
-        .logo-text { font-weight: 600; font-size: 16px; letter-spacing: -0.02em; }
+        .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--foreground); }
+        .logo-mark { width: 32px; height: 32px; display: block; }
+        .logo-text {
+            font-family: var(--font-brand);
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: -0.02em;
+            color: #fff;
+            background: var(--brand-blue);
+            border-radius: 999px;
+            padding: 3px 10px 4px;
+        }
 
         .container { min-height: 100vh; display: flex; flex-direction: column; }
         main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 24px 60px; text-align: center; }
@@ -83,12 +94,8 @@
     <div class="container">
         <nav>
             <a href="/" class="nav-logo">
-                <div class="logo-mark">
-                    <svg viewBox="0 0 76 65" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/>
-                    </svg>
-                </div>
-                <span class="logo-text">supermandi</span>
+                <img src="./brand/logo-shortmark.svg" alt="SuperMandi" width="32" height="32" class="logo-mark">
+                <span class="logo-text">SuperMandi</span>
             </a>
         </nav>
 
@@ -129,7 +136,7 @@
             </section>
         </main>
 
-        <footer>supermandi.tech</footer>
+        <footer>SuperMandi Tech Pvt Ltd</footer>
     </div>
 
     <!-- Rewrite nav logo link for local-prod Docker ports -->

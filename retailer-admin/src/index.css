@@ -885,7 +885,11 @@ input, select, textarea {
 .login-logo-text {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #2563eb;
+  color: #ffffff;
+  background: #2563eb;
+  border-radius: 999px;
+  padding: 4px 12px;
+  line-height: 1;
 }
 
 .login-logo-separator {

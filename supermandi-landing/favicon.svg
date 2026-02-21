@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- T-075: SuperMandi favicon — blue rounded square with white S-curve -->
-  <rect width="32" height="32" rx="6" fill="#2563EB"/>
-  <path d="M21 9h-5a4.5 4.5 0 000 9h1.5a3.5 3.5 0 010 7H12" stroke="#FFF" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <!-- SuperMandi favicon v3-c3: stacking-layer high-clarity -->
+  <rect x="2" y="2" width="28" height="28" rx="8" fill="#2563EB"/>
+  <rect x="9" y="9" width="14" height="3.2" rx="1.6" fill="#FFFFFF"/>
+  <rect x="9" y="14.4" width="14" height="3.2" rx="1.6" fill="#FFFFFF"/>
+  <rect x="9" y="19.8" width="14" height="3.2" rx="1.6" fill="#FFFFFF"/>
+  <circle cx="16" cy="25.3" r="2.1" fill="#FFFFFF"/>
 </svg>

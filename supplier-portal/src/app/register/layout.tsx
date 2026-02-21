@@ -13,8 +13,9 @@ export default function RegisterLayout({
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 h-16 flex items-center">
         <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-primary-600">
-              SuperManditech
+            <img src="/supplier/brand/logo-shortmark.svg" alt="" width={24} height={24} />
+            <h1 className="text-2xl font-semibold text-white bg-[#2563EB] rounded-full px-3 py-1 leading-none">
+              SuperMandi
             </h1>
             <span className="text-slate-400">|</span>
             <span className="text-slate-600 text-sm font-medium">Supplier Portal</span>
@@ -31,7 +32,7 @@ export default function RegisterLayout({
       {/* Footer - minimal, muted per spec */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-[13px] text-slate-500">
-          &copy; 2026 SuperManditech. All rights reserved.
+          &copy; 2026 SuperMandi Tech Pvt Ltd. All rights reserved.
           <BuildStamp />
         </div>
       </footer>
