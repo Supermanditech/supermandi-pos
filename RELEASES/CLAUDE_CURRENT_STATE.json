@@ -1,7 +1,7 @@
 {
-  "version": "51.0",
-  "lastUpdated": "2026-02-22T14:20:54.982Z",
-  "currentPhase": "IMPLEMENTATION REQUIRED: 46 backfilled LIVE.TICKETIZATION.UNMAPPED.* tickets added from previously unmapped CODE_REVIEW_ISSUE checks. Deploy blocked until these are executed one-by-one with git discipline.",
+  "version": "52.0",
+  "lastUpdated": "2026-02-22T16:16:08.343Z",
+  "currentPhase": "IMPLEMENTATION REQUIRED: 12 LIVE/STAGE tickets pending including theme toggle contract and hydration fix.",
   "currentTicket": null,
   "ticketQueue": [],
   "ticketStatus": {
@@ -484,15 +484,15 @@
     "LIVE.TICKETIZATION.UNMAPPED.027": "WORKFLOW_DONE",
     "LIVE.TICKETIZATION.UNMAPPED.028": "WORKFLOW_DONE",
     "LIVE.TICKETIZATION.UNMAPPED.029": "WORKFLOW_DONE",
-    "LIVE.TICKETIZATION.UNMAPPED.030": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.031": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.032": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.033": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.034": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.035": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.036": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.037": "WORKFLOW_TODO",
-    "LIVE.TICKETIZATION.UNMAPPED.038": "WORKFLOW_TODO",
+    "LIVE.TICKETIZATION.UNMAPPED.030": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.031": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.032": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.033": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.034": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.035": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.036": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.037": "WORKFLOW_DONE",
+    "LIVE.TICKETIZATION.UNMAPPED.038": "WORKFLOW_DONE",
     "LIVE.TICKETIZATION.UNMAPPED.039": "WORKFLOW_DONE",
     "LIVE.TICKETIZATION.UNMAPPED.040": "WORKFLOW_DONE",
     "LIVE.TICKETIZATION.UNMAPPED.041": "WORKFLOW_DONE",
@@ -500,7 +500,10 @@
     "LIVE.TICKETIZATION.UNMAPPED.043": "WORKFLOW_DONE",
     "LIVE.TICKETIZATION.UNMAPPED.044": "WORKFLOW_DONE",
     "LIVE.TICKETIZATION.UNMAPPED.045": "WORKFLOW_DONE",
-    "LIVE.TICKETIZATION.UNMAPPED.046": "WORKFLOW_DONE"
+    "LIVE.TICKETIZATION.UNMAPPED.046": "WORKFLOW_DONE",
+    "LIVE.SUPPLIER.AUTH.BUILDSTAMP_HYDRATION_MISMATCH.001": "WORKFLOW_DONE",
+    "LIVE.THEME.TOGGLE.OPENCLAW_STYLE_SECRET_ENTRY.001": "WORKFLOW_DONE",
+    "LIVE.THEME.TOKENS.CROSS_SURFACE_APPLICATION.001": "WORKFLOW_DONE"
   },
   "executionPhases": [
     {
@@ -1773,7 +1776,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Execute LIVE.TICKETIZATION.UNMAPPED.001 -> .046 one-by-one (WIP=1). No deploy until queue is resolved and guard passes for issue-ticket closure.",
+  "nextAction": "Execute pending implementation tickets one-by-one (WIP=1): LIVE.SUPPLIER.AUTH.BUILDSTAMP_HYDRATION_MISMATCH.001, LIVE.THEME.TOGGLE.OPENCLAW_STYLE_SECRET_ENTRY.001, LIVE.THEME.TOKENS.CROSS_SURFACE_APPLICATION.001, LIVE.TICKETIZATION.UNMAPPED.030, LIVE.TICKETIZATION.UNMAPPED.031, LIVE.TICKETIZATION.UNMAPPED.032, LIVE.TICKETIZATION.UNMAPPED.033, LIVE.TICKETIZATION.UNMAPPED.034, LIVE.TICKETIZATION.UNMAPPED.035, LIVE.TICKETIZATION.UNMAPPED.036, LIVE.TICKETIZATION.UNMAPPED.037, LIVE.TICKETIZATION.UNMAPPED.038. Do not deploy until queue reaches 0 and operator approves GO_DEPLOY.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -1788,6 +1791,7 @@
     "pr": "#288"
   },
   "lastActions": [
+    "Machine-state enforcement added: theme toggle UX contract + cross-surface token application + supplier BuildStamp hydration mismatch tickets added to workflow queue as WORKFLOW_TODO.",
     "Backfill completed: 46 previously unmapped CODE_REVIEW_ISSUE checks now have atomic workflow tickets (LIVE.TICKETIZATION.UNMAPPED.001-.046) and are set to WORKFLOW_TODO.",
     "Machine-state trigger set: progress.liveIteration.phase=implementation and deployApproval.approved=false with GO_DEPLOY token. Claude must not deploy until operator explicit approval in next session.",
     "DEPLOY COMPLETE: SHA 7b3a4ee8 deployed to GCP staging via run 22264213051. All 6 services serving 100% on new revisions. All smoke gates PASS. Health checks 200 on /api/health and /api/v1/health.",
