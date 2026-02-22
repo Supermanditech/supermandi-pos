@@ -205,14 +205,27 @@ export default function UploadPage() {
               </button>
             </div>
             {/* ISSUE-MICRO-085: Upload progress indicator */}
+            {/* LIVE.SUPPLIER.UPLOAD_PROGRESS_FAKE.001: Replaced fake 70% bar with indeterminate animation */}
             {uploadMutation.isPending && (
               <div className="mb-3">
                 <div className="flex justify-between text-sm text-slate-600 mb-1">
                   <span>Uploading &amp; processing...</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                  <div className="bg-primary-500 h-2 rounded-full animate-pulse" style={{ width: '70%' }} />
+                  <div
+                    className="bg-primary-500 h-2 rounded-full"
+                    style={{
+                      width: '40%',
+                      animation: 'indeterminate 1.5s ease-in-out infinite',
+                    }}
+                  />
                 </div>
+                <style>{`
+                  @keyframes indeterminate {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(350%); }
+                  }
+                `}</style>
               </div>
             )}
             <button
