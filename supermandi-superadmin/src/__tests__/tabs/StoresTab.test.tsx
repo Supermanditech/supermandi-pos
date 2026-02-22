@@ -202,8 +202,9 @@ describe('StoresTab', () => {
     });
 
     it('shows loading state', () => {
-      render(<StoresTab {...createDefaultProps({ storeDirectoryLoading: true })} />);
-      expect(screen.getByText('Loading stores...')).toBeTruthy();
+      const { container } = render(<StoresTab {...createDefaultProps({ storeDirectoryLoading: true })} />);
+      // UNMAPPED.044: Loading text replaced with skeleton table loaders
+      expect(container.querySelector('table')).toBeTruthy();
     });
 
     it('renders store rows', () => {

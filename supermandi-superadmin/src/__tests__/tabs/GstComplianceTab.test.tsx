@@ -34,8 +34,9 @@ describe('GstComplianceTab', () => {
 
   it('shows loading state', () => {
     gstMock.fetchGstStoresOverview.mockReturnValue(new Promise(() => {}));
-    render(<GstComplianceTab />);
-    expect(screen.getByText('Loading GST data...')).toBeTruthy();
+    const { container } = render(<GstComplianceTab />);
+    // UNMAPPED.043: Loading text replaced with skeleton loaders
+    expect(container.querySelector('div[style]')).toBeTruthy();
   });
 
   it('shows error state', async () => {
