@@ -54,8 +54,8 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     const trimmedOtp = otp.trim();
-    if (trimmedOtp.length < 4) {
-      setError("Enter the OTP from your email");
+    if (trimmedOtp.length !== 6) {
+      setError("Enter the 6-digit OTP from your email");
       return;
     }
     setLoading(true);
@@ -140,7 +140,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
                 placeholder="Enter 6-digit code"
-                maxLength={8}
+                maxLength={6}
                 disabled={loading}
                 autoComplete="one-time-code"
               />
