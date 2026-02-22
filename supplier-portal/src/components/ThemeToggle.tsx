@@ -11,8 +11,11 @@ export function ThemeToggle() {
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const isDark = saved === 'dark';
-    setDark(isDark);
     document.documentElement.classList.toggle('dark', isDark);
+    // SSR hydration: sync browser state on mount (valid pattern for external state)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDark(isDark);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

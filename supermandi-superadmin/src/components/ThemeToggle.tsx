@@ -3,14 +3,13 @@ import { useState, useEffect } from 'react';
 const STORAGE_KEY = 'supermandi-theme';
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY) === 'dark'; } catch { return false; }
+  });
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const isDark = saved === 'dark';
-    setDark(isDark);
-    document.documentElement.classList.toggle('dark', isDark);
-  }, []);
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
 
   const toggle = () => {
     const next = !dark;
