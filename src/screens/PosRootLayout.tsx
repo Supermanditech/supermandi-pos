@@ -197,6 +197,24 @@ export default function PosRootLayout() {
     setSelectedModeInternal(mode);
   }, [storeActive, selectedMode]);
 
+  // LIVE.NAV.POS.PURCHASE_CART_GUARD.001: Prevent leaving SellScan when purchase cart has items
+  useEffect(() => {
+    if (cartItemCount === 0) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (e.data.action.type === 'RESET') return;
+      e.preventDefault();
+      Alert.alert(
+        t('purchase_cart_not_empty', 'Purchase Cart Not Empty'),
+        t('purchase_cart_leave_warning', 'Your purchase cart will be saved. Do you want to leave?'),
+        [
+          { text: t('stay', 'Stay'), style: 'cancel' },
+          { text: t('leave', 'Leave'), style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, cartItemCount, t]);
+
   const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
   const [deviceType, setDeviceType] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
