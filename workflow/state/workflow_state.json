@@ -342,6 +342,8 @@
       "enforceTopLevelOrder": true,
       "maxSubTicketsPerParent": 10,
       "blockSubTicketStartIfParentNotActive": true,
+      "requireInProgressBeforeDone": true,
+      "requireInProgressBeforeDoneEnforceFrom": "2026-02-23T00:00:00Z",
       "requiredLayerChecklist": [
         "ui",
         "ux",
@@ -847,6 +849,21 @@
       "blockDetachedHead": true,
       "blockConflictMarkers": true,
       "allowDirtyStagingBatchManifest": true,
+      "enforceStatuses": [
+        "ready_for_operator_test",
+        "ready_for_impact_retest",
+        "ready_for_lock",
+        "locked"
+      ],
+      "enforceStatusesEnforceFrom": "2026-02-23T00:00:00Z",
+      "requireCiGatePassedStatuses": [
+        "done",
+        "ready_for_operator_test",
+        "ready_for_impact_retest",
+        "ready_for_lock",
+        "locked"
+      ],
+      "requireCiGatePassedEnforceFrom": "2026-02-23T00:00:00Z",
       "allowedDirtyFilesBeforeStagingDeploy": [
         "workflow/state/staging_batch.json"
       ]
