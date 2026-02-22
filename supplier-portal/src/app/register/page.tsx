@@ -76,9 +76,27 @@ function loadSavedSupRegState(): Partial<{
 
 export default function RegisterPageWrapper() {
   return (
-    <Suspense fallback={<div className="text-center py-8">Loading...</div>}>
+    <Suspense fallback={<RegisterSkeleton />}>
       <RegisterPage />
     </Suspense>
+  );
+}
+
+function RegisterSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-8 bg-slate-200 rounded w-2/3" />
+      <div className="h-4 bg-slate-100 rounded w-full" />
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i}>
+            <div className="h-4 bg-slate-100 rounded w-1/4 mb-2" />
+            <div className="h-10 bg-slate-100 rounded w-full" />
+          </div>
+        ))}
+      </div>
+      <div className="h-12 bg-slate-200 rounded w-full" />
+    </div>
   );
 }
 
