@@ -1,7 +1,7 @@
 // GL-RJ-005: Store Settings Page
 // Allows retailers to configure UPI VPA, tax rates, and store preferences
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
@@ -9,6 +9,7 @@ import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 // RET-005: Import shared UPI validation (single source of truth)
 import { validateUpiVpa } from '../components/UpiInput';
+import { useUnsavedChanges } from '../hooks/useNavigationSafety';
 
 interface StoreSettings {
   upiVpa: string;
@@ -52,6 +53,9 @@ export default function SettingsPage() {
     showTaxBreakdown: false,
   });
 
+  // Track loaded settings for dirty detection
+  const initialSettingsRef = useRef<string>('');
+
   // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,6 +72,16 @@ export default function SettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
+  // Dirty detection: settings changed from loaded state or password fields have content
+  const isDirty = useMemo(() => {
+    const settingsChanged = initialSettingsRef.current !== '' &&
+      JSON.stringify(settings) !== initialSettingsRef.current;
+    const passwordStarted = currentPassword !== '' || newPassword !== '' || confirmPassword !== '';
+    return settingsChanged || passwordStarted;
+  }, [settings, currentPassword, newPassword, confirmPassword]);
+
+  useUnsavedChanges(isDirty);
+
   // Load settings on mount
   useEffect(() => {
     if (!accessToken) return;
@@ -82,7 +96,7 @@ export default function SettingsPage() {
           const s = data.settings || data || {};
           // T-156: Extract receipt settings from nested JSONB or top-level
           const rs = s.receiptSettings || s.receipt_settings || {};
-          setSettings({
+          const loaded: StoreSettings = {
             upiVpa: s.upiVpa || '',
             taxRate: s.taxRate ?? 18,
             storeName: s.storeName || store?.name || '',
@@ -95,7 +109,9 @@ export default function SettingsPage() {
             receiptGstin: rs.gstin || '',
             receiptCustomFooter: rs.customFooter || '',
             showTaxBreakdown: rs.showTaxBreakdown ?? false,
-          });
+          };
+          setSettings(loaded);
+          initialSettingsRef.current = JSON.stringify(loaded);
         }
       } catch (err) {
         console.error('Failed to load settings:', err);
@@ -202,6 +218,7 @@ export default function SettingsPage() {
 
       if (response.ok) {
         setSaveSuccess(true);
+        initialSettingsRef.current = JSON.stringify(settings);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         const data = await safeJson(response);

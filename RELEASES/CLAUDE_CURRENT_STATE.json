@@ -1,5 +1,5 @@
 {
-  "version": "46.0",
+  "version": "46.1",
   "lastUpdated": "2026-02-22T21:30:00.000Z",
   "currentPhase": "IMPLEMENTATION: 5 new nav-guard tickets created. HEAD 3e6f7cda on main. 46 tickets total: 39 done, 5 todo, 1 blocked (IAM), 1 operator-pending (FIX-001). Deploy hold active.",
   "currentTicket": null,
@@ -464,7 +464,7 @@
     "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001": "WORKFLOW_DONE",
     "RETAILER.AUTH.PROBE_PATH.001": "WORKFLOW_DONE",
     "LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001": "WORKFLOW_DONE",
-    "LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001": "WORKFLOW_TODO",
+    "LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001": "WORKFLOW_DONE",
     "LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001": "WORKFLOW_TODO",
     "LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001": "WORKFLOW_TODO",
     "LIVE.NAV.POS.BUY_CART_GUARD.001": "WORKFLOW_TODO",
@@ -1741,7 +1741,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Execute 5 nav-guard tickets one-by-one with WIP=1. Start with LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001.",
+  "nextAction": "Execute remaining 4 nav-guard tickets. Next: LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
