@@ -114,7 +114,7 @@ This audit traces the complete onboarding and activation flows for retailers, su
          │
          ▼
 ┌───────────────────┐
-│ 3. Backend        │ ◄── POST /api/retailer/auth/firebase-login
+│ 3. Backend        │ ◄── POST /api/v1/retailer-admin/auth/firebase-login
 │    Validation     │     backend/services/auth-service/src/routes/retailerAuth.ts:199-217
 └────────┬──────────┘
          │
