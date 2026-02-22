@@ -7,13 +7,15 @@ import { BuildStamp } from '../components/BuildStamp';
 // User arrives from email link: /retailer/reset-password?email=X&token=Y
 // POST /api/v1/retailer-admin/auth/forgot-password/email-reset
 
-type Step = 'form' | 'success';
+type Step = 'form' | 'success' | 'missing-params';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
-  const [step, setStep] = useState<Step>('form');
-  const [email, setEmail] = useState(searchParams.get('email') || '');
-  const [token, setToken] = useState(searchParams.get('token') || '');
+  const paramEmail = searchParams.get('email') || '';
+  const paramToken = searchParams.get('token') || '';
+  const [step, setStep] = useState<Step>(!paramEmail && !paramToken ? 'missing-params' : 'form');
+  const [email, setEmail] = useState(paramEmail);
+  const [token, setToken] = useState(paramToken);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -99,7 +101,24 @@ export default function ResetPasswordPage() {
       <main className="login-main">
         <div className="login-card-container">
           <div className="login-card-box">
-            {step === 'success' ? (
+            {step === 'missing-params' ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '4rem', height: '4rem', background: '#fef2f2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#ef4444' }}>
+                  !
+                </div>
+                <h2 className="login-card-title">Invalid Reset Link</h2>
+                <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
+                  This page requires a valid password reset link from your email. Please request a new reset link.
+                </p>
+                <Link to="/retailer/forgot-password" className="login-btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                  Request Password Reset
+                </Link>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', marginTop: '1rem' }}>
+                  Remember your password?{' '}
+                  <Link to="/retailer/login" className="login-text-link">Sign In</Link>
+                </p>
+              </div>
+            ) : step === 'success' ? (
               <div style={{ textAlign: 'center' }}>
                 <div style={{ width: '4rem', height: '4rem', background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#22c55e' }}>
                   &#10003;

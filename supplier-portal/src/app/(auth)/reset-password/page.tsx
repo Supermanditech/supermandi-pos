@@ -9,7 +9,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 
-type Step = 'form' | 'success';
+type Step = 'form' | 'success' | 'missing-params';
 
 // T-111: Wrap useSearchParams in Suspense boundary (Next.js 16 requirement)
 export default function ResetPasswordPage() {
@@ -22,9 +22,11 @@ export default function ResetPasswordPage() {
 
 function ResetPasswordInner() {
   const searchParams = useSearchParams();
-  const [step, setStep] = useState<Step>('form');
-  const [email, setEmail] = useState(searchParams.get('email') || '');
-  const [token, setToken] = useState(searchParams.get('token') || '');
+  const paramEmail = searchParams.get('email') || '';
+  const paramToken = searchParams.get('token') || '';
+  const [step, setStep] = useState<Step>(!paramEmail && !paramToken ? 'missing-params' : 'form');
+  const [email, setEmail] = useState(paramEmail);
+  const [token, setToken] = useState(paramToken);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -87,6 +89,36 @@ function ResetPasswordInner() {
       setIsLoading(false);
     }
   };
+
+  if (step === 'missing-params') {
+    return (
+      <>
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl text-red-500">!</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+            Invalid Reset Link
+          </h2>
+          <p className="text-slate-600 text-sm mb-6">
+            This page requires a valid password reset link from your email. Please request a new reset link.
+          </p>
+          <Link
+            href="/forgot-password"
+            className="btn btn-primary w-full py-3 block text-center"
+          >
+            Request Password Reset
+          </Link>
+          <p className="text-slate-600 text-sm mt-4">
+            Remember your password?{' '}
+            <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </>
+    );
+  }
 
   if (step === 'success') {
     return (
