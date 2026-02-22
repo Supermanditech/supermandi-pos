@@ -480,6 +480,21 @@ function parseIsoTimestamp(value) {
   return parsed;
 }
 
+function shouldApplyCreatedAtEnforcement(ticket, enforceFrom) {
+  if (!isNonEmptyString(enforceFrom)) {
+    return true;
+  }
+  const enforceAt = parseIsoTimestamp(enforceFrom);
+  if (enforceAt === null) {
+    return true;
+  }
+  const createdAt = parseIsoTimestamp(ticket?.timestamps?.createdAt);
+  if (createdAt === null) {
+    return true;
+  }
+  return createdAt >= enforceAt;
+}
+
 const LIVE_EXECUTION_PHASE_VALUES = new Set(['ticketization', 'implementation', 'deploy']);
 const LIVE_EXECUTION_DEFAULT_BLOCKED_STATUSES = [
   'in_progress',
@@ -504,6 +519,7 @@ const PRODUCTION_ETHICS_DEFAULT_STATUSES = [
   'ready_for_lock',
   'locked',
 ];
+const GIT_DISCIPLINE_DEFAULT_ENFORCE_STATUSES = [...READY_STATUSES];
 const PRODUCTION_READINESS_CHECK_STATUS_VALUES = new Set([
   'pending',
   'pass',
@@ -709,6 +725,26 @@ function getProductionGradeCodingEthicsRules(state) {
     progressPercentScanFields: progressPercentScanFields.length > 0
       ? progressPercentScanFields
       : ['description', 'readiness.summary'],
+  };
+}
+
+function getGitDisciplineRules(state) {
+  const rules = state?.rules?.gitDiscipline || {};
+  const enforceStatuses = normalizeStringArray(rules.enforceStatuses).filter((status) => TICKET_STATUS_VALUES.has(status));
+  const requireCiGatePassedStatuses = normalizeStringArray(rules.requireCiGatePassedStatuses).filter(
+    (status) => TICKET_STATUS_VALUES.has(status)
+  );
+  return {
+    enforceStatuses: enforceStatuses.length > 0
+      ? enforceStatuses
+      : GIT_DISCIPLINE_DEFAULT_ENFORCE_STATUSES,
+    enforceStatusesEnforceFrom: isNonEmptyString(rules.enforceStatusesEnforceFrom)
+      ? rules.enforceStatusesEnforceFrom.trim()
+      : '',
+    requireCiGatePassedStatuses,
+    requireCiGatePassedEnforceFrom: isNonEmptyString(rules.requireCiGatePassedEnforceFrom)
+      ? rules.requireCiGatePassedEnforceFrom.trim()
+      : '',
   };
 }
 
@@ -2454,9 +2490,10 @@ function validateProductionReadinessTransitionGate(context, ticket, from, to, ac
   return errors;
 }
 
-function validateGitDisciplineSection(ticket, label, status) {
+function validateGitDisciplineSection(ticket, label, status, state) {
   const errors = [];
   const section = ticket.gitDiscipline;
+  const rules = getGitDisciplineRules(state);
   if (!section || typeof section !== 'object') {
     errors.push(`${label}: gitDiscipline must be an object`);
     return errors;
@@ -2484,7 +2521,10 @@ function validateGitDisciplineSection(ticket, label, status) {
     errors.push(`${label}: gitDiscipline.evidence must be an array`);
   }
 
-  if (READY_STATUSES.has(status)) {
+  const enforceDiscipline = rules.enforceStatuses.includes(status) &&
+    shouldApplyCreatedAtEnforcement(ticket, rules.enforceStatusesEnforceFrom);
+
+  if (enforceDiscipline) {
     if (section.noMixedScope !== true) {
       errors.push(`${label}: status ${status} requires gitDiscipline.noMixedScope=true`);
     }
@@ -2496,6 +2536,13 @@ function validateGitDisciplineSection(ticket, label, status) {
     } else {
       errors.push(...validateEvidenceRefsExist(section.evidence, label, 'gitDiscipline.evidence'));
     }
+  }
+
+  const requireCiGatePassed = rules.requireCiGatePassedStatuses.includes(status) &&
+    shouldApplyCreatedAtEnforcement(ticket, rules.requireCiGatePassedEnforceFrom);
+
+  if (requireCiGatePassed && section.ciGateStatus !== 'passed') {
+    errors.push(`${label}: status ${status} requires gitDiscipline.ciGateStatus=passed`);
   }
 
   if (LOCK_READY_STATUSES.has(status) && section.ciGateStatus === 'failed') {
@@ -2564,6 +2611,34 @@ function validateSessionBootSection(ticket, label, status, state) {
 
   if (READY_STATUSES.has(status)) {
     requireFiles(requiredFiles.beforeReady, `ready status ${status}`);
+  }
+
+  return errors;
+}
+
+function validateDoneTransitionDiscipline(ticket, label, state) {
+  const errors = [];
+  if (ticket.status !== 'done') {
+    return errors;
+  }
+
+  const rules = state?.rules?.ticketRules || {};
+  if (rules.requireInProgressBeforeDone !== true) {
+    return errors;
+  }
+  if (!shouldApplyCreatedAtEnforcement(ticket, rules.requireInProgressBeforeDoneEnforceFrom)) {
+    return errors;
+  }
+
+  const history = Array.isArray(ticket.statusHistory) ? ticket.statusHistory : [];
+  const hasInProgress = history.some((step) => step && step.to === 'in_progress');
+  const hasInProgressToDone = history.some((step) => step && step.from === 'in_progress' && step.to === 'done');
+
+  if (!hasInProgress) {
+    errors.push(`${label}: status done requires at least one progression into in_progress in statusHistory`);
+  }
+  if (!hasInProgressToDone) {
+    errors.push(`${label}: status done requires an in_progress->done transition in statusHistory`);
   }
 
   return errors;
@@ -2678,9 +2753,10 @@ function validateTicketGatesByStatus(ticket, label, state) {
   errors.push(...validateBuildMapping(ticket, label, status));
   errors.push(...validateDependencyDisclosure(ticket, label, status));
   errors.push(...validateReadinessSection(ticket, label, status));
-  errors.push(...validateGitDisciplineSection(ticket, label, status));
+  errors.push(...validateGitDisciplineSection(ticket, label, status, state));
   errors.push(...validateSessionBootSection(ticket, label, status, state));
   errors.push(...validateProductionInvariants(ticket, label, status));
+  errors.push(...validateDoneTransitionDiscipline(ticket, label, state));
 
   if (Number.isInteger(operator.blockingIssueCount) && operator.blockingIssueCount === 0) {
     if (operator.noBlockingIssueRemaining !== true) {
@@ -3835,6 +3911,51 @@ function validateState(context, options = {}) {
     for (const field of boolFields) {
       if (productionEthicsRules[field] !== undefined && !isBoolean(productionEthicsRules[field])) {
         errors.push(`rules.productionGradeCodingEthics.${field} must be boolean when provided`);
+      }
+    }
+  }
+
+  const gitDisciplineRules = state?.rules?.gitDiscipline;
+  if (
+    gitDisciplineRules !== undefined &&
+    (gitDisciplineRules === null || typeof gitDisciplineRules !== 'object' || Array.isArray(gitDisciplineRules))
+  ) {
+    errors.push('rules.gitDiscipline must be an object when provided');
+  } else if (gitDisciplineRules && typeof gitDisciplineRules === 'object') {
+    const statusArrayFields = ['enforceStatuses', 'requireCiGatePassedStatuses'];
+    for (const field of statusArrayFields) {
+      if (
+        gitDisciplineRules[field] !== undefined &&
+        (!Array.isArray(gitDisciplineRules[field]) ||
+          gitDisciplineRules[field].some((status) => !TICKET_STATUS_VALUES.has(status)))
+      ) {
+        errors.push(`rules.gitDiscipline.${field} must be an array of valid ticket statuses when provided`);
+      }
+    }
+    const timestampFields = ['enforceStatusesEnforceFrom', 'requireCiGatePassedEnforceFrom'];
+    for (const field of timestampFields) {
+      if (gitDisciplineRules[field] !== undefined) {
+        if (!isNonEmptyString(gitDisciplineRules[field])) {
+          errors.push(`rules.gitDiscipline.${field} must be a valid timestamp when provided`);
+          continue;
+        }
+        if (parseIsoTimestamp(gitDisciplineRules[field]) === null) {
+          errors.push(`rules.gitDiscipline.${field} must be a valid timestamp when provided`);
+        }
+      }
+    }
+  }
+
+  const ticketRules = state?.rules?.ticketRules;
+  if (ticketRules && typeof ticketRules === 'object') {
+    if (ticketRules.requireInProgressBeforeDone !== undefined && !isBoolean(ticketRules.requireInProgressBeforeDone)) {
+      errors.push('rules.ticketRules.requireInProgressBeforeDone must be boolean when provided');
+    }
+    if (ticketRules.requireInProgressBeforeDoneEnforceFrom !== undefined) {
+      if (!isNonEmptyString(ticketRules.requireInProgressBeforeDoneEnforceFrom)) {
+        errors.push('rules.ticketRules.requireInProgressBeforeDoneEnforceFrom must be a valid timestamp when provided');
+      } else if (parseIsoTimestamp(ticketRules.requireInProgressBeforeDoneEnforceFrom) === null) {
+        errors.push('rules.ticketRules.requireInProgressBeforeDoneEnforceFrom must be a valid timestamp when provided');
       }
     }
   }

@@ -170,16 +170,22 @@
     {
       "from": "todo",
       "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "session-livefix-navresilience-2026-02-22",
       "at": "2026-02-22T22:00:00.000Z",
-      "by": "claude",
-      "sessionId": "session-livefix-navresilience-2026-02-22"
+      "reason": "Starting implementation of navigation safety guards across all 4 surfaces",
+      "prevHash": "GENESIS",
+      "hash": "5afe40ae1cec220927fce5eba6577095369ccbbe7f3a0aab3b54c4d9d3252481"
     },
     {
       "from": "in_progress",
       "to": "done",
+      "actor": "claude",
+      "sessionId": "session-livefix-navresilience-2026-02-22",
       "at": "2026-02-22T22:30:00.000Z",
-      "by": "claude",
-      "sessionId": "session-livefix-navresilience-2026-02-22"
+      "reason": "Navigation safety guards implemented across retailer, supplier, superadmin, POS — TypeScript clean 4/4",
+      "prevHash": "5afe40ae1cec220927fce5eba6577095369ccbbe7f3a0aab3b54c4d9d3252481",
+      "hash": "89c43ec6ef0744935ec95e4a3d83e60c7f8bf026f315cb9d62e51fb77fcdaf79"
     }
   ],
   "evidence": {
@@ -189,13 +195,13 @@
       "https://staging.supermandi.tech/admin/"
     ],
     "afterVisual": [
-      "retailer-admin/src/hooks/useNavigationSafety.ts — useUnsavedChanges + useDraftStorage hooks",
-      "retailer-admin/src/pages/RetailerOnboardingPage.tsx — beforeunload guard on onboarding form",
-      "supplier-portal/src/hooks/useNavigationSafety.ts — SSR-safe useUnsavedChanges + useDraftStorage",
-      "supplier-portal/src/app/register/page.tsx — beforeunload guard on registration form",
-      "supermandi-superadmin/src/hooks/useNavigationSafety.ts — shared hooks (no forms need guards)",
-      "src/hooks/useCartNavigationGuard.ts — React Navigation beforeRemove guard for POS",
-      "src/screens/SellScanScreen.tsx — inline beforeRemove cart navigation guard with Alert"
+      "retailer-admin/src/hooks/useNavigationSafety.ts",
+      "retailer-admin/src/pages/RetailerOnboardingPage.tsx",
+      "supplier-portal/src/hooks/useNavigationSafety.ts",
+      "supplier-portal/src/app/register/page.tsx",
+      "supermandi-superadmin/src/hooks/useNavigationSafety.ts",
+      "src/hooks/useCartNavigationGuard.ts",
+      "src/screens/SellScanScreen.tsx"
     ],
     "apiProof": [
       "deploy_ref=github://run/22260688109",
@@ -283,7 +289,7 @@
     },
     "deterministicScanIntentResolution": {
       "status": "pass",
-      "evidence": ["src/screens/SellScanScreen.tsx — beforeRemove guard preserves cart state on back navigation, RESET nav type allowed for checkout completion"],
+      "evidence": ["src/screens/SellScanScreen.tsx"],
       "notes": "POS cart navigation is now deterministic: back triggers confirm dialog, checkout RESET bypasses guard."
     },
     "frontendBackendStateParity": {
@@ -308,12 +314,12 @@
     },
     "strictSchemaValidation": {
       "status": "pass",
-      "evidence": ["retailer-admin/src/hooks/useNavigationSafety.ts — DraftEntry<T> typed with JSON.parse in try/catch", "supplier-portal/src/hooks/useNavigationSafety.ts — same pattern with SSR guard"],
+      "evidence": ["retailer-admin/src/hooks/useNavigationSafety.ts", "supplier-portal/src/hooks/useNavigationSafety.ts"],
       "notes": "Draft payloads are typed via DraftEntry<T> generic. Invalid JSON fails gracefully (returns null)."
     },
     "zeroSilentFailures": {
       "status": "pass",
-      "evidence": ["src/screens/SellScanScreen.tsx — Alert.alert shown when cart has items and user tries to leave", "retailer-admin/src/hooks/useNavigationSafety.ts — browser beforeunload dialog shown", "supplier-portal/src/app/register/page.tsx — browser beforeunload dialog shown"],
+      "evidence": ["src/screens/SellScanScreen.tsx", "retailer-admin/src/hooks/useNavigationSafety.ts", "supplier-portal/src/app/register/page.tsx"],
       "notes": "All navigation guards show explicit user feedback (browser dialog or Alert)."
     },
     "structuredAuditLogging": {
@@ -326,16 +332,14 @@
     "productionGradeClaimed": true,
     "pendingInternal": [],
     "pendingExternal": [],
-    "pendingOps": [
-      "Staging deploy to verify guards in GCP environment"
-    ],
+    "pendingOps": [],
     "blocked": false,
     "summary": "DONE. Unsaved-change guards added to retailer onboarding, supplier registration, and POS cart. Shared hooks created for all 3 web portals. SuperAdmin confirmed no guards needed (all immediate API persistence). TypeScript clean (4/4 packages zero errors)."
   },
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001",
-    "lastValidatedCommit": "ae753ed0",
+    "lastValidatedCommit": "27abace2",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "pending",
