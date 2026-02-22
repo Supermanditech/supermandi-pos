@@ -213,7 +213,7 @@ describe('LoginGate', () => {
       const form = otpInput.closest('form')!;
       fireEvent.submit(form);
 
-      expect(screen.getByText('Enter the OTP from your email')).toBeTruthy();
+      expect(screen.getByText('Enter the 6-digit OTP from your email')).toBeTruthy();
     });
 
     it('calls verifyAdminOtp on submit', async () => {

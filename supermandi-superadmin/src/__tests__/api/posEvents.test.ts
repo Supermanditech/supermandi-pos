@@ -6,6 +6,7 @@ vi.stubEnv('VITE_API_BASE_URL', 'https://api.test.com');
 vi.mock('../../api/authToken', () => ({
   getAuthHeaders: () => ({ Authorization: 'Bearer test-token', 'X-Request-ID': 'uuid' }),
   fetchWithTimeout: vi.fn(),
+  hasValidSession: () => true,
 }));
 
 describe('posEvents module', () => {
