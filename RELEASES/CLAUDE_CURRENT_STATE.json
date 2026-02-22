@@ -1,7 +1,7 @@
 {
-  "version": "45.0",
-  "lastUpdated": "2026-02-23T04:00:00.000Z",
-  "currentPhase": "IMPLEMENTATION COMPLETE. HEAD ae753ed0 on main. 41 tickets: 39 done, 1 blocked (IAM), 1 operator-pending (FIX-001). All implementable tickets done. Deploy hold active.",
+  "version": "46.0",
+  "lastUpdated": "2026-02-22T21:30:00.000Z",
+  "currentPhase": "IMPLEMENTATION: 5 new nav-guard tickets created. HEAD 3e6f7cda on main. 46 tickets total: 39 done, 5 todo, 1 blocked (IAM), 1 operator-pending (FIX-001). Deploy hold active.",
   "currentTicket": null,
   "ticketQueue": [
     "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001",
@@ -13,7 +13,12 @@
     "LIVE.AUTH.PARITY.REGISTER_CARD_WIDTH.001",
     "LIVE.AUTH.PARITY.REGISTER_SUCCESS_LEGAL.001",
     "LIVE.AUTH.PARITY.AUTH_FOOTER_BUILDSTAMP.001",
-    "STAGE.BRAND.LOGO_CONSISTENCY.001"
+    "STAGE.BRAND.LOGO_CONSISTENCY.001",
+    "LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001",
+    "LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001",
+    "LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001",
+    "LIVE.NAV.POS.BUY_CART_GUARD.001",
+    "LIVE.NAV.POS.PURCHASE_CART_GUARD.001"
   ],
   "ticketStatus": {
     "T-054": "DONE",
@@ -458,7 +463,12 @@
     "STAGE.SECURITY.SECRET_ROTATION.001": "WORKFLOW_DONE",
     "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001": "WORKFLOW_DONE",
     "RETAILER.AUTH.PROBE_PATH.001": "WORKFLOW_DONE",
-    "LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001": "WORKFLOW_DONE"
+    "LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001": "WORKFLOW_DONE",
+    "LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001": "WORKFLOW_TODO",
+    "LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001": "WORKFLOW_TODO",
+    "LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001": "WORKFLOW_TODO",
+    "LIVE.NAV.POS.BUY_CART_GUARD.001": "WORKFLOW_TODO",
+    "LIVE.NAV.POS.PURCHASE_CART_GUARD.001": "WORKFLOW_TODO"
   },
   "executionPhases": [
     {
@@ -1731,7 +1741,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "ALL IMPLEMENTABLE TICKETS DONE. 39/41 done, 1 blocked (IAM_EDITOR_ROLE), 1 operator-pending (FIX-001). NAV.RESILIENCE implemented — beforeunload guards on retailer onboarding, supplier registration, POS cart. Deploy hold active. Next: operator triggers staging deploy when ready.",
+  "nextAction": "Execute 5 nav-guard tickets one-by-one with WIP=1. Start with LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
