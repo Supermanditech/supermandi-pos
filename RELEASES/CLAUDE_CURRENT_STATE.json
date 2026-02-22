@@ -1,7 +1,7 @@
 {
-  "version": "47.0",
-  "lastUpdated": "2026-02-22T22:00:00.000Z",
-  "currentPhase": "CLEANUP: 46 workflow tickets total — 44 done, 1 ready_for_operator_test (FIX-001), 1 blocked (STAGE.SECURITY.IAM_EDITOR_ROLE.001). HEAD e0658560 on main, 28 ahead of origin. Deploy hold active.",
+  "version": "48.0",
+  "lastUpdated": "2026-02-22T11:29:45.629Z",
+  "currentPhase": "EXTERNAL API READINESS: workflow tickets stable (46 done, 1 blocked, 1 ready_for_operator_test). Legacy T-256..T-298 dependency bucket revised: partnerships done, now awaiting provider API credentials/sandbox + Meta WABA approvals. Deploy hold active.",
   "currentTicket": null,
   "ticketQueue": [],
   "ticketStatus": {
@@ -206,24 +206,24 @@
     "T-253": "DONE",
     "T-254": "DONE",
     "T-255": "DONE",
-    "T-256": "AWAITING_RAZORPAY_API",
-    "T-257": "AWAITING_RAZORPAY_API",
+    "T-256": "AWAITING_RAZORPAYX_API_KEYS",
+    "T-257": "AWAITING_RAZORPAYX_API_KEYS",
     "T-258": "DONE",
     "T-259": "DONE",
     "T-260": "DONE",
     "T-261": "DONE",
     "T-262": "DONE",
     "T-263": "DONE",
-    "T-264": "AWAITING_PARTNERSHIP",
-    "T-265": "AWAITING_PARTNERSHIP",
-    "T-266": "AWAITING_PARTNERSHIP",
-    "T-267": "AWAITING_PARTNERSHIP",
-    "T-268": "AWAITING_PARTNERSHIP",
-    "T-269": "AWAITING_PARTNERSHIP",
-    "T-270": "AWAITING_PARTNERSHIP",
-    "T-271": "AWAITING_PARTNERSHIP",
-    "T-272": "AWAITING_PARTNERSHIP",
-    "T-273": "AWAITING_PARTNERSHIP",
+    "T-264": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-265": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-266": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-267": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-268": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-269": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-270": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-271": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-272": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-273": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
     "T-274": "DONE",
     "T-275": "DONE",
     "T-276": "DONE",
@@ -233,10 +233,10 @@
     "T-280": "DONE",
     "T-281": "DONE",
     "T-282": "DONE",
-    "T-283": "AWAITING_PARTNERSHIP",
-    "T-284": "AWAITING_PARTNERSHIP",
-    "T-285": "AWAITING_PARTNERSHIP",
-    "T-286": "AWAITING_PARTNERSHIP",
+    "T-283": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-284": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-285": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
+    "T-286": "PARTNERSHIP_DONE_AWAITING_PROVIDER_API_SANDBOX",
     "T-287": "DONE",
     "T-288": "DONE",
     "T-289": "DONE",
@@ -246,9 +246,9 @@
     "T-293": "DONE",
     "T-294": "DONE",
     "T-295": "DONE",
-    "T-296": "AWAITING_META_WHATSAPP_API",
-    "T-297": "AWAITING_META_WHATSAPP_API",
-    "T-298": "AWAITING_META_WHATSAPP_API",
+    "T-296": "AWAITING_META_WABA_VERIFICATION_AND_TEMPLATES",
+    "T-297": "AWAITING_META_WABA_VERIFICATION_AND_TEMPLATES",
+    "T-298": "AWAITING_META_WABA_VERIFICATION_AND_TEMPLATES",
     "T-299": "DONE",
     "T-300": "DONE",
     "T-301": "DONE",
@@ -452,7 +452,9 @@
     "LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001": "WORKFLOW_DONE",
     "LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001": "WORKFLOW_DONE",
     "LIVE.NAV.POS.BUY_CART_GUARD.001": "WORKFLOW_DONE",
-    "LIVE.NAV.POS.PURCHASE_CART_GUARD.001": "WORKFLOW_DONE"
+    "LIVE.NAV.POS.PURCHASE_CART_GUARD.001": "WORKFLOW_DONE",
+    "WORKFLOW.GITDISCIPLINE.TODO_MARKER_FALSEPOSITIVE.001": "WORKFLOW_DONE",
+    "LIVE.LOGGING.CONSOLE_RESIDUAL.001": "WORKFLOW_DONE"
   },
   "executionPhases": [
     {
@@ -916,7 +918,7 @@
         "T-261",
         "T-262"
       ],
-      "status": "DONE (8/10, T-256+T-257 awaiting Razorpay API)"
+      "status": "DONE (8/10, T-256+T-257 awaiting RazorpayX API keys + webhook secret + payout account)"
     },
     {
       "phase": 36,
@@ -928,7 +930,7 @@
         "T-266",
         "T-267"
       ],
-      "status": "DONE (T-263 done, T-264→T-267 awaiting partnerships)"
+      "status": "DONE (T-263 done; T-264→T-267 partnership complete, awaiting provider sandbox/API credentials)"
     },
     {
       "phase": 37,
@@ -941,7 +943,7 @@
         "T-272",
         "T-273"
       ],
-      "status": "AWAITING_PARTNERSHIP (all 6 need provider agreements)"
+      "status": "PARTNERSHIP_DONE_AWAITING_API_ACCESS (all 6 need sandbox/API credentials)"
     },
     {
       "phase": 38,
@@ -972,7 +974,7 @@
         "T-289",
         "T-290"
       ],
-      "status": "DONE (10/13 done, T-283→T-286 awaiting partnerships)"
+      "status": "DONE (10/13 done; T-283→T-286 partnership complete, awaiting provider sandbox/API credentials)"
     },
     {
       "phase": 40,
@@ -991,7 +993,7 @@
         "T-301",
         "T-302"
       ],
-      "status": "DONE (9/12, T-296→T-298 awaiting Meta WhatsApp API)"
+      "status": "DONE (9/12; T-296→T-298 awaiting Meta WABA verification + template approval + production access)"
     },
     {
       "phase": 41,
@@ -1725,7 +1727,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Git-discipline cleanup in progress. FIX-001 awaits operator test. IAM_EDITOR_ROLE blocked on operator. Deploy hold active.",
+  "nextAction": "Operator-directed: skip operator test for now. Keep FIX-001 parked at ready_for_operator_test. Prepare API-contract implementation plans for T-256..T-298 and execute only after credentials/sandbox access are available.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",

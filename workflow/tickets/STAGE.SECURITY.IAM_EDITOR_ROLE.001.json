@@ -301,10 +301,15 @@
       "Security/IAM review approval"
     ],
     "pendingOps": [
-      "Re-run IAM diff after binding changes"
+      "Create dedicated runtime service account for each Cloud Run service (or one constrained shared runtime SA) and remove dependency on default compute SA.",
+      "Grant minimum required IAM roles to runtime SA(s): run.invoker (where needed), cloudsql.client, secretmanager.secretAccessor, artifactregistry.reader, logging.logWriter, monitoring.metricWriter.",
+      "Update all 6 Cloud Run staging services to use the new runtime SA(s), then verify traffic is 100% on updated revisions.",
+      "Validate runtime health + auth flows on staging after SA migration (health/version/auth/POS endpoints).",
+      "After successful migration, remove roles/editor from 807429885586-compute@developer.gserviceaccount.com and capture IAM policy diff evidence.",
+      "Re-run IAM diff after binding changes and attach pre/post policy JSON plus exact gcloud commands used."
     ],
     "blocked": true,
-    "summary": "BLOCKED: Requires dedicated Cloud Run service account before removing roles/editor. Too risky for cleanup pass."
+    "summary": "BLOCKED: Operator IAM remediation required. First migrate Cloud Run services to dedicated least-privilege runtime SA(s), then remove roles/editor from default compute SA with pre/post IAM evidence."
   },
   "gitDiscipline": {
     "workBranch": "fix/RET-P0-batch-retailer-admin-audit",

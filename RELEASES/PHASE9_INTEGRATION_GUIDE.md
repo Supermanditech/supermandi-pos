@@ -193,7 +193,7 @@ Since 12 of 14 providers need partnerships, the **abstraction layer (T-263/B-1)*
 - **Existing pattern**: `credit_offers.offer_source` already supports `'OCEN' | 'SUPERMANDI' | 'PARTNER_BANK'` — extend with provider IDs
 - **Mock provider**: Create `MockCreditProvider` for staging testing
 
-#### T-264 (B-2): Rupifi integration 🔑 NEEDS PARTNERSHIP
+#### T-264 (B-2): Rupifi integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **API Docs**: https://developers.rupifi.com/docs/rupifi-bnpl/
 - **Integration model**: Anchor (SuperMandi) → Merchant (retailer) → Lender (Rupifi's NBFC partner)
 - **Flow**: Marketplace checkout → Rupifi BNPL as payment option → user selects → loan created → supplier paid instantly → retailer repays 15-60 days
@@ -201,25 +201,25 @@ Since 12 of 14 providers need partnerships, the **abstraction layer (T-263/B-1)*
 - **Action when partnership ready**: Implement `RupifiCreditProvider` extending `CreditProvider` interface
 - **Contact**: developers.rupifi.com or contact@rupifi.com
 
-#### T-265 (B-3): KredX integration 🔑 NEEDS PARTNERSHIP
+#### T-265 (B-3): KredX integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Website**: https://www.kredx.com/channel-finance/
 - **Key feature**: API integration in <24 hours (per KredX claims), multi-financier on single integration
 - **Model**: Closed-loop digital supply chain financing — brands/enterprises get instant payment, buyers get credit
 - **Action when partnership ready**: Implement `KredXCreditProvider`
 
-#### T-266 (B-4): Mintifi integration 🔑 NEEDS PARTNERSHIP
+#### T-266 (B-4): Mintifi integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Website**: https://mintifi.com
 - **NBFC**: Own NBFC (Mintifi Finserve Private Limited, RBI-registered middle layer)
 - **Model**: Data-driven SCF — collateral-free inventory + purchase financing through brand partnerships
 - **Series E**: $270M raised — well-funded, reliable partner
 - **Action when partnership ready**: Implement `MintifiCreditProvider`
 
-#### T-267 (B-5): Trevex integration 🔑 NEEDS PARTNERSHIP
+#### T-267 (B-5): Trevex integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Website**: https://www.trevex.io/b2b-bnpl
 - **Model**: White-label BNPL via lending partner
 - **Action when partnership ready**: Implement `TrevexCreditProvider`
 
-#### T-268 (B-6): Lendingkart integration 🔑 NEEDS PARTNERSHIP (BEST SANDBOX ACCESS)
+#### T-268 (B-6): Lendingkart integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX (BEST SANDBOX ACCESS)
 - **API Docs**: https://www.lendingkart.com/docs/xlr8/api/
 - **Sandbox**: ✅ UAT at `gateway-qa.lendingkart.io` — credentials from Partnerships SPOC
 - **Go-live**: ~1 week after UAT approval
@@ -227,23 +227,23 @@ Since 12 of 14 providers need partnerships, the **abstraction layer (T-263/B-1)*
 - **Revenue**: ₹898Cr — largest among Tier 2 providers
 - **Action when partnership ready**: Implement `LendingkartCreditProvider` — best candidate for FIRST integration due to documented sandbox
 
-#### T-269 (B-7): FlexiLoans integration 🔑 NEEDS PARTNERSHIP
+#### T-269 (B-7): FlexiLoans integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **API Docs**: Via FintegrationFS — REST API documented
 - **Model**: RBI-registered NBFC, collateral-free ₹50K-₹1Cr, 24-48h approval
 - **Action when partnership ready**: Implement `FlexiLoansCreditProvider`
 
-#### T-270 (B-8): Progcap integration 🔑 NEEDS PARTNERSHIP
+#### T-270 (B-8): Progcap integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Website**: https://www.progcap.com/products-services
 - **Product**: FRCL (Fast Rotation Credit Line) — aligns with inventory turnover cycles
 - **Scale**: $3B+ disbursed, semi-urban/rural India focus
 - **App**: `app.progfin.com` (Progfin is the NBFC arm)
 - **Action when partnership ready**: Implement `ProgcapCreditProvider`
 
-#### T-271 (B-9): NeoGrowth integration 🔑 NEEDS PARTNERSHIP
+#### T-271 (B-9): NeoGrowth integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Model**: POS-based lending — repayment via daily sales deduction
 - **Action when partnership ready**: Implement `NeoGrowthCreditProvider`
 
-#### T-272 (B-10): Finova Capital integration 🔑 NEEDS PARTNERSHIP
+#### T-272 (B-10): Finova Capital integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **HQ**: Jaipur, Rajasthan — 180 branches in RJ/MP/UP
 - **Focus**: Kirana stores — strongest local fit for SuperMandi's Rajasthan launch
 - **Scale**: 30K+ customers, own NBFC
@@ -288,21 +288,21 @@ Since 12 of 14 providers need partnerships, the **abstraction layer (T-263/B-1)*
 #### T-282 (B-20): Provider comparison engine ✅ CAN CODE NOW
 - **Action**: Side-by-side offers sorted by total cost — "Rupifi: ₹2L at 1.5%/mo" vs "KredX: ₹5L at 1.2%/mo"
 
-#### T-283 (B-21): KredX invoice discounting (Supplier side) 🔑 NEEDS PARTNERSHIP
+#### T-283 (B-21): KredX invoice discounting (Supplier side) 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - Same KredX partnership as T-265
 
-#### T-284 (B-22): M1xchange TReDS integration 🔑 NEEDS PARTNERSHIP
+#### T-284 (B-22): M1xchange TReDS integration 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Platform**: RBI-licensed TReDS — invoice discounting via bank bidding
 - **Scale**: ₹1.7L Cr+ processed, 70K+ MSMEs, 70 banks/NBFCs
 - **Integration**: Via NPCI Bharat Connect B2B API framework
 - **Contact**: m1xchange.com
 
-#### T-285 (B-23): Vayana trade credit 🔑 NEEDS PARTNERSHIP
+#### T-285 (B-23): Vayana trade credit 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Docs**: docs.enriched-api.vayana.com (GST/e-invoicing APIs documented)
 - **Scale**: USD 30B+ financed, 300K+ enterprises
 - **Trade finance docs**: docs.gsp.vayana.com for compliance APIs
 
-#### T-286 (B-24): Credlix invoice factoring 🔑 NEEDS PARTNERSHIP
+#### T-286 (B-24): Credlix invoice factoring 🔑 PARTNERSHIP DONE — NEEDS API CREDENTIALS/SANDBOX
 - **Website**: credlix.com
 - **Model**: 90% of invoice in 24h, PO financing, non-recourse
 

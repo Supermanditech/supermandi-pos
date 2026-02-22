@@ -240,10 +240,10 @@ Events, Devices, Stores, Suppliers, Applications, Analytics (8 sub-tabs), Paymen
 
 ## PHASE 9: PAYMENTS + B2B FINANCE + WHATSAPP + AI (T-253 → T-316) — DONE (45/64)
 
-> 64 tickets across 8 sub-phases (9A→9H). 45 codeable tickets complete. 19 awaiting external dependencies:
-> - 2 awaiting Razorpay API (T-256, T-257)
-> - 14 awaiting BNPL partnerships (T-264→T-273, T-283→T-286)
-> - 3 awaiting Meta WhatsApp API (T-296→T-298)
+> 64 tickets across 8 sub-phases (9A→9H). 45 codeable tickets complete. 19 awaiting external API onboarding dependencies:
+> - 2 awaiting RazorpayX credentials/webhook secrets (T-256, T-257)
+> - 14 partnerships complete; awaiting provider sandbox/API credentials (T-264→T-273, T-283→T-286)
+> - 3 awaiting Meta WABA verification + template approval + production access (T-296→T-298)
 
 ---
 
