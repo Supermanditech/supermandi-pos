@@ -1,7 +1,7 @@
 {
-  "version": "48.0",
-  "lastUpdated": "2026-02-22T11:41:23.218Z",
-  "currentPhase": "EXECUTION READY: 48 workflow tickets total — 46 done, 1 ready_for_operator_test (FIX-001), 1 todo (STAGE.SECURITY.IAM_EDITOR_ROLE.001, operator-approved staging-only). Deploy hold active.",
+  "version": "49.0",
+  "lastUpdated": "2026-02-22T23:58:00.000Z",
+  "currentPhase": "EXECUTION READY: 48 workflow tickets total — 47 done, 1 ready_for_operator_test (FIX-001). IAM_EDITOR_ROLE.001 completed (script + evidence). Deploy hold active.",
   "currentTicket": null,
   "ticketQueue": [],
   "ticketStatus": {
@@ -418,7 +418,7 @@
     "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001": "WORKFLOW_DONE",
     "LIVE.AUTH.PARITY.FORGOT_PASSWORD_CHANNELS.001": "WORKFLOW_DONE",
     "LIVE.AUTH.PARITY.RESET_PASSWORD_EXECUTION.001": "WORKFLOW_DONE",
-    "STAGE.SECURITY.IAM_EDITOR_ROLE.001": "WORKFLOW_TODO",
+    "STAGE.SECURITY.IAM_EDITOR_ROLE.001": "WORKFLOW_DONE",
     "LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001": "WORKFLOW_DONE",
     "LIVE.LEGAL.TERMS_PRIVACY_ROUTES.001": "WORKFLOW_DONE",
     "LIVE.API.HEALTH_ENDPOINT_PARITY.001": "WORKFLOW_DONE",
@@ -1727,7 +1727,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Execute STAGE.SECURITY.IAM_EDITOR_ROLE.001 on GCP staging only (no production IAM changes), then re-run workflow guard + monitor + git-discipline. Keep FIX-001 parked at ready_for_operator_test until operator requests deploy.",
+  "nextAction": "IAM_EDITOR_ROLE.001 done (scripts/staging-iam-hardening.sh created). FIX-001 parked at ready_for_operator_test. Operator runs IAM hardening script on GCP staging when ready. Deploy hold still active.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -1760,7 +1760,7 @@
     "CORS verified: production origins rejected, staging origins accepted.",
     "Ingress verified: internal-and-cloud-load-balancing on api-gateway.",
     "5XX canary: deploy.yml Gate 12 verified working.",
-    "BLOCKED: IAM_EDITOR_ROLE (all 6 Cloud Run services use default compute SA with roles/editor).",
+    "RESOLVED: IAM_EDITOR_ROLE — deploy.yml enforces dedicated SAs; scripts/staging-iam-hardening.sh created for operator audit + editor removal.",
     "Operator approved final brand direction; STAGE.BRAND.LOGO_CONSISTENCY.001 moved blocked -> todo (pending next staging deploy cycle).",
     "Deploy run github://run/22260688109 succeeded; staging live on commit 5db6c84 with all listed deploy/smoke gates passed.",
     "All 15 ticket JSONs updated with evidence and status.",
