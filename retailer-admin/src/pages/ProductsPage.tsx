@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson, API_GATEWAY_BASE } from '../lib/api';
@@ -14,6 +14,7 @@ import { useUrlState } from '../hooks/useUrlState';
 // GAP-2: EmptyState component for consistent empty states
 import EmptyState from '../components/EmptyState';
 import { Package } from 'lucide-react';
+import { useUnsavedChanges } from '../hooks/useNavigationSafety';
 
 interface Supplier {
   id: string;
@@ -187,11 +188,23 @@ export default function ProductsPage() {
   // T-058: Variant management state
   const [variantProduct, setVariantProduct] = useState<{ id: string; name: string } | null>(null);
 
+  // LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001: Snapshot form state on open for dirty tracking
+  const formOpenSnapshotRef = useRef<string>('');
+
   // Bulk upload state
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [bulkData, setBulkData] = useState('');
   const [bulkPreview, setBulkPreview] = useState<Partial<Product>[]>([]);
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+
+  // LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001: Unsaved-change guard
+  const isFormDirty = useMemo(() => {
+    if (!showForm && !showBulkUpload) return false;
+    if (showBulkUpload) return bulkData.trim() !== '';
+    return formOpenSnapshotRef.current !== '' &&
+      JSON.stringify(formData) !== formOpenSnapshotRef.current;
+  }, [showForm, showBulkUpload, formData, bulkData]);
+  useUnsavedChanges(isFormDirty);
 
   // Handle ?action=create and ?category=... query params from dashboard navigation
   useEffect(() => {
@@ -200,6 +213,7 @@ export default function ProductsPage() {
       setShowForm(true);
       setEditingProduct(null);
       setFormData(initialFormData);
+      formOpenSnapshotRef.current = JSON.stringify(initialFormData);
       searchParams.delete('action');
       setSearchParams(searchParams, { replace: true });
     }
@@ -336,7 +350,7 @@ export default function ProductsPage() {
   // Open edit form
   const openEditForm = (product: Product) => {
     setEditingProduct(product);
-    setFormData({
+    const editData: ProductFormData = {
       barcode: product.barcode || '',
       name: product.name,
       description: product.description || '',
@@ -364,7 +378,9 @@ export default function ProductsPage() {
       categoryId: product.categoryId || '',
       // GL-WF-029: BNPL eligibility
       bnplEligible: product.bnplEligible || false,
-    });
+    };
+    setFormData(editData);
+    formOpenSnapshotRef.current = JSON.stringify(editData);
     setShowForm(true);
     setError('');
     setSuccess('');
@@ -755,6 +771,7 @@ export default function ProductsPage() {
                 setShowBulkUpload(false);
                 setEditingProduct(null);
                 setFormData(initialFormData);
+                formOpenSnapshotRef.current = JSON.stringify(initialFormData);
                 setError('');
                 setSuccess('');
               }
@@ -1605,7 +1622,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                       ? 'Try a different search term or clear the search.'
                       : 'Add your first product to get started with inventory management.'}
                     action={!searchTerm ? (
-                      <button className="btn btn-primary" onClick={() => { setShowForm(true); setEditingProduct(null); setFormData(initialFormData); }}>
+                      <button className="btn btn-primary" onClick={() => { setShowForm(true); setEditingProduct(null); setFormData(initialFormData); formOpenSnapshotRef.current = JSON.stringify(initialFormData); }}>
                         + Add Product
                       </button>
                     ) : undefined}
