@@ -126,7 +126,6 @@ const TAB_LABELS: Record<TabKey, string> = {
   suppliers: "Suppliers",
   payments: "Payments",
   analytics: "Analytics",
-  ai: "AI Assistant",
   audit: "Audit Logs",
   users: "Users",
   settings: "Settings",
@@ -1817,7 +1816,6 @@ export default function App() {
     const shouldRefreshSuppliers = tab === "suppliers";
     const shouldRefreshUsers = tab === "users";
     const shouldRefreshSettings = tab === "settings";
-    const shouldRefreshAi = tab === "ai";
     const shouldRefreshAudit = tab === "audit"; // GO-LIVE-011
     const shouldRefreshDocuments = tab === "documents"; // DOCS-001
     const shouldRefreshRegEvents = tab === "registrations"; // RO-007
@@ -1832,11 +1830,6 @@ export default function App() {
     if (shouldRefreshSuppliers) r.refreshSuppliers?.();
     if (shouldRefreshUsers) r.refreshUsers?.();
     if (shouldRefreshSettings) { r.refreshSettings?.(); refreshFeatureFlags(); }
-    if (shouldRefreshAi) {
-      fetchAiHealth()
-        .then((res) => setAiConfigured(res.configured))
-        .catch(() => setAiConfigured(null));
-    }
     if (shouldRefreshAudit) r.refreshAuditLogs?.(); // GO-LIVE-011
     if (shouldRefreshDocuments) r.refreshDocuments?.(); // DOCS-001
     if (shouldRefreshRegEvents) r.refreshRegEvents?.(); // RO-007
@@ -1854,11 +1847,6 @@ export default function App() {
       if (shouldRefreshSuppliers) r.refreshSuppliers?.();
       if (shouldRefreshUsers) r.refreshUsers?.();
       if (shouldRefreshSettings) r.refreshSettings?.();
-      if (shouldRefreshAi) {
-        fetchAiHealth()
-          .then((res) => setAiConfigured(res.configured))
-          .catch(() => setAiConfigured(null));
-      }
       if (shouldRefreshAudit) r.refreshAuditLogs?.();
       if (shouldRefreshDocuments) r.refreshDocuments?.();
       r.refreshRegEvents?.(); // DR-010: Always poll for badge count
