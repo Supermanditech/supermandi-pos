@@ -11,7 +11,7 @@ import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
-  const { supplier, refreshProfile } = useAuth();
+  const { supplier, refreshProfile, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'bank'>('profile');
 
   // Profile form state
@@ -154,6 +154,19 @@ export default function ProfilePage() {
       </span>
     );
   };
+
+  if (authLoading) {
+    return (
+      <div className="animate-pulse space-y-4">
+        <div className="h-6 bg-slate-200 rounded w-1/3" />
+        <div className="h-4 bg-slate-100 rounded w-1/2" />
+        <div className="h-10 bg-slate-200 rounded w-full mt-4" />
+        <div className="card space-y-3">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-10 bg-slate-200 rounded" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

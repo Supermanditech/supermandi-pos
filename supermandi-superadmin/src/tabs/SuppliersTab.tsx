@@ -5,12 +5,18 @@ import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChan
 import { toggleAutoApproval, publishProduct, batchProductAction } from "../api/suppliers";
 
 // FIX-048: Light error boundary for modal dialogs — shows close button instead of crashing app
+// UNMAPPED.045: Reset hasError when resetKey changes (e.g., different product opened)
 class ModalErrorBoundary extends Component<
-  { children: React.ReactNode; onClose: () => void },
+  { children: React.ReactNode; onClose: () => void; resetKey?: string },
   { hasError: boolean }
 > {
   state = { hasError: false };
   static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidUpdate(prevProps: { resetKey?: string }) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false });
+    }
+  }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("[FIX-048] Modal error boundary caught:", error, info.componentStack);
   }
@@ -805,7 +811,7 @@ export function SuppliersTab({
             </div>
 
             {/* FIX-048: Error boundary prevents malformed data from crashing entire app */}
-            <ModalErrorBoundary onClose={handleCloseEditProduct}>
+            <ModalErrorBoundary onClose={handleCloseEditProduct} resetKey={editingProduct.id}>
             <div className="modalBody">
               {/* T-162: Larger product image preview (200x200) in detail modal */}
               <div style={{ marginBottom: 16, textAlign: "center" }}>

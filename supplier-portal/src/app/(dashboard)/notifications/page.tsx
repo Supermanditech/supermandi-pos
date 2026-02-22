@@ -106,7 +106,17 @@ export default function NotificationsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Loading notifications...</div>
+        <div className="space-y-3 p-4 animate-pulse">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex gap-3 p-3 bg-white rounded-lg border border-slate-100">
+              <div className="w-10 h-10 bg-slate-200 rounded-full flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-slate-200 rounded w-3/4" />
+                <div className="h-3 bg-slate-100 rounded w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : error ? (
         <div className="text-center py-12">
           <AlertTriangle size={48} className="text-red-300 mx-auto mb-4" />

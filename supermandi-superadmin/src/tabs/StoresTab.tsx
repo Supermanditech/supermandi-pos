@@ -306,9 +306,37 @@ export function StoresTab({
       )}
 
       {storeDirectory.length === 0 ? (
-        <div className="empty">
-          {storeDirectoryLoading ? "Loading stores..." : "No stores found."}
-        </div>
+        storeDirectoryLoading ? (
+          /* UNMAPPED.044: Loading skeleton for initial store fetch */
+          <div className="tableWrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th style={{ width: 32 }}>&nbsp;</th>
+                  <th>Store ID</th>
+                  <th>Store Name</th>
+                  <th>Contact</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <tr key={i}>
+                    <td><div style={{ width: 14, height: 14, background: "#e2e8f0", borderRadius: 3 }} /></td>
+                    <td><div style={{ height: 14, width: "80%", background: "#e2e8f0", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: "70%", background: "#e2e8f0", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: "50%", background: "#e2e8f0", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: 60, background: "#e2e8f0", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: 50, background: "#e2e8f0", borderRadius: 4 }} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty">No stores found.</div>
+        )
       ) : (
         <div className="tableWrap">
           <table className="table">

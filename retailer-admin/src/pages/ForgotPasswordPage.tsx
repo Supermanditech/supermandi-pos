@@ -8,8 +8,26 @@ import { BuildStamp } from '../components/BuildStamp';
 // Channel 1: Phone → OTP verify → new password
 // Channel 2: Email → reset link → token form → new password
 
-type Step = 'choose' | 'phone' | 'otp' | 'newPassword' | 'success' | 'emailSent' | 'emailReset';
+type Step = 'choose' | 'phone' | 'emailEntry' | 'otp' | 'newPassword' | 'success' | 'emailSent' | 'emailReset';
 type Channel = 'otp' | 'email';
+
+function PasswordChecklist({ password }: { password: string }) {
+  const checks = [
+    { label: 'At least 8 characters', pass: password.length >= 8 },
+    { label: 'One uppercase letter', pass: /[A-Z]/.test(password) },
+    { label: 'One lowercase letter', pass: /[a-z]/.test(password) },
+    { label: 'One digit', pass: /\d/.test(password) },
+  ];
+  return (
+    <ul style={{ listStyle: 'none', padding: 0, margin: '0.25rem 0 0', fontSize: '0.75rem' }}>
+      {checks.map((c) => (
+        <li key={c.label} style={{ color: c.pass ? '#16a34a' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.25rem', lineHeight: '1.5' }}>
+          <span>{c.pass ? '\u2713' : '\u2022'}</span> {c.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState<Step>('choose');
@@ -312,13 +330,13 @@ export default function ForgotPasswordPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <button
                     onClick={() => selectChannel('otp')}
-                    className="login-btn-primary"
+                    className={channel === 'otp' ? 'login-btn-primary login-btn-channel-active' : 'login-btn-secondary'}
                   >
                     Reset via mobile OTP
                   </button>
                   <button
-                    onClick={() => { setChannel('email'); setStep('phone'); setError(''); }}
-                    className="login-btn-secondary"
+                    onClick={() => { setChannel('email'); setStep('emailEntry'); setError(''); }}
+                    className={channel === 'email' ? 'login-btn-primary login-btn-channel-active' : 'login-btn-secondary'}
                   >
                     Reset via email link
                   </button>
@@ -371,7 +389,7 @@ export default function ForgotPasswordPage() {
             )}
 
             {/* Email Channel: Email Entry */}
-            {step === 'phone' && channel === 'email' && (
+            {step === 'emailEntry' && (
               <>
                 <h2 className="login-card-title">Reset Password</h2>
                 <p className="login-card-subtitle">Enter your registered email address and we'll send you a password reset link.</p>
@@ -412,8 +430,8 @@ export default function ForgotPasswordPage() {
                   </div>
                   <h2 className="login-card-title">Check Your Email</h2>
                   <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
-                    If an account exists with <strong>{email}</strong>, we've sent a password reset link.
-                    Please check your inbox and spam folder.
+                    We've sent a password reset link to <strong>{email}</strong>.
+                    Please check your inbox and spam folder. It may take a few minutes to arrive.
                   </p>
                   <button
                     onClick={() => setStep('emailReset')}
@@ -422,7 +440,7 @@ export default function ForgotPasswordPage() {
                     I Have a Reset Token
                   </button>
                   <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
-                    <button type="button" onClick={() => { setStep('phone'); setChannel('email'); setError(''); }} className="login-text-link">
+                    <button type="button" onClick={() => { setStep('emailEntry'); setError(''); }} className="login-text-link">
                       Try a different email
                     </button>
                   </div>
@@ -448,7 +466,7 @@ export default function ForgotPasswordPage() {
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="emailreset-new-password">New Password</label>
                     <input id="emailreset-new-password" name="newPassword" type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
-                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+                    <PasswordChecklist password={newPassword} />
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="emailreset-confirm-password">Confirm Password</label>
@@ -525,7 +543,7 @@ export default function ForgotPasswordPage() {
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="otpreset-new-password">New Password</label>
                     <input id="otpreset-new-password" name="newPassword" type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
-                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+                    <PasswordChecklist password={newPassword} />
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="otpreset-confirm-password">Confirm Password</label>

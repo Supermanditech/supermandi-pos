@@ -119,6 +119,7 @@ function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const recaptchaInitialized = useRef(false);
   const [idToken, setIdToken] = useState('');
+  const idTokenObtainedAt = useRef<number>(0);
 
   // Step 2: Business Details — restore from sessionStorage
   const [applicationId, setApplicationId] = useState(saved.current.applicationId || '');
@@ -303,6 +304,7 @@ function RegisterPage() {
     try {
       const token = await verifyOtp(otp);
       setIdToken(token);
+      idTokenObtainedAt.current = Date.now();
       setStep('details');
       toast.success('Phone verified successfully!');
     } catch (err) {
@@ -387,9 +389,11 @@ function RegisterPage() {
       return;
     }
 
-    // REG-SUP-002: Validate idToken exists before making API call
-    if (!idToken) {
-      setError('Phone verification expired. Please start over.');
+    // REG-SUP-002: Validate idToken exists and hasn't expired (Firebase tokens ~55min)
+    const TOKEN_MAX_AGE_MS = 50 * 60 * 1000; // 50 minutes
+    if (!idToken || (idTokenObtainedAt.current > 0 && Date.now() - idTokenObtainedAt.current > TOKEN_MAX_AGE_MS)) {
+      setError('Phone verification expired. Please verify your phone again.');
+      setIdToken('');
       setStep('phone');
       return;
     }
@@ -1296,7 +1300,10 @@ function RegisterPage() {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => handleDocumentSelect('owner_photo', e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    handleDocumentSelect('owner_photo', e.target.files?.[0] || null);
+                    e.target.value = '';
+                  }}
                   disabled={isLoading}
                 />
               </label>
@@ -1425,7 +1432,11 @@ function DocumentUploadField({
           type="file"
           accept={accept}
           className="hidden"
-          onChange={(e) => onSelect(e.target.files?.[0] || null)}
+          onChange={(e) => {
+            onSelect(e.target.files?.[0] || null);
+            // UNMAPPED.039: Reset input so re-selecting the same file triggers onChange
+            e.target.value = '';
+          }}
           disabled={disabled}
         />
         {document.status === 'uploading' ? (

@@ -155,28 +155,7 @@ export default function SupplierOnboardingPage() {
     setIsLoading(true);
 
     try {
-      // Check if GSTIN already exists
-      const checkResult = await checkSupplierGstin(gstin.toUpperCase());
-
-      if (checkResult.exists && checkResult.applicationId) {
-        // GSTIN exists - resume existing application
-        setApplicationId(checkResult.applicationId);
-        setApplicationStatus(checkResult.status || 'DRAFT');
-
-        if (checkResult.status === 'ACTIVE') {
-          // Already approved - redirect to login
-          toast.success('Your account is already approved! Redirecting to login...');
-          setTimeout(() => router.push('/login'), 2000);
-          return;
-        }
-
-        // Resume - go to phone verification
-        toast.success('Existing application found. Continuing...');
-        setStep('phone');
-        return;
-      }
-
-      // Create new application
+      // Combined: Create application (backend handles GSTIN uniqueness check)
       const createResult = await createSupplierApplication({
         phone: phone.replace(/[\s-]/g, ''),
         email: email.trim().toLowerCase(),
@@ -194,12 +173,30 @@ export default function SupplierOnboardingPage() {
         upiVpa: upiVpa.toLowerCase().trim() || undefined,
       });
 
-      setApplicationId(createResult.application?.id || createResult.applicationId || '');
+      const appId = createResult.application?.id || createResult.applicationId;
+      if (!appId || typeof appId !== 'string') {
+        throw new Error('Server returned an unexpected response. Please try again.');
+      }
+      setApplicationId(appId);
       setApplicationStatus(createResult.application?.status || createResult.status || '');
       toast.success('Application created!');
       setStep('phone');
     } catch (err) {
       if (err instanceof ApiError) {
+        // Handle GSTIN already exists — resume existing application
+        const apiErr = err as ApiError & { applicationId?: string; applicationStatus?: string };
+        if ((err.code === 'GSTIN_EXISTS' || err.code === 'APPLICATION_EXISTS') && apiErr.applicationId) {
+          setApplicationId(apiErr.applicationId);
+          setApplicationStatus(apiErr.applicationStatus || 'DRAFT');
+          if (apiErr.applicationStatus === 'ACTIVE') {
+            toast.success('Your account is already approved! Redirecting to login...');
+            setTimeout(() => router.push('/login'), 2000);
+            return;
+          }
+          toast.success('Existing application found. Continuing...');
+          setStep('phone');
+          return;
+        }
         setError(err.message);
       } else {
         setError('Failed to submit. Please try again.');

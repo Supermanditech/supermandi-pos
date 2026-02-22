@@ -57,6 +57,8 @@ export default function LoginPage() {
   const [authMode, setAuthMode] = useState<AuthMode>('otp');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
 
   // T-021: Setup reCAPTCHA when in OTP phone step (initialize early for combined lookup+send)
   useEffect(() => {
@@ -124,8 +126,13 @@ export default function LoginPage() {
         throw new Error(data.message || 'Failed to check registration status');
       }
 
-      // Handle lookup result
+      // Handle lookup result — UNMAPPED.006: validate action enum
+      const KNOWN_ACTIONS = ['REGISTER_REQUIRED', 'PENDING_APPROVAL', 'ACCOUNT_SUSPENDED', 'VERIFY_PHONE', 'UPLOAD_DOCUMENTS', 'FIX_REQUIRED', 'CONTACT_SUPPORT', 'LOGIN_ALLOWED'] as const;
       const action = data.action;
+      if (typeof action !== 'string' || !(KNOWN_ACTIONS as readonly string[]).includes(action)) {
+        setError('Unexpected server response. Please try again or contact support.');
+        return;
+      }
       if (action === 'REGISTER_REQUIRED') {
         setStep('not_onboarded');
         return;
@@ -200,19 +207,24 @@ export default function LoginPage() {
         user: result.user,
       });
 
+      // UNMAPPED.006: Validate store objects from backend
+      const validStores = (result.stores || []).filter(
+        (s): s is Store => Boolean(s && typeof s.id === 'string' && typeof s.code === 'string' && s.code.length > 0 && typeof s.name === 'string')
+      );
+
       // Handle stores based on count
-      if (result.stores.length === 0) {
+      if (validStores.length === 0) {
         // No stores assigned
         setStores([]);
         setStep('stores');
-      } else if (result.stores.length === 1) {
+      } else if (validStores.length === 1) {
         // Auto-enter single store
-        const store = result.stores[0];
+        const store = validStores[0];
         login(result.token, result.refreshToken || '', result.user, store);
         navigate(`/s/${store.code}`, { replace: true });
       } else {
         // Multiple stores - show picker
-        setStores(result.stores);
+        setStores(validStores);
         setStep('stores');
       }
     } catch (err) {
@@ -259,6 +271,10 @@ export default function LoginPage() {
       setError('Please enter your email address');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
     if (!password) {
       setError('Please enter your password');
       return;
@@ -281,15 +297,20 @@ export default function LoginPage() {
       const result = data as OtpLoginResponse;
       setAuthData({ token: result.token, refreshToken: result.refreshToken || '', user: result.user });
 
-      if (result.stores.length === 0) {
+      // UNMAPPED.006: Validate store objects from backend
+      const validStores = (result.stores || []).filter(
+        (s): s is Store => Boolean(s && typeof s.id === 'string' && typeof s.code === 'string' && s.code.length > 0 && typeof s.name === 'string')
+      );
+
+      if (validStores.length === 0) {
         setStores([]);
         setStep('stores');
-      } else if (result.stores.length === 1) {
-        const store = result.stores[0];
+      } else if (validStores.length === 1) {
+        const store = validStores[0];
         login(result.token, result.refreshToken || '', result.user, store);
         navigate(`/s/${store.code}`, { replace: true });
       } else {
-        setStores(result.stores);
+        setStores(validStores);
         setStep('stores');
       }
     } catch (err) {
@@ -446,22 +467,37 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => setEmailTouched(true)}
                     disabled={isLoading}
                     autoFocus
                   />
+                  {emailTouched && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && (
+                    <p style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.25rem' }}>Please enter a valid email address</p>
+                  )}
                 </div>
                 <div className="login-form-group">
                   <label className="login-form-label" htmlFor="login-password">Password</label>
-                  <input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    className="login-form-input"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      id="login-password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      className="login-form-input"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                      style={{ paddingRight: '3rem' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8125rem', padding: 0 }}
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                 </div>
 
                 <button

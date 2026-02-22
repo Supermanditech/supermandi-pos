@@ -12,6 +12,24 @@ import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/
 type Step = 'choose' | 'phone' | 'otp' | 'newPassword' | 'success' | 'email' | 'emailSent' | 'emailReset';
 type Channel = 'otp' | 'email';
 
+function PasswordChecklist({ password }: { password: string }) {
+  const checks = [
+    { label: 'At least 8 characters', pass: password.length >= 8 },
+    { label: 'One uppercase letter', pass: /[A-Z]/.test(password) },
+    { label: 'One lowercase letter', pass: /[a-z]/.test(password) },
+    { label: 'One digit', pass: /\d/.test(password) },
+  ];
+  return (
+    <ul className="list-none p-0 mt-1 text-xs space-y-0.5">
+      {checks.map((c) => (
+        <li key={c.label} className={`flex items-center gap-1 ${c.pass ? 'text-green-600' : 'text-slate-400'}`}>
+          <span>{c.pass ? '\u2713' : '\u2022'}</span> {c.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState<Step>('choose');
   const [channel, setChannel] = useState<Channel>('otp');
@@ -424,7 +442,7 @@ export default function ForgotPasswordPage() {
               disabled={isLoading}
               autoFocus
             />
-            <p className="text-xs text-slate-500 mt-1">Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+            <PasswordChecklist password={newPassword} />
           </div>
           <div>
             <label htmlFor="confirmPassword" className="label">Confirm Password</label>
@@ -615,7 +633,7 @@ export default function ForgotPasswordPage() {
               placeholder="Enter new password"
               disabled={isLoading}
             />
-            <p className="text-xs text-slate-500 mt-1">Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+            <PasswordChecklist password={newPassword} />
           </div>
           <div>
             <label htmlFor="confirmPasswordEmail" className="label">Confirm Password</label>

@@ -3,10 +3,11 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { MessageSquare, Send, ArrowLeft, Search, Headphones } from 'lucide-react';
+import { MessageSquare, Send, ArrowLeft, Search, Headphones, Image, Paperclip } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 // UIUX-SUP-006: Use centralized apiFetch (auth via HttpOnly cookies, 401 redirect, 30s timeout)
 import { apiFetch as globalApiFetch } from '@/lib/api';
@@ -55,9 +56,10 @@ function formatTime(iso: string | null): string {
 }
 
 export default function SupplierChatPage() {
+  const searchParams = useSearchParams();
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -68,7 +70,11 @@ export default function SupplierChatPage() {
     refetchInterval: 10000,
   });
 
-  const conversations: Conversation[] = (convData as { conversations?: Conversation[] })?.conversations || [];
+  const conversations: Conversation[] = useMemo(() => {
+    const raw = (convData as { conversations?: unknown[] })?.conversations;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((c): c is Conversation => c != null && typeof (c as Conversation).id === 'string');
+  }, [convData]);
   const selectedConv = conversations.find(c => c.id === selectedConvId);
 
   // Fetch messages for selected conversation
@@ -79,7 +85,11 @@ export default function SupplierChatPage() {
     refetchInterval: 5000,
   });
 
-  const messages: ChatMessage[] = ((msgData as { messages?: ChatMessage[] })?.messages || []).slice().reverse();
+  const messages: ChatMessage[] = useMemo(() => {
+    const raw = (msgData as { messages?: unknown[] })?.messages;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((m): m is ChatMessage => m != null && typeof (m as ChatMessage).id === 'string').slice().reverse();
+  }, [msgData]);
 
   // Mark as read when selecting conversation
   useEffect(() => {
@@ -157,7 +167,17 @@ export default function SupplierChatPage() {
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {convLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading...</div>
+            <div style={{ padding: '0.75rem 1rem' }}>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 20, background: '#e2e8f0' }} className="animate-pulse" />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ height: 12, background: '#e2e8f0', borderRadius: 4, width: '60%', marginBottom: 6 }} className="animate-pulse" />
+                    <div style={{ height: 10, background: '#f1f5f9', borderRadius: 4, width: '80%' }} className="animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : filteredConversations.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
               No conversations yet
@@ -269,7 +289,7 @@ export default function SupplierChatPage() {
                       }}>
                         {msg.attachmentName && (
                           <div style={{ fontSize: '0.75rem', color: isOwn ? 'rgba(255,255,255,0.8)' : '#64748b', marginBottom: 4 }}>
-                            {msg.messageType === 'image' ? '📷' : '📎'} {msg.attachmentName}
+                            {msg.messageType === 'image' ? <Image size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> : <Paperclip size={12} style={{ display: 'inline', verticalAlign: 'middle' }} />} {msg.attachmentName}
                           </div>
                         )}
                         {msg.content && <div style={{ fontSize: '0.85rem', lineHeight: 1.4 }}>{msg.content}</div>}

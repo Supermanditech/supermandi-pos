@@ -106,6 +106,40 @@ export function AnalyticsTab({
 
         {analyticsError && <div className="banner" style={{ marginTop: 12 }}>{analyticsError}</div>}
 
+        {/* UNMAPPED.041: Loading skeleton when data is null and loading */}
+        {analyticsLoading && (
+          <div style={{ marginTop: 12, padding: 24, textAlign: "center" }}>
+            <div style={{ display: "inline-block", width: 24, height: 24, border: "3px solid #e2e8f0", borderTopColor: "#6366f1", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <div className="muted" style={{ marginTop: 8 }}>Loading analytics...</div>
+          </div>
+        )}
+
+        {/* UNMAPPED.041: Empty state when data is null and not loading */}
+        {!analyticsLoading && !analyticsError && analyticsTab === "overview" && !overviewData && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No overview data available. Click Refresh to load.</div>
+        )}
+        {!analyticsLoading && !analyticsError && analyticsTab === "devices" && !analyticsDevices && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No device data available. Click Refresh to load.</div>
+        )}
+        {!analyticsLoading && !analyticsError && analyticsTab === "products" && !analyticsProducts && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No product data available. Click Refresh to load.</div>
+        )}
+        {!analyticsLoading && !analyticsError && analyticsTab === "payments" && !overviewData && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No payment data available. Click Refresh to load.</div>
+        )}
+        {!analyticsLoading && !analyticsError && analyticsTab === "purchases" && !analyticsPurchases && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No purchase data available. Click Refresh to load.</div>
+        )}
+        {!analyticsLoading && !analyticsError && analyticsTab === "consumer" && !analyticsConsumerSales && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No consumer sales data available. Click Refresh to load.</div>
+        )}
+        {!analyticsLoading && !analyticsError && analyticsTab === "activity" && !analyticsActivity && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No activity data available. Click Refresh to load.</div>
+        )}
+        {!analyticsLoading && !analyticsError && analyticsTab === "dues" && !analyticsDues && (
+          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No dues data available. Click Refresh to load.</div>
+        )}
+
         {analyticsTab === "overview" && overviewData && (
           <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
             <div className="analyticsGrid">

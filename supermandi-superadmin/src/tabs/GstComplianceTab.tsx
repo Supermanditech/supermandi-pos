@@ -105,9 +105,31 @@ export function GstComplianceTab() {
         </div>
       )}
 
+      {/* UNMAPPED.043: Loading skeleton for initial overview fetch */}
+      {loading && !overview && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} style={{ padding: "1rem", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "0.75rem" }}>
+              <div style={{ height: 12, width: "60%", background: "#e2e8f0", borderRadius: 4, marginBottom: 8 }} />
+              <div style={{ height: 20, width: "80%", background: "#e2e8f0", borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Stores table */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>Loading GST data...</div>
+        <div style={{ padding: "1.5rem" }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} style={{ display: "flex", gap: "1rem", padding: "0.75rem 0", borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ height: 14, width: "25%", background: "#e2e8f0", borderRadius: 4 }} />
+              <div style={{ height: 14, width: "20%", background: "#e2e8f0", borderRadius: 4 }} />
+              <div style={{ height: 14, width: "15%", background: "#e2e8f0", borderRadius: 4 }} />
+              <div style={{ height: 14, width: "15%", background: "#e2e8f0", borderRadius: 4 }} />
+              <div style={{ height: 14, width: "10%", background: "#e2e8f0", borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
       ) : overview && overview.stores.length > 0 ? (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
           <thead>

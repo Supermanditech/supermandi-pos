@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { phoneOtpLogin, loginSupplier, ApiError, lookupSupplierRegistration } from '@/lib/api';
+import { phoneOtpLogin, loginSupplier, ApiError, lookupSupplierRegistration, apiFetch } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 
@@ -283,9 +283,8 @@ export default function LoginPage() {
     // Best-effort backend clear — expire DRAFT application so GSTIN/phone can be reused
     if (phone) {
       try {
-        await fetch(`/api/v1/supplier/registration/clear`, {
+        await apiFetch('/api/v1/supplier/registration/clear', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: phone.trim() }),
         });
       } catch { /* ignore — best-effort clear */ }
@@ -298,6 +297,17 @@ export default function LoginPage() {
     recaptchaInitialized.current = false;
     sessionStorage.removeItem('supermandi_supplier_reg_state');
   };
+
+  if (!mounted) {
+    return (
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 bg-slate-200 rounded w-2/3" />
+        <div className="h-4 bg-slate-100 rounded w-1/2" />
+        <div className="h-10 bg-slate-200 rounded" />
+        <div className="h-12 bg-slate-200 rounded" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -357,6 +367,9 @@ export default function LoginPage() {
               disabled={isLoading}
               autoFocus
             />
+            {phone.trim().length > 0 && phone.replace(/[\s\-()]/g, '').length < 10 && (
+              <p className="text-xs text-slate-400 mt-1">Enter a 10-digit mobile number</p>
+            )}
           </div>
 
           <button

@@ -10,7 +10,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import EmptyState from '@/components/EmptyState';
 import { formatCurrency } from '@/lib/formatters';
 import { apiFetch } from '@/lib/api';
-import { ShieldCheck, Package } from 'lucide-react';
+import { ShieldCheck, Package, Banknote, AlertTriangle, CheckCircle2, Activity } from 'lucide-react';
 
 interface BnplOrder {
   drawdownId: string;
@@ -95,21 +95,21 @@ export default function BnplOrdersPage() {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="text-xs text-slate-500">Total Financed</div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500"><Banknote size={14} /> Total Financed</div>
             <div className="text-lg font-bold mt-1">{formatCurrency(summary.totalFinancedMinor)}</div>
           </div>
           <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="text-xs text-slate-500">Outstanding</div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500"><AlertTriangle size={14} /> Outstanding</div>
             <div className={`text-lg font-bold mt-1 ${summary.outstandingMinor > 0 ? 'text-red-600' : ''}`}>
               {formatCurrency(summary.outstandingMinor)}
             </div>
           </div>
           <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="text-xs text-slate-500">Repaid</div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500"><CheckCircle2 size={14} /> Repaid</div>
             <div className="text-lg font-bold mt-1 text-green-600">{formatCurrency(summary.totalRepaidMinor)}</div>
           </div>
           <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="text-xs text-slate-500">Active Orders</div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500"><Activity size={14} /> Active Orders</div>
             <div className="text-lg font-bold mt-1">{summary.activeOrders}</div>
           </div>
         </div>
@@ -135,7 +135,17 @@ export default function BnplOrdersPage() {
       {/* Table */}
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-400">Loading...</div>
+          <div className="p-4 space-y-3 animate-pulse">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="h-4 bg-slate-200 rounded w-1/4" />
+                <div className="h-4 bg-slate-200 rounded w-1/6" />
+                <div className="h-4 bg-slate-200 rounded w-1/6" />
+                <div className="h-4 bg-slate-200 rounded w-1/6" />
+                <div className="h-4 bg-slate-200 rounded w-1/6" />
+              </div>
+            ))}
+          </div>
         ) : isError ? (
           <div className="p-4 text-red-600 flex items-center gap-2">
             Failed to load BNPL orders.

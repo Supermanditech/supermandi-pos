@@ -184,6 +184,7 @@ const styles = {
   },
   textLinkDisabled: { color: '#9ca3af', cursor: 'not-allowed' },
   optionalBadge: { fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400, marginLeft: '0.25rem' },
+  requiredStar: { color: '#dc2626', fontWeight: 600 } as React.CSSProperties,
   fieldError: { fontSize: '0.8125rem', color: '#dc2626', marginTop: '0.25rem' },
   footer: { background: 'white', borderTop: '1px solid #e2e8f0' },
   footerInner: {
@@ -418,6 +419,7 @@ export default function RegisterPage() {
     setStep('phone');
     setOtp('');
     setIdToken('');
+    setApplicationId('');
     setError('');
     recaptchaInitialized.current = false;
   };
@@ -766,13 +768,13 @@ export default function RegisterPage() {
                 <h3 style={styles.sectionHeader}>Business Identity</h3>
                 <div style={styles.gridTwo}>
                   <div style={styles.gridFull}>
-                    <label style={styles.label} htmlFor="reg-business-name">Business / Store Name *</label>
+                    <label style={styles.label} htmlFor="reg-business-name">Business / Store Name <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-business-name" name="businessName" type="text" style={styles.input} placeholder="e.g. Sharma General Store"
                       value={businessName} onChange={(e) => setBusinessName(e.target.value)} disabled={isLoading} autoFocus />
                     {fieldErrors.businessName && <div style={styles.fieldError}>{fieldErrors.businessName}</div>}
                   </div>
                   <div>
-                    <label style={styles.label} htmlFor="reg-business-type">Business Type *</label>
+                    <label style={styles.label} htmlFor="reg-business-type">Business Type <span style={styles.requiredStar}>*</span></label>
                     <select id="reg-business-type" name="businessType" style={styles.select} value={businessType} onChange={(e) => setBusinessType(e.target.value)} disabled={isLoading}>
                       <option value="">Select business type</option>
                       {BUSINESS_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -781,17 +783,19 @@ export default function RegisterPage() {
                   </div>
                   {businessType === 'other' && (
                     <div>
-                      <label style={styles.label} htmlFor="reg-business-type-other">Specify Business Type *</label>
+                      <label style={styles.label} htmlFor="reg-business-type-other">Specify Business Type <span style={styles.requiredStar}>*</span></label>
                       <input id="reg-business-type-other" name="businessTypeOther" type="text" style={styles.input} placeholder="e.g. Wholesale Club"
                         value={businessTypeOther} onChange={(e) => setBusinessTypeOther(e.target.value)} disabled={isLoading} />
                       {fieldErrors.businessTypeOther && <div style={styles.fieldError}>{fieldErrors.businessTypeOther}</div>}
                     </div>
                   )}
                   <div>
-                    <label style={styles.label} htmlFor="reg-gstin">GSTIN *</label>
+                    <label style={styles.label} htmlFor="reg-gstin">GSTIN <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-gstin" name="gstin" type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="22AAAAA0000A1Z5" maxLength={15}
                       value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} disabled={isLoading} />
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>15-character GST Identification Number</div>
+                    <div style={{ fontSize: '0.75rem', color: gstin.length === 15 ? '#16a34a' : '#94a3b8', marginTop: '0.25rem' }}>
+                      {gstin.length}/15 characters {gstin.length === 15 ? '— Valid length' : '— GST Identification Number'}
+                    </div>
                     {fieldErrors.gstin && <div style={styles.fieldError}>{fieldErrors.gstin}</div>}
                   </div>
                 </div>
@@ -802,7 +806,7 @@ export default function RegisterPage() {
                 <h3 style={styles.sectionHeader}>Contact Person</h3>
                 <div style={styles.gridTwo}>
                   <div>
-                    <label style={styles.label} htmlFor="reg-owner-name">Owner / Authorized Person Name *</label>
+                    <label style={styles.label} htmlFor="reg-owner-name">Owner / Authorized Person Name <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-owner-name" name="ownerName" type="text" style={styles.input} placeholder="e.g. Rajesh Sharma"
                       value={ownerName} onChange={(e) => setOwnerName(e.target.value)} disabled={isLoading} />
                     {fieldErrors.ownerName && <div style={styles.fieldError}>{fieldErrors.ownerName}</div>}
@@ -826,7 +830,7 @@ export default function RegisterPage() {
                 <h3 style={styles.sectionHeader}>Business Address</h3>
                 <div style={styles.gridTwo}>
                   <div style={styles.gridFull}>
-                    <label style={styles.label} htmlFor="reg-address1">Address Line 1 *</label>
+                    <label style={styles.label} htmlFor="reg-address1">Address Line 1 <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-address1" name="addressLine1" type="text" style={styles.input} placeholder="Building name, Street"
                       value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} disabled={isLoading} />
                     {fieldErrors.addressLine1 && <div style={styles.fieldError}>{fieldErrors.addressLine1}</div>}
@@ -837,13 +841,13 @@ export default function RegisterPage() {
                       value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} disabled={isLoading} />
                   </div>
                   <div>
-                    <label style={styles.label} htmlFor="reg-city">City *</label>
+                    <label style={styles.label} htmlFor="reg-city">City <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-city" name="city" type="text" style={styles.input} placeholder="City"
                       value={city} onChange={(e) => setCity(e.target.value)} disabled={isLoading} />
                     {fieldErrors.city && <div style={styles.fieldError}>{fieldErrors.city}</div>}
                   </div>
                   <div>
-                    <label style={styles.label} htmlFor="reg-state">State *</label>
+                    <label style={styles.label} htmlFor="reg-state">State <span style={styles.requiredStar}>*</span></label>
                     <select id="reg-state" name="state" style={styles.select} value={selectedState} onChange={(e) => setSelectedState(e.target.value)} disabled={isLoading}>
                       <option value="">Select state</option>
                       {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -851,23 +855,26 @@ export default function RegisterPage() {
                     {fieldErrors.state && <div style={styles.fieldError}>{fieldErrors.state}</div>}
                   </div>
                   <div>
-                    <label style={styles.label} htmlFor="reg-pincode">Pincode *</label>
+                    <label style={styles.label} htmlFor="reg-pincode">Pincode <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-pincode" name="pincode" type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="400001" maxLength={6}
                       value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} disabled={isLoading} />
+                    <div style={{ fontSize: '0.75rem', color: pincode.length === 6 ? '#16a34a' : '#94a3b8', marginTop: '0.25rem' }}>
+                      {pincode.length}/6 digits {pincode.length === 6 ? '— Valid' : ''}
+                    </div>
                     {fieldErrors.pincode && <div style={styles.fieldError}>{fieldErrors.pincode}</div>}
                   </div>
                 </div>
               </div>
 
               {/* Agreement Card */}
-              <div style={styles.sectionCard}>
+              <div style={{ ...styles.sectionCard, borderColor: agreement ? '#22c55e' : '#f59e0b', borderWidth: '2px' }}>
                 <label style={styles.checkboxLabel}>
                   <input type="checkbox" checked={agreement} onChange={(e) => setAgreement(e.target.checked)} disabled={isLoading}
-                    style={{ marginTop: '0.25rem', width: '20px', height: '20px' }} />
+                    style={{ marginTop: '0.25rem', width: '20px', height: '20px', accentColor: '#2563eb' }} />
                   <span>
                     I confirm that all the details provided are correct and accurate. I agree to the{' '}
                     <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Privacy Policy</a>. *
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Privacy Policy</a>. <span style={styles.requiredStar}>*</span>
                   </span>
                 </label>
                 {fieldErrors.agreement && <div style={styles.fieldError}>{fieldErrors.agreement}</div>}
@@ -949,9 +956,12 @@ export default function RegisterPage() {
                         disabled={isUploading}
                       />
                       {isUploading && (
-                        <div style={{ textAlign: 'center' }}>
+                        <div style={{ textAlign: 'center', width: '100%' }}>
                           <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '0.5rem' }} />
-                          <p style={{ color: '#64748b', margin: 0 }}>Uploading...</p>
+                          <p style={{ color: '#64748b', margin: '0 0 0.5rem' }}>Uploading...</p>
+                          <div style={{ width: '80%', height: '4px', background: '#e2e8f0', borderRadius: '999px', margin: '0 auto', overflow: 'hidden' }}>
+                            <div style={{ width: '70%', height: '100%', background: '#2563eb', borderRadius: '999px', animation: 'uploadProgress 1.5s ease-in-out infinite' }} />
+                          </div>
                         </div>
                       )}
                       {isUploaded && (

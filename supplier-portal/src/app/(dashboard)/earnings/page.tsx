@@ -11,7 +11,7 @@ import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import Breadcrumb from '@/components/Breadcrumb';
 // GAP-3: EmptyState component for consistent empty states
 import EmptyState from '@/components/EmptyState';
-import { Wallet } from 'lucide-react';
+import { Wallet, AlertTriangle } from 'lucide-react';
 
 export default function EarningsPage() {
   const [page, setPage] = useState(1);
@@ -79,7 +79,7 @@ export default function EarningsPage() {
       {kycStatus && !kycStatus.payoutReady && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
-            <span className="text-xl">⚠️</span>
+            <AlertTriangle className="text-yellow-500 flex-shrink-0" size={20} />
             <div>
               <p className="font-medium text-yellow-800">Complete KYC to Receive Payouts</p>
               <p className="text-sm text-yellow-700 mt-1">
@@ -107,6 +107,16 @@ export default function EarningsPage() {
       )}
 
       {/* Summary Cards */}
+      {summaryLoading && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="card animate-pulse">
+              <div className="h-4 bg-slate-200 rounded w-1/2 mb-2" />
+              <div className="h-8 bg-slate-200 rounded w-3/4" />
+            </div>
+          ))}
+        </div>
+      )}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="card">

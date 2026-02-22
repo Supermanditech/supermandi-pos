@@ -4,8 +4,8 @@
 // User arrives here from the reset link in their email, or manually enters token
 // POST /api/v1/supplier/auth/reset-password with { email, token, newPassword }
 
-import { Suspense, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useState, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 
@@ -39,6 +39,7 @@ function ResetPasswordSkeleton() {
 }
 
 function ResetPasswordInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const paramEmail = searchParams.get('email') || '';
   const paramToken = searchParams.get('token') || '';
@@ -49,6 +50,24 @@ function ResetPasswordInner() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // UNMAPPED.040: Redirect countdown on success
+  const [countdown, setCountdown] = useState(5);
+  const countdownRef = useRef<ReturnType<typeof setInterval>>();
+  useEffect(() => {
+    if (step !== 'success') return;
+    setCountdown(5);
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current);
+          router.push('/login');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(countdownRef.current);
+  }, [step, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,8 +174,11 @@ function ResetPasswordInner() {
             href="/login"
             className="btn btn-primary w-full py-3 block text-center"
           >
-            Sign In
+            Sign In{countdown > 0 ? ` (${countdown}s)` : ''}
           </Link>
+          <p className="text-slate-400 text-xs mt-3">
+            Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
+          </p>
         </div>
       </>
     );

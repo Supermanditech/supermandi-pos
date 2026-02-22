@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { formatCurrency } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
+import { Package, Clock, ShoppingCart, DollarSign, AlertTriangle, FileText, Plus } from 'lucide-react';
 
 function StatCard({
   title,
@@ -17,7 +18,7 @@ function StatCard({
 }: {
   title: string;
   value: string | number;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   href?: string;
 }) {
@@ -30,7 +31,11 @@ function StatCard({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500">{title}</p>
-          <p className="text-2xl font-bold text-slate-800 mt-1">{value}</p>
+          {value === '-' ? (
+            <div className="h-8 w-20 bg-slate-200 rounded mt-1 animate-pulse" />
+          ) : (
+            <p className="text-2xl font-bold text-slate-800 mt-1">{value}</p>
+          )}
         </div>
         <div
           className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center text-2xl`}
@@ -100,7 +105,7 @@ export default function DashboardPage() {
       {/* GL-WF-058: Pending products visibility indicator */}
       {displayStats.pendingProducts > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-          <span className="text-amber-500 text-xl">⚠️</span>
+          <AlertTriangle className="text-amber-500 flex-shrink-0" size={20} />
           <div>
             <p className="font-medium text-amber-800">
               {displayStats.pendingProducts} product{displayStats.pendingProducts > 1 ? 's' : ''} pending approval
@@ -136,29 +141,29 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           title="Total Products"
-          value={statsLoading ? '...' : displayStats.totalProducts}
-          icon="📦"
+          value={statsLoading ? '-' : displayStats.totalProducts}
+          icon={<Package size={24} className="text-blue-600" />}
           color="bg-blue-100"
           href="/products"
         />
         <StatCard
           title="Pending Approval"
-          value={statsLoading ? '...' : displayStats.pendingProducts}
-          icon="⏳"
+          value={statsLoading ? '-' : displayStats.pendingProducts}
+          icon={<Clock size={24} className="text-yellow-600" />}
           color="bg-yellow-100"
           href="/products"
         />
         <StatCard
           title="Active Orders"
-          value={statsLoading ? '...' : displayStats.pendingOrders}
-          icon="🛒"
+          value={statsLoading ? '-' : displayStats.pendingOrders}
+          icon={<ShoppingCart size={24} className="text-green-600" />}
           color="bg-green-100"
           href="/orders"
         />
         <StatCard
           title="Total Revenue"
-          value={statsLoading ? '...' : formatCurrency(displayStats.totalRevenue)}
-          icon="💰"
+          value={statsLoading ? '-' : formatCurrency(displayStats.totalRevenue)}
+          icon={<DollarSign size={24} className="text-purple-600" />}
           color="bg-purple-100"
         />
       </div>
@@ -173,19 +178,19 @@ export default function DashboardPage() {
             href="/products?action=add"
             className="btn btn-primary flex items-center gap-2"
           >
-            <span>+</span> Add Product
+            <Plus size={16} /> Add Product
           </Link>
           <Link
             href="/upload"
             className="btn btn-secondary flex items-center gap-2"
           >
-            <span>📄</span> Upload CSV
+            <FileText size={16} /> Upload CSV
           </Link>
           <Link
             href="/orders"
             className="btn btn-secondary flex items-center gap-2"
           >
-            <span>🛒</span> View Orders
+            <ShoppingCart size={16} /> View Orders
           </Link>
         </div>
       </div>

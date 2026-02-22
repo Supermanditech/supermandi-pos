@@ -105,7 +105,19 @@ export default function InvoicesPage() {
       )}
 
       {/* Loading */}
-      {isLoading && <div className="p-8 text-center text-slate-400">Loading invoices...</div>}
+      {isLoading && (
+        <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3 animate-pulse">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex gap-4">
+              <div className="h-4 bg-slate-200 rounded w-1/5" />
+              <div className="h-4 bg-slate-200 rounded w-1/6" />
+              <div className="h-4 bg-slate-200 rounded w-1/4" />
+              <div className="h-4 bg-slate-200 rounded w-1/6" />
+              <div className="h-4 bg-slate-200 rounded w-1/6" />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Empty */}
       {!isLoading && !isError && invoices.length === 0 && (
@@ -182,7 +194,15 @@ export default function InvoicesPage() {
           onClick={() => setSelectedId(null)}>
           <div className="bg-white rounded-lg w-[90%] max-w-2xl max-h-[85vh] overflow-auto p-6"
             onClick={e => e.stopPropagation()}>
-            {detailLoading && <div className="p-8 text-center text-slate-400">Loading...</div>}
+            {detailLoading && (
+              <div className="p-4 space-y-3 animate-pulse">
+                <div className="h-6 bg-slate-200 rounded w-1/3" />
+                <div className="grid grid-cols-2 gap-2">
+                  {[...Array(6)].map((_, i) => <div key={i} className="h-4 bg-slate-200 rounded" />)}
+                </div>
+                <div className="h-32 bg-slate-200 rounded" />
+              </div>
+            )}
             {detail && (
               <>
                 <div className="flex justify-between items-center mb-4">

@@ -6,6 +6,7 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { CheckCircle2, Clock } from 'lucide-react';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
 import {
@@ -223,12 +224,25 @@ export default function KycPage() {
         </p>
       </div>
 
+      {/* Loading skeleton */}
+      {(statusLoading || docsLoading) && !kycStatus && (
+        <div className="card mb-6 animate-pulse">
+          <div className="flex gap-4">
+            <div className="w-12 h-12 bg-slate-200 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="h-5 bg-slate-200 rounded w-1/3" />
+              <div className="h-4 bg-slate-100 rounded w-2/3" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* GL-WF-043: Payout Readiness Card */}
       {kycStatus && (
         <div className={`card mb-6 border-2 ${kycStatus.payoutReady ? 'border-green-300 bg-green-50' : 'border-yellow-300 bg-yellow-50'}`}>
           <div className="flex items-start gap-4">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${kycStatus.payoutReady ? 'bg-green-200' : 'bg-yellow-200'}`}>
-              {kycStatus.payoutReady ? '✓' : '⏳'}
+              {kycStatus.payoutReady ? <CheckCircle2 size={24} /> : <Clock size={24} />}
             </div>
             <div className="flex-1">
               <h3 className={`font-semibold ${kycStatus.payoutReady ? 'text-green-800' : 'text-yellow-800'}`}>

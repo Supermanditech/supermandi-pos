@@ -65,6 +65,8 @@ export function CreditProvidersTab() {
   const [error, setError] = useState<string | null>(null);
   // UIUX-SA-011: Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  // UNMAPPED.042: Track which provider is being toggled
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -98,14 +100,17 @@ export function CreditProvidersTab() {
       variant: currentActive ? 'danger' : 'info',
       onConfirm: async () => {
         setConfirmDialog(null);
+        setTogglingId(providerId);
         try {
           await apiFetch(`/api/v1/admin/credit-providers/${providerId}`, {
             method: 'PATCH',
             body: JSON.stringify({ is_active: !currentActive }),
           });
-          fetchAll();
+          await fetchAll();
         } catch (err: unknown) {
           setError(err instanceof Error ? err.message : 'Failed to update');
+        } finally {
+          setTogglingId(null);
         }
       },
     });
@@ -212,18 +217,23 @@ export function CreditProvidersTab() {
                 <td style={{ textAlign: 'center', padding: '0.5rem' }}>
                   <span style={{
                     display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-                    background: p.is_active ? '#22c55e' : '#94a3b8',
+                    background: togglingId === p.provider_id ? '#facc15' : p.is_active ? '#22c55e' : '#94a3b8',
+                    animation: togglingId === p.provider_id ? 'pulse 1s ease-in-out infinite' : undefined,
                   }} />
                 </td>
                 <td style={{ textAlign: 'center', padding: '0.5rem' }}>
                   <button
                     onClick={() => toggleProvider(p.provider_id, p.is_active)}
+                    disabled={togglingId === p.provider_id}
                     style={{
                       fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px',
-                      border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer',
+                      border: '1px solid #e2e8f0',
+                      background: togglingId === p.provider_id ? '#f1f5f9' : 'white',
+                      cursor: togglingId === p.provider_id ? 'wait' : 'pointer',
+                      opacity: togglingId === p.provider_id ? 0.6 : 1,
                     }}
                   >
-                    {p.is_active ? 'Disable' : 'Enable'}
+                    {togglingId === p.provider_id ? 'Updating...' : p.is_active ? 'Disable' : 'Enable'}
                   </button>
                 </td>
               </tr>
