@@ -375,20 +375,18 @@ export default function SupplierOnboardingPage() {
       </h2>
 
       {/* Progress indicator */}
-      {step !== 'success' && (
-        <div className="flex justify-center gap-1 mb-6">
-          {['business', 'phone', 'otp', 'kyc'].map((s, i) => (
-            <div
-              key={s}
-              className={`h-1 w-8 rounded ${
-                ['business', 'phone', 'otp', 'kyc'].indexOf(step) >= i
-                  ? 'bg-primary-600'
-                  : 'bg-slate-200'
-              }`}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex justify-center gap-1 mb-6">
+        {(['business', 'phone', 'otp', 'kyc', 'success'] as const).map((s, i) => (
+          <div
+            key={s}
+            className={`h-1 w-8 rounded ${
+              (['business', 'phone', 'otp', 'kyc', 'success'] as const).indexOf(step) >= i
+                ? 'bg-primary-600'
+                : 'bg-slate-200'
+            }`}
+          />
+        ))}
+      </div>
 
       {/* Firebase warning - only show after client mount */}
       {mounted && !isFirebaseReady() && (step === 'phone' || step === 'otp') && (
