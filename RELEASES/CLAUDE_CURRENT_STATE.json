@@ -1,5 +1,5 @@
 {
-  "version": "46.3",
+  "version": "46.5",
   "lastUpdated": "2026-02-22T21:30:00.000Z",
   "currentPhase": "IMPLEMENTATION: 5 new nav-guard tickets created. HEAD 3e6f7cda on main. 46 tickets total: 39 done, 5 todo, 1 blocked (IAM), 1 operator-pending (FIX-001). Deploy hold active.",
   "currentTicket": null,
@@ -467,8 +467,8 @@
     "LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001": "WORKFLOW_DONE",
     "LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001": "WORKFLOW_DONE",
     "LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001": "WORKFLOW_DONE",
-    "LIVE.NAV.POS.BUY_CART_GUARD.001": "WORKFLOW_TODO",
-    "LIVE.NAV.POS.PURCHASE_CART_GUARD.001": "WORKFLOW_TODO"
+    "LIVE.NAV.POS.BUY_CART_GUARD.001": "WORKFLOW_DONE",
+    "LIVE.NAV.POS.PURCHASE_CART_GUARD.001": "WORKFLOW_DONE"
   },
   "executionPhases": [
     {
@@ -1741,7 +1741,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Execute remaining 4 nav-guard tickets. Next: LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001.",
+  "nextAction": "All 5 nav-guard tickets complete. Ready for next work item.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",

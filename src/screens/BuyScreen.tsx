@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
@@ -100,6 +102,25 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
 
   // GL-AUD-007: BNPL badge state
   const [bnplEnabled, setBnplEnabled] = useState(false);
+
+  // LIVE.NAV.POS.BUY_CART_GUARD.001: Navigation guard when cart has items
+  const navigation = useNavigation<any>();
+  useEffect(() => {
+    if (cartItems.length === 0) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (e.data.action.type === 'RESET') return;
+      e.preventDefault();
+      Alert.alert(
+        t('cart_has_items', 'Cart has items'),
+        t('buy_cart_leave_warning', 'Your purchase cart will be saved. Do you want to leave?'),
+        [
+          { text: t('stay', 'Stay'), style: 'cancel' as const },
+          { text: t('leave', 'Leave'), style: 'destructive' as const, onPress: () => navigation.dispatch(e.data.action) },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, cartItems.length, t]);
 
   // T-146: Offline catalog browsing state
   const [isOffline, setIsOffline] = useState(false);
