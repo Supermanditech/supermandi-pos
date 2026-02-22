@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 // AUTH-PARITY-002: Dual-channel forgot password (OTP + Email)
 // Channel 1: Phone → OTP verify → new password
@@ -311,11 +312,13 @@ export default function ForgotPasswordPage() {
       <header className="login-header">
         <div className="login-header-inner">
           <div className="login-logo">
-            <img src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <img className="brand-mark brand-mark-light" src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <img className="brand-mark brand-mark-dark" src="/retailer/brand/logo-shortmark-inverse.svg" alt="" width={20} height={20} />
             <span className="login-logo-text">SuperMandi</span>
             <span className="login-logo-separator">|</span>
             <span className="login-logo-subtext">Retailer Portal</span>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

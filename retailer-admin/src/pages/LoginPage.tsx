@@ -355,9 +355,10 @@ export default function LoginPage() {
       `}</style>
       {/* T-095: Unified login header */}
       <header className="login-header">
-        <div className="login-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="login-header-inner">
           <div className="login-logo">
-            <img src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <img className="brand-mark brand-mark-light" src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <img className="brand-mark brand-mark-dark" src="/retailer/brand/logo-shortmark-inverse.svg" alt="" width={20} height={20} />
             <span className="login-logo-text">SuperMandi</span>
             <span className="login-logo-separator">|</span>
             <span className="login-logo-subtext">Retailer Portal</span>

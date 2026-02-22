@@ -25,10 +25,12 @@ COPY . .
 # FRONTEND-CR-201: No hardcoded domain — set at build time via --build-arg
 ARG NEXT_PUBLIC_API_BASE_URL=""
 ARG NEXT_PUBLIC_GIT_SHA="unknown"
+ARG NEXT_PUBLIC_BUILD_TIME
 # STAGING-FIX-007: Firebase config comes from .env.production file (NOT Docker ARGs)
 # Empty ARG strings would override file values, so Firebase is loaded from .env.production
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_PUBLIC_GIT_SHA=${NEXT_PUBLIC_GIT_SHA}
+ENV NEXT_PUBLIC_BUILD_TIME=${NEXT_PUBLIC_BUILD_TIME}
 
 # STAGING-AUTH-001: Load Firebase config from .env.production for Next.js build
 # Next.js reads NEXT_PUBLIC_* from .env.production at build time (NODE_ENV=production)

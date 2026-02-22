@@ -133,33 +133,6 @@ export default function ProtectedLayout() {
     <div className="layout-wrapper">
       {/* T-222: Skip to content link for keyboard navigation */}
       <a href="#main-content" className="skip-to-content">Skip to content</a>
-      {/* T-088: Mobile hamburger button — visible only on mobile */}
-      {isMobile && !sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-          style={{
-            position: 'fixed',
-            top: 16,
-            left: 16,
-            zIndex: 40,
-            width: 40,
-            height: 40,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 8,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-            cursor: 'pointer',
-            padding: 0,
-          }}
-        >
-          <Menu style={{ width: 22, height: 22, color: '#1e293b' }} />
-        </button>
-      )}
-
       {/* T-088: Mobile backdrop overlay */}
       {isMobile && sidebarOpen && (
         <div
@@ -277,10 +250,27 @@ export default function ProtectedLayout() {
 
       {/* Main Area */}
       <div className="layout-main">
-        {/* Theme toggle — top-right corner */}
-        <div style={{ position: 'fixed', top: '0.75rem', right: '0.75rem', zIndex: 40 }}>
-          <ThemeToggle />
-        </div>
+        <header className="portal-topbar">
+          <div className="portal-topbar-inner">
+            <div className="portal-topbar-brand">
+              {isMobile && !sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="Open menu"
+                  className="portal-topbar-menu-btn"
+                >
+                  <Menu style={{ width: 20, height: 20 }} />
+                </button>
+              )}
+              <img className="brand-mark brand-mark-light" src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+              <img className="brand-mark brand-mark-dark" src="/retailer/brand/logo-shortmark-inverse.svg" alt="" width={20} height={20} />
+              <span className="login-logo-text portal-brand-pill">SuperMandi</span>
+              <span className="login-logo-separator">|</span>
+              <span className="login-logo-subtext">Retailer Portal</span>
+            </div>
+            <ThemeToggle />
+          </div>
+        </header>
 
         {/* AUDIT-RET-014: Gate debug banner behind DEV — exposes API URLs in production */}
         {import.meta.env.DEV && (

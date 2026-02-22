@@ -63,6 +63,8 @@ export default function MenuScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const showQaMenu = isQaMenuEnabled();
+  const buildShaLabel = String((BUILD_INFO as any).gitSha || (BUILD_INFO as any).version || "unknown");
+  const buildTimeLabel = String((BUILD_INFO as any).buildTime || (BUILD_INFO as any).buildDate || "unknown");
 
   // GO-LIVE-002: Feature flags for section visibility
   const buyEnabled = useSettingsStore((state) => state.buyEnabled);
@@ -1076,6 +1078,12 @@ export default function MenuScreen() {
           </View>
         </View>
       )}
+
+      <View style={styles.releaseBuildInfo}>
+        <Text style={styles.releaseBuildInfoText}>
+          Build: {buildShaLabel} · Deployed: {buildTimeLabel}
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -1389,6 +1397,16 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
+  },
+  releaseBuildInfo: {
+    marginTop: 24,
+    marginBottom: 4,
+    alignItems: "center",
+  },
+  releaseBuildInfoText: {
+    fontSize: 11,
+    fontFamily: "monospace",
+    color: theme.colors.textTertiary,
   },
   devInfoLabel: {
     fontSize: 11,

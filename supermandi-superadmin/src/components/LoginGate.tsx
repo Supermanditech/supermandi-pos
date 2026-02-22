@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { sendAdminOtp, verifyAdminOtp } from "../api/authToken";
 import { ThemeToggle } from "./ThemeToggle";
+import { BuildStamp } from "./BuildStamp";
 
 export function LoginGate({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState("");
@@ -78,14 +79,17 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--color-bg)' }}>
       {/* T-095: Unified login header — shortmark + brand text + portal name */}
-      <header style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} />
-          <span style={{ marginLeft: 10, fontWeight: 700, fontSize: 18, color: '#fff', background: '#2563EB', borderRadius: 999, padding: '4px 12px', lineHeight: 1 }}>SuperMandi</span>
-          <span style={{ margin: '0 12px', color: 'var(--color-border)' }}>|</span>
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: 16 }}>SuperAdmin</span>
+      <header className="auth-header">
+        <div className="auth-header-inner">
+          <div className="auth-header-brand">
+            <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} className="brand-mark-light" />
+            <img src="/admin/brand/logo-shortmark-inverse.svg" alt="" width={24} height={24} className="brand-mark-dark" />
+            <span className="auth-logo-pill">SuperMandi</span>
+            <span className="auth-logo-separator">|</span>
+            <span className="auth-logo-subtext">SuperAdmin</span>
+          </div>
+          <ThemeToggle />
         </div>
-        <ThemeToggle />
       </header>
       <div className="loginContainer" style={{ flex: 1 }}>
       <div className="loginCard">
@@ -185,7 +189,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
     {/* T-097: Unified footer — standard text + BuildStamp */}
     <footer style={{ background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', padding: '12px 24px', fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
-      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>SuperAdmin</span>
+      <BuildStamp />
     </footer>
     </div>
   );

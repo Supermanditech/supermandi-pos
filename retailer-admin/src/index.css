@@ -59,6 +59,8 @@
   --card-max-width-auth: 448px;
   --btn-height: 46px;
   --input-height: 42px;
+  --brand-pill-bg: #2563eb;
+  --brand-pill-text: #ffffff;
 }
 
 /* Dark mode token overrides */
@@ -71,6 +73,8 @@
   --border: #334155;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
+  --brand-pill-bg: #ffffff;
+  --brand-pill-text: #0b1220;
 }
 
 * {
@@ -124,6 +128,24 @@ button {
 .theme-toggle:focus-visible {
   outline: 2px solid var(--primary, #2563eb);
   outline-offset: 2px;
+}
+
+.brand-mark {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.brand-mark-dark {
+  display: none;
+}
+
+html.dark .brand-mark-light {
+  display: none;
+}
+
+html.dark .brand-mark-dark {
+  display: block;
 }
 
 input, select, textarea {
@@ -796,6 +818,48 @@ input, select, textarea {
   position: relative;
 }
 
+.portal-topbar {
+  height: 64px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+}
+
+.portal-topbar-inner {
+  width: 100%;
+  max-width: 1152px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.portal-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.portal-brand-pill {
+  font-size: 1.25rem;
+  padding: 4px 10px;
+}
+
+.portal-topbar-menu-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
 .layout-footer {
   padding: 0.6rem 2rem;
   background: #f8fafc;
@@ -923,8 +987,8 @@ input, select, textarea {
 .login-logo-text {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #ffffff;
-  background: #2563eb;
+  color: var(--brand-pill-text);
+  background: var(--brand-pill-bg);
   border-radius: 999px;
   padding: 4px 12px;
   line-height: 1;
@@ -1309,6 +1373,11 @@ html.dark .login-header {
   border-bottom-color: #334155;
 }
 
+html.dark .portal-topbar {
+  background: #1e293b;
+  border-bottom-color: #334155;
+}
+
 html.dark .login-card-box {
   background: #1e293b;
   border-color: #334155;
@@ -1320,6 +1389,14 @@ html.dark .login-card-title {
 
 html.dark .login-card-subtitle {
   color: #94a3b8;
+}
+
+html.dark .login-logo-subtext {
+  color: #94a3b8;
+}
+
+html.dark .login-logo-separator {
+  color: #64748b;
 }
 
 html.dark .login-form-label {

@@ -163,6 +163,8 @@ const PAYMENT_PROMPTED_KEY = "supermandi.payment_setup_prompted";
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<EnrollRoute>();
+  const buildShaLabel = String((BUILD_INFO as any).gitSha || (BUILD_INFO as any).version || "unknown");
+  const buildTimeLabel = String((BUILD_INFO as any).buildTime || (BUILD_INFO as any).buildDate || "unknown");
   // #342: Accept both ?enrollmentCode=X and ?code=X from deep links
   const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || route.params?.code || "");
   const [loading, setLoading] = useState(false);
@@ -610,6 +612,12 @@ export default function EnrollDeviceScreen() {
           )}
         </View>
       )}
+
+      <View style={styles.releaseBuildInfo}>
+        <Text style={styles.releaseBuildInfoText}>
+          Build: {buildShaLabel} · Deployed: {buildTimeLabel}
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -840,5 +848,14 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontStyle: "italic",
     lineHeight: 14,
+  },
+  releaseBuildInfo: {
+    marginTop: spacing.lg,
+    alignItems: "center",
+  },
+  releaseBuildInfoText: {
+    fontSize: 11,
+    fontFamily: "monospace",
+    color: colors.textTertiary,
   },
 });

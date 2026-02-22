@@ -33,6 +33,31 @@
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --font-brand: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --brand-blue: #2563EB;
+            --surface-rgb: 255, 255, 255;
+            --logo-pill-bg: #2563EB;
+            --logo-pill-fg: #FFFFFF;
+            --toggle-border: #d4d4d4;
+            --toggle-fg: #64748b;
+            --toggle-hover-bg: #f5f5f5;
+        }
+
+        html.dark {
+            --background: #0b1220;
+            --foreground: #f8fafc;
+            --gray-50: #0f172a;
+            --gray-100: #111b2e;
+            --gray-200: #22324b;
+            --gray-400: #64748b;
+            --gray-500: #94a3b8;
+            --gray-600: #cbd5e1;
+            --border: #2a3952;
+            --surface-rgb: 15, 23, 42;
+            --logo-pill-bg: #ffffff;
+            --logo-pill-fg: #0b1220;
+            --toggle-border: #475569;
+            --toggle-fg: #cbd5e1;
+            --toggle-hover-bg: #1e293b;
+            color-scheme: dark;
         }
         html, body { height: 100%; }
         body {
@@ -43,26 +68,60 @@
         ::selection { background: var(--foreground); color: var(--background); }
 
         nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: min(1152px, calc(100% - 48px)); z-index: 100;
             height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
-            background: rgba(255,255,255,0.8); backdrop-filter: saturate(180%) blur(20px);
-            border-bottom: 1px solid var(--border);
+            background: rgba(var(--surface-rgb), 0.86); backdrop-filter: saturate(180%) blur(20px);
+            border: 1px solid var(--border); border-top: 0; border-radius: 0 0 14px 14px;
         }
         .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--foreground); }
         .nav-right { display: flex; align-items: center; gap: 8px; }
         .nav-link { font-size: 14px; font-weight: 500; color: var(--gray-600); text-decoration: none; padding: 8px 12px; border-radius: 8px; transition: all 0.15s ease; }
-        .nav-link:hover { color: var(--foreground); background: #f5f5f5; }
+        .nav-link:hover { color: var(--foreground); background: var(--gray-100); }
         .logo-mark { width: 32px; height: 32px; display: block; }
+        .logo-mark-dark { display: none; }
+        html.dark .logo-mark-light { display: none; }
+        html.dark .logo-mark-dark { display: block; }
         .logo-text {
             font-family: var(--font-brand);
             font-weight: 700;
             font-size: 16px;
             letter-spacing: -0.02em;
-            color: #fff;
-            background: var(--brand-blue);
+            color: var(--logo-pill-fg);
+            background: var(--logo-pill-bg);
             border-radius: 999px;
             padding: 3px 10px 4px;
         }
+
+        .theme-toggle {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            border: 1px solid var(--toggle-border);
+            background: transparent;
+            color: var(--toggle-fg);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+        .theme-toggle:hover {
+            background: var(--toggle-hover-bg);
+            color: var(--foreground);
+        }
+        .theme-toggle svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .theme-icon-sun { display: none; }
+        html.dark .theme-icon-moon { display: none; }
+        html.dark .theme-icon-sun { display: block; }
 
         .container { min-height: 100vh; display: flex; flex-direction: column; }
         main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 24px 60px; text-align: center; }
@@ -95,7 +154,7 @@
         footer a:hover { color: var(--foreground); }
 
         @media (max-width: 768px) {
-            nav { padding: 0 16px; }
+            nav { padding: 0 16px; width: calc(100% - 24px); }
             main { padding: 100px 20px 40px; }
             h1 { font-size: 28px; }
         }
@@ -105,13 +164,30 @@
     <div class="container">
         <nav>
             <a href="/" class="nav-logo">
-                <img src="./brand/logo-shortmark.svg" alt="SuperMandi" width="32" height="32" class="logo-mark">
+                <img src="./brand/logo-shortmark.svg" alt="SuperMandi" width="32" height="32" class="logo-mark logo-mark-light">
+                <img src="./brand/logo-shortmark-inverse.svg" alt="SuperMandi" width="32" height="32" class="logo-mark logo-mark-dark">
                 <span class="logo-text">SuperMandi</span>
             </a>
             <div class="nav-right">
                 <a href="/supplier/login" class="nav-link">Supplier</a>
                 <a href="/retailer/login" class="nav-link">Retailer</a>
                 <a href="/admin/" class="nav-link">Admin</a>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" title="Dark mode" type="button">
+                    <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
             </div>
         </nav>
 
@@ -156,6 +232,36 @@
             <a href="/">SuperMandi Tech Pvt Ltd</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="mailto:hello@supermandi.tech">Contact</a> &middot; &copy; 2026
         </footer>
     </div>
+
+    <script>
+    (function () {
+      var key = 'supermandi-theme';
+      var html = document.documentElement;
+      var button = document.getElementById('theme-toggle');
+
+      function applyTheme(theme, persist) {
+        var dark = theme === 'dark';
+        html.classList.toggle('dark', dark);
+        if (button) {
+          button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+          button.setAttribute('title', dark ? 'Light mode' : 'Dark mode');
+        }
+        if (persist) {
+          try { localStorage.setItem(key, dark ? 'dark' : 'light'); } catch (e) {}
+        }
+      }
+
+      var saved = 'light';
+      try { saved = localStorage.getItem(key) || 'light'; } catch (e) {}
+      applyTheme(saved === 'dark' ? 'dark' : 'light', false);
+
+      if (button) {
+        button.addEventListener('click', function () {
+          applyTheme(html.classList.contains('dark') ? 'light' : 'dark', true);
+        });
+      }
+    })();
+    </script>
 
     <!-- Rewrite nav logo link for local-prod Docker ports -->
     <script>

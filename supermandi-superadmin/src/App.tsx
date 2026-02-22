@@ -2647,6 +2647,8 @@ export default function App() {
       <header className="header">
         <div>
           <div className="title">
+            <img src="/admin/brand/logo-shortmark.svg" alt="" width={20} height={20} className="header-brand-mark brand-mark-light" />
+            <img src="/admin/brand/logo-shortmark-inverse.svg" alt="" width={20} height={20} className="header-brand-mark brand-mark-dark" />
             <span className="brandPill">SuperMandi</span>
             SuperAdmin
           </div>
@@ -2655,7 +2657,6 @@ export default function App() {
 
         <div className="health">
           <div className="muted" style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
-            <ThemeToggle />
             <span style={{ color: "#059669" }}>Authenticated</span>
             <button
               className="tab"
@@ -2668,6 +2669,7 @@ export default function App() {
             >
               Logout
             </button>
+            <ThemeToggle />
           </div>
           <div className="healthRow">
             <span className={health.ok ? "dot dotOk" : "dot dotBad"} />

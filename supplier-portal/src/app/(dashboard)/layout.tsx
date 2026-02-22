@@ -99,19 +99,6 @@ export default function DashboardLayout({
     <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900">
       {/* T-222: Skip to content for keyboard navigation */}
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[10000] focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-br">Skip to content</a>
-      {/* T-087: Mobile hamburger button */}
-      <button
-        className="md:hidden fixed top-4 left-4 z-40 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow"
-        onClick={() => setSidebarOpen(true)}
-        aria-label="Open menu"
-      >
-        <Menu className="w-5 h-5 text-slate-700" />
-      </button>
-
-      {/* Theme toggle — top-right corner */}
-      <div className="fixed top-3 right-3 z-40">
-        <ThemeToggle />
-      </div>
 
       {/* T-087: Mobile backdrop */}
       {sidebarOpen && (
@@ -239,6 +226,28 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <main id="main-content" className="flex-1 overflow-auto">
+        <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-6 flex items-center">
+          <div className="max-w-[1152px] w-full mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                className="md:hidden inline-flex items-center justify-center w-9 h-9 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+              </button>
+              <img src="/supplier/brand/logo-shortmark.svg" alt="" width={20} height={20} className="block dark:hidden" />
+              <img src="/supplier/brand/logo-shortmark-inverse.svg" alt="" width={20} height={20} className="hidden dark:block" />
+              <span className="text-2xl font-semibold text-white bg-[#2563EB] dark:text-slate-900 dark:bg-white rounded-full px-3 py-1 leading-none">
+                SuperMandi
+              </span>
+              <span className="text-slate-400">|</span>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Supplier Portal</span>
+            </div>
+            <ThemeToggle />
+          </div>
+        </header>
+
         {/* AUDIT-SUP-023: Removed duplicate inline banners — LimitedModeBanner handles all non-verified states */}
 
         {/* REG-AUTH-302: LIMITED MODE Banner for non-verified suppliers */}

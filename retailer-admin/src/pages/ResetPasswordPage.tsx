@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { BuildStamp } from '../components/BuildStamp';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 // AUTH-PARITY-003: Retailer reset-password page — parity with supplier /reset-password
 // User arrives from email link: /retailer/reset-password?email=X&token=Y
@@ -90,11 +91,13 @@ export default function ResetPasswordPage() {
       <header className="login-header">
         <div className="login-header-inner">
           <div className="login-logo">
-            <img src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <img className="brand-mark brand-mark-light" src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <img className="brand-mark brand-mark-dark" src="/retailer/brand/logo-shortmark-inverse.svg" alt="" width={20} height={20} />
             <span className="login-logo-text">SuperMandi</span>
             <span className="login-logo-separator">|</span>
             <span className="login-logo-subtext">Retailer Portal</span>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

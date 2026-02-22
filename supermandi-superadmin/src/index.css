@@ -30,6 +30,8 @@
   --color-warning-soft: #fff7ed;
   --color-error-soft: #fef2f2;
   --color-ink: #0b1220;
+  --brand-pill-bg: #2563eb;
+  --brand-pill-fg: #ffffff;
 
   --color-text: var(--color-text-primary);
   --color-text-muted: var(--color-text-secondary);
@@ -60,6 +62,8 @@
   --color-warning-soft: #451a03;
   --color-error-soft: #450a0a;
   --color-ink: #f8fafc;
+  --brand-pill-bg: #ffffff;
+  --brand-pill-fg: #0b1220;
   --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.4);
 }
 
@@ -187,6 +191,22 @@ button:focus-visible {
 .theme-toggle:focus-visible {
   outline: 2px solid var(--color-primary, #2563eb);
   outline-offset: 2px;
+}
+
+.brand-mark-light {
+  display: block;
+}
+
+.brand-mark-dark {
+  display: none;
+}
+
+html.dark .brand-mark-light {
+  display: none;
+}
+
+html.dark .brand-mark-dark {
+  display: block;
 }
 
 /* T-222: WCAG skip-to-content link */

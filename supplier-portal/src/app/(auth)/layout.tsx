@@ -13,8 +13,9 @@ export default function AuthLayout({
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 flex items-center">
         <div className="max-w-[1152px] w-full mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/supplier/brand/logo-shortmark.svg" alt="" width={20} height={20} />
-            <span className="text-2xl font-semibold text-white bg-[#2563EB] rounded-full px-3 py-1 leading-none">
+            <img src="/supplier/brand/logo-shortmark.svg" alt="" width={20} height={20} className="block dark:hidden" />
+            <img src="/supplier/brand/logo-shortmark-inverse.svg" alt="" width={20} height={20} className="hidden dark:block" />
+            <span className="text-2xl font-semibold text-white bg-[#2563EB] dark:text-slate-900 dark:bg-white rounded-full px-3 py-1 leading-none">
               SuperMandi
             </span>
             <span className="text-slate-400">|</span>
