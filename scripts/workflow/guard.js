@@ -126,7 +126,7 @@ Workflow guard usage:
   node scripts/workflow/guard.js pre-staging-deploy
   node scripts/workflow/guard.js pre-promote --sha <sha>
   node scripts/workflow/guard.js mode --set <LIVE_FIX|FREEZE_CANDIDATE|FREEZE_READY|PROD_PROMOTE|PROD_LOCKED>
-  node scripts/workflow/guard.js resolve-contradiction --id <CC-XXX>
+  node scripts/workflow/guard.js resolve-contradiction --id <contradiction-id>
 `);
 }
 
@@ -4483,7 +4483,7 @@ function commandSetMode(args) {
 function commandResolveContradiction(args) {
   const id = getArg(args, '--id');
   if (!id) {
-    fail('resolve-contradiction requires --id <CC-XXX>');
+    fail('resolve-contradiction requires --id <contradiction-id>');
   }
   const context = ensureValidStateOrFail();
   const contradiction = (context.state.criticalContradictions || []).find((item) => item.id === id);
