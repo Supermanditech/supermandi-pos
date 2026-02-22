@@ -749,6 +749,26 @@ export default function SellScanScreen({
     autoUnlockIfExpired();
   }, [autoUnlockIfExpired]);
 
+  // LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001: Cart navigation guard
+  // Prevents accidental back navigation when cart has items. Cart state persists via Zustand+AsyncStorage.
+  useEffect(() => {
+    if (items.length === 0) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Allow programmatic navigation (RESET = checkout complete, NAVIGATE = explicit)
+      if (e.data.action.type === 'RESET') return;
+      e.preventDefault();
+      Alert.alert(
+        t('cart_has_items', 'Cart has items'),
+        t('cart_leave_warning', 'Your cart will be saved. Do you want to leave?'),
+        [
+          { text: t('stay', 'Stay'), style: 'cancel' },
+          { text: t('leave', 'Leave'), style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, items.length, t]);
+
   // GL-CRIT-0014: Show notification when cart items are adjusted due to stock changes
   useEffect(() => {
     if (!lastStockAdjustments || lastStockAdjustments.length === 0) return;

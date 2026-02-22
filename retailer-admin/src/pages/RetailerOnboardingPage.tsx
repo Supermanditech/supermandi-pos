@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp as firebaseSendOtp, verifyOtp as firebaseVerifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
+import { useUnsavedChanges } from '../hooks/useNavigationSafety';
 
 // UI-SPEC-002: Stripe-level calm infrastructure design for registration
 // Layout: Header (64px) + Wide container (1024px) + Footer - solid #F7F9FC background
@@ -343,6 +344,14 @@ export default function RetailerOnboardingPage() {
     gstin_certificate: { file: null, preview: null, status: 'pending' },
     address_proof: { file: null, preview: null, status: 'pending' },
   });
+
+  // LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001: Unsaved-change guard
+  // Prevents accidental page close/refresh when user has entered store details
+  const hasUnsavedDetails = useMemo(
+    () => (step === 'details' || step === 'documents') && (storeName !== '' || ownerName !== '' || email !== ''),
+    [step, storeName, ownerName, email],
+  );
+  useUnsavedChanges(hasUnsavedDetails);
 
   // Setup reCAPTCHA on mount
   useEffect(() => {

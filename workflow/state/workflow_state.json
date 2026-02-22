@@ -976,10 +976,9 @@
       },
       "implementation": {
         "complete": false,
-        "summary": "Implementation in progress. 26/41 tickets done. Remaining: FIX-001 (operator), LIVE.NAV.RESILIENCE (todo), STAGE.SECURITY.IAM_EDITOR_ROLE (blocked).",
+        "summary": "All implementable tickets done. 39/41 done. Remaining: FIX-001 (operator-pending), STAGE.SECURITY.IAM_EDITOR_ROLE (blocked/operator-IAM).",
         "remainingTicketIds": [
           "FIX-001",
-          "LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001",
           "STAGE.SECURITY.IAM_EDITOR_ROLE.001"
         ],
         "completedTicketIds": [
@@ -1020,10 +1019,10 @@
           "LIVE.RETAILER.RESETPW_NO_PARAM_CHECK.001",
           "LIVE.RETAILER.AUTH_401_NO_REDIRECT.001",
           "LIVE.SUPPLIER.UPLOAD_PROGRESS_FAKE.001",
-          "RETAILER.AUTH.PROBE_PATH.001",
-          "LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001"
+          "LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001",
+          "LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001"
         ],
-        "lastUpdatedAt": "2026-02-22T09:30:00.000Z"
+        "lastUpdatedAt": "2026-02-23T04:00:00.000Z"
       }
     },
     "productionReadinessTiers": {

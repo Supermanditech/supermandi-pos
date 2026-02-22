@@ -4,12 +4,13 @@
 // 3-Step Flow: Phone OTP → Business Details → KYC Documents
 // FULL-WIDTH ONBOARDING LAYOUT (not compact login-card)
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { ApiError, createSupplierApplication, verifySupplierOtp, submitSupplierKyc, lookupSupplierRegistration } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
+import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
 
 // Indian states for dropdown
 const INDIAN_STATES = [
@@ -149,6 +150,14 @@ function RegisterPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001: Unsaved-change guard
+  // Prevents accidental page close/refresh when user has entered business details
+  const hasUnsavedDetails = useMemo(
+    () => (step === 'details' || step === 'documents') && (businessName !== '' || ownerName !== '' || email !== ''),
+    [step, businessName, ownerName, email],
+  );
+  useUnsavedChanges(hasUnsavedDetails);
 
   // FIX-027: Revoke all blob URLs on unmount to prevent memory leak
   useEffect(() => {
