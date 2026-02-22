@@ -1,5 +1,5 @@
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
-import { getAuthHeaders, fetchWithTimeout } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout, hasValidSession } from "./authToken";
 
 export type PosEvent = {
   id: string;
@@ -27,6 +27,12 @@ function requireApiBase(): string {
  * Filters are applied server-side via query parameters.
  */
 export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosEvent[]> {
+  // LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001: Pre-flight auth check
+  // Prevents 401 storm from polling without a valid token
+  if (!hasValidSession()) {
+    throw new Error("Not authenticated");
+  }
+
   const base = requireApiBase();
   const limit = Math.min(1000, Math.max(1, Number(params.limit || 100)));
 

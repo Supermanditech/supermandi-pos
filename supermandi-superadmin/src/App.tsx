@@ -396,6 +396,17 @@ export default function App() {
   // ISSUE-MICRO-024: Ref to hold latest refresh functions (avoids stale closure in polling)
   const refreshRef = useRef<Record<string, (...args: any[]) => void>>({});
 
+  // LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001: Clear stale error banners on re-authentication
+  // Prevents "Session expired" banner from persisting after user logs back in
+  const prevAuthRef = useRef(isAuthenticated);
+  useEffect(() => {
+    if (isAuthenticated && !prevAuthRef.current) {
+      setEventsError("");
+      setHealthError("");
+    }
+    prevAuthRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   // AI panel
   const [aiQuestion, setAiQuestion] = useState<string>("");
   const [aiAnswer, setAiAnswer] = useState<string>("");
@@ -1806,7 +1817,9 @@ export default function App() {
   refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents, refreshStaff, refreshGrnAlerts, refreshAnalytics, refreshApplications };
 
   useEffect(() => {
-    // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
+    // LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001: Don't poll when not authenticated
+    // Prevents 401 storm from polling without a valid token
+    if (!isAuthenticated) return;
 
     const shouldRefreshEvents = tab === "events" || tab === "devices" || tab === "payments"; // P0-DEPLOY-002: Include payments
     const shouldRefreshDevices = tab === "devices";
@@ -1852,7 +1865,9 @@ export default function App() {
       r.refreshRegEvents?.(); // DR-010: Always poll for badge count
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
-  }, [tab, staffStoreId]);
+    // LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001: Added isAuthenticated dependency
+    // Ensures polling stops on logout and restarts on re-authentication
+  }, [tab, staffStoreId, isAuthenticated]);
 
   // If user changes limit, refresh immediately.
   useEffect(() => {
