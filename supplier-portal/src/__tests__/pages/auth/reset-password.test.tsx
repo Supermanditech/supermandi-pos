@@ -2,8 +2,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ResetPasswordPage from '../../../app/(auth)/reset-password/page';
 
-// Mock next/navigation
-const mockSearchParams = new URLSearchParams();
+// Mock next/navigation — provide email+token so component renders form (not missing-params view)
+const mockSearchParams = new URLSearchParams({ email: 'test@test.com', token: 'abc123' });
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   useSearchParams: () => mockSearchParams,
@@ -51,6 +51,8 @@ describe('ResetPasswordPage', () => {
 
   it('validates empty email', async () => {
     render(<ResetPasswordPage />);
+    // Clear the pre-filled email from search params
+    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: '' } });
     fireEvent.click(screen.getByText('Reset Password'));
     await waitFor(() => {
       expect(screen.getByText('Please enter your email address')).toBeInTheDocument();
@@ -59,7 +61,8 @@ describe('ResetPasswordPage', () => {
 
   it('validates empty token', async () => {
     render(<ResetPasswordPage />);
-    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
+    // Clear the pre-filled token from search params
+    fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: '' } });
     fireEvent.click(screen.getByText('Reset Password'));
     await waitFor(() => {
       expect(screen.getByText('Please enter the reset token from your email')).toBeInTheDocument();
@@ -68,8 +71,6 @@ describe('ResetPasswordPage', () => {
 
   it('validates short password', async () => {
     render(<ResetPasswordPage />);
-    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
-    fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: 'abc123' } });
     fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'short' } });
     fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'short' } });
     fireEvent.click(screen.getByText('Reset Password'));
@@ -80,8 +81,6 @@ describe('ResetPasswordPage', () => {
 
   it('validates password mismatch', async () => {
     render(<ResetPasswordPage />);
-    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
-    fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: 'abc123' } });
     fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'Password123' } });
     fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'Password456' } });
     fireEvent.click(screen.getByText('Reset Password'));
@@ -93,8 +92,6 @@ describe('ResetPasswordPage', () => {
   it('shows success step on successful reset', async () => {
     mockApiFetch.mockResolvedValueOnce({ success: true, message: 'Password reset' });
     render(<ResetPasswordPage />);
-    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
-    fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: 'abc123' } });
     fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'NewPassword123' } });
     fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'NewPassword123' } });
     fireEvent.click(screen.getByText('Reset Password'));
@@ -106,8 +103,6 @@ describe('ResetPasswordPage', () => {
   it('shows error message on API failure', async () => {
     mockApiFetch.mockRejectedValueOnce(new Error('Token expired'));
     render(<ResetPasswordPage />);
-    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
-    fireEvent.change(screen.getByLabelText('Reset Token'), { target: { value: 'abc123' } });
     fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'NewPassword123' } });
     fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'NewPassword123' } });
     fireEvent.click(screen.getByText('Reset Password'));
