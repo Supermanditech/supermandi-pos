@@ -90,7 +90,8 @@ describe('NotificationsPage', () => {
   it('renders loading state initially', () => {
     // Don't resolve fetch immediately
     mockFetch.mockImplementation(() => new Promise(() => {}));
-    render(<NotificationsPage />);
-    expect(screen.getByText('Loading notifications...')).toBeInTheDocument();
+    const { container } = render(<NotificationsPage />);
+    // Loading text replaced with skeleton loaders (animate-pulse divs)
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 });
