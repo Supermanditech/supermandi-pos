@@ -843,16 +843,16 @@ export default function ProductsPage() {
         ) : (
           <EmptyState
             icon={Package}
-            title="No products yet"
-            description="Add your first product to start building your catalog."
-            action={
+            title={products && products.length > 0 ? "No matching products" : "No products yet"}
+            description={products && products.length > 0 ? "Try adjusting your search or filter criteria." : "Add your first product to start building your catalog."}
+            action={products && products.length > 0 ? undefined : (
               <button
                 onClick={() => setShowForm(true)}
                 className="btn btn-primary"
               >
                 + Add Product
               </button>
-            }
+            )}
           />
         )}
       </div>

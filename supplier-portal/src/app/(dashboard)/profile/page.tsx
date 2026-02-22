@@ -185,9 +185,9 @@ export default function ProfilePage() {
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-xl font-semibold text-slate-800">
-              {supplier?.businessName}
+              {supplier?.businessName || 'Business Name'}
             </h2>
-            <p className="text-slate-500 mt-1">GSTIN: {supplier?.gstin}</p>
+            <p className="text-slate-500 mt-1">GSTIN: {supplier?.gstin || '—'}</p>
           </div>
           {verificationStatusBadge()}
         </div>

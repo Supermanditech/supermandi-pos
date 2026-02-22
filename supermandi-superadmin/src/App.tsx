@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 // ISSUE-MICRO-105: Global error boundary
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ThemeToggle } from "./components/ThemeToggle";
 // T-094: Standardized toast notifications
 import { Toaster } from "react-hot-toast";
 import { fetchHealth } from "./api/health";
@@ -2654,6 +2655,7 @@ export default function App() {
 
         <div className="health">
           <div className="muted" style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
+            <ThemeToggle />
             <span style={{ color: "#059669" }}>Authenticated</span>
             <button
               className="tab"

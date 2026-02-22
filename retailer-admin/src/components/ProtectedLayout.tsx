@@ -11,6 +11,7 @@ import DeviceRequiredBanner from './DeviceRequiredBanner';
 import LimitedModeBanner from './LimitedModeBanner';
 // RET-AUD-005: Build fingerprint in UI footer
 import BuildStamp from './BuildStamp';
+import { ThemeToggle } from './ThemeToggle';
 // T-091: Shared Modal component
 import Modal from './Modal';
 
@@ -276,6 +277,11 @@ export default function ProtectedLayout() {
 
       {/* Main Area */}
       <div className="layout-main">
+        {/* Theme toggle — top-right corner */}
+        <div style={{ position: 'fixed', top: '0.75rem', right: '0.75rem', zIndex: 40 }}>
+          <ThemeToggle />
+        </div>
+
         {/* AUDIT-RET-014: Gate debug banner behind DEV — exposes API URLs in production */}
         {import.meta.env.DEV && (
           <div style={{

@@ -14,24 +14,24 @@ describe('BuildStamp', () => {
     process.env = originalEnv;
   });
 
-  it('renders SHA and time from environment variables', () => {
+  it('renders SHA and time from environment variables after mount', async () => {
     process.env.NEXT_PUBLIC_BUILD_SHA = 'abc123';
     process.env.NEXT_PUBLIC_BUILD_TIME = '2026-02-16T10:30:00Z';
 
     render(<BuildStamp />);
 
-    expect(screen.getByText(/Build: abc123/)).toBeInTheDocument();
-    expect(screen.getByText(/Deployed: 2026-02-16T10:30:00Z/)).toBeInTheDocument();
+    expect(await screen.findByText(/Build: abc123/)).toBeInTheDocument();
+    expect(await screen.findByText(/Deployed: 2026-02-16T10:30:00Z/)).toBeInTheDocument();
   });
 
-  it('renders default values when environment variables are not set', () => {
+  it('renders default values when environment variables are not set', async () => {
     delete process.env.NEXT_PUBLIC_BUILD_SHA;
     delete process.env.NEXT_PUBLIC_BUILD_TIME;
 
     render(<BuildStamp />);
 
-    expect(screen.getByText(/Build: dev/)).toBeInTheDocument();
-    expect(screen.getByText(/Deployed: local/)).toBeInTheDocument();
+    expect(await screen.findByText(/Build: dev/)).toBeInTheDocument();
+    expect(await screen.findByText(/Deployed: local/)).toBeInTheDocument();
   });
 
   it('renders with monospace font', () => {

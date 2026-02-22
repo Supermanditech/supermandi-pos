@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
-  checkSupplierGstin,
   createSupplierApplication,
   verifySupplierOtp,
   submitSupplierKyc,
@@ -566,7 +565,7 @@ export default function SupplierOnboardingPage() {
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Checking...
+                Submitting...
               </span>
             ) : (
               'Continue'
@@ -711,7 +710,7 @@ export default function SupplierOnboardingPage() {
               onChange={handleFileChange(setPanFile)}
             />
             {panFile && (
-              <p className="text-xs text-green-600 mt-1">✓ {panFile.name}</p>
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{panFile.name}</p>
             )}
             {uploadProgress['PAN'] && (
               <p className="text-xs text-slate-500 mt-1">Uploading...</p>
@@ -727,7 +726,7 @@ export default function SupplierOnboardingPage() {
               onChange={handleFileChange(setGstinFile)}
             />
             {gstinFile && (
-              <p className="text-xs text-green-600 mt-1">✓ {gstinFile.name}</p>
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{gstinFile.name}</p>
             )}
             {uploadProgress['GSTIN_CERTIFICATE'] && (
               <p className="text-xs text-slate-500 mt-1">Uploading...</p>
@@ -746,7 +745,7 @@ export default function SupplierOnboardingPage() {
               Utility bill, rent agreement, or bank statement
             </p>
             {addressProofFile && (
-              <p className="text-xs text-green-600 mt-1">✓ {addressProofFile.name}</p>
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{addressProofFile.name}</p>
             )}
             {uploadProgress['ADDRESS_PROOF'] && (
               <p className="text-xs text-slate-500 mt-1">Uploading...</p>
@@ -774,7 +773,7 @@ export default function SupplierOnboardingPage() {
       {step === 'success' && (
         <div className="text-center py-4">
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl text-amber-600">⏳</span>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
           <h3 className="text-lg font-semibold text-amber-600 mb-2">
             Pending Admin Approval

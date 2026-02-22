@@ -71,6 +71,9 @@ function loadSavedSupRegState(): Partial<{
     const data = JSON.parse(raw);
     // Don't restore 'otp' step — fall back to 'phone'
     if (data.step === 'otp') data.step = 'phone';
+    // UNMAPPED.038: Don't restore 'details'/'documents' steps since idToken
+    // is not persisted (security) — user must re-verify phone on page refresh
+    if (data.step === 'details' || data.step === 'documents') data.step = 'phone';
     return data;
   } catch { return {}; }
 }

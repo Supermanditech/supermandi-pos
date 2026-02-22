@@ -61,6 +61,18 @@
   --input-height: 42px;
 }
 
+/* Dark mode token overrides */
+:root.dark {
+  color-scheme: dark;
+  --primary-light: #1e3a5f;
+  --accent-light: #0f2b3d;
+  --background: #0f172a;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -86,6 +98,32 @@ a:hover {
 button {
   cursor: pointer;
   font-family: inherit;
+}
+
+/* Theme toggle — subtle circular icon button */
+.theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border, #e2e8f0);
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  background: var(--surface, #ffffff);
+  border-color: var(--secondary, #94a3b8);
+  color: var(--text, #0f172a);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--primary, #2563eb);
+  outline-offset: 2px;
 }
 
 input, select, textarea {
@@ -1242,6 +1280,144 @@ input, select, textarea {
 
 /* UNMAPPED.008: Upload progress animation */
 @keyframes uploadProgress { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+
+/* Dark mode overrides for hardcoded-color elements */
+html.dark .layout-wrapper {
+  background: #0f172a;
+}
+
+html.dark .layout-main {
+  background: #0f172a;
+}
+
+html.dark .layout-footer {
+  background: #1e293b;
+  border-top-color: #334155;
+  color: #64748b;
+}
+
+html.dark .nav-link.active {
+  background-color: #1e3a5f;
+}
+
+html.dark .login-page-container {
+  background: #0f172a;
+}
+
+html.dark .login-header {
+  background: #1e293b;
+  border-bottom-color: #334155;
+}
+
+html.dark .login-card-box {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .login-card-title {
+  color: #f1f5f9;
+}
+
+html.dark .login-card-subtitle {
+  color: #94a3b8;
+}
+
+html.dark .login-form-label {
+  color: #e2e8f0;
+}
+
+html.dark .login-form-input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+html.dark .login-form-input:disabled {
+  background: #1a2332;
+}
+
+html.dark .login-btn-secondary {
+  background: #1e293b;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+html.dark .login-btn-secondary:hover {
+  background: #334155;
+}
+
+html.dark .login-store-btn {
+  background: #1a2332;
+  border-color: #334155;
+}
+
+html.dark .login-store-btn:hover {
+  background: #334155;
+}
+
+html.dark .login-store-name {
+  color: #f1f5f9;
+}
+
+html.dark .login-store-code {
+  color: #94a3b8;
+}
+
+html.dark .login-footer {
+  background: #1e293b;
+  border-top-color: #334155;
+}
+
+html.dark .login-footer-inner {
+  color: #64748b;
+}
+
+html.dark .login-warning-icon {
+  background: #1a2332;
+  color: #94a3b8;
+}
+
+html.dark .login-card {
+  background: #1e293b;
+}
+
+html.dark .modal-card {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+html.dark .modal-title {
+  color: #f1f5f9;
+}
+
+html.dark .modal-body {
+  color: #94a3b8;
+}
+
+html.dark .modal-btn-cancel {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+html.dark .modal-btn-cancel:hover {
+  background: #475569;
+}
+
+html.dark .product-image-placeholder {
+  background: #1a2332;
+  color: #64748b;
+}
+
+html.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200px 100%;
+}
+
+html.dark input, html.dark select, html.dark textarea {
+  background: #0f172a;
+  color: #f1f5f9;
+  border-color: #475569;
+}
 
 /* AUDIT-RET-049: Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {

@@ -2,6 +2,7 @@
 // GO-LIVE-LOGIN-004: Email OTP login gate component
 import React, { useEffect, useRef, useState } from "react";
 import { sendAdminOtp, verifyAdminOtp } from "../api/authToken";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function LoginGate({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState("");
@@ -75,13 +76,16 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F7F9FC' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--color-bg)' }}>
       {/* T-095: Unified login header — shortmark + brand text + portal name */}
-      <header style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #E2E8F0', background: 'white' }}>
-        <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} />
-        <span style={{ marginLeft: 10, fontWeight: 700, fontSize: 18, color: '#fff', background: '#2563EB', borderRadius: 999, padding: '4px 12px', lineHeight: 1 }}>SuperMandi</span>
-        <span style={{ margin: '0 12px', color: '#CBD5E1' }}>|</span>
-        <span style={{ color: '#64748B', fontSize: 16 }}>SuperAdmin</span>
+      <header style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} />
+          <span style={{ marginLeft: 10, fontWeight: 700, fontSize: 18, color: '#fff', background: '#2563EB', borderRadius: 999, padding: '4px 12px', lineHeight: 1 }}>SuperMandi</span>
+          <span style={{ margin: '0 12px', color: 'var(--color-border)' }}>|</span>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 16 }}>SuperAdmin</span>
+        </div>
+        <ThemeToggle />
       </header>
       <div className="loginContainer" style={{ flex: 1 }}>
       <div className="loginCard">
@@ -179,9 +183,9 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
       </div>
     </div>
     {/* T-097: Unified footer — standard text + BuildStamp */}
-    <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <footer style={{ background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', padding: '12px 24px', fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
-      <span style={{ fontSize: 11, color: '#94A3B8' }}>SuperAdmin</span>
+      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>SuperAdmin</span>
     </footer>
     </div>
   );

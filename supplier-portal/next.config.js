@@ -3,18 +3,32 @@
 // GO-LIVE-SOP: Get build info for cache-proof deployment verification
 // AUTH-SESSION-169: Check NEXT_PUBLIC_GIT_SHA env var first (set by CI), fallback to git
 function getBuildInfo() {
+  const envSha = process.env.NEXT_PUBLIC_GIT_SHA;
+  const envTime = process.env.NEXT_PUBLIC_BUILD_TIME || process.env.BUILD_TIME;
+
+  if (envSha && envSha !== 'unknown' && envTime) {
+    return { sha: envSha, time: envTime };
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    return {
+      sha: envSha && envSha !== 'unknown' ? envSha : 'dev',
+      time: envTime || 'local',
+    };
+  }
+
   try {
-    const envSha = process.env.NEXT_PUBLIC_GIT_SHA;
-    if (envSha && envSha !== 'unknown') {
-      const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }).replace(',', '');
-      return { sha: envSha, time };
-    }
     const { execSync } = require('child_process');
-    const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-    const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }).replace(',', '');
+    const sha = envSha && envSha !== 'unknown'
+      ? envSha
+      : execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    const time = envTime || execSync('git show -s --format=%cI HEAD', { encoding: 'utf8' }).trim();
     return { sha, time };
   } catch {
-    return { sha: process.env.NEXT_PUBLIC_GIT_SHA || 'unknown', time: new Date().toISOString() };
+    return {
+      sha: envSha || 'unknown',
+      time: envTime || 'local',
+    };
   }
 }
 
@@ -31,6 +45,8 @@ if (isNextBuild && process.env.NEXT_PUBLIC_API_BASE_URL === undefined) {
 }
 
 const nextConfig = {
+  // Local approval UX: hide Next.js "N issue(s)" dev indicator bubble.
+  devIndicators: false,
   // LIVE.SECURITY.XPOWEREDBY.001: Suppress x-powered-by: Next.js header
   poweredByHeader: false,
   // CONSOLE-STRIP-001: Strip console.log/debug from production builds (keep error+warn)

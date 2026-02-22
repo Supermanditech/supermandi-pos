@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 // UI-SPEC-001: Stripe-level calm infrastructure design
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
@@ -354,13 +355,14 @@ export default function LoginPage() {
       `}</style>
       {/* T-095: Unified login header */}
       <header className="login-header">
-        <div className="login-header-inner">
+        <div className="login-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="login-logo">
             <img src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
             <span className="login-logo-text">SuperMandi</span>
             <span className="login-logo-separator">|</span>
             <span className="login-logo-subtext">Retailer Portal</span>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

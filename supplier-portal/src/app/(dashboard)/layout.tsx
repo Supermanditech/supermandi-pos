@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { sendVerificationEmail, verifyEmail, getDashboardStats, markOrdersRead } from '@/lib/api';
 import { BuildStamp } from '@/components/BuildStamp';
+import { ThemeToggle } from '@/components/ThemeToggle';
 // T-092: Shared Modal component
 import Modal from '@/components/Modal';
 // REG-AUTH-302: LIMITED MODE Banner
@@ -95,17 +96,22 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900">
       {/* T-222: Skip to content for keyboard navigation */}
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[10000] focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-br">Skip to content</a>
       {/* T-087: Mobile hamburger button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-40 p-2 bg-white border border-slate-200 rounded-lg shadow"
+        className="md:hidden fixed top-4 left-4 z-40 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow"
         onClick={() => setSidebarOpen(true)}
         aria-label="Open menu"
       >
         <Menu className="w-5 h-5 text-slate-700" />
       </button>
+
+      {/* Theme toggle — top-right corner */}
+      <div className="fixed top-3 right-3 z-40">
+        <ThemeToggle />
+      </div>
 
       {/* T-087: Mobile backdrop */}
       {sidebarOpen && (
@@ -426,7 +432,7 @@ export default function DashboardLayout({
         <div className="p-6">{children}</div>
 
         {/* T-097: Unified footer — standard text + BuildStamp */}
-        <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <footer className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-3 text-xs text-slate-400 flex justify-between items-center">
           <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
           <BuildStamp />
         </footer>
