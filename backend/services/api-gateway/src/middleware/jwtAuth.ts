@@ -209,7 +209,7 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     try {
       const revoked = await isTokenBlacklisted(blacklistKey);
       if (revoked) {
-        console.log(`[T-184] Rejected blacklisted token: key=${blacklistKey.substring(0, 8)}..., user=${decoded.sub}`);
+        console.warn(`[T-184] Rejected blacklisted token: key=${blacklistKey.substring(0, 8)}..., user=${decoded.sub}`);
         res.status(401).json({
           error: {
             code: 'TOKEN_REVOKED',

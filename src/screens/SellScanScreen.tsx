@@ -23,6 +23,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+import { logger } from "../services/logger";
 
 import { AppText, ButtonText, PriceText, LabelText } from "../components/ui/AppText";
 import { useCartStore } from "../stores/cartStore";
@@ -116,7 +117,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
     // SD-ONBOARD-002C: Use list endpoint for initial load, search for queries
     if (trimmedQuery.length < 2) {
       // No query or short query - paginate through all store products
-      console.log("[syncProductsToOffline] Using list endpoint for tap-and-add");
+      logger.debug("SyncProducts", "Using list endpoint for tap-and-add");
       const PAGE = 100;
       let offset = 0;
       let allProducts: sellSearchApi.StoreProductListItem[] = [];
@@ -165,7 +166,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
       // Query provided - use search endpoint
       const storeId = await getDeviceStoreId();
       if (!storeId) {
-        console.log("[syncProductsToOffline] No storeId, skipping sync");
+        logger.debug("SyncProducts", "No storeId, skipping sync");
         return [];
       }
 
@@ -215,7 +216,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
     return items;
   } catch (error) {
-    console.log("[syncProductsToOffline] Error:", error);
+    logger.warn("SyncProducts", `Error: ${error}`);
     return [];
   }
 }
@@ -1059,7 +1060,7 @@ export default function SellScanScreen({
         const resp = await sellSearchApi.checkCatalogFreshness(lastSyncedAtRef.current);
         if (cancelled) return;
         if (resp.stale) {
-          console.log("[R5] Catalog stale, re-syncing from server");
+          logger.debug("SyncProducts", "Catalog stale, re-syncing from server");
           await syncProductsToOffline();
           if (resp.latestUpdatedAt) {
             lastSyncedAtRef.current = resp.latestUpdatedAt;
@@ -1577,9 +1578,7 @@ export default function SellScanScreen({
     const key = `${productId}:${resolved.priceMinor}:${resolved.inventoryPrice ?? "null"}:${resolved.variantPrice ?? "null"}:${resolved.mrp ?? "null"}`;
     if (priceLogRef.current.has(key)) return;
     priceLogRef.current.add(key);
-    console.log(
-      `[PRICE_DEBUG] ${productId} ${resolved.priceMinor} ${resolved.inventoryPrice ?? "null"}:${resolved.variantPrice ?? "null"}:${resolved.mrp ?? "null"}`
-    );
+    logger.debug("PriceDebug", `${productId} ${resolved.priceMinor} ${resolved.inventoryPrice ?? "null"}:${resolved.variantPrice ?? "null"}:${resolved.mrp ?? "null"}`);
   }, []);
 
   const handleSaveDefaultPrice = useCallback(async (item: CartItem, priceMinor: number): Promise<boolean> => {
@@ -1619,7 +1618,7 @@ export default function SellScanScreen({
         await setLocalPrice(barcode, priceMinor);
       }
       const logSku = item.sku ?? barcode ?? item.id;
-      console.log(`sell_price_saved_default:${logSku}`);
+      logger.debug("SellPrice", `saved_default:${logSku}`);
       return true;
     } catch (error) {
       console.warn("Failed to save store price", error);
@@ -2171,7 +2170,7 @@ export default function SellScanScreen({
     }
 
     // Log to ledger for accounting/tracking
-    console.log(`ledger_item_edit:${editorItem.id},qty=${nextQty},sellPrice=${parsedSellPrice ?? editorItem.priceMinor},purchasePrice=${parsedPurchasePrice ?? 0},name=${trimmedName || editorItem.name}`);
+    logger.debug("Ledger", `item_edit:${editorItem.id},qty=${nextQty},sellPrice=${parsedSellPrice ?? editorItem.priceMinor},purchasePrice=${parsedPurchasePrice ?? 0},name=${trimmedName || editorItem.name}`);
 
     const parsedDiscount = parseDiscountInput(editorDiscountValue);
     if (parsedDiscount <= 0) {
@@ -2317,12 +2316,12 @@ export default function SellScanScreen({
 
     if (existing) {
       // Item already in cart - increase quantity instead of adding duplicate
-      console.log(`handleAddSku:duplicate_found:${item.barcode},existingId=${existing.id},qty=${existing.quantity}+1`);
+      logger.debug("AddSku", `duplicate_found:${item.barcode},existingId=${existing.id},qty=${existing.quantity}+1`);
       cartState.updateQuantity(existing.id, existing.quantity + 1);
       showToast(`${existing.name} qty +1`);
     } else {
       // New item - add to cart (store identifiers in metadata for sync)
-      console.log(`handleAddSku:new_item:${item.barcode}`);
+      logger.debug("AddSku", `new_item:${item.barcode}`);
       // GL-RJ-007: Detect price resolution failures
       const priceResolutionFailed = resolved.priceMinor === 0 ||
         (resolved.inventoryPrice === null && resolved.variantPrice === null && resolved.mrp === null);

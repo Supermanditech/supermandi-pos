@@ -23,6 +23,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useTranslation } from "react-i18next";
+import { logger } from "../services/logger";
 
 import StaffLoginScreen from "./StaffLoginScreen";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
@@ -361,7 +362,7 @@ export default function PosRootLayout() {
       const session = await getDeviceSession();
       if (cancelled) return;
       if (!session || !session.deviceToken) {
-        console.log("[PosRootLayout] No valid session, redirecting to EnrollDevice");
+        logger.debug("PosRootLayout", "No valid session, redirecting to EnrollDevice");
         navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
       }
     };
@@ -492,7 +493,7 @@ export default function PosRootLayout() {
         // GO-LIVE FIX: Check session before making API calls - redirect if cleared
         const session = await getDeviceSession();
         if (!session || !session.deviceToken) {
-          console.log("[PosRootLayout/loadStatus] No valid session, redirecting to EnrollDevice");
+          logger.debug("PosRootLayout", "No valid session, redirecting to EnrollDevice (loadStatus)");
           navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
           return;
         }
@@ -914,34 +915,34 @@ export default function PosRootLayout() {
 
   useEffect(() => {
     setHidScanHandler((value) => {
-      console.log(`hid_scan_received:${value}`);
+      logger.debug("HidScan", `received:${value}`);
       markHidActive();
       setHidInput("");
 
       // Check if we should block the scan and show feedback
       if (sellOnboardingActive) {
-        console.log("hid_scan_blocked:onboarding_active");
+        logger.debug("HidScan", "blocked:onboarding_active");
         showToast("Complete price setup first");
         return;
       }
       // SD-ONBOARD-001B: Block scans when add store product modal is open
       if (addStoreProductActive) {
-        console.log("hid_scan_blocked:add_store_product_active");
+        logger.debug("HidScan", "blocked:add_store_product_active");
         showToast("Complete adding product first");
         return;
       }
       if (scannerOpen) {
-        console.log("hid_scan_blocked:camera_open");
+        logger.debug("HidScan", "blocked:camera_open");
         showToast("Close camera to use scanner");
         return;
       }
       if (storeActive === false) {
-        console.log("hid_scan_blocked:store_inactive");
+        logger.debug("HidScan", "blocked:store_inactive");
         showToast("Store is inactive");
         return;
       }
       if (!isFocused) {
-        console.log("hid_scan_blocked:not_focused");
+        logger.debug("HidScan", "blocked:not_focused");
         return;
       }
 
