@@ -294,7 +294,7 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001",
-    "lastValidatedCommit": "93687b50",
+    "lastValidatedCommit": "0534d446",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "pending",
