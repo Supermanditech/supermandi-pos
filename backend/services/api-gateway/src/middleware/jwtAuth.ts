@@ -145,7 +145,9 @@ function getCookieValue(req: Request, name: string): string | undefined {
 export async function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   // Check if this is a public path (auth, registration, health endpoints)
   const isPublicPath = PUBLIC_PATHS.some(path => req.path.startsWith(path));
-  if (isPublicPath) {
+  // LIVE.API.HEALTH_ENDPOINT_PARITY.001: All /health and /healthz endpoints are public for monitoring
+  const isHealthPath = req.path.endsWith('/health') || req.path.endsWith('/healthz');
+  if (isPublicPath || isHealthPath) {
     return next();
   }
 

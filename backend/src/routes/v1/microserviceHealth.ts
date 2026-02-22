@@ -156,6 +156,23 @@ microserviceHealthRouter.get("/auth/health", async (_req: Request, res: Response
 });
 
 /**
+ * GET /api/v1/analytics/health
+ * Health check for analytics service (logical microservice in monolith)
+ * LIVE.API.HEALTH_ENDPOINT_PARITY.001: Was missing — returned 404
+ */
+microserviceHealthRouter.get("/analytics/health", async (_req: Request, res: Response) => {
+  const dbHealthy = await checkDbConnection();
+  res.status(dbHealthy ? 200 : 503).json({
+    status: dbHealthy ? 'ok' : 'degraded',
+    service: 'analytics-service',
+    version: VERSION,
+    gitSha: GIT_SHA,
+    database: dbHealthy ? 'connected' : 'disconnected',
+    deployment: 'monolith',
+  });
+});
+
+/**
  * GET /api/v1/pos/health
  * Health check for POS service (logical microservice in monolith)
  * LIVE.BACKEND.POS_HEALTH.001: Was missing — all other services had health endpoints
