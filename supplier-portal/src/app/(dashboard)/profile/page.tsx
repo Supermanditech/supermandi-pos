@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/auth';
 import { updateSupplierProfile, changePassword } from '@/lib/api';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
+import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
@@ -39,10 +40,14 @@ export default function ProfilePage() {
     bankName: supplier?.bankDetails?.bankName || '',
   });
 
+  // LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001: Snapshot refs for dirty tracking
+  const profileSnapshotRef = useRef<string>('');
+  const bankSnapshotRef = useRef<string>('');
+
   // SUP-017: Sync form state when supplier data loads
   useEffect(() => {
     if (!supplier) return;
-    setProfileData({
+    const profile = {
       contactName: supplier.contactName || '',
       email: supplier.email || '',
       phone: supplier.phone || '',
@@ -50,19 +55,41 @@ export default function ProfilePage() {
       city: supplier.city || '',
       state: supplier.state || '',
       pincode: supplier.pincode || '',
-    });
-    setBankData({
+    };
+    const bank = {
       accountName: supplier.bankDetails?.accountName || '',
       accountNumber: supplier.bankDetails?.accountNumber || '',
       ifscCode: supplier.bankDetails?.ifscCode || '',
       bankName: supplier.bankDetails?.bankName || '',
-    });
+    };
+    setProfileData(profile);
+    setBankData(bank);
+    profileSnapshotRef.current = JSON.stringify(profile);
+    bankSnapshotRef.current = JSON.stringify(bank);
   }, [supplier]);
+
+  // LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001: Unsaved-change guard across all tabs
+  const isDirty = useMemo(() => {
+    const profileChanged = profileSnapshotRef.current !== '' &&
+      JSON.stringify(profileData) !== profileSnapshotRef.current;
+    const bankChanged = bankSnapshotRef.current !== '' &&
+      JSON.stringify(bankData) !== bankSnapshotRef.current;
+    const passwordStarted = passwordData.currentPassword !== '' ||
+      passwordData.newPassword !== '' || passwordData.confirmPassword !== '';
+    return profileChanged || bankChanged || passwordStarted;
+  }, [profileData, bankData, passwordData]);
+  useUnsavedChanges(isDirty);
 
   const updateProfileMutation = useMutation({
     mutationFn: updateSupplierProfile,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success('Profile updated successfully!');
+      // Reset dirty snapshot after successful save
+      if ('bankDetails' in variables) {
+        bankSnapshotRef.current = JSON.stringify(bankData);
+      } else {
+        profileSnapshotRef.current = JSON.stringify(profileData);
+      }
       refreshProfile();
       queryClient.invalidateQueries({ queryKey: ['supplier-profile'] });
     },
