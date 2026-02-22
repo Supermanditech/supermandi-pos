@@ -2828,6 +2828,14 @@ export default function App() {
           <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>Staff</button>
           <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN</button>
           <button className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
+          <button className={tab === "gst-compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("gst-compliance")}>GST</button>
+          <button className={tab === "refunds" ? "tab tabActive" : "tab"} onClick={() => setTab("refunds")}>Refunds</button>
+          <button className={tab === "monitoring" ? "tab tabActive" : "tab"} onClick={() => setTab("monitoring")}>Monitoring</button>
+          <button className={tab === "quality" ? "tab tabActive" : "tab"} onClick={() => setTab("quality")}>Quality</button>
+          <button className={tab === "credit-providers" ? "tab tabActive" : "tab"} onClick={() => setTab("credit-providers")}>Finance</button>
+          <button className={tab === "support" ? "tab tabActive" : "tab"} onClick={() => setTab("support")}>Support</button>
+          <button className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI</button>
+          <button className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
         </nav>
 
         <div id="main-content" className="mainContent" role="main">
