@@ -713,6 +713,66 @@ function getLiveIterationProgress(state) {
   };
 }
 
+function getLiveIssueQueueRows(state) {
+  const pageGateRules = getLivePageByPageGateRules(state);
+  const progressPath = path.join(ROOT_DIR, pageGateRules.progressFile.replace(/\//g, path.sep));
+  if (!fs.existsSync(progressPath)) {
+    return {
+      errors: [`live issue gate: progress file not found: ${pageGateRules.progressFile}`],
+      rows: [],
+      progressFile: pageGateRules.progressFile,
+    };
+  }
+  const progressJson = readJson(progressPath);
+  const queue = Array.isArray(progressJson.queueStatus) ? progressJson.queueStatus : [];
+  const issueRows = queue.filter((row) => row && row.status === 'CODE_REVIEW_ISSUE');
+  return {
+    errors: [],
+    rows: issueRows,
+    progressFile: pageGateRules.progressFile,
+  };
+}
+
+function validateLiveIssueTicketizationGate(context, options = {}) {
+  const errors = [];
+  const state = context.state;
+  const rules = getLiveIterationExecutionRules(state);
+  if (!rules.enabled || !isLiveExecutionRuleActiveForMode(state, rules)) {
+    return errors;
+  }
+
+  const queueResult = getLiveIssueQueueRows(state);
+  if (queueResult.errors.length > 0) {
+    return queueResult.errors;
+  }
+
+  const issueRows = queueResult.rows;
+  for (const row of issueRows) {
+    const checkId = isNonEmptyString(row.checkId) ? row.checkId.trim() : 'unknown-check';
+    const ticketId = isNonEmptyString(row.ticketId) ? row.ticketId.trim() : '';
+    if (!ticketId) {
+      errors.push(
+        `live issue gate: ${queueResult.progressFile} has CODE_REVIEW_ISSUE without ticketId mapping (${checkId})`
+      );
+      continue;
+    }
+    const mappedTicket = context.ticketMap.get(ticketId);
+    if (!mappedTicket) {
+      errors.push(
+        `live issue gate: ${queueResult.progressFile} maps ${checkId} to missing ticket ${ticketId}`
+      );
+      continue;
+    }
+    if (options.requireClosedForDeploy === true && !['done', 'locked', 'cancelled'].includes(mappedTicket.status)) {
+      errors.push(
+        `live issue gate: deploy blocked until ${ticketId} is closed (current status ${mappedTicket.status}, check ${checkId})`
+      );
+    }
+  }
+
+  return errors;
+}
+
 function normalizeLowerStringArray(value) {
   return normalizeStringArray(value).map((item) => item.toLowerCase());
 }
@@ -1166,6 +1226,11 @@ function validateLiveIterationDeployGate(context) {
         `live iteration gate: progress.liveIteration.deployApproval.approvalToken must equal ${rules.deployApprovalToken}`
       );
     }
+  }
+
+  const issueGateErrors = validateLiveIssueTicketizationGate(context, { requireClosedForDeploy: true });
+  if (issueGateErrors.length > 0) {
+    errors.push(...issueGateErrors);
   }
 
   return errors;
@@ -3647,6 +3712,11 @@ function validateLiveIterationExecutionState(context) {
         `live execution gate violation: ticketization is incomplete but blocked statuses are active post-enforcement for ticket(s): ${violatingTickets.join(', ')}`
       );
     }
+  }
+
+  const issueGateErrors = validateLiveIssueTicketizationGate(context, { requireClosedForDeploy: false });
+  if (issueGateErrors.length > 0) {
+    errors.push(...issueGateErrors);
   }
 
   return errors;

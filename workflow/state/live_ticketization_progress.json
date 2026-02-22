@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-22T22:50:00.000Z",
+  "generatedAt": "2026-02-22T14:19:32.403Z",
   "sourceManifest": "workflow/state/live_page_manifest.json",
   "sourceSweep": "workflow/state/live_http_sweep_latest.json",
   "totalChecks": 704,
@@ -223,7 +223,7 @@
       "url": "https://staging.supermandi.tech/retailer/forgot-password",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.001",
       "notes": "Channel selector lacks active state indicator"
     },
     {
@@ -233,7 +233,7 @@
       "url": "https://staging.supermandi.tech/retailer/forgot-password",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.002",
       "notes": "Email enumeration protection confuses users; password requirements as text not checklist"
     },
     {
@@ -253,7 +253,7 @@
       "url": "https://staging.supermandi.tech/retailer/forgot-password",
       "check": "navigation",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.003",
       "notes": "Email channel reuses phone step name"
     },
     {
@@ -383,7 +383,7 @@
       "url": "https://staging.supermandi.tech/retailer/login",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.004",
       "notes": "Missing password mode visual indicator"
     },
     {
@@ -393,7 +393,7 @@
       "url": "https://staging.supermandi.tech/retailer/login",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.005",
       "notes": "No password strength feedback; no inline email validation"
     },
     {
@@ -403,7 +403,7 @@
       "url": "https://staging.supermandi.tech/retailer/login",
       "check": "wiring",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.006",
       "notes": "Single-store auto-login trusts backend; action enum not validated"
     },
     {
@@ -543,7 +543,7 @@
       "url": "https://staging.supermandi.tech/retailer/register",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.007",
       "notes": "Missing required field indicators; agreement checkbox not visible"
     },
     {
@@ -553,7 +553,7 @@
       "url": "https://staging.supermandi.tech/retailer/register",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.008",
       "notes": "No character count for GSTIN/Pincode; no upload progress"
     },
     {
@@ -573,7 +573,7 @@
       "url": "https://staging.supermandi.tech/retailer/register",
       "check": "navigation",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.009",
       "notes": "Change phone doesnt clear applicationId"
     },
     {
@@ -2703,7 +2703,7 @@
       "url": "https://staging.supermandi.tech/supplier/bnpl-orders/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.010",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -2713,7 +2713,7 @@
       "url": "https://staging.supermandi.tech/supplier/bnpl-orders/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.011",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -2783,7 +2783,7 @@
       "url": "https://staging.supermandi.tech/supplier/chat/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.012",
       "notes": "Inline styles instead of Tailwind; hardcoded colors"
     },
     {
@@ -2793,7 +2793,7 @@
       "url": "https://staging.supermandi.tech/supplier/chat/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.013",
       "notes": "No typing/online indicators; search loses context on back"
     },
     {
@@ -2803,7 +2803,7 @@
       "url": "https://staging.supermandi.tech/supplier/chat/",
       "check": "wiring",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.014",
       "notes": "5-10s polling instead of SSE; search not in URL state"
     },
     {
@@ -2823,7 +2823,7 @@
       "url": "https://staging.supermandi.tech/supplier/chat/",
       "check": "api_contract",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.015",
       "notes": "chatApiFetch response shape assumed"
     },
     {
@@ -2863,7 +2863,7 @@
       "url": "https://staging.supermandi.tech/supplier/dashboard/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.016",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -2873,7 +2873,7 @@
       "url": "https://staging.supermandi.tech/supplier/dashboard/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.017",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -2943,7 +2943,7 @@
       "url": "https://staging.supermandi.tech/supplier/earnings/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.018",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -2953,7 +2953,7 @@
       "url": "https://staging.supermandi.tech/supplier/earnings/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.019",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -3033,7 +3033,7 @@
       "url": "https://staging.supermandi.tech/supplier/forgot-password/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.020",
       "notes": "Similar UX gaps to retailer forgot-password"
     },
     {
@@ -3183,7 +3183,7 @@
       "url": "https://staging.supermandi.tech/supplier/invoices/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.021",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -3193,7 +3193,7 @@
       "url": "https://staging.supermandi.tech/supplier/invoices/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.022",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -3263,7 +3263,7 @@
       "url": "https://staging.supermandi.tech/supplier/kyc/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.023",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -3273,7 +3273,7 @@
       "url": "https://staging.supermandi.tech/supplier/kyc/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.024",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -3343,7 +3343,7 @@
       "url": "https://staging.supermandi.tech/supplier/login/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.025",
       "notes": "Auth cookie detection may flash login before redirect"
     },
     {
@@ -3353,7 +3353,7 @@
       "url": "https://staging.supermandi.tech/supplier/login/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.026",
       "notes": "Phone masking missing; no inline validation feedback"
     },
     {
@@ -3363,7 +3363,7 @@
       "url": "https://staging.supermandi.tech/supplier/login/",
       "check": "wiring",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.027",
       "notes": "Raw fetch() bypasses auth headers for registration/clear"
     },
     {
@@ -3423,7 +3423,7 @@
       "url": "https://staging.supermandi.tech/supplier/notifications/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.028",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -3433,7 +3433,7 @@
       "url": "https://staging.supermandi.tech/supplier/notifications/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.029",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -3523,7 +3523,7 @@
       "url": "https://staging.supermandi.tech/supplier/onboard/",
       "check": "wiring",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.030",
       "notes": "Two API calls where one suffices (GSTIN check + create)"
     },
     {
@@ -3543,7 +3543,7 @@
       "url": "https://staging.supermandi.tech/supplier/onboard/",
       "check": "api_contract",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.031",
       "notes": "checkSupplierGstin endpoint not verified"
     },
     {
@@ -3583,7 +3583,7 @@
       "url": "https://staging.supermandi.tech/supplier/orders/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.032",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -3593,7 +3593,7 @@
       "url": "https://staging.supermandi.tech/supplier/orders/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.033",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -3743,7 +3743,7 @@
       "url": "https://staging.supermandi.tech/supplier/products/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.034",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -3753,7 +3753,7 @@
       "url": "https://staging.supermandi.tech/supplier/products/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.035",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -3823,7 +3823,7 @@
       "url": "https://staging.supermandi.tech/supplier/profile/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.036",
       "notes": "Minor: emoji icons instead of components; minor layout issues"
     },
     {
@@ -3833,7 +3833,7 @@
       "url": "https://staging.supermandi.tech/supplier/profile/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.037",
       "notes": "Minor: missing loading skeletons in some views; inconsistent empty states"
     },
     {
@@ -3903,7 +3903,7 @@
       "url": "https://staging.supermandi.tech/supplier/register/",
       "check": "ui",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.038",
       "notes": "idToken expiry during multi-step registration"
     },
     {
@@ -3913,7 +3913,7 @@
       "url": "https://staging.supermandi.tech/supplier/register/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.039",
       "notes": "File validation errors shown as toast but file input state not reset"
     },
     {
@@ -3993,7 +3993,7 @@
       "url": "https://staging.supermandi.tech/supplier/reset-password/",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.040",
       "notes": "No auto-focus; no redirect countdown on success"
     },
     {
@@ -4393,7 +4393,7 @@
       "url": "https://staging.supermandi.tech/admin/#analytics",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.041",
       "notes": "Sub-tabs show blank cards when data is null"
     },
     {
@@ -4633,7 +4633,7 @@
       "url": "https://staging.supermandi.tech/admin/#credit-providers",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.042",
       "notes": "Provider toggle loading state not visually distinct"
     },
     {
@@ -5033,7 +5033,7 @@
       "url": "https://staging.supermandi.tech/admin/#gst-compliance",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.043",
       "notes": "No visual feedback on initial overview fetch"
     },
     {
@@ -5753,7 +5753,7 @@
       "url": "https://staging.supermandi.tech/admin/#stores",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.044",
       "notes": "No loading skeleton on initial store fetch"
     },
     {
@@ -5833,7 +5833,7 @@
       "url": "https://staging.supermandi.tech/admin/#suppliers",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.045",
       "notes": "Modal error boundary doesnt reset form state"
     },
     {
@@ -5993,7 +5993,7 @@
       "url": "https://staging.supermandi.tech/admin/#users",
       "check": "ux",
       "status": "CODE_REVIEW_ISSUE",
-      "ticketId": null,
+      "ticketId": "LIVE.TICKETIZATION.UNMAPPED.046",
       "notes": "No loading skeleton for initial users table"
     },
     {

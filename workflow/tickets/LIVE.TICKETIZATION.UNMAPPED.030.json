@@ -1,0 +1,249 @@
+{
+  "ticketId": "LIVE.TICKETIZATION.UNMAPPED.030",
+  "screenId": "SUPPLIER_WEB.SUPPLIER_ONBOARD",
+  "orderInScreen": 1,
+  "surface": "supplier_web",
+  "riskClass": "medium",
+  "title": "Resolve unmapped issue: supplier_web /supplier/onboard/ wiring",
+  "description": "Backfilled from live ticketization queueStatus issue without ticket mapping. checkId=supplier_web|/supplier/onboard/|wiring. Route=/supplier/onboard/. Check=wiring. Notes=Two API calls where one suffices (GSTIN check + create).",
+  "status": "todo",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "fail",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "pass"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ],
+    "cloudRunServices": [
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": true,
+    "routingChecked": true,
+    "apiContractChecked": true,
+    "dbConnectivityChecked": true,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "SUPPLIER_WEB.SUPPLIER_ONBOARD"
+    ],
+    "impactedServices": [
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude_live_ticketization_reconcile_2026-02-23",
+    "reproSteps": [
+      "Open https://staging.supermandi.tech/supplier/onboard/ on staging.",
+      "Validate wiring behavior for supplier_web route /supplier/onboard/.",
+      "Observe issue: Two API calls where one suffices (GSTIN check + create)"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": true,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22264213051",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-23T00:29:00.000Z",
+    "runbookVersion": "workflow-v1.2",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": true,
+    "testedOnRealTarget": true,
+    "testedOnLaptopBrowser": true,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22264213051",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00087-zkd",
+      "api-gateway-00068-52v",
+      "retailer-admin-00068-7hr",
+      "supplier-portal-00063-sp8",
+      "superadmin-00061-wwz",
+      "landing-00061-7bs"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ],
+    "afterVisual": [],
+    "apiProof": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ],
+    "parityProof": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-23T00:29:00.000Z",
+    "updatedAt": "2026-02-23T00:29:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Backfilled from live ticketization issue on staging deploy ref github://run/22264213051. Source checkId supplier_web|/supplier/onboard/|wiring.",
+    "evidence": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "supplier_web",
+    "expectedBasePath": "/supplier",
+    "expectedPrimaryService": "supplier-portal",
+    "actualCloudRunServices": [
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/supplier/onboard/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "supplier-portal",
+      "api-gateway"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Backfill ticket from live ticketization reconciliation."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending validation during implementation."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [
+      "implementation pending"
+    ],
+    "blocked": false,
+    "summary": "NOT COMPLETE: ticket backfilled from unmapped live issue; implementation pending."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "LIVE.TICKETIZATION.UNMAPPED.030",
+    "lastValidatedCommit": "70faa6c7",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "workflow/state/live_ticketization_progress.json"
+    ]
+  }
+}

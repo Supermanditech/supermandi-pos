@@ -43,6 +43,12 @@ Effective date: 2026-02-23
    - no conflict markers
    - keep working tree clean between tickets
 
+### Current Mandatory Queue
+
+- `LIVE.TICKETIZATION.UNMAPPED.001` through `LIVE.TICKETIZATION.UNMAPPED.046` are now `todo`.
+- These were backfilled from previously unmapped `CODE_REVIEW_ISSUE` entries in `workflow/state/live_ticketization_progress.json`.
+- Deploy is blocked until all 46 are closed (`done/locked/cancelled`) and guard passes.
+
 ## If Queue Is Empty
 
 - Publish checkpoint: `No implementable tickets in todo/in_progress status.`
