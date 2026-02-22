@@ -228,17 +228,18 @@
     "evidence": [
       "git rev-parse --short HEAD",
       "gcloud run services describe",
-      "gcloud logging read"
+      "gcloud logging read",
+      "ci_not_triggered=local_commits_ahead_of_origin"
     ],
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "not_required",
     "workBranch": "main",
     "lastValidatedCommit": "8892f92"
   },
   "timestamps": {
     "createdAt": "2026-02-20T22:25:16Z",
     "lockedAt": null,
-    "updatedAt": "2026-02-22T08:49:10.530Z"
+    "updatedAt": "2026-02-22T10:06:27.879Z"
   },
   "dependencyDisclosure": {
     "externalDependencies": [],

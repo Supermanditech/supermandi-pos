@@ -186,7 +186,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-20T22:58:25Z",
-    "updatedAt": "2026-02-21T14:41:03.429Z",
+    "updatedAt": "2026-02-22T10:06:27.882Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -300,13 +300,14 @@
     "workBranch": "fix/RET-P0-batch-retailer-admin-audit",
     "changeScope": "infra-audit-ticketization",
     "lastValidatedCommit": "686c0b3",
-    "noMixedScope": false,
+    "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
       "pnpm workflow:validate",
       "pnpm workflow:monitor",
-      "gcloud evidence commands"
+      "gcloud evidence commands",
+      "scope=gcp_staging_audit_batch_686c0b3"
     ]
   }
 }

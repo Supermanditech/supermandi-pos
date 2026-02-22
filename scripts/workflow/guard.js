@@ -4224,6 +4224,12 @@ function commandTicketTransition(args) {
     fail(`ticket-transition blocked by production readiness gate:\n- ${productionReadinessGateErrors.join('\n- ')}`);
   }
 
+  const requireInProgressBeforeDone = context.state?.rules?.ticketRules?.requireInProgressBeforeDone === true;
+  const requireInProgressFrom = context.state?.rules?.ticketRules?.requireInProgressBeforeDoneEnforceFrom;
+  if (to === 'done' && requireInProgressBeforeDone && shouldApplyCreatedAtEnforcement(ticket, requireInProgressFrom) && from !== 'in_progress') {
+    fail(`ticket-transition blocked: ${ticket.ticketId} must transition through in_progress before done`);
+  }
+
   ticket.status = to;
   if (!Array.isArray(ticket.statusHistory)) {
     ticket.statusHistory = [];

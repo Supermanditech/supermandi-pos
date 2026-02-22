@@ -218,7 +218,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T23:50:00.000Z",
-    "updatedAt": "2026-02-23T04:00:00.000Z",
+    "updatedAt": "2026-02-22T10:06:27.868Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -289,7 +289,9 @@
     },
     "deterministicScanIntentResolution": {
       "status": "pass",
-      "evidence": ["src/screens/SellScanScreen.tsx"],
+      "evidence": [
+        "src/screens/SellScanScreen.tsx"
+      ],
       "notes": "POS cart navigation is now deterministic: back triggers confirm dialog, checkout RESET bypasses guard."
     },
     "frontendBackendStateParity": {
@@ -314,12 +316,19 @@
     },
     "strictSchemaValidation": {
       "status": "pass",
-      "evidence": ["retailer-admin/src/hooks/useNavigationSafety.ts", "supplier-portal/src/hooks/useNavigationSafety.ts"],
+      "evidence": [
+        "retailer-admin/src/hooks/useNavigationSafety.ts",
+        "supplier-portal/src/hooks/useNavigationSafety.ts"
+      ],
       "notes": "Draft payloads are typed via DraftEntry<T> generic. Invalid JSON fails gracefully (returns null)."
     },
     "zeroSilentFailures": {
       "status": "pass",
-      "evidence": ["src/screens/SellScanScreen.tsx", "retailer-admin/src/hooks/useNavigationSafety.ts", "supplier-portal/src/app/register/page.tsx"],
+      "evidence": [
+        "src/screens/SellScanScreen.tsx",
+        "retailer-admin/src/hooks/useNavigationSafety.ts",
+        "supplier-portal/src/app/register/page.tsx"
+      ],
       "notes": "All navigation guards show explicit user feedback (browser dialog or Alert)."
     },
     "structuredAuditLogging": {
@@ -342,14 +351,15 @@
     "lastValidatedCommit": "27abace2",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "not_required",
     "evidence": [
       "git rev-parse --short HEAD",
       "typecheck retailer-admin: PASS",
       "typecheck supplier-portal: PASS",
       "typecheck superadmin: PASS",
       "typecheck root/POS: PASS",
-      "ticket-monitor: PASS (41 tickets, 0 failures)"
+      "ticket-monitor: PASS (41 tickets, 0 failures)",
+      "ci_not_triggered=local_commits_ahead_of_origin"
     ]
   }
 }

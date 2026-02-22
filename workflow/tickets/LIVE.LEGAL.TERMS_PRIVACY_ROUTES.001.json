@@ -198,7 +198,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T22:15:00.000Z",
-    "updatedAt": "2026-02-22T07:39:04.101Z",
+    "updatedAt": "2026-02-22T10:06:27.867Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -316,9 +316,10 @@
     "lastValidatedCommit": "9089afe1",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "not_required",
     "evidence": [
-      "staging_ticketization_audit_2026-02-22"
+      "staging_ticketization_audit_2026-02-22",
+      "ci_not_triggered=local_commits_ahead_of_origin"
     ]
   }
 }

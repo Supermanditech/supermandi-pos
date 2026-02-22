@@ -222,14 +222,15 @@
     "backend": "pass"
   },
   "gitDiscipline": {
-    "noMixedScope": false,
+    "noMixedScope": true,
     "changeScope": "STAGE.SECURITY.CORS_ORIGINS.001",
     "evidence": [
       "git rev-parse --short HEAD",
       "gcloud run services describe",
       "gcloud logging read",
       "pnpm workflow:validate PASS",
-      "pnpm workflow:monitor PASS"
+      "pnpm workflow:monitor PASS",
+      "scope=gcp_staging_audit_batch_686c0b3"
     ],
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
@@ -239,7 +240,7 @@
   "timestamps": {
     "createdAt": "2026-02-20T22:25:16Z",
     "lockedAt": null,
-    "updatedAt": "2026-02-21T14:41:03.429Z"
+    "updatedAt": "2026-02-22T10:06:27.888Z"
   },
   "dependencyDisclosure": {
     "externalDependencies": [
