@@ -1,7 +1,7 @@
 {
   "version": "48.0",
-  "lastUpdated": "2026-02-22T11:29:45.629Z",
-  "currentPhase": "EXTERNAL API READINESS: workflow tickets stable (46 done, 1 blocked, 1 ready_for_operator_test). Legacy T-256..T-298 dependency bucket revised: partnerships done, now awaiting provider API credentials/sandbox + Meta WABA approvals. Deploy hold active.",
+  "lastUpdated": "2026-02-22T11:41:23.218Z",
+  "currentPhase": "EXECUTION READY: 48 workflow tickets total — 46 done, 1 ready_for_operator_test (FIX-001), 1 todo (STAGE.SECURITY.IAM_EDITOR_ROLE.001, operator-approved staging-only). Deploy hold active.",
   "currentTicket": null,
   "ticketQueue": [],
   "ticketStatus": {
@@ -418,7 +418,7 @@
     "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001": "WORKFLOW_DONE",
     "LIVE.AUTH.PARITY.FORGOT_PASSWORD_CHANNELS.001": "WORKFLOW_DONE",
     "LIVE.AUTH.PARITY.RESET_PASSWORD_EXECUTION.001": "WORKFLOW_DONE",
-    "STAGE.SECURITY.IAM_EDITOR_ROLE.001": "WORKFLOW_BLOCKED",
+    "STAGE.SECURITY.IAM_EDITOR_ROLE.001": "WORKFLOW_TODO",
     "LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001": "WORKFLOW_DONE",
     "LIVE.LEGAL.TERMS_PRIVACY_ROUTES.001": "WORKFLOW_DONE",
     "LIVE.API.HEALTH_ENDPOINT_PARITY.001": "WORKFLOW_DONE",
@@ -1727,7 +1727,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "Operator-directed: skip operator test for now. Keep FIX-001 parked at ready_for_operator_test. Prepare API-contract implementation plans for T-256..T-298 and execute only after credentials/sandbox access are available.",
+  "nextAction": "Execute STAGE.SECURITY.IAM_EDITOR_ROLE.001 on GCP staging only (no production IAM changes), then re-run workflow guard + monitor + git-discipline. Keep FIX-001 parked at ready_for_operator_test until operator requests deploy.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",

@@ -6,7 +6,7 @@
   "riskClass": "high",
   "title": "Replace broad editor roles on default service accounts",
   "description": "Project IAM grants roles/editor to default compute and cloudservices service accounts, violating least-privilege baseline and increasing blast radius.",
-  "status": "blocked",
+  "status": "todo",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -168,6 +168,16 @@
       "sessionId": "session-staging-hardening-2026-02-21",
       "prevHash": "GENESIS",
       "hash": "ce4e0578999acf53958edd1be3f2430dcdf0cfac528e2095e241c4ab2143540b"
+    },
+    {
+      "from": "blocked",
+      "to": "todo",
+      "at": "2026-02-22T11:40:33.377Z",
+      "reason": "Operator approved staging-only execution. Move back to todo for implementation under strict staging boundary.",
+      "actor": "claude",
+      "sessionId": "session-operator-approval-2026-02-22",
+      "prevHash": "ce4e0578999acf53958edd1be3f2430dcdf0cfac528e2095e241c4ab2143540b",
+      "hash": "a0e9b8fc824afa6a602c84fcc6e1774341458c91d5b412df14f15ee476e5e694"
     }
   ],
   "evidence": {
@@ -187,7 +197,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-20T22:58:25Z",
-    "updatedAt": "2026-02-21T14:41:03.429Z",
+    "updatedAt": "2026-02-22T11:41:23.218Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -196,7 +206,7 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": true,
-    "notes": "Evidence collected from live staging GCP control plane and runtime endpoints.",
+    "notes": "Operator approved staging-only execution. Production IAM changes are forbidden in this ticket.",
     "evidence": [
       "gcloud project/network/sql/run/logging commands",
       "curl staging endpoints"
@@ -233,16 +243,12 @@
       "gcp-config",
       "deploy-pipeline"
     ],
-    "externalDependencies": [
-      "Security/IAM review approval"
-    ],
+    "externalDependencies": [],
     "pendingDependencies": [],
-    "blockers": [
-      "BLOCKED: Requires dedicated Cloud Run service account before removing roles/editor. Too risky for cleanup pass."
-    ],
+    "blockers": [],
     "disclosedToOperator": true,
-    "operatorAcknowledged": false,
-    "notes": "Pending security and platform remediation tasks."
+    "operatorAcknowledged": true,
+    "notes": "Operator approval received: execute IAM least-privilege migration on staging only. Production IAM scope is explicitly out-of-bounds for this ticket."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {
@@ -297,19 +303,17 @@
       "Replace roles/editor with least-privilege role set per service account",
       "Document explicit role mapping for CI/CD and runtime principals"
     ],
-    "pendingExternal": [
-      "Security/IAM review approval"
-    ],
+    "pendingExternal": [],
     "pendingOps": [
       "Create dedicated runtime service account for each Cloud Run service (or one constrained shared runtime SA) and remove dependency on default compute SA.",
       "Grant minimum required IAM roles to runtime SA(s): run.invoker (where needed), cloudsql.client, secretmanager.secretAccessor, artifactregistry.reader, logging.logWriter, monitoring.metricWriter.",
       "Update all 6 Cloud Run staging services to use the new runtime SA(s), then verify traffic is 100% on updated revisions.",
       "Validate runtime health + auth flows on staging after SA migration (health/version/auth/POS endpoints).",
-      "After successful migration, remove roles/editor from 807429885586-compute@developer.gserviceaccount.com and capture IAM policy diff evidence.",
+      "If and only if no production service depends on 807429885586-compute@developer.gserviceaccount.com, remove roles/editor from that principal and capture IAM policy diff evidence; otherwise do not remove in this ticket and record follow-up for production split.",
       "Re-run IAM diff after binding changes and attach pre/post policy JSON plus exact gcloud commands used."
     ],
-    "blocked": true,
-    "summary": "BLOCKED: Operator IAM remediation required. First migrate Cloud Run services to dedicated least-privilege runtime SA(s), then remove roles/editor from default compute SA with pre/post IAM evidence."
+    "blocked": false,
+    "summary": "Operator-approved for execution on staging only. Implement dedicated staging runtime SA migration with least privilege; production IAM is out of scope for this ticket."
   },
   "gitDiscipline": {
     "workBranch": "fix/RET-P0-batch-retailer-admin-audit",
