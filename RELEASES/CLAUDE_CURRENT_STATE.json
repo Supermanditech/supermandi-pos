@@ -1,7 +1,7 @@
 {
-  "version": "49.0",
-  "lastUpdated": "2026-02-22T23:58:00.000Z",
-  "currentPhase": "EXECUTION READY: 48 workflow tickets total — 47 done, 1 ready_for_operator_test (FIX-001). IAM_EDITOR_ROLE.001 completed (script + evidence). Deploy hold active.",
+  "version": "50.0",
+  "lastUpdated": "2026-02-22T13:57:03.600Z",
+  "currentPhase": "IMPLEMENTATION HOLD ACTIVE: execute tickets one-by-one only when workflow status is todo/in_progress. GCP staging deploy is blocked until operator explicit GO_DEPLOY approval in next session.",
   "currentTicket": null,
   "ticketQueue": [],
   "ticketStatus": {
@@ -1727,7 +1727,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "IAM_EDITOR_ROLE.001 done (scripts/staging-iam-hardening.sh created). FIX-001 parked at ready_for_operator_test. Operator runs IAM hardening script on GCP staging when ready. Deploy hold still active.",
+  "nextAction": "NO DEPLOY THIS SESSION. Re-read required workflow files, run workflow:validate + workflow:monitor, compute todo ticket queue, execute one ticket at a time (WIP=1) with strict git discipline; wait for operator GO_DEPLOY before any pre-staging attempt.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -1742,6 +1742,7 @@
     "pr": "#288"
   },
   "lastActions": [
+    "Machine-state trigger set: progress.liveIteration.phase=implementation and deployApproval.approved=false with GO_DEPLOY token. Claude must not deploy until operator explicit approval in next session.",
     "DEPLOY COMPLETE: SHA 7b3a4ee8 deployed to GCP staging via run 22264213051. All 6 services serving 100% on new revisions. All smoke gates PASS. Health checks 200 on /api/health and /api/v1/health.",
     "Deploy sequence: 3 CI runs passed (25cc7551, d66ffce8, 7b3a4ee8) → 3 deploys triggered → final deploy 22264213051 is the active staging baseline.",
     "Cloud Run revisions: main-backend-00087-zkd, api-gateway-00068-52v, retailer-admin-00068-7hr, supplier-portal-00063-sp8, superadmin-00061-wwz, landing-00061-7bs.",

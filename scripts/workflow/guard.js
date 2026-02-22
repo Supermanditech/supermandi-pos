@@ -549,6 +549,9 @@ function getLiveIterationExecutionRules(state) {
   const enforceModes = normalizeStringArray(rules.enforceModes);
   const blockedStatuses = normalizeStringArray(rules.blockedStatusesBeforeTicketizationComplete);
   const requiredSurfaces = normalizeStringArray(rules.requiredSurfaceCoverage);
+  const approvalToken = isNonEmptyString(rules.deployApprovalToken)
+    ? rules.deployApprovalToken.trim()
+    : 'GO_DEPLOY';
   return {
     enabled: rules.enabled === true,
     enforceModes: enforceModes.length > 0 ? enforceModes : ['LIVE_FIX'],
@@ -564,6 +567,8 @@ function getLiveIterationExecutionRules(state) {
     requiredSurfaceCoverage: requiredSurfaces.length > 0
       ? requiredSurfaces
       : ['retailer_web', 'supplier_web', 'superadmin_web', 'pos_app', 'cross_function_matrix'],
+    requireOperatorDeployApproval: rules.requireOperatorDeployApproval === true,
+    deployApprovalToken: approvalToken,
   };
 }
 
@@ -675,6 +680,7 @@ function getLiveIterationProgress(state) {
   const progress = state?.progress?.liveIteration || {};
   const ticketization = progress.ticketization || {};
   const implementation = progress.implementation || {};
+  const deployApproval = progress.deployApproval || {};
   const phase = isNonEmptyString(progress.phase) ? progress.phase.trim() : 'ticketization';
   return {
     phase,
@@ -695,6 +701,14 @@ function getLiveIterationProgress(state) {
       summary: isNonEmptyString(implementation.summary) ? implementation.summary.trim() : '',
       remainingTicketIds: normalizeStringArray(implementation.remainingTicketIds),
       lastUpdatedAt: isNonEmptyString(implementation.lastUpdatedAt) ? implementation.lastUpdatedAt.trim() : '',
+    },
+    deployApproval: {
+      approved: deployApproval.approved === true,
+      approvedBy: isNonEmptyString(deployApproval.approvedBy) ? deployApproval.approvedBy.trim() : '',
+      approvedAt: isNonEmptyString(deployApproval.approvedAt) ? deployApproval.approvedAt.trim() : '',
+      approvalToken: isNonEmptyString(deployApproval.approvalToken)
+        ? deployApproval.approvalToken.trim()
+        : '',
     },
   };
 }
@@ -1135,6 +1149,23 @@ function validateLiveIterationDeployGate(context) {
   }
   if (progress.phase !== 'deploy') {
     errors.push(`live iteration gate: staging deploy requires progress.liveIteration.phase=deploy (current ${progress.phase})`);
+  }
+  if (rules.requireOperatorDeployApproval) {
+    if (progress.deployApproval.approved !== true) {
+      const tokenHint = isNonEmptyString(rules.deployApprovalToken) ? ` using token ${rules.deployApprovalToken}` : '';
+      errors.push(`live iteration gate: staging deploy requires operator deploy approval${tokenHint}`);
+    }
+    if (!isNonEmptyString(progress.deployApproval.approvedBy)) {
+      errors.push('live iteration gate: staging deploy requires progress.liveIteration.deployApproval.approvedBy');
+    }
+    if (parseIsoTimestamp(progress.deployApproval.approvedAt) === null) {
+      errors.push('live iteration gate: staging deploy requires valid progress.liveIteration.deployApproval.approvedAt');
+    }
+    if (isNonEmptyString(rules.deployApprovalToken) && progress.deployApproval.approvalToken !== rules.deployApprovalToken) {
+      errors.push(
+        `live iteration gate: progress.liveIteration.deployApproval.approvalToken must equal ${rules.deployApprovalToken}`
+      );
+    }
   }
 
   return errors;
@@ -3528,6 +3559,18 @@ function validateLiveIterationExecutionState(context) {
   if (!isNonEmptyString(progress.implementation.summary)) {
     errors.push('progress.liveIteration.implementation.summary must be set');
   }
+  if (rules.requireOperatorDeployApproval) {
+    if (!isBoolean(progress.deployApproval.approved)) {
+      errors.push('progress.liveIteration.deployApproval.approved must be boolean');
+    }
+    if (!isNonEmptyString(progress.deployApproval.approvalToken)) {
+      errors.push('progress.liveIteration.deployApproval.approvalToken must be set');
+    } else if (progress.deployApproval.approvalToken !== rules.deployApprovalToken) {
+      errors.push(
+        `progress.liveIteration.deployApproval.approvalToken must equal rules.liveIterationExecutionRules.deployApprovalToken (${rules.deployApprovalToken})`
+      );
+    }
+  }
 
   const coverage = progress.ticketization.coverageBySurface || {};
   for (const surface of rules.requiredSurfaceCoverage) {
@@ -3566,6 +3609,17 @@ function validateLiveIterationExecutionState(context) {
     }
     if (progress.implementation.complete !== true) {
       errors.push('progress.liveIteration.phase=deploy requires implementation.complete=true');
+    }
+    if (rules.requireOperatorDeployApproval) {
+      if (progress.deployApproval.approved !== true) {
+        errors.push('progress.liveIteration.phase=deploy requires deployApproval.approved=true');
+      }
+      if (!isNonEmptyString(progress.deployApproval.approvedBy)) {
+        errors.push('progress.liveIteration.phase=deploy requires deployApproval.approvedBy');
+      }
+      if (parseIsoTimestamp(progress.deployApproval.approvedAt) === null) {
+        errors.push('progress.liveIteration.phase=deploy requires valid deployApproval.approvedAt');
+      }
     }
   }
 

@@ -1,5 +1,18 @@
 # CLAUDE NEXT ACTION: FIX-001 (Live Iteration Batch-First)
 
+## Implementation-Only Override (Effective 2026-02-23)
+
+If `workflow/state/workflow_state.json` shows:
+
+- `progress.liveIteration.phase = implementation`, and
+- `progress.liveIteration.deployApproval.approved = false`,
+
+then this file is subordinate to:
+
+- `RELEASES/CLAUDE_NEXT_ACTION_IMPLEMENTATION_ONLY_2026-02-23.md`
+
+In that case, Claude must execute ticket implementation one-by-one (WIP=1) and must not run any staging deploy command until operator explicitly grants `GO_DEPLOY`.
+
 ## Routing Note (Current Active Path)
 
 If `workflow/state/workflow_state.json` shows:
