@@ -376,14 +376,16 @@ export default function LoginPage() {
             )}
 
             {/* Error display */}
-            {error && <div className="login-alert-error">{error}</div>}
+            {error && <div className="login-alert-error" role="alert">{error}</div>}
 
             {/* T-021: Phone Number -- combined lookup + OTP send */}
             {step === 'phone' && authMode === 'otp' && (
               <form onSubmit={handleSendOtp}>
                 <div className="login-form-group">
-                  <label className="login-form-label">Phone Number</label>
+                  <label className="login-form-label" htmlFor="login-phone">Phone Number</label>
                   <input
+                    id="login-phone"
+                    name="phone"
                     type="tel"
                     className="login-form-input"
                     placeholder="+91 98765 43210"
@@ -435,8 +437,10 @@ export default function LoginPage() {
             {step === 'phone' && authMode === 'password' && (
               <form onSubmit={handlePasswordLogin}>
                 <div className="login-form-group">
-                  <label className="login-form-label">Email Address</label>
+                  <label className="login-form-label" htmlFor="login-email">Email Address</label>
                   <input
+                    id="login-email"
+                    name="email"
                     type="email"
                     className="login-form-input"
                     placeholder="you@example.com"
@@ -447,8 +451,10 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="login-form-group">
-                  <label className="login-form-label">Password</label>
+                  <label className="login-form-label" htmlFor="login-password">Password</label>
                   <input
+                    id="login-password"
+                    name="password"
                     type="password"
                     className="login-form-input"
                     placeholder="Enter your password"
@@ -498,8 +504,10 @@ export default function LoginPage() {
             {step === 'otp' && (
               <form onSubmit={handleVerifyOtp}>
                 <div className="login-form-group">
-                  <label className="login-form-label">Verification Code</label>
+                  <label className="login-form-label" htmlFor="login-otp">Verification Code</label>
                   <input
+                    id="login-otp"
+                    name="otp"
                     type="text"
                     className="login-form-input login-form-input--otp"
                     placeholder="Enter 6-digit PIN"
@@ -512,6 +520,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* AUTH-OTP-001: OTP expiry countdown */}
+                <div aria-live="polite">
                 {otpExpirySeconds > 0 && (
                   <p className={`login-otp-expiry ${otpExpirySeconds <= 60 ? 'login-otp-expiry--warning' : 'login-otp-expiry--normal'}`}>
                     Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
@@ -522,6 +531,7 @@ export default function LoginPage() {
                     Code expired. Please resend OTP.
                   </p>
                 )}
+                </div>
 
                 <button
                   type="submit"

@@ -95,8 +95,10 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
         {step === "email" && (
           <form onSubmit={handleSendOtp}>
             <div className="loginField">
-              <label>Email address</label>
+              <label htmlFor="admin-email">Email address</label>
               <input
+                id="admin-email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -106,7 +108,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
               />
             </div>
 
-            {error && <div className="loginError">{error}</div>}
+            {error && <div className="loginError" role="alert">{error}</div>}
 
             <button
               type="submit"
@@ -129,8 +131,10 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
             </div>
 
             <div className="loginField">
-              <label>Enter OTP</label>
+              <label htmlFor="admin-otp">Enter OTP</label>
               <input
+                id="admin-otp"
+                name="otp"
                 ref={otpRef}
                 type="text"
                 value={otp}
@@ -142,7 +146,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
               />
             </div>
 
-            {error && <div className="loginError">{error}</div>}
+            {error && <div className="loginError" role="alert">{error}</div>}
 
             <button
               type="submit"

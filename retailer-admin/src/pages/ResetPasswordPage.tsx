@@ -117,12 +117,14 @@ export default function ResetPasswordPage() {
                 <h2 className="login-card-title">Set New Password</h2>
                 <p className="login-card-subtitle">Enter the reset token from your email and choose a new password.</p>
 
-                {error && <div className="login-alert-error">{error}</div>}
+                {error && <div className="login-alert-error" role="alert">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                   <div className="login-form-group">
-                    <label className="login-form-label">Email Address</label>
+                    <label className="login-form-label" htmlFor="reset-email">Email Address</label>
                     <input
+                      id="reset-email"
+                      name="email"
                       type="email"
                       className="login-form-input"
                       placeholder="you@example.com"
@@ -133,8 +135,10 @@ export default function ResetPasswordPage() {
                     />
                   </div>
                   <div className="login-form-group">
-                    <label className="login-form-label">Reset Token</label>
+                    <label className="login-form-label" htmlFor="reset-token">Reset Token</label>
                     <input
+                      id="reset-token"
+                      name="token"
                       type="text"
                       className="login-form-input"
                       style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}
@@ -146,8 +150,10 @@ export default function ResetPasswordPage() {
                     />
                   </div>
                   <div className="login-form-group">
-                    <label className="login-form-label">New Password</label>
+                    <label className="login-form-label" htmlFor="reset-new-password">New Password</label>
                     <input
+                      id="reset-new-password"
+                      name="newPassword"
                       type="password"
                       className="login-form-input"
                       placeholder="Enter new password"
@@ -159,8 +165,10 @@ export default function ResetPasswordPage() {
                     <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
                   </div>
                   <div className="login-form-group">
-                    <label className="login-form-label">Confirm Password</label>
+                    <label className="login-form-label" htmlFor="reset-confirm-password">Confirm Password</label>
                     <input
+                      id="reset-confirm-password"
+                      name="confirmPassword"
                       type="password"
                       className="login-form-input"
                       placeholder="Confirm new password"

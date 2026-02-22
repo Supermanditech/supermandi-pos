@@ -337,11 +337,13 @@ export default function ForgotPasswordPage() {
               <>
                 <h2 className="login-card-title">Reset Password</h2>
                 <p className="login-card-subtitle">Enter your registered phone number to receive an OTP</p>
-                {error && <div className="login-alert-error">{error}</div>}
+                {error && <div className="login-alert-error" role="alert">{error}</div>}
                 <form onSubmit={handleSendOtp}>
                   <div className="login-form-group">
-                    <label className="login-form-label">Phone Number</label>
+                    <label className="login-form-label" htmlFor="forgot-phone">Phone Number</label>
                     <input
+                      id="forgot-phone"
+                      name="phone"
                       type="tel"
                       className="login-form-input"
                       placeholder="+91 98765 43210"
@@ -373,11 +375,13 @@ export default function ForgotPasswordPage() {
               <>
                 <h2 className="login-card-title">Reset Password</h2>
                 <p className="login-card-subtitle">Enter your registered email address and we'll send you a password reset link.</p>
-                {error && <div className="login-alert-error">{error}</div>}
+                {error && <div className="login-alert-error" role="alert">{error}</div>}
                 <form onSubmit={handleEmailRequest}>
                   <div className="login-form-group">
-                    <label className="login-form-label">Email Address</label>
+                    <label className="login-form-label" htmlFor="forgot-email">Email Address</label>
                     <input
+                      id="forgot-email"
+                      name="email"
                       type="email"
                       className="login-form-input"
                       placeholder="you@example.com"
@@ -431,24 +435,24 @@ export default function ForgotPasswordPage() {
               <>
                 <h2 className="login-card-title">Set New Password</h2>
                 <p className="login-card-subtitle">Enter the reset token from your email and choose a new password.</p>
-                {error && <div className="login-alert-error">{error}</div>}
+                {error && <div className="login-alert-error" role="alert">{error}</div>}
                 <form onSubmit={handleEmailReset}>
                   <div className="login-form-group">
-                    <label className="login-form-label">Email Address</label>
-                    <input type="email" className="login-form-input" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
+                    <label className="login-form-label" htmlFor="emailreset-email">Email Address</label>
+                    <input id="emailreset-email" name="email" type="email" className="login-form-input" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
                   </div>
                   <div className="login-form-group">
-                    <label className="login-form-label">Reset Token</label>
-                    <input type="text" className="login-form-input" style={{ fontFamily: 'monospace', fontSize: '0.875rem' }} placeholder="Paste the token from your email" value={resetToken} onChange={(e) => setResetToken(e.target.value)} disabled={isLoading} />
+                    <label className="login-form-label" htmlFor="emailreset-token">Reset Token</label>
+                    <input id="emailreset-token" name="token" type="text" className="login-form-input" style={{ fontFamily: 'monospace', fontSize: '0.875rem' }} placeholder="Paste the token from your email" value={resetToken} onChange={(e) => setResetToken(e.target.value)} disabled={isLoading} />
                   </div>
                   <div className="login-form-group">
-                    <label className="login-form-label">New Password</label>
-                    <input type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
+                    <label className="login-form-label" htmlFor="emailreset-new-password">New Password</label>
+                    <input id="emailreset-new-password" name="newPassword" type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
                     <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
                   </div>
                   <div className="login-form-group">
-                    <label className="login-form-label">Confirm Password</label>
-                    <input type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                    <label className="login-form-label" htmlFor="emailreset-confirm-password">Confirm Password</label>
+                    <input id="emailreset-confirm-password" name="confirmPassword" type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
                     {isLoading ? 'Resetting...' : 'Reset Password'}
@@ -462,11 +466,13 @@ export default function ForgotPasswordPage() {
               <>
                 <h2 className="login-card-title">Reset Password</h2>
                 <p className="login-card-subtitle">Enter the 6-digit code sent to {phone}</p>
-                {error && <div className="login-alert-error">{error}</div>}
+                {error && <div className="login-alert-error" role="alert">{error}</div>}
                 <form onSubmit={handleVerifyOtp}>
                   <div className="login-form-group">
-                    <label className="login-form-label">Verification Code</label>
+                    <label className="login-form-label" htmlFor="forgot-otp">Verification Code</label>
                     <input
+                      id="forgot-otp"
+                      name="otp"
                       type="text"
                       className="login-form-input login-form-input--otp"
                       placeholder="Enter 6-digit PIN"
@@ -477,6 +483,7 @@ export default function ForgotPasswordPage() {
                       autoFocus
                     />
                   </div>
+                  <div aria-live="polite">
                   {otpExpirySeconds > 0 && (
                     <p className={`login-otp-expiry ${otpExpirySeconds <= 60 ? 'login-otp-expiry--warning' : 'login-otp-expiry--normal'}`}>
                       Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
@@ -485,6 +492,7 @@ export default function ForgotPasswordPage() {
                   {otpExpirySeconds === 0 && step === 'otp' && (
                     <p className="login-otp-expiry login-otp-expiry--warning">Code expired. Please resend OTP.</p>
                   )}
+                  </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading || otp.length !== 6}>
                     {isLoading ? 'Verifying...' : 'Verify OTP'}
                   </button>
@@ -512,16 +520,16 @@ export default function ForgotPasswordPage() {
               <>
                 <h2 className="login-card-title">Reset Password</h2>
                 <p className="login-card-subtitle">Phone verified. Enter your new password below.</p>
-                {error && <div className="login-alert-error">{error}</div>}
+                {error && <div className="login-alert-error" role="alert">{error}</div>}
                 <form onSubmit={handleOtpResetPassword}>
                   <div className="login-form-group">
-                    <label className="login-form-label">New Password</label>
-                    <input type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
+                    <label className="login-form-label" htmlFor="otpreset-new-password">New Password</label>
+                    <input id="otpreset-new-password" name="newPassword" type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
                     <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
                   </div>
                   <div className="login-form-group">
-                    <label className="login-form-label">Confirm Password</label>
-                    <input type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                    <label className="login-form-label" htmlFor="otpreset-confirm-password">Confirm Password</label>
+                    <input id="otpreset-confirm-password" name="confirmPassword" type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
                     {isLoading ? 'Resetting...' : 'Reset Password'}

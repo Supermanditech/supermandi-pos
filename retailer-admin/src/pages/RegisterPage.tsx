@@ -660,12 +660,13 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              {error && <div style={styles.alertError}>{error}</div>}
+              {error && <div style={styles.alertError} role="alert">{error}</div>}
 
               <form onSubmit={handleSendOtp}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone Number</label>
+                  <label style={styles.label} htmlFor="reg-phone">Phone Number</label>
                   <input
+                    id="reg-phone" name="phone"
                     type="tel" style={styles.input} placeholder="+91 9876543210"
                     value={phone} onChange={(e) => setPhone(e.target.value)}
                     disabled={isLoading} autoFocus
@@ -695,12 +696,13 @@ export default function RegisterPage() {
               <h2 style={styles.cardTitle}>Enter verification code</h2>
               <p style={styles.cardSubtitle}>Enter the 6-digit code sent to {phone}</p>
 
-              {error && <div style={styles.alertError}>{error}</div>}
+              {error && <div style={styles.alertError} role="alert">{error}</div>}
 
               <form onSubmit={handleVerifyOtp}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Verification Code</label>
+                  <label style={styles.label} htmlFor="reg-otp">Verification Code</label>
                   <input
+                    id="reg-otp" name="otp"
                     type="text"
                     style={{ ...styles.input, textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
                     placeholder="------" value={otp}
@@ -709,6 +711,7 @@ export default function RegisterPage() {
                   />
                 </div>
 
+                <div aria-live="polite">
                 {otpExpirySeconds > 0 && (
                   <p style={{ fontSize: '0.8125rem', color: otpExpirySeconds <= 60 ? '#dc2626' : '#64748b', textAlign: 'center', marginBottom: '1rem' }}>
                     Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
@@ -719,6 +722,7 @@ export default function RegisterPage() {
                     Code expired. Please resend OTP.
                   </p>
                 )}
+                </div>
 
                 <button
                   type="submit"
@@ -755,21 +759,21 @@ export default function RegisterPage() {
                 <span>Phone verified: <strong>{phone}</strong></span>
               </div>
 
-              {error && <div style={{ ...styles.alertError, marginBottom: 0 }}>{error}</div>}
+              {error && <div style={{ ...styles.alertError, marginBottom: 0 }} role="alert">{error}</div>}
 
               {/* Business Identity Card */}
               <div style={styles.sectionCard}>
                 <h3 style={styles.sectionHeader}>Business Identity</h3>
                 <div style={styles.gridTwo}>
                   <div style={styles.gridFull}>
-                    <label style={styles.label}>Business / Store Name *</label>
-                    <input type="text" style={styles.input} placeholder="e.g. Sharma General Store"
+                    <label style={styles.label} htmlFor="reg-business-name">Business / Store Name *</label>
+                    <input id="reg-business-name" name="businessName" type="text" style={styles.input} placeholder="e.g. Sharma General Store"
                       value={businessName} onChange={(e) => setBusinessName(e.target.value)} disabled={isLoading} autoFocus />
                     {fieldErrors.businessName && <div style={styles.fieldError}>{fieldErrors.businessName}</div>}
                   </div>
                   <div>
-                    <label style={styles.label}>Business Type *</label>
-                    <select style={styles.select} value={businessType} onChange={(e) => setBusinessType(e.target.value)} disabled={isLoading}>
+                    <label style={styles.label} htmlFor="reg-business-type">Business Type *</label>
+                    <select id="reg-business-type" name="businessType" style={styles.select} value={businessType} onChange={(e) => setBusinessType(e.target.value)} disabled={isLoading}>
                       <option value="">Select business type</option>
                       {BUSINESS_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
@@ -777,15 +781,15 @@ export default function RegisterPage() {
                   </div>
                   {businessType === 'other' && (
                     <div>
-                      <label style={styles.label}>Specify Business Type *</label>
-                      <input type="text" style={styles.input} placeholder="e.g. Wholesale Club"
+                      <label style={styles.label} htmlFor="reg-business-type-other">Specify Business Type *</label>
+                      <input id="reg-business-type-other" name="businessTypeOther" type="text" style={styles.input} placeholder="e.g. Wholesale Club"
                         value={businessTypeOther} onChange={(e) => setBusinessTypeOther(e.target.value)} disabled={isLoading} />
                       {fieldErrors.businessTypeOther && <div style={styles.fieldError}>{fieldErrors.businessTypeOther}</div>}
                     </div>
                   )}
                   <div>
-                    <label style={styles.label}>GSTIN *</label>
-                    <input type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="22AAAAA0000A1Z5" maxLength={15}
+                    <label style={styles.label} htmlFor="reg-gstin">GSTIN *</label>
+                    <input id="reg-gstin" name="gstin" type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="22AAAAA0000A1Z5" maxLength={15}
                       value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} disabled={isLoading} />
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>15-character GST Identification Number</div>
                     {fieldErrors.gstin && <div style={styles.fieldError}>{fieldErrors.gstin}</div>}
@@ -798,20 +802,20 @@ export default function RegisterPage() {
                 <h3 style={styles.sectionHeader}>Contact Person</h3>
                 <div style={styles.gridTwo}>
                   <div>
-                    <label style={styles.label}>Owner / Authorized Person Name *</label>
-                    <input type="text" style={styles.input} placeholder="e.g. Rajesh Sharma"
+                    <label style={styles.label} htmlFor="reg-owner-name">Owner / Authorized Person Name *</label>
+                    <input id="reg-owner-name" name="ownerName" type="text" style={styles.input} placeholder="e.g. Rajesh Sharma"
                       value={ownerName} onChange={(e) => setOwnerName(e.target.value)} disabled={isLoading} />
                     {fieldErrors.ownerName && <div style={styles.fieldError}>{fieldErrors.ownerName}</div>}
                   </div>
                   <div>
-                    <label style={styles.label}>Email <span style={styles.optionalBadge}>(optional)</span></label>
-                    <input type="email" style={styles.input} placeholder="store@example.com"
+                    <label style={styles.label} htmlFor="reg-email">Email <span style={styles.optionalBadge}>(optional)</span></label>
+                    <input id="reg-email" name="email" type="email" style={styles.input} placeholder="store@example.com"
                       value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
                     {fieldErrors.email && <div style={styles.fieldError}>{fieldErrors.email}</div>}
                   </div>
                   <div>
-                    <label style={styles.label}>Phone (Verified)</label>
-                    <input type="text" style={{ ...styles.input, background: '#f1f5f9', cursor: 'not-allowed' }}
+                    <label style={styles.label} htmlFor="reg-phone-verified">Phone (Verified)</label>
+                    <input id="reg-phone-verified" type="text" style={{ ...styles.input, background: '#f1f5f9', cursor: 'not-allowed' }}
                       value={phone} disabled />
                   </div>
                 </div>
@@ -822,33 +826,33 @@ export default function RegisterPage() {
                 <h3 style={styles.sectionHeader}>Business Address</h3>
                 <div style={styles.gridTwo}>
                   <div style={styles.gridFull}>
-                    <label style={styles.label}>Address Line 1 *</label>
-                    <input type="text" style={styles.input} placeholder="Building name, Street"
+                    <label style={styles.label} htmlFor="reg-address1">Address Line 1 *</label>
+                    <input id="reg-address1" name="addressLine1" type="text" style={styles.input} placeholder="Building name, Street"
                       value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} disabled={isLoading} />
                     {fieldErrors.addressLine1 && <div style={styles.fieldError}>{fieldErrors.addressLine1}</div>}
                   </div>
                   <div style={styles.gridFull}>
-                    <label style={styles.label}>Address Line 2 <span style={styles.optionalBadge}>(optional)</span></label>
-                    <input type="text" style={styles.input} placeholder="Area, Landmark"
+                    <label style={styles.label} htmlFor="reg-address2">Address Line 2 <span style={styles.optionalBadge}>(optional)</span></label>
+                    <input id="reg-address2" name="addressLine2" type="text" style={styles.input} placeholder="Area, Landmark"
                       value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} disabled={isLoading} />
                   </div>
                   <div>
-                    <label style={styles.label}>City *</label>
-                    <input type="text" style={styles.input} placeholder="City"
+                    <label style={styles.label} htmlFor="reg-city">City *</label>
+                    <input id="reg-city" name="city" type="text" style={styles.input} placeholder="City"
                       value={city} onChange={(e) => setCity(e.target.value)} disabled={isLoading} />
                     {fieldErrors.city && <div style={styles.fieldError}>{fieldErrors.city}</div>}
                   </div>
                   <div>
-                    <label style={styles.label}>State *</label>
-                    <select style={styles.select} value={selectedState} onChange={(e) => setSelectedState(e.target.value)} disabled={isLoading}>
+                    <label style={styles.label} htmlFor="reg-state">State *</label>
+                    <select id="reg-state" name="state" style={styles.select} value={selectedState} onChange={(e) => setSelectedState(e.target.value)} disabled={isLoading}>
                       <option value="">Select state</option>
                       {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                     {fieldErrors.state && <div style={styles.fieldError}>{fieldErrors.state}</div>}
                   </div>
                   <div>
-                    <label style={styles.label}>Pincode *</label>
-                    <input type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="400001" maxLength={6}
+                    <label style={styles.label} htmlFor="reg-pincode">Pincode *</label>
+                    <input id="reg-pincode" name="pincode" type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="400001" maxLength={6}
                       value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} disabled={isLoading} />
                     {fieldErrors.pincode && <div style={styles.fieldError}>{fieldErrors.pincode}</div>}
                   </div>
@@ -907,7 +911,7 @@ export default function RegisterPage() {
                 </ul>
               </div>
 
-              {error && <div style={{ ...styles.alertError, marginBottom: 0 }}>{error}</div>}
+              {error && <div style={{ ...styles.alertError, marginBottom: 0 }} role="alert">{error}</div>}
 
               {/* Individual document cards */}
               {Object.entries(DOCUMENT_TYPES).map(([key, config]) => {
