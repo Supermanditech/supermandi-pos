@@ -8,7 +8,8 @@ import { getEmailProviderInfo } from "../../../services/emailService";
 export const adminHealthRouter = Router();
 
 // Git SHA for deployment verification
-const GIT_SHA = process.env['GIT_SHA'] || 'dev';
+// LIVE.API.HEALTH_GITSHA_ENV_PARITY.001: Standardize fallback to 'unknown' matching Docker ARG default
+const GIT_SHA = process.env['GIT_SHA'] || 'unknown';
 const BUILD_TIME = process.env['BUILD_TIME'] || new Date().toISOString();
 const ADMIN_TOKEN = process.env['ADMIN_TOKEN'] || '';
 

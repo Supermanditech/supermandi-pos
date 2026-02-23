@@ -9,7 +9,8 @@ export const microserviceHealthRouter = Router();
 
 // Common version info
 const VERSION = "3.0.10";
-const GIT_SHA = process.env['GIT_SHA'] || 'dev';
+// LIVE.API.HEALTH_GITSHA_ENV_PARITY.001: Standardize fallback to 'unknown' matching Docker ARG default
+const GIT_SHA = process.env['GIT_SHA'] || 'unknown';
 
 // Database health check helper
 async function checkDbConnection(): Promise<boolean> {
