@@ -20,6 +20,7 @@ Use this file to sync Claude memory/rules with the latest machine-enforced workf
 9. `workflow/production_boundary_iam.md`
 10. `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md`
 11. `RELEASES/CLAUDE_NEXT_ACTION_GCP_TICKETIZATION.md`
+12. `RELEASES/CLAUDE_NEXT_ACTION_CANONICAL_203_EXECUTION_2026-02-23.md`
 
 ## 2. Mandatory Session Commands
 
@@ -310,6 +311,7 @@ No silent retries.
 - `RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md`
 - `RELEASES/CLAUDE_NEXT_ACTION_FIX001.md`
 - `RELEASES/CLAUDE_NEXT_ACTION_GCP_TICKETIZATION.md`
+- `RELEASES/CLAUDE_NEXT_ACTION_CANONICAL_203_EXECUTION_2026-02-23.md`
 - `scripts/deploy-cloud-run.sh`
 - `scripts/gates/git-discipline.sh`
 - `scripts/promote-to-prod.sh`

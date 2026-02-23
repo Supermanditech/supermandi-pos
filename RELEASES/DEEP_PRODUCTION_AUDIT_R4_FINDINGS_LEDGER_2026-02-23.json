@@ -1,22 +1,23 @@
 {
-  "generatedAt": "2026-02-23T16:08:42.881Z",
+  "generatedAt": "2026-02-23T16:21:53.030Z",
   "sourceFile": "RELEASES/DEEP_PRODUCTION_AUDIT_R4.md",
   "sourceMethod": "static_repo_audit_round4",
+  "parseMethod": "markdown_table_split_pipe",
   "note": "Lossless extraction of markdown findings table rows. Does not activate workflow tickets.",
-  "totalExtracted": 140,
+  "totalExtracted": 144,
   "countsBySeverity": {
     "P0": 43,
-    "P1": 78,
+    "P1": 82,
     "P2": 19
   },
   "countsByCategory": {
     "A": 13,
-    "B": 29,
+    "B": 32,
     "C": 21,
     "D": 14,
     "E": 26,
     "F": 8,
-    "G": 11,
+    "G": 12,
     "H": 15,
     "I": 3
   },
@@ -216,6 +217,33 @@
       "file": "ra/auth.ts",
       "line": "—",
       "finding": "Registration overwrites retailer_portal_phone (account hijack)",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-10",
+      "severity": "P1",
+      "file": "Gateway /retailer/me",
+      "line": "—",
+      "finding": "In PUBLIC_PATHS — no auth required",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-11",
+      "severity": "P1",
+      "file": "Gateway /supplier/bnpl/backed-orders",
+      "line": "—",
+      "finding": "No JWT validation",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-12",
+      "severity": "P1",
+      "file": "Gateway /chat/*",
+      "line": "—",
+      "finding": "Trusts x-user-id header without JWT",
       "categoryCode": "B",
       "categoryName": "Authentication & Authorization"
     },
@@ -1080,6 +1108,15 @@
       "file": "documents.ts",
       "line": "`(req as any).userId/storeId/supplierId`",
       "finding": "Complex identity chain; silent bypass",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-8",
+      "severity": "P1",
+      "file": "chat.ts + socketManager.ts",
+      "line": "`(req/socket as any).userId`",
+      "finding": "Untyped identity in chat system",
       "categoryCode": "G",
       "categoryName": "TypeScript Safety"
     },

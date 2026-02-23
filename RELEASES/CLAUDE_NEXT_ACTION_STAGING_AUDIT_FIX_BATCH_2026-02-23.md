@@ -286,9 +286,9 @@ Round 4 extracted ledger:
 
 - File: `RELEASES/DEEP_PRODUCTION_AUDIT_R4_FINDINGS_LEDGER_2026-02-23.json`
 - Extraction scope: markdown category tables (`A-1`..`I-3`)
-- Extracted findings rows: `140`
-- Severity counts (table rows): `P0=43`, `P1=78`, `P2=19`
-- Category counts: `A=13`, `B=29`, `C=21`, `D=14`, `E=26`, `F=8`, `G=11`, `H=15`, `I=3`
+- Extracted findings rows: `144`
+- Severity counts (table rows): `P0=43`, `P1=82`, `P2=19`
+- Category counts: `A=13`, `B=32`, `C=21`, `D=14`, `E=26`, `F=8`, `G=12`, `H=15`, `I=3`
 
 No-loss rules for Source E:
 
@@ -327,3 +327,51 @@ When operator says `ACTIVATE_ROUND4`:
 4. Closure requires both:
   - implementation evidence
   - post-fix runtime evidence on latest staging deploy SHA
+
+## 10. Final Canonical Dedupe (Rounds 1-4) [LOCKED]
+
+Authoritative dedupe outputs:
+
+- `RELEASES/AUDIT_R1234_FINAL_CANONICAL_DEDUPE_2026-02-23.json`
+- `RELEASES/CLAUDE_NEXT_ACTION_AUDIT_R1234_FINAL_EXECUTION_2026-02-23.md`
+
+Locked totals (after full dedupe):
+
+- rounds 1-3 existing canonical tickets: `91`
+- round-4 findings rows mapped: `144`
+- round-4 canonical tickets after dedupe: `125`
+- round-4 rows deduped: `19`
+- new canonical tickets added from round 4: `112`
+- final canonical tickets across rounds 1-4: `203`
+
+Locked final severity rollup (canonical set):
+
+- `P0=88`
+- `P1=100`
+- `P2=15`
+- `UNKNOWN=0`
+
+Mandatory execution rule:
+
+1. Claude must execute only `canonicalTickets.allFinal` from `RELEASES/AUDIT_R1234_FINAL_CANONICAL_DEDUPE_2026-02-23.json`.
+2. Claude must preserve `rowMappings` coverage at `144/144` (no unmapped rows).
+3. Deploy hold remains active until the activated canonical execution queue is complete per workflow gates.
+
+## 11. Mandatory Scope Reference (Use In Every Checkpoint)
+
+Reference string (must be present in every progress update):
+
+- `REF: POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203`
+
+Scope bundle document:
+
+- `RELEASES/POST_DEPLOY_SCOPE_BADC3FBE_AUDIT_R1234_CANONICAL_203.md`
+- `RELEASES/CLAUDE_NEXT_ACTION_POST_DEPLOY_SCOPE_EXECUTION_DISCIPLINE_2026-02-23.md`
+
+Before any "all tickets completed" claim, run:
+
+```bash
+pnpm workflow:scope:check:strict
+```
+
+If exit code is non-zero, completion claim is invalid.

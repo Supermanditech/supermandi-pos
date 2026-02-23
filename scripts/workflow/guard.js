@@ -44,6 +44,12 @@ const CUMULATIVE_DEPLOY_DEFAULT_POST_BASELINE_COMMIT_EXEMPT_PATHS = [
   'workflow/',
   'RELEASES/',
 ];
+const POST_DEPLOY_SCOPE_DEFAULT_SCOPE_ID = 'POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203';
+const POST_DEPLOY_SCOPE_DEFAULT_CANONICAL_FILE =
+  'RELEASES/AUDIT_R1234_FINAL_CANONICAL_DEDUPE_2026-02-23.json';
+const POST_DEPLOY_SCOPE_DEFAULT_REQUIRED_CANONICAL_TOTAL = 203;
+const POST_DEPLOY_SCOPE_DEFAULT_REQUIRED_ROUND4_ROWS = 144;
+const POST_DEPLOY_SCOPE_DEFAULT_CLOSED_STATUSES = ['done', 'locked', 'cancelled'];
 
 const MODES = new Set([
   'LIVE_FIX',
@@ -542,6 +548,10 @@ const LIVE_PAGE_GATE_DEFAULT_RESOLVED_STATUSES = [
   'PASS',
   'VERIFIED',
 ];
+const LIVE_IMPLEMENTATION_LINEAR_DEFAULT_START_ALLOWED_FROM_STATUSES = ['todo'];
+const LIVE_IMPLEMENTATION_LINEAR_DEFAULT_REQUIRED_PRIOR_STATUSES = ['done', 'locked', 'cancelled'];
+const LIVE_IMPLEMENTATION_LINEAR_DEFAULT_ALLOWED_DONE_CI_STATUSES = ['passed', 'not_required'];
+const LIVE_IMPLEMENTATION_LINEAR_DEFAULT_BLOCKING_WIP_STATUSES = ['in_progress'];
 const PRODUCTION_ETHICS_DEFAULT_STATUSES = [
   'ready_for_operator_test',
   'ready_for_impact_retest',
@@ -605,6 +615,40 @@ function getLiveIterationExecutionRules(state) {
       : ['retailer_web', 'supplier_web', 'superadmin_web', 'pos_app', 'cross_function_matrix'],
     requireOperatorDeployApproval: rules.requireOperatorDeployApproval === true,
     deployApprovalToken: approvalToken,
+  };
+}
+
+function getLiveImplementationLinearExecutionRules(state) {
+  const rules = state?.rules?.liveIterationExecutionRules?.implementationLinearGate || {};
+  const enforceModes = normalizeStringArray(rules.enforceModes);
+  const startAllowedFromStatuses = normalizeStringArray(rules.startAllowedFromStatuses);
+  const requiredPriorStatuses = normalizeStringArray(rules.requiredPriorStatuses);
+  const allowedDoneCiGateStatuses = normalizeStringArray(rules.allowedDoneCiGateStatuses);
+  const blockingOtherWipStatuses = normalizeStringArray(rules.blockingOtherWipStatuses);
+  const allowDirtyPathsBeforeStart = normalizeStringArray(rules.allowDirtyPathsBeforeStart);
+
+  return {
+    enabled: rules.enabled === true,
+    enforceModes: enforceModes.length > 0 ? enforceModes : ['LIVE_FIX'],
+    enforceFrom: isNonEmptyString(rules.enforceFrom) ? rules.enforceFrom : '',
+    requireImplementationPhase: rules.requireImplementationPhase !== false,
+    requireTicketAtQueueHead: rules.requireTicketAtQueueHead !== false,
+    requireNoOtherWipTickets: rules.requireNoOtherWipTickets !== false,
+    requireCleanWorktreeBeforeStart: rules.requireCleanWorktreeBeforeStart === true,
+    allowDirtyPathsBeforeStart,
+    startAllowedFromStatuses: startAllowedFromStatuses.length > 0
+      ? startAllowedFromStatuses
+      : LIVE_IMPLEMENTATION_LINEAR_DEFAULT_START_ALLOWED_FROM_STATUSES,
+    requiredPriorStatuses: requiredPriorStatuses.length > 0
+      ? requiredPriorStatuses
+      : LIVE_IMPLEMENTATION_LINEAR_DEFAULT_REQUIRED_PRIOR_STATUSES,
+    requirePreviousDoneTicketsGitDiscipline: rules.requirePreviousDoneTicketsGitDiscipline !== false,
+    allowedDoneCiGateStatuses: allowedDoneCiGateStatuses.length > 0
+      ? allowedDoneCiGateStatuses
+      : LIVE_IMPLEMENTATION_LINEAR_DEFAULT_ALLOWED_DONE_CI_STATUSES,
+    blockingOtherWipStatuses: blockingOtherWipStatuses.length > 0
+      ? blockingOtherWipStatuses
+      : LIVE_IMPLEMENTATION_LINEAR_DEFAULT_BLOCKING_WIP_STATUSES,
   };
 }
 
@@ -807,6 +851,181 @@ function validateCumulativeDeployShaDisciplineConfig(state) {
         'rules.liveTicketIntakeRules.lastSuccessfulStagingCommitSha must be a valid git SHA when cumulativeDeployShaDiscipline.requireTargetDescendsFromLastSuccessfulStagingSha=true'
       );
     }
+  }
+
+  return errors;
+}
+
+function getPostDeployScopeDisciplineRules(state) {
+  const rules = state?.rules?.deploymentRules?.postDeployScopeDiscipline || {};
+  const closedStatuses = normalizeStringArray(rules.closedStatuses);
+  const enforceOn = normalizeStringArray(rules.enforceOn);
+  const requiredCanonicalTotal = Number(rules.requiredCanonicalTotal);
+  const requiredRound4Rows = Number(rules.requiredRound4Rows);
+
+  return {
+    enabled: rules.enabled === true,
+    enforceOn,
+    scopeId: isNonEmptyString(rules.scopeId)
+      ? rules.scopeId.trim()
+      : POST_DEPLOY_SCOPE_DEFAULT_SCOPE_ID,
+    canonicalFile: isNonEmptyString(rules.canonicalFile)
+      ? rules.canonicalFile.trim().replace(/\\/g, '/')
+      : POST_DEPLOY_SCOPE_DEFAULT_CANONICAL_FILE,
+    requiredCanonicalTotal:
+      Number.isInteger(requiredCanonicalTotal) && requiredCanonicalTotal > 0
+        ? requiredCanonicalTotal
+        : POST_DEPLOY_SCOPE_DEFAULT_REQUIRED_CANONICAL_TOTAL,
+    requiredRound4Rows:
+      Number.isInteger(requiredRound4Rows) && requiredRound4Rows > 0
+        ? requiredRound4Rows
+        : POST_DEPLOY_SCOPE_DEFAULT_REQUIRED_ROUND4_ROWS,
+    closedStatuses:
+      closedStatuses.length > 0
+        ? closedStatuses
+        : POST_DEPLOY_SCOPE_DEFAULT_CLOSED_STATUSES,
+  };
+}
+
+function validatePostDeployScopeDisciplineConfig(state) {
+  const errors = [];
+  const rules = getPostDeployScopeDisciplineRules(state);
+  if (!rules.enabled) {
+    errors.push('rules.deploymentRules.postDeployScopeDiscipline.enabled must be true');
+    return errors;
+  }
+
+  if (!rules.enforceOn.includes('staging_deploy')) {
+    errors.push('rules.deploymentRules.postDeployScopeDiscipline.enforceOn must include staging_deploy');
+  }
+
+  const invalidClosedStatuses = rules.closedStatuses.filter((status) => !TICKET_STATUS_VALUES.has(status));
+  if (invalidClosedStatuses.length > 0) {
+    errors.push(
+      `rules.deploymentRules.postDeployScopeDiscipline.closedStatuses contains invalid status(es): ${invalidClosedStatuses.join(', ')}`
+    );
+  }
+
+  const canonicalPath = path.join(ROOT_DIR, rules.canonicalFile.replace(/\//g, path.sep));
+  const canonical = readJsonSafe(canonicalPath);
+  if (canonical.error || !canonical.value) {
+    errors.push(
+      `rules.deploymentRules.postDeployScopeDiscipline.canonicalFile cannot be read: ${rules.canonicalFile} (${canonical.error || 'unknown error'})`
+    );
+    return errors;
+  }
+
+  const ids = Array.isArray(canonical.value?.canonicalTickets?.allFinal)
+    ? canonical.value.canonicalTickets.allFinal
+    : [];
+  if (ids.length === 0) {
+    errors.push(
+      `rules.deploymentRules.postDeployScopeDiscipline.canonicalFile has no canonicalTickets.allFinal entries: ${rules.canonicalFile}`
+    );
+  }
+
+  if (ids.length !== rules.requiredCanonicalTotal) {
+    errors.push(
+      `rules.deploymentRules.postDeployScopeDiscipline.requiredCanonicalTotal (${rules.requiredCanonicalTotal}) must equal canonicalTickets.allFinal length (${ids.length})`
+    );
+  }
+
+  const mappedRows = Number(canonical.value?.totals?.round4Rows || 0);
+  if (!Number.isInteger(mappedRows) || mappedRows <= 0) {
+    errors.push(
+      `rules.deploymentRules.postDeployScopeDiscipline.canonicalFile missing totals.round4Rows in ${rules.canonicalFile}`
+    );
+  } else if (mappedRows !== rules.requiredRound4Rows) {
+    errors.push(
+      `rules.deploymentRules.postDeployScopeDiscipline.requiredRound4Rows (${rules.requiredRound4Rows}) must equal totals.round4Rows (${mappedRows})`
+    );
+  }
+
+  return errors;
+}
+
+function buildPostDeployScopeCoverageReport(context, disciplineRules) {
+  const rules = disciplineRules || getPostDeployScopeDisciplineRules(context.state);
+  const canonicalPath = path.join(ROOT_DIR, rules.canonicalFile.replace(/\//g, path.sep));
+  const canonical = readJsonSafe(canonicalPath);
+
+  const report = {
+    scopeId: rules.scopeId,
+    canonicalFile: rules.canonicalFile,
+    canonicalTotal: 0,
+    requiredCanonicalTotal: rules.requiredCanonicalTotal,
+    round4Rows: 0,
+    requiredRound4Rows: rules.requiredRound4Rows,
+    missingTicketFiles: [],
+    openTickets: [],
+    openByStatus: {},
+    errors: [],
+  };
+
+  if (canonical.error || !canonical.value) {
+    report.errors.push(
+      `post-deploy scope gate: cannot read canonical file ${rules.canonicalFile} (${canonical.error || 'unknown error'})`
+    );
+    return report;
+  }
+
+  const canonicalIds = Array.isArray(canonical.value?.canonicalTickets?.allFinal)
+    ? canonical.value.canonicalTickets.allFinal
+    : [];
+  report.canonicalTotal = canonicalIds.length;
+  report.round4Rows = Number(canonical.value?.totals?.round4Rows || 0);
+
+  const closedSet = new Set(rules.closedStatuses);
+  for (const ticketId of canonicalIds) {
+    const ticket = context.ticketMap.get(ticketId);
+    if (!ticket) {
+      report.missingTicketFiles.push(ticketId);
+      continue;
+    }
+    if (!closedSet.has(ticket.status)) {
+      report.openTickets.push(ticketId);
+      report.openByStatus[ticket.status] = (report.openByStatus[ticket.status] || 0) + 1;
+    }
+  }
+
+  if (report.canonicalTotal !== rules.requiredCanonicalTotal) {
+    report.errors.push(
+      `post-deploy scope gate: canonical total ${report.canonicalTotal} does not match required ${rules.requiredCanonicalTotal}`
+    );
+  }
+  if (report.round4Rows !== rules.requiredRound4Rows) {
+    report.errors.push(
+      `post-deploy scope gate: mapped round-4 rows ${report.round4Rows} does not match required ${rules.requiredRound4Rows}`
+    );
+  }
+
+  return report;
+}
+
+function validatePostDeployScopeDisciplineForPreStaging(context) {
+  const errors = [];
+  const rules = getPostDeployScopeDisciplineRules(context.state);
+  if (!rules.enabled || !rules.enforceOn.includes('staging_deploy')) {
+    return errors;
+  }
+
+  const report = buildPostDeployScopeCoverageReport(context, rules);
+  errors.push(...report.errors);
+
+  if (report.missingTicketFiles.length > 0) {
+    const sample = report.missingTicketFiles.slice(0, 12);
+    errors.push(
+      `post-deploy scope gate (${rules.scopeId}): missing ${report.missingTicketFiles.length} ticket file(s) from canonical scope. Sample: ${sample.join(', ')}${report.missingTicketFiles.length > sample.length ? ', ...' : ''}`
+    );
+  }
+
+  if (report.openTickets.length > 0) {
+    const statusSummary = Object.entries(report.openByStatus)
+      .map(([status, count]) => `${status}=${count}`)
+      .join(', ');
+    errors.push(
+      `post-deploy scope gate (${rules.scopeId}): ${report.openTickets.length} ticket(s) not closed in canonical scope. Statuses: ${statusSummary || 'unknown'}`
+    );
   }
 
   return errors;
@@ -1808,6 +2027,163 @@ function isLiveExecutionRuleActiveForMode(state, rules) {
   return rules.enforceModes.includes(mode);
 }
 
+function isImplementationLinearGateActiveForMode(state, rules) {
+  if (!rules.enabled) {
+    return false;
+  }
+  const mode = state?.workflowMode || '';
+  return rules.enforceModes.includes(mode);
+}
+
+function validateCleanWorktreeForTicketStart(context, linearRules) {
+  const errors = [];
+  if (!linearRules.requireCleanWorktreeBeforeStart) {
+    return errors;
+  }
+
+  let rawStatus = '';
+  try {
+    rawStatus = execSync('git status --porcelain', {
+      cwd: ROOT_DIR,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }) || '';
+  } catch (_error) {
+    errors.push('implementation linear gate: failed to read git status');
+    return errors;
+  }
+
+  if (!isNonEmptyString(rawStatus.trimEnd())) {
+    return errors;
+  }
+
+  const allowedDirtyPaths = new Set(
+    (linearRules.allowDirtyPathsBeforeStart || []).map((entry) => normalizeRepoPath(entry))
+  );
+  const blocking = collectBlockingDirtyLines(rawStatus, allowedDirtyPaths);
+  if (blocking.length > 0) {
+    errors.push('implementation linear gate: worktree must be clean before starting next ticket');
+    errors.push(`implementation linear gate: blocking changes:\n  ${blocking.join('\n  ')}`);
+  }
+  return errors;
+}
+
+function validatePreviousDoneTicketDiscipline(context, ticket, linearRules) {
+  const errors = [];
+  if (!linearRules.requirePreviousDoneTicketsGitDiscipline) {
+    return errors;
+  }
+
+  const progress = getLiveIterationProgress(context.state);
+  const queue = progress.implementation.remainingTicketIds;
+  const currentIndex = queue.indexOf(ticket.ticketId);
+  if (currentIndex <= 0) {
+    return errors;
+  }
+
+  const requiredPriorStatuses = new Set(linearRules.requiredPriorStatuses);
+  const allowedDoneCiStatuses = new Set(linearRules.allowedDoneCiGateStatuses);
+  for (let idx = 0; idx < currentIndex; idx += 1) {
+    const priorTicketId = queue[idx];
+    const priorTicket = context.ticketMap.get(priorTicketId);
+    if (!priorTicket) {
+      errors.push(`implementation linear gate: prior queue ticket missing file: ${priorTicketId}`);
+      continue;
+    }
+    if (!requiredPriorStatuses.has(priorTicket.status)) {
+      errors.push(
+        `implementation linear gate: prior queue ticket ${priorTicketId} must be in closed status (${[...requiredPriorStatuses].join(', ')}) before starting ${ticket.ticketId}; current status=${priorTicket.status}`
+      );
+      continue;
+    }
+    const gitDiscipline = priorTicket.gitDiscipline || {};
+    if (gitDiscipline.noMixedScope !== true) {
+      errors.push(`implementation linear gate: prior ticket ${priorTicketId} requires gitDiscipline.noMixedScope=true`);
+    }
+    if (gitDiscipline.noConflictMarkers !== true) {
+      errors.push(`implementation linear gate: prior ticket ${priorTicketId} requires gitDiscipline.noConflictMarkers=true`);
+    }
+    const ciStatus = isNonEmptyString(gitDiscipline.ciGateStatus) ? gitDiscipline.ciGateStatus.trim() : '';
+    if (!allowedDoneCiStatuses.has(ciStatus)) {
+      errors.push(
+        `implementation linear gate: prior ticket ${priorTicketId} requires gitDiscipline.ciGateStatus in ${[...allowedDoneCiStatuses].join(', ')} (found ${ciStatus || 'missing'})`
+      );
+    }
+    if (!isLikelyGitSha(gitDiscipline.lastValidatedCommit)) {
+      errors.push(
+        `implementation linear gate: prior ticket ${priorTicketId} requires valid gitDiscipline.lastValidatedCommit`
+      );
+    }
+  }
+  return errors;
+}
+
+function validateImplementationLinearTransitionGate(context, ticket, from, to, actor) {
+  const errors = [];
+  if (actor !== 'claude' || to !== 'in_progress') {
+    return errors;
+  }
+
+  const linearRules = getLiveImplementationLinearExecutionRules(context.state);
+  if (!isImplementationLinearGateActiveForMode(context.state, linearRules)) {
+    return errors;
+  }
+
+  const enforceFrom = parseIsoTimestamp(linearRules.enforceFrom);
+  if (enforceFrom !== null && Date.now() < enforceFrom) {
+    return errors;
+  }
+
+  const progress = getLiveIterationProgress(context.state);
+  if (linearRules.requireImplementationPhase && progress.phase !== 'implementation') {
+    errors.push(
+      `implementation linear gate: progress.liveIteration.phase must be implementation before starting ticket execution (current ${progress.phase})`
+    );
+  }
+
+  const startAllowedFrom = new Set(linearRules.startAllowedFromStatuses);
+  if (!startAllowedFrom.has(from)) {
+    errors.push(
+      `implementation linear gate: ${ticket.ticketId} cannot move ${from} -> ${to}; allowed start statuses: ${[...startAllowedFrom].join(', ')}`
+    );
+  }
+
+  const queue = progress.implementation.remainingTicketIds;
+  if (linearRules.requireTicketAtQueueHead) {
+    if (queue.length === 0) {
+      errors.push(`implementation linear gate: remainingTicketIds is empty; cannot start ${ticket.ticketId}`);
+    } else if (queue[0] !== ticket.ticketId) {
+      errors.push(
+        `implementation linear gate: ${ticket.ticketId} is out of order. Required queue head is ${queue[0]}`
+      );
+    }
+  }
+
+  if (linearRules.requireNoOtherWipTickets) {
+    const blockingStatuses = new Set(linearRules.blockingOtherWipStatuses);
+    const otherWip = [...context.ticketMap.values()]
+      .filter((entry) => entry.ticketId !== ticket.ticketId && blockingStatuses.has(entry.status))
+      .map((entry) => entry.ticketId);
+    if (otherWip.length > 0) {
+      errors.push(
+        `implementation linear gate: cannot start ${ticket.ticketId} while other WIP tickets exist: ${otherWip.join(', ')}`
+      );
+    }
+  }
+
+  const worktreeErrors = validateCleanWorktreeForTicketStart(context, linearRules);
+  if (worktreeErrors.length > 0) {
+    errors.push(...worktreeErrors);
+  }
+
+  const priorDisciplineErrors = validatePreviousDoneTicketDiscipline(context, ticket, linearRules);
+  if (priorDisciplineErrors.length > 0) {
+    errors.push(...priorDisciplineErrors);
+  }
+
+  return errors;
+}
+
 function validateLiveIterationTransitionGate(context, ticket, from, to, actor) {
   const errors = [];
   const rules = getLiveIterationExecutionRules(context.state);
@@ -1836,6 +2212,11 @@ function validateLiveIterationTransitionGate(context, ticket, from, to, actor) {
     errors.push(
       `live iteration gate: cannot transition ${ticket.ticketId} ${from} -> ${to} while ticketization is incomplete (${progress.ticketization.statement || 'NOT COMPLETE'}).${remainingSuffix}`
     );
+  }
+
+  const linearErrors = validateImplementationLinearTransitionGate(context, ticket, from, to, actor);
+  if (linearErrors.length > 0) {
+    errors.push(...linearErrors);
   }
 
   return errors;
@@ -4214,6 +4595,7 @@ function validateLiveIterationExecutionState(context) {
   const errors = [];
   const state = context.state;
   const rules = getLiveIterationExecutionRules(state);
+  const linearRules = getLiveImplementationLinearExecutionRules(state);
 
   const rawRules = state?.rules?.liveIterationExecutionRules;
   if (rawRules !== undefined && (rawRules === null || typeof rawRules !== 'object' || Array.isArray(rawRules))) {
@@ -4223,6 +4605,55 @@ function validateLiveIterationExecutionState(context) {
 
   if (!rules.enabled) {
     return errors;
+  }
+
+  const rawLinear = state?.rules?.liveIterationExecutionRules?.implementationLinearGate;
+  if (rawLinear !== undefined && (rawLinear === null || typeof rawLinear !== 'object' || Array.isArray(rawLinear))) {
+    errors.push('rules.liveIterationExecutionRules.implementationLinearGate must be an object when provided');
+  }
+
+  const linearInvalidModes = linearRules.enforceModes.filter((mode) => !MODES.has(mode));
+  if (linearInvalidModes.length > 0) {
+    errors.push(
+      `rules.liveIterationExecutionRules.implementationLinearGate.enforceModes contains invalid mode(s): ${linearInvalidModes.join(', ')}`
+    );
+  }
+
+  const linearEnforceFromTs = parseIsoTimestamp(linearRules.enforceFrom);
+  if (isNonEmptyString(linearRules.enforceFrom) && linearEnforceFromTs === null) {
+    errors.push('rules.liveIterationExecutionRules.implementationLinearGate.enforceFrom must be a valid timestamp when provided');
+  }
+
+  const linearInvalidStartStatuses = linearRules.startAllowedFromStatuses.filter((status) => !TICKET_STATUS_VALUES.has(status));
+  if (linearInvalidStartStatuses.length > 0) {
+    errors.push(
+      `rules.liveIterationExecutionRules.implementationLinearGate.startAllowedFromStatuses contains invalid status(es): ${linearInvalidStartStatuses.join(', ')}`
+    );
+  }
+
+  const linearInvalidPriorStatuses = linearRules.requiredPriorStatuses.filter((status) => !TICKET_STATUS_VALUES.has(status));
+  if (linearInvalidPriorStatuses.length > 0) {
+    errors.push(
+      `rules.liveIterationExecutionRules.implementationLinearGate.requiredPriorStatuses contains invalid status(es): ${linearInvalidPriorStatuses.join(', ')}`
+    );
+  }
+
+  const linearInvalidCiStatuses = linearRules.allowedDoneCiGateStatuses.filter(
+    (status) => !['not_required', 'pending', 'passed', 'failed'].includes(status)
+  );
+  if (linearInvalidCiStatuses.length > 0) {
+    errors.push(
+      `rules.liveIterationExecutionRules.implementationLinearGate.allowedDoneCiGateStatuses contains invalid value(s): ${linearInvalidCiStatuses.join(', ')}`
+    );
+  }
+
+  const linearInvalidBlockingStatuses = linearRules.blockingOtherWipStatuses.filter(
+    (status) => !TICKET_STATUS_VALUES.has(status)
+  );
+  if (linearInvalidBlockingStatuses.length > 0) {
+    errors.push(
+      `rules.liveIterationExecutionRules.implementationLinearGate.blockingOtherWipStatuses contains invalid status(es): ${linearInvalidBlockingStatuses.join(', ')}`
+    );
   }
 
   const invalidModes = rules.enforceModes.filter((mode) => !MODES.has(mode));
@@ -4582,6 +5013,7 @@ function validateState(context, options = {}) {
   errors.push(...validateProductionReadinessTiersState(context));
   errors.push(...validateNonBreakableDeploymentGateConfig(state));
   errors.push(...validateCumulativeDeployShaDisciplineConfig(state));
+  errors.push(...validatePostDeployScopeDisciplineConfig(state));
   errors.push(...validateImplementationProgressTicketSync(context));
 
   const sessionRules = state?.rules?.sessionRules || {};
@@ -5180,6 +5612,11 @@ function commandPreStagingDeploy() {
     const cumulativeDeployErrors = validateCumulativeDeployShaDisciplineForPreStaging(context, batch);
     if (cumulativeDeployErrors.length > 0) {
       fail(`staging deploy blocked by cumulative deploy SHA discipline:\n- ${cumulativeDeployErrors.join('\n- ')}`);
+    }
+
+    const scopeDisciplineErrors = validatePostDeployScopeDisciplineForPreStaging(context);
+    if (scopeDisciplineErrors.length > 0) {
+      fail(`staging deploy blocked by post-deploy scope discipline:\n- ${scopeDisciplineErrors.join('\n- ')}`);
     }
   }
 

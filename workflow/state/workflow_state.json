@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-23T12:18:18.000Z",
+  "updatedAt": "2026-02-23T17:34:20.854Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -337,7 +337,7 @@
     },
     "ticketRules": {
       "maxActiveTicketsPerScreen": 1,
-      "maxWipTicketsGlobal": 2,
+      "maxWipTicketsGlobal": 1,
       "maxWipScreensGlobal": 2,
       "enforceTopLevelOrder": true,
       "maxSubTicketsPerParent": 10,
@@ -821,6 +821,23 @@
           "unknown",
           "tbd"
         ]
+      },
+      "postDeployScopeDiscipline": {
+        "enabled": true,
+        "enforceOn": [
+          "staging_deploy"
+        ],
+        "scopeId": "POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203",
+        "canonicalFile": "RELEASES/AUDIT_R1234_FINAL_CANONICAL_DEDUPE_2026-02-23.json",
+        "requiredCanonicalTotal": 203,
+        "requiredRound4Rows": 144,
+        "closedStatuses": [
+          "done",
+          "locked",
+          "cancelled"
+        ],
+        "baselineDeploySha": "badc3fbe",
+        "baselineDeployRun": "22305359033"
       }
     },
     "deploymentBatchPolicy": {
@@ -1006,6 +1023,34 @@
         "requireCurrentPageIdMatchFirstIncomplete": true,
         "currentPageIdField": "progress.liveIteration.ticketization.currentPageId"
       },
+      "implementationLinearGate": {
+        "enabled": true,
+        "enforceModes": [
+          "LIVE_FIX"
+        ],
+        "enforceFrom": "2026-02-23T00:00:00Z",
+        "requireImplementationPhase": true,
+        "requireTicketAtQueueHead": true,
+        "requireNoOtherWipTickets": true,
+        "blockingOtherWipStatuses": [
+          "in_progress"
+        ],
+        "requireCleanWorktreeBeforeStart": true,
+        "allowDirtyPathsBeforeStart": [],
+        "startAllowedFromStatuses": [
+          "todo"
+        ],
+        "requiredPriorStatuses": [
+          "done",
+          "locked",
+          "cancelled"
+        ],
+        "requirePreviousDoneTicketsGitDiscipline": true,
+        "allowedDoneCiGateStatuses": [
+          "passed",
+          "not_required"
+        ]
+      },
       "requireOperatorDeployApproval": true,
       "deployApprovalToken": "GO_DEPLOY"
     },
@@ -1059,9 +1104,11 @@
         "lastUpdatedAt": "2026-02-22T22:50:00.000Z"
       },
       "implementation": {
-        "complete": true,
-        "summary": "COMPLETE: implementation backlog is zero and cumulative staging deploy is complete on SHA badc3fbe (run 22305359033). Deploy hold is re-enabled; next deploy requires a fresh GO_DEPLOY after new ticket implementation.",
-        "remainingTicketIds": [],
+        "complete": false,
+        "summary": "NOT COMPLETE: implementation pending ticket LIVE.RETAILER.REGISTER.OTP_SUCCESS_ERROR_CONFLICT.001 before next deploy approval.",
+        "remainingTicketIds": [
+          "LIVE.RETAILER.REGISTER.OTP_SUCCESS_ERROR_CONFLICT.001"
+        ],
         "completedTicketIds": [
           "FIX-001",
           "LIVE.A11Y.RETAILER_FORM_LABELS.001",
@@ -1164,7 +1211,7 @@
           "STAGE.SECURITY.SECRET_ROTATION.001",
           "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001"
         ],
-        "lastUpdatedAt": "2026-02-23T12:18:18.000Z"
+        "lastUpdatedAt": "2026-02-23T17:34:20.854Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1275,7 +1322,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-23T12:18:18.000Z"
+    "updatedAt": "2026-02-23T17:34:20.854Z"
   },
-  "lastUpdated": "2026-02-23T12:18:18.000Z"
+  "lastUpdated": "2026-02-23T17:34:20.854Z"
 }
