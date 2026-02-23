@@ -132,33 +132,14 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
   // T-207: Accept optional orderId for PO validation
   const { items, supplierId, supplierName, supplierGstin, notes, totalAmount, idempotencyKey, orderId } = req.body;
 
-  // PRA-080 + AUDIT-API-011: Idempotency check — prevent duplicate stock-in on double-submit
-  // Require idempotency key for all stock-in operations (backward-compat: warn if missing)
+  // LIVE.STOCKIN.IDEMPOTENCY_SINGLE_TX_LOCK.001: Idempotency check moved into main transaction
+  // Advisory lock + duplicate check now happen on the SAME connection as the work transaction
+  // to prevent race condition between unlock and BEGIN
+  let idempotencyChecked = false;
+  let idempotencyLockId: number | null = null;
   if (idempotencyKey && typeof idempotencyKey === "string") {
-    // Use advisory lock to prevent race condition (check-then-act atomicity)
-    // hashCode of idempotencyKey as lock ID — advisory locks are session-scoped
-    const lockId = Math.abs(idempotencyKey.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0));
-    const lockClient = await pool.connect();
-    try {
-      await lockClient.query(`SELECT pg_advisory_lock($1)`, [lockId]);
-      const dupCheck = await lockClient.query(
-        `SELECT id FROM inventory.inventory_ledger
-         WHERE store_id = $1 AND reference_id = $2 AND transaction_type = 'purchase_received'
-         LIMIT 1`,
-        [storeId, idempotencyKey]
-      );
-      if (dupCheck.rows.length > 0) {
-        await lockClient.query(`SELECT pg_advisory_unlock($1)`, [lockId]);
-        lockClient.release();
-        return res.json({
-          success: true,
-          data: { ledgerEntryId: idempotencyKey, itemsProcessed: 0, duplicate: true },
-        });
-      }
-      await lockClient.query(`SELECT pg_advisory_unlock($1)`, [lockId]);
-    } finally {
-      lockClient.release();
-    }
+    idempotencyLockId = Math.abs(idempotencyKey.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0));
+    idempotencyChecked = true;
   }
 
   // SA-P0-004: Validate GSTIN format if provided
@@ -214,6 +195,25 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
 
   try {
     await client.query("BEGIN");
+
+    // LIVE.STOCKIN.IDEMPOTENCY_SINGLE_TX_LOCK.001: Lock + duplicate check inside main transaction
+    if (idempotencyChecked && idempotencyLockId !== null) {
+      await client.query(`SELECT pg_advisory_xact_lock($1)`, [idempotencyLockId]);
+      const dupCheck = await client.query(
+        `SELECT id FROM inventory.inventory_ledger
+         WHERE store_id = $1 AND reference_id = $2 AND transaction_type = 'purchase_received'
+         LIMIT 1`,
+        [storeId, idempotencyKey]
+      );
+      if (dupCheck.rows.length > 0) {
+        await client.query("ROLLBACK");
+        client.release();
+        return res.json({
+          success: true,
+          data: { ledgerEntryId: idempotencyKey, itemsProcessed: 0, duplicate: true },
+        });
+      }
+    }
 
     let itemsProcessed = 0;
 
