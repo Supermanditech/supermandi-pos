@@ -2,8 +2,73 @@
 // Protects API from abuse with configurable rate limits
 // GL-CRIT-0027: Reduced default from 100 to 30/min, auth endpoints 5/min
 
-import rateLimit from 'express-rate-limit';
+import rateLimit, { type Store, type IncrementResponse, type Options } from 'express-rate-limit';
 import { config } from '../config';
+import { getGatewayRedis } from '../redis';
+
+// LIVE.GW.RATE_LIMIT_REDIS_BACKED.001: Redis-backed rate limit store for distributed limiting
+// Falls back to in-memory when Redis is unavailable (single-instance still works)
+class RedisRateLimitStore implements Store {
+  private prefix: string;
+  private windowMs: number;
+  private localStore = new Map<string, { totalHits: number; resetTime: Date }>();
+
+  constructor(prefix: string, windowMs: number) {
+    this.prefix = `rl:${prefix}:`;
+    this.windowMs = windowMs;
+  }
+
+  async increment(key: string): Promise<IncrementResponse> {
+    const redis = getGatewayRedis();
+    if (redis) {
+      try {
+        const redisKey = this.prefix + key;
+        const ttlSeconds = Math.ceil(this.windowMs / 1000);
+        const hits = await redis.incr(redisKey);
+        if (hits === 1) await redis.expire(redisKey, ttlSeconds);
+        const ttl = await redis.ttl(redisKey);
+        return { totalHits: hits, resetTime: new Date(Date.now() + ttl * 1000) };
+      } catch { /* fall through to local */ }
+    }
+    // Fallback: in-memory
+    const now = Date.now();
+    const entry = this.localStore.get(key);
+    if (entry && entry.resetTime.getTime() > now) {
+      entry.totalHits++;
+      return { totalHits: entry.totalHits, resetTime: entry.resetTime };
+    }
+    const resetTime = new Date(now + this.windowMs);
+    this.localStore.set(key, { totalHits: 1, resetTime });
+    return { totalHits: 1, resetTime };
+  }
+
+  async decrement(key: string): Promise<void> {
+    const redis = getGatewayRedis();
+    if (redis) {
+      try { await redis.decr(this.prefix + key); return; } catch { /* fall through */ }
+    }
+    const entry = this.localStore.get(key);
+    if (entry && entry.totalHits > 0) entry.totalHits--;
+  }
+
+  async resetKey(key: string): Promise<void> {
+    const redis = getGatewayRedis();
+    if (redis) {
+      try { await redis.del(this.prefix + key); } catch { /* fall through */ }
+    }
+    this.localStore.delete(key);
+  }
+
+  // Required by interface but not all versions need it
+  init(_options: Options): void { /* no-op */ }
+}
+
+function createStore(prefix: string, windowMs: number): RedisRateLimitStore {
+  return new RedisRateLimitStore(prefix, windowMs);
+}
+
+// LIVE.GW.HEALTH_BYPASS_EXPLICIT_ALLOWLIST.001: Explicit health endpoint allowlist
+const HEALTH_BYPASS_PATHS = new Set(['/healthz', '/health', '/readyz']);
 
 /**
  * General rate limiter middleware
@@ -16,6 +81,7 @@ export const rateLimiterMiddleware = rateLimit({
   max: config.rateLimitMax,
   standardHeaders: true, // Return rate limit info in headers
   legacyHeaders: false, // Disable X-RateLimit-* headers
+  store: createStore('general', config.rateLimitWindowMs),
 
   // Custom response
   message: {
@@ -25,11 +91,10 @@ export const rateLimiterMiddleware = rateLimit({
     },
   },
 
-  // Skip rate limiting for health checks and admin routes
+  // LIVE.GW.HEALTH_BYPASS_EXPLICIT_ALLOWLIST.001: Use explicit allowlist for health bypasses
   // RET-AUD-019: Admin routes are authenticated and have separate adminRateLimiter
   skip: (req) => {
-    return req.path === '/healthz' ||
-           req.path === '/health' ||
+    return HEALTH_BYPASS_PATHS.has(req.path) ||
            req.path.startsWith('/api/v1/admin');
   },
 
@@ -48,6 +113,7 @@ export const authRateLimiter = rateLimit({
   max: config.authRateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
+  store: createStore('auth', config.rateLimitWindowMs),
 
   message: {
     error: {
@@ -70,6 +136,7 @@ export const adminRateLimiter = rateLimit({
   max: config.authRateLimitMax, // 5 attempts per minute (same as auth)
   standardHeaders: true,
   legacyHeaders: false,
+  store: createStore('admin', config.rateLimitWindowMs),
 
   message: {
     error: {
