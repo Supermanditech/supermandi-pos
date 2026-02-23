@@ -1260,9 +1260,11 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
               [randomUUID(), saleId, mode, status, amountMinor]
             );
 
-            await client.query(`UPDATE sales SET status = $1 WHERE id = $2`, [
+            // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+            await client.query(`UPDATE sales SET status = $1 WHERE id = $2 AND store_id = $3`, [
               mode === "CASH" ? "PAID_CASH" : "DUE",
-              saleId
+              saleId,
+              storeId
             ]);
           } else {
             // AUD-080-D COMPLETE FIX: Always use the NEWER amount (this event is more recent)
@@ -1271,9 +1273,10 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
             if (existingAmount !== amountMinor) {
               log.warn(`[Sync] PAYMENT amount mismatch detected: sale_id=${saleId}, existing=${existingAmount}, new=${amountMinor}`);
               // Always update to the new amount - newer events are authoritative corrections
+              // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
               await client.query(
-                `UPDATE payments SET amount_minor = $1, updated_at = NOW() WHERE id = $2`,
-                [amountMinor, existingPayment.rows[0].id]
+                `UPDATE payments SET amount_minor = $1, updated_at = NOW() WHERE id = $2 AND store_id = $3`,
+                [amountMinor, existingPayment.rows[0].id, storeId]
               );
               log.info(`[Sync] Updated payment amount from ${existingAmount} to ${amountMinor} (newer event is authoritative)`);
             }
