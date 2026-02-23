@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "medium",
   "title": "Establish POS build stamp parity with staging commit and API version evidence",
-  "description": "Build/Deployed stamp in POS must map to shipped app build metadata and be auditable against staging API/version signals. Remove ambiguous local labels in release candidates and provide deterministic production-grade provenance. Git discipline (mandatory): run session boot for this ticket; keep WIP=1; stage only ticket scope files; run workflow validate+monitor before commit; include ticketId in commit message.",
+  "description": "Build/Deployed stamp in POS must map to shipped app build metadata and be auditable against staging API/version signals. Remove ambiguous local labels in release candidates and provide deterministic production-grade provenance. Git discipline (mandatory): run session boot for this ticket; keep WIP=1; stage only ticket scope files; run workflow validate+monitor before commit; include ticketId in commit message. Production-grade closure gate (mandatory): no partial implementation. Ticket can move beyond todo only when runtime behavior is implemented end-to-end and evidence is captured. Runtime parity scope (mandatory): POS theme switch must apply in active session without app reinstall and persist across restart/login/logout/navigation. GCP staging parity scope (mandatory): closure requires staging API evidence, deploy run ref, and active Cloud Run revision IDs recorded in ticket fields. Git discipline (mandatory): WIP=1, session-boot before transition, scope-only commits, validate+monitor before commit, no deploy trigger in implementation phase. Cumulative deploy contract: keep changes parked at git; deploy only after all 5 POS theme tickets are done and operator provides GO_DEPLOY.",
   "status": "todo",
   "severity": "P2",
   "parentTicketId": null,
@@ -167,7 +167,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-23T08:35:56.563Z",
-    "updatedAt": "2026-02-23T08:37:18.673Z",
+    "updatedAt": "2026-02-23T08:43:25.695Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -266,14 +266,18 @@
     "productionGradeClaimed": false,
     "pendingInternal": [
       "implementation",
-      "qa_e2e"
+      "qa_e2e",
+      "runtime_e2e",
+      "non_regression_proof",
+      "staging_parity_evidence"
     ],
     "pendingExternal": [],
     "pendingOps": [
-      "operator_signoff"
+      "operator_signoff",
+      "operator_go_deploy_after_full_batch"
     ],
     "blocked": false,
-    "summary": "NOT READY: ticket created for implementation and evidence-driven closure."
+    "summary": "NOT READY: must meet 100% runtime + staging parity + git discipline closure gates; keep parked for cumulative deploy."
   },
   "gitDiscipline": {
     "workBranch": "main",
@@ -287,7 +291,10 @@
       "must-run: pnpm workflow:session-boot -- --file workflow/tickets/LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001.json",
       "must-run: pnpm workflow:validate",
       "must-run: pnpm workflow:monitor",
-      "must-pass: scripts/gates/git-discipline.sh"
+      "must-pass: scripts/gates/git-discipline.sh",
+      "gate:WIP=1",
+      "gate:no_deploy_until_batch_complete",
+      "gate:cumulative_deploy_only_after_all_5_done"
     ]
   }
 }
