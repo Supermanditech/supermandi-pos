@@ -1084,37 +1084,38 @@ export default function MenuScreen() {
         </>
       )}
 
-      {/* Build Info - DEV only */}
+      {/* LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: Build Info - DEV only, theme-aware */}
       {__DEV__ && (
-        <View style={[styles.buildInfo, BUILD_INFO.isDirty && styles.buildInfoDirty]}>
-          <Text style={styles.buildInfoLabel}>
+        <View style={[styles.buildInfo, { backgroundColor: tc.surfaceAlt, borderColor: tc.border }, BUILD_INFO.isDirty && styles.buildInfoDirty]}>
+          <Text style={[styles.buildInfoLabel, { color: tc.warning }]}>
             Build Info {BUILD_INFO.isDirty ? "(DIRTY)" : "(CLEAN)"}
           </Text>
-          <Text style={[styles.buildInfoText, styles.buildInfoFingerprint]}>
+          <Text style={[styles.buildInfoText, styles.buildInfoFingerprint, { color: tc.textPrimary }]}>
             {BUILD_INFO.fingerprint}
           </Text>
-          <Text style={styles.buildInfoText}>
+          <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>
             Branch: {BUILD_INFO.branch} | SHA: {BUILD_INFO.gitSha}
           </Text>
           {BUILD_INFO.isDirty && (
-            <Text style={styles.buildInfoDirtyText}>
+            <Text style={[styles.buildInfoDirtyText, { color: tc.warning }]}>
               {BUILD_INFO.modifiedCount} modified, {BUILD_INFO.untrackedCount} untracked
             </Text>
           )}
-          <Text style={styles.buildInfoText}>Built: {BUILD_INFO.buildTime}</Text>
-          <Text style={styles.buildInfoText}>API: {API_BASE_URL}</Text>
-          <View style={styles.devInfoSection}>
-            <Text style={styles.devInfoLabel}>Device Info</Text>
-            <Text style={styles.buildInfoText}>Token: ...{devInfo.tokenSuffix}</Text>
-            <Text style={styles.buildInfoText}>Store: {devInfo.storeName ?? "null"}</Text>
-            <Text style={styles.buildInfoText}>StoreId: {devInfo.storeId ?? "null"}</Text>
-            <Text style={styles.buildInfoText}>StoreCode: {devInfo.storeCode ?? "null"}</Text>
+          <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>Built: {BUILD_INFO.buildTime}</Text>
+          <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>API: {API_BASE_URL}</Text>
+          <View style={[styles.devInfoSection, { borderTopColor: tc.border }]}>
+            <Text style={[styles.devInfoLabel, { color: tc.primary }]}>Device Info</Text>
+            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>Token: ...{devInfo.tokenSuffix}</Text>
+            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>Store: {devInfo.storeName ?? "null"}</Text>
+            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>StoreId: {devInfo.storeId ?? "null"}</Text>
+            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>StoreCode: {devInfo.storeCode ?? "null"}</Text>
           </View>
         </View>
       )}
 
+      {/* LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: Release build stamp, theme-aware */}
       <View style={styles.releaseBuildInfo}>
-        <Text style={styles.releaseBuildInfoText}>
+        <Text style={[styles.releaseBuildInfoText, { color: tc.textTertiary }]}>
           Build: {buildShaLabel} · Deployed: {buildTimeLabel}
         </Text>
       </View>

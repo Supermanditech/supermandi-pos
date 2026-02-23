@@ -33,7 +33,7 @@ import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../serv
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { POS_MESSAGES } from "../utils/uiStatus";
-import { theme, colors, typography, spacing } from "../theme";
+import { theme, colors, typography, spacing, useThemeColors } from "../theme";
 import { API_BASE_URL, BUILD_INFO, TEST_STORE_CONFIG } from "../config/api";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { useCartStore } from "../stores/cartStore";
@@ -163,6 +163,8 @@ const PAYMENT_PROMPTED_KEY = "supermandi.payment_setup_prompted";
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<EnrollRoute>();
+  // LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: Theme-aware build stamp
+  const tc = useThemeColors();
   const buildShaLabel = String((BUILD_INFO as any).gitSha || (BUILD_INFO as any).version || "unknown");
   const buildTimeLabel = String((BUILD_INFO as any).buildTime || (BUILD_INFO as any).buildDate || "unknown");
   // #342: Accept both ?enrollmentCode=X and ?code=X from deep links
@@ -580,17 +582,17 @@ export default function EnrollDeviceScreen() {
         </Text>
       </View>
 
-      {/* DEV-only section */}
+      {/* LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: DEV-only section, theme-aware */}
       {__DEV__ && (
-        <View style={styles.devSection}>
-          <Text style={styles.devSectionLabel}>DEV MODE</Text>
+        <View style={[styles.devSection, { backgroundColor: tc.warning + "15" }]}>
+          <Text style={[styles.devSectionLabel, { color: tc.warning }]}>DEV MODE</Text>
           <View style={styles.devInfoRow}>
-            <Text style={styles.devInfoLabel}>API:</Text>
-            <Text style={styles.devInfoValue} numberOfLines={1}>{API_BASE_URL}</Text>
+            <Text style={[styles.devInfoLabel, { color: tc.textSecondary }]}>API:</Text>
+            <Text style={[styles.devInfoValue, { color: tc.textPrimary }]} numberOfLines={1}>{API_BASE_URL}</Text>
           </View>
           <View style={styles.devInfoRow}>
-            <Text style={styles.devInfoLabel}>Build:</Text>
-            <Text style={styles.devInfoValue}>{BUILD_INFO.gitSha} @ {BUILD_INFO.buildTime}</Text>
+            <Text style={[styles.devInfoLabel, { color: tc.textSecondary }]}>Build:</Text>
+            <Text style={[styles.devInfoValue, { color: tc.textPrimary }]}>{BUILD_INFO.gitSha} @ {BUILD_INFO.buildTime}</Text>
           </View>
           {TEST_STORE_CONFIG?.phone && TEST_STORE_CONFIG?.pin ? (
             <Pressable
@@ -613,8 +615,9 @@ export default function EnrollDeviceScreen() {
         </View>
       )}
 
+      {/* LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: Theme-aware release stamp */}
       <View style={styles.releaseBuildInfo}>
-        <Text style={styles.releaseBuildInfoText}>
+        <Text style={[styles.releaseBuildInfoText, { color: tc.textTertiary }]}>
           Build: {buildShaLabel} · Deployed: {buildTimeLabel}
         </Text>
       </View>
