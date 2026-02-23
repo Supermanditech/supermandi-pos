@@ -152,13 +152,23 @@
   "statusHistory": [
     {
       "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T22:15:00.000Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
+      "prevHash": "GENESIS",
+      "hash": "9398163e5022371048f3b9fd00cb104b225d00dfad3b5ac2d04f56fab80e95f6"
+    },
+    {
+      "from": "in_progress",
       "to": "done",
       "actor": "claude",
-      "sessionId": "session-livefix-impl-2026-02-22",
-      "at": "2026-02-22T08:34:12.618Z",
-      "reason": "Replaced bare Loading... Suspense fallbacks with animated skeleton placeholders for register and reset-password pages",
-      "prevHash": "GENESIS",
-      "hash": "75e1efddd2065cbd81f2c9f9cad9b39bf4cd1388722607101e41998f9574ac97"
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.877Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "9398163e5022371048f3b9fd00cb104b225d00dfad3b5ac2d04f56fab80e95f6",
+      "hash": "aaf252e8b3a39fac7935585ece84e8f21df29e66da717df3a1630fecda7fa5b5"
     }
   ],
   "evidence": {
@@ -182,7 +192,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T22:15:00.000Z",
-    "updatedAt": "2026-02-22T10:06:27.877Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -289,7 +299,7 @@
     "lastValidatedCommit": "9089afe1",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "staging_ticketization_audit_2026-02-22",
       "ci_not_triggered=local_commits_ahead_of_origin"

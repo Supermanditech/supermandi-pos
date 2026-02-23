@@ -161,24 +161,24 @@
   },
   "statusHistory": [
     {
-      "from": "ready_for_operator_test",
-      "to": "todo",
+      "from": "todo",
+      "to": "in_progress",
       "actor": "claude",
-      "sessionId": "SESSION-RECONCILE-2026-02-22",
-      "at": "2026-02-22T22:00:00Z",
-      "reason": "State reconciliation: downgrade from ready_for_operator_test to todo — staging deploy of 55aad06a is pending; code is CI-green but no staging/operator evidence exists for the fix commit; WIP limit 1 requires non-WIP status for parked tickets",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T23:50:00.000Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
       "prevHash": "GENESIS",
-      "hash": "2e2483e3fc7a8c344ca4d7f1f570fcd6ae097245f6cc9ef3ae7a25454ff81c91"
+      "hash": "1bcfee31cdf8d905b8ad016ea98c24a72e4f9e4309d3688a193e7492b88d6283"
     },
     {
-      "from": "todo",
+      "from": "in_progress",
       "to": "done",
       "actor": "claude",
-      "sessionId": "session-livefix-impl-2026-02-22",
-      "at": "2026-02-22T08:00:09.879Z",
-      "reason": "Auth parity already implemented via PRs 424/425 (commit 55aad06a). Code verified.",
-      "prevHash": "2e2483e3fc7a8c344ca4d7f1f570fcd6ae097245f6cc9ef3ae7a25454ff81c91",
-      "hash": "e62bf83d802d2914bedd624acd8ba6977bd3286f9a14d9564e6c9522672ab81a"
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T08:00:09.880Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "1bcfee31cdf8d905b8ad016ea98c24a72e4f9e4309d3688a193e7492b88d6283",
+      "hash": "b0c234dcaa42f38bebe0433f6dc16bc27f85b80633fe288258d5ddce6e667eff"
     }
   ],
   "evidence": {
@@ -205,7 +205,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T23:50:00.000Z",
-    "updatedAt": "2026-02-22T08:00:09.880Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {

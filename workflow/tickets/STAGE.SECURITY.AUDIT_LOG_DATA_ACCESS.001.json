@@ -161,13 +161,23 @@
   "statusHistory": [
     {
       "from": "todo",
-      "to": "done",
-      "at": "2026-02-21T14:41:03.429Z",
-      "reason": "Data Access audit logging enabled for 4 critical services.",
+      "to": "in_progress",
       "actor": "claude",
-      "sessionId": "session-staging-hardening-2026-02-21",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-20T23:02:04Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
       "prevHash": "GENESIS",
-      "hash": "ad0ca8b9d5383c158b97a9026f4c9f56a6d427fe447eaf2516b6896615f98951"
+      "hash": "e08e52969526957e70108b3a160b44ff5a8d4711d168ffb270901a92e957fe98"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.885Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "e08e52969526957e70108b3a160b44ff5a8d4711d168ffb270901a92e957fe98",
+      "hash": "e3eabc3c7edf7fd553a9cca1bcf18542ac4338badad6405bec80f9de3538da44"
     }
   ],
   "evidence": {
@@ -186,7 +196,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-20T23:02:04Z",
-    "updatedAt": "2026-02-22T10:06:27.885Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {

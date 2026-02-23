@@ -157,13 +157,23 @@
   "statusHistory": [
     {
       "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T22:48:00.000Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
+      "prevHash": "GENESIS",
+      "hash": "46c498798217f74fb657405b4a94cd8532b074df73cebba6850abab2a084c1d8"
+    },
+    {
+      "from": "in_progress",
       "to": "done",
       "actor": "claude",
-      "sessionId": "session-livefix-impl-2026-02-22",
-      "at": "2026-02-22T07:52:39.393Z",
-      "reason": "Removed dead ai tab from TAB_LABELS, TabKey, and shouldRefreshAi dead code. Only ai-insights route remains.",
-      "prevHash": "GENESIS",
-      "hash": "26ce97bfde261a4654d00157fbd5460b95795d8dc2ddfaff4a8baf13164f5408"
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.872Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "46c498798217f74fb657405b4a94cd8532b074df73cebba6850abab2a084c1d8",
+      "hash": "2ad7c707217eb1ae0e576f09dfca728f5d5c2d0511efbf4041204308845105ad"
     }
   ],
   "evidence": {
@@ -185,7 +195,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T22:48:00.000Z",
-    "updatedAt": "2026-02-22T10:06:27.872Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -293,7 +303,7 @@
     "lastValidatedCommit": "7b3a4ee8",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "staging_sha=7b3a4ee8",
       "ci_not_triggered=local_commits_ahead_of_origin"

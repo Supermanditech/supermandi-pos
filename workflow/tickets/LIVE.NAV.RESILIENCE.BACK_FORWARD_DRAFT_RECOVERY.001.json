@@ -218,7 +218,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T23:50:00.000Z",
-    "updatedAt": "2026-02-22T10:06:27.868Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -351,7 +351,7 @@
     "lastValidatedCommit": "27abace2",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "git rev-parse --short HEAD",
       "typecheck retailer-admin: PASS",

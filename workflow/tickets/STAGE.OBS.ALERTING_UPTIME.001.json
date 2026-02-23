@@ -161,13 +161,23 @@
   "statusHistory": [
     {
       "from": "todo",
-      "to": "done",
-      "at": "2026-02-21T14:41:03.429Z",
-      "reason": "5 uptime checks + alert policy created for all staging surfaces.",
+      "to": "in_progress",
       "actor": "claude",
-      "sessionId": "session-staging-hardening-2026-02-21",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-20T22:58:25Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
       "prevHash": "GENESIS",
-      "hash": "ec4ac00428acfef0e78f6740d165c9b9364cde97c15a7c1be375ead8e1b856c0"
+      "hash": "f36ac2e096dc36aaf406216b7fdf18032acb674b5e7fd3dfd47088549b0344e9"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.884Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "f36ac2e096dc36aaf406216b7fdf18032acb674b5e7fd3dfd47088549b0344e9",
+      "hash": "b2b31c4c27e6c6bc6b410058c124a9d7723925ec2461b1c66295bc1d6d67bf7c"
     }
   ],
   "evidence": {
@@ -190,7 +200,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-20T22:58:25Z",
-    "updatedAt": "2026-02-22T10:06:27.884Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {

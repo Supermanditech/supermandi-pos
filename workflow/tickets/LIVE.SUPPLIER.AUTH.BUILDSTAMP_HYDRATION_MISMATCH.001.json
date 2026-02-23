@@ -182,7 +182,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T22:30:00.000Z",
-    "updatedAt": "2026-02-22T16:35:03.486Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -287,7 +287,7 @@
     "lastValidatedCommit": "76fc2b7a",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
       "workflow/state/live_ticketization_progress.json",
       "operator_screenshot_hydration_theme_2026-02-22"

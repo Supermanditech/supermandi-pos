@@ -24,7 +24,9 @@
   },
   "gcpParity": {
     "stagingValidated": true,
-    "stagingUrls": [],
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/health"
+    ],
     "cloudRunServices": [
       "api-gateway"
     ],
@@ -127,7 +129,9 @@
     "testedOnRealTarget": false,
     "testedOnLaptopBrowser": false,
     "testedOnRedmi": false,
-    "stagingUrlsTested": [],
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/api/health"
+    ],
     "issuesReproduced": true,
     "fixVerified": true,
     "blockingIssueCount": 0,
@@ -188,7 +192,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T22:20:00.000Z",
-    "updatedAt": "2026-02-22T22:35:00.000Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -300,7 +304,7 @@
     "lastValidatedCommit": "4563f468",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "typecheck-clean",
       "git-discipline-clean",

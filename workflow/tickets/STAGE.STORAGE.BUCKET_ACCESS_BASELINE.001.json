@@ -151,13 +151,23 @@
   "statusHistory": [
     {
       "from": "todo",
-      "to": "done",
-      "at": "2026-02-21T14:41:03.429Z",
-      "reason": "Storage bucket hardened with uniform access and public access prevention.",
+      "to": "in_progress",
       "actor": "claude",
-      "sessionId": "session-staging-hardening-2026-02-21",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-20T23:02:04Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
       "prevHash": "GENESIS",
-      "hash": "4d39ea4fe0fa7ba1189670f4b492bdbb53407712b297205d7a6e78460fd35beb"
+      "hash": "e08e52969526957e70108b3a160b44ff5a8d4711d168ffb270901a92e957fe98"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.891Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "e08e52969526957e70108b3a160b44ff5a8d4711d168ffb270901a92e957fe98",
+      "hash": "3e7523eb8dc248117693ba3672077f33e9e4a7be6817fb4f9f470b0160ffaf52"
     }
   ],
   "evidence": {
@@ -174,7 +184,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-20T23:02:04Z",
-    "updatedAt": "2026-02-22T10:06:27.891Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {

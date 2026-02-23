@@ -135,13 +135,23 @@
   "statusHistory": [
     {
       "from": "todo",
-      "to": "done",
-      "at": "2026-02-21T14:41:03.429Z",
-      "reason": "CORS origin lockdown verified on staging. Production origins rejected.",
+      "to": "in_progress",
       "actor": "claude",
-      "sessionId": "session-staging-hardening-2026-02-21",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-20T22:25:16Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
       "prevHash": "GENESIS",
-      "hash": "b1a03fac66b3ffaf4155ffc5824b99395ece4aac62f60d9dd765e388dfe468c1"
+      "hash": "80598a22a6bdb21460857528a9b29c2340a873229bdba3bbe643d461ebc464a6"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.888Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "80598a22a6bdb21460857528a9b29c2340a873229bdba3bbe643d461ebc464a6",
+      "hash": "7d239948fc70917b2be9d28aaee9d85551c5f66e84c33121d3b01d2ce52fecd2"
     }
   ],
   "orderInScreen": 1,
@@ -240,7 +250,7 @@
   "timestamps": {
     "createdAt": "2026-02-20T22:25:16Z",
     "lockedAt": null,
-    "updatedAt": "2026-02-22T10:06:27.888Z"
+    "updatedAt": "2026-02-23T20:51:06.848Z"
   },
   "dependencyDisclosure": {
     "externalDependencies": [

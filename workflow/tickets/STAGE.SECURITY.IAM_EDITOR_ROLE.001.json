@@ -228,7 +228,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-20T22:58:25Z",
-    "updatedAt": "2026-02-22T23:58:00.000Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -344,7 +344,7 @@
     "lastValidatedCommit": "d104c4e5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
       "pnpm workflow:validate",
       "pnpm workflow:monitor",

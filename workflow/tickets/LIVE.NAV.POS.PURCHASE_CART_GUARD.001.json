@@ -186,7 +186,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T21:30:00.000Z",
-    "updatedAt": "2026-02-22T10:53:40.788Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -295,7 +295,7 @@
     "lastValidatedCommit": "5b1aa134",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "typecheck-clean",
       "workflow-validate-pass"

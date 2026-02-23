@@ -136,13 +136,23 @@
   "statusHistory": [
     {
       "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-20T22:25:16Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
+      "prevHash": "GENESIS",
+      "hash": "80598a22a6bdb21460857528a9b29c2340a873229bdba3bbe643d461ebc464a6"
+    },
+    {
+      "from": "in_progress",
       "to": "done",
       "actor": "claude",
-      "sessionId": "session-livefix-impl-2026-02-22",
-      "at": "2026-02-22T08:49:10.530Z",
-      "reason": "Fixed deprecated auth path in audit docs, ZRP-D-015 gate already catches deprecated usage in scripts",
-      "prevHash": "GENESIS",
-      "hash": "8cdd6ab89e7c324910addb7f7da9de981fbf6b2be38bd9965124503d8fca3a32"
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.879Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "80598a22a6bdb21460857528a9b29c2340a873229bdba3bbe643d461ebc464a6",
+      "hash": "3f585cd723b95e6f55c63221242c91d52d0724b0efb5ae5232f79499026ea805"
     }
   ],
   "orderInScreen": 1,
@@ -232,14 +242,14 @@
       "ci_not_triggered=local_commits_ahead_of_origin"
     ],
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "workBranch": "main",
     "lastValidatedCommit": "8892f92"
   },
   "timestamps": {
     "createdAt": "2026-02-20T22:25:16Z",
     "lockedAt": null,
-    "updatedAt": "2026-02-22T10:06:27.879Z"
+    "updatedAt": "2026-02-23T20:51:06.848Z"
   },
   "dependencyDisclosure": {
     "externalDependencies": [],

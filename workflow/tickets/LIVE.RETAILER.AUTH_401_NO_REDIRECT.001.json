@@ -154,13 +154,23 @@
   "statusHistory": [
     {
       "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T22:48:00.000Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
+      "prevHash": "GENESIS",
+      "hash": "46c498798217f74fb657405b4a94cd8532b074df73cebba6850abab2a084c1d8"
+    },
+    {
+      "from": "in_progress",
       "to": "done",
       "actor": "claude",
-      "sessionId": "session-livefix-impl-2026-02-22",
-      "at": "2026-02-22T08:29:04.547Z",
-      "reason": "Already handled: authFetch notifyAuthFailure chain -> AuthContext logout -> ProtectedRoute redirect to /retailer/login",
-      "prevHash": "GENESIS",
-      "hash": "0d1e7d8be532046d7ba7d7d2a44fb1f094ff37c4304702fe1b548624f4d479db"
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.869Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "46c498798217f74fb657405b4a94cd8532b074df73cebba6850abab2a084c1d8",
+      "hash": "83fd0984569f8874f82296135c9681047e9f413b375cdad668a779d982610476"
     }
   ],
   "evidence": {
@@ -181,7 +191,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-22T22:48:00.000Z",
-    "updatedAt": "2026-02-22T10:06:27.869Z",
+    "updatedAt": "2026-02-23T20:51:06.848Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -287,7 +297,7 @@
     "lastValidatedCommit": "7b3a4ee8",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "staging_sha=7b3a4ee8",
       "ci_not_triggered=local_commits_ahead_of_origin"

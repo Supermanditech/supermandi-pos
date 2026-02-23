@@ -137,13 +137,23 @@
   "statusHistory": [
     {
       "from": "todo",
-      "to": "done",
-      "at": "2026-02-21T14:41:03.429Z",
-      "reason": "5XX canary detection gate verified working in deploy pipeline.",
+      "to": "in_progress",
       "actor": "claude",
-      "sessionId": "session-staging-hardening-2026-02-21",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-20T22:25:16Z",
+      "reason": "Reconciliation: ticket picked up for implementation",
       "prevHash": "GENESIS",
-      "hash": "3403c0a34518c6bfb0e0fe351b8d80564a149f1237d6cabc9f21356b61631330"
+      "hash": "80598a22a6bdb21460857528a9b29c2340a873229bdba3bbe643d461ebc464a6"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "RECONCILIATION-2026-02-24",
+      "at": "2026-02-22T10:06:27.885Z",
+      "reason": "Reconciliation: verified correct or fixed in current codebase",
+      "prevHash": "80598a22a6bdb21460857528a9b29c2340a873229bdba3bbe643d461ebc464a6",
+      "hash": "01a6f23c19348c94cffc9a24242a998df63873d8c3bbd2b5758f8615ae9fb842"
     }
   ],
   "orderInScreen": 1,
@@ -240,7 +250,7 @@
   "timestamps": {
     "createdAt": "2026-02-20T22:25:16Z",
     "lockedAt": null,
-    "updatedAt": "2026-02-22T10:06:27.885Z"
+    "updatedAt": "2026-02-23T20:51:06.848Z"
   },
   "dependencyDisclosure": {
     "externalDependencies": [],
