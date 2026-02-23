@@ -904,6 +904,9 @@ jobs:
       # blocks direct *.run.app access from external CI runners.
       STAGING_URL: https://staging.supermandi.tech
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Authenticate to GCP (WIF)
         uses: google-github-actions/auth@v2
         with:
