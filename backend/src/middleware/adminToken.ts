@@ -127,8 +127,9 @@ async function verifyAdminApiKey(apiKey: string): Promise<AdminInfo | null> {
 }
 
 // SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
+// LIVE.AUTH.JWT_SECRET_FALLBACK_REMOVAL_STACK.001: Remove ADMIN_TOKEN fallback — JWT_SECRET only
 const JWT_SECRET = (() => {
-  const secret = process.env.JWT_SECRET || process.env.ADMIN_TOKEN;
+  const secret = process.env.JWT_SECRET;
   if (!secret) {
     const env = (process.env.NODE_ENV || '').toLowerCase();
     if (env === 'development' || env === 'test') {
