@@ -623,8 +623,9 @@ posPaymentsRouter.post(
 
       // 5. Update sale to indicate split payment in progress
       await client.query(
-        `UPDATE public.sales SET payment_mode = 'SPLIT' WHERE id = $1`,
-        [saleId]
+        // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+        `UPDATE public.sales SET payment_mode = 'SPLIT' WHERE id = $1 AND store_id = $2`,
+        [saleId, storeId]
       );
 
       await client.query("COMMIT");
@@ -751,10 +752,11 @@ posPaymentsRouter.post(
 
       // Update cash payment to completed
       await client.query(
+        // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
         `UPDATE payments.sell_payments
          SET status = 'completed', completed_at = NOW()
-         WHERE id = $1`,
-        [paymentId]
+         WHERE id = $1 AND store_id = $2`,
+        [paymentId, storeId]
       );
 
       // Check if all payments for this sale are completed
@@ -769,8 +771,9 @@ posPaymentsRouter.post(
       if (pendingCount === 0) {
         // All payments complete - update sale status
         await client.query(
-          `UPDATE public.sales SET status = 'completed' WHERE id = $1`,
-          [payment.sale_id]
+          // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+          `UPDATE public.sales SET status = 'completed' WHERE id = $1 AND store_id = $2`,
+          [payment.sale_id, storeId]
         );
       }
 
