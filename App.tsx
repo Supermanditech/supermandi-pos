@@ -79,7 +79,7 @@ import BulkPurchaseCreditScreen from "./src/screens/BulkPurchaseCreditScreen";
 // HELP-001: Help & Support screen
 import HelpScreen from "./src/screens/HelpScreen";
 import { theme, useThemeColors } from "./src/theme";
-import { useSettingsStore } from "./src/stores/settingsStore";
+import { useSettingsStore, useSettingsHydrated } from "./src/stores/settingsStore";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
 // Wrapper components for screens that need route params
@@ -373,6 +373,9 @@ const linking = {
 
 export default function App() {
   const [appReady, setAppReady] = useState(false);
+  // LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001: Wait for AsyncStorage hydration
+  // before first render so theme colors are correct from the first visible frame.
+  const settingsHydrated = useSettingsHydrated();
   // LIVE.POS.THEME: Dynamic colors based on persisted theme preference
   const themeColors = useThemeColors();
   const isDark = useSettingsStore((s) => s.themeMode === 'dark');
@@ -421,8 +424,9 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
-  // Show loading indicator while app is initializing
-  if (!appReady) {
+  // LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001: Gate on both app init AND settings
+  // hydration to ensure persisted theme is applied before first visible frame.
+  if (!appReady || !settingsHydrated) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: themeColors.background }}>
         <ActivityIndicator size="large" color={themeColors.primary} />

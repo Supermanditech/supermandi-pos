@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState, useEffect } from 'react';
 import { setLanguage as setI18nLanguage, type SupportedLanguage } from '../i18n';
 
 // LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001: Theme mode type
@@ -87,7 +88,25 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'supermandi.settings.v7', // LIVE.POS.THEME: Bumped version for themeMode field
-      storage: createJSONStorage(() => AsyncStorage)
+      storage: createJSONStorage(() => AsyncStorage),
+      // LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001: Log hydration errors
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.warn('[SettingsStore] Hydration failed, using defaults:', error);
+        }
+      },
     }
   )
 );
+
+// LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001: Hydration-aware hook
+// Gates rendering until AsyncStorage has rehydrated persisted theme preference.
+// Prevents light-mode flash for dark-mode users on app startup.
+export function useSettingsHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(useSettingsStore.persist.hasHydrated());
+  useEffect(() => {
+    const unsub = useSettingsStore.persist.onFinishHydration(() => setHydrated(true));
+    return unsub;
+  }, []);
+  return hydrated;
+}
