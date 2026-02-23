@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-23T18:30:24.296Z",
+  "updatedAt": "2026-02-23T18:41:45.852Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1105,13 +1105,9 @@
       },
       "implementation": {
         "complete": false,
-        "summary": "POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203: remaining=199, completed=105",
+        "summary": "POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203: remaining=195, completed=109",
         "remainingTicketIds": [
           "LIVE.RETAILER.REGISTER.OTP_SUCCESS_ERROR_CONFLICT.001",
-          "LIVE.BE.CHAT_WS_JWT_CONSTRAINTS.001",
-          "LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001",
-          "LIVE.BE.DOC_UPLOAD_AUTH_VALIDATION.001",
-          "LIVE.BE.EVENTS_JSON_PARSE_GUARD.001",
           "LIVE.BE.JWT_ADMIN_ISSUER_ENFORCEMENT.001",
           "LIVE.BE.JWT_ALGORITHM_PINNING.001",
           "LIVE.BE.STORE_ISOLATION.CUSTOMER_DUES_SCOPE.001",
@@ -1412,9 +1408,13 @@
           "LIVE.AI.VOICE_PROMPT_INJECTION_GUARD.001",
           "LIVE.API.HEALTH_GITSHA_ENV_PARITY.001",
           "LIVE.API.PLATFORM_STORES_PUBLIC_ACCESS_PARITY.001",
-          "LIVE.AUTH.JWT_SECRET_FALLBACK_REMOVAL_STACK.001"
+          "LIVE.AUTH.JWT_SECRET_FALLBACK_REMOVAL_STACK.001",
+          "LIVE.BE.CHAT_WS_JWT_CONSTRAINTS.001",
+          "LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001",
+          "LIVE.BE.DOC_UPLOAD_AUTH_VALIDATION.001",
+          "LIVE.BE.EVENTS_JSON_PARSE_GUARD.001"
         ],
-        "lastUpdatedAt": "2026-02-23T18:30:24.296Z"
+        "lastUpdatedAt": "2026-02-23T18:41:45.852Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1525,7 +1525,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-23T18:30:24.296Z"
+    "updatedAt": "2026-02-23T18:41:45.852Z"
   },
-  "lastUpdated": "2026-02-23T18:30:24.296Z"
+  "lastUpdated": "2026-02-23T18:41:45.852Z"
 }
