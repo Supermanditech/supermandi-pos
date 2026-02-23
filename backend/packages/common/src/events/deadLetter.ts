@@ -240,7 +240,8 @@ function mapDeadLetterRow(row: DeadLetterRow): DeadLetterEntry {
     eventId: row.event_id,
     eventType: row.event_type,
     targetQueue: row.target_queue,
-    payload: JSON.parse(row.payload) as DomainEvent,
+    // LIVE.BE.EVENTS_JSON_PARSE_GUARD.001: Guard against malformed payload
+    payload: (() => { try { return JSON.parse(row.payload); } catch { return { eventType: 'PARSE_ERROR', payload: row.payload }; } })() as DomainEvent,
     errorMessage: row.error_message,
     errorStack: row.error_stack ?? undefined,
     attemptCount: row.attempt_count,

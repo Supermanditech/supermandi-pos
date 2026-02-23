@@ -179,7 +179,13 @@ export class OutboxWorker {
    * Publish a single event to all subscriber queues (FANOUT)
    */
   private async publishEvent(client: PoolClient, row: OutboxRow): Promise<void> {
-    const event: DomainEvent = JSON.parse(row.payload);
+    // LIVE.BE.EVENTS_JSON_PARSE_GUARD.001: Guard against malformed payload
+    let event: DomainEvent;
+    try { event = JSON.parse(row.payload); } catch (e) {
+      console.error(`[OutboxWorker] Malformed JSON payload in outbox row ${row.id}:`, e);
+      await this.markAsPublished(client, row.id); // skip corrupt row
+      return;
+    }
     const { schema } = this.config;
 
     // Get subscriber queues for this event type
@@ -260,7 +266,12 @@ export class OutboxWorker {
 
     if (newRetryCount >= maxRetries) {
       // Max retries exceeded - move to dead letter
-      const event: DomainEvent = JSON.parse(row.payload);
+      // LIVE.BE.EVENTS_JSON_PARSE_GUARD.001: Guard against malformed payload
+      let event: DomainEvent;
+      try { event = JSON.parse(row.payload); } catch {
+        console.error(`[OutboxWorker] Malformed JSON in dead-letter path for row ${row.id}`);
+        event = { eventType: 'PARSE_ERROR', payload: row.payload } as unknown as DomainEvent;
+      }
       await addToDeadLetter(schema, event, 'outbox', error, newRetryCount);
 
       // Mark as failed in outbox

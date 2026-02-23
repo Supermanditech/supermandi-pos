@@ -288,7 +288,8 @@ function mapInboxRow(row: InboxRow): InboxEntry {
     sourceQueue: row.source_queue,
     status: row.status as InboxStatus,
     retryCount: row.retry_count,
-    payload: JSON.parse(row.payload) as DomainEvent,
+    // LIVE.BE.EVENTS_JSON_PARSE_GUARD.001: Guard against malformed payload
+    payload: (() => { try { return JSON.parse(row.payload); } catch { return { eventType: 'PARSE_ERROR', payload: row.payload }; } })() as DomainEvent,
     errorMessage: row.error_message ?? undefined,
     processedAt: row.processed_at ?? undefined,
     createdAt: row.created_at,

@@ -82,7 +82,9 @@ async function getOtp(email: string): Promise<StoredOTP | null> {
   const redis = getRedis();
   if (redis) {
     const raw = await redis.get(REDIS_OTP_PREFIX + email);
-    return raw ? JSON.parse(raw) as StoredOTP : null;
+    // LIVE.BE.EVENTS_JSON_PARSE_GUARD.001: Guard against corrupted Redis data
+    if (!raw) return null;
+    try { return JSON.parse(raw) as StoredOTP; } catch { return null; }
   }
   return otpStoreFallback.get(email) ?? null;
 }
