@@ -302,5 +302,7 @@ export function stripClientAuthHeaders(req: Request, _res: Response, next: NextF
   delete req.headers['x-actor-id'];
   delete req.headers['x-actor-type'];
   delete req.headers['x-permissions'];
+  // LIVE.GW.STORE_ISOLATION.ADMIN_HEADER_STRIP.001: Strip admin token to prevent client spoofing
+  delete req.headers['x-admin-token'];
   next();
 }
