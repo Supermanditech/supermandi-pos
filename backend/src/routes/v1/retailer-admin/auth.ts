@@ -1541,9 +1541,16 @@ router.post("/auth/change-password", authRateLimiter, async (req: Request, res: 
       [newHash, userId]
     );
 
-    log.info(`[RetailerAuth] T-004: Password changed for user ${userId}`);
+    // LIVE.R4.B18.001: Invalidate all existing sessions after password change
+    // Sets tokens_revoked_at so all tokens issued before now are rejected on refresh
+    await pool.query(
+      `UPDATE auth.users SET tokens_revoked_at = NOW() WHERE id = $1`,
+      [userId]
+    );
 
-    res.json({ data: { success: true, message: "Password changed successfully" } });
+    log.info(`[RetailerAuth] T-004: Password changed and sessions invalidated for user ${userId}`);
+
+    res.json({ data: { success: true, message: "Password changed successfully. Please login again." } });
   } catch (error) {
     next(error);
   }
