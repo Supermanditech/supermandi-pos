@@ -183,3 +183,92 @@ Seed themes:
 3. Keep deploy hold active (`deployApproval.approved=false`).
 4. Start implementation from first ticket only.
 5. No staging deploy until active batch remaining tickets is zero.
+
+## 6. Round 3 Mega-Audit Lock (12-Agent Consolidated Intake)
+
+Source D: Mega-report (2026-02-23), 41 P0 + 68 P1 + 80+ P2.
+
+- This section is append-only and mandatory for future activation.
+- No finding from Source D may be silently dropped.
+- Any duplicate issue IDs must map to one canonical ticket with explicit dedupe note.
+- If severity conflicts across rounds, highest severity wins until closure evidence proves otherwise.
+
+### 6.1 Round 3 P0 Mapping Ledger (41 findings, explicit traceability)
+
+| # | Audit Ref | Finding (short) | Canonical Draft Ticket | Disposition |
+|---|---|---|---|---|
+| 1 | Security-1 | Gateway does not strip `x-admin-token` | `LIVE.GW.STORE_ISOLATION.ADMIN_HEADER_STRIP.001` | existing |
+| 2 | Security-2 | `isSuperAdmin` trusts header presence | `LIVE.BE.SUPERADMIN_TRUST_MODEL_HARDENING.001` | existing, P0 override |
+| 3 | Security-3 | CORS allows `x-admin-token`/internal headers | `LIVE.GW.CORS_INTERNAL_HEADER_EXPOSURE.001` | existing |
+| 4 | Security-4 | RLS context never activated in runtime | `LIVE.DB.RLS_CONTEXT_RUNTIME_ENFORCEMENT.001` | new |
+| 5 | Security-5 | `UPDATE sales` without `store_id` scope | `LIVE.BE.STORE_ISOLATION.UPDATE_SALES_SCOPE.001` | new |
+| 6 | Security-6 | `UPDATE sell_payments` without `store_id` | `LIVE.BE.STORE_ISOLATION.UPDATE_SELL_PAYMENTS_SCOPE.001` | new |
+| 7 | Security-7 | `UPDATE sales status` without `store_id` | `LIVE.BE.STORE_ISOLATION.UPDATE_SALES_STATUS_SCOPE.001` | new |
+| 8 | Security-8 | Sync path updates sales without `store_id` | `LIVE.BE.STORE_ISOLATION.SYNC_UPDATE_SALES_SCOPE.001` | new |
+| 9 | Security-9 | Sync path updates payments without `store_id` | `LIVE.BE.STORE_ISOLATION.SYNC_UPDATE_PAYMENTS_SCOPE.001` | new |
+| 10 | Security-10 | Refund path updates inventory ledger without store scope | `LIVE.BE.STORE_ISOLATION.REFUND_LEDGER_SCOPE.001` | new |
+| 11 | Security-11 | Dues update without store scope | `LIVE.BE.STORE_ISOLATION.CUSTOMER_DUES_SCOPE.001` | new |
+| 12 | Security-12 | Store-context update touches global catalog products | `LIVE.RET.PRODUCTS.GLOBAL_CATALOG_SCOPE_GUARD.001` | new |
+| 13 | Security-13 | OTP codes logged in production path | `LIVE.SECRETS.OTP_LOG_REDACTION.001` | new |
+| 14 | Security-14 | Test auth router mounted without production guard | `LIVE.BE.TEST_AUTH_ROUTE_PROD_GUARD.001` | new |
+| 15 | Security-15 | Document upload auth checks presence only | `LIVE.BE.DOC_UPLOAD_AUTH_VALIDATION.001` | existing |
+| 16 | Security-16 | Content-Disposition header injection risk | `LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001` | new |
+| 17 | Biz-1 | Opening stock mutates balances without ledger rows | `LIVE.BIZ.OPENING_STOCK_LEDGER_INTEGRITY.001` | new |
+| 18 | Biz-2 | Sale cancellation does not reverse inventory | `LIVE.BIZ.SALE_CANCELLATION_INVENTORY_REVERSAL.001` | new |
+| 19 | Biz-3 | Daily closing uses wrong status filter | `LIVE.REPORTS.DAILY_STATUS_FILTER_PARITY.001` | new |
+| 20 | Biz-4 | UPI/Cash confirm misses `stock_quantity` for retail variants | `LIVE.BIZ.PAYMENT_CONFIRM_STOCK_QUANTITY_PARITY.001` | new |
+| 21 | Biz-5 | Cancelled sales leave orphan ledger deductions | `LIVE.BIZ.SALE_CANCELLATION_INVENTORY_REVERSAL.001` | dedupe to #18 |
+| 22 | Biz-6 | Opening stock causes ledger mismatch | `LIVE.BIZ.OPENING_STOCK_LEDGER_INTEGRITY.001` | dedupe to #17 |
+| 23 | Input-1 | Voice order prompt-injection vector | `LIVE.AI.VOICE_PROMPT_INJECTION_GUARD.001` | new |
+| 24 | Input-2 | Superadmin AI analytics prompt-injection vector | `LIVE.SA.AI_PROMPT_INJECTION_GUARD.001` | new |
+| 25 | Race-1 | Sync mid-loop `COMMIT` breaks transaction atomicity | `LIVE.SYNC.BATCH_TRANSACTION_ATOMICITY_SAVEPOINT.001` | new |
+| 26 | Race-2 | Stock-in idempotency TOCTOU race | `LIVE.STOCKIN.IDEMPOTENCY_SINGLE_TX_LOCK.001` | new |
+| 27 | Race-3 | Shift start allows double-open due to no transaction guard | `LIVE.SHIFTS.START_DOUBLE_OPEN_GUARD.001` | new |
+| 28 | Sync-1 | Legacy offline queue key not store-scoped | `LIVE.POS.OFFLINE_QUEUE_STORE_SCOPING.001` | existing |
+| 29 | Sync-2 | Legacy queue drops events after 3 retries | `LIVE.POS.OFFLINE_QUEUE_RETRY_POLICY_HARDENING.001` | new |
+| 30 | Sync-3 | Client rejects retriable sync events permanently | `LIVE.POS.SYNC_RETRYABLE_REJECTION_GUARD.001` | new |
+| 31 | Frontend-1 | Superadmin JWT persisted in localStorage | `LIVE.SA.AUTH_TOKEN_STORAGE_HARDENING.001` | new |
+| 32 | Frontend-2 | Superadmin bearer token model JS-accessible | `LIVE.SA.AUTH_TOKEN_STORAGE_HARDENING.001` | dedupe to #31 |
+| 33 | Secrets-1 | Enrollment codes logged plaintext | `LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001` | new |
+| 34 | Secrets-2 | Supplier non-prod response includes `devToken` | `LIVE.SUP.AUTH.DEVTOKEN_RESPONSE_REDACTION.001` | new |
+| 35 | Secrets-3 | Supplier non-prod response includes `devCode` | `LIVE.SUP.AUTH.DEVCODE_RESPONSE_REDACTION.001` | new |
+| 36 | Secrets-4 | Retailer non-prod response includes `devToken` | `LIVE.RET.AUTH.DEVTOKEN_RESPONSE_REDACTION.001` | new |
+| 37 | Secrets-5 | Supplier OTP logged in verification flow | `LIVE.SUP.AUTH.OTP_LOG_REDACTION.001` | new |
+| 38 | Secrets-6 | Raw `device_token` returned in API response | `LIVE.POS.ENROLL.DEVICE_TOKEN_RESPONSE_MINIMIZATION.001` | new |
+| 39 | Migrate-1 | Duplicate migration numbers (`100`,`101`,`108`) | `LIVE.DB.MIGRATION_DUPLICATE_NUMBER_ORDERING.001` | existing |
+| 40 | Migrate-2 | `orders.payments` table reference without schema creation parity | `LIVE.DB.ORDERS_PAYMENTS_SCHEMA_PARITY.001` | new |
+| 41 | Migrate-3 | Sales status enum contradiction across migrations | `LIVE.DB.SALES_STATUS_ENUM_PARITY.001` | new |
+
+### 6.2 Round 3 P0 Immediate Bundle (deploy-blocking once activated)
+
+1. `LIVE.GW.STORE_ISOLATION.ADMIN_HEADER_STRIP.001`
+2. `LIVE.BE.SUPERADMIN_TRUST_MODEL_HARDENING.001`
+3. `LIVE.GW.CORS_INTERNAL_HEADER_EXPOSURE.001`
+4. `LIVE.GW.TRUST_PROXY_CLOUD_RUN.001`
+5. `LIVE.DB.RLS_CONTEXT_RUNTIME_ENFORCEMENT.001`
+6. `LIVE.REPORTS.DAILY_STATUS_FILTER_PARITY.001`
+7. `LIVE.BIZ.SALE_CANCELLATION_INVENTORY_REVERSAL.001`
+8. `LIVE.BIZ.PAYMENT_CONFIRM_STOCK_QUANTITY_PARITY.001`
+9. `LIVE.SYNC.BATCH_TRANSACTION_ATOMICITY_SAVEPOINT.001`
+10. `LIVE.STOCKIN.IDEMPOTENCY_SINGLE_TX_LOCK.001`
+
+## 7. Round 3 P1/P2 Intake Policy (No Loss)
+
+- Round 3 reports `68` P1 and `80+` P2 findings.
+- These remain mandatory backlog and cannot be dropped before atomic split.
+- For each P1/P2 finding, required expansion tuple:
+  - `auditRef`
+  - `file:line`
+  - `impact`
+  - `fix`
+  - `canonical ticket id`
+
+## 8. Activation Guard for Round 3
+
+When operator says ACTIVATE_ROUND3:
+
+1. Create schema-valid ticket JSON per canonical ID in section 6.1.
+2. Mark dedupe tickets via `relatedTickets` to avoid duplicate execution.
+3. Inject queue in `workflow/state/workflow_state.json` with WIP=1 and deploy hold still true.
+4. Enforce no deploy while any activated P0 remains non-done.
+5. Keep cumulative deploy scope parked at git until all activated tickets are done.
