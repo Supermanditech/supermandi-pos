@@ -15,6 +15,12 @@ const CLAUDE_CURRENT_STATE_FILE = path.join(ROOT_DIR, 'RELEASES', 'CLAUDE_CURREN
 const TICKETS_DIR = path.join(WORKFLOW_DIR, 'tickets');
 const SCREENS_DIR = path.join(WORKFLOW_DIR, 'screens');
 const DEFAULT_ALLOWED_STAGING_HOSTS = ['staging.supermandi.tech'];
+const NON_BREAKABLE_DEPLOY_REQUIRED_SURFACES = new Set([
+  'retailer_web',
+  'supplier_web',
+  'superadmin_web',
+  'pos_app',
+]);
 
 const MODES = new Set([
   'LIVE_FIX',
@@ -570,6 +576,116 @@ function getLiveIterationExecutionRules(state) {
     requireOperatorDeployApproval: rules.requireOperatorDeployApproval === true,
     deployApprovalToken: approvalToken,
   };
+}
+
+function getNonBreakableDeploymentGateRules(state) {
+  const rules = state?.rules?.deploymentRules?.nonBreakableDeploymentGate || {};
+  const requiredWorkflowTokens = normalizeStringArray(rules.requiredWorkflowTokens);
+  const requiredSurfaces = normalizeStringArray(rules.requiredSurfaces);
+  const requiredCloudRunServices = normalizeStringArray(rules.requiredCloudRunServices);
+
+  return {
+    enabled: rules.enabled === true,
+    enforceOn: normalizeStringArray(rules.enforceOn),
+    contractFile: isNonEmptyString(rules.contractFile)
+      ? rules.contractFile.trim()
+      : 'workflow/state/deployment_runtime_contract.json',
+    scriptPath: isNonEmptyString(rules.scriptPath)
+      ? rules.scriptPath.trim()
+      : 'scripts/gates/nonbreakable-deploy-parity.js',
+    deployWorkflowFile: isNonEmptyString(rules.deployWorkflowFile)
+      ? rules.deployWorkflowFile.trim()
+      : '.github/workflows/deploy.yml',
+    requiredWorkflowTokens: requiredWorkflowTokens.length > 0
+      ? requiredWorkflowTokens
+      : [
+          'Gate 13: Non-Breakable Surface/Build/API/GCP Parity (BLOCKING)',
+          'node scripts/gates/nonbreakable-deploy-parity.js',
+        ],
+    requiredSurfaces: requiredSurfaces.length > 0
+      ? requiredSurfaces
+      : [...NON_BREAKABLE_DEPLOY_REQUIRED_SURFACES],
+    requiredCloudRunServices: requiredCloudRunServices.length > 0
+      ? requiredCloudRunServices
+      : [...REQUIRED_SERVICES],
+  };
+}
+
+function validateNonBreakableDeploymentGateConfig(state) {
+  const errors = [];
+  const rules = getNonBreakableDeploymentGateRules(state);
+  if (!rules.enabled) {
+    errors.push('rules.deploymentRules.nonBreakableDeploymentGate.enabled must be true');
+    return errors;
+  }
+
+  for (const surface of NON_BREAKABLE_DEPLOY_REQUIRED_SURFACES) {
+    if (!rules.requiredSurfaces.includes(surface)) {
+      errors.push(
+        `rules.deploymentRules.nonBreakableDeploymentGate.requiredSurfaces must include ${surface}`
+      );
+    }
+  }
+
+  for (const service of REQUIRED_SERVICES) {
+    if (!rules.requiredCloudRunServices.includes(service)) {
+      errors.push(
+        `rules.deploymentRules.nonBreakableDeploymentGate.requiredCloudRunServices must include ${service}`
+      );
+    }
+  }
+
+  if (!rules.enforceOn.includes('staging_deploy')) {
+    errors.push(
+      'rules.deploymentRules.nonBreakableDeploymentGate.enforceOn must include staging_deploy'
+    );
+  }
+
+  const contractPath = path.join(ROOT_DIR, rules.contractFile.replace(/\//g, path.sep));
+  if (!fs.existsSync(contractPath)) {
+    errors.push(
+      `rules.deploymentRules.nonBreakableDeploymentGate.contractFile not found: ${rules.contractFile}`
+    );
+  } else {
+    const contract = readJson(contractPath);
+    const requiredSurfaces = normalizeStringArray(contract.requiredSurfaces);
+    const requiredServices = normalizeStringArray(contract.requiredCloudRunServices);
+    for (const surface of NON_BREAKABLE_DEPLOY_REQUIRED_SURFACES) {
+      if (!requiredSurfaces.includes(surface)) {
+        errors.push(`${rules.contractFile}: requiredSurfaces missing ${surface}`);
+      }
+    }
+    for (const service of REQUIRED_SERVICES) {
+      if (!requiredServices.includes(service)) {
+        errors.push(`${rules.contractFile}: requiredCloudRunServices missing ${service}`);
+      }
+    }
+  }
+
+  const scriptPath = path.join(ROOT_DIR, rules.scriptPath.replace(/\//g, path.sep));
+  if (!fs.existsSync(scriptPath)) {
+    errors.push(
+      `rules.deploymentRules.nonBreakableDeploymentGate.scriptPath not found: ${rules.scriptPath}`
+    );
+  }
+
+  const deployWorkflowPath = path.join(ROOT_DIR, rules.deployWorkflowFile.replace(/\//g, path.sep));
+  if (!fs.existsSync(deployWorkflowPath)) {
+    errors.push(
+      `rules.deploymentRules.nonBreakableDeploymentGate.deployWorkflowFile not found: ${rules.deployWorkflowFile}`
+    );
+  } else {
+    const workflowContent = fs.readFileSync(deployWorkflowPath, 'utf8');
+    for (const token of rules.requiredWorkflowTokens) {
+      if (!workflowContent.includes(token)) {
+        errors.push(
+          `deploy workflow contract violation: missing token "${token}" in ${rules.deployWorkflowFile}`
+        );
+      }
+    }
+  }
+
+  return errors;
 }
 
 function getLivePageByPageGateRules(state) {
@@ -3923,6 +4039,7 @@ function validateState(context, options = {}) {
   errors.push(...validateLivePageByPageTicketization(context));
   errors.push(...validateClaudeCurrentStateSync(context));
   errors.push(...validateProductionReadinessTiersState(context));
+  errors.push(...validateNonBreakableDeploymentGateConfig(state));
 
   const sessionRules = state?.rules?.sessionRules || {};
   if (sessionRules.requireSessionIdForTransitions === true && !isNonEmptyString(sessionRules.sessionIdEnvVar)) {
@@ -4491,6 +4608,11 @@ function commandPreStagingDeploy() {
   const gitDisciplineErrors = validateGitWorkspaceForStaging(context.state);
   if (gitDisciplineErrors.length > 0) {
     fail(`staging deploy blocked by git discipline:\n- ${gitDisciplineErrors.join('\n- ')}`);
+  }
+
+  const nonBreakableGateErrors = validateNonBreakableDeploymentGateConfig(context.state);
+  if (nonBreakableGateErrors.length > 0) {
+    fail(`staging deploy blocked by non-breakable deployment gate config:\n- ${nonBreakableGateErrors.join('\n- ')}`);
   }
 
   const requireBatchManifest = context.state.rules?.deploymentBatchPolicy?.requireBatchManifestForStagingDeploy === true;

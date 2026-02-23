@@ -1269,6 +1269,22 @@ jobs:
           fi
           echo "PASS: All $TOTAL canary endpoints healthy (no 5xx detected)"
 
+      # ---- Gate 13: Non-breakable deploy parity gate (BLOCKING) ----
+      # Enforces runtime routing/build/API/GCP parity for:
+      # - retailer web
+      # - supplier web
+      # - superadmin web
+      # - POS app (API and /pos distribution path)
+      - name: "Gate 13: Non-Breakable Surface/Build/API/GCP Parity (BLOCKING)"
+        env:
+          STAGING_URL: ${{ env.STAGING_URL }}
+          DEPLOY_SHA: ${{ needs.gate.outputs.sha_short }}
+          GCP_PROJECT: ${{ env.GCP_PROJECT }}
+          GCP_REGION: ${{ env.GCP_REGION }}
+          NONBREAKABLE_CONTRACT_FILE: workflow/state/deployment_runtime_contract.json
+        run: |
+          node scripts/gates/nonbreakable-deploy-parity.js
+
       # ---- ZRP Parity Report — GitHub Step Summary ----
       - name: "ZRP: Staging Smoke Parity Report"
         if: always()
@@ -1291,6 +1307,7 @@ jobs:
           echo "| 10 | Health latency | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 11 | API error format | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 12 | Canary 5xx detection | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 13 | Non-breakable surface/build/API/GCP parity | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "*ZRP Parity Report v1.1*" >> "$GITHUB_STEP_SUMMARY"
 

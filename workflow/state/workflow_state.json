@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-23T08:43:25.696Z",
+  "updatedAt": "2026-02-23T10:11:08.979Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -756,7 +756,34 @@
       "requireImmutableImageDigest": true,
       "requirePinnedSecretVersions": true,
       "failClosedIfStagingVerificationUnavailable": true,
-      "requireMigrationSafetyForDbChanges": true
+      "requireMigrationSafetyForDbChanges": true,
+      "nonBreakableDeploymentGate": {
+        "enabled": true,
+        "enforceOn": [
+          "staging_deploy"
+        ],
+        "contractFile": "workflow/state/deployment_runtime_contract.json",
+        "scriptPath": "scripts/gates/nonbreakable-deploy-parity.js",
+        "deployWorkflowFile": ".github/workflows/deploy.yml",
+        "requiredWorkflowTokens": [
+          "Gate 13: Non-Breakable Surface/Build/API/GCP Parity (BLOCKING)",
+          "node scripts/gates/nonbreakable-deploy-parity.js"
+        ],
+        "requiredSurfaces": [
+          "retailer_web",
+          "supplier_web",
+          "superadmin_web",
+          "pos_app"
+        ],
+        "requiredCloudRunServices": [
+          "api-gateway",
+          "main-backend",
+          "retailer-admin",
+          "supplier-portal",
+          "superadmin",
+          "landing"
+        ]
+      }
     },
     "deploymentBatchPolicy": {
       "baseScreensPerBatch": 3,
@@ -1213,5 +1240,5 @@
   "timestamps": {
     "updatedAt": "2026-02-22T09:28:55.165Z"
   },
-  "lastUpdated": "2026-02-23T08:43:25.696Z"
+  "lastUpdated": "2026-02-23T10:11:08.979Z"
 }

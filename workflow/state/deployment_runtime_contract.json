@@ -1,0 +1,164 @@
+{
+  "schemaVersion": "1.0.0",
+  "updatedAt": "2026-02-23T00:00:00Z",
+  "stagingUrl": "https://staging.supermandi.tech",
+  "gcpProject": "supermandi-backend",
+  "gcpRegion": "asia-south1",
+  "requiredSurfaces": [
+    "retailer_web",
+    "supplier_web",
+    "superadmin_web",
+    "pos_app"
+  ],
+  "requiredCloudRunServices": [
+    "api-gateway",
+    "main-backend",
+    "retailer-admin",
+    "supplier-portal",
+    "superadmin",
+    "landing"
+  ],
+  "surfacePathChecks": [
+    {
+      "id": "NB-SURF-001",
+      "name": "retailer_root",
+      "path": "/retailer/",
+      "expectedStatuses": [
+        200
+      ],
+      "bodyContainsAny": [
+        "Retailer Portal",
+        "SuperMandi"
+      ]
+    },
+    {
+      "id": "NB-SURF-002",
+      "name": "supplier_root",
+      "path": "/supplier/",
+      "expectedStatuses": [
+        200
+      ],
+      "bodyContainsAny": [
+        "Supplier Portal",
+        "SuperMandi"
+      ]
+    },
+    {
+      "id": "NB-SURF-003",
+      "name": "superadmin_root",
+      "path": "/admin/",
+      "expectedStatuses": [
+        200
+      ],
+      "bodyContainsAny": [
+        "SuperAdmin",
+        "SuperMandi"
+      ]
+    },
+    {
+      "id": "NB-SURF-004",
+      "name": "pos_download_page",
+      "path": "/pos",
+      "expectedStatuses": [
+        200
+      ],
+      "bodyContainsAny": [
+        "SuperMandi",
+        "POS"
+      ]
+    }
+  ],
+  "deepLinkChecks": [
+    {
+      "id": "NB-PATH-001",
+      "path": "/retailer/login",
+      "expectedStatuses": [
+        200
+      ]
+    },
+    {
+      "id": "NB-PATH-002",
+      "path": "/supplier/login/",
+      "expectedStatuses": [
+        200
+      ]
+    },
+    {
+      "id": "NB-PATH-003",
+      "path": "/admin/stores",
+      "expectedStatuses": [
+        200
+      ]
+    },
+    {
+      "id": "NB-PATH-004",
+      "path": "/retailer/dashboard",
+      "expectedStatuses": [
+        200
+      ]
+    },
+    {
+      "id": "NB-PATH-005",
+      "path": "/supplier/orders",
+      "expectedStatuses": [
+        200
+      ]
+    }
+  ],
+  "backendFrontendChecks": [
+    {
+      "id": "NB-API-001",
+      "name": "admin_auth_guard",
+      "path": "/api/v1/admin/stores",
+      "expectedStatuses": [
+        401,
+        403
+      ]
+    },
+    {
+      "id": "NB-API-002",
+      "name": "pos_api_health_proxy",
+      "path": "/api/v1/pos/health",
+      "acceptAnyStatusRange": {
+        "min": 200,
+        "max": 499
+      }
+    },
+    {
+      "id": "NB-API-003",
+      "name": "supplier_auth_route",
+      "path": "/api/v1/supplier/auth/login",
+      "acceptAnyStatusRange": {
+        "min": 200,
+        "max": 499
+      }
+    },
+    {
+      "id": "NB-API-004",
+      "name": "retailer_auth_route",
+      "path": "/api/v1/retailer-admin/auth/login",
+      "acceptAnyStatusRange": {
+        "min": 200,
+        "max": 499
+      }
+    }
+  ],
+  "versionParityChecks": [
+    {
+      "id": "NB-VERSION-001",
+      "path": "/version",
+      "field": "sha"
+    },
+    {
+      "id": "NB-VERSION-002",
+      "path": "/api/v1/version",
+      "field": "sha"
+    }
+  ],
+  "cloudRunParityRules": {
+    "requireSingleActiveRevision": true,
+    "require100TrafficToActiveRevision": true,
+    "requireGitShaEnvParity": true,
+    "requireMainBackendMinAppVersion": true
+  }
+}
