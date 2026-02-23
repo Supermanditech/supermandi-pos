@@ -69,12 +69,15 @@ export function getPool(config?: DbConfig): Pool {
         connectionTimeoutMillis: 30000,
       };
     } else {
+      // LIVE.CONFIG.DB_PASSWORD_DEFAULT_REMOVAL_GLOBAL.001: No default credentials in non-dev
+      const nodeEnv = process.env['NODE_ENV'];
+      const isDev = !nodeEnv || nodeEnv === 'development';
       envConfig = {
-        host: process.env['DB_HOST'] || 'localhost',
+        host: process.env['DB_HOST'] || (isDev ? 'localhost' : (() => { throw new Error('DB_HOST required in non-development'); })()),
         port: parseInt(process.env['DB_PORT'] || '5432', 10),
-        database: process.env['DB_NAME'] || 'supermandi',
-        user: process.env['DB_USER'] || 'postgres',
-        password: process.env['DB_PASSWORD'] || '',
+        database: process.env['DB_NAME'] || (isDev ? 'supermandi' : (() => { throw new Error('DB_NAME required in non-development'); })()),
+        user: process.env['DB_USER'] || (isDev ? 'postgres' : (() => { throw new Error('DB_USER required in non-development'); })()),
+        password: process.env['DB_PASSWORD'] || (isDev ? '' : (() => { throw new Error('DB_PASSWORD required in non-development'); })()),
         ssl: process.env['DB_SSL'] === 'true' ? { rejectUnauthorized: false } : false,
         min: parseInt(process.env['DB_POOL_MIN'] || '2', 10),
         max: parseInt(process.env['DB_POOL_MAX'] || '10', 10),
