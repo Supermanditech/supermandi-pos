@@ -307,7 +307,7 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "LIVE.POS.THEME.E2E_GCP_STAGING_PARITY_MATRIX.001",
-    "lastValidatedCommit": "20cdbd6e",
+    "lastValidatedCommit": "85e9437b",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",

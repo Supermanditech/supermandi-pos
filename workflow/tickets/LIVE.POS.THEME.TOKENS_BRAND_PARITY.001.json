@@ -306,7 +306,7 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "LIVE.POS.THEME.TOKENS_BRAND_PARITY.001",
-    "lastValidatedCommit": "9f33b49c",
+    "lastValidatedCommit": "a8872797",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",

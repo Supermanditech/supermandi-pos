@@ -305,7 +305,7 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001",
-    "lastValidatedCommit": "6fcbaeac",
+    "lastValidatedCommit": "6a8d1bc4",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",

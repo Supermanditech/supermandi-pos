@@ -21,6 +21,21 @@ const NON_BREAKABLE_DEPLOY_REQUIRED_SURFACES = new Set([
   'superadmin_web',
   'pos_app',
 ]);
+const CUMULATIVE_DEPLOY_DEFAULT_ENFORCE_TICKET_STATUSES = [
+  'done',
+  'ready_for_operator_test',
+  'ready_for_impact_retest',
+  'ready_for_lock',
+  'locked',
+];
+const CUMULATIVE_DEPLOY_DEFAULT_PLACEHOLDER_COMMITS = [
+  'pending',
+  'todo',
+  'na',
+  'n/a',
+  'unknown',
+  'tbd',
+];
 
 const MODES = new Set([
   'LIVE_FIX',
@@ -550,6 +565,13 @@ function normalizeStringArray(value) {
     .map((item) => item.trim());
 }
 
+function isLikelyGitSha(value) {
+  if (!isNonEmptyString(value)) {
+    return false;
+  }
+  return /^[0-9a-f]{7,40}$/i.test(value.trim());
+}
+
 function getLiveIterationExecutionRules(state) {
   const rules = state?.rules?.liveIterationExecutionRules || {};
   const enforceModes = normalizeStringArray(rules.enforceModes);
@@ -688,6 +710,247 @@ function validateNonBreakableDeploymentGateConfig(state) {
   return errors;
 }
 
+function getCumulativeDeployShaDisciplineRules(state) {
+  const rules = state?.rules?.deploymentRules?.cumulativeDeployShaDiscipline || {};
+  const enforceTicketStatuses = normalizeStringArray(rules.enforceTicketStatuses);
+  const placeholderTicketCommitValues = normalizeStringArray(rules.placeholderTicketCommitValues);
+
+  return {
+    enabled: rules.enabled === true,
+    enforceOn: normalizeStringArray(rules.enforceOn),
+    requireTargetDescendsFromLastSuccessfulStagingSha:
+      rules.requireTargetDescendsFromLastSuccessfulStagingSha !== false,
+    requireBatchCommitMatchesHead: rules.requireBatchCommitMatchesHead !== false,
+    requireBatchTicketsInAllowedStatuses: rules.requireBatchTicketsInAllowedStatuses !== false,
+    requireBatchTicketCommitPresent: rules.requireBatchTicketCommitPresent !== false,
+    requireBatchTicketCommitObject: rules.requireBatchTicketCommitObject !== false,
+    requireBatchTicketCommitAncestorOfHead: rules.requireBatchTicketCommitAncestorOfHead !== false,
+    rejectPlaceholderTicketCommit: rules.rejectPlaceholderTicketCommit !== false,
+    requireImplementationProgressSync: rules.requireImplementationProgressSync !== false,
+    enforceTicketStatuses:
+      enforceTicketStatuses.length > 0
+        ? enforceTicketStatuses
+        : CUMULATIVE_DEPLOY_DEFAULT_ENFORCE_TICKET_STATUSES,
+    placeholderTicketCommitValues:
+      placeholderTicketCommitValues.length > 0
+        ? placeholderTicketCommitValues
+        : CUMULATIVE_DEPLOY_DEFAULT_PLACEHOLDER_COMMITS,
+  };
+}
+
+function validateCumulativeDeployShaDisciplineConfig(state) {
+  const errors = [];
+  const rules = getCumulativeDeployShaDisciplineRules(state);
+  if (!rules.enabled) {
+    errors.push('rules.deploymentRules.cumulativeDeployShaDiscipline.enabled must be true');
+    return errors;
+  }
+  if (!rules.enforceOn.includes('staging_deploy')) {
+    errors.push(
+      'rules.deploymentRules.cumulativeDeployShaDiscipline.enforceOn must include staging_deploy'
+    );
+  }
+
+  const invalidStatuses = rules.enforceTicketStatuses.filter((status) => !TICKET_STATUS_VALUES.has(status));
+  if (invalidStatuses.length > 0) {
+    errors.push(
+      `rules.deploymentRules.cumulativeDeployShaDiscipline.enforceTicketStatuses contains invalid status(es): ${invalidStatuses.join(', ')}`
+    );
+  }
+
+  if (rules.requireTargetDescendsFromLastSuccessfulStagingSha) {
+    const baseline = (state?.rules?.liveTicketIntakeRules?.lastSuccessfulStagingCommitSha || '').trim();
+    if (!isLikelyGitSha(baseline)) {
+      errors.push(
+        'rules.liveTicketIntakeRules.lastSuccessfulStagingCommitSha must be a valid git SHA when cumulativeDeployShaDiscipline.requireTargetDescendsFromLastSuccessfulStagingSha=true'
+      );
+    }
+  }
+
+  return errors;
+}
+
+function validateImplementationProgressTicketSync(context, disciplineRules) {
+  const errors = [];
+  const rules = disciplineRules || getCumulativeDeployShaDisciplineRules(context.state);
+  if (!rules.requireImplementationProgressSync) {
+    return errors;
+  }
+
+  const progress = getLiveIterationProgress(context.state);
+  const allowedStatuses = new Set(rules.enforceTicketStatuses);
+  const remainingSeen = new Set();
+  const completedSeen = new Set();
+
+  for (const ticketId of progress.implementation.remainingTicketIds) {
+    if (remainingSeen.has(ticketId)) {
+      errors.push(`progress.liveIteration.implementation.remainingTicketIds has duplicate id: ${ticketId}`);
+      continue;
+    }
+    remainingSeen.add(ticketId);
+    const ticket = context.ticketMap.get(ticketId);
+    if (!ticket) {
+      errors.push(`progress.liveIteration.implementation.remainingTicketIds references missing ticket: ${ticketId}`);
+      continue;
+    }
+    if (allowedStatuses.has(ticket.status) || isClosedTicketStatus(ticket.status)) {
+      errors.push(
+        `progress.liveIteration.implementation.remainingTicketIds includes ${ticketId} but ticket status is ${ticket.status}; move it to completedTicketIds`
+      );
+    }
+  }
+
+  for (const ticketId of progress.implementation.completedTicketIds) {
+    if (completedSeen.has(ticketId)) {
+      errors.push(`progress.liveIteration.implementation.completedTicketIds has duplicate id: ${ticketId}`);
+      continue;
+    }
+    completedSeen.add(ticketId);
+    const ticket = context.ticketMap.get(ticketId);
+    if (!ticket) {
+      errors.push(`progress.liveIteration.implementation.completedTicketIds references missing ticket: ${ticketId}`);
+      continue;
+    }
+    if (!(allowedStatuses.has(ticket.status) || ticket.status === 'cancelled')) {
+      errors.push(
+        `progress.liveIteration.implementation.completedTicketIds includes ${ticketId} but ticket status is ${ticket.status}; completed tickets must be deploy-ready or cancelled`
+      );
+    }
+  }
+
+  if (
+    progress.implementation.remainingTicketIds.length === 0 &&
+    progress.implementation.completedTicketIds.length > 0 &&
+    progress.implementation.complete !== true
+  ) {
+    errors.push(
+      'progress.liveIteration.implementation.complete must be true when remainingTicketIds is empty and completedTicketIds is non-empty'
+    );
+  }
+
+  return errors;
+}
+
+function validateCumulativeDeployShaDisciplineForPreStaging(context, batch) {
+  const errors = [];
+  const rules = getCumulativeDeployShaDisciplineRules(context.state);
+  if (!rules.enabled || !rules.enforceOn.includes('staging_deploy')) {
+    return errors;
+  }
+
+  const headShaResult = tryExec('git rev-parse HEAD');
+  if (!headShaResult.ok || !isLikelyGitSha(headShaResult.output)) {
+    errors.push('cumulative deploy gate: unable to resolve current HEAD sha');
+    return errors;
+  }
+  const headSha = headShaResult.output.trim();
+
+  if (rules.requireTargetDescendsFromLastSuccessfulStagingSha) {
+    const baselineSha = (context.state?.rules?.liveTicketIntakeRules?.lastSuccessfulStagingCommitSha || '').trim();
+    if (!isLikelyGitSha(baselineSha)) {
+      errors.push('cumulative deploy gate: rules.liveTicketIntakeRules.lastSuccessfulStagingCommitSha must be a valid SHA');
+    } else {
+      const baselineCommitExists = tryExec(`git cat-file -e ${baselineSha}^{commit}`);
+      if (!baselineCommitExists.ok) {
+        errors.push(
+          `cumulative deploy gate: baseline staging commit not found in repo: ${baselineSha}`
+        );
+      } else {
+        const ancestryCheck = tryExec(`git merge-base --is-ancestor ${baselineSha} ${headSha}`);
+        if (!ancestryCheck.ok) {
+          errors.push(
+            `cumulative deploy gate: target HEAD (${headSha.slice(0, 8)}) must descend from last successful staging commit (${baselineSha})`
+          );
+        }
+      }
+    }
+  }
+
+  const progressSyncErrors = validateImplementationProgressTicketSync(context, rules);
+  if (progressSyncErrors.length > 0) {
+    errors.push(...progressSyncErrors);
+  }
+
+  if (rules.requireBatchCommitMatchesHead) {
+    if (!batch || typeof batch !== 'object') {
+      errors.push('cumulative deploy gate: staging_batch manifest is required');
+    } else {
+      const declaredSha = (batch.commitSha || '').trim();
+      if (!isLikelyGitSha(declaredSha)) {
+        errors.push(
+          `cumulative deploy gate: staging_batch.commitSha must be a valid git SHA (found "${declaredSha || '<empty>'}")`
+        );
+      } else {
+        const declaredShaResult = tryExec(`git rev-parse ${declaredSha}`);
+        if (!declaredShaResult.ok || !isLikelyGitSha(declaredShaResult.output)) {
+          errors.push(`cumulative deploy gate: staging_batch.commitSha cannot be resolved in git: ${declaredSha}`);
+        } else if (declaredShaResult.output.trim() !== headSha) {
+          errors.push(
+            `cumulative deploy gate: staging_batch.commitSha (${declaredSha}) must resolve to HEAD (${headSha.slice(0, 8)})`
+          );
+        }
+      }
+    }
+  }
+
+  const placeholderValues = new Set(
+    rules.placeholderTicketCommitValues.map((value) => value.toLowerCase())
+  );
+  const allowedStatuses = new Set(rules.enforceTicketStatuses);
+  const batchTicketIds = Array.isArray(batch?.ticketIds) ? batch.ticketIds : [];
+  for (const ticketId of batchTicketIds) {
+    const ticket = context.ticketMap.get(ticketId);
+    if (!ticket) {
+      errors.push(`cumulative deploy gate: staging_batch.ticketIds includes unknown ticket ${ticketId}`);
+      continue;
+    }
+
+    if (rules.requireBatchTicketsInAllowedStatuses && !allowedStatuses.has(ticket.status)) {
+      errors.push(
+        `cumulative deploy gate: ticket ${ticketId} has status ${ticket.status}; expected one of ${rules.enforceTicketStatuses.join(', ')}`
+      );
+    }
+
+    const commitSha = (ticket?.gitDiscipline?.lastValidatedCommit || '').trim();
+    if (rules.requireBatchTicketCommitPresent && !isNonEmptyString(commitSha)) {
+      errors.push(`cumulative deploy gate: ticket ${ticketId} is missing gitDiscipline.lastValidatedCommit`);
+      continue;
+    }
+    if (rules.rejectPlaceholderTicketCommit && placeholderValues.has(commitSha.toLowerCase())) {
+      errors.push(
+        `cumulative deploy gate: ticket ${ticketId} gitDiscipline.lastValidatedCommit cannot be placeholder value "${commitSha}"`
+      );
+      continue;
+    }
+    if (!isLikelyGitSha(commitSha)) {
+      errors.push(
+        `cumulative deploy gate: ticket ${ticketId} gitDiscipline.lastValidatedCommit must be a valid SHA (found "${commitSha || '<empty>'}")`
+      );
+      continue;
+    }
+
+    if (rules.requireBatchTicketCommitObject) {
+      const commitExists = tryExec(`git cat-file -e ${commitSha}^{commit}`);
+      if (!commitExists.ok) {
+        errors.push(
+          `cumulative deploy gate: ticket ${ticketId} gitDiscipline.lastValidatedCommit not found in repo: ${commitSha}`
+        );
+        continue;
+      }
+    }
+    if (rules.requireBatchTicketCommitAncestorOfHead) {
+      const ancestorCheck = tryExec(`git merge-base --is-ancestor ${commitSha} ${headSha}`);
+      if (!ancestorCheck.ok) {
+        errors.push(
+          `cumulative deploy gate: ticket ${ticketId} lastValidatedCommit (${commitSha}) must be ancestor of target HEAD (${headSha.slice(0, 8)})`
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
 function getLivePageByPageGateRules(state) {
   const liveRules = getLiveIterationExecutionRules(state);
   const raw = state?.rules?.liveIterationExecutionRules?.pageByPageGate || {};
@@ -816,6 +1079,7 @@ function getLiveIterationProgress(state) {
       complete: implementation.complete === true,
       summary: isNonEmptyString(implementation.summary) ? implementation.summary.trim() : '',
       remainingTicketIds: normalizeStringArray(implementation.remainingTicketIds),
+      completedTicketIds: normalizeStringArray(implementation.completedTicketIds),
       lastUpdatedAt: isNonEmptyString(implementation.lastUpdatedAt) ? implementation.lastUpdatedAt.trim() : '',
     },
     deployApproval: {
@@ -4040,6 +4304,8 @@ function validateState(context, options = {}) {
   errors.push(...validateClaudeCurrentStateSync(context));
   errors.push(...validateProductionReadinessTiersState(context));
   errors.push(...validateNonBreakableDeploymentGateConfig(state));
+  errors.push(...validateCumulativeDeployShaDisciplineConfig(state));
+  errors.push(...validateImplementationProgressTicketSync(context));
 
   const sessionRules = state?.rules?.sessionRules || {};
   if (sessionRules.requireSessionIdForTransitions === true && !isNonEmptyString(sessionRules.sessionIdEnvVar)) {
@@ -4632,6 +4898,11 @@ function commandPreStagingDeploy() {
       if (declared !== gitSha.output) {
         fail(`staging deploy blocked: staging_batch commitSha (${declared}) must match current HEAD (${gitSha.output})`);
       }
+    }
+
+    const cumulativeDeployErrors = validateCumulativeDeployShaDisciplineForPreStaging(context, batch);
+    if (cumulativeDeployErrors.length > 0) {
+      fail(`staging deploy blocked by cumulative deploy SHA discipline:\n- ${cumulativeDeployErrors.join('\n- ')}`);
     }
   }
 

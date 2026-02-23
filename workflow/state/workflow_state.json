@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-23T10:11:08.979Z",
+  "updatedAt": "2026-02-23T10:39:14.327Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -783,6 +783,35 @@
           "superadmin",
           "landing"
         ]
+      },
+      "cumulativeDeployShaDiscipline": {
+        "enabled": true,
+        "enforceOn": [
+          "staging_deploy"
+        ],
+        "requireTargetDescendsFromLastSuccessfulStagingSha": true,
+        "requireBatchCommitMatchesHead": true,
+        "requireBatchTicketsInAllowedStatuses": true,
+        "requireBatchTicketCommitPresent": true,
+        "requireBatchTicketCommitObject": true,
+        "requireBatchTicketCommitAncestorOfHead": true,
+        "rejectPlaceholderTicketCommit": true,
+        "requireImplementationProgressSync": true,
+        "enforceTicketStatuses": [
+          "done",
+          "ready_for_operator_test",
+          "ready_for_impact_retest",
+          "ready_for_lock",
+          "locked"
+        ],
+        "placeholderTicketCommitValues": [
+          "pending",
+          "todo",
+          "na",
+          "n/a",
+          "unknown",
+          "tbd"
+        ]
       }
     },
     "deploymentBatchPolicy": {
@@ -1021,15 +1050,9 @@
         "lastUpdatedAt": "2026-02-22T22:50:00.000Z"
       },
       "implementation": {
-        "complete": false,
-        "summary": "NOT COMPLETE: POS runtime theme parity batch must be implemented production-grade with staging evidence and parked at git for one cumulative deploy.",
-        "remainingTicketIds": [
-          "LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001",
-          "LIVE.POS.THEME.TOKENS_BRAND_PARITY.001",
-          "LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001",
-          "LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001",
-          "LIVE.POS.THEME.E2E_GCP_STAGING_PARITY_MATRIX.001"
-        ],
+        "complete": true,
+        "summary": "COMPLETE: implementation backlog is zero. All current-wave tickets are parked at git and must deploy as one cumulative staging SHA with strict ancestry and parity gates.",
+        "remainingTicketIds": [],
         "completedTicketIds": [
           "FIX-001",
           "LIVE.A11Y.RETAILER_FORM_LABELS.001",
@@ -1052,6 +1075,11 @@
           "LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001",
           "LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001",
           "LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001",
+          "LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001",
+          "LIVE.POS.THEME.E2E_GCP_STAGING_PARITY_MATRIX.001",
+          "LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001",
+          "LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001",
+          "LIVE.POS.THEME.TOKENS_BRAND_PARITY.001",
           "LIVE.RETAILER.AUTH_401_NO_REDIRECT.001",
           "LIVE.RETAILER.RESETPW_NO_PARAM_CHECK.001",
           "LIVE.SUPERADMIN.AI_ROUTE_DUPLICATE.001",
@@ -1127,7 +1155,7 @@
           "STAGE.SECURITY.SECRET_ROTATION.001",
           "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001"
         ],
-        "lastUpdatedAt": "2026-02-23T08:35:56.563Z"
+        "lastUpdatedAt": "2026-02-23T10:39:14.326Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1240,5 +1268,5 @@
   "timestamps": {
     "updatedAt": "2026-02-22T09:28:55.165Z"
   },
-  "lastUpdated": "2026-02-23T10:11:08.979Z"
+  "lastUpdated": "2026-02-23T10:39:14.327Z"
 }
