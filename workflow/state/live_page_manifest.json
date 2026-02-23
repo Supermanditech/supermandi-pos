@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-21T22:11:17.055Z",
+  "generatedAt": "2026-02-23T21:39:45.710Z",
   "generatedBy": "scripts/workflow/generate-live-page-manifest.js",
   "sourceEnvironment": "gcp_staging",
   "baseUrl": "https://staging.supermandi.tech",
@@ -777,21 +777,6 @@
       {
         "route": "/admin/",
         "url": "https://staging.supermandi.tech/admin/",
-        "primaryService": "superadmin",
-        "requiredChecks": [
-          "ui",
-          "ux",
-          "wiring",
-          "navigation",
-          "api_contract",
-          "backend_behavior",
-          "db_migration_impact",
-          "gcp_staging_parity"
-        ]
-      },
-      {
-        "route": "/admin/#ai",
-        "url": "https://staging.supermandi.tech/admin/#ai",
         "primaryService": "superadmin",
         "requiredChecks": [
           "ui",
