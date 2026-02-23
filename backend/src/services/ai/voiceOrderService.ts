@@ -280,13 +280,55 @@ export function isValidParsedActions(obj: unknown): obj is ParsedActions {
   return true;
 }
 
+// LIVE.AI.VOICE_PROMPT_INJECTION_GUARD.001: Sanitize transcript before LLM prompt injection
+const PROMPT_INJECTION_PATTERNS = [
+  /ignore\s+(previous|above|all|prior)\s+(instructions?|prompts?|rules?)/i,
+  /override\s+(system|instructions?|rules?|prompts?)/i,
+  /forget\s+(your|the|all|previous)\s+(instructions?|rules?|prompts?)/i,
+  /you\s+are\s+now\s+/i,
+  /act\s+as\s+(if|a|an)\s+/i,
+  /new\s+instructions?:/i,
+  /system\s*prompt/i,
+  /\bdo\s+not\s+follow\b/i,
+  /\bdisregard\b/i,
+  /respond\s+with\s+only/i,
+  /\bjailbreak\b/i,
+  /\bDAN\b/,
+];
+const MAX_TRANSCRIPT_LENGTH = 500;
+
+function sanitizeTranscriptForPrompt(transcript: string): { sanitized: string; injectionDetected: boolean } {
+  const trimmed = transcript.slice(0, MAX_TRANSCRIPT_LENGTH).trim();
+  for (const pattern of PROMPT_INJECTION_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      log.warn(`[VoiceOrder] Prompt injection pattern detected in transcript: ${pattern.source}`);
+      return { sanitized: trimmed, injectionDetected: true };
+    }
+  }
+  // Strip backticks and angle brackets to prevent markdown/XML injection in prompt
+  const sanitized = trimmed.replace(/[`<>]/g, '');
+  return { sanitized, injectionDetected: false };
+}
+
 async function parseTranscript(
   transcript: string,
   storeId: string,
   currentMode: "SELL" | "BUY",
   userRole?: string
 ): Promise<{ actions: CartAction[]; confidence: number }> {
-  const userMessage = `Parse this voice command: "${transcript}"
+  const { sanitized, injectionDetected } = sanitizeTranscriptForPrompt(transcript);
+
+  if (injectionDetected) {
+    return {
+      actions: [{
+        type: "UNKNOWN",
+        reason: "Voice command could not be processed safely"
+      }],
+      confidence: 0.0
+    };
+  }
+
+  const userMessage = `Parse this voice command: "${sanitized}"
 
 Context:
 - Current mode: ${currentMode}
