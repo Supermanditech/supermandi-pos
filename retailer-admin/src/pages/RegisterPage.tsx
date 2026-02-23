@@ -493,12 +493,15 @@ export default function RegisterPage() {
       }
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string; status?: number; applicationId?: string; applicationStatus?: string };
-      // STAGING-FIX-009: Auto-resume existing application from 409 error body
+      // STAGING-FIX-009 + OTP_SUCCESS_ERROR_CONFLICT fix:
+      // Auto-resume existing application from 409 error body.
+      // Prevent contradictory success+error banners by handling every resume path explicitly.
       if (error.code === 'APPLICATION_EXISTS' && error.applicationId) {
+        const PAST_OTP_STATUSES = ['OTP_VERIFIED', 'UPLOAD_DOCUMENTS', 'KYC_SUBMITTED', 'UNDER_REVIEW', 'ACTIVE'];
         try {
           setApplicationId(error.applicationId);
-          if (error.applicationStatus === 'OTP_VERIFIED' || error.applicationStatus === 'UPLOAD_DOCUMENTS') {
-            // Already OTP-verified, skip directly to documents
+          if (error.applicationStatus && PAST_OTP_STATUSES.includes(error.applicationStatus)) {
+            // Application is already past OTP verification — skip directly to documents
             setStep('documents');
           } else {
             // Verify OTP to advance the application
@@ -506,10 +509,17 @@ export default function RegisterPage() {
             setStep('documents');
           }
           return;
-        } catch {
-          // Resume failed — show fallback error
+        } catch (resumeErr: unknown) {
+          // If verifyRetailerOtp failed because app is already approved/past-OTP, navigate to documents
+          const re = resumeErr as { code?: string; message?: string };
+          if (re.code === 'ALREADY_APPROVED') {
+            setStep('documents');
+            return;
+          }
+          // Unresumable — show single clear error (no conflicting success banner)
+          setError('A registration already exists for this GSTIN. Please contact support.');
+          return;
         }
-        setError('A registration already exists for this GSTIN. Please contact support.');
       } else if (error.code === 'APPLICATION_EXISTS') {
         setError('A registration already exists for this GSTIN. Please contact support.');
       } else if (error.code === 'GSTIN_EXISTS') {
@@ -753,13 +763,15 @@ export default function RegisterPage() {
           {/* STEP 3: Business Details — Multi-card layout matching Supplier Portal */}
           {step === 'details' && (
             <form onSubmit={handleSubmitDetails} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Phone verified banner */}
-              <div style={{ ...styles.alertSuccess, display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: 0 }}>
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Phone verified: <strong>{phone}</strong></span>
-              </div>
+              {/* Phone verified banner — hidden when error is active to prevent conflicting state */}
+              {!error && (
+                <div style={{ ...styles.alertSuccess, display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: 0 }}>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Phone verified: <strong>{phone}</strong></span>
+                </div>
+              )}
 
               {error && <div style={{ ...styles.alertError, marginBottom: 0 }} role="alert">{error}</div>}
 

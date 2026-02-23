@@ -270,7 +270,12 @@ export async function verifyRetailerOtp(data: {
   // AUDIT-RET-041/052: Use safeJson + throw proper Error
   const json = await safeJson(response);
   if (!response.ok) {
-    throw new Error(json?.error?.message || `OTP verification failed (${response.status})`);
+    const err = new Error(json?.error?.message || `OTP verification failed (${response.status})`);
+    // Preserve structured error fields (code) for caller state machine decisions
+    if (json?.error && typeof json.error === 'object') {
+      Object.assign(err, json.error);
+    }
+    throw err;
   }
   return json;
 }
