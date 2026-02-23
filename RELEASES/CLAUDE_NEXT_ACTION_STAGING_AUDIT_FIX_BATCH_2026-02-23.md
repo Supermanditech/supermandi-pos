@@ -272,3 +272,58 @@ When operator says ACTIVATE_ROUND3:
 3. Inject queue in `workflow/state/workflow_state.json` with WIP=1 and deploy hold still true.
 4. Enforce no deploy while any activated P0 remains non-done.
 5. Keep cumulative deploy scope parked at git until all activated tickets are done.
+
+## 9. Round 4 Mega-Audit Intake Lock (No-Loss, Source-Classified)
+
+Source E: `RELEASES/DEEP_PRODUCTION_AUDIT_R4.md`
+
+- Date in report: `2026-02-23`
+- Method in report: static code analysis of local repo, no live servers contacted
+- Branch/SHA in report: `main @ 9975471e`
+- Classification: `REPO_ANALYSIS` (not live-runtime staging evidence)
+
+Round 4 extracted ledger:
+
+- File: `RELEASES/DEEP_PRODUCTION_AUDIT_R4_FINDINGS_LEDGER_2026-02-23.json`
+- Extraction scope: markdown category tables (`A-1`..`I-3`)
+- Extracted findings rows: `140`
+- Severity counts (table rows): `P0=43`, `P1=78`, `P2=19`
+- Category counts: `A=13`, `B=29`, `C=21`, `D=14`, `E=26`, `F=8`, `G=11`, `H=15`, `I=3`
+
+No-loss rules for Source E:
+
+1. Every extracted row in the JSON ledger must map to exactly one canonical ticket ID before activation.
+2. Duplicates are allowed only with explicit `dedupeTo` pointer.
+3. No row deletion or omission is allowed without explicit disposition:
+  - `informational`
+  - `duplicate`
+  - `already-fixed-on-newer-sha`
+  - `invalid-finding`
+4. Any row marked `already-fixed-on-newer-sha` must include:
+  - fixing commit SHA
+  - regression test ref
+  - staging runtime proof after deploy
+
+### 9.1 Source-of-Truth Enforcement Matrix (Rounds 1-4)
+
+| Round | Source Class | Can create implementation ticket directly? | Runtime re-validation required before closure? |
+|---|---|---|---|
+| Round 1 | hybrid (staging sweep + code-review checks) | yes | yes |
+| Round 2 | repo code-read confirmations | yes | yes |
+| Round 3 | repo deep-audit intake | yes | yes |
+| Round 4 | repo static analysis (20 agents) | yes | yes (mandatory for all P0/P1) |
+
+### 9.2 Round 4 Activation Gate
+
+When operator says `ACTIVATE_ROUND4`:
+
+1. Generate canonical ticket IDs for all Source-E ledger rows.
+2. Populate per-ticket fields:
+  - `origin.sourceClass = REPO_ANALYSIS`
+  - `origin.reportRef = RELEASES/DEEP_PRODUCTION_AUDIT_R4.md`
+  - `origin.rowId = <A-1|B-3|...>`
+  - `runtimeValidation.required = true`
+3. Keep deploy hold active (`deployApproval.approved=false`) while any activated P0/P1 remains open.
+4. Closure requires both:
+  - implementation evidence
+  - post-fix runtime evidence on latest staging deploy SHA

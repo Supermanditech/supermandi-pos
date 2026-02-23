@@ -1,0 +1,1285 @@
+{
+  "generatedAt": "2026-02-23T16:08:42.881Z",
+  "sourceFile": "RELEASES/DEEP_PRODUCTION_AUDIT_R4.md",
+  "sourceMethod": "static_repo_audit_round4",
+  "note": "Lossless extraction of markdown findings table rows. Does not activate workflow tickets.",
+  "totalExtracted": 140,
+  "countsBySeverity": {
+    "P0": 43,
+    "P1": 78,
+    "P2": 19
+  },
+  "countsByCategory": {
+    "A": 13,
+    "B": 29,
+    "C": 21,
+    "D": 14,
+    "E": 26,
+    "F": 8,
+    "G": 11,
+    "H": 15,
+    "I": 3
+  },
+  "findings": [
+    {
+      "id": "A-1",
+      "severity": "P0",
+      "file": "middleware/storeIsolation.ts",
+      "line": "—",
+      "finding": "`enforceStoreIsolation()` defined but NEVER mounted on any route",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-2",
+      "severity": "P0",
+      "file": "pos/sales.ts",
+      "line": "23 locations",
+      "finding": "UPDATE queries missing `WHERE store_id`",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-3",
+      "severity": "P0",
+      "file": "pos/payments.ts",
+      "line": "3 locations",
+      "finding": "UPDATE queries missing `WHERE store_id`",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-4",
+      "severity": "P0",
+      "file": "pos/bnpl.ts",
+      "line": "1 location",
+      "finding": "UPDATE query missing `WHERE store_id`",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-5",
+      "severity": "P0",
+      "file": "pos/inventory.ts",
+      "line": "2 locations",
+      "finding": "UPDATE queries missing `WHERE store_id`",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-6",
+      "severity": "P0",
+      "file": "middleware/storeOwnership.ts",
+      "line": "42",
+      "finding": "`x-admin-token` header bypasses all store ownership checks",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-7",
+      "severity": "P1",
+      "file": "middleware/storeOwnership.ts",
+      "line": "15 locs",
+      "finding": "15 `(req as any)` accesses for security-critical identity props",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-8",
+      "severity": "P1",
+      "file": "middleware/storeIsolation.ts",
+      "line": "4 locs",
+      "finding": "4 `(req as any)` accesses — if `storeId` is `undefined`, isolation bypassed",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-9",
+      "severity": "P1",
+      "file": "middleware/storeStatusGate.ts",
+      "line": "83",
+      "finding": "If both req.storeId and req.posDevice.storeId are undefined, gate bypassed",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-10",
+      "severity": "P2",
+      "file": "pos/customers.ts",
+      "line": "—",
+      "finding": "`sale_items` query missing store_id JOIN",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-11",
+      "severity": "P2",
+      "file": "pos/dues.ts",
+      "line": "—",
+      "finding": "UPDATE missing store_id",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-12",
+      "severity": "P0",
+      "file": "ra/compliance.ts",
+      "line": "—",
+      "finding": "Export queries by user_id without store_id",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "A-13",
+      "severity": "P0",
+      "file": "ra/csvImport.ts",
+      "line": "—",
+      "finding": "Shared `catalog.products` updated without store scope",
+      "categoryCode": "A",
+      "categoryName": "Multi-Tenant Store Isolation"
+    },
+    {
+      "id": "B-1",
+      "severity": "P0",
+      "file": "supplier/notifications.ts",
+      "line": "all",
+      "finding": "No auth middleware on any endpoint",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-2",
+      "severity": "P0",
+      "file": "supplier/bnplVisibility.ts",
+      "line": "all",
+      "finding": "No auth middleware",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-3",
+      "severity": "P0",
+      "file": "pos/staff.ts",
+      "line": "—",
+      "finding": "PIN login: no rate limit, no lockout",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-4",
+      "severity": "P0",
+      "file": "middleware/posStaff.ts",
+      "line": "—",
+      "finding": "X-Staff-Id header trusted without session token",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-5",
+      "severity": "P0",
+      "file": "middleware/deviceToken.ts",
+      "line": "—",
+      "finding": "Plaintext device token storage",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-6",
+      "severity": "P0",
+      "file": "admin/adminOtp.ts",
+      "line": "—",
+      "finding": "Plaintext OTP storage in Redis",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-7",
+      "severity": "P0",
+      "file": "ra/registration.ts",
+      "line": "—",
+      "finding": "Status endpoint exposes PII unauthenticated",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-8",
+      "severity": "P0",
+      "file": "supplier/registration.ts",
+      "line": "—",
+      "finding": "Status endpoint exposes unmasked PII unauthenticated",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-9",
+      "severity": "P0",
+      "file": "ra/auth.ts",
+      "line": "—",
+      "finding": "Registration overwrites retailer_portal_phone (account hijack)",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-13",
+      "severity": "P1",
+      "file": "jwtAuth.ts",
+      "line": "53",
+      "finding": "JWT_SECRET falls back to ADMIN_TOKEN",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-14",
+      "severity": "P1",
+      "file": "adminToken.ts",
+      "line": "131",
+      "finding": "JWT_SECRET falls back to ADMIN_TOKEN",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-15",
+      "severity": "P1",
+      "file": "adminAuth.ts",
+      "line": "38",
+      "finding": "JWT_SECRET falls back to ADMIN_TOKEN",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-16",
+      "severity": "P1",
+      "file": "adminSessionService.ts",
+      "line": "41",
+      "finding": "JWT_SECRET falls back to ADMIN_TOKEN",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-17",
+      "severity": "P1",
+      "file": "adminSessionService.ts",
+      "line": "—",
+      "finding": "Email OTP token verification skips issuer check",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-18",
+      "severity": "P1",
+      "file": "ra/auth.ts",
+      "line": "—",
+      "finding": "change-password doesn't invalidate existing sessions",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-19",
+      "severity": "P1",
+      "file": "supplier/auth.ts",
+      "line": "—",
+      "finding": "Refresh token revocation checks wrong schema",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-20",
+      "severity": "P1",
+      "file": "admin/adminAuth.ts",
+      "line": "—",
+      "finding": "JWT in response body, unlimited token refresh",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-21",
+      "severity": "P1",
+      "file": "gateway/authorize.ts",
+      "line": "—",
+      "finding": "Missing actorType allows bypass; no policy for chat/credit",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-22",
+      "severity": "P1",
+      "file": "admin/devices.ts",
+      "line": "—",
+      "finding": "No RBAC permission checks",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-23",
+      "severity": "P1",
+      "file": "admin/deviceEnrollments.ts",
+      "line": "—",
+      "finding": "No RBAC permission checks",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-24",
+      "severity": "P1",
+      "file": "supplier/orders.ts",
+      "line": "—",
+      "finding": "Status update not scoped to supplier's items",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-25",
+      "severity": "P1",
+      "file": "supplier/profile.ts",
+      "line": "—",
+      "finding": "Email change doesn't reset email_verified",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-26",
+      "severity": "P1",
+      "file": "supplier/payouts.ts",
+      "line": "—",
+      "finding": "Bank account returned unmasked",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-27",
+      "severity": "P1",
+      "file": "ra/auth.ts",
+      "line": "—",
+      "finding": "`/auth/me` bypasses JWT validation",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-28",
+      "severity": "P1",
+      "file": "middleware/adminAudit.ts",
+      "line": "—",
+      "finding": "Actor user ID from untrusted header",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-29",
+      "severity": "P2",
+      "file": "gateway/csrfProtection.ts",
+      "line": "—",
+      "finding": "Content-Type: application/json bypasses CSRF",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-30",
+      "severity": "P2",
+      "file": "ra/settings.ts",
+      "line": "—",
+      "finding": "Bank account number stored cleartext",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-31",
+      "severity": "P2",
+      "file": "gateway/proxy.ts",
+      "line": "—",
+      "finding": "Injects master admin token on all /admin routes",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "B-32",
+      "severity": "P2",
+      "file": "ra/products.ts",
+      "line": "—",
+      "finding": "Bulk import doesn't sanitize HTML",
+      "categoryCode": "B",
+      "categoryName": "Authentication & Authorization"
+    },
+    {
+      "id": "C-1",
+      "severity": "P0",
+      "file": "pos/sync.ts",
+      "line": "—",
+      "finding": "SALE_CREATED duplicate path commits mid-batch",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-2",
+      "severity": "P0",
+      "file": "pos/stockIn.ts",
+      "line": "—",
+      "finding": "Advisory lock race: released before work transaction",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-3",
+      "severity": "P0",
+      "file": "pos/openingStock.ts",
+      "line": "—",
+      "finding": "Wrong table/column names + missing stock_balances writes",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-4",
+      "severity": "P0",
+      "file": "pos/inventory.ts",
+      "line": "—",
+      "finding": "stock_balances ON CONFLICT uses stale delta",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-5",
+      "severity": "P0",
+      "file": "pos/dues.ts",
+      "line": "—",
+      "finding": "Count query parameter mismatch crash",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-6",
+      "severity": "P1",
+      "file": "pos/refunds.ts",
+      "line": "—",
+      "finding": "No idempotency key; network retry = double refund",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-7",
+      "severity": "P1",
+      "file": "pos/dailyClosing.ts",
+      "line": "—",
+      "finding": "No transaction wrapper on multi-write",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-8",
+      "severity": "P1",
+      "file": "pos/bnpl.ts",
+      "line": "—",
+      "finding": "Partial payment blocked after first; UPI confirm overwrites",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-9",
+      "severity": "P1",
+      "file": "pos/shifts.ts",
+      "line": "—",
+      "finding": "Race condition on active shift check; staffUserId from body",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-10",
+      "severity": "P1",
+      "file": "pos/scan.ts",
+      "line": "—",
+      "finding": "No RBAC on price update",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-11",
+      "severity": "P1",
+      "file": "pos/khata.ts",
+      "line": "—",
+      "finding": "Balance can go negative; no integer validation",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-12",
+      "severity": "P1",
+      "file": "pos/credit.ts",
+      "line": "—",
+      "finding": "Amount not validated as integer",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-13",
+      "severity": "P1",
+      "file": "pos/stockIn.ts",
+      "line": "152,160",
+      "finding": "Double `client.release()` corrupts pool",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-14",
+      "severity": "P1",
+      "file": "pos/inventory.ts",
+      "line": "—",
+      "finding": "Physical count race conditions",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-15",
+      "severity": "P1",
+      "file": "ra/csvImport.ts",
+      "line": "—",
+      "finding": "Bulk paste commits trust client data without re-validation",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-16",
+      "severity": "P1",
+      "file": "ra/reconciliation.ts",
+      "line": "—",
+      "finding": "No date range limit, no default range",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-17",
+      "severity": "P1",
+      "file": "Services/stores",
+      "line": "—",
+      "finding": "Dual offline queue (outbox + offlineQueue) = double inventory deduction",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-18",
+      "severity": "P1",
+      "file": "Services/stores",
+      "line": "—",
+      "finding": "Batch attempt penalization causes valid event loss",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-19",
+      "severity": "P1",
+      "file": "supplier/auth.ts",
+      "line": "—",
+      "finding": "Registration sets status='active' immediately (should be pending)",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-20",
+      "severity": "P2",
+      "file": "admin/stores.ts",
+      "line": "—",
+      "finding": "UPI VPA update silently changes status but never writes upi_vpa",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "C-21",
+      "severity": "P2",
+      "file": "webhooks/refundWebhook.ts",
+      "line": "—",
+      "finding": "Signature on re-serialized JSON; DB error returns 200",
+      "categoryCode": "C",
+      "categoryName": "Transaction & Data Integrity"
+    },
+    {
+      "id": "D-1",
+      "severity": "P0",
+      "file": "buy/CatalogProductCard.tsx",
+      "line": "100",
+      "finding": "`formatMoney(bestPrice * 100)` — double conversion",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-2",
+      "severity": "P0",
+      "file": "buy/CartItem.tsx",
+      "line": "56,61,90",
+      "finding": "`formatMoney(unitPrice * 100)` — double conversion",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-3",
+      "severity": "P0",
+      "file": "buy/SupplierCartSection.tsx",
+      "line": "144,188",
+      "finding": "`formatMoney(minOrderValue * 100)` — double conversion",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-4",
+      "severity": "P0",
+      "file": "buy/PurchaseCartModal.tsx",
+      "line": "158,485,815",
+      "finding": "BNPL check + display at 100x",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-5",
+      "severity": "P0",
+      "file": "reorder/PendingReorderCard.tsx",
+      "line": "143,170",
+      "finding": "`formatMoney(suggestedUnitPrice * 100)` — double conversion",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-6",
+      "severity": "P0",
+      "file": "reorder/EditReorderModal.tsx",
+      "line": "335-387",
+      "finding": "All 4 price displays at 100x",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-7",
+      "severity": "P1",
+      "file": "pos/reports.ts",
+      "line": "84-96",
+      "finding": "12 `parseInt` on DB aggregates without NaN guard",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-8",
+      "severity": "P1",
+      "file": "supplier/payouts.ts",
+      "line": "174-179",
+      "finding": "Financial NaN: `totalRevenue - NaN - NaN - NaN`",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-9",
+      "severity": "P1",
+      "file": "admin/gstCompliance.ts",
+      "line": "224-228",
+      "finding": "Float accumulation in GST report loop",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-10",
+      "severity": "P1",
+      "file": "admin/gstCompliance.ts",
+      "line": "291-345",
+      "finding": "18 `parseInt` on tax amounts without NaN guard",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-11",
+      "severity": "P1",
+      "file": "supplier/payouts.ts",
+      "line": "48-165",
+      "finding": "Financial amounts: `parseInt(null)` = NaN",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-12",
+      "severity": "P1",
+      "file": "pos/overduePayments.ts",
+      "line": "46-53",
+      "finding": "Money columns: `parseInt(null, 10)` = NaN",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-13",
+      "severity": "P1",
+      "file": "admin/documents.ts",
+      "line": "70",
+      "finding": "`parseInt(limit)` NaN → DB error on malformed query",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "D-14",
+      "severity": "P2",
+      "file": "buy/PaymentOptionsSheet.tsx",
+      "line": "101,164,282",
+      "finding": "Dead code but `* 100` landmine when credit enabled",
+      "categoryCode": "D",
+      "categoryName": "Money & Financial Precision"
+    },
+    {
+      "id": "E-1",
+      "severity": "P0",
+      "file": "PaymentScreen.tsx",
+      "line": "—",
+      "finding": "Split payment uses `navigate` not `replace` → back = re-pay",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-2",
+      "severity": "P0",
+      "file": "BnplDuesScreen.tsx",
+      "line": "259",
+      "finding": "`parseFloat(\"\") * 100` = NaN bypasses validation",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-3",
+      "severity": "P0",
+      "file": "DailyClosingScreen.tsx",
+      "line": "—",
+      "finding": "No guard against double-closing same date",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-4",
+      "severity": "P0",
+      "file": "ShiftScreen.tsx",
+      "line": "—",
+      "finding": "No protection against overlapping shifts",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-5",
+      "severity": "P0",
+      "file": "StockStatementScreen.tsx",
+      "line": "42-43",
+      "finding": "stockValue unit ambiguity (paise vs rupees)",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-6",
+      "severity": "P0",
+      "file": "src/config/api.ts",
+      "line": "9-10",
+      "finding": "API_URL undefined if both Expo config sources missing",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-7",
+      "severity": "P1",
+      "file": "EnrollDeviceScreen",
+      "line": "—",
+      "finding": "No double-tap guard on Activate; phone +91 stripping broken",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-8",
+      "severity": "P1",
+      "file": "CreditScreen",
+      "line": "—",
+      "finding": "Float-to-integer conversion; no double-tap guards",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-9",
+      "severity": "P1",
+      "file": "KhataScreen",
+      "line": "—",
+      "finding": "Payment can exceed balance; no double-tap guards",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-10",
+      "severity": "P1",
+      "file": "ReturnScreen",
+      "line": "—",
+      "finding": "Refund total could exceed original sale total",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-11",
+      "severity": "P1",
+      "file": "GRNScreen",
+      "line": "—",
+      "finding": "No double-tap guard on Submit",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-12",
+      "severity": "P1",
+      "file": "ReorderScreen",
+      "line": "—",
+      "finding": "No back button; edits lost on refresh",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-13",
+      "severity": "P1",
+      "file": "DailyClosingScreen",
+      "line": "—",
+      "finding": "UTC timezone bug (wrong day near midnight IST)",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-14",
+      "severity": "P1",
+      "file": "DailyReportScreen",
+      "line": "—",
+      "finding": "UTC timezone bug + HTML XSS in report generation",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-15",
+      "severity": "P1",
+      "file": "SalesHistoryScreen",
+      "line": "—",
+      "finding": "No pagination for bills list",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-16",
+      "severity": "P1",
+      "file": "SellScanScreen",
+      "line": "—",
+      "finding": "fetchSubstitutes called during render; lineSubtotal no rounding",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-17",
+      "severity": "P1",
+      "file": "SplashScreen",
+      "line": "—",
+      "finding": "No timeout on fetchUiStatus",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-18",
+      "severity": "P1",
+      "file": "SalesHistoryScreen.tsx",
+      "line": "115",
+      "finding": "`(navigation as any).navigate(\"SellScan\")` bypasses type check",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-19",
+      "severity": "P1",
+      "file": "StockStatementScreen.tsx",
+      "line": "—",
+      "finding": "Hardcoded 200-item limit",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-20",
+      "severity": "P1",
+      "file": "OpeningStockScreen.tsx",
+      "line": "—",
+      "finding": "Fake progress simulation",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-21",
+      "severity": "P1",
+      "file": "checkoutService.ts",
+      "line": "—",
+      "finding": "Payment recorded but inventory fails silently; retry = duplicate",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-22",
+      "severity": "P1",
+      "file": "stockService.ts",
+      "line": "—",
+      "finding": "Returns 0 for unknown products (blocks sales)",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-23",
+      "severity": "P1",
+      "file": "outbox.ts",
+      "line": "—",
+      "finding": "No maximum outbox size limit",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-24",
+      "severity": "P1",
+      "file": "apiClient.ts",
+      "line": "—",
+      "finding": "No retry on transient failures; token refresh recursion risk",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-25",
+      "severity": "P2",
+      "file": "cartStore.ts",
+      "line": "—",
+      "finding": "Percentage discount floating-point; rehydration error swallowed",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "E-26",
+      "severity": "P2",
+      "file": "8+ screens",
+      "line": "—",
+      "finding": "Various minor UX polish items",
+      "categoryCode": "E",
+      "categoryName": "Frontend UX & Safety"
+    },
+    {
+      "id": "F-1",
+      "severity": "P1",
+      "file": "109 route files",
+      "line": "—",
+      "finding": "Express 4 + no `asyncHandler` wrapper; `pool.connect()` outside try (67+ locs)",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "F-2",
+      "severity": "P1",
+      "file": "pos/sync.ts",
+      "line": "615",
+      "finding": "`upsertDeviceHeartbeat()` before try block",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "F-3",
+      "severity": "P1",
+      "file": "pos/sync.ts",
+      "line": "1394",
+      "finding": "`pool.query()` after finally block",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "F-4",
+      "severity": "P1",
+      "file": "pos/sales.ts",
+      "line": "953,958",
+      "finding": "`getStore()` + idempotency check before try block",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "F-5",
+      "severity": "P1",
+      "file": "pos/stockIn.ts",
+      "line": "152,160",
+      "finding": "Double `client.release()` corrupts connection pool",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "F-6",
+      "severity": "P2",
+      "file": "pos/sync.ts",
+      "line": "481-503",
+      "finding": "`upsertDeviceHeartbeat` has no internal try/catch",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "F-7",
+      "severity": "P2",
+      "file": "pos/sync.ts",
+      "line": "1371",
+      "finding": "Empty catch swallows all errors including programming",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "F-8",
+      "severity": "P2",
+      "file": "Multiple",
+      "line": "—",
+      "finding": "Pre-transaction reads create TOCTOU race windows",
+      "categoryCode": "F",
+      "categoryName": "Async & Connection Safety"
+    },
+    {
+      "id": "G-1",
+      "severity": "P0",
+      "file": "12 POS route files",
+      "line": "`(req as any).posDevice` destructuring",
+      "finding": "60+ handlers crash if middleware fails",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-2",
+      "severity": "P0",
+      "file": "outboxWorker.ts",
+      "line": "`JSON.parse` no try-catch",
+      "finding": "2 locations; error handler also crashes",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-3",
+      "severity": "P0",
+      "file": "eventInbox.ts",
+      "line": "`JSON.parse` no try-catch",
+      "finding": "Corrupted row makes all events unreadable",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-4",
+      "severity": "P0",
+      "file": "src/config/api.ts",
+      "line": "`(Constants.expoConfig as any)?.extra`",
+      "finding": "API_URL undefined = entire app fails",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-5",
+      "severity": "P1",
+      "file": "Security middleware",
+      "line": "`(req as any).storeId` etc",
+      "finding": "19 untyped accesses in store isolation",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-6",
+      "severity": "P1",
+      "file": "admin/suppliers.ts",
+      "line": "`(req as any).adminId` × 14",
+      "finding": "Audit trail incomplete if missing",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-7",
+      "severity": "P1",
+      "file": "documents.ts",
+      "line": "`(req as any).userId/storeId/supplierId`",
+      "finding": "Complex identity chain; silent bypass",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-9",
+      "severity": "P1",
+      "file": "6 financial routes",
+      "line": "`parseInt` without NaN guard",
+      "finding": "12 locations with financial data",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-10",
+      "severity": "P1",
+      "file": "admin/stores.ts",
+      "line": "`result.store!.id` × 9",
+      "finding": "Crash if `store` is null despite success",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-11",
+      "severity": "P1",
+      "file": "admin/ai.ts",
+      "line": "`requestId.split(\"-\")[1]!`",
+      "finding": "NaN duration metric",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "G-12",
+      "severity": "P2",
+      "file": "Various",
+      "line": "`as any` safe patterns",
+      "finding": "~80 occurrences with proper guards",
+      "categoryCode": "G",
+      "categoryName": "TypeScript Safety"
+    },
+    {
+      "id": "H-1",
+      "severity": "P0",
+      "file": "order-service/config.ts",
+      "line": "22-27",
+      "finding": "`DB_PASSWORD` = `getEnvOrDefault('postgres')`",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-2",
+      "severity": "P0",
+      "file": "platform-service/config.ts",
+      "line": "30-34",
+      "finding": "`DB_PASSWORD` = `getEnvOrDefault('postgres')`",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-3",
+      "severity": "P0",
+      "file": "firebaseAdminService.ts",
+      "line": "99",
+      "finding": "Token preview + PII (phone) logged in production",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-4",
+      "severity": "P0",
+      "file": "get-retailer-jwt.ps1",
+      "line": "95",
+      "finding": "Hardcoded JWT secret fallback",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-5",
+      "severity": "P1",
+      "file": "gateway/index.ts",
+      "line": "48",
+      "finding": "`mainBackendUrl` localhost fallback outside config.ts",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-6",
+      "severity": "P1",
+      "file": "gateway/adminAuth.ts",
+      "line": "230",
+      "finding": "`mainBackendUrl` localhost fallback",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-7",
+      "severity": "P1",
+      "file": "common/db/pool.ts",
+      "line": "73-77",
+      "finding": "Shared DB pool: zero validation, `password: ''` default",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-8",
+      "severity": "P1",
+      "file": "src/db/redis.ts",
+      "line": "43",
+      "finding": "Redis host defaults to localhost; no fail-fast",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-9",
+      "severity": "P1",
+      "file": "gateway/redis.ts",
+      "line": "28",
+      "finding": "Redis host defaults to localhost; no fail-fast",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-10",
+      "severity": "P1",
+      "file": "deploy.yml + services",
+      "line": "—",
+      "finding": "`NODE_ENV=staging` bypasses `=== 'production'` checks",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-11",
+      "severity": "P1",
+      "file": "admin/health.ts",
+      "line": "13",
+      "finding": "ADMIN_TOKEN defaults to empty string",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-12",
+      "severity": "P2",
+      "file": "5 service configs",
+      "line": "—",
+      "finding": "Dev fallback `'postgres'` is a real password value",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-13",
+      "severity": "P2",
+      "file": "auth-service/config.ts",
+      "line": "39",
+      "finding": "JWT_SECRET dev fallback is known weak secret",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-14",
+      "severity": "P2",
+      "file": "chat/socketManager.ts",
+      "line": "62",
+      "finding": "Hardcoded localhost origins in WebSocket CORS",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "H-15",
+      "severity": "P2",
+      "file": "test-batch2-real-user.ts",
+      "line": "32",
+      "finding": "JWT_SECRET hardcoded in test script",
+      "categoryCode": "H",
+      "categoryName": "Config & Deploy"
+    },
+    {
+      "id": "I-1",
+      "severity": "P0",
+      "file": "whatsappWebhook.ts",
+      "line": "—",
+      "finding": "Signature verification skipped when secret not configured",
+      "categoryCode": "I",
+      "categoryName": "Webhook Security"
+    },
+    {
+      "id": "I-2",
+      "severity": "P1",
+      "file": "refundWebhook.ts",
+      "line": "—",
+      "finding": "Signature verified on re-serialized JSON (may mismatch)",
+      "categoryCode": "I",
+      "categoryName": "Webhook Security"
+    },
+    {
+      "id": "I-3",
+      "severity": "P1",
+      "file": "refundWebhook.ts",
+      "line": "—",
+      "finding": "DB errors return 200 (webhook provider won't retry)",
+      "categoryCode": "I",
+      "categoryName": "Webhook Security"
+    }
+  ]
+}
