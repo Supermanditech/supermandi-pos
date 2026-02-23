@@ -8,9 +8,11 @@ import { Request, Response, NextFunction } from 'express';
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // Paths exempt from CSRF check (public auth endpoints that don't need it)
+// LIVE.GW.CSRF_WEBHOOK_EXEMPTIONS.001: Exempt webhooks (server-to-server, can't send custom headers)
 const EXEMPT_PREFIXES = [
   '/api/v1/health',
   '/api/v1/ready',
+  '/api/v1/webhooks',
   '/health',
   '/ready',
 ];
