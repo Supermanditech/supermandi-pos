@@ -741,7 +741,8 @@ export default function PosRootLayout() {
           setPendingReorderCount(response.pagination.total);
         }
       } catch (error) {
-        console.error("[PosRootLayout] Failed to fetch pending reorder count:", error);
+        // LIVE.POS.SESSION_LOGGING_DEV_GUARD.001: Only log in development
+        if (__DEV__) console.error("[PosRootLayout] Failed to fetch pending reorder count:", error);
       } finally {
         reorderInFlightRef.current = false;
       }
@@ -953,7 +954,8 @@ export default function PosRootLayout() {
         try {
           await onBarcodeScanned(value);
         } catch (err) {
-          console.error("hid_scan_error:", err);
+          // LIVE.POS.SESSION_LOGGING_DEV_GUARD.001: Only log in development
+          if (__DEV__) console.error("hid_scan_error:", err);
         }
       })();
     });
@@ -1092,7 +1094,8 @@ export default function PosRootLayout() {
       try {
         await onBarcodeScanned(value, format);
       } catch (err) {
-        console.error("camera_scan_error:", err);
+        // LIVE.POS.SESSION_LOGGING_DEV_GUARD.001: Only log in development
+        if (__DEV__) console.error("camera_scan_error:", err);
       }
     })();
   };
