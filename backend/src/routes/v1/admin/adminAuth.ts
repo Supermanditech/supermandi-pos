@@ -48,6 +48,8 @@ const JWT_SECRET = (() => {
   return secret;
 })();
 const JWT_EXPIRY = '24h';
+// LIVE.BE.JWT_ADMIN_ISSUER_ENFORCEMENT.001: Enforce issuer on admin JWTs
+const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 // OTP data shape
 interface StoredOTP {
@@ -291,6 +293,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
   await deleteLockout(normalizedEmail);
 
   // Generate JWT token
+  // LIVE.BE.JWT_ADMIN_ISSUER_ENFORCEMENT.001: Include issuer in admin JWT
   const token = jwt.sign(
     {
       email: normalizedEmail,
@@ -298,7 +301,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
       type: 'admin',
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRY }
+    { expiresIn: JWT_EXPIRY, issuer: JWT_ISSUER }
   );
 
   log.info(`[GO-LIVE-LOGIN-004] Admin login successful: ${normalizedEmail}`);
@@ -341,7 +344,7 @@ adminAuthRouter.get("/auth/check", (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { email: string; role: string };
+    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'] }) as { email: string; role: string };
     return res.json({
       valid: true,
       admin: {
@@ -375,7 +378,7 @@ adminAuthRouter.post("/auth/refresh", (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { email: string; role: string; type: string };
+    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'] }) as { email: string; role: string; type: string };
 
     // Issue new token with fresh expiry
     const newToken = jwt.sign(
@@ -385,7 +388,7 @@ adminAuthRouter.post("/auth/refresh", (req: Request, res: Response) => {
         type: decoded.type || 'admin',
       },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRY }
+      { expiresIn: JWT_EXPIRY, issuer: JWT_ISSUER }
     );
 
     // Refresh the HttpOnly cookie too
