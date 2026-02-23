@@ -98,8 +98,8 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
     return next();
   }
 
-  // Allow public admin paths through without auth
-  if (ADMIN_PUBLIC_PATHS.some(path => req.path === path || req.path.startsWith(path + '/'))) {
+  // LIVE.GW.ADMIN_PUBLIC_PATH_EXACT_MATCH.001: Exact match only — no prefix bypass
+  if (ADMIN_PUBLIC_PATHS.some(path => req.path === path)) {
     return next();
   }
 
