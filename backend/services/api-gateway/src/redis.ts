@@ -25,7 +25,14 @@ export function getGatewayRedis(): Redis | null {
     return null;
   }
 
-  const host = process.env.REDIS_HOST || 'localhost';
+  // LIVE.CONFIG.REDIS_FAIL_FAST_GLOBAL.001: Fail-fast if REDIS_HOST not set in non-dev
+  const host = process.env.REDIS_HOST || (() => {
+    if (process.env.NODE_ENV !== 'development') {
+      console.error('[Gateway Redis] FATAL: REDIS_HOST must be set in non-development environments');
+      return undefined; // Will cause connection to fail fast
+    }
+    return 'localhost';
+  })();
   const port = parseInt(process.env.REDIS_PORT || '6379', 10);
   const password = process.env.REDIS_PASSWORD || undefined;
   const db = parseInt(process.env.REDIS_DB || '0', 10);
