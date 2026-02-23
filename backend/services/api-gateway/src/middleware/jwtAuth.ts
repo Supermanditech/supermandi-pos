@@ -114,6 +114,12 @@ const PUBLIC_PATHS = [
   '/healthz',
 ];
 
+// LIVE.API.PLATFORM_STORES_PUBLIC_ACCESS_PARITY.001: GET-only public paths
+// These paths are public only for GET requests (reads). Writes still require JWT.
+const PUBLIC_GET_PATHS = [
+  '/api/v1/platform/stores',
+];
+
 // =============================================================================
 // AUTH-STORAGE-001: COOKIE HELPER
 // =============================================================================
@@ -147,7 +153,9 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
   const isPublicPath = PUBLIC_PATHS.some(path => req.path.startsWith(path));
   // LIVE.API.HEALTH_ENDPOINT_PARITY.001: All /health and /healthz endpoints are public for monitoring
   const isHealthPath = req.path.endsWith('/health') || req.path.endsWith('/healthz');
-  if (isPublicPath || isHealthPath) {
+  // LIVE.API.PLATFORM_STORES_PUBLIC_ACCESS_PARITY.001: GET-only public paths (reads public, writes require JWT)
+  const isPublicGetPath = req.method === 'GET' && PUBLIC_GET_PATHS.some(path => req.path.startsWith(path));
+  if (isPublicPath || isHealthPath || isPublicGetPath) {
     return next();
   }
 
