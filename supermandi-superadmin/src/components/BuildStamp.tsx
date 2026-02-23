@@ -10,7 +10,7 @@ export function BuildStamp() {
     <div
       style={{
         fontSize: '11px',
-        color: '#94a3b8',
+        color: 'inherit',
         fontFamily: 'monospace',
         textAlign: 'center',
         padding: '4px 0',

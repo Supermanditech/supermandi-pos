@@ -312,7 +312,7 @@ export default function ProtectedLayout() {
         </main>
 
         {/* T-097: Unified footer — standard text + BuildStamp */}
-        <footer style={{ padding: '12px 24px', background: '#F8FAFC', color: '#94A3B8', fontSize: '12px', display: 'flex', borderTop: '1px solid #E2E8F0', justifyContent: 'space-between', alignItems: 'center' }}>
+        <footer className="layout-footer">
           <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
           <BuildStamp />
         </footer>

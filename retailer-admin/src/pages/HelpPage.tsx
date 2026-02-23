@@ -36,7 +36,7 @@ export default function HelpPage() {
         <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Link to="/retailer/login" style={{ color: '#94A3B8', fontSize: '0.75rem', textDecoration: 'none' }}>Sign In</Link>
+            <Link to="/retailer/login" style={{ color: 'inherit', fontSize: '0.75rem', textDecoration: 'none' }}>Sign In</Link>
             <BuildStamp />
           </div>
         </div>
