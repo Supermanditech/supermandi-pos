@@ -72,10 +72,11 @@ export async function initChatSocket(
     pingTimeout: 20000,
   });
 
-  // Auth middleware — verify JWT token, extract userId from claims (NEVER trust client-sent userId)
+  // LIVE.BE.CHAT_WS_JWT_CONSTRAINTS.001: Auth middleware with algorithm pinning and issuer enforcement
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+      // Only accept token from auth object (not query string — prevents token leaking in logs/URLs)
+      const token = socket.handshake.auth?.token;
       if (!token) {
         return next(new Error('Authentication required'));
       }
@@ -90,9 +91,12 @@ export async function initChatSocket(
           log.error('[ChatSocket] JWT_SECRET not configured');
           return next(new Error('Server misconfigured'));
         }
-        const decoded = jwt.verify(String(token), secret) as Record<string, unknown>;
-        userId = String(decoded.sub || decoded.userId || decoded.id || '');
-        userType = String(decoded.role || decoded.userType || 'retailer');
+        const decoded = jwt.verify(String(token), secret, {
+          algorithms: ['HS256'],
+          issuer: process.env.JWT_ISSUER || 'supermandi-auth',
+        }) as Record<string, unknown>;
+        userId = String(decoded.sub || '');
+        userType = String(decoded.actorType || 'retailer');
       } catch {
         return next(new Error('Invalid token'));
       }
