@@ -218,9 +218,18 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
     return;
   }
 
-  // Legacy token grants super_admin access
+  // LIVE.BE.SUPERADMIN_TRUST_MODEL_HARDENING.001: Structured audit logging for master token usage
+  // Legacy token grants super_admin access — log for audit trail
   req.adminId = "master-token";
   req.adminRole = "super_admin";
+  log.warn(JSON.stringify({
+    event: 'admin_master_token_used',
+    method: req.method,
+    path: req.path,
+    ip: req.ip || req.socket.remoteAddress || 'unknown',
+    userAgent: req.headers['user-agent']?.substring(0, 100),
+    gatewayForwarded: !!req.headers['x-correlation-id'],
+  }));
   next();
 }
 
