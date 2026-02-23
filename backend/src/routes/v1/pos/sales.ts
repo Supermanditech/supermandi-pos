@@ -1371,7 +1371,8 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
 
     // GO-LIVE-042: Check reservation expiry
     if (isSaleReservationExpired(sale.created_at)) {
-      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1 AND store_id = $2`, [saleId, storeId]);
       await client.query("COMMIT");
       return res.status(410).json({
         error: "sale_reservation_expired",
@@ -1435,8 +1436,9 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     const newStatus = paymentMode === "CASH" ? "PAID_CASH" : paymentMode === "UPI" ? "PAID_UPI" : "DUE";
     const newPaymentStatus = paymentMode === "DUE" ? "due" : "paid";
     await client.query(
-      `UPDATE sales SET status = $1, payment_status = $2 WHERE id = $3`,
-      [newStatus, newPaymentStatus, saleId]
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      `UPDATE sales SET status = $1, payment_status = $2 WHERE id = $3 AND store_id = $4`,
+      [newStatus, newPaymentStatus, saleId, storeId]
     );
 
     // GO-LIVE-070: Create AR record if payment mode is DUE
@@ -1541,8 +1543,9 @@ posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, requireActiveSt
 
     // Update status to CANCELLED
     await client.query(
-      `UPDATE sales SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1`,
-      [saleId]
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      `UPDATE sales SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
     );
 
     await client.query("COMMIT");
@@ -1652,17 +1655,19 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
 
     // Update sale status to REFUNDED
     await client.query(
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
       `UPDATE sales SET status = 'REFUNDED', payment_status = 'refunded', updated_at = NOW()
-       WHERE id = $1`,
-      [saleId]
+       WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
     );
 
     // Update AR record if it exists (for DUE sales)
     if (sale.status === "DUE") {
       await client.query(
+        // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
         `UPDATE accounts_receivable SET status = 'written_off', notes = $2, updated_at = NOW()
-         WHERE sale_id = $1`,
-        [saleId, reason ?? "Sale returned"]
+         WHERE sale_id = $1 AND store_id = $3`,
+        [saleId, reason ?? "Sale returned", storeId]
       );
     }
 
@@ -1832,7 +1837,8 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
 
     // GO-LIVE-042: Check reservation expiry
     if (isSaleReservationExpired(sale.created_at)) {
-      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1 AND store_id = $2`, [saleId, storeId]);
       await client.query("COMMIT");
       return res.status(410).json({
         error: "sale_reservation_expired",
@@ -1889,8 +1895,9 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
 
     // GO-LIVE-069: Update both status and payment_status
     await client.query(
-      `UPDATE sales SET status = 'PAID_UPI', payment_status = 'paid' WHERE id = $1`,
-      [saleId]
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      `UPDATE sales SET status = 'PAID_UPI', payment_status = 'paid' WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
     );
 
     await client.query("COMMIT");
@@ -1975,7 +1982,8 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
 
     // GO-LIVE-042: Check reservation expiry
     if (isSaleReservationExpired(sale.created_at)) {
-      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1 AND store_id = $2`, [saleId, storeId]);
       await client.query("COMMIT");
       return res.status(410).json({
         error: "sale_reservation_expired",
@@ -2031,8 +2039,9 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
 
     // GO-LIVE-069: Update both status and payment_status
     await client.query(
-      `UPDATE sales SET status = 'PAID_CASH', payment_status = 'paid' WHERE id = $1`,
-      [saleId]
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      `UPDATE sales SET status = 'PAID_CASH', payment_status = 'paid' WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
     );
 
     await client.query("COMMIT");
@@ -2126,7 +2135,8 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
 
     // GO-LIVE-042: Check reservation expiry
     if (isSaleReservationExpired(sale.created_at)) {
-      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1 AND store_id = $2`, [saleId, storeId]);
       await client.query("COMMIT");
       return res.status(410).json({
         error: "sale_reservation_expired",
@@ -2182,8 +2192,9 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
 
     // GO-LIVE-069: Update both status and payment_status
     await client.query(
-      `UPDATE sales SET status = 'DUE', payment_status = 'due' WHERE id = $1`,
-      [saleId]
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      `UPDATE sales SET status = 'DUE', payment_status = 'due' WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
     );
 
     // GO-LIVE-070: Create AR (Accounts Receivable) record for DUE payment
