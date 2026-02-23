@@ -36,6 +36,14 @@ const CUMULATIVE_DEPLOY_DEFAULT_PLACEHOLDER_COMMITS = [
   'unknown',
   'tbd',
 ];
+const CUMULATIVE_DEPLOY_DEFAULT_COMMIT_COVERAGE_TICKET_SOURCES = [
+  'staging_batch',
+  'implementation_completed',
+];
+const CUMULATIVE_DEPLOY_DEFAULT_POST_BASELINE_COMMIT_EXEMPT_PATHS = [
+  'workflow/',
+  'RELEASES/',
+];
 
 const MODES = new Set([
   'LIVE_FIX',
@@ -714,6 +722,8 @@ function getCumulativeDeployShaDisciplineRules(state) {
   const rules = state?.rules?.deploymentRules?.cumulativeDeployShaDiscipline || {};
   const enforceTicketStatuses = normalizeStringArray(rules.enforceTicketStatuses);
   const placeholderTicketCommitValues = normalizeStringArray(rules.placeholderTicketCommitValues);
+  const commitCoverageTicketSources = normalizeStringArray(rules.commitCoverageTicketSources);
+  const postBaselineCodeCommitExemptPaths = normalizeStringArray(rules.postBaselineCodeCommitExemptPaths);
 
   return {
     enabled: rules.enabled === true,
@@ -727,6 +737,16 @@ function getCumulativeDeployShaDisciplineRules(state) {
     requireBatchTicketCommitAncestorOfHead: rules.requireBatchTicketCommitAncestorOfHead !== false,
     rejectPlaceholderTicketCommit: rules.rejectPlaceholderTicketCommit !== false,
     requireImplementationProgressSync: rules.requireImplementationProgressSync !== false,
+    requirePostBaselineCodeCommitsCoveredByTicketLineage:
+      rules.requirePostBaselineCodeCommitsCoveredByTicketLineage !== false,
+    commitCoverageTicketSources:
+      commitCoverageTicketSources.length > 0
+        ? commitCoverageTicketSources
+        : CUMULATIVE_DEPLOY_DEFAULT_COMMIT_COVERAGE_TICKET_SOURCES,
+    postBaselineCodeCommitExemptPaths:
+      postBaselineCodeCommitExemptPaths.length > 0
+        ? postBaselineCodeCommitExemptPaths
+        : CUMULATIVE_DEPLOY_DEFAULT_POST_BASELINE_COMMIT_EXEMPT_PATHS,
     enforceTicketStatuses:
       enforceTicketStatuses.length > 0
         ? enforceTicketStatuses
@@ -755,6 +775,28 @@ function validateCumulativeDeployShaDisciplineConfig(state) {
   if (invalidStatuses.length > 0) {
     errors.push(
       `rules.deploymentRules.cumulativeDeployShaDiscipline.enforceTicketStatuses contains invalid status(es): ${invalidStatuses.join(', ')}`
+    );
+  }
+
+  const allowedCoverageSources = new Set(['staging_batch', 'implementation_completed']);
+  const invalidCoverageSources = rules.commitCoverageTicketSources.filter(
+    (source) => !allowedCoverageSources.has(source)
+  );
+  if (invalidCoverageSources.length > 0) {
+    errors.push(
+      `rules.deploymentRules.cumulativeDeployShaDiscipline.commitCoverageTicketSources contains invalid value(s): ${invalidCoverageSources.join(', ')}`
+    );
+  }
+
+  if (rules.commitCoverageTicketSources.length === 0) {
+    errors.push(
+      'rules.deploymentRules.cumulativeDeployShaDiscipline.commitCoverageTicketSources must contain at least one source'
+    );
+  }
+
+  if (rules.postBaselineCodeCommitExemptPaths.length === 0) {
+    errors.push(
+      'rules.deploymentRules.cumulativeDeployShaDiscipline.postBaselineCodeCommitExemptPaths must contain at least one path prefix'
     );
   }
 
@@ -831,6 +873,182 @@ function validateImplementationProgressTicketSync(context, disciplineRules) {
   return errors;
 }
 
+function normalizeRepoPathPrefix(value) {
+  if (!isNonEmptyString(value)) {
+    return '';
+  }
+  return value
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\/+/, '')
+    .replace(/\/+/g, '/')
+    .replace(/^\/+/, '');
+}
+
+function isRepoPathExemptByPrefix(filePath, exemptPrefixes) {
+  const normalizedPath = normalizeRepoPathPrefix(filePath).toLowerCase();
+  if (!normalizedPath) {
+    return false;
+  }
+
+  for (const rawPrefix of exemptPrefixes) {
+    const normalizedPrefix = normalizeRepoPathPrefix(rawPrefix).toLowerCase();
+    if (!normalizedPrefix) {
+      continue;
+    }
+    if (normalizedPrefix.endsWith('/')) {
+      if (normalizedPath.startsWith(normalizedPrefix)) {
+        return true;
+      }
+      continue;
+    }
+    if (normalizedPath === normalizedPrefix || normalizedPath.startsWith(`${normalizedPrefix}/`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function collectCommitCoverageTicketIds(context, batch, rules) {
+  const ticketIds = new Set();
+  const sources = new Set(rules.commitCoverageTicketSources);
+  if (sources.has('staging_batch') && Array.isArray(batch?.ticketIds)) {
+    for (const ticketId of batch.ticketIds) {
+      if (isNonEmptyString(ticketId)) {
+        ticketIds.add(ticketId.trim());
+      }
+    }
+  }
+
+  if (sources.has('implementation_completed')) {
+    const progress = getLiveIterationProgress(context.state);
+    for (const ticketId of progress.implementation.completedTicketIds) {
+      if (isNonEmptyString(ticketId)) {
+        ticketIds.add(ticketId.trim());
+      }
+    }
+  }
+
+  return Array.from(ticketIds.values());
+}
+
+function resolveCommitCoverageTicketShas(ticketIds, context, placeholderValues, errors) {
+  const commitShas = new Set();
+  const seen = new Set();
+  for (const ticketId of ticketIds) {
+    if (seen.has(ticketId)) {
+      continue;
+    }
+    seen.add(ticketId);
+    const ticket = context.ticketMap.get(ticketId);
+    if (!ticket) {
+      errors.push(`cumulative deploy gate: commit coverage references unknown ticket ${ticketId}`);
+      continue;
+    }
+    const commitSha = (ticket?.gitDiscipline?.lastValidatedCommit || '').trim();
+    if (!isNonEmptyString(commitSha)) {
+      errors.push(`cumulative deploy gate: commit coverage ticket ${ticketId} missing gitDiscipline.lastValidatedCommit`);
+      continue;
+    }
+    if (placeholderValues.has(commitSha.toLowerCase())) {
+      errors.push(
+        `cumulative deploy gate: commit coverage ticket ${ticketId} uses placeholder gitDiscipline.lastValidatedCommit "${commitSha}"`
+      );
+      continue;
+    }
+    if (!isLikelyGitSha(commitSha)) {
+      errors.push(
+        `cumulative deploy gate: commit coverage ticket ${ticketId} has invalid gitDiscipline.lastValidatedCommit "${commitSha}"`
+      );
+      continue;
+    }
+    const resolved = tryExec(`git rev-parse ${commitSha}`);
+    if (!resolved.ok || !isLikelyGitSha(resolved.output)) {
+      errors.push(
+        `cumulative deploy gate: commit coverage ticket ${ticketId} commit does not resolve in git: ${commitSha}`
+      );
+      continue;
+    }
+    commitShas.add(resolved.output.trim());
+  }
+
+  return Array.from(commitShas.values());
+}
+
+function collectPostBaselineCodeCommitsForCoverage(baselineSha, headSha, exemptPrefixes) {
+  const result = tryExec(`git rev-list --reverse ${baselineSha}..${headSha}`);
+  if (!result.ok) {
+    return {
+      commits: [],
+      error: `cumulative deploy gate: unable to list commits in range ${baselineSha}..${headSha}: ${result.output || 'unknown error'}`,
+    };
+  }
+
+  const commitShas = result.output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (commitShas.length === 0) {
+    return { commits: [], error: '' };
+  }
+
+  const commits = [];
+  for (const commitSha of commitShas) {
+    if (!isLikelyGitSha(commitSha)) {
+      continue;
+    }
+    const filesResult = tryExec(`git show --pretty=format: --name-only --no-renames ${commitSha}`);
+    if (!filesResult.ok) {
+      return {
+        commits: [],
+        error: `cumulative deploy gate: unable to inspect files for commit ${commitSha.slice(0, 8)}: ${filesResult.output || 'unknown error'}`,
+      };
+    }
+    const changedFiles = filesResult.output
+      .split('\n')
+      .map((line) => normalizeRepoPathPrefix(line))
+      .filter(Boolean);
+    if (changedFiles.length === 0) {
+      continue;
+    }
+    const nonExemptFiles = changedFiles.filter(
+      (filePath) => !isRepoPathExemptByPrefix(filePath, exemptPrefixes)
+    );
+    if (nonExemptFiles.length === 0) {
+      continue;
+    }
+    commits.push({
+      sha: commitSha,
+      files: nonExemptFiles,
+    });
+  }
+
+  return { commits, error: '' };
+}
+
+function isCommitCoveredByTicketLineage(commitSha, coverageTicketShas, ancestryCache) {
+  if (coverageTicketShas.includes(commitSha)) {
+    return true;
+  }
+  for (const ticketSha of coverageTicketShas) {
+    const cacheKey = `${commitSha}:${ticketSha}`;
+    if (ancestryCache.has(cacheKey)) {
+      if (ancestryCache.get(cacheKey)) {
+        return true;
+      }
+      continue;
+    }
+    const ancestorResult = tryExec(`git merge-base --is-ancestor ${commitSha} ${ticketSha}`);
+    const covered = ancestorResult.ok;
+    ancestryCache.set(cacheKey, covered);
+    if (covered) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function validateCumulativeDeployShaDisciplineForPreStaging(context, batch) {
   const errors = [];
   const rules = getCumulativeDeployShaDisciplineRules(context.state);
@@ -844,9 +1062,9 @@ function validateCumulativeDeployShaDisciplineForPreStaging(context, batch) {
     return errors;
   }
   const headSha = headShaResult.output.trim();
+  const baselineSha = (context.state?.rules?.liveTicketIntakeRules?.lastSuccessfulStagingCommitSha || '').trim();
 
   if (rules.requireTargetDescendsFromLastSuccessfulStagingSha) {
-    const baselineSha = (context.state?.rules?.liveTicketIntakeRules?.lastSuccessfulStagingCommitSha || '').trim();
     if (!isLikelyGitSha(baselineSha)) {
       errors.push('cumulative deploy gate: rules.liveTicketIntakeRules.lastSuccessfulStagingCommitSha must be a valid SHA');
     } else {
@@ -929,8 +1147,17 @@ function validateCumulativeDeployShaDisciplineForPreStaging(context, batch) {
       continue;
     }
 
+    const resolvedBatchTicketCommitResult = tryExec(`git rev-parse ${commitSha}`);
+    if (!resolvedBatchTicketCommitResult.ok || !isLikelyGitSha(resolvedBatchTicketCommitResult.output)) {
+      errors.push(
+        `cumulative deploy gate: ticket ${ticketId} gitDiscipline.lastValidatedCommit cannot be resolved in git: ${commitSha}`
+      );
+      continue;
+    }
+    const resolvedBatchTicketCommitSha = resolvedBatchTicketCommitResult.output.trim();
+
     if (rules.requireBatchTicketCommitObject) {
-      const commitExists = tryExec(`git cat-file -e ${commitSha}^{commit}`);
+      const commitExists = tryExec(`git cat-file -e ${resolvedBatchTicketCommitSha}^{commit}`);
       if (!commitExists.ok) {
         errors.push(
           `cumulative deploy gate: ticket ${ticketId} gitDiscipline.lastValidatedCommit not found in repo: ${commitSha}`
@@ -939,11 +1166,61 @@ function validateCumulativeDeployShaDisciplineForPreStaging(context, batch) {
       }
     }
     if (rules.requireBatchTicketCommitAncestorOfHead) {
-      const ancestorCheck = tryExec(`git merge-base --is-ancestor ${commitSha} ${headSha}`);
+      const ancestorCheck = tryExec(`git merge-base --is-ancestor ${resolvedBatchTicketCommitSha} ${headSha}`);
       if (!ancestorCheck.ok) {
         errors.push(
           `cumulative deploy gate: ticket ${ticketId} lastValidatedCommit (${commitSha}) must be ancestor of target HEAD (${headSha.slice(0, 8)})`
         );
+      }
+    }
+  }
+
+  if (
+    rules.requirePostBaselineCodeCommitsCoveredByTicketLineage &&
+    isLikelyGitSha(baselineSha)
+  ) {
+    const coverageTicketIds = collectCommitCoverageTicketIds(context, batch, rules);
+    if (coverageTicketIds.length === 0) {
+      errors.push(
+        'cumulative deploy gate: commit coverage requires at least one ticket id from configured sources'
+      );
+    } else {
+      const coverageTicketShas = resolveCommitCoverageTicketShas(
+        coverageTicketIds,
+        context,
+        placeholderValues,
+        errors
+      );
+      if (coverageTicketShas.length === 0) {
+        errors.push(
+          'cumulative deploy gate: commit coverage found zero valid ticket commit SHAs after resolution'
+        );
+      } else {
+        const commitRangeResult = collectPostBaselineCodeCommitsForCoverage(
+          baselineSha,
+          headSha,
+          rules.postBaselineCodeCommitExemptPaths
+        );
+        if (commitRangeResult.error) {
+          errors.push(commitRangeResult.error);
+        } else {
+          const ancestryCache = new Map();
+          const uncovered = [];
+          for (const entry of commitRangeResult.commits) {
+            if (!isCommitCoveredByTicketLineage(entry.sha, coverageTicketShas, ancestryCache)) {
+              uncovered.push(entry);
+            }
+          }
+          if (uncovered.length > 0) {
+            const details = uncovered
+              .slice(0, 10)
+              .map((entry) => `${entry.sha.slice(0, 8)} [${entry.files.slice(0, 3).join(', ')}]`)
+              .join('; ');
+            errors.push(
+              `cumulative deploy gate: ${uncovered.length} post-baseline code commit(s) are not covered by any ticket commit lineage. Examples: ${details}`
+            );
+          }
+        }
       }
     }
   }

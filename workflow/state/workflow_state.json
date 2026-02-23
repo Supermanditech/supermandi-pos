@@ -797,6 +797,15 @@
         "requireBatchTicketCommitAncestorOfHead": true,
         "rejectPlaceholderTicketCommit": true,
         "requireImplementationProgressSync": true,
+        "requirePostBaselineCodeCommitsCoveredByTicketLineage": true,
+        "commitCoverageTicketSources": [
+          "staging_batch",
+          "implementation_completed"
+        ],
+        "postBaselineCodeCommitExemptPaths": [
+          "workflow/",
+          "RELEASES/"
+        ],
         "enforceTicketStatuses": [
           "done",
           "ready_for_operator_test",
@@ -940,9 +949,9 @@
       "requireValidatedDeploymentRef": true,
       "requireDeploymentRefMatch": true,
       "allowInfraAuditDeploymentRef": false,
-      "lastSuccessfulStagingDeployRef": "github://run/22264213051",
-      "lastSuccessfulStagingDeployAt": "2026-02-22T21:21:00Z",
-      "lastSuccessfulStagingCommitSha": "7b3a4ee8",
+      "lastSuccessfulStagingDeployRef": "github://run/22282352113",
+      "lastSuccessfulStagingDeployAt": "2026-02-22T18:11:00Z",
+      "lastSuccessfulStagingCommitSha": "e7cf49f5",
       "requireStagingCommitShaEvidence": false,
       "requireStagingHostEvidence": true,
       "rejectNonStagingHostEvidence": true,
