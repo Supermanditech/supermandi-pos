@@ -53,12 +53,12 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
         )}
         <View style={styles.priceRow}>
           <Text style={styles.unitPrice}>
-            {formatMoney(item.unitPrice * 100)}
+            {formatMoney(item.unitPrice)}
           </Text>
           <Text style={styles.perUnit}>/unit</Text>
           {item.mrp && item.mrp > item.unitPrice && (
             <Text style={styles.mrp}>
-              MRP {formatMoney(item.mrp * 100)}
+              MRP {formatMoney(item.mrp)}
             </Text>
           )}
         </View>
@@ -87,7 +87,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
         )}
 
         <Text style={styles.lineTotal}>
-          {formatMoney(lineTotal * 100)}
+          {formatMoney(lineTotal)}
         </Text>
       </View>
 

@@ -332,7 +332,7 @@ export function EditReorderModal({
 
                         <View style={styles.supplierMeta}>
                           <Text style={styles.supplierPrice}>
-                            {formatMoney(supplier.purchasePrice * 100)}
+                            {formatMoney(supplier.purchasePrice)}
                           </Text>
                           <Text style={styles.supplierStock}>
                             Stock: {supplier.stockQuantity}
@@ -356,7 +356,7 @@ export function EditReorderModal({
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Unit Price</Text>
                 <Text style={styles.priceValue}>
-                  {formatMoney(newUnitPrice * 100)}
+                  {formatMoney(newUnitPrice)}
                 </Text>
               </View>
               <View style={styles.priceRow}>
@@ -367,7 +367,7 @@ export function EditReorderModal({
               <View style={styles.priceRow}>
                 <Text style={styles.totalLabel}>New Total</Text>
                 <Text style={styles.totalValue}>
-                  {formatMoney(newTotal * 100)}
+                  {formatMoney(newTotal)}
                 </Text>
               </View>
               {priceDifference !== 0 && (
@@ -384,7 +384,7 @@ export function EditReorderModal({
                     ]}
                   >
                     {priceDifference > 0 ? "+" : ""}
-                    {formatMoney(priceDifference * 100)}
+                    {formatMoney(priceDifference)}
                   </Text>
                 </View>
               )}

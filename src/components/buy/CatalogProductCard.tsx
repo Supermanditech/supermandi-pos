@@ -97,7 +97,7 @@ export function CatalogProductCard({
 
         <View style={styles.priceRow}>
           <Text style={styles.price}>
-            {formatMoney(product.bestPrice * 100)}
+            {formatMoney(product.bestPrice)}
           </Text>
           {product.unit && (
             <Text style={styles.unit}>/{product.unit}</Text>

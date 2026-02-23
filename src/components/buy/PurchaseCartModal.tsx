@@ -482,7 +482,7 @@ export function PurchaseCartModal({
 
     Alert.alert(
       "Place All Orders",
-      `Place orders with ${supplierGroups.length} suppliers for a total of ${formatMoney(totals.grandTotal * 100)}?`,
+      `Place orders with ${supplierGroups.length} suppliers for a total of ${formatMoney(totals.grandTotal)}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -812,7 +812,7 @@ export function PurchaseCartModal({
               <View style={styles.grandTotalSection}>
                 <Text style={styles.grandTotalLabel}>Grand Total</Text>
                 <Text style={styles.grandTotalValue}>
-                  {formatMoney(totals.grandTotal * 100)}
+                  {formatMoney(totals.grandTotal)}
                 </Text>
               </View>
 

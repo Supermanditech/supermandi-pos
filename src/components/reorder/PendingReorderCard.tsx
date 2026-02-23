@@ -140,7 +140,7 @@ export function PendingReorderCard({
             <View style={styles.suggestionItem}>
               <Text style={styles.suggestionLabel}>{t("reorder.unitPrice")}</Text>
               <Text style={styles.suggestionValue}>
-                {formatMoney(item.suggestedUnitPrice * 100)}
+                {formatMoney(item.suggestedUnitPrice)}
               </Text>
             </View>
           )}
@@ -167,7 +167,7 @@ export function PendingReorderCard({
               <>
                 <Text style={styles.totalLabel}>{t("reorder.estTotal")}</Text>
                 <Text style={styles.totalValue}>
-                  {formatMoney(estimatedTotal * 100)}
+                  {formatMoney(estimatedTotal)}
                 </Text>
               </>
             )}

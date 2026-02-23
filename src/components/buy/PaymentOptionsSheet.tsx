@@ -279,7 +279,7 @@ export function PaymentOptionsSheet({
           {/* Order Summary */}
           <View style={styles.orderSummary}>
             <Text style={styles.supplierName}>{supplierName}</Text>
-            <Text style={styles.orderAmount}>{formatMoney(amount * 100)}</Text>
+            <Text style={styles.orderAmount}>{formatMoney(amount)}</Text>
           </View>
 
           {upiStep === "select" ? (

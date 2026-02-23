@@ -141,8 +141,8 @@ export function SupplierCartSection({
                 color={theme.colors.warning}
               />
               <Text style={styles.warningText}>
-                Minimum order value: {formatMoney(minOrderValue * 100)}
-                {" "}(need {formatMoney((minOrderValue - group.totalAmount) * 100)} more)
+                Minimum order value: {formatMoney(minOrderValue)}
+                {" "}(need {formatMoney(minOrderValue - group.totalAmount)} more)
               </Text>
             </View>
           )}
@@ -185,7 +185,7 @@ export function SupplierCartSection({
         <View style={styles.subtotalSection}>
           <Text style={styles.subtotalLabel}>Subtotal</Text>
           <Text style={styles.subtotalValue}>
-            {formatMoney(group.totalAmount * 100)}
+            {formatMoney(group.totalAmount)}
           </Text>
           {bnplEnabled && (
             <Text style={styles.bnplPayLaterHint}>
