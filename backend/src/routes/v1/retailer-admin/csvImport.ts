@@ -1104,7 +1104,8 @@ retailerAdminCsvImportRouter.get("/products/import/errors", async (req: Request,
     const csvContent = [csvHeader, ...csvRows].join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="import_errors_${jobId}.csv"`);
+    // LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Sanitize jobId in filename
+    res.setHeader('Content-Disposition', `attachment; filename="import_errors_${String(jobId).replace(/[/\\<>"'\r\n\t]/g, '_')}.csv"`);
     return res.send(csvContent);
   } catch (_error: unknown) {
     const error = asError(_error);

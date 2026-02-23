@@ -633,7 +633,8 @@ adminInvoicesRouter.get("/invoices/:invoiceId/pdf", requireAdminToken, requirePe
 
     const pdfDoc = generateInvoicePdf(invoice);
 
-    const filename = `${invoice.invoiceNumber.replace(/\//g, "-")}.pdf`;
+    // LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Strip path traversal + special chars
+    const filename = `${invoice.invoiceNumber.replace(/[/\\<>"'\r\n\t]/g, "-")}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 

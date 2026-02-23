@@ -28,6 +28,15 @@ function loadAdminTokenForValidation(): string | undefined {
 }
 const ADMIN_TOKEN_CACHED = loadAdminTokenForValidation();
 
+// LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Sanitize filenames for Content-Disposition
+function sanitizeContentDispositionFilename(filename: string): string {
+  // Strip path traversal, control chars, quotes, backslashes, and angle brackets
+  return filename
+    .replace(/[/\\<>"'\r\n\t]/g, '_')
+    .replace(/\.\./g, '_')
+    .slice(0, 255);
+}
+
 // DOCS-001: Check if request has valid admin token
 function isValidAdminRequest(req: Request): boolean {
   const token = req.headers['x-admin-token'] as string | undefined;
@@ -171,9 +180,15 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
     }
 
     // PRA-079: Unauthenticated uploads restricted to 'application' entity type only
-    // Store/supplier document uploads require an authenticated session
-    const isAuthenticated = !!(req.headers['authorization'] || req.headers['x-admin-token'] || req.headers['x-device-token']);
-    if (!isAuthenticated && entity_type !== 'application') {
+    // LIVE.BE.DOC_UPLOAD_AUTH_VALIDATION.001: Validate token format, not just presence
+    const authHeader = req.headers['authorization'] as string | undefined;
+    const adminToken = req.headers['x-admin-token'] as string | undefined;
+    const deviceToken = req.headers['x-device-token'] as string | undefined;
+    const hasValidAuth =
+      (authHeader && authHeader.startsWith('Bearer ') && authHeader.length > 7) ||
+      (adminToken && ADMIN_TOKEN_CACHED && adminToken === ADMIN_TOKEN_CACHED) ||
+      (deviceToken && deviceToken.length > 0);
+    if (!hasValidAuth && entity_type !== 'application') {
       res.status(401).json({
         error: 'AUTH_REQUIRED',
         message: 'Authentication required for store/supplier document uploads',
@@ -387,7 +402,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     // STBT-179: Stream file from GCS (or generate signed URL)
     try {
       res.setHeader('Content-Type', doc.content_type);
-      res.setHeader('Content-Disposition', `inline; filename="${doc.file_name}"`);
+      res.setHeader('Content-Disposition', `inline; filename="${sanitizeContentDispositionFilename(doc.file_name)}"`);
 
       const gcsStream = streamFile(GCS_DOCUMENTS_BUCKET, doc.file_path);
       gcsStream.on('error', (err: any) => {

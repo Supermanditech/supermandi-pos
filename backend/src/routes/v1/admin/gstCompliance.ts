@@ -241,7 +241,8 @@ adminGstComplianceRouter.get(
 
       // Set headers for JSON download
       res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename=GSTR1_${gstr1Export.fp}_${storeId.slice(0, 8)}.json`);
+      // LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Quote filename and sanitize
+      res.setHeader('Content-Disposition', `attachment; filename="GSTR1_${String(gstr1Export.fp).replace(/[/\\<>"'\r\n\t]/g, '_')}_${storeId.slice(0, 8)}.json"`);
 
       return res.json(gstr1Export);
     } catch (err: unknown) {

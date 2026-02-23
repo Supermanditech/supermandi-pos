@@ -91,7 +91,8 @@ retailerInvoicesRouter.get("/invoices/:invoiceId/pdf", async (req: Request, res:
     }
 
     const doc = generateInvoicePdf(invoice);
-    const filename = `${(invoice.invoiceNumber || "invoice").replace(/\//g, "-")}.pdf`;
+    // LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Strip path traversal + special chars
+    const filename = `${(invoice.invoiceNumber || "invoice").replace(/[/\\<>"'\r\n\t]/g, "-")}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
