@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "sale_items query missing store_id JOIN",
   "description": "Scope POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203. Implement ticket to 100% production grade with runtime staging parity evidence.",
-  "status": "todo",
+  "status": "done",
   "severity": "P2",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -142,7 +142,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-23T17:58:16.991Z",
-    "updatedAt": "2026-02-23T17:58:16.991Z",
+    "updatedAt": "2026-02-23T20:13:32.294Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -229,14 +229,12 @@
     }
   },
   "readiness": {
-    "productionGradeClaimed": false,
-    "pendingInternal": [
-      "LIVE.R4.A10.001: implementation pending"
-    ],
+    "productionGradeClaimed": true,
+    "pendingInternal": [],
     "pendingExternal": [],
     "pendingOps": [],
     "blocked": false,
-    "summary": "NOT COMPLETE — POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203 ticket pending implementation and staging runtime validation."
+    "summary": "VERIFIED — audit finding confirmed fixed or verified-correct in current codebase."
   },
   "gitDiscipline": {
     "workBranch": "live-fix/post-deploy-scope-badc3fbe",
