@@ -8,6 +8,7 @@
 import { Router, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
+import { sanitizeHtml } from "@supermandi/common";
 import {
   validateProductName as validateProductNameUnified,
   validateBarcode as validateBarcodeUnified,
@@ -724,7 +725,8 @@ async function commitVariantRow(
       `INSERT INTO catalog.product_retail_variants
         (store_product_id, variant_label, variant_qty, base_unit, sell_price_minor, barcode, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [storeProductId, variantLabel, variantQty, variantUnit, sellPricePaise, barcode, sortOrder]
+      // LIVE.R4.B32.001: Sanitize variant_label to prevent stored XSS
+      [storeProductId, variantLabel ? sanitizeHtml(variantLabel) : variantLabel, variantQty, variantUnit, sellPricePaise, barcode, sortOrder]
     );
 
     return { action: 'created' };

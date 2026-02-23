@@ -221,11 +221,12 @@ adminGstComplianceRouter.get(
               entry = { sply_ty: 'INTRA', pos: getStateCode(state), txval: '0', camt: '0', samt: '0', iamt: '0', csamt: '0' };
               acc.push(entry);
             }
-            entry.txval = (parseFloat(entry.txval) + inv.taxable_amount / 100).toFixed(2);
-            entry.camt = (parseFloat(entry.camt) + inv.cgst_amount / 100).toFixed(2);
-            entry.samt = (parseFloat(entry.samt) + inv.sgst_amount / 100).toFixed(2);
-            entry.iamt = (parseFloat(entry.iamt) + inv.igst_amount / 100).toFixed(2);
-            entry.csamt = (parseFloat(entry.csamt) + (inv.cess_amount || 0) / 100).toFixed(2);
+            // LIVE.R4.D9.001: NaN guard on float accumulation
+            entry.txval = ((parseFloat(entry.txval) || 0) + (inv.taxable_amount || 0) / 100).toFixed(2);
+            entry.camt = ((parseFloat(entry.camt) || 0) + (inv.cgst_amount || 0) / 100).toFixed(2);
+            entry.samt = ((parseFloat(entry.samt) || 0) + (inv.sgst_amount || 0) / 100).toFixed(2);
+            entry.iamt = ((parseFloat(entry.iamt) || 0) + (inv.igst_amount || 0) / 100).toFixed(2);
+            entry.csamt = ((parseFloat(entry.csamt) || 0) + (inv.cess_amount || 0) / 100).toFixed(2);
             return acc;
           }, []),
         // HSN Summary
@@ -287,14 +288,16 @@ adminGstComplianceRouter.get(
       `, [month, year]);
 
       // Totals
+      // LIVE.R4.D10.001: NaN guards on tax amount parseInt
+      const toInt = (v: unknown) => parseInt(String(v || '0'), 10) || 0;
       const totals = result.rows.reduce((acc, r) => ({
         totalInvoices: acc.totalInvoices + r.total_invoices,
-        totalTaxable: acc.totalTaxable + parseInt(r.total_taxable_amount),
-        totalCgst: acc.totalCgst + parseInt(r.cgst_collected),
-        totalSgst: acc.totalSgst + parseInt(r.sgst_collected),
-        totalIgst: acc.totalIgst + parseInt(r.igst_collected),
-        totalTax: acc.totalTax + parseInt(r.total_tax_collected),
-        totalAmount: acc.totalAmount + parseInt(r.total_invoice_amount),
+        totalTaxable: acc.totalTaxable + toInt(r.total_taxable_amount),
+        totalCgst: acc.totalCgst + toInt(r.cgst_collected),
+        totalSgst: acc.totalSgst + toInt(r.sgst_collected),
+        totalIgst: acc.totalIgst + toInt(r.igst_collected),
+        totalTax: acc.totalTax + toInt(r.total_tax_collected),
+        totalAmount: acc.totalAmount + toInt(r.total_invoice_amount),
       }), { totalInvoices: 0, totalTaxable: 0, totalCgst: 0, totalSgst: 0, totalIgst: 0, totalTax: 0, totalAmount: 0 });
 
       return res.json({
@@ -306,12 +309,12 @@ adminGstComplianceRouter.get(
           storeName: r.store_name,
           storeCode: r.store_code,
           totalInvoices: r.total_invoices,
-          totalTaxable: parseInt(r.total_taxable_amount),
-          cgst: parseInt(r.cgst_collected),
-          sgst: parseInt(r.sgst_collected),
-          igst: parseInt(r.igst_collected),
-          totalTax: parseInt(r.total_tax_collected),
-          totalAmount: parseInt(r.total_invoice_amount),
+          totalTaxable: toInt(r.total_taxable_amount),
+          cgst: toInt(r.cgst_collected),
+          sgst: toInt(r.sgst_collected),
+          igst: toInt(r.igst_collected),
+          totalTax: toInt(r.total_tax_collected),
+          totalAmount: toInt(r.total_invoice_amount),
           generatedAt: r.generated_at,
         })),
         // Compliance calendar
@@ -332,18 +335,19 @@ adminGstComplianceRouter.get(
 // =============================================================================
 
 function formatGstSummary(r: Record<string, unknown>) {
+  const toInt = (v: unknown) => parseInt(String(v || '0'), 10) || 0;
   return {
     storeId: r.store_id,
     month: r.report_month,
     year: r.report_year,
     totalInvoices: r.total_invoices,
-    totalTaxable: parseInt(String(r.total_taxable_amount)),
-    cgst: parseInt(String(r.cgst_collected)),
-    sgst: parseInt(String(r.sgst_collected)),
-    igst: parseInt(String(r.igst_collected)),
-    cess: parseInt(String(r.cess_collected)),
-    totalTax: parseInt(String(r.total_tax_collected)),
-    totalAmount: parseInt(String(r.total_invoice_amount)),
+    totalTaxable: toInt(r.total_taxable_amount),
+    cgst: toInt(r.cgst_collected),
+    sgst: toInt(r.sgst_collected),
+    igst: toInt(r.igst_collected),
+    cess: toInt(r.cess_collected),
+    totalTax: toInt(r.total_tax_collected),
+    totalAmount: toInt(r.total_invoice_amount),
     stateBreakdown: r.state_breakdown,
     supplierBreakdown: r.supplier_breakdown,
     generatedAt: r.generated_at,

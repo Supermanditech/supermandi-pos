@@ -45,7 +45,7 @@ router.get("/", requireSupplierAuth, async (req: SupplierAuthRequest, res: Respo
       `SELECT COUNT(*) FROM supplier.payouts WHERE supplier_id = $1`,
       [req.supplierId]
     );
-    const total = parseInt(countResult.rows[0].count);
+    const total = parseInt(countResult.rows[0]?.count, 10) || 0;
 
     // Get payouts
     const result = await pool.query(
@@ -73,7 +73,7 @@ router.get("/", requireSupplierAuth, async (req: SupplierAuthRequest, res: Respo
     res.json({
       data: result.rows.map(payout => ({
         id: payout.id,
-        amountPaise: parseInt(payout.amount_paise),
+        amountPaise: parseInt(payout.amount_paise, 10) || 0,
         currency: payout.currency,
         status: payout.status,
         bankAccount: {
@@ -171,12 +171,13 @@ router.get("/summary", requireSupplierAuth, async (req: SupplierAuthRequest, res
     res.json({
       data: {
         totalRevenuePaise: totalRevenue,
-        totalPaidPaise: parseInt(summary.total_paid),
-        totalPendingPaise: parseInt(summary.total_pending),
-        totalProcessingPaise: parseInt(summary.total_processing),
-        availableBalancePaise: totalRevenue - parseInt(summary.total_paid) - parseInt(summary.total_pending) - parseInt(summary.total_processing),
-        completedPayouts: parseInt(summary.completed_count),
-        pendingPayouts: parseInt(summary.pending_count),
+        // LIVE.R4.D8.001: NaN guards on DB aggregate parseInt
+        totalPaidPaise: parseInt(summary.total_paid, 10) || 0,
+        totalPendingPaise: parseInt(summary.total_pending, 10) || 0,
+        totalProcessingPaise: parseInt(summary.total_processing, 10) || 0,
+        availableBalancePaise: (totalRevenue || 0) - (parseInt(summary.total_paid, 10) || 0) - (parseInt(summary.total_pending, 10) || 0) - (parseInt(summary.total_processing, 10) || 0),
+        completedPayouts: parseInt(summary.completed_count, 10) || 0,
+        pendingPayouts: parseInt(summary.pending_count, 10) || 0,
         // T-205: Fee transparency fields
         grossSalesPaise,
         platformFeePaise: totalPlatformFeePaise,
@@ -235,7 +236,7 @@ router.get("/:id", requireSupplierAuth, async (req: SupplierAuthRequest, res: Re
     res.json({
       data: {
         id: payout.id,
-        amountPaise: parseInt(payout.amount_paise),
+        amountPaise: parseInt(payout.amount_paise, 10) || 0,
         currency: payout.currency,
         status: payout.status,
         bankAccount: {

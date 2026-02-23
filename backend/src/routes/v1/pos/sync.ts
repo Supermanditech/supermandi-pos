@@ -1371,7 +1371,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
     // If batch-level error occurs, rollback entire transaction
     try {
       await client.query("ROLLBACK");
-    } catch (_) { /* ignore rollback errors */ }
+    } catch (rollbackErr: any) { log.warn(`[Sync] Rollback failed:`, rollbackErr?.message); }
     log.error(`[Sync] Batch transaction failed:`, batchError?.message);
     return res.status(500).json({
       error: "batch_transaction_failed",

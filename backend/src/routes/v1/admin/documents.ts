@@ -67,7 +67,10 @@ router.get("/pending", async (req: Request, res: Response, next: NextFunction) =
     }
 
     query += ` ORDER BY d.uploaded_at ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(parseInt(limit as string, 10), parseInt(offset as string, 10));
+    // LIVE.R4.D13.001: Validate limit/offset to prevent NaN in SQL
+    const parsedLimit = Math.max(1, Math.min(parseInt(limit as string, 10) || 50, 100));
+    const parsedOffset = Math.max(0, parseInt(offset as string, 10) || 0);
+    params.push(parsedLimit, parsedOffset);
 
     const result = await pool.query(query, params);
 
