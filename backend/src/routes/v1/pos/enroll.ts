@@ -279,7 +279,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       );
 
       // AUD-063-B FIX: Log re-enrollment with full context for audit trail
-      log.info(`[Enroll] Idempotent re-enrollment: device=${existingDeviceByFingerprint.id} code=${code} store=${store.id} matchType=fingerprint`);
+      // LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001: Redact enrollment code from logs
+      log.info(`[Enroll] Idempotent re-enrollment: device=${existingDeviceByFingerprint.id} code=***REDACTED store=${store.id} matchType=fingerprint`);
 
       await client.query("COMMIT");
       return res.json({
@@ -311,7 +312,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       // Check if code is already used/exhausted
       if (usesExhausted) {
         await client.query("ROLLBACK");
-        log.info(`[Enroll] REJECT 409: Production code ${code} already used (maxUses=${maxUses}, usesCount=${usesCount}, isMultiUse=${isMultiUseMode})`);
+        // LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001: Redact enrollment code
+        log.info(`[Enroll] REJECT 409: Production code ***REDACTED already used (maxUses=${maxUses}, usesCount=${usesCount}, isMultiUse=${isMultiUseMode})`);
         return res.status(409).json({
           error: {
             code: "ENROLLMENT_CODE_USED",
@@ -323,7 +325,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       // Check if code is expired
       if (isExpired) {
         await client.query("ROLLBACK");
-        log.info(`[Enroll] REJECT 409: Production code ${code} expired at ${enrollment.expires_at}`);
+        // LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001: Redact enrollment code
+        log.info(`[Enroll] REJECT 409: Production code ***REDACTED expired at ${enrollment.expires_at}`);
         return res.status(409).json({
           error: {
             code: "ENROLLMENT_CODE_EXPIRED",
@@ -335,7 +338,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
 
     // Log demo multi-use enrollment (for monitoring)
     if (isDemo && (usesExhausted || isExpired)) {
-      log.info(`[Enroll] Demo bypass: code=${code} store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
+      // LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001: Redact enrollment code
+      log.info(`[Enroll] Demo bypass: code=***REDACTED store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
     }
 
     // ISSUE-MICRO-091: Check daily enrollment attempt count per store
@@ -547,7 +551,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
 
     await client.query("COMMIT");
 
-    log.info(`[Enroll] Device ${deviceId} enrolled with code ${code} (uses: ${usesCount + 1}/${maxUses})`);
+    // LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001: Redact enrollment code
+    log.info(`[Enroll] Device ${deviceId} enrolled with code ***REDACTED (uses: ${usesCount + 1}/${maxUses})`);
 
     // DR-005: Transition store DRAFT → ENROLLED after first device enrollment
     // Non-blocking: if transition fails (already ENROLLED, etc.), enrollment still succeeds
