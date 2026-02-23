@@ -53,6 +53,13 @@ healthChecker.addHttpCheck('main-backend', `${mainBackendUrl}/api/v1/admin/healt
 
 const app = express();
 
+// LIVE.GW.TRUST_PROXY_CLOUD_RUN.001: Enable trust proxy for Cloud Run (behind LB)
+// Cloud Run always sits behind Google's load balancer; trust proxy is required for correct
+// client IP (req.ip) and protocol (req.protocol) via X-Forwarded-For/X-Forwarded-Proto
+if (config.env !== 'development') {
+  app.set('trust proxy', parseInt(process.env.TRUST_PROXY_HOPS || '1', 10));
+}
+
 // =============================================================================
 // MIDDLEWARE SETUP
 // =============================================================================
@@ -94,7 +101,8 @@ app.use((req, res, next) => {
   // SEC-006: Only send CORS headers when origin is allowed — prevents leaking config to unauthorized origins
   if (originAllowed) {
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token, X-Requested-With');
+    // LIVE.GW.CORS_INTERNAL_HEADER_EXPOSURE.001: Only expose client-facing headers, not internal ones
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
   }
 
