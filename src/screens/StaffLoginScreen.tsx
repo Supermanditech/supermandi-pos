@@ -35,8 +35,10 @@ export default function StaffLoginScreen({ storeName }: Props) {
     const trimmedPhone = phone.trim();
     const trimmedPin = pin.trim();
 
-    if (!trimmedPhone || trimmedPhone.length < 10) {
-      Alert.alert("Invalid Phone", "Please enter a valid 10-digit phone number.");
+    // LIVE.POS.PHONE_VALIDATION_STRICT_REGEX.001: Strict Indian mobile number validation
+    const phone10 = trimmedPhone.replace(/^\+91/, '').replace(/^91/, '');
+    if (phone10.length !== 10 || !/^[6-9]\d{9}$/.test(phone10)) {
+      Alert.alert("Invalid Phone", "Please enter a valid 10-digit Indian mobile number.");
       return;
     }
     if (!trimmedPin || !/^\d{4,6}$/.test(trimmedPin)) {
