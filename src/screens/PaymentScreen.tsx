@@ -1108,7 +1108,8 @@ const PaymentScreen = () => {
             void clearPartialSaleState();
           }
 
-          navigation.navigate("SuccessPrint", {
+          // LIVE.POS.SPLIT_PAYMENT_NAV_REPLACE.001: Use replace to prevent back-to-repay
+          navigation.replace("SuccessPrint", {
             paymentMode: "CASH", // Split shows as CASH on receipt
             transactionId,
             billId: billRef || "",
