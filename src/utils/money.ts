@@ -41,9 +41,15 @@ const formatInrGrouped = (value: string): string => {
   return `${sign}${restGrouped},${last3}${fractionPart ? `.${fractionPart}` : ""}`;
 };
 
+// LIVE.POS.AMOUNT_PRECISION_AND_CAP.001: Max displayable amount (100 crore = 1 billion paise)
+const MAX_AMOUNT_MINOR = 1_000_000_000_00; // 100 crore INR in paise
+
 export function formatMoney(minor: number, currency: MoneyCurrency = "INR", fractionDigits = 2): string {
   const safeMinor = Number.isFinite(Number(minor)) ? Number(minor) : 0;
-  const major = minorToMajor(safeMinor, fractionDigits);
+  // LIVE.POS.AMOUNT_PRECISION_AND_CAP.001: Cap and round to prevent floating point display issues
+  const cappedMinor = Math.min(Math.abs(safeMinor), MAX_AMOUNT_MINOR) * (safeMinor < 0 ? -1 : 1);
+  const roundedMinor = Math.round(cappedMinor);
+  const major = minorToMajor(roundedMinor, fractionDigits);
   if (typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function") {
     try {
       const locale = getFormattingLocale(currency);
