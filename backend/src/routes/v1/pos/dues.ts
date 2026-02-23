@@ -136,10 +136,11 @@ posDuesRouter.post("/dues/:dueId/pay", requireDeviceToken, requireActiveStore, a
     const newStatus = newPaid >= due.amount_minor ? "paid" : "partial";
 
     await client.query(
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
       `UPDATE payments.customer_dues
        SET paid_amount_minor = $1, status = $2, updated_at = NOW()
-       WHERE id = $3`,
-      [newPaid, newStatus, dueId]
+       WHERE id = $3 AND store_id = $4`,
+      [newPaid, newStatus, dueId, storeId]
     );
 
     await client.query("COMMIT");
