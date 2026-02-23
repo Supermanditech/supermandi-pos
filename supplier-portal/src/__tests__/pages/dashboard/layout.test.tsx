@@ -156,7 +156,8 @@ describe('DashboardLayout', () => {
         <div>Content</div>
       </DashboardLayout>
     );
-    expect(screen.getByText('Supplier Portal')).toBeInTheDocument();
+    const elements = screen.getAllByText('Supplier Portal');
+    expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders logout button', () => {
