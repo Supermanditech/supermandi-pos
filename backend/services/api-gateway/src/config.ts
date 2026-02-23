@@ -39,7 +39,8 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
  * 3. BACKEND_SERVICE_URL (legacy)
  * 4. Default: http://localhost:3010 (main-backend port, dev only)
  */
-function getMainBackendUrl(): string {
+// LIVE.GW.MAIN_BACKEND_URL_FAIL_FAST.001: Exported so index.ts uses fail-fast path
+export function getMainBackendUrl(): string {
   const url = process.env['ADMIN_SERVICE_URL']
     || process.env['POS_SERVICE_URL']
     || process.env['BACKEND_SERVICE_URL'];
