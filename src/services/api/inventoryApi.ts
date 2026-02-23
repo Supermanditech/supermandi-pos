@@ -146,8 +146,10 @@ export async function recordSaleTransaction(
 ): Promise<InventoryTransactionResponse> {
   if (!(await isOnline())) {
     // GL-WF-007: Queue transaction for later sync instead of silently discarding
+    // LIVE.POS.OFFLINE_QUEUE_STORE_SCOPING.001: Include storeId for store-scoped sync
     await queueOfflineTransaction({
       type: "inventory_sale",
+      storeId: (await getDeviceStoreId()) || "",
       payload: {
         items,
         transactionType: "sale",
@@ -183,8 +185,10 @@ export async function recordSaleReturnTransaction(
 ): Promise<InventoryTransactionResponse> {
   if (!(await isOnline())) {
     // GL-WF-007: Queue transaction for later sync
+    // LIVE.POS.OFFLINE_QUEUE_STORE_SCOPING.001: Include storeId for store-scoped sync
     await queueOfflineTransaction({
       type: "inventory_return",
+      storeId: (await getDeviceStoreId()) || "",
       payload: {
         items,
         transactionType: "sale_return",
