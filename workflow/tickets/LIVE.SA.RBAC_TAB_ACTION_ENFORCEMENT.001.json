@@ -1,0 +1,253 @@
+{
+  "ticketId": "LIVE.SA.RBAC_TAB_ACTION_ENFORCEMENT.001",
+  "screenId": "LIVE.SA.RBAC_TAB_ACTION_ENFORCEMENT.001",
+  "orderInScreen": 1,
+  "surface": "superadmin_web",
+  "riskClass": "critical",
+  "title": "No RBAC permission checks",
+  "description": "Scope POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203. Implement ticket to 100% production grade with runtime staging parity evidence.",
+  "status": "todo",
+  "severity": "P0",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "fail",
+    "navigation": "fail",
+    "api": "fail",
+    "backend": "fail",
+    "db": "fail",
+    "migration": "fail",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/admin/"
+    ],
+    "cloudRunServices": [
+      "superadmin",
+      "api-gateway",
+      "main-backend"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": []
+  },
+  "impact": {
+    "impactedScreens": [
+      "LIVE.SA.RBAC_TAB_ACTION_ENFORCEMENT.001"
+    ],
+    "impactedServices": [
+      "superadmin",
+      "api-gateway",
+      "main-backend"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "operator",
+    "reproSteps": [
+      "Review and execute fix for LIVE.SA.RBAC_TAB_ACTION_ENFORCEMENT.001.",
+      "Validate runtime behavior on staging after implementation."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22305359033",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1/workstations/ws-livefix-01"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-23T17:58:17.087Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/admin/"
+    ],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": []
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-23T17:58:17.087Z",
+    "updatedAt": "2026-02-23T17:58:17.087Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": false,
+    "disclosedToOperator": false,
+    "notes": "Execution scope POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203; runtime staging evidence mandatory.",
+    "evidence": []
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "superadmin_web",
+    "expectedBasePath": "/admin",
+    "expectedPrimaryService": "superadmin",
+    "actualCloudRunServices": [
+      "superadmin",
+      "api-gateway",
+      "main-backend"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "Track blockers explicitly for POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending verification."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "LIVE.SA.RBAC_TAB_ACTION_ENFORCEMENT.001: implementation pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "NOT COMPLETE — POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203 ticket pending implementation and staging runtime validation."
+  },
+  "gitDiscipline": {
+    "workBranch": "live-fix/post-deploy-scope-badc3fbe",
+    "changeScope": "LIVE.SA.RBAC_TAB_ACTION_ENFORCEMENT.001",
+    "lastValidatedCommit": "pending",
+    "noMixedScope": false,
+    "noConflictMarkers": false,
+    "ciGateStatus": "pending",
+    "evidence": []
+  }
+}
