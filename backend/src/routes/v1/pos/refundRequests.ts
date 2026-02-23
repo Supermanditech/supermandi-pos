@@ -90,7 +90,8 @@ posRefundRequestsRouter.post('/refund-requests', async (req: Request, res: Respo
     // If we have a Razorpay payment ID, attempt to initiate the refund via Razorpay API
     if (payment.razorpay_payment_id) {
       // Non-blocking: attempt Razorpay refund in background
-      initiateRazorpayRefund(refund.id, payment.razorpay_payment_id, refundAmount).catch((err) => {
+      // LIVE.BE.STORE_ISOLATION: Pass storeId for scoped updates
+      initiateRazorpayRefund(refund.id, payment.razorpay_payment_id, refundAmount, storeId).catch((err) => {
         log.error('[T-219] Razorpay refund initiation failed:', err);
       });
     }
@@ -271,7 +272,8 @@ posRefundRequestsRouter.post('/refund-requests/:id/cancel', async (req: Request,
 async function initiateRazorpayRefund(
   refundRequestId: string,
   razorpayPaymentId: string,
-  amount: number
+  amount: number,
+  storeId: string
 ): Promise<void> {
   const pool = getPool();
   if (!pool) return;
@@ -287,8 +289,9 @@ async function initiateRazorpayRefund(
   try {
     // Update status to processing
     await pool.query(
-      `UPDATE orders.refund_requests SET status = 'processing', processed_at = NOW() WHERE id = $1`,
-      [refundRequestId]
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
+      `UPDATE orders.refund_requests SET status = 'processing', processed_at = NOW() WHERE id = $1 AND store_id = $2`,
+      [refundRequestId, storeId]
     );
 
     // Call Razorpay Refund API
@@ -313,33 +316,36 @@ async function initiateRazorpayRefund(
 
     if (response.ok && data.id) {
       // Refund initiated with Razorpay
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
       await pool.query(
         `UPDATE orders.refund_requests
          SET razorpay_refund_id = $2, razorpay_status = $3,
              status = CASE WHEN $3 = 'processed' THEN 'completed' ELSE 'processing' END,
              completed_at = CASE WHEN $3 = 'processed' THEN NOW() ELSE NULL END
-         WHERE id = $1`,
-        [refundRequestId, data.id, data.status || 'created']
+         WHERE id = $1 AND store_id = $4`,
+        [refundRequestId, data.id, data.status || 'created', storeId]
       );
       log.info(`[T-219] Razorpay refund ${data.id} initiated for request ${refundRequestId}`);
     } else {
       // Razorpay API error
       const errorMsg = data.error?.description || 'Razorpay refund API error';
+      // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
       await pool.query(
         `UPDATE orders.refund_requests
          SET status = 'failed', failed_at = NOW(), failure_reason = $2
-         WHERE id = $1`,
-        [refundRequestId, errorMsg]
+         WHERE id = $1 AND store_id = $3`,
+        [refundRequestId, errorMsg, storeId]
       );
       log.error(`[T-219] Razorpay refund failed:`, data.error);
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause
     await pool.query(
       `UPDATE orders.refund_requests
        SET status = 'failed', failed_at = NOW(), failure_reason = $2
-       WHERE id = $1`,
-      [refundRequestId, errorMsg]
+       WHERE id = $1 AND store_id = $3`,
+      [refundRequestId, errorMsg, storeId]
     );
     log.error('[T-219] Razorpay refund exception:', err);
   }
