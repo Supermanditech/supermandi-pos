@@ -184,7 +184,8 @@ export function createTestAuthRouter(): Router {
       const token = authHeader.substring(7);
 
       try {
-        const decoded = jwt.verify(token, TEST_JWT_SECRET) as jwt.JwtPayload;
+        // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+        const decoded = jwt.verify(token, TEST_JWT_SECRET, { algorithms: ['HS256'] }) as jwt.JwtPayload;
         const exp = decoded.exp || 0;
         const now = Math.floor(Date.now() / 1000);
         const remaining = exp - now;
@@ -250,7 +251,8 @@ export function createTestAuthRouter(): Router {
       }
 
       try {
-        const decoded = jwt.verify(refreshToken, TEST_JWT_SECRET) as jwt.JwtPayload;
+        // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+        const decoded = jwt.verify(refreshToken, TEST_JWT_SECRET, { algorithms: ['HS256'] }) as jwt.JwtPayload;
 
         // Verify it's a refresh token
         if (decoded.type !== 'refresh') {

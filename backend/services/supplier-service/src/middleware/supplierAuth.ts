@@ -51,7 +51,8 @@ export function supplierAuth(
     // Verify and decode token with issuer validation
     let decoded: SupplierTokenPayload;
     try {
-      decoded = jwt.verify(token, config.jwtSecret, { issuer: JWT_ISSUER }) as SupplierTokenPayload;
+      // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+      decoded = jwt.verify(token, config.jwtSecret, { issuer: JWT_ISSUER, algorithms: ['HS256'] }) as SupplierTokenPayload;
     } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {
         throw new ApiError(401, ERROR_CODES.UNAUTHORIZED, 'Token expired');

@@ -1208,7 +1208,8 @@ router.post("/auth/forgot-password/email-reset", authRateLimiter, async (req: Re
     // Verify JWT reset token
     let decoded: { sub?: string; purpose?: string };
     try {
-      decoded = jwt.verify(token, JWT_SECRET) as { sub?: string; purpose?: string };
+      // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+      decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { sub?: string; purpose?: string };
     } catch {
       res.status(400).json({
         error: { code: "INVALID_TOKEN", message: "Invalid or expired reset token. Please request a new one." }
@@ -1279,8 +1280,10 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
     // Verify refresh token
     let decoded;
     try {
+      // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
       decoded = jwt.verify(refreshToken, JWT_SECRET, {
         issuer: JWT_ISSUER,
+        algorithms: ['HS256'],
       }) as { sub: string; type: string; storeId: string; jti?: string; iat?: number };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {

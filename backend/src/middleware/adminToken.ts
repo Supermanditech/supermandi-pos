@@ -159,7 +159,8 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
   const cookieToken = extractCookie(req, 'admin_session');
   if (cookieToken) {
     try {
-      const decoded = jwt.verify(cookieToken, JWT_SECRET) as { email?: string; role?: string; type?: string };
+      // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+      const decoded = jwt.verify(cookieToken, JWT_SECRET, { algorithms: ['HS256'] }) as { email?: string; role?: string; type?: string };
       if (decoded.type === 'admin' || decoded.role === 'super_admin') {
         req.adminId = decoded.email || 'jwt-session';
         req.adminRole = (decoded.role as AdminRole) || 'super_admin';
@@ -176,7 +177,8 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
   if (authHeader?.startsWith("Bearer ")) {
     const bearerToken = authHeader.slice(7);
     try {
-      const decoded = jwt.verify(bearerToken, JWT_SECRET) as { email?: string; role?: string; type?: string };
+      // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+      const decoded = jwt.verify(bearerToken, JWT_SECRET, { algorithms: ['HS256'] }) as { email?: string; role?: string; type?: string };
       if (decoded.type === 'admin' || decoded.role === 'super_admin') {
         req.adminId = decoded.email || 'jwt-session';
         req.adminRole = (decoded.role as AdminRole) || 'super_admin';

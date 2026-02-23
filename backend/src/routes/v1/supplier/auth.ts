@@ -306,7 +306,8 @@ export async function requireSupplierAuth(
   const token = authHeader.slice(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER }) as {
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'] }) as {
       sub: string;
       actorType: string;
       actorId: string;
@@ -1926,8 +1927,10 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
     // Verify refresh token
     let decoded: { sub: string; type: string; actorType?: string; jti?: string; iat?: number };
     try {
+      // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
       decoded = jwt.verify(refreshToken, JWT_SECRET, {
         issuer: JWT_ISSUER,
+        algorithms: ['HS256'],
       }) as { sub: string; type: string; actorType?: string; jti?: string; iat?: number };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {

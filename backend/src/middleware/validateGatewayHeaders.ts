@@ -81,8 +81,10 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
   const token = authHeader.substring(7);
 
   try {
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: JWT_ISSUER,
+      algorithms: ['HS256'],
     }) as JwtPayload;
 
     // Validate required claims

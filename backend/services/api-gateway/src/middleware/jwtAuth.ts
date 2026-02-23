@@ -192,8 +192,10 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
 
   try {
     // Verify and decode the token
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: JWT_ISSUER,
+      algorithms: ['HS256'],
     }) as JwtPayload;
 
     // Store decoded payload on request for logging/debugging

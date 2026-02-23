@@ -172,8 +172,10 @@ export function verifyAccessToken(token: string): JwtPayload | null {
  */
 export function verifyAccessTokenWithError(token: string): JwtVerifyResult {
   try {
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
+      algorithms: ['HS256'],
     }) as jwt.JwtPayload;
 
     // Validate required fields
@@ -235,8 +237,10 @@ export interface RefreshTokenVerifyResult {
  */
 export function verifyRefreshTokenWithError(token: string): RefreshTokenVerifyResult {
   try {
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
+      algorithms: ['HS256'],
     }) as jwt.JwtPayload;
 
     // Validate it's a refresh token
@@ -365,8 +369,10 @@ export interface ServiceTokenVerifyResult {
  */
 export function verifyServiceTokenWithError(token: string): ServiceTokenVerifyResult {
   try {
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
+      algorithms: ['HS256'],
     }) as jwt.JwtPayload;
 
     // Validate it's a service token

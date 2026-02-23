@@ -204,8 +204,10 @@ export async function verifyAdminSession(token: string): Promise<AdminSession | 
   try {
     // First try with gateway's JWT_SECRET and issuer (legacy master token flow)
     try {
+      // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
       const decoded = jwt.verify(token, JWT_SECRET, {
         issuer: JWT_ISSUER,
+        algorithms: ['HS256'],
       }) as AdminSessionPayload;
 
       // Check it's an admin token
@@ -234,7 +236,8 @@ export async function verifyAdminSession(token: string): Promise<AdminSession | 
 
     // GO-LIVE-LOGIN-004: Try verifying as email OTP JWT from main-backend
     // Email OTP tokens have { email, role, type } payload and use the shared JWT_SECRET
-    const emailOtpDecoded = jwt.verify(token, JWT_SECRET) as { email?: string; role?: string; type?: string; exp?: number };
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
+    const emailOtpDecoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { email?: string; role?: string; type?: string; exp?: number };
 
     if (emailOtpDecoded.email && emailOtpDecoded.role === 'super_admin' && emailOtpDecoded.type === 'admin') {
       console.log(`[AdminSession] Verified email OTP token for: ***@${emailOtpDecoded.email?.split('@')[1] || '***'}`);
@@ -268,8 +271,10 @@ export async function verifyAdminSession(token: string): Promise<AdminSession | 
  */
 export async function revokeAdminSession(token: string): Promise<boolean> {
   try {
+    // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: JWT_ISSUER,
+      algorithms: ['HS256'],
       ignoreExpiration: true, // Allow revoking expired tokens
     }) as AdminSessionPayload;
 
