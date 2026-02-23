@@ -798,8 +798,8 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
             existingBillRef = existing.bill_ref;
 
             if (!retryInventoryDeduction) {
-              // Normal duplicate - skip everything
-              await client.query("COMMIT");
+              // LIVE.SYNC.BATCH_TRANSACTION_ATOMICITY_SAVEPOINT.001: Don't COMMIT mid-batch
+              // Just skip this event without committing — batch transaction stays open
               results.push({ eventId, status: "duplicate_ignored" });
               saleMappings.push({
                 saleId,
