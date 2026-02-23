@@ -11,14 +11,17 @@ import {
   isMasterTokenConfigured,
   getActiveSessionCount,
 } from '../services/adminSessionService';
+import { config } from '../config';
 
 // =============================================================================
 // RATE LIMITING FOR LOGIN
+// LIVE.ADMIN.AUTH_RATE_LIMIT_TUNING.001: Use centralized config values
+// instead of hardcoded constants so limits are env-tunable.
 // =============================================================================
 
 const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
-const LOGIN_WINDOW_MS = 60000; // 1 minute
-const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = config.rateLimitWindowMs;
+const MAX_LOGIN_ATTEMPTS = config.adminLoginRateLimitMax;
 
 function isLoginRateLimited(ip: string): boolean {
   const record = loginAttempts.get(ip);

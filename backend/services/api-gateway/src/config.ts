@@ -18,6 +18,8 @@ export interface GatewayConfig {
   rateLimitMax: number;
   // GL-CRIT-0027: Stricter rate limit for auth endpoints
   authRateLimitMax: number;
+  // LIVE.ADMIN.AUTH_RATE_LIMIT_TUNING.001: Separate admin login limit (defaults to authRateLimitMax)
+  adminLoginRateLimitMax: number;
   services: ServiceConfig[];
 }
 
@@ -61,6 +63,8 @@ export const config: GatewayConfig = {
   rateLimitMax: getEnvIntOrDefault('RATE_LIMIT_MAX', 30), // 30 requests per window
   // Auth endpoints have stricter limit
   authRateLimitMax: getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 5), // 5 auth attempts per window
+  // LIVE.ADMIN.AUTH_RATE_LIMIT_TUNING.001: Admin login rate limit (env-tunable, defaults to AUTH_RATE_LIMIT_MAX)
+  adminLoginRateLimitMax: getEnvIntOrDefault('ADMIN_LOGIN_RATE_LIMIT_MAX', getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 5)),
 
   // Backend services
   services: [
