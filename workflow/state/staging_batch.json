@@ -4,8 +4,8 @@
   "targetEnvironment": "staging",
   "targetProject": "supermandi-backend",
   "targetRegion": "asia-south1",
-  "commitSha": "01b090b0",
-  "deploymentRef": "deploy-mega-batch-2026-02-20",
+  "commitSha": "badc3fbe",
+  "deploymentRef": "github://run/22305359033",
   "createdAt": "2026-02-20T15:10:00+05:30",
   "screenIds": [
     "INFRA.STAGING-DEPLOY"
@@ -67,5 +67,5 @@
     "operatorApproved": true,
     "completed": true
   },
-  "notes": "Mega-batch first staging deploy. All 500+ tickets code-complete. 6 services + 18 DB migrations."
+  "notes": "Latest cumulative staging deploy completed successfully on badc3fbe (run 22305359033). Next deploy requires fresh GO_DEPLOY after new implementation batch."
 }
