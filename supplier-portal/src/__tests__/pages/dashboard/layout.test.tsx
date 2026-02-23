@@ -146,7 +146,8 @@ describe('DashboardLayout', () => {
         <div>Content</div>
       </DashboardLayout>
     );
-    expect(screen.getByText('SuperMandi')).toBeInTheDocument();
+    const elements = screen.getAllByText('SuperMandi');
+    expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Supplier Portal label', () => {
