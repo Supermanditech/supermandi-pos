@@ -75,6 +75,10 @@ export default function MenuScreen() {
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
 
+  // LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001: Theme toggle
+  const themeMode = useSettingsStore((state) => state.themeMode);
+  const toggleTheme = useSettingsStore((state) => state.toggleTheme);
+
   // DEV-057: Operational status for status panel
   // STORECODE-003: Added storeCode for display
   const [opStatus, setOpStatus] = useState<{
@@ -978,6 +982,34 @@ export default function MenuScreen() {
             styles.langOption,
             language === 'hi' && styles.langOptionActive
           ]}>हि</Text>
+        </View>
+      </Pressable>
+
+      {/* LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001: Theme toggle */}
+      <Pressable style={styles.menuItem} onPress={toggleTheme}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons
+            name={themeMode === 'dark' ? "weather-night" as any : "white-balance-sunny" as any}
+            size={20}
+            color={theme.colors.primary}
+          />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Theme</Text>
+          <Text style={styles.menuSubtitle}>
+            {themeMode === 'dark' ? 'Dark mode' : 'Light mode'}
+          </Text>
+        </View>
+        <View style={styles.languageToggle}>
+          <Text style={[
+            styles.langOption,
+            themeMode === 'light' && styles.langOptionActive
+          ]}>☀</Text>
+          <Text style={styles.langDivider}>|</Text>
+          <Text style={[
+            styles.langOption,
+            themeMode === 'dark' && styles.langOptionActive
+          ]}>🌙</Text>
         </View>
       </Pressable>
 

@@ -78,7 +78,8 @@ import AIInsightsScreen from "./src/screens/AIInsightsScreen";
 import BulkPurchaseCreditScreen from "./src/screens/BulkPurchaseCreditScreen";
 // HELP-001: Help & Support screen
 import HelpScreen from "./src/screens/HelpScreen";
-import { theme } from "./src/theme";
+import { theme, useThemeColors } from "./src/theme";
+import { useSettingsStore } from "./src/stores/settingsStore";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
 // Wrapper components for screens that need route params
@@ -372,6 +373,9 @@ const linking = {
 
 export default function App() {
   const [appReady, setAppReady] = useState(false);
+  // LIVE.POS.THEME: Dynamic colors based on persisted theme preference
+  const themeColors = useThemeColors();
+  const isDark = useSettingsStore((s) => s.themeMode === 'dark');
 
   const initializeApp = useCallback(async () => {
     try {
@@ -420,8 +424,8 @@ export default function App() {
   // Show loading indicator while app is initializing
   if (!appReady) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background }}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: themeColors.background }}>
+        <ActivityIndicator size="large" color={themeColors.primary} />
       </View>
     );
   }
@@ -430,9 +434,10 @@ export default function App() {
     <I18nextProvider i18n={i18n}>
       <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
+        {/* LIVE.POS.THEME: Dynamic StatusBar based on theme preference */}
         <StatusBar
-          backgroundColor={theme.colors.background}
-          barStyle={Platform.OS === "android" ? "dark-content" : "default"}
+          backgroundColor={themeColors.background}
+          barStyle={isDark ? "light-content" : (Platform.OS === "android" ? "dark-content" : "default")}
         />
 
         <ErrorBoundary>

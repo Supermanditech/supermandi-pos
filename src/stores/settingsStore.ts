@@ -3,6 +3,9 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setLanguage as setI18nLanguage, type SupportedLanguage } from '../i18n';
 
+// LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001: Theme mode type
+export type ThemeMode = 'light' | 'dark';
+
 type SettingsState = {
   buyEnabled: boolean;
   reorderEnabled: boolean;
@@ -15,6 +18,8 @@ type SettingsState = {
   language: SupportedLanguage;
   storeName: string | null; // GO-LIVE: Store name from SuperAdmin (read-only, persisted for offline)
   storeCode: string | null; // GO-LIVE: Human-readable store code
+  // LIVE.POS.THEME: Theme preference (persisted via AsyncStorage)
+  themeMode: ThemeMode;
   // T-195: Thermal printer settings
   printerPaperWidth: 58 | 80; // mm
   printerAutoPrint: boolean;  // Auto-print receipt after sale
@@ -33,6 +38,9 @@ type SettingsState = {
   setLanguage: (lang: SupportedLanguage) => void;
   setStoreName: (name: string | null) => void;
   setStoreCode: (code: string | null) => void;
+  // LIVE.POS.THEME: Theme actions
+  toggleTheme: () => void;
+  setThemeMode: (mode: ThemeMode) => void;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -49,6 +57,8 @@ export const useSettingsStore = create<SettingsState>()(
       language: 'en', // Default language
       storeName: null, // GO-LIVE: Persisted for offline display
       storeCode: null, // GO-LIVE: Human-readable store code
+      // LIVE.POS.THEME: Default to light mode (parity with web portals)
+      themeMode: 'light' as ThemeMode,
       // T-195: Thermal printer defaults
       printerPaperWidth: 58,
       printerAutoPrint: false,
@@ -71,9 +81,12 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setStoreName: (name) => set({ storeName: name }),
       setStoreCode: (code) => set({ storeCode: code }),
+      // LIVE.POS.THEME: Theme toggle actions
+      toggleTheme: () => set((state) => ({ themeMode: state.themeMode === 'dark' ? 'light' : 'dark' })),
+      setThemeMode: (mode) => set({ themeMode: mode }),
     }),
     {
-      name: 'supermandi.settings.v6', // SM-022: Bumped version for Credit fields
+      name: 'supermandi.settings.v7', // LIVE.POS.THEME: Bumped version for themeMode field
       storage: createJSONStorage(() => AsyncStorage)
     }
   )

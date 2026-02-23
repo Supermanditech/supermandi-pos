@@ -1,6 +1,7 @@
-import { colors } from './colors';
+import { colors, lightColors, darkColors, type ColorPalette } from './colors';
 import { typography } from './typography';
 import { spacing } from './spacing';
+import { useSettingsStore } from '../stores/settingsStore';
 
 export const theme = {
   colors,
@@ -40,4 +41,19 @@ export const theme = {
 
 export type Theme = typeof theme;
 
-export { colors, typography, spacing };
+// LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001: Runtime-reactive color hook
+// Returns the current palette based on persisted theme preference.
+export function useThemeColors(): ColorPalette {
+  const mode = useSettingsStore((s) => s.themeMode);
+  return mode === 'dark' ? darkColors : lightColors;
+}
+
+// LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001: Non-hook palette resolver
+// For use outside React components (e.g., StyleSheet factories called at module scope).
+export function getThemeColors(): ColorPalette {
+  const mode = useSettingsStore.getState().themeMode;
+  return mode === 'dark' ? darkColors : lightColors;
+}
+
+export { colors, lightColors, darkColors, typography, spacing };
+export type { ColorPalette };

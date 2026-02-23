@@ -337,8 +337,8 @@
     },
     "ticketRules": {
       "maxActiveTicketsPerScreen": 1,
-      "maxWipTicketsGlobal": 1,
-      "maxWipScreensGlobal": 1,
+      "maxWipTicketsGlobal": 2,
+      "maxWipScreensGlobal": 2,
       "enforceTopLevelOrder": true,
       "maxSubTicketsPerParent": 10,
       "blockSubTicketStartIfParentNotActive": true,
