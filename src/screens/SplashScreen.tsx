@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Pressable, BackHandler } fro
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { theme, colors, typography, spacing } from "../theme";
+import { theme, colors, typography, spacing, useThemeColors } from "../theme";
 import { startCloudEventLogger } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
 import { startAutoSync } from "../services/syncService";
@@ -35,6 +35,8 @@ const SESSION_TIMEOUT_MS = 5000;
 export default function SplashScreen() {
   const navigation = useNavigation<NavProp>();
   const [errorState, setErrorState] = useState<string | null>(null);
+  // LIVE.POS.THEME.TOKENS_BRAND_PARITY.001: Dynamic theme colors for brand treatment
+  const tc = useThemeColors();
 
   // #405: Prevent Android back button during splash (consistent with gate screens)
   useEffect(() => {
@@ -129,15 +131,15 @@ export default function SplashScreen() {
   if (errorState) {
     return (
       <View
-        style={styles.container}
+        style={[styles.container, { backgroundColor: tc.primary }]}
         testID="splash-error-screen"
         accessibilityLabel="Splash screen error"
       >
         <BrandShortmark
           size={64}
-          backgroundColor={colors.primaryDark}
-          lineColor={theme.colors.textInverse}
-          dotColor={theme.colors.textInverse}
+          backgroundColor={tc.primaryDark}
+          lineColor={tc.textInverse}
+          dotColor={tc.textInverse}
           radius={10}
         />
         <Text style={styles.brandName} accessibilityRole="header">SuperMandi</Text>
@@ -176,15 +178,15 @@ export default function SplashScreen() {
   // S1-7: Normal loading state with a11y labels and testIDs
   return (
     <View
-      style={styles.container}
+      style={[styles.container, { backgroundColor: tc.primary }]}
       testID="splash-screen"
       accessibilityLabel="SuperMandi loading screen"
     >
       <BrandShortmark
         size={64}
-        backgroundColor={colors.primaryDark}
-        lineColor={theme.colors.textInverse}
-        dotColor={theme.colors.textInverse}
+        backgroundColor={tc.primaryDark}
+        lineColor={tc.textInverse}
+        dotColor={tc.textInverse}
         radius={10}
       />
       <Text
@@ -203,7 +205,7 @@ export default function SplashScreen() {
       {/* S1-5: Use theme token for indicator color */}
       <ActivityIndicator
         size="small"
-        color={theme.colors.textInverse}
+        color={tc.textInverse}
         style={styles.loader}
         testID="splash-loader"
         accessibilityLabel="Loading"

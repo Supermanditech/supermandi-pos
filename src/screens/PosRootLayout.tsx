@@ -73,7 +73,7 @@ import { POS_MESSAGES } from "../utils/uiStatus";
 import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/stockCache";
 import { refreshStockSnapshot } from "../services/stockService";
 import { useSettingsStore } from "../stores/settingsStore";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { showToast } from "../utils/showToast";
 // GATE-000: Import probeReadiness for startup endpoint check
 import { probeReadiness } from "../services/api/readinessGate";
@@ -123,6 +123,8 @@ export default function PosRootLayout() {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
   const hidInputRef = useRef<TextInput>(null);
+  // LIVE.POS.THEME.TOKENS_BRAND_PARITY.001: Dynamic theme colors
+  const tc = useThemeColors();
   const hidFocusRequestRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hidActiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -277,8 +279,8 @@ export default function PosRootLayout() {
   };
   // Always show Menu text on handheld POS devices for better usability
   const showMenuText = true;
-  const reorderTabColor = reorderEnabled ? theme.colors.success : theme.colors.error;
-  const reorderTextColor = theme.colors.textInverse;
+  const reorderTabColor = reorderEnabled ? tc.success : tc.error;
+  const reorderTextColor = tc.textInverse;
   const showReorderPulse = reorderEnabled && !reduceMotionEnabled;
   const reorderPulseScale = reorderPulse.interpolate({
     inputRange: [0, 1],
@@ -1115,11 +1117,11 @@ export default function PosRootLayout() {
 
   const indicatorLayout = tabLayouts[effectiveMode];
   const indicatorColor =
-    effectiveMode === "REORDER" ? reorderTabColor : theme.colors.primary;
+    effectiveMode === "REORDER" ? reorderTabColor : tc.primary;
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, { backgroundColor: tc.background }]}
       onStartShouldSetResponderCapture={() => {
         scheduleHidFocus();
         // T-123: Reset session timeout on any touch interaction
@@ -1149,15 +1151,15 @@ export default function PosRootLayout() {
 
       {/* UI-REVEAL: API connection error banner - show warning but keep UI functional */}
       {apiConnectionError && storeActive !== false && (
-        <View style={styles.apiConnectionBanner}>
-          <MaterialCommunityIcons name="cloud-off-outline" size={16} color={theme.colors.warning} />
-          <Text style={styles.apiConnectionBannerText}>
+        <View style={[styles.apiConnectionBanner, { backgroundColor: tc.warningSoft, borderBottomColor: tc.warning }]}>
+          <MaterialCommunityIcons name="cloud-off-outline" size={16} color={tc.warning} />
+          <Text style={[styles.apiConnectionBannerText, { color: tc.warning }]}>
             Offline mode: {apiConnectionError}
           </Text>
         </View>
       )}
 
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { backgroundColor: tc.surface, borderBottomColor: tc.border }]}>
         {indicatorLayout ? (
           <Animated.View
             pointerEvents="none"
@@ -1186,17 +1188,17 @@ export default function PosRootLayout() {
           const isStoreDisabled = storeActive === false && tab.id !== "MENU";
           const isDisabled = isStoreDisabled || isFeatureDisabled || isRoleRestricted;
           const iconColor = isDisabled
-            ? theme.colors.textTertiary
+            ? tc.textTertiary
             : active
-              ? theme.colors.textInverse
-              : theme.colors.textPrimary;
+              ? tc.textInverse
+              : tc.textPrimary;
           const tabTextColor = isDisabled
-            ? theme.colors.textTertiary
+            ? tc.textTertiary
             : isReorder
               ? reorderTextColor
               : active
-                ? theme.colors.textInverse
-                : theme.colors.textPrimary;
+                ? tc.textInverse
+                : tc.textPrimary;
           // Badge counts
           const badgeCount = isPurchase ? cartItemCount : isReorder && reorderEnabled ? pendingReorderCount : 0;
           return (
@@ -1205,11 +1207,12 @@ export default function PosRootLayout() {
               onLayout={handleTabLayout(tab.id)}
               style={({ pressed }) => [
                 styles.tabButton,
+                { borderColor: tc.primary },
                 isReorder && styles.reorderTab,
                 isReorder && (reorderEnabled ? styles.reorderTabOn : styles.reorderTabOff),
                 active && styles.tabButtonActive,
                 pressed && !isDisabled && styles.tabPressed,
-                isDisabled && styles.tabButtonDisabled,
+                isDisabled && [styles.tabButtonDisabled, { borderColor: tc.border }],
               ]}
               onPress={() => {
                 // SA-P1-001: Show toast for role-restricted tabs
@@ -1240,7 +1243,7 @@ export default function PosRootLayout() {
                   <MaterialCommunityIcons name="menu" size={16} color={iconColor} />
                   {showMenuText ? (
                     <Text
-                      style={[styles.tabText, compactTabs && styles.tabTextCompact, active && styles.tabTextActive]}
+                      style={[styles.tabText, { color: tc.textPrimary }, compactTabs && styles.tabTextCompact, active && { color: tc.textInverse }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
@@ -1263,7 +1266,7 @@ export default function PosRootLayout() {
                     {reorderLabel}
                   </Text>
                   {reorderEnabled && pendingReorderCount > 0 ? (
-                    <TabBadge count={pendingReorderCount} color={theme.colors.warning} />
+                    <TabBadge count={pendingReorderCount} color={tc.warning} />
                   ) : reorderEnabled ? (
                     <Animated.View
                       style={[
@@ -1293,8 +1296,8 @@ export default function PosRootLayout() {
                   {badgeCount > 0 ? (
                     <TabBadge
                       count={badgeCount}
-                      color={active ? theme.colors.textInverse : theme.colors.primary}
-                      textColor={active ? theme.colors.primary : theme.colors.textInverse}
+                      color={active ? tc.textInverse : tc.primary}
+                      textColor={active ? tc.primary : tc.textInverse}
                     />
                   ) : null}
                 </View>
