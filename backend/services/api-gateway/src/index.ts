@@ -13,7 +13,7 @@ import {
   errorHandler,
   notFoundHandler,
 } from '@supermandi/common';
-import { config } from './config';
+import { config, getMainBackendUrl } from './config';
 import {
   correlationIdMiddleware,
   requestLoggerMiddleware,
@@ -44,8 +44,8 @@ const healthChecker = createHealthChecker({
   version: '3.0.11',
 });
 
-// Add upstream service health checks (non-critical - gateway still works if backend is down)
-const mainBackendUrl = process.env.ADMIN_SERVICE_URL || 'http://localhost:3010';
+// LIVE.GW.MAIN_BACKEND_URL_FAIL_FAST.001: Use config (fail-fast) instead of inline localhost fallback
+const mainBackendUrl = getMainBackendUrl();
 healthChecker.addHttpCheck('main-backend', `${mainBackendUrl}/api/v1/admin/health`, {
   timeoutMs: 5000,
   critical: false, // Gateway can still serve some requests even if backend is down
@@ -101,6 +101,15 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     res.sendStatus(originAllowed ? 204 : 403);
     return;
+  }
+  next();
+});
+
+// LIVE.GW.SUPPLIER_REGISTER_TRAILING_SLASH_PARITY.001: Normalize trailing slashes on API routes
+// Removes trailing slashes to ensure consistent routing (e.g., /auth/register/ → /auth/register)
+app.use((req, _res, next) => {
+  if (req.path.length > 1 && req.path.endsWith('/') && req.path.startsWith('/api/')) {
+    req.url = req.url.replace(/\/(\?|$)/, '$1');
   }
   next();
 });
@@ -269,11 +278,14 @@ app.get('/api/v1/version', (_req, res) => {
 app.use('/api/v1/admin/auth', adminAuthRouter);
 
 // =============================================================================
-// TEST AUTH ROUTES - Only enabled in non-production environments
+// TEST AUTH ROUTES - Only enabled in development
+// LIVE.BE.TEST_AUTH_ROUTE_PROD_GUARD.001: Double-guard at mount point
 // Provides: /api/test/mint-token, /api/test/verify-token, /api/test/refresh-token
 // Used for automated E2E testing of token refresh flows
 // =============================================================================
-app.use('/api/test', createTestAuthRouter());
+if (process.env.NODE_ENV === 'development') {
+  app.use('/api/test', createTestAuthRouter());
+}
 
 // =============================================================================
 // PROXY ROUTES
