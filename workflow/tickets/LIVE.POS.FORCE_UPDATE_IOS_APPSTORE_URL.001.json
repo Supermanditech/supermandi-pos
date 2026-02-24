@@ -163,7 +163,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-23T17:58:16.979Z",
-    "updatedAt": "2026-02-23T20:54:14.758Z",
+    "updatedAt": "2026-02-24T10:24:07.758Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -200,7 +200,7 @@
     "blockers": [],
     "disclosedToOperator": false,
     "operatorAcknowledged": false,
-    "notes": "Track blockers explicitly for POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203."
+    "notes": "Track blockers explicitly for POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203. R5_REVALIDATION(R5-POS-005): Revalidation: empty APP_STORE_URL sends iOS users to Play Store. R5 audit re-confirmed as operator dependency. Source: AUDIT_R5_COMPREHENSIVE_F05165B8.md. Audit SHA: f05165b8."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {

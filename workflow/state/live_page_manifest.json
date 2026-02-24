@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-23T21:39:45.710Z",
+  "generatedAt": "2026-02-24T10:27:37.774Z",
   "generatedBy": "scripts/workflow/generate-live-page-manifest.js",
   "sourceEnvironment": "gcp_staging",
   "baseUrl": "https://staging.supermandi.tech",

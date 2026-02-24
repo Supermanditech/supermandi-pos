@@ -165,7 +165,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-23T17:58:17.087Z",
-    "updatedAt": "2026-02-23T20:51:06.848Z",
+    "updatedAt": "2026-02-24T10:24:07.758Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -203,7 +203,7 @@
     "blockers": [],
     "disclosedToOperator": false,
     "operatorAcknowledged": false,
-    "notes": "Track blockers explicitly for POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203."
+    "notes": "Track blockers explicitly for POST_DEPLOY_SCOPE.BADC3FBE.AUDIT_R1234.CANONICAL_203. R5_REVALIDATION(R5-SA-006): Revalidation: no RBAC enforcement at tab level. R5 audit re-confirmed finding. Source: AUDIT_R5_COMPREHENSIVE_F05165B8.md. Audit SHA: f05165b8."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {

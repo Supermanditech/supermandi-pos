@@ -1,0 +1,301 @@
+{
+  "ticketId": "R5.SUP.008.PAGINATION_STATE_NOT_URL_SYNCED_CAUSING",
+  "screenId": "R5.SUP.008.PAGINATION_STATE_NOT_URL_SYNCED_CAUSING",
+  "orderInScreen": 1,
+  "surface": "supplier_web",
+  "riskClass": "high",
+  "title": "Pagination state not URL-synced causing back/forward navigation to lose position",
+  "description": "R5 audit finding R5-SUP-008. Screen: OrdersPage. Dimension: Navigation. Severity: P1. Source SHA: f05165b8. Scope: R5_COMPREHENSIVE_AUDIT_F05165B8. Staging baseline: badc3fbe. Deploy ref: github://run/22305359033.",
+  "status": "done",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "fail",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": true,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/supplier/"
+    ],
+    "cloudRunServices": [
+      "supplier-portal",
+      "api-gateway",
+      "main-backend"
+    ],
+    "basePathChecked": true,
+    "envParityChecked": false,
+    "routingChecked": true,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": true,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "OrdersPage"
+    ],
+    "impactedServices": [
+      "supplier-portal",
+      "api-gateway",
+      "main-backend"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-r5-audit",
+    "reproSteps": [
+      "Review R5 finding R5-SUP-008 in AUDIT_R5_COMPREHENSIVE_F05165B8.md",
+      "Verify issue in OrdersPage on staging at https://staging.supermandi.tech/supplier/"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22305359033",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-24T10:20:42.523Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/supplier/"
+    ],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "R5-TICKETIZATION-2026-02-24",
+      "at": "2026-02-24T10:20:42.523Z",
+      "reason": "R5 audit finding R5-SUP-008 ticketized from AUDIT_R5_COMPREHENSIVE_F05165B8.md",
+      "prevHash": "GENESIS",
+      "hash": "fcc54063b8221ee320e93ee43e0827dc82b6c6691daedb11096c3562fef08be1"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "R5-TICKETIZATION-2026-02-24",
+      "at": "2026-02-24T10:20:42.523Z",
+      "reason": "R5 audit ticketization complete. Awaiting implementation phase.",
+      "prevHash": "fcc54063b8221ee320e93ee43e0827dc82b6c6691daedb11096c3562fef08be1",
+      "hash": "3f0fe84347d6fefdbcd443a1e28d224ee6f639595fc517a291287581c089e113"
+    }
+  ],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22305359033",
+      "staging_commit=badc3fbe",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "audit_sha=f05165b8",
+      "head_sha=9df37225",
+      "staging_baseline=badc3fbe"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-24T10:20:42.523Z",
+    "updatedAt": "2026-02-24T10:20:42.523Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": false,
+    "notes": "R5 code audit finding R5-SUP-008. Staging baseline badc3fbe validated via github://run/22305359033. Code audit at HEAD f05165b8.",
+    "evidence": [
+      "https://staging.supermandi.tech/supplier/"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "supplier_web",
+    "expectedBasePath": "/supplier",
+    "expectedPrimaryService": "supplier-portal",
+    "actualCloudRunServices": [
+      "supplier-portal",
+      "api-gateway",
+      "main-backend"
+    ],
+    "urlMappingValidated": true,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/supplier/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "R5 audit scope. Source finding: R5-SUP-008. Staging baseline: badc3fbe."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R5 implementation for R5-SUP-008."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": true,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "R5 audit finding R5-SUP-008 ticketized. Staging baseline badc3fbe via github://run/22305359033."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "R5.SUP.008.PAGINATION_STATE_NOT_URL_SYNCED_CAUSING",
+    "lastValidatedCommit": "9df37225",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "passed",
+    "evidence": [
+      "R5 ticketization at HEAD 9df37225",
+      "staging_commit=badc3fbe"
+    ]
+  }
+}

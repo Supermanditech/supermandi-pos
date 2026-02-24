@@ -1,0 +1,902 @@
+{
+  "R5-BE-001": {
+    "severity": null,
+    "summary": ": The inventory transaction routes (`POST /:storeId/inventory/transactions` and `POST /:storeId/inventory/adjust`) have zero authentication middleware at the service level. The `storeId` is taken dire",
+    "raw": "R5-BE-001: Inventory Transaction Routes Have NO Service-Level Authentication **Severity**: P0   **Summary**: The inventory transaction routes (`POST /:storeId/inventory/transactions` and `POST /:store"
+  },
+  "R5-BE-002": {
+    "severity": null,
+    "summary": ": All GRN receive routes (`POST /stores/:storeId/orders/:orderId/receive`, `GET .../receives`, `GET .../receives/:receiveId`) have no authentication middleware. Anyone with backend access can receive",
+    "raw": "R5-BE-002: Order Receive (GRN) Routes Have NO Service-Level Authentication **Severity**: P0   **Summary**: All GRN receive routes (`POST /stores/:storeId/orders/:orderId/receive`, `GET .../receives`, "
+  },
+  "R5-BE-003": {
+    "severity": null,
+    "summary": ": Platform store CRUD operations (create, update, delete stores) have no authentication at the service level. The `listStores()` function returns ALL stores globally with no access control.",
+    "raw": "R5-BE-003: Platform Stores Routes Have NO Service-Level Authentication **Severity**: P0   **Summary**: Platform store CRUD operations (create, update, delete stores) have no authentication at the serv"
+  },
+  "R5-BE-004": {
+    "severity": null,
+    "summary": ": `getLedgerEntriesByReference()` queries inventory ledger entries by `reference_type` and `reference_id` WITHOUT filtering by `store_id`, potentially returning ledger entries belonging to other store",
+    "raw": "R5-BE-004: Inventory Ledger Query Leaks Cross-Store Data **Severity**: P0   **Summary**: `getLedgerEntriesByReference()` queries inventory ledger entries by `reference_type` and `reference_id` WITHOUT"
+  },
+  "R5-BE-005": {
+    "severity": null,
+    "summary": ": The GRN `receiveGoods` function calls inventory-service via HTTP to update stock BEFORE committing the database transaction. If the DB commit fails after inventory succeeds, stock is updated but the",
+    "raw": "R5-BE-005: GRN Service Has Data Inconsistency Risk (No Compensating Transaction) **Severity**: P0   **Summary**: The GRN `receiveGoods` function calls inventory-service via HTTP to update stock BEFORE"
+  },
+  "R5-BE-006": {
+    "severity": null,
+    "summary": ": `GET /policies/:policyId`, `PUT /policies/:policyId`, and `DELETE /policies/:policyId` routes operate on policies by ID without verifying the policy belongs to the requesting user's store. No `requi",
+    "raw": "R5-BE-006: Reorder Policy Routes Lack Store Isolation on CRUD by policyId **Severity**: P1   **Summary**: `GET /policies/:policyId`, `PUT /policies/:policyId`, and `DELETE /policies/:policyId` routes "
+  },
+  "R5-BE-007": {
+    "severity": null,
+    "summary": ": The voice-service has no authentication middleware. While the `/interpret` and `/execute` routes check for `x-actor-id` header manually, the `/status/:requestId` route has NO auth check at all and e",
+    "raw": "R5-BE-007: Voice Service Has NO Authentication Middleware at Service Level **Severity**: P1   **Summary**: The voice-service has no authentication middleware. While the `/interpret` and `/execute` rou"
+  },
+  "R5-BE-008": {
+    "severity": null,
+    "summary": ": The admin session service uses an in-memory `Map` for rate limiting login attempts. On Cloud Run with multiple instances, each instance maintains its own counter, effectively multiplying the rate li",
+    "raw": "R5-BE-008: Admin Auth In-Memory Rate Limiting Not Distributed Across Cloud Run Instances **Severity**: P1   **Summary**: The admin session service uses an in-memory `Map` for rate limiting login attem"
+  },
+  "R5-BE-009": {
+    "severity": null,
+    "summary": ": `verifyUserCredentials()` in the user service checks the password hash before checking user status (active/suspended/locked). This means a suspended user's password is still verified, potentially le",
+    "raw": "R5-BE-009: Auth Service Verifies Password Before Checking User Status **Severity**: P1   **Summary**: `verifyUserCredentials()` in the user service checks the password hash before checking user status"
+  },
+  "R5-BE-010": {
+    "severity": null,
+    "summary": ": The supplier auth routes (`/auth/login`) have no service-level rate limiting or account lockout mechanism. While the gateway applies `authRateLimiter` (5/min per IP), a brute-force attack from multi",
+    "raw": "R5-BE-010: Supplier Login Has NO Rate Limiting or Account Lockout **Severity**: P1   **Summary**: The supplier auth routes (`/auth/login`) have no service-level rate limiting or account lockout mechan"
+  },
+  "R5-BE-011": {
+    "severity": null,
+    "summary": ": The catalog-service exposes product search, product detail, and barcode lookup endpoints with no authentication at the service level: `/products/search`, `/products/:productId`, `/products/barcode/:",
+    "raw": "R5-BE-011: Catalog Service Unauthenticated Search Endpoints **Severity**: P1   **Summary**: The catalog-service exposes product search, product detail, and barcode lookup endpoints with no authenticat"
+  },
+  "R5-BE-012": {
+    "severity": null,
+    "summary": ": `getDeviceById()` in platform-service device queries has no `store_id` filter. A caller knowing a device UUID can look up any device across all stores.",
+    "raw": "R5-BE-012: Device Lookup Has NO Store Isolation Filter **Severity**: P1   **Summary**: `getDeviceById()` in platform-service device queries has no `store_id` filter. A caller knowing a device UUID can"
+  },
+  "R5-BE-013": {
+    "severity": null,
+    "summary": ": The admin session service uses `JWT_ISSUER = 'supermandi-admin'` while the auth-service uses `JWT_ISSUER = 'supermandi-auth'`. The backend's `validateGatewayHeaders` middleware validates tokens with",
+    "raw": "R5-BE-013: Admin Session JWT Issuer Mismatch **Severity**: P1   **Summary**: The admin session service uses `JWT_ISSUER = 'supermandi-admin'` while the auth-service uses `JWT_ISSUER = 'supermandi-auth"
+  },
+  "R5-BE-014": {
+    "severity": null,
+    "summary": ": The dev-only test auth router (`/api/test/mint-token`) mints tokens without `actorType`, `actorId`, or `permissions` claims. These tokens will pass gateway JWT verification but then fail at `validat",
+    "raw": "R5-BE-014: Test Auth Tokens Lack Required JWT Claims **Severity**: P2   **Summary**: The dev-only test auth router (`/api/test/mint-token`) mints tokens without `actorType`, `actorId`, or `permissions"
+  },
+  "R5-BE-015": {
+    "severity": null,
+    "summary": ": `generateAccessToken()` in the JWT service does not set the `jti` (JWT ID) claim. Token blacklisting must hash the entire token string instead of using a short unique identifier, which is less effic",
+    "raw": "R5-BE-015: Access Token Does NOT Include `jti` Claim for Efficient Blacklisting **Severity**: P2   **Summary**: `generateAccessToken()` in the JWT service does not set the `jti` (JWT ID) claim. Token "
+  },
+  "R5-BE-016": {
+    "severity": null,
+    "summary": ": The voice service uses an in-memory `Map` for storing voice request state between the `/interpret` and `/execute` steps. In Cloud Run with multiple instances, the `/execute` call may hit a different",
+    "raw": "R5-BE-016: Voice Service Uses In-Memory Request Store (Cloud Run Multi-Instance Failure) **Severity**: P2   **Summary**: The voice service uses an in-memory `Map` for storing voice request state betwe"
+  },
+  "R5-BE-017": {
+    "severity": null,
+    "summary": ": The `requireActiveUser` middleware in `storeOwnership.ts` calls `next()` (fails open) on any database error, including connection failures. A persistent DB outage would allow suspended/deactivated u",
+    "raw": "R5-BE-017: `requireActiveUser` Fails Open on Database Error **Severity**: P2   **Summary**: The `requireActiveUser` middleware in `storeOwnership.ts` calls `next()` (fails open) on any database error,"
+  },
+  "R5-BE-018": {
+    "severity": null,
+    "summary": ": The `POST /gstin/validate` endpoint in the supplier-service is unauthenticated at the service level. While used during registration (public), it could be abused for GSTIN enumeration.",
+    "raw": "R5-BE-018: Supplier GSTIN Validate Endpoint Has No Authentication **Severity**: P2   **Summary**: The `POST /gstin/validate` endpoint in the supplier-service is unauthenticated at the service level. W"
+  },
+  "R5-BE-019": {
+    "severity": null,
+    "summary": ": The POS rate limiting in `tokenSecurity.ts` uses PostgreSQL `INSERT ... ON CONFLICT DO UPDATE` for rate limit counters. Under high scan volume (200 scans/min/device), this creates significant write",
+    "raw": "R5-BE-019: POS Rate Limiting Uses Database-Backed Counter (Performance Concern) **Severity**: P2   **Summary**: The POS rate limiting in `tokenSecurity.ts` uses PostgreSQL `INSERT ... ON CONFLICT DO U"
+  },
+  "R5-BE-020": {
+    "severity": null,
+    "summary": ": The `getReceiveRecords(orderId)` query fetches receive records by `order_id` alone without a `store_id` filter. If combined with R5-BE-002 (missing auth), this enables cross-store data access.",
+    "raw": "R5-BE-020: `getReceiveRecords` Query Missing Store ID Filter **Severity**: P2   **Summary**: The `getReceiveRecords(orderId)` query fetches receive records by `order_id` alone without a `store_id` fil"
+  },
+  "R5-BE-021": {
+    "severity": null,
+    "summary": ": The `deleteUser` function in auth-service performs a hard `DELETE FROM auth.users WHERE id = $1`. This permanently removes user records, making audit trail reconstruction and account recovery imposs",
+    "raw": "R5-BE-021: Auth Service `deleteUser` Does Hard DELETE Instead of Soft Delete **Severity**: P2   **Summary**: The `deleteUser` function in auth-service performs a hard `DELETE FROM auth.users WHERE id "
+  },
+  "R5-BE-022": {
+    "severity": null,
+    "summary": ": The CORS wildcard production guard at line 88 of `index.ts` uses `console.error` instead of the structured `logger` that is initialized at line 34. This means the critical security misconfiguration",
+    "raw": "R5-BE-022: CORS Wildcard Check Logs to console.error Instead of Structured Logger **Severity**: P2   **Summary**: The CORS wildcard production guard at line 88 of `index.ts` uses `console.error` inste"
+  },
+  "R5-BE-023": {
+    "severity": null,
+    "summary": ": Supplier tokens are minted with `actorType: 'SUPPLIER'` (uppercase) but different parts of the system expect different casings. The gateway's `actorTypeMiddleware` normalizes to lowercase via `actor",
+    "raw": "R5-BE-023: Supplier Token `actorType` Case Inconsistency **Severity**: P2   **Summary**: Supplier tokens are minted with `actorType: 'SUPPLIER'` (uppercase) but different parts of the system expect di"
+  },
+  "R5-BE-024": {
+    "severity": null,
+    "summary": ": In `adminToken.ts`, the `verifyAdminApiKey` function updates `last_login_ip` to `null` (line 108: `[admin.id, null]`). The comment says",
+    "raw": "R5-BE-024: Admin Token Middleware IP Logging Always Null **Severity**: P2   **Summary**: In `adminToken.ts`, the `verifyAdminApiKey` function updates `last_login_ip` to `null` (line 108: `[admin.id, n"
+  },
+  "R5-BE-025": {
+    "severity": null,
+    "summary": ": In `adminAuth.ts`, the `mainBackendUrl` for proxying email OTP verification falls back to `http://localhost:3010` without the fail-fast pattern used elsewhere.",
+    "raw": "R5-BE-025: Admin Auth `mainBackendUrl` Has Hardcoded localhost Fallback **Severity**: P2   **Summary**: In `adminAuth.ts`, the `mainBackendUrl` for proxying email OTP verification falls back to `http:"
+  },
+  "R5-POS-001": {
+    "severity": "P0",
+    "summary": ": `Math.round(item.quantity)` truncates fractional quantities for loose/weighed items",
+    "raw": "R5-POS-001 **Screen**: PaymentScreen   **Dimension**: Business Logic   **Severity**: P0   **Summary**: `Math.round(item.quantity)` truncates fractional quantities for loose/weighed items   **Detail**:"
+  },
+  "R5-POS-002": {
+    "severity": null,
+    "summary": ": Network status effect captures stale `allowedMethods` in closure",
+    "raw": "R5-POS-002 **Screen**: PaymentScreen   **Dimension**: Wiring/State   **Severity**: P1   **Summary**: Network status effect captures stale `allowedMethods` in closure   **Detail**: At line 222, the `us"
+  },
+  "R5-POS-003": {
+    "severity": null,
+    "summary": ": Floating-point money conversion (`parseFloat",
+    "raw": "R5-POS-003 **Screen**: DailyClosingScreen, ShiftScreen, KhataScreen, BnplDuesScreen, CreditScreen   **Dimension**: Business Logic   **Severity**: P1   **Summary**: Floating-point money conversion (`pa"
+  },
+  "R5-POS-004": {
+    "severity": null,
+    "summary": ": Camera idle timeout hint text says",
+    "raw": "R5-POS-004 **Screen**: PosRootLayout   **Dimension**: UI   **Severity**: P2   **Summary**: Camera idle timeout hint text says \\\"5s\\\" but actual timeout is 45s   **Detail**: At line 1408, a hint messag"
+  },
+  "R5-POS-005": {
+    "severity": null,
+    "summary": ": Empty `APP_STORE_URL` means iOS users are directed to Play Store",
+    "raw": "R5-POS-005 **Screen**: ForceUpdateScreen   **Dimension**: UI / Business Logic   **Severity**: P1   **Summary**: Empty `APP_STORE_URL` means iOS users are directed to Play Store   **Detail**: At line 2"
+  },
+  "R5-POS-006": {
+    "severity": null,
+    "summary": ": No ref-based double-submit protection on refund processing",
+    "raw": "R5-POS-006 **Screen**: ReturnScreen   **Dimension**: Wiring/State   **Severity**: P1   **Summary**: No ref-based double-submit protection on refund processing   **Detail**: At line 207, `handleProcess"
+  },
+  "R5-POS-007": {
+    "severity": null,
+    "summary": ": No ref-based double-submit protection on goods receiving",
+    "raw": "R5-POS-007 **Screen**: GRNScreen   **Dimension**: Wiring/State   **Severity**: P1   **Summary**: No ref-based double-submit protection on goods receiving   **Detail**: GRNScreen's `handleSubmit` (line"
+  },
+  "R5-POS-008": {
+    "severity": null,
+    "summary": ": No ref-based double-submit protection on manual stock inward",
+    "raw": "R5-POS-008 **Screen**: InwardScreen   **Dimension**: Wiring/State   **Severity**: P1   **Summary**: No ref-based double-submit protection on manual stock inward   **Detail**: Same pattern as R5-POS-00"
+  },
+  "R5-POS-009": {
+    "severity": null,
+    "summary": ": `fetchSubstitutes` called during render body (side effect in render)",
+    "raw": "R5-POS-009 **Screen**: SellScanScreen   **Dimension**: Wiring/State   **Severity**: P2   **Summary**: `fetchSubstitutes` called during render body (side effect in render)   **Detail**: At line 2481, i"
+  },
+  "R5-POS-010": {
+    "severity": null,
+    "summary": ": `loadCatalog` useCallback has stale closure over `catalogPage` and `catalogHasMore`",
+    "raw": "R5-POS-010 **Screen**: SellScanScreen   **Dimension**: Wiring/State   **Severity**: P2   **Summary**: `loadCatalog` useCallback has stale closure over `catalogPage` and `catalogHasMore`   **Detail**: "
+  },
+  "R5-POS-011": {
+    "severity": null,
+    "summary": ": `sellOnboarding` useEffect missing `addQuery` dependency",
+    "raw": "R5-POS-011 **Screen**: SellScanScreen   **Dimension**: Wiring/State   **Severity**: P2   **Summary**: `sellOnboarding` useEffect missing `addQuery` dependency   **Detail**: At line 1218-1246, the `use"
+  },
+  "R5-POS-012": {
+    "severity": null,
+    "summary": ": No client-side rate limiting on login attempts",
+    "raw": "R5-POS-012 **Screen**: StaffLoginScreen   **Dimension**: Business Logic   **Severity**: P2   **Summary**: No client-side rate limiting on login attempts   **Detail**: `StaffLoginScreen` allows unlimit"
+  },
+  "R5-POS-013": {
+    "severity": null,
+    "summary": ": Fake progress indicator does not reflect actual submission progress",
+    "raw": "R5-POS-013 **Screen**: OpeningStockScreen   **Dimension**: UX   **Severity**: P2   **Summary**: Fake progress indicator does not reflect actual submission progress   **Detail**: The OpeningStockScreen"
+  },
+  "R5-POS-014": {
+    "severity": null,
+    "summary": ": QR regeneration after expiry clears state but does not re-trigger UPI init",
+    "raw": "R5-POS-014 **Screen**: PaymentScreen   **Dimension**: Wiring/State   **Severity**: P2   **Summary**: QR regeneration after expiry clears state but does not re-trigger UPI init   **Detail**: When QR ex"
+  },
+  "R5-POS-015": {
+    "severity": null,
+    "summary": null,
+    "raw": "R5-POS-015 **Screen**: SplashScreen   **Dimension**: Navigation   **Severity**: P2   **Summary**: \\\"Continue without session\\\" skip button bypasses version check and device-blocked check   **Detail**:"
+  },
+  "R5-POS-016": {
+    "severity": "P0",
+    "summary": ": `handleSaveDefaultPrice` useCallback has empty dependency array, captures stale closures",
+    "raw": "R5-POS-016 **Screen**: SellScanScreen   **Dimension**: Wiring/State   **Severity**: P1   **Summary**: `handleSaveDefaultPrice` useCallback has empty dependency array, captures stale closures   **Detai"
+  },
+  "R5-POS-017": {
+    "severity": "P0",
+    "summary": ": Deep link handling could navigate to PaymentSetup for a store with no UPI VPA configured",
+    "raw": "R5-POS-017 **Screen**: EnrollDeviceScreen   **Dimension**: Navigation   **Severity**: P2   **Summary**: Deep link handling could navigate to PaymentSetup for a store with no UPI VPA configured   **Det"
+  },
+  "R5-POS-018": {
+    "severity": "P0",
+    "summary": ": Variance calculation shows negative paise values due to timing",
+    "raw": "R5-POS-018 **Screen**: DailyClosingScreen, ShiftScreen   **Dimension**: UX   **Severity**: P2   **Summary**: Variance calculation shows negative paise values due to timing   **Detail**: Both screens c"
+  },
+  "R5-POS-019": {
+    "severity": "P0",
+    "summary": ": Search token matching uses OR instead of AND, returning overly broad results",
+    "raw": "R5-POS-019 **Screen**: SellScanScreen   **Dimension**: Business Logic   **Severity**: P2   **Summary**: Search token matching uses OR instead of AND, returning overly broad results   **Detail**: At li"
+  },
+  "R5-POS-020": {
+    "severity": "P0",
+    "summary": ": Staff session gate renders `StaffLoginScreen` without `storeName`, losing context",
+    "raw": "R5-POS-020 **Screen**: PosRootLayout   **Dimension**: Wiring/State   **Severity**: P2   **Summary**: Staff session gate renders `StaffLoginScreen` without `storeName`, losing context   **Detail**: At "
+  },
+  "R5-POS-021": {
+    "severity": "P0",
+    "summary": ": Cleanup effect cancels sale even when payment was finalized but component unmounts before state propagates",
+    "raw": "R5-POS-021 **Screen**: PaymentScreen   **Dimension**: Wiring/State   **Severity**: P0   **Summary**: Cleanup effect cancels sale even when payment was finalized but component unmounts before state pro"
+  },
+  "R5-POS-022": {
+    "severity": null,
+    "summary": ": `editorItem` useEffect has missing dependency for `formatPriceInput` and `formatFixedDiscount`",
+    "raw": "R5-POS-022 **Screen**: SellScanScreen   **Dimension**: UX   **Severity**: P2   **Summary**: `editorItem` useEffect has missing dependency for `formatPriceInput` and `formatFixedDiscount`   **Detail**:"
+  },
+  "R5-POS-023": {
+    "severity": null,
+    "summary": ": `handleAddSku` uses `item.barcode` as cart item `id`, causing conflicts for products sharing a barcode",
+    "raw": "R5-POS-023 **Screen**: SellScanScreen   **Dimension**: Business Logic   **Severity**: P2   **Summary**: `handleAddSku` uses `item.barcode` as cart item `id`, causing conflicts for products sharing a b"
+  },
+  "R5-POS-024": {
+    "severity": null,
+    "summary": ": Amount validation allows negative values through the input",
+    "raw": "R5-POS-024 **Screen**: KhataScreen   **Dimension**: Wiring/State   **Severity**: P2   **Summary**: Amount validation allows negative values through the input   **Detail**: At lines 148 and 184 in Khat"
+  },
+  "R5-POS-025": {
+    "severity": null,
+    "summary": ": No hardcoded backend URLs found; all API calls use relative paths or configured base URLs",
+    "raw": "R5-POS-025 **Screen**: Multiple (all screens)   **Dimension**: GCP Parity (stale-runtime-baseline)   **Severity**: P2   **Summary**: No hardcoded backend URLs found; all API calls use relative paths o"
+  },
+  "R5-POS-050": {
+    "severity": null,
+    "summary": ": HTML entity `&amp;` renders literally in React Native `<Text>`.",
+    "raw": "R5-POS-050 **Severity**: P1 **Summary**: HTML entity `&amp;` renders literally in React Native `<Text>`. ### FINDING: R5-POS-051 **Severity**: P2 **Summary**: HTML entity `&apos;` renders literally in"
+  },
+  "R5-POS-051": {
+    "severity": null,
+    "summary": ": HTML entity `&apos;` renders literally in React Native `<Text>`.",
+    "raw": "R5-POS-051 **Severity**: P2 **Summary**: HTML entity `&apos;` renders literally in React Native `<Text>`. **Detail**: Line 82: `<Text style={styles.subtitle}>We&apos;re here for you.</Text>`. Same pro"
+  },
+  "R5-POS-052": {
+    "severity": null,
+    "summary": ": Falsy-or fallback on `subtotal` causes wrong receipt value when subtotal is zero.",
+    "raw": "R5-POS-052 **Severity**: P1 **Summary**: Falsy-or fallback on `subtotal` causes wrong receipt value when subtotal is zero. ### FINDING: R5-POS-053 **Severity**: P2 **Summary**: Phone input `maxLength="
+  },
+  "R5-POS-053": {
+    "severity": null,
+    "summary": ": Phone input `maxLength=10` contradicts `validatePhone` which accepts 11/12-digit inputs.",
+    "raw": "R5-POS-053 **Severity**: P2 **Summary**: Phone input `maxLength=10` contradicts `validatePhone` which accepts 11/12-digit inputs. ### FINDING: R5-POS-054 **Severity**: P0 **Summary**: Sequential order"
+  },
+  "R5-POS-054": {
+    "severity": null,
+    "summary": ": Sequential order creation in a for-loop: one failure aborts remaining supplier orders.",
+    "raw": "R5-POS-054) where partial order failures leave the system in an inconsistent state with no recovery path.</result> <usage><total_tokens>147036</total_tokens><tool_uses>48</tool_uses><duration_ms>26929"
+  },
+  "R5-POS-055": {
+    "severity": null,
+    "summary": ": `addToQuickItems` missing from useEffect dependency array causes stale closure.",
+    "raw": "R5-POS-055 **Severity**: P1 **Summary**: `addToQuickItems` missing from useEffect dependency array causes stale closure. ### FINDING: R5-POS-056 **Severity**: P2 **Summary**: Dual export (named + defa"
+  },
+  "R5-POS-056": {
+    "severity": null,
+    "summary": ": Dual export (named + default) can cause duplicate module instantiation.",
+    "raw": "R5-POS-056 **Severity**: P2 **Summary**: Dual export (named + default) can cause duplicate module instantiation. ### FINDING: R5-POS-057 **Severity**: P1 **Summary**: Hardcoded low-stock threshold of "
+  },
+  "R5-POS-057": {
+    "severity": null,
+    "summary": ": Hardcoded low-stock threshold of 10 ignores per-product reorder levels.",
+    "raw": "R5-POS-057 **Severity**: P1 **Summary**: Hardcoded low-stock threshold of 10 ignores per-product reorder levels. ### FINDING: R5-POS-058 **Severity**: P1 **Summary**: Quick Reorder uses hardcoded `sup"
+  },
+  "R5-POS-058": {
+    "severity": null,
+    "summary": ": Quick Reorder uses hardcoded `supplierId:",
+    "raw": "R5-POS-058 **Severity**: P1 **Summary**: Quick Reorder uses hardcoded `supplierId: \\\"reorder\\\"` string instead of actual supplier. ### FINDING: R5-POS-059 **Severity**: P1 **Summary**: `handleSaveEdit"
+  },
+  "R5-POS-059": {
+    "severity": null,
+    "summary": ": `handleSaveEdit` only updates local state -- edits are lost on refresh/remount.",
+    "raw": "R5-POS-059 **Severity**: P1 **Summary**: `handleSaveEdit` only updates local state -- edits are lost on refresh/remount. ### FINDING: R5-POS-060 **Severity**: P1 **Summary**: Auto-polling every 30s wi"
+  },
+  "R5-POS-060": {
+    "severity": null,
+    "summary": ": Auto-polling every 30s with no max attempts -- potential battery drain.",
+    "raw": "R5-POS-060 **Severity**: P1 **Summary**: Auto-polling every 30s with no max attempts -- potential battery drain. ### FINDING: R5-POS-061 **Severity**: P2 **Summary**: Loading spinner `centerContent` s"
+  },
+  "R5-POS-061": {
+    "severity": null,
+    "summary": ": Loading spinner `centerContent` style missing `flex: 1` -- spinner may not center vertically.",
+    "raw": "R5-POS-061 **Severity**: P2 **Summary**: Loading spinner `centerContent` style missing `flex: 1` -- spinner may not center vertically. ### FINDING: R5-POS-062 **Severity**: P2 **Summary**: Missing `fe"
+  },
+  "R5-POS-062": {
+    "severity": null,
+    "summary": ": Missing `fetchCustomers` in useEffect dependency -- search debounce timer is never cleaned up on unmount.",
+    "raw": "R5-POS-062 **Severity**: P2 **Summary**: Missing `fetchCustomers` in useEffect dependency -- search debounce timer is never cleaned up on unmount. ### FINDING: R5-POS-063 **Severity**: P1 **Summary**:"
+  },
+  "R5-POS-063": {
+    "severity": null,
+    "summary": ": Two separate Customer screens exist with overlapping functionality -- unclear which is canonical.",
+    "raw": "R5-POS-063 **Severity**: P1 **Summary**: Two separate Customer screens exist with overlapping functionality -- unclear which is canonical. ### FINDING: R5-POS-064 **Severity**: P2 **Summary**: Message"
+  },
+  "R5-POS-064": {
+    "severity": null,
+    "summary": ": Message equality check only compares length and first element ID -- can miss mid-list changes.",
+    "raw": "R5-POS-064 **Severity**: P2 **Summary**: Message equality check only compares length and first element ID -- can miss mid-list changes. ### FINDING: R5-POS-065 **Severity**: P2 **Summary**: Unsafe `as"
+  },
+  "R5-POS-065": {
+    "severity": null,
+    "summary": ": Unsafe `as any` type assertions on FlatList `data` and `renderItem` lose type safety.",
+    "raw": "R5-POS-065 **Severity**: P2 **Summary**: Unsafe `as any` type assertions on FlatList `data` and `renderItem` lose type safety. ### FINDING: R5-POS-066 **Severity**: P2 **Summary**: `getYYYYMMDD` uses "
+  },
+  "R5-POS-066": {
+    "severity": null,
+    "summary": ": `getYYYYMMDD` uses `toISOString()` which converts to UTC -- can show wrong date near midnight.",
+    "raw": "R5-POS-066 **Severity**: P2 **Summary**: `getYYYYMMDD` uses `toISOString()` which converts to UTC -- can show wrong date near midnight. ### FINDING: R5-POS-067 **Severity**: P2 **Summary**: No empty s"
+  },
+  "R5-POS-067": {
+    "severity": null,
+    "summary": ": No empty state shown when report data is null and no error.",
+    "raw": "R5-POS-067 **Severity**: P2 **Summary**: No empty state shown when report data is null and no error. ### FINDING: R5-POS-068 **Severity**: P2 **Summary**: Hardcoded store name \\\"SuperMandi\\\" in WhatsA"
+  },
+  "R5-POS-068": {
+    "severity": null,
+    "summary": ": Hardcoded store name",
+    "raw": "R5-POS-068 **Severity**: P2 **Summary**: Hardcoded store name \\\"SuperMandi\\\" in WhatsApp reminder message instead of actual store name. ### FINDING: R5-POS-069 **Severity**: P2 **Summary**: `totalOver"
+  },
+  "R5-POS-069": {
+    "severity": null,
+    "summary": ": `totalOverdue` computed on every render without memoization.",
+    "raw": "R5-POS-069 **Severity**: P2 **Summary**: `totalOverdue` computed on every render without memoization. ### FINDING: R5-POS-070 **Severity**: P2 **Summary**: `catch (err: any)` uses untyped `any` -- err"
+  },
+  "R5-POS-070": {
+    "severity": null,
+    "summary": ": `catch (err: any)` uses untyped `any` -- error handling may crash on non-Error objects.",
+    "raw": "R5-POS-070 **Severity**: P2 **Summary**: `catch (err: any)` uses untyped `any` -- error handling may crash on non-Error objects. ### FINDING: R5-POS-071 **Severity**: P2 **Summary**: `toLocaleString('"
+  },
+  "R5-POS-071": {
+    "severity": null,
+    "summary": ": `toLocaleString('en-IN')` on `(item.maxAmount / 100)` displays as decimal, not currency.",
+    "raw": "R5-POS-071 **Severity**: P2 **Summary**: `toLocaleString('en-IN')` on `(item.maxAmount / 100)` displays as decimal, not currency. ### FINDING: R5-POS-072 **Severity**: P2 **Summary**: Price comparison"
+  },
+  "R5-POS-072": {
+    "severity": null,
+    "summary": ": Price comparison renders manual `(price / 100).toFixed(2)` instead of `formatMoney()`.",
+    "raw": "R5-POS-072 **Severity**: P2 **Summary**: Price comparison renders manual `(price / 100).toFixed(2)` instead of `formatMoney()`. ### FINDING: R5-POS-073 **Severity**: P2 **Summary**: VPA regex allows m"
+  },
+  "R5-POS-073": {
+    "severity": null,
+    "summary": ": VPA regex allows minimum 3-char local part but validation also checks `length < 6` on full VPA.",
+    "raw": "R5-POS-073 **Severity**: P2 **Summary**: VPA regex allows minimum 3-char local part but validation also checks `length < 6` on full VPA. ### FINDING: R5-POS-074 **Severity**: P2 **Summary**: WhatsApp "
+  },
+  "R5-POS-074": {
+    "severity": null,
+    "summary": ": WhatsApp link uses raw phone digits without guaranteed country code prefix.",
+    "raw": "R5-POS-074 **Severity**: P2 **Summary**: WhatsApp link uses raw phone digits without guaranteed country code prefix. ### FINDING: R5-POS-075 **Severity**: P2 **Summary**: `onRefresh` callback has empt"
+  },
+  "R5-POS-075": {
+    "severity": null,
+    "summary": ": `onRefresh` callback has empty dependency array -- `loadBills` is not in deps.",
+    "raw": "R5-POS-075 **Severity**: P2 **Summary**: `onRefresh` callback has empty dependency array -- `loadBills` is not in deps. ### FINDING: R5-POS-076 **Severity**: P2 **Summary**: Duplicate `error instanceo"
+  },
+  "R5-POS-076": {
+    "severity": null,
+    "summary": ": Duplicate `error instanceof Error` check after `asError()` call.",
+    "raw": "R5-POS-076 **Severity**: P2 **Summary**: Duplicate `error instanceof Error` check after `asError()` call. ### FINDING: R5-POS-077 **Severity**: P1 **Summary**: Partial payment remaining balance uses `"
+  },
+  "R5-POS-077": {
+    "severity": null,
+    "summary": ": Partial payment remaining balance uses `principalMinor` without considering `totalWithInterestMinor`.",
+    "raw": "R5-POS-077 **Severity**: P1 **Summary**: Partial payment remaining balance uses `principalMinor` without considering `totalWithInterestMinor`. | Severity | Count | IDs | | P0 | 1 | R5-POS-054 | | P1 |"
+  },
+  "R5-RET-001": {
+    "severity": "P2",
+    "summary": "Double ErrorBoundary wrapping — redundant nesting",
+    "raw": "R5-RET-001\\ Screen: main.tsx + App.tsx\\ Dimension: Wiring/State\\ Severity: P2\\ Summary: Double ErrorBoundary wrapping — redundant nesting\\ Detail: ErrorBoundary wraps the entire app in main.tsx (line "
+  },
+  "R5-RET-002": {
+    "severity": "P2",
+    "summary": "Toaster component placed outside AuthProvider — no auth context access",
+    "raw": "R5-RET-002\\ Screen: App.tsx\\ Dimension: Wiring/State\\ Severity: P2\\ Summary: Toaster component placed outside AuthProvider — no auth context access\\ Detail: In App.tsx, the <Toaster /> from sonner is "
+  },
+  "R5-RET-003": {
+    "severity": "P1",
+    "summary": "Feature flag fetch uses accessToken which may be null on page refresh with cookie auth",
+    "raw": "R5-RET-003\\ Screen: FeatureFlagContext.tsx\\ Dimension: Wiring/State\\ Severity: P1\\ Summary: Feature flag fetch uses accessToken which may be null on page refresh with cookie auth\\ Detail: FeatureFlagC"
+  },
+  "R5-RET-004": {
+    "severity": "P1",
+    "summary": "handleChangePhone sends clear request without credentials: 'include'",
+    "raw": "R5-RET-004\\ Screen: LoginPage.tsx\\ Dimension: API Integration\\ Severity: P1\\ Summary: handleChangePhone sends clear request without credentials: 'include'\\ Detail: When the user clicks \\\\\\\"Change Phon"
+  },
+  "R5-RET-005": {
+    "severity": "P2",
+    "summary": "No client-side rate limiting on OTP send — user can spam OTP requests",
+    "raw": "R5-RET-005\\ Screen: LoginPage.tsx\\ Dimension: UX\\ Severity: P2\\ Summary: No client-side rate limiting on OTP send — user can spam OTP requests\\ Detail: The \\\\\\\"Send OTP\\\\\\\" button has no cooldown time"
+  },
+  "R5-RET-006": {
+    "severity": "P1",
+    "summary": "Document upload preview URLs created with URL.createObjectURL but never revoked",
+    "raw": "R5-RET-006 blob URLs, R5-RET-008 unmounted state updates, R5-RET-022 unconditional polling).  No code changes were made -- this is a report-only audit as requested.</result> <usage><total_tokens>16410"
+  },
+  "R5-RET-007": {
+    "severity": "P2",
+    "summary": "Large inline styles object instead of CSS classes — inconsistent with LoginPage",
+    "raw": "R5-RET-007\\ Screen:\",\"stderr\":\"\",\"interrupted\":false,\"isImage\":false,\"noOutputExpected\":false,\"persistedOutputPath\":\"C:\\\\Users\\\\jisal\\\\.claude\\\\projects\\\\c--supermandi-pos\\\\63f3e90c-5ffe-49f5-a21e-687"
+  },
+  "R5-RET-008": {
+    "severity": "P1",
+    "summary": "No AbortController for initial data fetches — unmount during fetch causes state updates on unmounted component",
+    "raw": "R5-RET-008 unmounted state updates, R5-RET-022 unconditional polling).  No code changes were made -- this is a report-only audit as requested.</result> <usage><total_tokens>164100</total_tokens><tool_"
+  },
+  "R5-RET-009": {
+    "severity": "P2",
+    "summary": "File size is 62KB+ — extremely large single component",
+    "raw": "R5-RET-009 Severity: P2 Summary: File size is 62KB+ — extremely large single component FINDING: R5-RET-010 Severity: P1 Summary: Duplicate 401 check — dead code after first return FINDING: R5-RET-011 "
+  },
+  "R5-RET-010": {
+    "severity": "P1",
+    "summary": "Duplicate 401 check — dead code after first return",
+    "raw": "R5-RET-010), **wrong API endpoint prefix** (R5-RET-032), and **resource leaks** (R5-RET-006 blob URLs, R5-RET-008 unmounted state updates, R5-RET-022 unconditional polling).  No code changes were made"
+  },
+  "R5-RET-011": {
+    "severity": "P2",
+    "summary": "File size is 77KB+ — extremely large single component",
+    "raw": "R5-RET-011 Severity: P2 Summary: File size is 77KB+ — extremely large single component FINDING: R5-RET-012 Severity: P2 Summary: rupeesToPaise function duplicated — defined twice inside ProductsPage F"
+  },
+  "R5-RET-012": {
+    "severity": "P2",
+    "summary": "rupeesToPaise function duplicated — defined twice inside ProductsPage",
+    "raw": "R5-RET-012 Severity: P2 Summary: rupeesToPaise function duplicated — defined twice inside ProductsPage FINDING: R5-RET-013 Severity: P1 Summary: SKU label PDF link uses direct URL without auth — may f"
+  },
+  "R5-RET-013": {
+    "severity": "P1",
+    "summary": "SKU label PDF link uses direct URL without auth — may fail if endpoint requires auth",
+    "raw": "R5-RET-013 Severity: P1 Summary: SKU label PDF link uses direct URL without auth — may fail if endpoint requires auth FINDING: R5-RET-014 Severity: P1 Summary: INWARD filter only maps to 'purchase_rec"
+  },
+  "R5-RET-014": {
+    "severity": "P1",
+    "summary": "INWARD filter only maps to 'purchase_received' — misses 'opening_stock' and 'sale_return'",
+    "raw": "R5-RET-014 inventory filter, R5-RET-038 currency format ambiguity), **dead/unreachable code** (R5-RET-010), **wrong API endpoint prefix** (R5-RET-032), and **resource leaks** (R5-RET-006 blob URLs, R5"
+  },
+  "R5-RET-015": {
+    "severity": "P2",
+    "summary": "Auto-refresh interval re-registers on every lastRefreshAt change",
+    "raw": "R5-RET-015 Severity: P2 Summary: Auto-refresh interval re-registers on every lastRefreshAt change FINDING: R5-RET-016 Severity: P1 Summary: Double fetch on mount — initial useEffect and search useEffe"
+  },
+  "R5-RET-016": {
+    "severity": "P1",
+    "summary": "Double fetch on mount — initial useEffect and search useEffect both fire fetchCatalog()",
+    "raw": "R5-RET-016 Severity: P1 Summary: Double fetch on mount — initial useEffect and search useEffect both fire fetchCatalog() FINDING: R5-RET-017 Severity: P2 Summary: formatPrice uses \\\"Rs\\\" prefix instea"
+  },
+  "R5-RET-017": {
+    "severity": "P2",
+    "summary": "formatPrice uses",
+    "raw": "R5-RET-017 Severity: P2 Summary: formatPrice uses \\\"Rs\\\" prefix instead of rupee symbol or Intl.NumberFormat FINDING: R5-RET-018 Severity: P1 Summary: loadDevices function missing from useEffect depen"
+  },
+  "R5-RET-018": {
+    "severity": "P1",
+    "summary": "loadDevices function missing from useEffect dependency array",
+    "raw": "R5-RET-018 Severity: P1 Summary: loadDevices function missing from useEffect dependency array FINDING: R5-RET-019 Severity: P2 Summary: No GSTIN validation regex on settings page — accepts any string "
+  },
+  "R5-RET-019": {
+    "severity": "P2",
+    "summary": "No GSTIN validation regex on settings page — accepts any string",
+    "raw": "R5-RET-019 Severity: P2 Summary: No GSTIN validation regex on settings page — accepts any string FINDING: R5-RET-020 Severity: P2 Summary: Two separate receipt footer fields — potentially confusing FI"
+  },
+  "R5-RET-020": {
+    "severity": "P2",
+    "summary": "Two separate receipt footer fields — potentially confusing",
+    "raw": "R5-RET-020 Severity: P2 Summary: Two separate receipt footer fields — potentially confusing FINDING: R5-RET-021 Severity: P2 Summary: \\\"View Products\\\" link uses relative URL 'products' instead of abs"
+  },
+  "R5-RET-021": {
+    "severity": "P2",
+    "summary": "15-second polling interval with no exponential backoff or visibility check",
+    "raw": "R5-RET-021 Severity: P2 Summary: \\\"View Products\\\" link uses relative URL 'products' instead of absolute path FINDING: R5-RET-022 Severity: P1 Summary: 15-second polling interval with no exponential b"
+  },
+  "R5-RET-022": {
+    "severity": "P1",
+    "summary": "15-second polling interval with no exponential backoff or visibility check",
+    "raw": "R5-RET-022 unconditional polling).  No code changes were made -- this is a report-only audit as requested.</result> <usage><total_tokens>164100</total_tokens><tool_uses>77</tool_uses><duration_ms>4584"
+  },
+  "R5-RET-023": {
+    "severity": "P2",
+    "summary": "selectConversation called inside handleSend causes full message re-fetch after every send",
+    "raw": "R5-RET-023 Severity: P2 Summary: selectConversation called inside handleSend causes full message re-fetch after every send FINDING: R5-RET-024 Severity: P1 Summary: fetchNotifications silently ignores"
+  },
+  "R5-RET-024": {
+    "severity": "P1",
+    "summary": "fetchNotifications silently ignores non-ok responses — no error set",
+    "raw": "R5-RET-024 Severity: P1 Summary: fetchNotifications silently ignores non-ok responses — no error set FINDING: R5-RET-025 Severity: P2 Summary: selectChannel sets same step for both channels — dead con"
+  },
+  "R5-RET-025": {
+    "severity": "P2",
+    "summary": "selectChannel sets same step for both channels — dead conditional",
+    "raw": "R5-RET-025 Severity: P2 Summary: selectChannel sets same step for both channels — dead conditional FINDING: R5-RET-026 Severity: P2 Summary: No special character requirement in password validation — w"
+  },
+  "R5-RET-026": {
+    "severity": "P2",
+    "summary": "No special character requirement in password validation — weaker than industry standard",
+    "raw": "R5-RET-026 Severity: P2 Summary: No special character requirement in password validation — weaker than industry standard FINDING: R5-RET-027 Severity: P2 Summary: Uses Tailwind CSS class names instead"
+  },
+  "R5-RET-027": {
+    "severity": "P2",
+    "summary": "Uses Tailwind CSS class names instead of inline styles — inconsistent with rest of portal",
+    "raw": "R5-RET-027 Severity: P2 Summary: Uses Tailwind CSS class names instead of inline styles — inconsistent with rest of portal FINDING: R5-RET-028 Severity: P2 Summary: Search useEffect has stale closure "
+  },
+  "R5-RET-028": {
+    "severity": "P2",
+    "summary": "Search useEffect has stale closure over suppliers and error — eslint-disable-line",
+    "raw": "R5-RET-028 Severity: P2 Summary: Search useEffect has stale closure over suppliers and error — eslint-disable-line FINDING: R5-RET-029 Severity: P2 Summary: minOrderValue sent as float rupees but deli"
+  },
+  "R5-RET-029": {
+    "severity": "P2",
+    "summary": "minOrderValue sent as float rupees but deliveryCharges sent as int — inconsistent",
+    "raw": "R5-RET-029 Severity: P2 Summary: minOrderValue sent as float rupees but deliveryCharges sent as int — inconsistent FINDING: R5-RET-030 Severity: P2 Summary: FormData upload sends Content-Type through "
+  },
+  "R5-RET-030": {
+    "severity": "P2",
+    "summary": "FormData upload sends Content-Type through authFetch which may add incorrect JSON header",
+    "raw": "R5-RET-030 Severity: P2 Summary: FormData upload sends Content-Type through authFetch which may add incorrect JSON header FINDING: R5-RET-031 Severity: P2 Summary: fetchPendingSuppliers not wrapped in"
+  },
+  "R5-RET-031": {
+    "severity": "P2",
+    "summary": "fetchPendingSuppliers not wrapped in useCallback — recreated every render",
+    "raw": "R5-RET-031 Severity: P2 Summary: fetchPendingSuppliers not wrapped in useCallback — recreated every render FINDING: R5-RET-032 Severity: P1 Summary: Admin API endpoints use /api/v1/admin/ prefix inste"
+  },
+  "R5-RET-032": {
+    "severity": "P1",
+    "summary": "Admin API endpoints use /api/v1/admin/ prefix instead of /api/v1/retailer-admin/admin/",
+    "raw": "R5-RET-032), and **resource leaks** (R5-RET-006 blob URLs, R5-RET-008 unmounted state updates, R5-RET-022 unconditional polling).  No code changes were made -- this is a report-only audit as requested"
+  },
+  "R5-RET-033": {
+    "severity": "P2",
+    "summary": "Loading indicator shown below table instead of replacing content",
+    "raw": "R5-RET-033 Severity: P2 Summary: Loading indicator shown below table instead of replacing content FINDING: R5-RET-034 Severity: P2 Summary: Reorder Breadcrumb uses relative path '.' instead of absolut"
+  },
+  "R5-RET-034": {
+    "severity": "P2",
+    "summary": "Reorder Breadcrumb uses relative path '.' instead of absolute store path",
+    "raw": "R5-RET-034 Severity: P2 Summary: Reorder Breadcrumb uses relative path '.' instead of absolute store path FINDING: R5-RET-035 Severity: P2 Summary: Invoice detail modal uses div with tabIndex={-1} and"
+  },
+  "R5-RET-035": {
+    "severity": "P2",
+    "summary": "Invoice detail modal uses div with tabIndex={-1} and manual focus for Escape key — fragile",
+    "raw": "R5-RET-035 Severity: P2 Summary: Invoice detail modal uses div with tabIndex={-1} and manual focus for Escape key — fragile FINDING: R5-RET-036 Severity: P2 Summary: Search term triggers immediate re-"
+  },
+  "R5-RET-036": {
+    "severity": "P2",
+    "summary": "Search term triggers immediate re-fetch without debounce",
+    "raw": "R5-RET-036 Severity: P2 Summary: Search term triggers immediate re-fetch without debounce FINDING: R5-RET-037 Severity: P2 Summary: QA Hub page has incomplete route listing — missing newer pages FINDI"
+  },
+  "R5-RET-037": {
+    "severity": "P2",
+    "summary": "QA Hub page has incomplete route listing — missing newer pages",
+    "raw": "R5-RET-037 Severity: P2 Summary: QA Hub page has incomplete route listing — missing newer pages FINDING: R5-RET-038 Severity: P1 Summary: formatCurrency inconsistency — some pages divide by 100 (paise"
+  },
+  "R5-RET-038": {
+    "severity": "P1",
+    "summary": "formatCurrency inconsistency — some pages divide by 100 (paise to rupees), some do not",
+    "raw": "R5-RET-038 currency format ambiguity), **dead/unreachable code** (R5-RET-010), **wrong API endpoint prefix** (R5-RET-032), and **resource leaks** (R5-RET-006 blob URLs, R5-RET-008 unmounted state upda"
+  },
+  "R5-RET-039": {
+    "severity": "P2",
+    "summary": "Firebase SDK loaded from CDN — no environment variable for Firebase project config",
+    "raw": "R5-RET-039 Severity: P2 Summary: Firebase SDK loaded from CDN — no environment variable for Firebase project config FINDING: R5-RET-040 Severity: P2 Summary: Inconsistent CSS approach — mix of inline "
+  },
+  "R5-RET-040": {
+    "severity": "P2",
+    "summary": "Inconsistent CSS approach — mix of inline styles, CSS classes, and Tailwind utilities",
+    "raw": "R5-RET-040 Severity: P2 Summary: Inconsistent CSS approach — mix of inline styles, CSS classes, and Tailwind utilities\",\"is_error\":false}]},\"uuid\":\"9bfdef20-8ca4-41da-8f09-323e09decefd\",\"timestamp\":\"2"
+  },
+  "R5-SA-001": {
+    "severity": null,
+    "summary": ": Refund approval has no confirmation dialog -- one click triggers irreversible financial action",
+    "raw": "R5-SA-001  **Screen**: RefundsTab.tsx **Dimension**: Business Logic **Severity**: CRITICAL **Summary**: Refund approval has no confirmation dialog -- one click triggers irreversible financial action *"
+  },
+  "R5-SA-002": {
+    "severity": null,
+    "summary": ": Invoice",
+    "raw": "R5-SA-002  **Screen**: InvoicesTab.tsx **Dimension**: Business Logic **Severity**: CRITICAL **Summary**: Invoice \\\"Issue\\\" action has no confirmation dialog -- draft-to-issued is irreversible **Detail"
+  },
+  "R5-SA-003": {
+    "severity": null,
+    "summary": ": Feature kill switch uses bare `confirm()` instead of styled `ConfirmDialog`",
+    "raw": "R5-SA-003  **Screen**: SettingsTab.tsx **Dimension**: UX / UI Consistency **Severity**: CRITICAL **Summary**: Feature kill switch uses bare `confirm()` instead of styled `ConfirmDialog` **Detail**: Li"
+  },
+  "R5-SA-004": {
+    "severity": null,
+    "summary": ": Staff deactivation uses bare `confirm()` instead of styled `ConfirmDialog`",
+    "raw": "R5-SA-004  **Screen**: StaffTab.tsx **Dimension**: UX / UI Consistency **Severity**: CRITICAL **Summary**: Staff deactivation uses bare `confirm()` instead of styled `ConfirmDialog` **Detail**: Line 1"
+  },
+  "R5-SA-005": {
+    "severity": null,
+    "summary": ": Hardcoded infrastructure values -- service list, alert policies, LB name, domain are static arrays",
+    "raw": "R5-SA-005  **Screen**: MonitoringTab.tsx **Dimension**: GCP Parity **Severity**: CRITICAL **Summary**: Hardcoded infrastructure values -- service list, alert policies, LB name, domain are static array"
+  },
+  "R5-SA-006": {
+    "severity": null,
+    "summary": ": No RBAC enforcement at tab level -- any authenticated admin sees all 22 tabs",
+    "raw": "R5-SA-006  **Screen**: App.tsx (shell) **Dimension**: Navigation / RBAC **Severity**: HIGH **Summary**: No RBAC enforcement at tab level -- any authenticated admin sees all 22 tabs **Detail**: The tab"
+  },
+  "R5-SA-007": {
+    "severity": null,
+    "summary": ": Tab-switch error clearing is manually enumerated and fragile -- missing errors for self-contained tabs",
+    "raw": "R5-SA-007  **Screen**: App.tsx (performTabSwitch) **Dimension**: Wiring/State **Severity**: HIGH **Summary**: Tab-switch error clearing is manually enumerated and fragile -- missing errors for self-co"
+  },
+  "R5-SA-008": {
+    "severity": null,
+    "summary": ": StoreId is a free-text input instead of a store picker dropdown",
+    "raw": "R5-SA-008  **Screen**: AIInsightsTab.tsx **Dimension**: UX / API Integration **Severity**: HIGH **Summary**: StoreId is a free-text input instead of a store picker dropdown **Detail**: AIInsightsTab l"
+  },
+  "R5-SA-009": {
+    "severity": null,
+    "summary": ": User status change via dropdown fires immediately with no confirmation",
+    "raw": "R5-SA-009  **Screen**: UsersTab.tsx **Dimension**: Wiring/State **Severity**: HIGH **Summary**: User status change via dropdown fires immediately with no confirmation **Detail**: Line 107 has a `<sele"
+  },
+  "R5-SA-010": {
+    "severity": null,
+    "summary": ": Client-side-only search filtering -- no server-side search, no pagination",
+    "raw": "R5-SA-010  **Screen**: UsersTab.tsx **Dimension**: API Integration **Severity**: HIGH **Summary**: Client-side-only search filtering -- no server-side search, no pagination **Detail**: Line 98 applies"
+  },
+  "R5-SA-011": {
+    "severity": null,
+    "summary": ": Prev button is never disabled -- allows navigating to negative page on first page",
+    "raw": "R5-SA-011  **Screen**: EventsTab.tsx **Dimension**: UI / UX **Severity**: HIGH **Summary**: Prev button is never disabled -- allows navigating to negative page on first page **Detail**: Line 64 render"
+  },
+  "R5-SA-012": {
+    "severity": null,
+    "summary": ": Acknowledge and Dismiss actions have no confirmation dialog",
+    "raw": "R5-SA-012  **Screen**: GrnAlertsTab.tsx **Dimension**: Business Logic **Severity**: HIGH **Summary**: Acknowledge and Dismiss actions have no confirmation dialog **Detail**: Lines 79-80 have Acknowled"
+  },
+  "R5-SA-013": {
+    "severity": null,
+    "summary": ": Self-contained tabs define local `apiFetch` wrappers with relative URLs, bypassing any API_BASE config",
+    "raw": "R5-SA-013  **Screen**: AIInsightsTab.tsx, CreditProvidersTab.tsx, SupportQueueTab.tsx **Dimension**: API Integration / GCP Parity **Severity**: MEDIUM **Summary**: Self-contained tabs define local `ap"
+  },
+  "R5-SA-014": {
+    "severity": null,
+    "summary": ": Anomalies and alerts have hardcoded `limit=50` with no pagination",
+    "raw": "R5-SA-014  **Screen**: AIInsightsTab.tsx **Dimension**: API Integration **Severity**: MEDIUM **Summary**: Anomalies and alerts have hardcoded `limit=50` with no pagination **Detail**: Line 58: `apiFet"
+  },
+  "R5-SA-015": {
+    "severity": null,
+    "summary": ": Phone number validation is minimal -- only checks non-empty, no format validation",
+    "raw": "R5-SA-015  **Screen**: WhatsAppTab.tsx **Dimension**: Business Logic / Validation **Severity**: MEDIUM **Summary**: Phone number validation is minimal -- only checks non-empty, no format validation **"
+  },
+  "R5-SA-016": {
+    "severity": null,
+    "summary": ": Health check endpoint URLs are hardcoded to `/health` path with no env-var base URL",
+    "raw": "R5-SA-016  **Screen**: MonitoringTab.tsx **Dimension**: GCP Parity **Severity**: MEDIUM **Summary**: Health check endpoint URLs are hardcoded to `/health` path with no env-var base URL **Detail**: The"
+  },
+  "R5-SA-017": {
+    "severity": null,
+    "summary": ": Massive monolithic state management -- App.tsx holds 80+ state variables for prop-drilled tabs",
+    "raw": "R5-SA-017  **Screen**: App.tsx **Dimension**: Wiring/State **Severity**: MEDIUM **Summary**: Massive monolithic state management -- App.tsx holds 80+ state variables for prop-drilled tabs **Detail**: "
+  },
+  "R5-SA-018": {
+    "severity": null,
+    "summary": ": GST tab uses its own API module but does not use centralized `fetchWithTimeout` for abort-on-tab-switch",
+    "raw": "R5-SA-018  **Screen**: GstComplianceTab.tsx **Dimension**: API Integration **Severity**: MEDIUM **Summary**: GST tab uses its own API module but does not use centralized `fetchWithTimeout` for abort-o"
+  },
+  "R5-SA-019": {
+    "severity": null,
+    "summary": ": Blob URL cleanup has stale closure -- revokes previous blob URL using outer scope variable",
+    "raw": "R5-SA-019  **Screen**: DocumentsTab.tsx **Dimension**: Wiring/State **Severity**: MEDIUM **Summary**: Blob URL cleanup has stale closure -- revokes previous blob URL using outer scope variable **Detai"
+  },
+  "R5-SA-020": {
+    "severity": null,
+    "summary": ": Store directory fetches all stores without explicit pagination",
+    "raw": "R5-SA-020  **Screen**: StoresTab.tsx **Dimension**: API Integration **Severity**: MEDIUM **Summary**: Store directory fetches all stores without explicit pagination **Detail**: StoresTab receives `sto"
+  },
+  "R5-SA-021": {
+    "severity": null,
+    "summary": ": `catch (err: any)` pattern used instead of `err: unknown` -- inconsistent error typing",
+    "raw": "R5-SA-021  **Screen**: RefundsTab.tsx **Dimension**: UX **Severity**: LOW **Summary**: `catch (err: any)` pattern used instead of `err: unknown` -- inconsistent error typing **Detail**: RefundsTab use"
+  },
+  "R5-SA-022": {
+    "severity": null,
+    "summary": ": `document.execCommand(",
+    "raw": "R5-SA-022  **Screen**: App.tsx **Dimension**: Navigation **Severity**: LOW **Summary**: `document.execCommand(\\\"copy\\\")` is deprecated -- used as fallback for deep link copy **Detail**: Lines 305-309 "
+  },
+  "R5-SA-023": {
+    "severity": null,
+    "summary": ": GSTR-1 export uses programmatic `a.click()` pattern without cleanup",
+    "raw": "R5-SA-023  **Screen**: GstComplianceTab.tsx **Dimension**: UX **Severity**: LOW **Summary**: GSTR-1 export uses programmatic `a.click()` pattern without cleanup **Detail**: Lines 56-61 create a tempor"
+  },
+  "R5-SA-024": {
+    "severity": null,
+    "summary": ": Analytics sub-tab navigation has 8 sub-tabs in a horizontal row that may overflow on narrow screens",
+    "raw": "R5-SA-024  **Screen**: AnalyticsTab.tsx **Dimension**: UI **Severity**: LOW **Summary**: Analytics sub-tab navigation has 8 sub-tabs in a horizontal row that may overflow on narrow screens **Detail**:"
+  },
+  "R5-SA-025": {
+    "severity": null,
+    "summary": ": Alert policies all permanently display",
+    "raw": "R5-SA-025  **Screen**: MonitoringTab.tsx **Dimension**: UI **Severity**: LOW **Summary**: Alert policies all permanently display \\\"Active\\\" badge -- status is static, never reflects reality **Detail**"
+  },
+  "R5-SA-026": {
+    "severity": null,
+    "summary": ": Auto-refresh interval does not reset when `loadData` changes",
+    "raw": "R5-SA-026  **Screen**: QualityDashboardTab.tsx **Dimension**: Wiring/State **Severity**: LOW **Summary**: Auto-refresh interval does not reset when `loadData` changes **Detail**: Lines 46-49 set up a "
+  },
+  "R5-SUP-001": {
+    "severity": "P0",
+    "summary": "Invoice PDF download uses relative URL without API_BASE_URL, will 404 in production",
+    "raw": "R5-SUP-001**\\ Screen: InvoicesPage\\ Dimension: API Integration\\ Severity: P0\\ Summary: Invoice PDF download uses relative URL without API_BASE_URL, will 404 in production\\ Detail: At `C:\\\\\\\\supermandi"
+  },
+  "R5-SUP-002": {
+    "severity": "P0",
+    "summary": "Double-unwrapping of API response data causes runtime crash or undefined access",
+    "raw": "R5-SUP-002**\\ Screen: API Client (getSupplierInvoiceDetail)\\ Dimension: API-DB\\ Severity: P0\\ Summary: Double-unwrapping of API response data causes runtime crash or undefined access\\ Detail: At `C:\\\\"
+  },
+  "R5-SUP-003": {
+    "severity": "P0",
+    "summary": "Registration document upload sends no Authorization header — will fail with 401 for authenticated upload endpoint",
+    "raw": "R5-SUP-003**\\ Screen: RegisterPage (register/page.tsx)\\ Dimension: API Integration\\ Severity: P0\\ Summary: Registration document upload sends no Authorization header — will fail with 401 for authentic"
+  },
+  "R5-SUP-004": {
+    "severity": "P0",
+    "summary": "Orders read-marking compares pathname `/orders` but basePath makes actual pathname `/supplier/orders`",
+    "raw": "R5-SUP-004**\\ Screen: Dashboard Layout\\ Dimension: Navigation\\ Severity: P0\\ Summary: Orders read-marking compares pathname `/orders` but basePath makes actual pathname `/supplier/orders`\\ Detail: At "
+  },
+  "R5-SUP-005": {
+    "severity": "P0",
+    "summary": "Logout redirect path inconsistency — auth.tsx uses `/login` (router.push) vs api.ts uses `/supplier/login` (window.location.replace)",
+    "raw": "R5-SUP-005.\\ Evidence: layout.tsx line 79: `if (pathname === '/orders' && newOrdersCount > 0)` — works only because Next.js strips basePath from usePathname.\\ \\ ---\\ \\ **FINDING: R5-SUP-005**\\ Screen:"
+  },
+  "R5-SUP-006": {
+    "severity": "P1",
+    "summary": "Client-side search/filter only searches within current page data, not all products",
+    "raw": "R5-SUP-006** Severity: P1 Summary: Client-side search/filter only searches within current page data, not all products **FINDING: R5-SUP-007** Severity: P1 Summary: Price input feedback loop — typing c"
+  },
+  "R5-SUP-007": {
+    "severity": "P1",
+    "summary": "Price input feedback loop — typing creates jumpy values due to paise conversion on every keystroke",
+    "raw": "R5-SUP-007** Severity: P1 Summary: Price input feedback loop — typing creates jumpy values due to paise conversion on every keystroke **FINDING: R5-SUP-008** Severity: P1 Summary: Orders page paginati"
+  },
+  "R5-SUP-008": {
+    "severity": "P1",
+    "summary": "Orders page pagination state not synced to URL — browser back/forward loses page position",
+    "raw": "R5-SUP-008** Severity: P1 Summary: Orders page pagination state not synced to URL — browser back/forward loses page position **FINDING: R5-SUP-009** Severity: P1 Summary: Email verification modal is h"
+  },
+  "R5-SUP-009": {
+    "severity": "P1",
+    "summary": "Email verification modal is hand-built (120+ lines) instead of using the shared Modal component that already handles scroll lock",
+    "raw": "R5-SUP-009** Severity: P1 Summary: Email verification modal is hand-built (120+ lines) instead of using the shared Modal component that already handles scroll lock **FINDING: R5-SUP-010** Severity: P1"
+  },
+  "R5-SUP-010": {
+    "severity": "P1",
+    "summary": "Two conflicting paths to update bank details — profile page uses `updateSupplierProfile` while KYC page uses `verifyBankAccount` with IFSC lookup",
+    "raw": "R5-SUP-010** Severity: P1 Summary: Two conflicting paths to update bank details — profile page uses `updateSupplierProfile` while KYC page uses `verifyBankAccount` with IFSC lookup **FINDING: R5-SUP-0"
+  },
+  "R5-SUP-011": {
+    "severity": "P1",
+    "summary": "Chat page uses inline styles instead of Tailwind and has no mobile responsive design",
+    "raw": "R5-SUP-011** Severity: P1 Summary: Chat page uses inline styles instead of Tailwind and has no mobile responsive design **FINDING: R5-SUP-012** Severity: P1 Summary: `emailReset` step is defined in St"
+  },
+  "R5-SUP-012": {
+    "severity": "P1",
+    "summary": "`emailReset` step is defined in Step type but never navigated to — dead code path",
+    "raw": "R5-SUP-012** Severity: P1 Summary: `emailReset` step is defined in Step type but never navigated to — dead code path **FINDING: R5-SUP-013** Severity: P1 Summary: `supplierType` and `supplierTypeOther"
+  },
+  "R5-SUP-013": {
+    "severity": "P1",
+    "summary": "`supplierType` and `supplierTypeOther` form fields collected in UI but never sent to backend",
+    "raw": "R5-SUP-013** Severity: P1 Summary: `supplierType` and `supplierTypeOther` form fields collected in UI but never sent to backend **FINDING: R5-SUP-014** Severity: P1 Summary: Dashboard stats fallback c"
+  },
+  "R5-SUP-014": {
+    "severity": "P1",
+    "summary": "Dashboard stats fallback calculates from first page of paginated data only — shows inaccurate totals",
+    "raw": "R5-SUP-014** Severity: P1 Summary: Dashboard stats fallback calculates from first page of paginated data only — shows inaccurate totals **FINDING: R5-SUP-015** Severity: P1 Summary: `!isAuthenticated`"
+  },
+  "R5-SUP-015": {
+    "severity": "P1",
+    "summary": "`!isAuthenticated` returns `null` — causes brief flash of empty content before redirect",
+    "raw": "R5-SUP-015** Severity: P1 Summary: `!isAuthenticated` returns `null` — causes brief flash of empty content before redirect **FINDING: R5-SUP-016** Severity: P2 Summary: Payout detail and invoice detai"
+  },
+  "R5-SUP-016": {
+    "severity": "P2",
+    "summary": "Payout detail and invoice detail modals do not use the shared Modal component — no body scroll lock",
+    "raw": "R5-SUP-016** Severity: P2 Summary: Payout detail and invoice detail modals do not use the shared Modal component — no body scroll lock **FINDING: R5-SUP-017** Severity: P2 Summary: Breadcrumb uses `hr"
+  },
+  "R5-SUP-017": {
+    "severity": "P2",
+    "summary": "Breadcrumb uses `href` prop instead of `path` — inconsistent with Profile, Products, and other pages",
+    "raw": "R5-SUP-017** Severity: P2 Summary: Breadcrumb uses `href` prop instead of `path` — inconsistent with Profile, Products, and other pages **FINDING: R5-SUP-018** Severity: P2 Summary: Extra `p-6` paddin"
+  },
+  "R5-SUP-018": {
+    "severity": "P2",
+    "summary": "Extra `p-6` padding wrapper causes double padding with dashboard layout",
+    "raw": "R5-SUP-018** Severity: P2 Summary: Extra `p-6` padding wrapper causes double padding with dashboard layout **FINDING: R5-SUP-019** Severity: P2 Summary: \\\"View Products\\\" link uses `<a href>` instead "
+  },
+  "R5-SUP-019": {
+    "severity": "P2",
+    "summary": "Help layout uses inline styles and lacks dark mode support — inconsistent with auth and dashboard layouts",
+    "raw": "R5-SUP-019** Severity: P2 Summary: \\\"View Products\\\" link uses `<a href>` instead of Next.js `<Link>` — causes full page reload **FINDING: R5-SUP-020** Severity: P2 Summary: Help layout uses inline st"
+  },
+  "R5-SUP-020": {
+    "severity": "P2",
+    "summary": "Help layout uses inline styles and lacks dark mode support — inconsistent with auth and dashboard layouts",
+    "raw": "R5-SUP-020** Severity: P2 Summary: Help layout uses inline styles and lacks dark mode support — inconsistent with auth and dashboard layouts **FINDING: R5-SUP-021** Severity: P2 Summary: Register layo"
+  },
+  "R5-SUP-021": {
+    "severity": "P2",
+    "summary": "Register layout includes its own `<Toaster>` component — potential duplicate toast rendering",
+    "raw": "R5-SUP-021** Severity: P2 Summary: Register layout includes its own `<Toaster>` component — potential duplicate toast rendering **FINDING: R5-SUP-022** Severity: P2 Summary: `selectedOrder` from list "
+  },
+  "R5-SUP-022": {
+    "severity": "P2",
+    "summary": "`selectedOrder` from list holds stale data while `orderDetail` fetches fresh data — modal shows mixed state",
+    "raw": "R5-SUP-022** Severity: P2 Summary: `selectedOrder` from list holds stale data while `orderDetail` fetches fresh data — modal shows mixed state **FINDING: R5-SUP-023** Severity: P2 Summary: Single load"
+  },
+  "R5-SUP-023": {
+    "severity": "P2",
+    "summary": "Single loading state shared across all document type uploads — cannot tell which document is uploading",
+    "raw": "R5-SUP-023** Severity: P2 Summary: Single loading state shared across all document type uploads — cannot tell which document is uploading **FINDING: R5-SUP-024** Severity: P2 Summary: SSE EventSource "
+  },
+  "R5-SUP-024": {
+    "severity": "P2",
+    "summary": "SSE EventSource does not include credentials for cross-origin scenarios",
+    "raw": "R5-SUP-024** Severity: P2 Summary: SSE EventSource does not include credentials for cross-origin scenarios **FINDING: R5-SUP-025** Severity: P2 Summary: Application ID stored in localStorage persists "
+  },
+  "R5-SUP-025": {
+    "severity": "P2",
+    "summary": "Application ID stored in localStorage persists across sessions — stale ID could cause conflicts",
+    "raw": "R5-SUP-025** Severity: P2 Summary: Application ID stored in localStorage persists across sessions — stale ID could cause conflicts **FINDING: R5-SUP-026** Severity: P2 Summary: Root error.tsx uses emo"
+  },
+  "R5-SUP-026": {
+    "severity": "P2",
+    "summary": "Root error.tsx uses emoji (unicode) and gray color scheme instead of Tailwind design tokens",
+    "raw": "R5-SUP-026** Severity: P2 Summary: Root error.tsx uses emoji (unicode) and gray color scheme instead of Tailwind design tokens **FINDING: R5-SUP-027** Severity: P2 Summary: 404 page always links to `/"
+  },
+  "R5-SUP-027": {
+    "severity": "P2",
+    "summary": "404 page always links to `/dashboard` — unauthenticated users should be sent to `/login`",
+    "raw": "R5-SUP-027** Severity: P2 Summary: 404 page always links to `/dashboard` — unauthenticated users should be sent to `/login` **FINDING: R5-SUP-028** Severity: P2 Summary: reCAPTCHA cleanup fires on eve"
+  },
+  "R5-SUP-028": {
+    "severity": "P2",
+    "summary": "reCAPTCHA cleanup fires on every step change including OTP step — may break OTP verification",
+    "raw": "R5-SUP-028** Severity: P2 Summary: reCAPTCHA cleanup fires on every step change including OTP step — may break OTP verification **FINDING: R5-SUP-029** Severity: P2 Summary: Reset password sends `conf"
+  },
+  "R5-SUP-029": {
+    "severity": "P2",
+    "summary": "Reset password sends `confirmPassword` in request body but the forgot-password OTP reset does not — inconsistent API contract",
+    "raw": "R5-SUP-029** Severity: P2 Summary: Reset password sends `confirmPassword` in request body but the forgot-password OTP reset does not — inconsistent API contract **FINDING: R5-SUP-030** Severity: P2 Su"
+  },
+  "R5-SUP-030": {
+    "severity": "P2",
+    "summary": "BNPL Orders page has no mobile card/responsive view — table is unusable on small screens",
+    "raw": "R5-SUP-030** Severity: P2 Summary: BNPL Orders page has no mobile card/responsive view — table is unusable on small screens **FINDING: R5-SUP-031** Severity: P2 Summary: Shared Modal component has fix"
+  },
+  "R5-SUP-031": {
+    "severity": "P2",
+    "summary": "Shared Modal component has fixed `max-w-sm` width — too narrow for complex content like order details or invoices",
+    "raw": "R5-SUP-031** Severity: P2 Summary: Shared Modal component has fixed `max-w-sm` width — too narrow for complex content like order details or invoices **FINDING: R5-SUP-032** Severity: P2 Summary: Share"
+  },
+  "R5-SUP-032": {
+    "severity": "P2",
+    "summary": "Shared Modal has no dark mode support",
+    "raw": "R5-SUP-032** Severity: P2 Summary: Shared Modal has no dark mode support **FINDING: R5-SUP-033** Severity: P2 Summary: EmptyState component has no dark mode support **FINDING: R5-SUP-034** Severity: P"
+  },
+  "R5-SUP-033": {
+    "severity": "P2",
+    "summary": "EmptyState component has no dark mode support",
+    "raw": "R5-SUP-033** Severity: P2 Summary: EmptyState component has no dark mode support **FINDING: R5-SUP-034** Severity: P2 Summary: Dashboard error boundary has no dark mode support **FINDING: R5-SUP-035**"
+  },
+  "R5-SUP-034": {
+    "severity": "P2",
+    "summary": "Dashboard error boundary has no dark mode support",
+    "raw": "R5-SUP-034** Severity: P2 Summary: Dashboard error boundary has no dark mode support **FINDING: R5-SUP-035** Severity: P2 Summary: LimitedModeBanner uses emoji characters for icons — inconsistent with"
+  },
+  "R5-SUP-035": {
+    "severity": "P2",
+    "summary": "LimitedModeBanner uses emoji characters for icons — inconsistent with Lucide icon system",
+    "raw": "R5-SUP-035** Severity: P2 Summary: LimitedModeBanner uses emoji characters for icons — inconsistent with Lucide icon system **FINDING: R5-SUP-036** Severity: P2 Summary: `getProducts` pagination check"
+  },
+  "R5-SUP-036": {
+    "severity": "P2",
+    "summary": "`getProducts` pagination check `if (params.page)` is falsy for page 0",
+    "raw": "R5-SUP-036** Severity: P2 Summary: `getProducts` pagination check `if (params.page)` is falsy for page 0 | ID | Severity | Screen | Dimension | Summary | | R5-SUP-001 | P0 | InvoicesPage | API | PDF d"
+  }
+}
