@@ -1,0 +1,82 @@
+{
+  "auditWave": "R7",
+  "baselineSHA": "178b19f2",
+  "generatedAt": "2026-02-24T20:00:00.000Z",
+  "status": "backend_cross_complete",
+  "surfaces": {
+    "BE": {
+      "serviceCount": 10,
+      "endpointCount": 179,
+      "slices": 4,
+      "findings": { "P0": 5, "P1": 17, "P2": 29, "P3": 18, "total": 69 },
+      "sliceBreakdown": {
+        "BE-1a (api-gateway + auth-service)": {
+          "findings": { "P0": 0, "P1": 4, "P2": 13, "P3": 7, "total": 24 },
+          "topFindings": [
+            { "id": "BE-GW-001", "severity": "P1", "service": "api-gateway", "issue": "Token blacklist fail-open on Redis outage — revoked tokens still accepted" },
+            { "id": "BE-GW-002", "severity": "P1", "service": "api-gateway", "issue": "Admin /status endpoint leaks active session count" },
+            { "id": "BE-AUTH-001", "severity": "P1", "service": "auth-service", "issue": "Internal routes rely on shared JWT_SECRET instead of dedicated service token" },
+            { "id": "BE-AUTH-002", "severity": "P1", "service": "auth-service", "issue": "No UUID validation on route params (path traversal risk)" }
+          ]
+        },
+        "BE-1b (supplier + catalog + inventory)": {
+          "findings": { "P0": 2, "P1": 5, "P2": 6, "P3": 5, "total": 18 },
+          "topFindings": [
+            { "id": "BE-INV-001", "severity": "P0", "service": "inventory-service", "issue": "Internal routes have ZERO authentication (no validateInternalService)" },
+            { "id": "BE-INV-002", "severity": "P0", "service": "inventory-service", "issue": "Stock non-negative invariant has adjustment bypass — transactionType=adjustment skips check" },
+            { "id": "BE-SUP-001", "severity": "P1", "service": "supplier-service", "issue": "userId from x-user-id header is spoofable" },
+            { "id": "BE-CAT-001", "severity": "P1", "service": "catalog-service", "issue": "5 unauthenticated catalog endpoints (search, categories, etc.)" },
+            { "id": "BE-CAT-002", "severity": "P1", "service": "catalog-service", "issue": "GSTIN validate endpoint is unauthenticated" }
+          ]
+        },
+        "BE-S2 (platform + order + payment + reorder + voice)": {
+          "findings": { "P0": 3, "P1": 8, "P2": 10, "P3": 6, "total": 27 },
+          "topFindings": [
+            { "id": "BE-PLAT-001", "severity": "P0", "service": "platform-service", "issue": "Admin routes have NO service-level auth middleware" },
+            { "id": "BE-PLAT-002", "severity": "P0", "service": "platform-service", "issue": "Store routes CRUD have NO auth middleware at all" },
+            { "id": "BE-VOICE-001", "severity": "P0", "service": "voice-service", "issue": "GET /status/:requestId has NO auth check" },
+            { "id": "BE-PLAT-003", "severity": "P1", "service": "platform-service", "issue": "GET /suppliers leaks PostgreSQL error details" },
+            { "id": "BE-PLAT-004", "severity": "P1", "service": "platform-service", "issue": "PATCH /products updates shared catalog (not store-scoped)" },
+            { "id": "BE-PLAT-005", "severity": "P1", "service": "platform-service", "issue": "retailerAdmin admin ID from untrusted header" },
+            { "id": "BE-PLAT-006", "severity": "P1", "service": "platform-service", "issue": "retailerPortal storeId from header not JWT" },
+            { "id": "BE-VOICE-002", "severity": "P1", "service": "voice-service", "issue": "No authenticate middleware on any voice endpoint" },
+            { "id": "BE-REORDER-001", "severity": "P1", "service": "reorder-service", "issue": "Soft store isolation pattern — silently passes if req.user is undefined" }
+          ]
+        }
+      }
+    },
+    "CROSS": {
+      "flowCount": 3,
+      "slices": 1,
+      "findings": { "P0": 0, "P1": 4, "P2": 8, "P3": 9, "total": 21 },
+      "topFindings": [
+        { "id": "CROSS-SP-003", "severity": "P1", "flow": "SUP<>POS", "issue": "Supplier cannot transition order status (confirm/ship) — blocked by requireStoreAccess" },
+        { "id": "CROSS-RP-001", "severity": "P1", "flow": "RET<>POS", "issue": "Dual stock sources diverge — inventory.stock_balances vs catalog.store_products.current_stock" },
+        { "id": "CROSS-RP-002", "severity": "P1", "flow": "RET<>POS", "issue": "Offline queue not store-scoped — single global storage key" },
+        { "id": "CROSS-RS-005", "severity": "P1", "flow": "RET<>SUP", "issue": "Catalog price cache staleness — no TTL or invalidation mechanism" }
+      ]
+    }
+  },
+  "backendCrossTotals": {
+    "P0": 5,
+    "P1": 21,
+    "P2": 37,
+    "P3": 27,
+    "total": 90
+  },
+  "grandTotals": {
+    "frontend": { "P0": 2, "P1": 23, "P2": 161, "P3": 259, "total": 445 },
+    "backend": { "P0": 5, "P1": 17, "P2": 29, "P3": 18, "total": 69 },
+    "cross": { "P0": 0, "P1": 4, "P2": 8, "P3": 9, "total": 21 },
+    "grandTotal": { "P0": 7, "P1": 44, "P2": 198, "P3": 286, "total": 535 }
+  },
+  "p0CriticalFindings": [
+    { "id": "PA-01", "surface": "POS", "issue": "PaymentScreen submittingRef.current never reset on failure, permanently blocking payments" },
+    { "id": "PG-023", "surface": "SUP", "issue": "Supplier Register page document upload XHR missing auth credentials" },
+    { "id": "BE-INV-001", "surface": "BE", "issue": "Inventory-service internal routes have ZERO authentication" },
+    { "id": "BE-INV-002", "surface": "BE", "issue": "Stock non-negative invariant has adjustment bypass" },
+    { "id": "BE-PLAT-001", "surface": "BE", "issue": "Platform-service admin routes have NO service-level auth" },
+    { "id": "BE-PLAT-002", "surface": "BE", "issue": "Platform-service store routes CRUD have NO auth" },
+    { "id": "BE-VOICE-001", "surface": "BE", "issue": "Voice /status/:requestId has NO auth check" }
+  ]
+}

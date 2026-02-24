@@ -1,0 +1,87 @@
+{
+  "auditWave": "R7",
+  "baselineSHA": "178b19f2",
+  "generatedAt": "2026-02-24T18:00:00.000Z",
+  "surfaces": {
+    "POS": {
+      "screenCount": 44,
+      "screens": [
+        "SplashScreen", "EnrollDeviceScreen", "ForceUpdateScreen", "DeviceBlockedScreen", "PaymentSetupScreen",
+        "PosRootLayout", "SellScanScreen", "MenuScreen", "PurchaseScreen", "ReorderScreen", "CreditScreen", "StaffLoginScreen",
+        "PaymentScreen", "SuccessPrintScreenV2", "BillDetailScreen",
+        "GRNScreen", "InwardScreen", "PurchaseHistoryScreen", "OpeningStockScreen", "BarcodeSheetScreen",
+        "OrderHistoryScreen", "OrderDetailScreen", "ReorderSettingsScreen", "ReorderPoliciesScreen",
+        "SalesHistoryScreen", "SalesStatementScreen", "StockStatementScreen", "DailyReportScreen", "AIInsightsScreen",
+        "CustomerListScreen", "CustomerManagementScreen", "KhataScreen", "BnplDuesScreen", "OverdueDuesScreen",
+        "ReturnScreen", "DailyClosingScreen", "ShiftScreen", "PrinterSettingsScreen",
+        "ChatListScreen", "ChatConversationScreen", "BulkPurchaseCreditScreen", "BuyScreen", "HelpScreen", "UiShowcaseScreen"
+      ]
+    },
+    "RET": {
+      "screenCount": 30,
+      "screens": [
+        "LoginPage", "RegisterPage", "ForgotPasswordPage", "ResetPasswordPage", "HelpPage",
+        "DashboardPage", "ProductsPage", "ImportPage", "InventoryPage", "SuppliersPage", "SupplierCatalogPage",
+        "CompliancePage", "SettingsPage", "PaymentsPage", "DeviceActivationPage",
+        "InvoicesPage", "ReconciliationPage", "CreditDashboardPage",
+        "PurchaseOrdersPage", "ReorderPage",
+        "AnalyticsPage", "CustomersPage", "ChatPage", "NotificationsPage", "HelpDashboardPage",
+        "SupplierQueuePage", "ProductQueuePage", "AllPagesPage", "NotFoundPage", "RetailerOnboardingPage"
+      ]
+    },
+    "SUP": {
+      "screenCount": 29,
+      "screens": [
+        "RootPage", "RootLayout", "AppError", "GlobalError", "NotFound",
+        "AuthLayout", "LoginPage", "ForgotPasswordPage", "ResetPasswordPage", "PendingApprovalPage", "OnboardPage",
+        "RegisterLayout", "RegisterPage",
+        "HelpLayout", "HelpPage",
+        "DashboardLayout", "DashboardError", "DashboardLoading",
+        "DashboardPage", "ProductsPage", "UploadPage", "OrdersPage", "KycPage", "EarningsPage",
+        "InvoicesPage", "NotificationsPage", "ChatPage", "BnplOrdersPage", "ProfilePage"
+      ]
+    },
+    "SA": {
+      "screenCount": 23,
+      "screens": [
+        "EventsTab", "DevicesTab", "StoresTab", "SuppliersTab", "ApplicationsTab",
+        "PaymentsTab", "AnalyticsTab", "AuditTab", "UsersTab", "SettingsTab",
+        "DocumentsTab", "RegistrationsTab", "StaffTab", "GrnAlertsTab", "InvoicesTab",
+        "GstComplianceTab", "RefundsTab", "MonitoringTab", "QualityDashboardTab",
+        "CreditProvidersTab", "SupportQueueTab", "AIInsightsTab", "WhatsAppTab"
+      ],
+      "components": ["LoginGate", "ErrorBoundary", "ThemeToggle", "BuildStamp", "AiPanel", "ConfirmationModals", "ConfirmDialog"]
+    },
+    "BE": {
+      "serviceCount": 10,
+      "endpointCount": 179,
+      "services": [
+        {"name": "api-gateway", "endpoints": 4, "middleware": 9},
+        {"name": "auth-service", "endpoints": 29, "routes": 4},
+        {"name": "platform-service", "endpoints": 65, "routes": 6},
+        {"name": "supplier-service", "endpoints": 19, "routes": 3},
+        {"name": "catalog-service", "endpoints": 16, "routes": 3},
+        {"name": "inventory-service", "endpoints": 12, "routes": 3},
+        {"name": "order-service", "endpoints": 11, "routes": 3},
+        {"name": "payment-service", "endpoints": 4, "routes": 1},
+        {"name": "reorder-service", "endpoints": 16, "routes": 3},
+        {"name": "voice-service", "endpoints": 3, "routes": 1}
+      ]
+    },
+    "CROSS": {
+      "flows": [
+        "RET<>SUP: Supplier linking, product sourcing, catalog sync",
+        "RET<>POS: Device enrollment, stock sync, sale→inventory",
+        "SUP<>POS: Purchase orders, GRN, supplier catalog browse"
+      ]
+    }
+  },
+  "totals": {
+    "posScreens": 44,
+    "retailerPages": 30,
+    "supplierPages": 29,
+    "superadminTabs": 23,
+    "backendEndpoints": 179,
+    "totalAuditTargets": "126 screens + 179 endpoints + cross-flows"
+  }
+}
