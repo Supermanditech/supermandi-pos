@@ -76,7 +76,7 @@ router.get(
 router.get(
   '/:storeId/inventory/low-stock',
   asyncHandler<StoreIdParams>(async (req: Request<StoreIdParams>, res: Response) => {
-    const threshold = parseInt(req.query.threshold as string, 10) || 10;
+    const threshold = Math.min(parseInt(req.query.threshold as string, 10) || 10, 1000);
     const balances = await listLowStockProducts(req.params.storeId, threshold);
     res.json({ data: balances });
   })

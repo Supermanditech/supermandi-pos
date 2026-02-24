@@ -61,7 +61,7 @@ export function EventsTab({
 
       <div className="tableWrap" style={{ paddingTop: 0 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button className="tab" onClick={() => setPage((p) => Math.max(0, p - 1))}>
+          <button className="tab" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
             Prev
           </button>
           <button

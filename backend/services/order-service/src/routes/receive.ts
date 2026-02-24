@@ -11,6 +11,7 @@ import {
   getReceiveRecordItems,
   ReceiveItemInput,
 } from '../services/grnService';
+import { getPurchaseOrderByIdAndStore } from '../db/queries';
 
 const router: RouterType = Router();
 
@@ -133,7 +134,13 @@ router.get(
   '/stores/:storeId/orders/:orderId/receives',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { orderId } = req.params;
+      const { storeId, orderId } = req.params;
+
+      // R6.CROSS.008: Enforce store isolation — verify order belongs to this store
+      const order = await getPurchaseOrderByIdAndStore(orderId, storeId);
+      if (!order) {
+        throw new ApiError(404, ERROR_CODES.NOT_FOUND, `Order not found: ${orderId}`);
+      }
 
       const records = await getReceiveRecords(orderId);
 
@@ -155,7 +162,13 @@ router.get(
   '/stores/:storeId/orders/:orderId/receives/:receiveId',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { orderId, receiveId } = req.params;
+      const { storeId, orderId, receiveId } = req.params;
+
+      // R6.CROSS.008: Enforce store isolation
+      const order = await getPurchaseOrderByIdAndStore(orderId, storeId);
+      if (!order) {
+        throw new ApiError(404, ERROR_CODES.NOT_FOUND, `Order not found: ${orderId}`);
+      }
 
       const records = await getReceiveRecords(orderId);
       const record = records.find((r) => r.id === receiveId);

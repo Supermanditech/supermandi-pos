@@ -17,7 +17,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
   }, [error]);
 
   const handleGoHome = () => {
-    window.location.href = '/';
+    window.location.href = '/supplier/dashboard';
   };
 
   return (

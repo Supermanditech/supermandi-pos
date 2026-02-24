@@ -153,7 +153,7 @@ export async function listInvoices(filters: InvoiceListFilters = {}): Promise<{ 
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices${qs ? `?${qs}` : ""}`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Failed to list invoices: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to list invoices. Please try again.');
   const json = await res.json();
   return { data: json.data || [], total: json.total || 0 };
 }
@@ -162,7 +162,7 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Failed to get invoice: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to get invoice. Please try again.');
   const json = await res.json();
   return json.data;
 }
@@ -173,7 +173,7 @@ export async function createPurchaseInvoice(input: CreatePurchaseInvoiceInput): 
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`Failed to create purchase invoice: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to create purchase invoice. Please try again.');
   const json = await res.json();
   return json.data;
 }
@@ -184,7 +184,7 @@ export async function createSaleInvoice(input: CreateSaleInvoiceInput): Promise<
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`Failed to create sale invoice: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to create sale invoice. Please try again.');
   const json = await res.json();
   return json.data;
 }
@@ -195,7 +195,7 @@ export async function createCommissionInvoice(input: CreateCommissionInvoiceInpu
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`Failed to create commission invoice: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to create commission invoice. Please try again.');
   const json = await res.json();
   return json.data;
 }
@@ -206,7 +206,7 @@ export async function createSupplierSaleInvoice(input: CreateCommissionInvoiceIn
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`Failed to create supplier sale invoice: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to create supplier sale invoice. Please try again.');
   const json = await res.json();
   return json.data;
 }
@@ -216,7 +216,7 @@ export async function issueInvoice(invoiceId: string): Promise<void> {
     method: "POST",
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Failed to issue invoice: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to issue invoice. Please try again.');
 }
 
 export async function recordPayment(invoiceId: string, input: RecordPaymentInput): Promise<void> {
@@ -225,7 +225,7 @@ export async function recordPayment(invoiceId: string, input: RecordPaymentInput
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`Failed to record payment: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to record payment. Please try again.');
 }
 
 export async function cancelInvoice(invoiceId: string, reason?: string): Promise<void> {
@@ -234,7 +234,7 @@ export async function cancelInvoice(invoiceId: string, reason?: string): Promise
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
   });
-  if (!res.ok) throw new Error(`Failed to cancel invoice: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to cancel invoice. Please try again.');
 }
 
 export function getInvoicePdfUrl(invoiceId: string): string {
@@ -245,7 +245,7 @@ export async function downloadInvoicePdf(invoiceId: string, invoiceNumber: strin
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}/pdf`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Failed to download PDF: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to download PDF. Please try again.');
 
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

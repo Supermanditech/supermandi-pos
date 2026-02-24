@@ -39,7 +39,7 @@ export async function triggerTokenCleanup(): Promise<TokenCleanupResult> {
     method: "POST",
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Token cleanup failed: ${res.status}`);
+  if (!res.ok) throw new Error('Token cleanup failed. Please try again.');
   const json = await res.json();
   return { deactivated: json.deactivated || 0, deleted: json.deleted || 0 };
 }

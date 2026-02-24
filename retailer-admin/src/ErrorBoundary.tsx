@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = (): void => {
-    window.location.href = '/retailer/';
+    window.location.href = '/retailer/dashboard';
   };
 
   render(): ReactNode {

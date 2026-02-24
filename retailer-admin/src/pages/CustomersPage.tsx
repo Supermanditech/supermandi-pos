@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
-import { formatDateTime } from '../lib/formatters';
+import { formatDateTime, formatCurrency } from '../lib/formatters';
 import Breadcrumb from '../components/Breadcrumb';
 import EmptyState from '../components/EmptyState';
 import { WhatsAppIcon } from '../components/WhatsAppIcon';
@@ -31,9 +31,6 @@ interface Purchase {
   createdAt: string;
 }
 
-function formatCurrency(minor: number): string {
-  return '\u20B9' + (minor / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-}
 
 export default function CustomersPage() {
   const { accessToken } = useAuth();
@@ -121,7 +118,7 @@ export default function CustomersPage() {
               {selectedCustomer.phone}
               {selectedCustomer.phone && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${selectedCustomer.phone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${selectedCustomer.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
+                  onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/91${selectedCustomer.phone.replace(/[^0-9]/g, '').replace(/^91/, '')}?text=${encodeURIComponent(`Hi ${selectedCustomer.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
                   title="Message on WhatsApp"
                   aria-label="Message on WhatsApp"
@@ -249,7 +246,7 @@ export default function CustomersPage() {
                     {c.phone}
                     {c.phone && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${c.phone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${c.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
+                        onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/91${c.phone.replace(/[^0-9]/g, '').replace(/^91/, '')}?text=${encodeURIComponent(`Hi ${c.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
                         title="Message on WhatsApp"
                         aria-label="Message on WhatsApp"

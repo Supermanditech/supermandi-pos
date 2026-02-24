@@ -47,7 +47,7 @@ export async function fetchRefunds(params?: {
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/refunds${qStr}`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Refunds fetch failed: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to load refunds. Please try again.');
   const json = await res.json();
   return { data: json.data || [], total: json.pagination?.total || 0, limit: json.pagination?.limit || 50, offset: json.pagination?.offset || 0 };
 }
@@ -57,7 +57,7 @@ export async function approveRefund(refundId: string): Promise<void> {
     method: "POST",
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Refund approve failed: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to approve refund. Please try again.');
 }
 
 export async function rejectRefund(refundId: string, reason: string): Promise<void> {
@@ -66,5 +66,5 @@ export async function rejectRefund(refundId: string, reason: string): Promise<vo
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
   });
-  if (!res.ok) throw new Error(`Refund reject failed: ${res.status}`);
+  if (!res.ok) throw new Error('Failed to reject refund. Please try again.');
 }

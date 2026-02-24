@@ -55,10 +55,10 @@ export function AIInsightsTab() {
     setError(null);
     try {
       if (view === 'anomalies') {
-        const result = await apiFetch(`/api/v1/admin/ai/anomalies?storeId=${storeId}&limit=50`);
+        const result = await apiFetch(`/api/v1/admin/ai/anomalies?storeId=${encodeURIComponent(storeId)}&limit=50`);
         setAnomalies(result.anomalies || []);
       } else if (view === 'alerts') {
-        const result = await apiFetch(`/api/v1/admin/ai/alerts?storeId=${storeId}&limit=50`);
+        const result = await apiFetch(`/api/v1/admin/ai/alerts?storeId=${encodeURIComponent(storeId)}&limit=50`);
         setAlerts(result.alerts || []);
       }
     } catch (err: unknown) {
@@ -70,9 +70,15 @@ export function AIInsightsTab() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const VALID_JOB_ENDPOINTS = new Set([
+    'admin/jobs/ai-alerts', 'admin/jobs/ai-forecasts', 'admin/jobs/ai-smart-reorder',
+    'admin/jobs/ai-auto-closing', 'admin/jobs/ai-customer-insights',
+    'admin/jobs/ai-anomaly-detection', 'admin/jobs/ai-recommendations',
+  ]);
   const runJob = async (endpoint: string, name: string) => {
     setJobResult(null);
     setError(null);
+    if (!VALID_JOB_ENDPOINTS.has(endpoint)) { setError('Invalid job endpoint'); return; }
     try {
       const result = await apiFetch(`/api/v1/${endpoint}`, { method: 'POST' });
       setJobResult(`${name}: ${JSON.stringify(result)}`);

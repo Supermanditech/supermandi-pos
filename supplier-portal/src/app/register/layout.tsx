@@ -1,4 +1,3 @@
-import { Toaster } from 'react-hot-toast';
 import { BuildStamp } from '@/components/BuildStamp';
 
 // UI-SPEC-005: Stripe-level calm infrastructure design for registration
@@ -40,20 +39,6 @@ export default function RegisterLayout({
         </div>
       </footer>
 
-      {/* T-094: Standardized toast config per DESIGN_TOKENS.md */}
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#0F172A',
-            color: '#FFFFFF',
-            borderRadius: '8px',
-          },
-          success: { duration: 4000 },
-          error: { duration: 6000 },
-        }}
-      />
     </div>
   );
 }

@@ -100,6 +100,18 @@ router.post(
     const body = req.body as TransactionRequestBody;
     const userId = req.headers['x-user-id'] as string | undefined;
 
+    // R6.BE.006: Runtime enum validation for transactionType and referenceType
+    const VALID_TRANSACTION_TYPES = ['sale', 'sale_return', 'purchase_received', 'adjustment', 'opening_stock'] as const;
+    const VALID_REFERENCE_TYPES = ['sale', 'po', 'return', 'manual'] as const;
+    if (!VALID_TRANSACTION_TYPES.includes(body.transactionType as any)) {
+      res.status(400).json({ error: `Invalid transactionType: ${body.transactionType}. Must be one of: ${VALID_TRANSACTION_TYPES.join(', ')}` });
+      return;
+    }
+    if (body.referenceType && !VALID_REFERENCE_TYPES.includes(body.referenceType as any)) {
+      res.status(400).json({ error: `Invalid referenceType: ${body.referenceType}. Must be one of: ${VALID_REFERENCE_TYPES.join(', ')}` });
+      return;
+    }
+
     const input: CreateTransactionInput = {
       storeId: req.params.storeId,
       items: body.items,
