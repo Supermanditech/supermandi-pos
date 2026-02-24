@@ -688,7 +688,7 @@ export interface Order {
   orderType?: 'manual' | 'reorder';  // T-246: reorder context
   items: OrderItem[];
   totalAmount: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'draft' | 'submitted' | 'confirmed' | 'shipped' | 'partial_received' | 'delivered' | 'cancelled';
   createdAt: string;
 }
 

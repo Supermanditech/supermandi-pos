@@ -5,6 +5,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
 import { validateGstin } from '../utils/gstin';
 import { config } from '../config';
@@ -45,6 +46,33 @@ function isValidUpiVpa(vpa: string): boolean {
   const trimmed = vpa.trim().toLowerCase();
   // T-215: Canonical UPI VPA pattern — min 3 chars before @, min 2 after @, max 100 total
   return /^[a-z0-9._-]{3,}@[a-z0-9]{2,}$/.test(trimmed) && trimmed.length >= 6 && trimmed.length <= 100;
+}
+
+// =============================================================================
+// T-214 PARITY: Password Strength Validation (matches auth-service)
+// =============================================================================
+
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', '12345678', '123456789', '1234567890',
+  'qwerty12', 'qwertyui', 'letmein1', 'welcome1', 'monkey12',
+  'dragon12', 'master12', 'abc12345', 'abcd1234', 'football',
+  'baseball', 'iloveyou', 'trustno1', 'sunshine', 'princess',
+  'admin123', 'passw0rd', 'shadow12', 'michael1', 'jennifer',
+]);
+
+const PASSWORD_STRENGTH_REGEX = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
+
+function validatePasswordStrength(password: string): string | null {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+  if (!PASSWORD_STRENGTH_REGEX.test(password)) {
+    return 'Password must contain at least one letter and one number';
+  }
+  if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+    return 'This password is too common. Please choose a stronger password.';
+  }
+  return null;
 }
 
 // =============================================================================
@@ -92,6 +120,7 @@ function generateSupplierToken(supplierId: string, email: string): string {
   // Payload structure must match main-backend expectations
   const payload = {
     sub: supplierId,
+    jti: crypto.randomUUID(), // R6.BE.004: Enable future blacklisting
     actorType: 'SUPPLIER',
     actorId: supplierId,
     email,
@@ -101,7 +130,7 @@ function generateSupplierToken(supplierId: string, email: string): string {
   };
 
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: '24h',  // Match main-backend's 24h expiry
+    expiresIn: '1h',  // R6.BE.004: Reduced from 24h — use /auth/refresh for renewal
     issuer: JWT_ISSUER,
   });
 }
@@ -139,13 +168,10 @@ router.post(
         );
       }
 
-      // Validate password strength (minimum 8 characters)
-      if (body.password.length < 8) {
-        throw new ApiError(
-          422,
-          ERROR_CODES.VALIDATION_ERROR,
-          'Password must be at least 8 characters'
-        );
+      // Validate password strength (parity with auth-service T-214)
+      const passwordError = validatePasswordStrength(body.password);
+      if (passwordError) {
+        throw new ApiError(422, ERROR_CODES.VALIDATION_ERROR, passwordError);
       }
 
       // Validate email format
@@ -435,6 +461,76 @@ router.get(
         status: supplier.verification_status,
         accountStatus: supplier.status,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /auth/refresh
+ * R6.BE.004: Issue a fresh access token using a still-valid (but possibly near-expiry) token.
+ * The caller sends the current Bearer token; if valid and the supplier is still active,
+ * a new 1h token is returned. Old token remains valid until its own expiry.
+ */
+router.post(
+  '/auth/refresh',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Missing or invalid authorization header'
+        );
+      }
+
+      const token = authHeader.substring(7);
+
+      let decoded: {
+        supplierId?: string;
+        actorId?: string;
+        sub?: string;
+        email: string;
+        actorType: string;
+      };
+      try {
+        decoded = jwt.verify(token, config.jwtSecret, { issuer: JWT_ISSUER }) as typeof decoded;
+      } catch {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Invalid or expired token'
+        );
+      }
+
+      if (decoded.actorType !== 'SUPPLIER') {
+        throw new ApiError(403, ERROR_CODES.FORBIDDEN, 'Invalid token type');
+      }
+
+      const supplierId = decoded.supplierId || decoded.actorId || decoded.sub;
+      if (!supplierId) {
+        throw new ApiError(401, ERROR_CODES.UNAUTHORIZED, 'Invalid token: missing supplier ID');
+      }
+
+      // Verify supplier still exists and is active
+      const supplier = await queryOne<Pick<SupplierRow, 'id' | 'primary_email' | 'status'>>(
+        'SELECT id, primary_email, status FROM supplier.suppliers WHERE id = $1',
+        [supplierId]
+      );
+
+      if (!supplier) {
+        throw new ApiError(401, ERROR_CODES.UNAUTHORIZED, 'Supplier not found');
+      }
+
+      if (supplier.status === 'suspended') {
+        throw new ApiError(403, ERROR_CODES.FORBIDDEN, 'Account suspended');
+      }
+
+      const newToken = generateSupplierToken(supplier.id, supplier.primary_email);
+
+      res.json({ token: newToken });
     } catch (error) {
       next(error);
     }

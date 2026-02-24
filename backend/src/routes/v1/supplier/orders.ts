@@ -28,6 +28,21 @@ const SSE_JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 const router = Router();
 
+// R6.CROSS.004: Write to outbox so downstream consumers (reorder-service, analytics) see supplier-initiated changes
+async function writeSupplierOutboxEvent(
+  pool: ReturnType<typeof getPool>,
+  eventType: string,
+  orderId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  if (!pool) return;
+  await pool.query(
+    `INSERT INTO orders.outbox (event_type, aggregate_type, aggregate_id, payload)
+     VALUES ($1, 'PurchaseOrder', $2, $3)`,
+    [eventType, orderId, JSON.stringify(payload)]
+  );
+}
+
 // =============================================================================
 // ROUTES
 // =============================================================================
@@ -525,12 +540,13 @@ router.patch("/orders/:id/status", requireSupplierAuth, requireActiveSupplier, a
 
     const currentStatus = checkResult.rows[0].status;
 
-    // Validate status transition
+    // R6.CROSS.003+004: Aligned with order-service stateMachine.ts (source of truth)
     const validTransitions: Record<string, string[]> = {
       draft: ['submitted', 'cancelled'],
       submitted: ['confirmed', 'cancelled'],
       confirmed: ['shipped', 'cancelled'],
-      shipped: ['delivered'],
+      shipped: ['delivered', 'partial_received'],
+      partial_received: ['delivered', 'partial_received'],
       delivered: [],
       cancelled: [],
     };
@@ -562,6 +578,15 @@ router.patch("/orders/:id/status", requireSupplierAuth, requireActiveSupplier, a
         JSON.stringify({ from: currentStatus, to: status }),
       ]
     );
+
+    // R6.CROSS.004: Write to outbox for downstream consumers
+    await writeSupplierOutboxEvent(pool, 'orders.po.status_changed.v1', id, {
+      orderId: id,
+      previousStatus: currentStatus,
+      newStatus: status,
+      actor: { type: 'supplier', id: req.supplierId },
+      changedAt: new Date().toISOString(),
+    });
 
     res.json({
       data: {
@@ -674,6 +699,19 @@ router.patch("/orders/:id/shipment", requireSupplierAuth, requireActiveSupplier,
       ]
     );
 
+    // R6.CROSS.004: Write to outbox for downstream consumers
+    if (newStatus !== currentStatus) {
+      await writeSupplierOutboxEvent(pool, 'orders.po.status_changed.v1', id, {
+        orderId: id,
+        previousStatus: currentStatus,
+        newStatus,
+        actor: { type: 'supplier', id: req.supplierId },
+        trackingNumber,
+        carrier,
+        changedAt: new Date().toISOString(),
+      });
+    }
+
     res.json({
       data: {
         id: result.rows[0].id,
@@ -760,6 +798,16 @@ router.post("/orders/:id/delivery-confirm", requireSupplierAuth, requireActiveSu
         }),
       ]
     );
+
+    // R6.CROSS.004: Write to outbox for downstream consumers
+    await writeSupplierOutboxEvent(pool, 'orders.po.delivered.v1', id, {
+      orderId: id,
+      previousStatus: currentStatus,
+      newStatus: 'delivered',
+      actor: { type: 'supplier', id: req.supplierId },
+      isReorder: checkResult.rows[0].order_type === 'reorder',
+      deliveredAt: new Date().toISOString(),
+    });
 
     res.json({
       data: {

@@ -502,7 +502,8 @@ export function canCancel(status: OrderStatus): boolean {
  * Check if order can be received (GRN).
  */
 export function canReceive(status: OrderStatus): boolean {
-  return ["shipped", "partial_received", "confirmed"].includes(status);
+  // R6.CROSS.005: Must match backend grnService.ts — only shipped or partial_received
+  return ["shipped", "partial_received"].includes(status);
 }
 
 /**

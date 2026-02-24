@@ -11,6 +11,7 @@ import {
   getCurrentStock,
   getStockBalance,
   getAllStockBalancesForStore,
+  getStockBalancesForProducts,
   getLowStockProducts,
   getLedgerEntriesForProduct,
   getLedgerEntriesByReference,
@@ -44,7 +45,7 @@ export async function getStockForMultipleProducts(
   storeId: string,
   productIds: string[]
 ): Promise<StockLookupResult[]> {
-  const balances = await getAllStockBalancesForStore(storeId);
+  const balances = await getStockBalancesForProducts(storeId, productIds);
   const balanceMap = new Map(balances.map((b) => [b.productId, b]));
 
   return productIds.map((productId) => {
@@ -58,8 +59,12 @@ export async function getStockForMultipleProducts(
   });
 }
 
-export async function listStoreInventory(storeId: string): Promise<StockBalance[]> {
-  return getAllStockBalancesForStore(storeId);
+export async function listStoreInventory(
+  storeId: string,
+  limit = 200,
+  offset = 0
+): Promise<StockBalance[]> {
+  return getAllStockBalancesForStore(storeId, limit, offset);
 }
 
 export async function listLowStockProducts(

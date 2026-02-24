@@ -171,7 +171,11 @@ export async function getCurrentStock(storeId: string, productId: string): Promi
   return balance?.currentQty ?? 0;
 }
 
-export async function getAllStockBalancesForStore(storeId: string): Promise<StockBalance[]> {
+export async function getAllStockBalancesForStore(
+  storeId: string,
+  limit = 200,
+  offset = 0
+): Promise<StockBalance[]> {
   return query<StockBalance>(
     `SELECT
       store_id as "storeId",
@@ -181,8 +185,28 @@ export async function getAllStockBalancesForStore(storeId: string): Promise<Stoc
       updated_at as "updatedAt"
     FROM inventory.stock_balances
     WHERE store_id = $1
+    ORDER BY product_id
+    LIMIT $2 OFFSET $3`,
+    [storeId, limit, offset]
+  );
+}
+
+export async function getStockBalancesForProducts(
+  storeId: string,
+  productIds: string[]
+): Promise<StockBalance[]> {
+  if (productIds.length === 0) return [];
+  return query<StockBalance>(
+    `SELECT
+      store_id as "storeId",
+      product_id as "productId",
+      current_qty as "currentQty",
+      last_ledger_id as "lastLedgerId",
+      updated_at as "updatedAt"
+    FROM inventory.stock_balances
+    WHERE store_id = $1 AND product_id = ANY($2)
     ORDER BY product_id`,
-    [storeId]
+    [storeId, productIds]
   );
 }
 

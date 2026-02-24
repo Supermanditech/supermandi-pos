@@ -61,7 +61,9 @@ interface StoreProductParams {
 router.get(
   '/:storeId/inventory',
   asyncHandler<StoreIdParams>(async (req: Request<StoreIdParams>, res: Response) => {
-    const balances = await listStoreInventory(req.params.storeId);
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 200, 500);
+    const offset = Math.max(parseInt(req.query.offset as string, 10) || 0, 0);
+    const balances = await listStoreInventory(req.params.storeId, limit, offset);
     res.json({ data: balances });
   })
 );
@@ -88,7 +90,7 @@ router.get(
 router.get(
   '/:storeId/inventory/recent',
   asyncHandler<StoreIdParams>(async (req: Request<StoreIdParams>, res: Response) => {
-    const limit = parseInt(req.query.limit as string, 10) || 100;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 500);
     const entries = await getStoreRecentActivity(req.params.storeId, limit);
     res.json({ data: entries });
   })
@@ -114,7 +116,7 @@ router.get(
 router.get(
   '/:storeId/inventory/:productId/history',
   asyncHandler<StoreProductParams>(async (req: Request<StoreProductParams>, res: Response) => {
-    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 500);
     const entries = await getProductLedgerHistory(
       req.params.storeId,
       req.params.productId,

@@ -84,7 +84,7 @@ export default function DashboardPage() {
         pendingProducts: products?.filter((p) => p.approvalStatus === 'pending').length ?? 0,
         approvedProducts: products?.filter((p) => p.approvalStatus === 'approved').length ?? 0,
         totalOrders: ordersResponse?.pagination?.total ?? recentOrders?.length ?? 0,
-        pendingOrders: recentOrders?.filter((o) => o.status === 'pending').length ?? 0,
+        pendingOrders: recentOrders?.filter((o) => o.status === 'submitted').length ?? 0,
         totalRevenue: recentOrders?.reduce((sum, o) => sum + o.totalAmount, 0) ?? 0,
       };
 
@@ -245,7 +245,7 @@ export default function DashboardPage() {
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           order.status === 'delivered'
                             ? 'bg-green-100 text-green-700'
-                            : order.status === 'pending'
+                            : order.status === 'submitted'
                             ? 'bg-yellow-100 text-yellow-700'
                             : order.status === 'cancelled'
                             ? 'bg-red-100 text-red-700'

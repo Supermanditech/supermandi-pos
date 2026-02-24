@@ -33,13 +33,14 @@ const itemStatusColors: Record<string, string> = {
   rejected: 'bg-red-100 text-red-700',
 };
 
-// GL-CRIT-0062: Allow shipment entry for pending status (not just confirmed)
+// R6.CROSS.003: Aligned with order-service stateMachine.ts (source of truth)
 // UIUX-XPLAT-001: 'submitted' is the initial backend PO status before supplier confirms
 const statusFlow: Record<string, string[]> = {
+  draft: ['submitted', 'cancelled'],
   submitted: ['confirmed', 'cancelled'],
-  pending: ['confirmed', 'shipped', 'cancelled'],
   confirmed: ['shipped', 'cancelled'],
-  shipped: ['delivered'],
+  shipped: ['delivered', 'partial_received'],
+  partial_received: ['delivered', 'partial_received'],
   delivered: [],
   cancelled: [],
 };
@@ -304,7 +305,7 @@ export default function OrdersPage() {
       {/* Status Filters */}
       <div className="card mb-6">
         <div className="flex flex-wrap gap-2">
-          {['all', 'submitted', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map(
+          {['all', 'draft', 'submitted', 'confirmed', 'shipped', 'partial_received', 'delivered', 'cancelled'].map(
             (status) => (
               <button
                 key={status}
@@ -733,7 +734,7 @@ export default function OrdersPage() {
 
             {/* GL-WF-039: Shipment Form - GL-CRIT-0062: Allow from pending or confirmed */}
             {/* GO-LIVE-029: Added shipment date fields */}
-            {showShipmentForm && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'pending') && (
+            {showShipmentForm && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'submitted') && (
               <div className="border border-slate-200 rounded-lg p-4 mb-6 bg-slate-50">
                 <h3 className="font-medium text-slate-800 mb-3">Add Shipment Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -977,7 +978,7 @@ export default function OrdersPage() {
                       key={newStatus}
                       onClick={() => {
                         // GL-CRIT-0062: Allow shipment from pending or confirmed status
-                        if (newStatus === 'shipped' && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'pending')) {
+                        if (newStatus === 'shipped' && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'submitted')) {
                           // GL-CRIT-0063: Warn if any items still pending
                           // UIUX-SUP-010: Use styled confirmation instead of window.confirm
                           const pendingItems = selectedOrder.items.filter(item => item.status === 'pending' || !item.receivedQuantity);
