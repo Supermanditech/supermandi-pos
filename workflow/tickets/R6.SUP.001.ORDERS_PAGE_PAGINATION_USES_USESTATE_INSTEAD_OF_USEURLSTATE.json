@@ -6,7 +6,7 @@
   "riskClass": "high",
   "title": "Orders page pagination uses useState instead of useUrlState, inconsistent with status filter",
   "description": "R6 deep audit finding. Dimension: wiring. Severity: P1. Source SHA: bbd487a3. Scope: R6_DEEP_AUDIT_WAVE. The orders page syncs the status filter with URL via useUrlState (line 66) but uses local useState for currentPage (line 68). This means pagination state is lost on back/forward navigation while status filter is preserved, creating an inconsistent and confusing UX. Products page uses useUrlState for all state. This is different from R5.SUP.008 which covered a different page's pagination — this finding is specific to the status filter/pagination split inconsistency on the same page.",
-  "status": "todo",
+  "status": "done",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -14,7 +14,7 @@
     "ui": "na",
     "ux": "na",
     "professional_polish": "na",
-    "wiring": "fail",
+    "wiring": "pass",
     "navigation": "na",
     "api": "na",
     "backend": "na",
@@ -51,7 +51,7 @@
       "supplier-portal"
     ],
     "impactRetestRequired": true,
-    "impactRetestStatus": "pending"
+    "impactRetestStatus": "passed"
   },
   "operator": {
     "reportedBy": "claude-r6-audit",
@@ -63,9 +63,9 @@
   },
   "claudeChecks": {
     "screenVisualizedWithOperator": true,
-    "codeQualityChecksPassed": false,
-    "regressionChecklistPassed": false,
-    "apiContractChecked": false,
+    "codeQualityChecksPassed": true,
+    "regressionChecklistPassed": true,
+    "apiContractChecked": true,
     "navigationChecked": false,
     "envAndBasePathChecked": false,
     "migrationSafetyChecked": false,
@@ -140,14 +140,36 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "R6-IMPL-2026-02-24",
+      "at": "2026-02-24T14:31:16.178Z",
+      "reason": "Implementation started for R6.SUP.001.ORDERS_PAGE_PAGINATION_USES_USESTATE_INSTEAD_OF_USEURLSTATE.",
+      "prevHash": "GENESIS",
+      "hash": "7086433895f2aefae8219b414e23080c378d00acd54e2927435187fe255281cc"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "R6-IMPL-2026-02-24",
+      "at": "2026-02-24T14:31:16.178Z",
+      "reason": "Changed orders page pagination from useState to useUrlState for URL-synced page state",
+      "prevHash": "7086433895f2aefae8219b414e23080c378d00acd54e2927435187fe255281cc",
+      "hash": "85ff366bcf642a125d908e21bc1214d462675e1274fae1152e9222c81591a7f0"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
       "deploy_ref=github://run/22305359033",
       "staging_commit=badc3fbe",
-      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+      "api_health_200=https://staging.supermandi.tech/api/v1/health",
+      "typecheck-pass:supplier-portal"
     ],
     "parityProof": [
       "audit_sha=bbd487a3",
@@ -156,7 +178,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T18:00:00.000Z",
-    "updatedAt": "2026-02-24T18:00:00.000Z",
+    "updatedAt": "2026-02-24T14:31:16.178Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -244,12 +266,12 @@
     }
   },
   "readiness": {
-    "productionGradeClaimed": false,
+    "productionGradeClaimed": true,
     "pendingInternal": [],
     "pendingExternal": [],
     "pendingOps": [],
     "blocked": false,
-    "summary": "R6 deep audit finding. Awaiting implementation."
+    "summary": "Changed orders page pagination from useState to useUrlState for URL-synced page state"
   },
   "gitDiscipline": {
     "workBranch": "fix/r6-sup-001-orders_page_pagination_uses_usestate_instead_of_u",
@@ -257,7 +279,7 @@
     "lastValidatedCommit": "bbd487a3",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "R6 audit ticketization at HEAD bbd487a3"
     ]

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ThemeToggle } from "./components/ThemeToggle";
 // T-094: Standardized toast notifications
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
@@ -1863,7 +1863,7 @@ export default function App() {
       if (shouldRefreshSettings) r.refreshSettings?.();
       if (shouldRefreshAudit) r.refreshAuditLogs?.();
       if (shouldRefreshDocuments) r.refreshDocuments?.();
-      r.refreshRegEvents?.(); // DR-010: Always poll for badge count
+      if (shouldRefreshRegEvents) r.refreshRegEvents?.();
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
     // LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001: Added isAuthenticated dependency
@@ -2505,25 +2505,32 @@ export default function App() {
   }
 
   // SA-ENROLL-UX G2: Revoke an enrollment code
-  async function handleRevokeEnrollment(code: string) {
-    if (!confirm(`Revoke enrollment code ${code}? This cannot be undone.`)) return;
-    setRevokeLoading(true);
-    try {
-      await revokeEnrollmentCode(code);
-      if (enrollment?.code === code) {
-        setEnrollment(null);
-      }
-      // Refresh any store enrollments that contain this code
-      for (const [sid, records] of Object.entries(storeEnrollments)) {
-        if (records.some((r) => r.code === code)) {
-          void loadStoreEnrollmentsHandler(sid);
+  function handleRevokeEnrollment(code: string) {
+    showConfirm(
+      "Revoke Enrollment Code",
+      `Revoke enrollment code ${code}? This cannot be undone.`,
+      "Revoke Code",
+      "danger",
+      async () => {
+        setRevokeLoading(true);
+        try {
+          await revokeEnrollmentCode(code);
+          if (enrollment?.code === code) {
+            setEnrollment(null);
+          }
+          // Refresh any store enrollments that contain this code
+          for (const [sid, records] of Object.entries(storeEnrollments)) {
+            if (records.some((r) => r.code === code)) {
+              void loadStoreEnrollmentsHandler(sid);
+            }
+          }
+        } catch (e: any) {
+          setEnrollError(e?.message ? String(e.message) : "Failed to revoke enrollment code");
+        } finally {
+          setRevokeLoading(false);
         }
-      }
-    } catch (e: any) {
-      setEnrollError(e?.message ? String(e.message) : "Failed to revoke enrollment code");
-    } finally {
-      setRevokeLoading(false);
-    }
+      },
+    );
   }
 
   // #329-332: Resend welcome message (download links + activation instructions)
@@ -2532,9 +2539,9 @@ export default function App() {
     try {
       const result = await resendEnrollmentCode(code);
       if (result.sent) {
-        alert(`Welcome message resent${result.sentTo ? ` to ${result.sentTo}` : ""} via ${result.channels.join(", ")}`);
+        toast.success(`Welcome message resent${result.sentTo ? ` to ${result.sentTo}` : ""} via ${result.channels.join(", ")}`);
       } else {
-        alert("Resend request completed but no channels were available.");
+        toast("Resend request completed but no channels were available.", { icon: "⚠️" });
       }
     } catch (e: any) {
       setEnrollError(e?.message ? String(e.message) : "Failed to resend welcome message");

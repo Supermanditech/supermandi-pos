@@ -239,9 +239,9 @@ export default function SupplierOnboardingPage() {
       // Exchange with backend (CRITICAL: includes applicationId!)
       const result = await verifySupplierOtp(idToken, applicationId);
 
-      // Store application info locally
-      localStorage.setItem('supplier_application_id', applicationId);
-      localStorage.setItem('supplier_application_status', result.status || 'DRAFT');
+      // Store application info in session (cleared on tab close, not persisted across sessions)
+      sessionStorage.setItem('supplier_application_id', applicationId);
+      sessionStorage.setItem('supplier_application_status', result.status || 'DRAFT');
 
       setApplicationStatus(result.status || 'DRAFT');
       toast.success('Phone verified!');
@@ -332,7 +332,7 @@ export default function SupplierOnboardingPage() {
       // Submit KYC
       const result = await submitSupplierKyc(applicationId);
       setApplicationStatus('KYC_SUBMITTED');
-      localStorage.setItem('supplier_application_status', 'KYC_SUBMITTED');
+      sessionStorage.setItem('supplier_application_status', 'KYC_SUBMITTED');
       toast.success('Documents submitted!');
       setStep('success');
     } catch (err) {

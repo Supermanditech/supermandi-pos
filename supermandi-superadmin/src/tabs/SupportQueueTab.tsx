@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSessionToken, fetchWithTimeout } from '../api/authToken';
 // UIUX-SA-005: Use parseError for sanitized error messages instead of generic 'API error: {status}'
 import { parseError } from '../api/errorSanitizer';
+import { ConfirmDialog, type ConfirmDialogConfig } from '../components/ConfirmDialog';
 
 interface SupportConversation {
   id: string;
@@ -71,6 +72,7 @@ export function SupportQueueTab() {
   const [statusFilter, setStatusFilter] = useState<'open' | 'resolved' | 'all'>('open');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const fetchQueue = useCallback(async () => {
     setLoading(true);
@@ -248,7 +250,7 @@ export function SupportQueueTab() {
                     <button onClick={() => assignToMe(selectedConvId)} style={{ padding: '0.3rem 0.6rem', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontSize: '0.75rem' }}>
                       Assign to Me
                     </button>
-                    <button onClick={() => resolveConversation(selectedConvId)} style={{ padding: '0.3rem 0.6rem', borderRadius: 4, border: '1px solid #dcfce7', background: '#f0fdf4', cursor: 'pointer', fontSize: '0.75rem', color: '#166534' }}>
+                    <button onClick={() => setConfirmDialog({ title: 'Resolve Conversation', message: 'Mark this conversation as resolved? The customer will no longer see it as active.', confirmLabel: 'Resolve', variant: 'warning', onConfirm: () => { setConfirmDialog(null); resolveConversation(selectedConvId); } })} style={{ padding: '0.3rem 0.6rem', borderRadius: 4, border: '1px solid #dcfce7', background: '#f0fdf4', cursor: 'pointer', fontSize: '0.75rem', color: '#166534' }}>
                       Resolve
                     </button>
                   </div>
@@ -336,6 +338,10 @@ export function SupportQueueTab() {
             )}
           </tbody>
         </table>
+      )}
+
+      {confirmDialog && (
+        <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />
       )}
     </div>
   );

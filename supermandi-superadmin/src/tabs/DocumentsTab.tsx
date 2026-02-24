@@ -1,5 +1,5 @@
 // SA-001: Documents verification tab extracted from App.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { DocumentRecord } from "../api/documents";
 import { fetchDocumentBlob } from "../api/documents";
 import { formatDateTime } from "../lib/formatters";
@@ -39,9 +39,11 @@ export function DocumentsTab({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [blobLoading, setBlobLoading] = useState(false);
   const [blobError, setBlobError] = useState<string | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!selectedDocument) {
+      if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
       setBlobUrl(null);
       setBlobError(null);
       return;
@@ -49,9 +51,12 @@ export function DocumentsTab({
     let cancelled = false;
     setBlobLoading(true);
     setBlobError(null);
+    // Revoke previous blob URL before fetching new one
+    if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
     fetchDocumentBlob(selectedDocument.id)
       .then((url) => {
-        if (!cancelled) setBlobUrl(url);
+        if (!cancelled) { blobUrlRef.current = url; setBlobUrl(url); }
+        else URL.revokeObjectURL(url);
       })
       .catch((err) => {
         if (!cancelled) setBlobError(err instanceof Error ? err.message : "Failed to load document");
@@ -61,7 +66,6 @@ export function DocumentsTab({
       });
     return () => {
       cancelled = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDocument?.id]);

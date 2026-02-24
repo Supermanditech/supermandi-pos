@@ -36,15 +36,18 @@ interface BnplSummary {
   totalRepaidMinor: number;
 }
 
-async function fetchBnplOrders(status?: string): Promise<{ orders: BnplOrder[]; summary: BnplSummary }> {
+const BNPL_PAGE_SIZE = 20;
+
+async function fetchBnplOrders(status?: string, page = 1): Promise<{ orders: BnplOrder[]; summary: BnplSummary; total: number }> {
   const params = new URLSearchParams();
   if (status) params.set('status', status);
-  params.set('limit', '100');
+  params.set('limit', String(BNPL_PAGE_SIZE));
+  params.set('offset', String((page - 1) * BNPL_PAGE_SIZE));
 
-  const json = await apiFetch<{ orders: BnplOrder[]; summary: BnplSummary }>(
+  const json = await apiFetch<{ orders: BnplOrder[]; summary: BnplSummary; total?: number }>(
     `/api/v1/supplier/bnpl/backed-orders?${params}`
   );
-  return { orders: json.orders || [], summary: json.summary || {} as BnplSummary };
+  return { orders: json.orders || [], summary: json.summary || {} as BnplSummary, total: json.total ?? json.orders?.length ?? 0 };
 }
 
 function fmtDate(iso: string): string {
@@ -71,14 +74,17 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function BnplOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['bnpl-orders', filterStatus],
-    queryFn: () => fetchBnplOrders(filterStatus || undefined),
+    queryKey: ['bnpl-orders', filterStatus, currentPage],
+    queryFn: () => fetchBnplOrders(filterStatus || undefined, currentPage),
   });
 
   const orders = data?.orders || [];
   const summary = data?.summary;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / BNPL_PAGE_SIZE));
 
   return (
     <div>
@@ -125,7 +131,7 @@ export default function BnplOrdersPage() {
                 ? 'bg-primary-600 text-white border-primary-600'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
-            onClick={() => setFilterStatus(s)}
+            onClick={() => { setFilterStatus(s); setCurrentPage(1); }}
           >
             {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
           </button>
@@ -156,6 +162,7 @@ export default function BnplOrdersPage() {
         ) : orders.length === 0 ? (
           <EmptyState icon={Package} title="No BNPL orders" description="No credit-backed orders found for the selected filter." />
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -197,6 +204,30 @@ export default function BnplOrdersPage() {
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border border-slate-200 rounded-lg">
+              <span className="text-sm text-slate-600">
+                Page {currentPage} of {totalPages} ({total} orders)
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm border border-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1 text-sm border border-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

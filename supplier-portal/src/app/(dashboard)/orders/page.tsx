@@ -65,8 +65,13 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   // T-121: Sync status filter with URL for back/forward persistence
   const [statusFilter, setStatusFilter] = useUrlState('status', 'all');
-  // GL-WF-063: Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  // GL-WF-063: Pagination state — synced with URL for back/forward persistence
+  const [pageParam, setPageParam] = useUrlState('page', '1');
+  const currentPage = Math.max(1, parseInt(pageParam, 10) || 1);
+  const setCurrentPage = (v: number | ((p: number) => number)) => {
+    const next = typeof v === 'function' ? v(currentPage) : v;
+    setPageParam(String(next));
+  };
   const pageSize = 20;
   // AUDIT-SUP-018: Debounce timer for quantity input mutations
   const qtyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

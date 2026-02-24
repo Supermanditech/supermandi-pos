@@ -62,11 +62,12 @@ export default function SupplierChatPage() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const [convLimit, setConvLimit] = useState(50);
 
   // Fetch conversations
   const { data: convData, isLoading: convLoading } = useQuery({
-    queryKey: ['supplier-conversations'],
-    queryFn: () => chatApiFetch('/api/v1/chat/conversations?limit=100'),
+    queryKey: ['supplier-conversations', convLimit],
+    queryFn: () => chatApiFetch(`/api/v1/chat/conversations?limit=${convLimit}`),
     refetchInterval: 10000,
   });
 
@@ -230,6 +231,14 @@ export default function SupplierChatPage() {
                 </div>
               </div>
             ))
+          )}
+          {conversations.length >= convLimit && (
+            <button
+              onClick={() => setConvLimit(l => l + 50)}
+              style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', color: '#2563eb', background: '#f8fafc', border: 'none', borderTop: '1px solid #e2e8f0', cursor: 'pointer' }}
+            >
+              Load more conversations
+            </button>
           )}
         </div>
       </div>
