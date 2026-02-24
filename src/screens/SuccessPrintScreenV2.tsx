@@ -203,18 +203,16 @@ export default function SuccessPrintScreenV2() {
   };
 
   const handleSkip = () => {
-    // GL-CRIT-0094: Navigate first, then unlock cart after navigation completes
-    // This prevents race conditions where cart is unlocked while still on this screen
+    // R6.POS.002: Unlock cart synchronously before navigation reset to avoid race conditions.
+    // zustand state updates are synchronous — unlockCart() completes immediately.
     if (!isPartialSale) {
       clearCart(true);
     }
-    // Use reset to ensure clean navigation state and unlock after
+    unlockCart();
     navigation.reset({
       index: 0,
       routes: [{ name: "SellScan" }],
     });
-    // Unlock after reset is queued (React Navigation processes reset synchronously)
-    setTimeout(() => unlockCart(), 0);
   };
 
   return (

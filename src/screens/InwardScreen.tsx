@@ -388,14 +388,14 @@ export default function InwardScreen({
         await doSubmit();
       }
     } catch (error) {
-      // AUDIT-POS-035: Block submission on stock check failure instead of silently proceeding
+      // R6.POS.001: Block submission on stock check failure — no bypass allowed
       console.warn("[InwardScreen] Stock check failed:", error);
+      setSubmitting(false);
       Alert.alert(
         "Stock Check Failed",
         "Could not verify current stock levels. Please check your connection and try again.",
         [
-          { text: "Cancel", style: "cancel", onPress: () => setSubmitting(false) },
-          { text: "Submit Anyway", onPress: () => doSubmit() },
+          { text: "OK", style: "cancel" },
         ]
       );
     }

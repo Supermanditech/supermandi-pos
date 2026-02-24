@@ -236,7 +236,7 @@ export default function OrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orderDetail'] });
-      toast.success('Delivery confirmed successfully');
+      toast.success('Delivery confirmation recorded. Awaiting retailer receipt.');
       setSelectedOrder(null);
       setShowDeliveryForm(false);
       setDeliveryNotes('');

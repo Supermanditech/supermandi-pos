@@ -1080,7 +1080,7 @@ export async function markOrdersRead(): Promise<{ success: boolean }> {
   });
 }
 
-// T-245: Confirm delivery for an order (shipped → delivered)
+// R6.CROSS.007: Supplier records delivery confirmation (metadata only, status stays shipped)
 export interface DeliveryConfirmation {
   deliveryNotes?: string;
   deliveryProofUrl?: string;
@@ -1089,7 +1089,7 @@ export interface DeliveryConfirmation {
 export async function confirmOrderDelivery(
   orderId: string,
   data?: DeliveryConfirmation
-): Promise<{ id: string; status: string; actualDeliveryDate: string; updatedAt: string }> {
+): Promise<{ id: string; status: string; updatedAt: string }> {
   return apiFetch(`/api/v1/supplier/orders/${orderId}/delivery-confirm`, {
     method: 'POST',
     body: JSON.stringify(data || {}),

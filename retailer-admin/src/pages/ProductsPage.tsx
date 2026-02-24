@@ -579,10 +579,9 @@ export default function ProductsPage() {
         body: JSON.stringify(payload),
       });
 
-      if (response.status === 401) return;
-
       // AUD-025-B: Handle 409 CONFLICT (stale update rejected by LWW)
       // GL-CRIT-0101: Differentiate error handling by status code
+      // R6.RET.001: Removed duplicate 401 silent return — show user-friendly message instead
       if (response.status === 401) {
         throw new Error('Session expired. Please log in again.');
       }

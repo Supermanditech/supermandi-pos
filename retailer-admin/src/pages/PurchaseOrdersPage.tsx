@@ -34,7 +34,7 @@ interface PurchaseOrder {
   orderDate: string;
   expectedDeliveryDate?: string;
   totalMinor: number;
-  status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
+  status: 'draft' | 'submitted' | 'confirmed' | 'shipped' | 'partial_received' | 'delivered' | 'cancelled';
   itemsCount: number;
   items?: PurchaseOrderItem[];
   notes?: string;
@@ -63,10 +63,13 @@ function fmtDate(d: string): string {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pending:   { bg: '#fef3c7', color: '#92400e' },
-  confirmed: { bg: '#dbeafe', color: '#1e40af' },
-  delivered: { bg: '#dcfce7', color: '#166534' },
-  cancelled: { bg: '#f3f4f6', color: '#6b7280' },
+  draft:             { bg: '#f3f4f6', color: '#6b7280' },
+  submitted:         { bg: '#fef3c7', color: '#92400e' },
+  confirmed:         { bg: '#dbeafe', color: '#1e40af' },
+  shipped:           { bg: '#e0e7ff', color: '#3730a3' },
+  partial_received:  { bg: '#fef9c3', color: '#854d0e' },
+  delivered:         { bg: '#dcfce7', color: '#166534' },
+  cancelled:         { bg: '#fee2e2', color: '#991b1b' },
 };
 
 export default function PurchaseOrdersPage() {
@@ -157,8 +160,11 @@ export default function PurchaseOrdersPage() {
             style={{ maxWidth: '200px' }}
           >
             <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
+            <option value="draft">Draft</option>
+            <option value="submitted">Submitted</option>
             <option value="confirmed">Confirmed</option>
+            <option value="shipped">Shipped</option>
+            <option value="partial_received">Partial Received</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
           </select>

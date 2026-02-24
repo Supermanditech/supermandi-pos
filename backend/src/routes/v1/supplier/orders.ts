@@ -731,8 +731,9 @@ router.patch("/orders/:id/shipment", requireSupplierAuth, requireActiveSupplier,
 
 /**
  * POST /api/v1/supplier/orders/:id/delivery-confirm
- * T-245: Dedicated delivery confirmation endpoint
- * Transitions shipped → delivered, sets actual_delivery_date, records delivery notes
+ * T-245: Supplier records delivery metadata (notes, proof URL).
+ * R6.CROSS.007: Does NOT change status — only GRN (retailer receive) triggers
+ * the shipped→delivered transition with proper inventory updates.
  * SEC-001: Requires ACTIVE supplier status
  */
 router.post("/orders/:id/delivery-confirm", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
@@ -766,57 +767,54 @@ router.post("/orders/:id/delivery-confirm", requireSupplierAuth, requireActiveSu
     const currentStatus = checkResult.rows[0].status;
     if (currentStatus !== 'shipped') {
       res.status(400).json({
-        error: { code: 'INVALID_TRANSITION', message: `Only shipped orders can be confirmed delivered (current: ${currentStatus})` }
+        error: { code: 'INVALID_TRANSITION', message: `Only shipped orders can record delivery confirmation (current: ${currentStatus})` }
       });
       return;
     }
 
-    // Transition to delivered + set actual_delivery_date
+    // R6.CROSS.007: Record delivery metadata WITHOUT changing status.
+    // Status remains 'shipped' — retailer GRN flow handles shipped→delivered with inventory updates.
     const result = await pool.query(
       `UPDATE orders.purchase_orders
-       SET status = 'delivered',
-           actual_delivery_date = NOW(),
-           updated_at = NOW()
+       SET updated_at = NOW()
        WHERE id = $1
-       RETURNING id, status, actual_delivery_date, updated_at`,
+       RETURNING id, status, updated_at`,
       [id]
     );
 
     // Log delivery confirmation event with metadata
     await pool.query(
       `INSERT INTO orders.order_events (purchase_order_id, event_type, actor_id, actor_type, metadata)
-       VALUES ($1, 'delivery_confirmed', $2, 'supplier', $3)`,
+       VALUES ($1, 'supplier_delivery_confirmed', $2, 'supplier', $3)`,
       [
         id,
         req.supplierId,
         JSON.stringify({
-          from: currentStatus,
-          to: 'delivered',
+          status: currentStatus,
           deliveryNotes: deliveryNotes || null,
           deliveryProofUrl: deliveryProofUrl || null,
           isReorder: checkResult.rows[0].order_type === 'reorder',
+          note: 'Supplier confirmed delivery. Awaiting retailer GRN for status transition.',
         }),
       ]
     );
 
     // R6.CROSS.004: Write to outbox for downstream consumers
-    await writeSupplierOutboxEvent(pool, 'orders.po.delivered.v1', id, {
+    await writeSupplierOutboxEvent(pool, 'orders.po.supplier_delivery_confirmed.v1', id, {
       orderId: id,
-      previousStatus: currentStatus,
-      newStatus: 'delivered',
+      currentStatus,
       actor: { type: 'supplier', id: req.supplierId },
       isReorder: checkResult.rows[0].order_type === 'reorder',
-      deliveredAt: new Date().toISOString(),
+      confirmedAt: new Date().toISOString(),
     });
 
     res.json({
       data: {
         id: result.rows[0].id,
         status: result.rows[0].status,
-        actualDeliveryDate: result.rows[0].actual_delivery_date,
         updatedAt: result.rows[0].updated_at,
       },
-      message: 'Delivery confirmed successfully',
+      message: 'Delivery confirmation recorded. Retailer will confirm receipt via GRN.',
     });
   } catch (error) {
     next(error);
@@ -831,7 +829,9 @@ router.post("/orders/:id/delivery-confirm", requireSupplierAuth, requireActiveSu
 router.patch("/orders/:orderId/items/:itemId/status", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { orderId, itemId } = req.params;
-    const { status, receivedQuantity } = req.body;
+    // R6.CROSS.010: Supplier can only change item status, NOT received_quantity.
+    // received_quantity is updated only through GRN (retailer receive flow) with inventory-service call.
+    const { status } = req.body;
 
     const validStatuses = ['pending', 'partial', 'received', 'rejected'];
     if (!status || !validStatuses.includes(status)) {
@@ -867,33 +867,13 @@ router.patch("/orders/:orderId/items/:itemId/status", requireSupplierAuth, requi
 
     const item = checkResult.rows[0];
 
-    // Validate received_quantity if provided
-    let newReceivedQty = item.received_quantity;
-    if (receivedQuantity !== undefined) {
-      if (receivedQuantity < 0 || receivedQuantity > item.ordered_quantity) {
-        res.status(400).json({
-          error: { code: 'VALIDATION_ERROR', message: `Received quantity must be between 0 and ${item.ordered_quantity}` }
-        });
-        return;
-      }
-      newReceivedQty = receivedQuantity;
-    }
-
-    // Auto-determine status based on received quantity if not explicitly set
-    let finalStatus = status;
-    if (status === 'received' && newReceivedQty < item.ordered_quantity) {
-      finalStatus = 'partial';
-    } else if (status === 'partial' && newReceivedQty === item.ordered_quantity) {
-      finalStatus = 'received';
-    }
-
-    // Update item status
+    // Update item status only (not received_quantity)
     const result = await pool.query(
       `UPDATE orders.purchase_order_items
-       SET status = $1, received_quantity = $2, updated_at = NOW()
-       WHERE id = $3
+       SET status = $1, updated_at = NOW()
+       WHERE id = $2
        RETURNING id, status, received_quantity, ordered_quantity, updated_at`,
-      [finalStatus, newReceivedQty, itemId]
+      [status, itemId]
     );
 
     // Log the item status change
@@ -907,8 +887,7 @@ router.patch("/orders/:orderId/items/:itemId/status", requireSupplierAuth, requi
         JSON.stringify({
           itemId,
           fromStatus: item.current_status,
-          toStatus: finalStatus,
-          receivedQuantity: newReceivedQty,
+          toStatus: status,
         }),
       ]
     );
