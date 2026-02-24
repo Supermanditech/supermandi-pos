@@ -1,0 +1,3348 @@
+{
+  "FIX-001": {
+    "surface": "shared",
+    "title": "Trigger mega-batch staging deploy — 6 services + 25 migrations",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "ready_for_operator_test"
+  },
+  "LIVE.A11Y.RETAILER_FORM_LABELS.001": {
+    "surface": "retailer_web",
+    "title": "Add missing htmlFor/id label associations and ARIA attributes to all retailer auth forms",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.ADMIN.AUTH_RATE_LIMIT_TUNING.001": {
+    "surface": "shared",
+    "title": "Admin Auth Rate Limit Tuning",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.AI.VOICE_PROMPT_INJECTION_GUARD.001": {
+    "surface": "backend",
+    "title": "Ai Voice Prompt Injection Guard",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.API.HEALTH_ENDPOINT_PARITY.001": {
+    "surface": "shared",
+    "title": "Standardize health endpoint auth policy and add missing order/analytics health routes",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.API.HEALTH_GITSHA_ENV_PARITY.001": {
+    "surface": "backend",
+    "title": "Api Health Gitsha Env Parity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.API.PLATFORM_STORES_PUBLIC_ACCESS_PARITY.001": {
+    "surface": "backend",
+    "title": "Api Platform Stores Public Access Parity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.AUTH.JWT_SECRET_FALLBACK_REMOVAL_STACK.001": {
+    "surface": "shared",
+    "title": "JWT_SECRET falls back to ADMIN_TOKEN",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.AUTH_FOOTER_BUILDSTAMP.001": {
+    "surface": "supplier_web",
+    "title": "Lock auth footer and build stamp parity across supplier and retailer auth surfaces",
+    "riskClass": "low",
+    "severity": "P3",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.CREDENTIAL_INPUT_MODEL.001": {
+    "surface": "supplier_web",
+    "title": "Lock login credential model parity: OTP phone mode + email/password mode on both portals",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.FORGOT_PASSWORD_CHANNELS.001": {
+    "surface": "supplier_web",
+    "title": "Lock forgot-password channel parity: both OTP reset and email-link reset on both portals",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.LOGIN_CONTAINER.001": {
+    "surface": "supplier_web",
+    "title": "Lock supplier login shell metrics to retailer baseline (pixel parity)",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.LOGIN_COPY_LINKS.001": {
+    "surface": "supplier_web",
+    "title": "Lock login copy and link labels to one canonical string set across supplier and retailer",
+    "riskClass": "low",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.REGISTER_CARD_WIDTH.001": {
+    "surface": "supplier_web",
+    "title": "Lock register card and stepper geometry parity across supplier and retailer",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.REGISTER_HEADER_COPY.001": {
+    "surface": "supplier_web",
+    "title": "Lock register page heading/subheading/step labels to a shared template across supplier and retailer",
+    "riskClass": "low",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.REGISTER_SUCCESS_LEGAL.001": {
+    "surface": "supplier_web",
+    "title": "Lock registration success legal/support content parity across supplier and retailer",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.AUTH.PARITY.RESET_PASSWORD_EXECUTION.001": {
+    "surface": "supplier_web",
+    "title": "Lock reset-password execution parity for OTP and email token paths across supplier and retailer",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.BE.CHAT_WS_JWT_CONSTRAINTS.001": {
+    "surface": "backend",
+    "title": "Be Chat Ws Jwt Constraints",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001": {
+    "surface": "backend",
+    "title": "Be Documents Content Disposition Sanitization",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.DOC_UPLOAD_AUTH_VALIDATION.001": {
+    "surface": "backend",
+    "title": "Be Doc Upload Auth Validation",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.EVENTS_JSON_PARSE_GUARD.001": {
+    "surface": "backend",
+    "title": "2 locations; error handler also crashes",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.JWT_ADMIN_ISSUER_ENFORCEMENT.001": {
+    "surface": "backend",
+    "title": "Email OTP token verification skips issuer check",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.BE.JWT_ALGORITHM_PINNING.001": {
+    "surface": "backend",
+    "title": "Be Jwt Algorithm Pinning",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.BE.STORE_ISOLATION.CUSTOMER_DUES_SCOPE.001": {
+    "surface": "backend",
+    "title": "UPDATE missing store_id",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.STORE_ISOLATION.REFUND_LEDGER_SCOPE.001": {
+    "surface": "backend",
+    "title": "Be Store Isolation Refund Ledger Scope",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.STORE_ISOLATION.SYNC_UPDATE_PAYMENTS_SCOPE.001": {
+    "surface": "backend",
+    "title": "Be Store Isolation Sync Update Payments Scope",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.STORE_ISOLATION.SYNC_UPDATE_SALES_SCOPE.001": {
+    "surface": "backend",
+    "title": "Be Store Isolation Sync Update Sales Scope",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.STORE_ISOLATION.UPDATE_SALES_SCOPE.001": {
+    "surface": "backend",
+    "title": "UPDATE queries missing WHERE store_id",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.STORE_ISOLATION.UPDATE_SALES_STATUS_SCOPE.001": {
+    "surface": "backend",
+    "title": "Be Store Isolation Update Sales Status Scope",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.STORE_ISOLATION.UPDATE_SELL_PAYMENTS_SCOPE.001": {
+    "surface": "backend",
+    "title": "UPDATE queries missing WHERE store_id",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.SUPERADMIN_TRUST_MODEL_HARDENING.001": {
+    "surface": "backend",
+    "title": "x-admin-token header bypasses all store ownership checks",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BE.TEST_AUTH_ROUTE_PROD_GUARD.001": {
+    "surface": "backend",
+    "title": "Be Test Auth Route Prod Guard",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BIZ.OPENING_STOCK_LEDGER_INTEGRITY.001": {
+    "surface": "shared",
+    "title": "Biz Opening Stock Ledger Integrity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BIZ.PAYMENT_CONFIRM_STOCK_QUANTITY_PARITY.001": {
+    "surface": "shared",
+    "title": "Biz Payment Confirm Stock Quantity Parity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.BIZ.SALE_CANCELLATION_INVENTORY_REVERSAL.001": {
+    "surface": "shared",
+    "title": "Biz Sale Cancellation Inventory Reversal",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.CONFIG.DB_PASSWORD_DEFAULT_REMOVAL_GLOBAL.001": {
+    "surface": "backend",
+    "title": "DB_PASSWORD = getEnvOrDefault('postgres')",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.CONFIG.REDIS_FAIL_FAST_GLOBAL.001": {
+    "surface": "backend",
+    "title": "Redis host defaults to localhost; no fail-fast",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.DB.CRITICAL_MIGRATION_INTEGRITY_008.001": {
+    "surface": "backend",
+    "title": "Db Critical Migration Integrity 008",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.MIGRATION_DUPLICATE_NUMBER_ORDERING.001": {
+    "surface": "backend",
+    "title": "Db Migration Duplicate Number Ordering",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.MIGRATION_GAPS_DOCUMENTATION.001": {
+    "surface": "backend",
+    "title": "Db Migration Gaps Documentation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.DB.MIGRATION_RUNNER_LOCK_CRASH_SAFETY.001": {
+    "surface": "backend",
+    "title": "Db Migration Runner Lock Crash Safety",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.ORDERS_PAYMENTS_SCHEMA_PARITY.001": {
+    "surface": "backend",
+    "title": "Db Orders Payments Schema Parity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.RLS_CONTEXT_RUNTIME_ENFORCEMENT.001": {
+    "surface": "backend",
+    "title": "Db Rls Context Runtime Enforcement",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.RLS_CRITICAL_GAP_001.001": {
+    "surface": "backend",
+    "title": "Db Rls Critical Gap 001",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.RLS_CRITICAL_GAP_002.001": {
+    "surface": "backend",
+    "title": "Db Rls Critical Gap 002",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.RLS_CRITICAL_GAP_003.001": {
+    "surface": "backend",
+    "title": "Db Rls Critical Gap 003",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.RLS_CRITICAL_GAP_004.001": {
+    "surface": "backend",
+    "title": "Db Rls Critical Gap 004",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.RLS_CRITICAL_GAP_005.001": {
+    "surface": "backend",
+    "title": "Db Rls Critical Gap 005",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.DB.SALES_STATUS_ENUM_PARITY.001": {
+    "surface": "backend",
+    "title": "Db Sales Status Enum Parity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.GW.ADMIN_PUBLIC_PATH_EXACT_MATCH.001": {
+    "surface": "backend",
+    "title": "Gw Admin Public Path Exact Match",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.GW.CORS_INTERNAL_HEADER_EXPOSURE.001": {
+    "surface": "backend",
+    "title": "Gw Cors Internal Header Exposure",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.GW.CSRF_WEBHOOK_EXEMPTIONS.001": {
+    "surface": "backend",
+    "title": "Gw Csrf Webhook Exemptions",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.GW.HEALTH_BYPASS_EXPLICIT_ALLOWLIST.001": {
+    "surface": "backend",
+    "title": "Gw Health Bypass Explicit Allowlist",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.GW.JWT_SECRET_FALLBACK_REMOVAL.001": {
+    "surface": "backend",
+    "title": "Gw Jwt Secret Fallback Removal",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.GW.MAIN_BACKEND_URL_FAIL_FAST.001": {
+    "surface": "backend",
+    "title": "mainBackendUrl localhost fallback outside config.ts",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.GW.RATE_LIMIT_REDIS_BACKED.001": {
+    "surface": "backend",
+    "title": "Gw Rate Limit Redis Backed",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.GW.STORE_ISOLATION.ADMIN_HEADER_STRIP.001": {
+    "surface": "backend",
+    "title": "Gw Store Isolation Admin Header Strip",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.GW.SUPPLIER_REGISTER_TRAILING_SLASH_PARITY.001": {
+    "surface": "backend",
+    "title": "Gw Supplier Register Trailing Slash Parity",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.GW.TRUST_PROXY_CLOUD_RUN.001": {
+    "surface": "backend",
+    "title": "Gw Trust Proxy Cloud Run",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.LANDING.CROSS_PAGE_CONSISTENCY.001": {
+    "surface": "shared",
+    "title": "Fix landing page font, footer, and navigation inconsistencies across index/pos/privacy/terms",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.LEGAL.TERMS_PRIVACY_ROUTES.001": {
+    "surface": "shared",
+    "title": "Fix broken /terms and /privacy routes on retailer register and supplier register/help pages",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.LOGGING.CONSOLE_RESIDUAL.001": {
+    "surface": "shared",
+    "title": "Replace 18 console.log statements with structured logger in production files",
+    "riskClass": "low",
+    "severity": "P3",
+    "status": "done"
+  },
+  "LIVE.NAV.POS.BUY_CART_GUARD.001": {
+    "surface": "pos",
+    "title": "Add beforeRemove navigation guard to POS BuyScreen when purchase cart has items",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.NAV.POS.PURCHASE_CART_GUARD.001": {
+    "surface": "pos",
+    "title": "Add beforeRemove navigation guard to POS PurchaseScreen when cart has items",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001": {
+    "surface": "shared",
+    "title": "Enforce back/forward navigation safety and draft recovery across retailer, supplier, superadmin, and POS",
+    "riskClass": "critical",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.NAV.RETAILER.PRODUCT_FORM_GUARD.001": {
+    "surface": "retailer_web",
+    "title": "Add unsaved-change guard to retailer ProductsPage create/edit form",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.NAV.RETAILER.SETTINGS_FORM_GUARD.001": {
+    "surface": "retailer_web",
+    "title": "Add unsaved-change guard to retailer SettingsPage form",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.NAV.SUPPLIER.PROFILE_FORM_GUARD.001": {
+    "surface": "supplier_web",
+    "title": "Add unsaved-change guard to supplier ProfilePage tabbed form",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.POS.AMOUNT_PRECISION_AND_CAP.001": {
+    "surface": "pos",
+    "title": "Pos Amount Precision And Cap",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.API_URL_CONFIG_FAIL_FAST.001": {
+    "surface": "pos",
+    "title": "API_URL undefined if both Expo config sources missing",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001": {
+    "surface": "pos",
+    "title": "Establish POS build stamp parity with staging commit and API version evidence",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.POS.BUY_SEARCH_EMPTY_STATE.001": {
+    "surface": "pos",
+    "title": "Pos Buy Search Empty State",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.CAMERA_TIMEOUT_COPY_PARITY.001": {
+    "surface": "pos",
+    "title": "Pos Camera Timeout Copy Parity",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.CART_TOTAL_SHARED_UTILITY.001": {
+    "surface": "pos",
+    "title": "Pos Cart Total Shared Utility",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.ENROLL.DEVICE_TOKEN_RESPONSE_MINIMIZATION.001": {
+    "surface": "pos",
+    "title": "Pos Enroll Device Token Response Minimization",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.ENROLL.DEVICE_TYPE_REQUIRED_PARITY.001": {
+    "surface": "pos",
+    "title": "Pos Enroll Device Type Required Parity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.ENROLL_DEEPLINK_AUTOFILL_E2E.001": {
+    "surface": "pos",
+    "title": "Pos Enroll Deeplink Autofill E2e",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.FORCE_UPDATE_IOS_APPSTORE_URL.001": {
+    "surface": "pos",
+    "title": "Pos Force Update Ios Appstore Url",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.OFFLINE_QUEUE_CONSOLIDATION.001": {
+    "surface": "pos",
+    "title": "Dual offline queue (outbox + offlineQueue) = double inventory deduction",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.OFFLINE_QUEUE_RETRY_POLICY_HARDENING.001": {
+    "surface": "pos",
+    "title": "Pos Offline Queue Retry Policy Hardening",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.OFFLINE_QUEUE_STORE_SCOPING.001": {
+    "surface": "pos",
+    "title": "Pos Offline Queue Store Scoping",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.PHONE_VALIDATION_STRICT_REGEX.001": {
+    "surface": "pos",
+    "title": "Pos Phone Validation Strict Regex",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.SECURESTORE_FALLBACK_HARDENING.001": {
+    "surface": "pos",
+    "title": "Pos Securestore Fallback Hardening",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.SELLSCAN_EMPTY_STATE.001": {
+    "surface": "pos",
+    "title": "Pos Sellscan Empty State",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.SESSION_LOGGING_DEV_GUARD.001": {
+    "surface": "pos",
+    "title": "Pos Session Logging Dev Guard",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.SPLIT_PAYMENT_NAV_REPLACE.001": {
+    "surface": "pos",
+    "title": "Split payment uses navigate not replace → back = re-pay",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.STOCKIN_CLIENT_RELEASE_SAFETY.001": {
+    "surface": "pos",
+    "title": "Double client.release() corrupts pool",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.SYNC_RETRYABLE_REJECTION_GUARD.001": {
+    "surface": "pos",
+    "title": "Batch attempt penalization causes valid event loss",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.POS.THEME.E2E_GCP_STAGING_PARITY_MATRIX.001": {
+    "surface": "pos",
+    "title": "Execute end-to-end POS theme parity matrix against staging backend before deploy",
+    "riskClass": "critical",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001": {
+    "surface": "pos",
+    "title": "Harden POS theme persistence, bootstrap, and resume behavior",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001": {
+    "surface": "pos",
+    "title": "Implement true runtime light/dark theme toggle parity in POS app",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.THEME.TOKENS_BRAND_PARITY.001": {
+    "surface": "pos",
+    "title": "Bind POS theme tokens and brand visuals for dark/light parity",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.POS.TRANSIENT_NETWORK_RETRY_BACKOFF.001": {
+    "surface": "pos",
+    "title": "Pos Transient Network Retry Backoff",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.A1.001": {
+    "surface": "shared",
+    "title": "enforceStoreIsolation() defined but NEVER mounted on any route",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.A10.001": {
+    "surface": "shared",
+    "title": "sale_items query missing store_id JOIN",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.A12.001": {
+    "surface": "shared",
+    "title": "Export queries by user_id without store_id",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.A4.001": {
+    "surface": "shared",
+    "title": "UPDATE query missing WHERE store_id",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.A5.001": {
+    "surface": "shared",
+    "title": "UPDATE queries missing WHERE store_id",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.A7.001": {
+    "surface": "shared",
+    "title": "15 (req as any) accesses for security-critical identity props",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.A8.001": {
+    "surface": "shared",
+    "title": "4 (req as any) accesses — if storeId is undefined, isolation bypassed",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.A9.001": {
+    "surface": "shared",
+    "title": "If both req.storeId and req.posDevice.storeId are undefined, gate bypassed",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B1.001": {
+    "surface": "shared",
+    "title": "No auth middleware on any endpoint",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B10.001": {
+    "surface": "shared",
+    "title": "In PUBLIC_PATHS — no auth required",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B11.001": {
+    "surface": "shared",
+    "title": "No JWT validation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B12.001": {
+    "surface": "shared",
+    "title": "Trusts x-user-id header without JWT",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B18.001": {
+    "surface": "shared",
+    "title": "change-password doesn't invalidate existing sessions",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B19.001": {
+    "surface": "shared",
+    "title": "Refresh token revocation checks wrong schema",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B2.001": {
+    "surface": "shared",
+    "title": "No auth middleware",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B20.001": {
+    "surface": "shared",
+    "title": "JWT in response body, unlimited token refresh",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B21.001": {
+    "surface": "shared",
+    "title": "Missing actorType allows bypass; no policy for chat/credit",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B24.001": {
+    "surface": "shared",
+    "title": "Status update not scoped to supplier's items",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B25.001": {
+    "surface": "shared",
+    "title": "Email change doesn't reset email_verified",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B26.001": {
+    "surface": "shared",
+    "title": "Bank account returned unmasked",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B27.001": {
+    "surface": "shared",
+    "title": "/auth/me bypasses JWT validation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B28.001": {
+    "surface": "shared",
+    "title": "Actor user ID from untrusted header",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.B29.001": {
+    "surface": "shared",
+    "title": "Content-Type: application/json bypasses CSRF",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.B3.001": {
+    "surface": "shared",
+    "title": "PIN login: no rate limit, no lockout",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B30.001": {
+    "surface": "shared",
+    "title": "Bank account number stored cleartext",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.B31.001": {
+    "surface": "shared",
+    "title": "Injects master admin token on all /admin routes",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.B32.001": {
+    "surface": "shared",
+    "title": "Bulk import doesn't sanitize HTML",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.B4.001": {
+    "surface": "shared",
+    "title": "X-Staff-Id header trusted without session token",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B5.001": {
+    "surface": "shared",
+    "title": "Plaintext device token storage",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B6.001": {
+    "surface": "shared",
+    "title": "Plaintext OTP storage in Redis",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B7.001": {
+    "surface": "shared",
+    "title": "Status endpoint exposes PII unauthenticated",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B8.001": {
+    "surface": "shared",
+    "title": "Status endpoint exposes unmasked PII unauthenticated",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.B9.001": {
+    "surface": "shared",
+    "title": "Registration overwrites retailer_portal_phone (account hijack)",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.C10.001": {
+    "surface": "shared",
+    "title": "No RBAC on price update",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C11.001": {
+    "surface": "shared",
+    "title": "Balance can go negative; no integer validation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C12.001": {
+    "surface": "shared",
+    "title": "Amount not validated as integer",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C14.001": {
+    "surface": "shared",
+    "title": "Physical count race conditions",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C15.001": {
+    "surface": "shared",
+    "title": "Bulk paste commits trust client data without re-validation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C16.001": {
+    "surface": "shared",
+    "title": "No date range limit, no default range",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C19.001": {
+    "surface": "shared",
+    "title": "Registration sets status='active' immediately (should be pending)",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C20.001": {
+    "surface": "shared",
+    "title": "UPI VPA update silently changes status but never writes upi_vpa",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.C3.001": {
+    "surface": "shared",
+    "title": "Wrong table/column names + missing stock_balances writes",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.C4.001": {
+    "surface": "shared",
+    "title": "stock_balances ON CONFLICT uses stale delta",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.C5.001": {
+    "surface": "shared",
+    "title": "Count query parameter mismatch crash",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.C6.001": {
+    "surface": "shared",
+    "title": "No idempotency key; network retry = double refund",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C7.001": {
+    "surface": "shared",
+    "title": "No transaction wrapper on multi-write",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C8.001": {
+    "surface": "shared",
+    "title": "Partial payment blocked after first; UPI confirm overwrites",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.C9.001": {
+    "surface": "shared",
+    "title": "Race condition on active shift check; staffUserId from body",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.D10.001": {
+    "surface": "shared",
+    "title": "18 parseInt on tax amounts without NaN guard",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.D11.001": {
+    "surface": "shared",
+    "title": "Financial amounts: parseInt(null) = NaN",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.D12.001": {
+    "surface": "shared",
+    "title": "Money columns: parseInt(null, 10) = NaN",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.D13.001": {
+    "surface": "shared",
+    "title": "parseInt(limit) NaN → DB error on malformed query",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.D7.001": {
+    "surface": "shared",
+    "title": "12 parseInt on DB aggregates without NaN guard",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.D8.001": {
+    "surface": "shared",
+    "title": "Financial NaN: totalRevenue - NaN - NaN - NaN",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.D9.001": {
+    "surface": "shared",
+    "title": "Float accumulation in GST report loop",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E10.001": {
+    "surface": "shared",
+    "title": "Refund total could exceed original sale total",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E11.001": {
+    "surface": "shared",
+    "title": "No double-tap guard on Submit",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E12.001": {
+    "surface": "shared",
+    "title": "No back button; edits lost on refresh",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E13.001": {
+    "surface": "shared",
+    "title": "UTC timezone bug (wrong day near midnight IST)",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E14.001": {
+    "surface": "shared",
+    "title": "UTC timezone bug + HTML XSS in report generation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E15.001": {
+    "surface": "shared",
+    "title": "No pagination for bills list",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E16.001": {
+    "surface": "shared",
+    "title": "fetchSubstitutes called during render; lineSubtotal no rounding",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E17.001": {
+    "surface": "shared",
+    "title": "No timeout on fetchUiStatus",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E18.001": {
+    "surface": "shared",
+    "title": "(navigation as any).navigate(\"SellScan\") bypasses type check",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E19.001": {
+    "surface": "shared",
+    "title": "Hardcoded 200-item limit",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E2.001": {
+    "surface": "shared",
+    "title": "parseFloat(\"\") * 100 = NaN bypasses validation",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.E20.001": {
+    "surface": "shared",
+    "title": "Fake progress simulation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E21.001": {
+    "surface": "shared",
+    "title": "Payment recorded but inventory fails silently; retry = duplicate",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E22.001": {
+    "surface": "shared",
+    "title": "Returns 0 for unknown products (blocks sales)",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E23.001": {
+    "surface": "shared",
+    "title": "No maximum outbox size limit",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E24.001": {
+    "surface": "shared",
+    "title": "No retry on transient failures; token refresh recursion risk",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E25.001": {
+    "surface": "shared",
+    "title": "Percentage discount floating-point; rehydration error swallowed",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.E26.001": {
+    "surface": "shared",
+    "title": "Various minor UX polish items",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.E3.001": {
+    "surface": "shared",
+    "title": "No guard against double-closing same date",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.E5.001": {
+    "surface": "shared",
+    "title": "stockValue unit ambiguity (paise vs rupees)",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.E7.001": {
+    "surface": "shared",
+    "title": "No double-tap guard on Activate; phone +91 stripping broken",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E8.001": {
+    "surface": "shared",
+    "title": "Float-to-integer conversion; no double-tap guards",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.E9.001": {
+    "surface": "shared",
+    "title": "Payment can exceed balance; no double-tap guards",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.F1.001": {
+    "surface": "shared",
+    "title": "Express 4 + no asyncHandler wrapper; pool.connect() outside try (67+ locs)",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.F2.001": {
+    "surface": "shared",
+    "title": "upsertDeviceHeartbeat() before try block",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.F3.001": {
+    "surface": "shared",
+    "title": "pool.query() after finally block",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.F4.001": {
+    "surface": "shared",
+    "title": "getStore() + idempotency check before try block",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.F6.001": {
+    "surface": "shared",
+    "title": "upsertDeviceHeartbeat has no internal try/catch",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.F7.001": {
+    "surface": "shared",
+    "title": "Empty catch swallows all errors including programming",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.F8.001": {
+    "surface": "shared",
+    "title": "Pre-transaction reads create TOCTOU race windows",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.G1.001": {
+    "surface": "shared",
+    "title": "60+ handlers crash if middleware fails",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.G10.001": {
+    "surface": "shared",
+    "title": "Crash if store is null despite success",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.G11.001": {
+    "surface": "shared",
+    "title": "NaN duration metric",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.G12.001": {
+    "surface": "shared",
+    "title": "~80 occurrences with proper guards",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.G5.001": {
+    "surface": "shared",
+    "title": "19 untyped accesses in store isolation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.G6.001": {
+    "surface": "shared",
+    "title": "Audit trail incomplete if missing",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.G7.001": {
+    "surface": "shared",
+    "title": "Complex identity chain; silent bypass",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.G8.001": {
+    "surface": "shared",
+    "title": "Untyped identity in chat system",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.G9.001": {
+    "surface": "shared",
+    "title": "12 locations with financial data",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.H10.001": {
+    "surface": "shared",
+    "title": "NODE_ENV=staging bypasses === 'production' checks",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.H11.001": {
+    "surface": "shared",
+    "title": "ADMIN_TOKEN defaults to empty string",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.H13.001": {
+    "surface": "shared",
+    "title": "JWT_SECRET dev fallback is known weak secret",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.H14.001": {
+    "surface": "shared",
+    "title": "Hardcoded localhost origins in WebSocket CORS",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.H15.001": {
+    "surface": "shared",
+    "title": "JWT_SECRET hardcoded in test script",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.R4.H3.001": {
+    "surface": "shared",
+    "title": "Token preview + PII (phone) logged in production",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.H4.001": {
+    "surface": "shared",
+    "title": "Hardcoded JWT secret fallback",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.R4.H7.001": {
+    "surface": "shared",
+    "title": "Shared DB pool: zero validation, password: '' default",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.R4.I1.001": {
+    "surface": "shared",
+    "title": "Signature verification skipped when secret not configured",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.REPORTS.DAILY_PAYMENT_BREAKDOWN_FIX.001": {
+    "surface": "backend",
+    "title": "Reports Daily Payment Breakdown Fix",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.REPORTS.DAILY_SQL_ITEM_COUNT_FIX.001": {
+    "surface": "backend",
+    "title": "Reports Daily Sql Item Count Fix",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.REPORTS.DAILY_STATUS_FILTER_PARITY.001": {
+    "surface": "backend",
+    "title": "Reports Daily Status Filter Parity",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.RET.AUTH.DEVTOKEN_RESPONSE_REDACTION.001": {
+    "surface": "retailer_web",
+    "title": "Ret Auth Devtoken Response Redaction",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.RET.BUY_REORDER_PRICE_DOUBLE_CONVERSION_FIX.001": {
+    "surface": "retailer_web",
+    "title": "formatMoney(bestPrice * 100) — double conversion",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.RET.PRODUCTS.GLOBAL_CATALOG_SCOPE_GUARD.001": {
+    "surface": "retailer_web",
+    "title": "Shared catalog.products updated without store scope",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.RET.SKU_PDF_AUTH_DOWNLOAD_PATH.001": {
+    "surface": "retailer_web",
+    "title": "Ret Sku Pdf Auth Download Path",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.RETAILER.AUTH_401_NO_REDIRECT.001": {
+    "surface": "retailer_web",
+    "title": "Add automatic redirect to login on 401 across all authenticated retailer pages",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.RETAILER.REGISTER.OTP_SUCCESS_ERROR_CONFLICT.001": {
+    "surface": "retailer_web",
+    "title": "Resolve contradictory OTP state on retailer registration (success + 409 error shown together)",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.RETAILER.RESETPW_NO_PARAM_CHECK.001": {
+    "surface": "retailer_web",
+    "title": "Add URL param validation to reset-password page before rendering form",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.SA.AI_ENDPOINT_PREFIX_PARITY.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Ai Endpoint Prefix Parity",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SA.AI_PROMPT_INJECTION_GUARD.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Ai Prompt Injection Guard",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SA.AUTH_TOKEN_STORAGE_HARDENING.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Auth Token Storage Hardening",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SA.INVOICE_API_ERROR_SANITIZATION.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Invoice Api Error Sanitization",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SA.INVOICE_API_PATH_SANITIZATION.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Invoice Api Path Sanitization",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SA.INVOICE_PDF_AUTH_GUARD.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Invoice Pdf Auth Guard",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SA.LOGIN_EMAIL_VALIDATION_STRICT.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Login Email Validation Strict",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SA.OTP_RESEND_COUNTDOWN_AFTER_SUCCESS.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Otp Resend Countdown After Success",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SA.RBAC_TAB_ACTION_ENFORCEMENT.001": {
+    "surface": "superadmin_web",
+    "title": "No RBAC permission checks",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SA.STORE_DIRECTORY_PAGINATION.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Store Directory Pagination",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SA.WHATSAPP_API_ERROR_SANITIZATION.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Whatsapp Api Error Sanitization",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SA.WHATSAPP_PHONE_VALIDATION.001": {
+    "surface": "superadmin_web",
+    "title": "Sa Whatsapp Phone Validation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001": {
+    "surface": "backend",
+    "title": "Secrets Enrollment Code Log Redaction",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SECRETS.OTP_LOG_REDACTION.001": {
+    "surface": "backend",
+    "title": "Secrets Otp Log Redaction",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SHIFTS.START_DOUBLE_OPEN_GUARD.001": {
+    "surface": "pos",
+    "title": "No protection against overlapping shifts",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.STOCKIN.IDEMPOTENCY_SINGLE_TX_LOCK.001": {
+    "surface": "pos",
+    "title": "Advisory lock race: released before work transaction",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SUP.AUTH.DEVCODE_RESPONSE_REDACTION.001": {
+    "surface": "supplier_web",
+    "title": "Sup Auth Devcode Response Redaction",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SUP.AUTH.DEVTOKEN_RESPONSE_REDACTION.001": {
+    "surface": "supplier_web",
+    "title": "Sup Auth Devtoken Response Redaction",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SUP.AUTH.OTP_LOG_REDACTION.001": {
+    "surface": "supplier_web",
+    "title": "Sup Auth Otp Log Redaction",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SUP.AUTH.SERVER_SIDE_ENFORCEMENT.001": {
+    "surface": "supplier_web",
+    "title": "Sup Auth Server Side Enforcement",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SUP.LIMITED_MODE_ENFORCEMENT.001": {
+    "surface": "supplier_web",
+    "title": "Sup Limited Mode Enforcement",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.SUPERADMIN.AI_ROUTE_DUPLICATE.001": {
+    "surface": "superadmin_web",
+    "title": "Fix duplicate route: #ai and #ai-insights both render AIInsightsTab",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SUPERADMIN.CSP_FONT_BLOCK.001": {
+    "surface": "superadmin_web",
+    "title": "Fix SuperAdmin CSP blocking Google Fonts (missing font-src and style-src allowlist)",
+    "riskClass": "high",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001": {
+    "surface": "superadmin_web",
+    "title": "Fix persistent Events tab unauthorized loop when session polling fires without valid token",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SUPERADMIN.MOBILE_NAVIGATION.001": {
+    "surface": "superadmin_web",
+    "title": "Add missing 8 tabs to SuperAdmin mobile navigation bar",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.SUPERADMIN.OTP_LENGTH_MISMATCH.001": {
+    "surface": "superadmin_web",
+    "title": "Fix SuperAdmin OTP input length validation mismatch (says 6-digit but allows 4-8)",
+    "riskClass": "low",
+    "severity": "P3",
+    "status": "done"
+  },
+  "LIVE.SUPPLIER.AUTH.BUILDSTAMP_HYDRATION_MISMATCH.001": {
+    "surface": "supplier_web",
+    "title": "Remove supplier auth hydration mismatch caused by BuildStamp SSR/client drift",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.SUPPLIER.ONBOARD_PROGRESS_MISMATCH.001": {
+    "surface": "supplier_web",
+    "title": "Fix onboard progress indicator: shows 4 bars for 5-step flow",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.SUPPLIER.SSR_REGISTER_DEGRADED.001": {
+    "surface": "supplier_web",
+    "title": "Fix supplier register and reset-password pages showing Loading... in SSR",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.SUPPLIER.UPLOAD_PROGRESS_FAKE.001": {
+    "surface": "supplier_web",
+    "title": "Fix hardcoded 70% upload progress bar on supplier CSV upload page",
+    "riskClass": "low",
+    "severity": "P3",
+    "status": "done"
+  },
+  "LIVE.SYNC.BATCH_TRANSACTION_ATOMICITY_SAVEPOINT.001": {
+    "surface": "pos",
+    "title": "SALE_CREATED duplicate path commits mid-batch",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "LIVE.THEME.TOGGLE.OPENCLAW_STYLE_SECRET_ENTRY.001": {
+    "surface": "shared",
+    "title": "Implement subtle secret theme toggle entrypoint with OpenClaw-style compact icon button",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.THEME.TOKENS.CROSS_SURFACE_APPLICATION.001": {
+    "surface": "shared",
+    "title": "Bind theme tokens to actual UI so background/logo/text update across pre-login and post-login pages",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.001": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/forgot-password ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.002": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/forgot-password ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.003": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/forgot-password navigation",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.004": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/login ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.005": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/login ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.006": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/login wiring",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.007": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/register ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.008": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/register ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.009": {
+    "surface": "retailer_web",
+    "title": "Resolve unmapped issue: retailer_web /retailer/register navigation",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.010": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/bnpl-orders/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.011": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/bnpl-orders/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.012": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/chat/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.013": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/chat/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.014": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/chat/ wiring",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.015": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/chat/ api_contract",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.016": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/dashboard/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.017": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/dashboard/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.018": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/earnings/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.019": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/earnings/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.020": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/forgot-password/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.021": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/invoices/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.022": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/invoices/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.023": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/kyc/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.024": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/kyc/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.025": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/login/ ui",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.026": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/login/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.027": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/login/ wiring",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.028": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/notifications/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.029": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/notifications/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.030": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/onboard/ wiring",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.031": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/onboard/ api_contract",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.032": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/orders/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.033": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/orders/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.034": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/products/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.035": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/products/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.036": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/profile/ ui",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.037": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/profile/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.038": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/register/ ui",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.039": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/register/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.040": {
+    "surface": "supplier_web",
+    "title": "Resolve unmapped issue: supplier_web /supplier/reset-password/ ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.041": {
+    "surface": "superadmin_web",
+    "title": "Resolve unmapped issue: superadmin_web /admin/#analytics ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.042": {
+    "surface": "superadmin_web",
+    "title": "Resolve unmapped issue: superadmin_web /admin/#credit-providers ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.043": {
+    "surface": "superadmin_web",
+    "title": "Resolve unmapped issue: superadmin_web /admin/#gst-compliance ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.044": {
+    "surface": "superadmin_web",
+    "title": "Resolve unmapped issue: superadmin_web /admin/#stores ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.045": {
+    "surface": "superadmin_web",
+    "title": "Resolve unmapped issue: superadmin_web /admin/#suppliers ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.TICKETIZATION.UNMAPPED.046": {
+    "surface": "superadmin_web",
+    "title": "Resolve unmapped issue: superadmin_web /admin/#users ux",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "LIVE.WEBHOOK.REFUND_SIGNATURE_AND_RETRY_PARITY.001": {
+    "surface": "backend",
+    "title": "Signature on re-serialized JSON; DB error returns 200",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.XF.DUAL_INVENTORY_RECONCILIATION.001": {
+    "surface": "backend",
+    "title": "Xf Dual Inventory Reconciliation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.XF.ENROLLMENT_ACTIVE_DEVICE_COUNT_RESPONSE.001": {
+    "surface": "backend",
+    "title": "Xf Enrollment Active Device Count Response",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "LIVE.XF.UI_STATUS_UPI_VPA_PARITY.001": {
+    "surface": "backend",
+    "title": "Xf Ui Status Upi Vpa Parity",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.001.INVENTORY_TRANSACTION_ROUTES_HAVE_NO_SERVICE": {
+    "surface": "backend",
+    "title": "Inventory transaction routes have NO service-level authentication with storeId from URL params trusted",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.BE.002.GRN_RECEIVE_ROUTES_HAVE_NO_SERVICE": {
+    "surface": "backend",
+    "title": "GRN receive routes have NO service-level authentication",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.BE.003.PLATFORM_STORES_CRUD_HAS_NO_SERVICE": {
+    "surface": "backend",
+    "title": "Platform stores CRUD has NO service-level authentication",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.BE.004.GETLEDGERENTRIESBYREFERENCE_QUERIES_WITHOUT_STORE_ID_FILTER": {
+    "surface": "backend",
+    "title": "getLedgerEntriesByReference queries without store_id filter causing cross-store data leak",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.BE.005.GRN_RECEIVEGOODS_CALLS_INVENTORY_HTTP_BEFORE": {
+    "surface": "backend",
+    "title": "GRN receiveGoods calls inventory HTTP BEFORE DB commit causing stock updated but order fails inconsistency",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.BE.006.POLICY_CRUD_BY_ID_HAS_NO": {
+    "surface": "backend",
+    "title": "Policy CRUD by ID has no store ownership verification",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.007.NO_AUTH_MIDDLEWARE_STATUS_REQUESTID_LEAKS": {
+    "surface": "backend",
+    "title": "No auth middleware: /status/:requestId leaks voice transcripts",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.008.ADMIN_IN_MEMORY_RATE_LIMITING_NOT": {
+    "surface": "backend",
+    "title": "Admin in-memory rate limiting not distributed for Cloud Run multi-instance",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.009.PASSWORD_VERIFIED_BEFORE_USER_STATUS_CHECK": {
+    "surface": "backend",
+    "title": "Password verified before user status check leaking account existence info for suspended users",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.010.SUPPLIER_LOGIN_HAS_NO_RATE_LIMITING": {
+    "surface": "backend",
+    "title": "Supplier login has no rate limiting or account lockout mechanism",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.011.UNAUTHENTICATED_PRODUCT_SEARCH_EXPOSES_PRICING_DATA": {
+    "surface": "backend",
+    "title": "Unauthenticated product search exposes pricing data",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.012.GETDEVICEBYID_HAS_NO_STORE_ID_FILTER": {
+    "surface": "backend",
+    "title": "getDeviceById has no store_id filter allowing cross-store device access",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.BE.014.DEV_ONLY_TEST_AUTH_ROUTER_MINTS": {
+    "surface": "backend",
+    "title": "Dev-only test auth router mints tokens without actorType actorId and proper claims",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.015.GENERATEACCESSTOKEN_DOES_NOT_SET_JTI_JWT": {
+    "surface": "backend",
+    "title": "generateAccessToken does not set jti JWT ID claim making token blacklisting impossible",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.016.IN_MEMORY_MAP_FOR_VOICE_REQUEST": {
+    "surface": "backend",
+    "title": "In-memory Map for voice request state incompatible with Cloud Run multi-instance",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.017.REQUIREACTIVEUSER_MIDDLEWARE_CALLS_NEXT_FAILS_OPEN": {
+    "surface": "backend",
+    "title": "requireActiveUser middleware calls next fails-open on database error",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.018.POST_GSTIN_VALIDATE_ENDPOINT_IS_UNAUTHENTICATED": {
+    "surface": "backend",
+    "title": "POST /gstin/validate endpoint is unauthenticated at service level",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.019.POS_RATE_LIMITING_USES_POSTGRESQL_INSERT": {
+    "surface": "backend",
+    "title": "POS rate limiting uses PostgreSQL INSERT ON CONFLICT for every request causing DB load under Cloud Run",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.020.GETRECEIVERECORDS_QUERIES_BY_ORDER_ID_ALONE": {
+    "surface": "backend",
+    "title": "getReceiveRecords queries by order_id alone without store_id filter",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.021.DELETEUSER_PERFORMS_HARD_DELETE_FROM_AUTH": {
+    "surface": "backend",
+    "title": "deleteUser performs hard DELETE FROM auth.users losing audit trail",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.022.CORS_WILDCARD_PRODUCTION_GUARD_USES_CONSOLE": {
+    "surface": "backend",
+    "title": "CORS wildcard production guard uses console.error instead of structured logger",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.023.SUPPLIER_TOKENS_MINTED_WITH_SUPPLIER_UPPERCASE": {
+    "surface": "backend",
+    "title": "Supplier tokens minted with SUPPLIER uppercase but system expects different casing in some checks",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.024.VERIFYADMINAPIKEY_UPDATES_LAST_LOGIN_IP_TO": {
+    "surface": "backend",
+    "title": "verifyAdminApiKey updates last_login_ip to null instead of actual client IP",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.BE.025.MAINBACKENDURL_FOR_ADMIN_EMAIL_OTP_PROXY": {
+    "surface": "backend",
+    "title": "mainBackendUrl for admin email OTP proxy falls back to http://localhost:3001",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.001.MATH_ROUND_QUANTITY_TRUNCATES_FRACTIONAL_QUANTITIES": {
+    "surface": "pos",
+    "title": "Math.round(quantity) truncates fractional quantities for loose/weighed items",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.POS.002.ALLOWEDMETHODS_STALE_IN_NETWORK_STATUS_EFFECT": {
+    "surface": "pos",
+    "title": "allowedMethods stale in network status effect closure",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.003.PARSEFLOAT_100_FLOATING_POINT_MONEY_CONVERSION": {
+    "surface": "pos",
+    "title": "parseFloat * 100 floating-point money conversion can produce rounding errors across 5 screens",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.006.NO_REF_BASED_DOUBLE_SUBMIT_GUARD": {
+    "surface": "pos",
+    "title": "No ref-based double-submit guard on refund processing",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.007.NO_REF_BASED_DOUBLE_SUBMIT_GUARD": {
+    "surface": "pos",
+    "title": "No ref-based double-submit guard on goods receiving",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.008.NO_REF_BASED_DOUBLE_SUBMIT_GUARD": {
+    "surface": "pos",
+    "title": "No ref-based double-submit guard on manual stock inward",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.009.FETCHSUBSTITUTES_CALLED_DURING_RENDER_BODY_AS": {
+    "surface": "pos",
+    "title": "fetchSubstitutes called during render body as side effect",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.010.LOADCATALOG_USECALLBACK_HAS_STALE_CLOSURE_OVER": {
+    "surface": "pos",
+    "title": "loadCatalog useCallback has stale closure over catalogPage and catalogHasMore",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.011.SELLONBOARDING_USEEFFECT_MISSING_ADDQUERY_DEPENDENCY": {
+    "surface": "pos",
+    "title": "sellOnboarding useEffect missing addQuery dependency",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.012.NO_CLIENT_SIDE_RATE_LIMITING_ON": {
+    "surface": "pos",
+    "title": "No client-side rate limiting on login attempts",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.013.FAKE_PROGRESS_INDICATOR_DOES_NOT_REFLECT": {
+    "surface": "pos",
+    "title": "Fake progress indicator does not reflect actual submission progress",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.014.QR_REGENERATION_AFTER_EXPIRY_CLEARS_STATE": {
+    "surface": "pos",
+    "title": "QR regeneration after expiry clears state but does not re-trigger UPI init",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.015.CONTINUE_WITHOUT_SESSION_BUTTON_BYPASSES_FORCEUPDATE": {
+    "surface": "pos",
+    "title": "Continue without session button bypasses ForceUpdate and DeviceBlocked gates",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.016.HANDLESAVEDEFAULTPRICE_HAS_EMPTY_DEPENDENCY_ARRAY_CAPTURING": {
+    "surface": "pos",
+    "title": "handleSaveDefaultPrice has empty dependency array capturing stale closures",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.017.DEEP_LINK_NAVIGATION_TO_PAYMENTSETUP_MAY": {
+    "surface": "pos",
+    "title": "Deep link navigation to PaymentSetup may fail if screen not registered in navigator",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.018.VARIANCE_CALCULATION_USES_STALE_EXPECTED_CASH": {
+    "surface": "pos",
+    "title": "Variance calculation uses stale expected cash value from initial fetch",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.019.MULTI_WORD_SEARCH_TOKEN_MATCHING_USES": {
+    "surface": "pos",
+    "title": "Multi-word search token matching uses OR instead of AND returning overly broad results",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.020.STAFFLOGINSCREEN_MAY_RENDER_WITH_NULL_STORENAME": {
+    "surface": "pos",
+    "title": "StaffLoginScreen may render with null storeName before UI status poll completes",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.021.CLEANUP_EFFECT_MAY_CANCEL_FINALIZED_SALE": {
+    "surface": "pos",
+    "title": "Cleanup effect may cancel finalized sale due to async gap between API success and ref update",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.POS.022.EDITORITEM_USEEFFECT_HAS_MISSING_DEPENDENCY_FOR": {
+    "surface": "pos",
+    "title": "editorItem useEffect has missing dependency for formatPriceInput and formatFixedDiscount",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.023.HANDLEADDSKU_USES_ITEM_BARCODE_AS_CART": {
+    "surface": "pos",
+    "title": "handleAddSku uses item.barcode as cart item id causing conflicts for barcode collisions",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.024.AMOUNT_TEXTINPUT_SHOULD_RESTRICT_TO_POSITIVE": {
+    "surface": "pos",
+    "title": "Amount TextInput should restrict to positive numbers as defense-in-depth",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.050.HTML_ENTITY_AMP_RENDERS_LITERALLY_IN": {
+    "surface": "pos",
+    "title": "HTML entity &amp; renders literally in React Native Text component",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.051.HTML_ENTITY_APOS_RENDERS_LITERALLY_IN": {
+    "surface": "pos",
+    "title": "HTML entity &apos; renders literally in React Native Text component",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.052.FALSY_OR_FALLBACK_ON_SUBTOTAL_SHOWS": {
+    "surface": "pos",
+    "title": "Falsy-or fallback on subtotal shows wrong receipt value when subtotal is zero",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.053.PHONE_INPUT_MAXLENGTH_10_CONTRADICTS_VALIDATEPHONE": {
+    "surface": "pos",
+    "title": "Phone input maxLength=10 contradicts validatePhone which accepts 11/12-digit inputs",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.054.SEQUENTIAL_ORDER_CREATION_IN_FOR_LOOP": {
+    "surface": "pos",
+    "title": "Sequential order creation in for-loop: one supplier failure aborts remaining with no rollback",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.POS.055.ADDTOQUICKITEMS_MISSING_FROM_USEEFFECT_DEPENDENCY_ARRAY": {
+    "surface": "pos",
+    "title": "addToQuickItems missing from useEffect dependency array causing stale closure",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.056.DUAL_EXPORT_NAMED_DEFAULT_CAN_CAUSE": {
+    "surface": "pos",
+    "title": "Dual export named + default can cause duplicate module instantiation",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.057.HARDCODED_LOW_STOCK_THRESHOLD_OF_10": {
+    "surface": "pos",
+    "title": "Hardcoded low-stock threshold of 10 ignores per-product reorder levels",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.058.QUICK_REORDER_USES_HARDCODED_SUPPLIERID_REORDER": {
+    "surface": "pos",
+    "title": "Quick Reorder uses hardcoded supplierId reorder instead of actual supplier",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.059.HANDLESAVEEDIT_ONLY_UPDATES_LOCAL_STATE_CAUSING": {
+    "surface": "pos",
+    "title": "handleSaveEdit only updates local state causing edits lost on refresh",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.060.AUTO_POLLING_EVERY_30S_WITH_NO": {
+    "surface": "pos",
+    "title": "Auto-polling every 30s with no max attempts causing potential battery drain",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.061.LOADING_SPINNER_CENTERCONTENT_STYLE_MISSING_FLEX": {
+    "surface": "pos",
+    "title": "Loading spinner centerContent style missing flex 1 causing off-center display",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.062.MISSING_FETCHCUSTOMERS_IN_USEEFFECT_DEPENDENCY_AND": {
+    "surface": "pos",
+    "title": "Missing fetchCustomers in useEffect dependency and search debounce not cleaned up",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.063.TWO_CUSTOMER_SCREENS_WITH_OVERLAPPING_FUNCTIONALITY": {
+    "surface": "pos",
+    "title": "Two Customer screens with overlapping functionality and unclear canonical screen",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.POS.064.MESSAGE_EQUALITY_CHECK_ONLY_COMPARES_LENGTH": {
+    "surface": "pos",
+    "title": "Message equality check only compares length and first element ID missing mid-list changes",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.065.UNSAFE_AS_ANY_TYPE_ASSERTIONS_ON": {
+    "surface": "pos",
+    "title": "Unsafe as any type assertions on FlatList data and renderItem lose type safety",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.066.GETYYYYMMDD_USES_TOISOSTRING_WHICH_CONVERTS_TO": {
+    "surface": "pos",
+    "title": "getYYYYMMDD uses toISOString which converts to UTC showing wrong date near midnight",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.067.NO_EMPTY_STATE_SHOWN_WHEN_REPORT": {
+    "surface": "pos",
+    "title": "No empty state shown when report data is null and no error",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.068.HARDCODED_STORE_NAME_IN_REPORT_HEADER": {
+    "surface": "pos",
+    "title": "Hardcoded store name in report header instead of dynamic store name",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.069.TOTALOVERDUE_COMPUTED_ON_EVERY_RENDER_WITHOUT": {
+    "surface": "pos",
+    "title": "totalOverdue computed on every render without memoization",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.070.CATCH_ERR_ANY_USES_UNTYPED_ANY": {
+    "surface": "pos",
+    "title": "catch err: any uses untyped any instead of unknown for error handling",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.071.TOLOCALESTRING_EN_IN_ON_AMOUNT_DISPLAYS": {
+    "surface": "pos",
+    "title": "toLocaleString en-IN on amount displays as decimal not currency format",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.072.PRICE_COMPARISON_RENDERS_MANUAL_PRICE_100": {
+    "surface": "pos",
+    "title": "Price comparison renders manual price/100 toFixed instead of formatMoney utility",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.073.VPA_REGEX_ALLOWS_CHAR_LOCAL_PART": {
+    "surface": "pos",
+    "title": "VPA regex allows 3-char local part but validation also checks length < 6 on full VPA",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.074.WHATSAPP_LINK_USES_RAW_PHONE_DIGITS": {
+    "surface": "pos",
+    "title": "WhatsApp link uses raw phone digits without guaranteed country code prefix",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.075.ONREFRESH_CALLBACK_HAS_EMPTY_DEPENDENCY_ARRAY": {
+    "surface": "pos",
+    "title": "onRefresh callback has empty dependency array without loadBills in deps",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.076.DUPLICATE_ERROR_INSTANCEOF_ERROR_CHECK_AFTER": {
+    "surface": "pos",
+    "title": "Duplicate error instanceof Error check after asError call",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.POS.077.PARTIAL_PAYMENT_REMAINING_BALANCE_USES_PRINCIPALMINOR": {
+    "surface": "pos",
+    "title": "Partial payment remaining balance uses principalMinor without considering totalWithInterestMinor",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.001.LOGIN_FORM_ALLOWS_SUBMIT_WHILE_REQUEST": {
+    "surface": "retailer_web",
+    "title": "Login form allows submit while request in-flight with no loading state on button",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.002.NO_REDIRECT_TO_DASHBOARD_IF_ALREADY": {
+    "surface": "retailer_web",
+    "title": "No redirect-to-dashboard if already authenticated when landing on login",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.003.FEATURE_FLAG_FETCH_USES_ACCESSTOKEN_WHICH": {
+    "surface": "retailer_web",
+    "title": "Feature flag fetch uses accessToken which may be null on page refresh",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.004.HANDLECHANGEPHONE_SENDS_REQUEST_WITHOUT_CREDENTIALS_INCLUDE": {
+    "surface": "retailer_web",
+    "title": "handleChangePhone sends request without credentials include for cookie-based auth",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.005.MULTI_STEP_FORM_LOSES_ALL_DATA": {
+    "surface": "retailer_web",
+    "title": "Multi-step form loses all data on browser back or refresh with no draft persistence",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.006.DOCUMENT_UPLOAD_PREVIEW_URLS_CREATED_VIA": {
+    "surface": "retailer_web",
+    "title": "Document upload preview URLs created via createObjectURL but never revoked causing memory leak",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.007.LARGE_FILE_UPLOAD_GIVES_NO_PROGRESS": {
+    "surface": "retailer_web",
+    "title": "Large file upload gives no progress indicator or size validation before upload",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.008.NO_ABORTCONTROLLER_FOR_INITIAL_DATA_FETCHES": {
+    "surface": "retailer_web",
+    "title": "No AbortController for initial data fetches causing state updates on unmounted component",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.009.DASHBOARD_EMPTY_STATE_SHOWS_NOTHING_WHEN": {
+    "surface": "retailer_web",
+    "title": "Dashboard empty state shows nothing when store has zero sales, no onboarding guidance",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.010.DUPLICATE_401_CHECK_BLOCK_IS_DEAD": {
+    "surface": "retailer_web",
+    "title": "Duplicate 401 check block is dead code after first return statement",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.011.PRODUCT_IMAGE_UPLOAD_PREVIEW_FLICKERS_ON": {
+    "surface": "retailer_web",
+    "title": "Product image upload preview flickers on re-render due to new objectURL each render",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.012.PRODUCT_EDIT_FORM_STATE_NOT_RESET": {
+    "surface": "retailer_web",
+    "title": "Product edit form state not reset when switching between products to edit",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.014.INWARD_FILTER_ONLY_MAPS_TO_PURCHASE": {
+    "surface": "retailer_web",
+    "title": "INWARD filter only maps to purchase_received missing opening_stock and sale_return types",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.015.INVENTORY_TABLE_SORTING_IS_CLIENT_SIDE": {
+    "surface": "retailer_web",
+    "title": "Inventory table sorting is client-side only, limited to current page of paginated results",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.016.DOUBLE_FETCH_ON_MOUNT_BOTH_INITIAL": {
+    "surface": "retailer_web",
+    "title": "Double fetch on mount: both initial load and search useEffects fire simultaneously",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.017.NO_SUPPLIER_CATALOG_EMPTY_STATE_WHEN": {
+    "surface": "retailer_web",
+    "title": "No supplier catalog empty state when no suppliers are connected",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.018.LOADDEVICES_MISSING_FROM_USEEFFECT_DEPENDENCY_ARRAY": {
+    "surface": "retailer_web",
+    "title": "loadDevices missing from useEffect dependency array causing stale data",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.019.DEVICE_QR_CODE_REGENERATION_HAS_NO": {
+    "surface": "retailer_web",
+    "title": "Device QR code regeneration has no cooldown allowing rapid generation of enrollment codes",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.020.ORDER_STATUS_FILTER_DROPDOWN_NOT_SYNCED": {
+    "surface": "retailer_web",
+    "title": "Order status filter dropdown not synced to URL params losing filter on navigation",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.021.ORDER_DETAIL_MODAL_FETCHES_FULL_ORDER": {
+    "surface": "retailer_web",
+    "title": "Order detail modal fetches full order on each open with no caching",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.022.15_SECOND_POLLING_WITH_NO_EXPONENTIAL": {
+    "surface": "retailer_web",
+    "title": "15-second polling with no exponential backoff or tab visibility check",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.023.CHAT_MESSAGE_INPUT_HAS_NO_CHARACTER": {
+    "surface": "retailer_web",
+    "title": "Chat message input has no character limit or multiline support",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.024.FETCHNOTIFICATIONS_SILENTLY_IGNORES_NON_OK_RESPONSES": {
+    "surface": "retailer_web",
+    "title": "fetchNotifications silently ignores non-ok responses showing empty instead of error",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.025.MARK_ALL_READ_FIRES_INDIVIDUAL_API": {
+    "surface": "retailer_web",
+    "title": "Mark-all-read fires N individual API calls instead of batch endpoint",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.026.STORE_SETTINGS_FORM_HAS_NO_UNSAVED": {
+    "surface": "retailer_web",
+    "title": "Store settings form has no unsaved-changes warning on navigation away",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.027.SETTINGS_FORM_INITIALIZES_FROM_STALE_CACHED": {
+    "surface": "retailer_web",
+    "title": "Settings form initializes from stale cached data, no refetch on mount",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.028.REPORT_DATE_RANGE_PICKER_ALLOWS_END": {
+    "surface": "retailer_web",
+    "title": "Report date range picker allows end date before start date with no validation",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.029.REPORT_CSV_EXPORT_DOWNLOADS_FULL_DATASET": {
+    "surface": "retailer_web",
+    "title": "Report CSV export downloads full dataset without pagination or streaming for large reports",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.030.HELP_PAGE_CONTENT_IS_STATIC_HTML": {
+    "surface": "retailer_web",
+    "title": "Help page content is static HTML with no search or categorization",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.031.PROFILE_AVATAR_UPLOAD_HAS_NO_CROP": {
+    "surface": "retailer_web",
+    "title": "Profile avatar upload has no crop or resize allowing large image uploads",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.032.ADMIN_API_ENDPOINTS_USE_WRONG_PREFIX": {
+    "surface": "retailer_web",
+    "title": "Admin API endpoints use wrong prefix /api/v1/admin/ instead of /api/v1/retailer-admin/admin/",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.033.ADMIN_SUB_NAVIGATION_LINKS_NOT_HIGHLIGHTED": {
+    "surface": "retailer_web",
+    "title": "Admin sub-navigation links not highlighted for current active section",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.034.AUTH_GUARD_SHOWS_BRIEF_FLASH_OF": {
+    "surface": "retailer_web",
+    "title": "Auth guard shows brief flash of protected content before redirect on expired session",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.035.GLOBAL_ERROR_BOUNDARY_SHOWS_GENERIC_ERROR": {
+    "surface": "retailer_web",
+    "title": "Global error boundary shows generic error message with no retry or navigation options",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.036.INCONSISTENT_TABLE_ROW_HEIGHT_AND_ALIGNMENT": {
+    "surface": "retailer_web",
+    "title": "Inconsistent table row height and alignment across different data tables",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.037.LOADING_SKELETON_PLACEHOLDERS_DO_NOT_MATCH": {
+    "surface": "retailer_web",
+    "title": "Loading skeleton placeholders do not match actual content layout causing layout shift",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.038.FORMATCURRENCY_INCONSISTENCY_SOME_PAGES_DIVIDE_BY": {
+    "surface": "retailer_web",
+    "title": "formatCurrency inconsistency: some pages divide by 100 for paise others display raw value",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.RET.039.PHONE_NUMBER_INPUTS_ACCEPT_ANY_TEXT": {
+    "surface": "retailer_web",
+    "title": "Phone number inputs accept any text with no format mask or validation feedback",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.RET.040.API_ERROR_RESPONSES_SHOW_RAW_ERROR": {
+    "surface": "retailer_web",
+    "title": "API error responses show raw error message strings instead of user-friendly messages",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.001.REFUND_APPROVAL_FIRES_ON_SINGLE_CLICK": {
+    "surface": "superadmin_web",
+    "title": "Refund approval fires on single click with no confirmation dialog for irreversible financial action",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SA.002.INVOICE_ISSUANCE_FIRES_ON_SINGLE_CLICK": {
+    "surface": "superadmin_web",
+    "title": "Invoice issuance fires on single click with no confirmation for irreversible legal document creation",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SA.003.FEATURE_KILL_SWITCH_USES_BARE_CONFIRM": {
+    "surface": "superadmin_web",
+    "title": "Feature kill switch uses bare confirm() instead of styled ConfirmDialog for highest-impact action",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SA.004.STAFF_DEACTIVATION_USES_BARE_CONFIRM_INSTEAD": {
+    "surface": "superadmin_web",
+    "title": "Staff deactivation uses bare confirm() instead of styled ConfirmDialog",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SA.005.HARDCODED_INFRASTRUCTURE_SERVICES_10_ALERT_POLICIES": {
+    "surface": "superadmin_web",
+    "title": "Hardcoded infrastructure: 6 services, 10 alert policies, LB name, domain are static never fetched from API",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SA.007.TAB_SWITCH_ERROR_CLEARING_MANUALLY_ENUMERATED": {
+    "surface": "superadmin_web",
+    "title": "Tab-switch error clearing manually enumerated and fragile missing self-contained tabs",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SA.008.STOREID_IS_FREE_TEXT_INPUT_INSTEAD": {
+    "surface": "superadmin_web",
+    "title": "StoreId is free-text input instead of store picker dropdown",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SA.009.USER_STATUS_CHANGE_VIA_DROPDOWN_FIRES": {
+    "surface": "superadmin_web",
+    "title": "User status change via dropdown fires immediately with no confirmation dialog",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SA.010.CLIENT_SIDE_ONLY_SEARCH_FILTERING_WITH": {
+    "surface": "superadmin_web",
+    "title": "Client-side-only search filtering with no server-side search or pagination",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SA.011.PREV_NEXT_PAGINATION_BUTTONS_NEVER_DISABLED": {
+    "surface": "superadmin_web",
+    "title": "Prev/Next pagination buttons never disabled at boundaries allowing invalid page navigation",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SA.012.ACKNOWLEDGE_AND_DISMISS_GRN_ALERT_ACTIONS": {
+    "surface": "superadmin_web",
+    "title": "Acknowledge and Dismiss GRN alert actions have no confirmation dialog",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SA.013.SELF_CONTAINED_TABS_DEFINE_LOCAL_APIFETCH": {
+    "surface": "superadmin_web",
+    "title": "Self-contained tabs define local apiFetch wrappers with relative URLs bypassing API_BASE config",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.014.ANOMALIES_AND_ALERTS_HAVE_HARDCODED_LIMIT": {
+    "surface": "superadmin_web",
+    "title": "Anomalies and alerts have hardcoded limit=50 with no pagination controls",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.016.HEALTH_CHECK_ENDPOINT_URLS_HARDCODED_TO": {
+    "surface": "superadmin_web",
+    "title": "Health check endpoint URLs hardcoded to /health path with no env-var base URL",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.017.MASSIVE_MONOLITHIC_STATE_MANAGEMENT_APP_TSX": {
+    "surface": "superadmin_web",
+    "title": "Massive monolithic state management: App.tsx holds 80+ state variables for prop-drilled tabs",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.018.GST_TAB_USES_OWN_API_MODULE": {
+    "surface": "superadmin_web",
+    "title": "GST tab uses own API module not using centralized fetchWithTimeout for abort-on-tab-switch",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.019.BLOB_URL_CLEANUP_HAS_STALE_CLOSURE": {
+    "surface": "superadmin_web",
+    "title": "Blob URL cleanup has stale closure revoking wrong URL reference",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.021.CATCH_ERR_ANY_PATTERN_USED_INSTEAD": {
+    "surface": "superadmin_web",
+    "title": "catch err: any pattern used instead of err: unknown across multiple tabs",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.022.DOCUMENT_EXECCOMMAND_COPY_USED_WHICH_IS": {
+    "surface": "superadmin_web",
+    "title": "document.execCommand copy used which is deprecated instead of navigator.clipboard API",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.023.GSTR_EXPORT_USES_PROGRAMMATIC_CLICK_PATTERN": {
+    "surface": "superadmin_web",
+    "title": "GSTR-1 export uses programmatic a.click() pattern without cleanup or error handling",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.024.ANALYTICS_SUB_TABS_IN_HORIZONTAL_ROW": {
+    "surface": "superadmin_web",
+    "title": "Analytics 8 sub-tabs in horizontal row may overflow on narrow screens with no scroll",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.025.ALERT_POLICIES_ALL_PERMANENTLY_DISPLAY_ACTIVE": {
+    "surface": "superadmin_web",
+    "title": "Alert policies all permanently display active green regardless of actual alert state",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SA.026.AUTO_REFRESH_INTERVAL_DOES_NOT_RESET": {
+    "surface": "superadmin_web",
+    "title": "Auto-refresh interval does not reset when loadData changes causing stale interval handler",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.001.INVOICE_PDF_DOWNLOAD_USES_RELATIVE_URL": {
+    "surface": "supplier_web",
+    "title": "Invoice PDF download uses relative URL without API_BASE_URL causing 404 in production",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SUP.002.DOUBLE_UNWRAPPING_OF_API_RESPONSE_DATA": {
+    "surface": "supplier_web",
+    "title": "Double-unwrapping of API response data causes runtime crash on invoice detail",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SUP.003.REGISTRATION_DOCUMENT_UPLOAD_SENDS_NO_AUTHORIZATION": {
+    "surface": "supplier_web",
+    "title": "Registration document upload sends no Authorization header causing 401 on authenticated endpoint",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SUP.004.ORDERS_READ_MARKING_COMPARES_BARE_PATHNAME": {
+    "surface": "supplier_web",
+    "title": "Orders read-marking compares bare pathname without basePath causing fragile Next.js behavior",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SUP.005.LOGOUT_REDIRECT_RACE_AUTH_TSX_USES": {
+    "surface": "supplier_web",
+    "title": "Logout redirect race: auth.tsx uses /login while api.ts uses /supplier/login",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "R5.SUP.006.CLIENT_SIDE_SEARCH_ONLY_SEARCHES_CURRENT": {
+    "surface": "supplier_web",
+    "title": "Client-side search only searches current page data not full dataset",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.007.PRICE_INPUT_PAISE_CONVERSION_CREATES_FEEDBACK": {
+    "surface": "supplier_web",
+    "title": "Price input paise conversion creates feedback loop on every keystroke",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.008.PAGINATION_STATE_NOT_URL_SYNCED_CAUSING": {
+    "surface": "supplier_web",
+    "title": "Pagination state not URL-synced causing back/forward navigation to lose position",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.009.EMAIL_VERIFICATION_MODAL_NOT_USING_SHARED": {
+    "surface": "supplier_web",
+    "title": "Email verification modal not using shared Modal component causing inconsistent UX",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.010.TWO_CONFLICTING_BANK_DETAIL_UPDATE_PATHS": {
+    "surface": "supplier_web",
+    "title": "Two conflicting bank detail update paths between Profile and KYC pages",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.011.CHAT_PAGE_HAS_INLINE_STYLES_WITH": {
+    "surface": "supplier_web",
+    "title": "Chat page has inline styles with no mobile responsive design",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.012.EMAILRESET_STEP_DEFINED_BUT_NEVER_NAVIGATED": {
+    "surface": "supplier_web",
+    "title": "emailReset step defined but never navigated to causing dead code",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.013.SUPPLIERTYPE_AND_SUPPLIERTYPEOTHER_COLLECTED_IN_UI": {
+    "surface": "supplier_web",
+    "title": "supplierType and supplierTypeOther collected in UI but never sent to backend",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.014.DASHBOARD_STATS_CALCULATE_FROM_FIRST_PAGE": {
+    "surface": "supplier_web",
+    "title": "Dashboard stats calculate from first page only giving inaccurate totals",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.015.ISAUTHENTICATED_RETURNS_NULL_CAUSING_FLASH_OF": {
+    "surface": "supplier_web",
+    "title": "isAuthenticated returns null causing flash of empty content before redirect",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "R5.SUP.016.MISSING_SCROLL_TO_TOP_ON_PAGE": {
+    "surface": "supplier_web",
+    "title": "Missing scroll-to-top on page navigation and modal scroll locks",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.017.BREADCRUMB_COMPONENT_RECEIVES_INCONSISTENT_PROP_TYPES": {
+    "surface": "supplier_web",
+    "title": "Breadcrumb component receives inconsistent prop types across pages",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.018.DOUBLE_PADDING_FROM_NESTED_LAYOUT_CONTAINERS": {
+    "surface": "supplier_web",
+    "title": "Double padding from nested layout containers causing excessive whitespace",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.019.ANCHOR_TAGS_USED_INSTEAD_OF_NEXT": {
+    "surface": "supplier_web",
+    "title": "Anchor tags used instead of Next.js Link component losing client-side routing",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.020.INLINE_STYLES_ON_HELP_LAYOUT_INSTEAD": {
+    "surface": "supplier_web",
+    "title": "Inline styles on help layout instead of tailwind classes causing style inconsistency",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.021.DUPLICATE_TOASTER_RENDERED_IN_BOTH_PROVIDERS": {
+    "surface": "supplier_web",
+    "title": "Duplicate Toaster rendered in both Providers and layout components",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.022.STALE_SELECTEDORDER_REFERENCE_AFTER_ORDER_LIST": {
+    "surface": "supplier_web",
+    "title": "stale selectedOrder reference after order list refresh",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.023.SHARED_UPLOAD_LOADING_STATE_ACROSS_MULTIPLE": {
+    "surface": "supplier_web",
+    "title": "Shared upload loading state across multiple document upload fields",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.024.SSE_CONNECTION_SENDS_NO_CREDENTIALS_HEADER": {
+    "surface": "supplier_web",
+    "title": "SSE connection sends no credentials header for authenticated streaming",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.025.LOCALSTORAGE_STALE_DATA_PERSISTS_AFTER_SESSION": {
+    "surface": "supplier_web",
+    "title": "localStorage stale data persists after session expiry causing ghost auth",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.026.INCONSISTENT_GRAY_VS_SLATE_COLOR_PALETTE": {
+    "surface": "supplier_web",
+    "title": "Inconsistent gray vs slate color palette between components",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.027.404_PAGE_ALWAYS_LINKS_TO_DASHBOARD": {
+    "surface": "supplier_web",
+    "title": "404 page always links to dashboard even for unauthenticated users",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.028.RECAPTCHA_CLEANUP_TIMING_MAY_CAUSE_MEMORY": {
+    "surface": "supplier_web",
+    "title": "reCAPTCHA cleanup timing may cause memory leak on rapid navigation",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.029.INCONSISTENT_CONFIRMPASSWORD_VALIDATION_BETWEEN_REGISTER_AND": {
+    "surface": "supplier_web",
+    "title": "Inconsistent confirmPassword validation between register and reset flows",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.030.NO_MOBILE_RESPONSIVE_VIEW_FOR_BNPL": {
+    "surface": "supplier_web",
+    "title": "No mobile responsive view for BNPL order details section",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.031.MODAL_COMPONENT_TOO_NARROW_ON_DESKTOP": {
+    "surface": "supplier_web",
+    "title": "Modal component too narrow on desktop and missing dark mode support",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.032.EMPTYSTATE_AND_DASHBOARDERROR_COMPONENTS_HAVE_NO": {
+    "surface": "supplier_web",
+    "title": "EmptyState and DashboardError components have no dark mode support",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.033.EMOJI_USED_INSTEAD_OF_LUCIDE_ICON": {
+    "surface": "supplier_web",
+    "title": "Emoji used instead of Lucide icon components for visual indicators",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.034.PAGE_FALSY_CHECK_CAUSES_INCORRECT_PAGINATION": {
+    "surface": "supplier_web",
+    "title": "Page 0 falsy check causes incorrect pagination behavior on first page",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.035.PRODUCT_IMAGE_UPLOAD_HAS_NO_SIZE": {
+    "surface": "supplier_web",
+    "title": "Product image upload has no size limit or compression before upload",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "R5.SUP.036.INVOICE_LIST_HAS_NO_DATE_RANGE": {
+    "surface": "supplier_web",
+    "title": "Invoice list has no date range filter for historical invoice lookup",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "RETAILER.AUTH.PROBE_PATH.001": {
+    "surface": "retailer_web",
+    "title": "Audit probes still hit deprecated retailer auth path",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "STAGE.BRAND.LOGO_CONSISTENCY.001": {
+    "surface": "shared",
+    "title": "Unify SuperMandi logo treatment across landing, retailer, supplier, superadmin, and POS activation/login gates",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.COST.BUDGET_ALERTS.001": {
+    "surface": "shared",
+    "title": "Set up budget alerts and cost governance for staging",
+    "riskClass": "medium",
+    "severity": "P3",
+    "status": "done"
+  },
+  "STAGE.DB.CLOUDSQL_PUBLIC_IP.001": {
+    "surface": "backend",
+    "title": "Migrate staging Cloud SQL to private connectivity only",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "STAGE.ENV.BOUNDARY.ISOLATION.001": {
+    "surface": "shared",
+    "title": "Separate staging/prod trust boundaries in edge and cert configuration",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.NETWORK.FIREWALL_WORLD_OPEN.001": {
+    "surface": "shared",
+    "title": "Close world-open ingress firewall rules in default VPC",
+    "riskClass": "critical",
+    "severity": "P0",
+    "status": "done"
+  },
+  "STAGE.NETWORK.VPC_BASELINE.001": {
+    "surface": "shared",
+    "title": "Harden default VPC baseline (Private Google Access + Flow Logs)",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.OBS.ALERTING_UPTIME.001": {
+    "surface": "shared",
+    "title": "Establish staging alert policies and uptime checks",
+    "riskClass": "medium",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.OBS.HISTORICAL_5XX.001": {
+    "surface": "backend",
+    "title": "Historical 5xx spikes on retired revisions need guardrails",
+    "riskClass": "high",
+    "severity": "P2",
+    "status": "done"
+  },
+  "STAGE.SECURITY.AUDIT_LOG_DATA_ACCESS.001": {
+    "surface": "shared",
+    "title": "Enable Data Access audit logging for critical services",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.SECURITY.CORS_ORIGINS.001": {
+    "surface": "shared",
+    "title": "Staging CORS allows production origins",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.SECURITY.IAM_EDITOR_ROLE.001": {
+    "surface": "shared",
+    "title": "Replace broad editor roles on default service accounts",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.SECURITY.INGRESS_BOUNDARY.001": {
+    "surface": "shared",
+    "title": "Cloud Run services still reachable on direct run.app URLs",
+    "riskClass": "high",
+    "severity": "P1",
+    "status": "done"
+  },
+  "STAGE.SECURITY.POSTURE_API_COVERAGE.001": {
+    "surface": "shared",
+    "title": "Enable core security posture services for staging",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "STAGE.SECURITY.SECRET_ROTATION.001": {
+    "surface": "shared",
+    "title": "Add secret rotation policy and version lifecycle controls",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "STAGE.STORAGE.BUCKET_ACCESS_BASELINE.001": {
+    "surface": "shared",
+    "title": "Enforce uniform bucket-level access and public access prevention",
+    "riskClass": "medium",
+    "severity": "P2",
+    "status": "done"
+  },
+  "WORKFLOW.GITDISCIPLINE.TODO_MARKER_FALSEPOSITIVE.001": {
+    "surface": "shared",
+    "title": "Replace CC-XXX placeholder in guard.js to clear TODO/XXX false positive",
+    "riskClass": "low",
+    "severity": "P3",
+    "status": "done"
+  }
+}
