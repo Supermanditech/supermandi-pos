@@ -1,5 +1,6 @@
 // Transaction Routes - V3.0.9 compliant
 // Inventory transaction endpoints with event outbox integration
+// R5-BE-001: Service-level authentication added (defense-in-depth)
 
 import { Router, Request, Response, NextFunction } from 'express';
 import {
@@ -10,8 +11,13 @@ import {
   TransactionType,
   ReferenceType,
 } from '../services/transactionService';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 
 const router: Router = Router();
+
+// R5-BE-001: Apply authentication to all transaction routes (defense-in-depth)
+router.use(authenticate);
+router.use(requireStoreAccess);
 
 // =============================================================================
 // ASYNC HANDLER
