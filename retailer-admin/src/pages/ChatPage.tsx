@@ -148,7 +148,7 @@ export default function ChatPage() {
         </button>
       </header>
 
-      <div className="page-content" style={{ display: 'flex', height: 'calc(100vh - 180px)', gap: 0 }}>
+      <div className="page-content" style={{ display: 'flex', height: 'calc(100dvh - 180px)', minHeight: '300px', gap: 0 }}>
         {error && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#fee2e2', color: '#991b1b', padding: '0.5rem 1rem', fontSize: '0.85rem', zIndex: 10 }}>
             {error} <button onClick={() => setError(null)} style={{ marginLeft: 8, fontWeight: 600 }}>Dismiss</button>

@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -55,7 +55,15 @@ function formatTime(iso: string | null): string {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' });
 }
 
-export default function SupplierChatPage() {
+export default function SupplierChatPageWrapper() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading chat...</div>}>
+      <SupplierChatPage />
+    </Suspense>
+  );
+}
+
+function SupplierChatPage() {
   const searchParams = useSearchParams();
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -92,12 +100,15 @@ export default function SupplierChatPage() {
     return raw.filter((m): m is ChatMessage => m != null && typeof (m as ChatMessage).id === 'string').slice().reverse();
   }, [msgData]);
 
-  // Mark as read when selecting conversation
+  // Mark as read when selecting conversation (only if it has unread messages)
   useEffect(() => {
     if (selectedConvId) {
-      chatApiFetch(`/api/v1/chat/conversations/${selectedConvId}/read`, { method: 'PATCH' }).catch(() => {});
+      const conv = conversations.find(c => c.id === selectedConvId);
+      if (conv && conv.unreadCount > 0) {
+        chatApiFetch(`/api/v1/chat/conversations/${selectedConvId}/read`, { method: 'PATCH' }).catch(() => {});
+      }
     }
-  }, [selectedConvId]);
+  }, [selectedConvId, conversations]);
 
   // Scroll to bottom on new messages
   useEffect(() => {

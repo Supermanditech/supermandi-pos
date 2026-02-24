@@ -161,6 +161,7 @@ export default function ReconciliationPage() {
             <input
               type="date"
               value={fromDate}
+              max={toDate || undefined}
               onChange={(e) => setFromDate(e.target.value)}
               style={{
                 padding: '0.5rem',
@@ -175,6 +176,7 @@ export default function ReconciliationPage() {
             <input
               type="date"
               value={toDate}
+              min={fromDate || undefined}
               onChange={(e) => setToDate(e.target.value)}
               style={{
                 padding: '0.5rem',

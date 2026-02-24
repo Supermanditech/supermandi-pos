@@ -1,4 +1,5 @@
 // SA-001: Applications approval tab extracted from App.tsx
+import { useEffect } from "react";
 import type { Application } from "../api/applications";
 import { formatDateTime } from "../lib/formatters";
 
@@ -33,6 +34,9 @@ export function ApplicationsTab({
   handleRejectApplication,
   onLoadMore,
 }: ApplicationsTabProps) {
+  // SA.016: Refresh when entity filter changes instead of using setTimeout
+  useEffect(() => { refreshApplications(); }, [appEntityFilter]);
+
   return (
     <section className="card">
       <div className="cardHeader">
@@ -44,7 +48,7 @@ export function ApplicationsTab({
           <select
             className="selectSmall"
             value={appEntityFilter}
-            onChange={(e) => { setAppEntityFilter(e.target.value); setTimeout(() => refreshApplications(), 50); }}
+            onChange={(e) => setAppEntityFilter(e.target.value)}
           >
             <option value="">All Types</option>
             <option value="retailer">Retailer</option>

@@ -106,8 +106,9 @@ export function SupportQueueTab() {
     try {
       const result = await apiFetch(`/api/v1/admin/chat/conversations/${convId}/messages?limit=100`);
       setMessages((result.messages || []).slice().reverse());
-    } catch {
+    } catch (err: unknown) {
       setMessages([]);
+      setError(err instanceof Error ? err.message : 'Failed to load messages');
     }
   };
 
@@ -286,7 +287,7 @@ export function SupportQueueTab() {
                     <input
                       value={replyText}
                       onChange={e => setReplyText(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && sendReply()}
+                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendReply())}
                       placeholder="Type a reply..."
                       style={{ flex: 1, padding: '0.5rem', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.85rem', outline: 'none' }}
                     />

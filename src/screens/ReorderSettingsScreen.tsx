@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
+import { formatMoney } from "../utils/money";
 import * as reorderApi from "../services/api/reorderApi";
 import type { ReorderSettings } from "../services/api/reorderApi";
 import { getDeviceStoreId } from "../services/deviceSession";
@@ -376,7 +377,7 @@ export default function ReorderSettingsScreen({
               </View>
               <View style={styles.valueContainer}>
                 <Text style={styles.valueText}>
-                  {settings?.autoApproveThreshold}
+                  {settings?.autoApproveThreshold != null ? formatMoney(settings.autoApproveThreshold) : '—'}
                 </Text>
               </View>
             </View>

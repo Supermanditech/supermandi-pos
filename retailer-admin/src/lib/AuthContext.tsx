@@ -413,6 +413,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('scroll', updateActivity);
 
     // GL-WF-028: Check for idle timeout and show warning before logout
+    // Note: Date.now() elapsed time correctly handles laptop sleep (waking up after
+    // timeout period = immediate logout, which is the desired security behavior)
     idleCheckRef.current = setInterval(() => {
       // GO-LIVE-133: Use namespaced key
       const lastActivity = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY));

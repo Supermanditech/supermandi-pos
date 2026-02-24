@@ -326,13 +326,18 @@ export default function LoginPage() {
   const handleChangePhone = async () => {
     // Best-effort backend clear -- expire DRAFT application so GSTIN/phone can be reused
     if (phone) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       try {
         await fetch(`${API_GATEWAY_BASE}/api/v1/retailer-admin/registration/clear`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: phone.trim() }),
+          signal: controller.signal,
         });
-      } catch { /* ignore -- best-effort clear */ }
+      } catch { /* ignore -- best-effort clear */ } finally {
+        clearTimeout(timeout);
+      }
     }
     setStep('phone');
     setOtp('');

@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme } from "../theme";
 import { useCartStore } from "../stores/cartStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import type { CartItem } from "../stores/cartStore";
 import { eventLogger } from "../services/eventLogger";
 import { logPaymentEvent, logPosEvent } from "../services/cloudEventLogger";
@@ -38,6 +39,7 @@ export default function SuccessPrintScreenV2() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { items, total, subtotal, discountAmount, discount, clearCart, unlockCart } = useCartStore();
+  const storeName = useSettingsStore((s) => s.storeName);
 
   // UIUX-POS-001: useRef MUST be unconditional (Rules of Hooks).
   // These are fallbacks when route params don't provide billId/transactionId.
@@ -84,7 +86,7 @@ export default function SuccessPrintScreenV2() {
     const isOfflineSale = billNumber.startsWith("OFF-");
     return [
       "=================================",
-      "       SuperMandi POS",
+      `       ${storeName || "SuperMandi POS"}`,
       "=================================",
       `Bill #: ${billNumber}`,
       `Date: ${formatDateTime(new Date())}`,

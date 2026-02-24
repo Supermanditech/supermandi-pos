@@ -59,8 +59,8 @@ export function FeatureFlagProvider({ children }: { children: React.ReactNode })
           setFlags({ ...DEFAULT_FLAGS, ...json.data.features });
         }
       }
-    } catch {
-      // Network error — keep defaults
+    } catch (err) {
+      console.warn('[FeatureFlagProvider] Failed to load flags, using defaults:', err instanceof Error ? err.message : err);
     } finally {
       setLoading(false);
     }

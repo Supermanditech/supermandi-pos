@@ -86,8 +86,8 @@ export function AiPanel({
                 try {
                   const res = await askAi(aiQuestion);
                   setAiAnswer(res.answer);
-                } catch (e: any) {
-                  setAiError(e?.message ? String(e.message) : "AI request failed");
+                } catch (e: unknown) {
+                  setAiError(e instanceof Error ? e.message : "AI request failed");
                 } finally {
                   setAiLoading(false);
                 }

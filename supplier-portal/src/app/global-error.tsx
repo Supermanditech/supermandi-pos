@@ -62,7 +62,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 Try Again
               </button>
               <button
-                onClick={() => window.location.href = '/'}
+                onClick={() => window.location.href = '/supplier/dashboard'}
                 style={{
                   padding: '0.5rem 1.5rem',
                   backgroundColor: '#4b5563',

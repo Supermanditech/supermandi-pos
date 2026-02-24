@@ -249,6 +249,7 @@ export default function InventoryPage() {
             <input
               type="date"
               value={startDate}
+              max={endDate || undefined}
               onChange={(e) => setStartDate(e.target.value)}
               style={{
                 padding: '0.5rem',
@@ -263,6 +264,7 @@ export default function InventoryPage() {
             <input
               type="date"
               value={endDate}
+              min={startDate || undefined}
               onChange={(e) => setEndDate(e.target.value)}
               style={{
                 padding: '0.5rem',

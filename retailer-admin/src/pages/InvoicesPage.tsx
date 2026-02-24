@@ -265,7 +265,7 @@ export default function InvoicesPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: "5vh", zIndex: 1000 }}
           onClick={() => { setDetail(null); setDetailError(null); }}
           onKeyDown={e => { if (e.key === 'Escape') { setDetail(null); setDetailError(null); } }}
-          tabIndex={-1} ref={(el: HTMLDivElement | null) => el?.focus()}>
+          tabIndex={-1} ref={(el) => { if (el) el.focus(); }}>
           <div style={{ background: "#fff", borderRadius: 8, width: "90%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "1.5rem" }}
             onClick={e => e.stopPropagation()}>
             {detailLoading && <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>}

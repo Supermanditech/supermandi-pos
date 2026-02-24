@@ -2852,7 +2852,7 @@ export default function App() {
           <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>Audit</button>
           <button className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>Registrations</button>
           <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>Staff</button>
-          <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN</button>
+          <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN Alerts</button>
           <button className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
           <button className={tab === "gst-compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("gst-compliance")}>GST</button>
           <button className={tab === "refunds" ? "tab tabActive" : "tab"} onClick={() => setTab("refunds")}>Refunds</button>
@@ -2860,7 +2860,7 @@ export default function App() {
           <button className={tab === "quality" ? "tab tabActive" : "tab"} onClick={() => setTab("quality")}>Quality</button>
           <button className={tab === "credit-providers" ? "tab tabActive" : "tab"} onClick={() => setTab("credit-providers")}>Finance</button>
           <button className={tab === "support" ? "tab tabActive" : "tab"} onClick={() => setTab("support")}>Support</button>
-          <button className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI</button>
+          <button className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI Intelligence</button>
           <button className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
         </nav>
 
@@ -3164,7 +3164,7 @@ export default function App() {
                 )}
                 <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(approvalResult.activationCode); }}
+                    onClick={() => { navigator.clipboard.writeText(approvalResult.activationCode).catch(() => { /* clipboard unavailable in insecure context */ }); }}
                     style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}
                   >
                     Copy Code

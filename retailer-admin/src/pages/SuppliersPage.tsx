@@ -328,7 +328,7 @@ export default function SuppliersPage() {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchTerm, fetchSuppliers]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;

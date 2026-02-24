@@ -72,7 +72,7 @@ export default function VariantManager({ storeProductId, productName, onClose }:
         accessToken
       );
       const data = await safeJson(res);
-      if (data?.ok) {
+      if (res.ok) {
         setVariants(data.data || []);
       } else {
         setError(data?.error?.message || 'Failed to load variants');
@@ -123,7 +123,7 @@ export default function VariantManager({ storeProductId, productName, onClose }:
         }
       );
       const data = await safeJson(res);
-      if (data?.ok) {
+      if (res.ok) {
         setSuccess('Variant added');
         setFormData(initialVariantForm);
         setShowAddForm(false);
@@ -175,7 +175,7 @@ export default function VariantManager({ storeProductId, productName, onClose }:
         }
       );
       const data = await safeJson(res);
-      if (data?.ok) {
+      if (res.ok) {
         setSuccess('Variant updated');
         setEditingId(null);
         await loadVariants();
@@ -200,7 +200,7 @@ export default function VariantManager({ storeProductId, productName, onClose }:
         { method: 'DELETE' }
       );
       const data = await safeJson(res);
-      if (data?.ok) {
+      if (res.ok) {
         setSuccess('Variant deactivated');
         await loadVariants();
         setTimeout(() => setSuccess(''), 3000);

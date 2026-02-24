@@ -27,8 +27,8 @@ export function GstComplianceTab() {
     try {
       const data = await fetchGstStoresOverview(month);
       setOverview(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load GST overview");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load GST overview");
     } finally {
       setLoading(false);
     }
@@ -42,8 +42,8 @@ export function GstComplianceTab() {
     try {
       const data = await fetchGstSummary(storeId, month);
       setStoreSummary(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load store GST detail");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load store GST detail");
     } finally {
       setDetailLoading(false);
     }
@@ -54,13 +54,16 @@ export function GstComplianceTab() {
     try {
       const blob = await exportGstr1(storeId, month);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `GSTR1_${storeId}_${month}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setError(err.message || "Export failed");
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `GSTR1_${storeId}_${month}.json`;
+        a.click();
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Export failed");
     } finally {
       setExporting(false);
     }

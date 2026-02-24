@@ -117,7 +117,7 @@ export function DevicesTab({
                     className="tab"
                     onClick={() => {
                       if (navigator.clipboard?.writeText) {
-                        navigator.clipboard.writeText(enrollment.code).catch(() => undefined);
+                        navigator.clipboard.writeText(enrollment.code).catch(() => { /* clipboard unavailable */ });
                       }
                     }}
                   >
@@ -127,7 +127,7 @@ export function DevicesTab({
                     className="btnGhost"
                     onClick={() => {
                       if (navigator.clipboard?.writeText) {
-                        navigator.clipboard.writeText(enrollment.qrPayload).catch(() => undefined);
+                        navigator.clipboard.writeText(enrollment.qrPayload).catch(() => { /* clipboard unavailable */ });
                       }
                     }}
                   >

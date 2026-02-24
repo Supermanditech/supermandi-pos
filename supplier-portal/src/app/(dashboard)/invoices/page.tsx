@@ -48,7 +48,8 @@ export default function InvoicesPage() {
   const downloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     try {
       const token = (await import('@/lib/api')).getAuthToken();
-      const res = await fetch(`/api/v1/supplier/invoices/${invoiceId}/pdf`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const res = await fetch(`${apiBase}/api/v1/supplier/invoices/${invoiceId}/pdf`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: 'include',
       });

@@ -119,11 +119,11 @@ export function CreditProvidersTab() {
   if (loading) return <div style={{ padding: '2rem', color: '#64748b' }}>Loading finance dashboard...</div>;
 
   // Aggregate totals
-  const totalDisbursed = stats.reduce((s, r) => s + parseInt(r.total_disbursed_minor, 10), 0);
-  const totalOutstanding = stats.reduce((s, r) => s + parseInt(r.outstanding_minor, 10), 0);
-  const totalRepaid = stats.reduce((s, r) => s + parseInt(r.total_repaid_minor, 10), 0);
-  const totalActive = stats.reduce((s, r) => s + parseInt(r.active, 10), 0);
-  const totalOverdue = stats.reduce((s, r) => s + parseInt(r.overdue, 10), 0);
+  const totalDisbursed = stats.reduce((s, r) => s + Math.round(Number(r.total_disbursed_minor) || 0), 0);
+  const totalOutstanding = stats.reduce((s, r) => s + Math.round(Number(r.outstanding_minor) || 0), 0);
+  const totalRepaid = stats.reduce((s, r) => s + Math.round(Number(r.total_repaid_minor) || 0), 0);
+  const totalActive = stats.reduce((s, r) => s + Math.round(Number(r.active) || 0), 0);
+  const totalOverdue = stats.reduce((s, r) => s + Math.round(Number(r.overdue) || 0), 0);
 
   return (
     <div style={{ padding: '1.5rem' }}>

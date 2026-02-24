@@ -112,7 +112,8 @@ export default function OrderDetailScreen({
     }
   }, [order?.trackingNumber]);
 
-  // GO-LIVE-239: Auto-refresh for in-progress orders
+  // GO-LIVE-239: Auto-refresh for in-progress orders (max 60 attempts = 30 min)
+  const pollCountRef = React.useRef(0);
   useEffect(() => {
     // Only auto-refresh if order is in a non-final status
     if (!order) return;
@@ -120,10 +121,15 @@ export default function OrderDetailScreen({
     if (finalStatuses.includes(order.status)) {
       return;
     }
+    pollCountRef.current = 0;
 
-    // Poll every 30 seconds for status updates
+    // Poll every 30 seconds for status updates, max 60 attempts
     const pollInterval = setInterval(() => {
-      console.log("[OrderDetailScreen] GO-LIVE-239: Auto-refreshing order status");
+      pollCountRef.current += 1;
+      if (pollCountRef.current > 60) {
+        clearInterval(pollInterval);
+        return;
+      }
       void loadOrder();
     }, 30000);
 
@@ -213,8 +219,8 @@ export default function OrderDetailScreen({
       `Items:\n${itemsSummary}${moreItems}\n\n` +
       `Please update on the status. Thank you.`
     );
-    // supplierPhone not available on PurchaseOrder type — open wa.me without phone so user picks contact
-    // wa.me universal link works on both Android and iOS (whatsapp:// is platform-inconsistent)
+    // TODO: Include supplierPhone in PurchaseOrder API response for direct wa.me/{phone} links
+    // For now, open WhatsApp with pre-filled message — user picks the supplier contact
     const url = `https://wa.me/?text=${message}`;
     Linking.openURL(url).catch(() => {
       Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");

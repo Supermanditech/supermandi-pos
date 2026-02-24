@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, CheckCheck, RefreshCw, Truck, Package, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Breadcrumb from '@/components/Breadcrumb';
 import { apiFetch } from '@/lib/api';
 
@@ -52,7 +53,7 @@ export default function NotificationsPage() {
       await apiFetch(`/api/v1/supplier/notifications/${id}/read`, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
     } catch {
-      // Silently handle — notification still appears read in UI
+      toast.error('Failed to mark notification as read');
     }
   };
 
@@ -61,7 +62,7 @@ export default function NotificationsPage() {
       await apiFetch('/api/v1/supplier/notifications/read-all', { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch {
-      // Silently handle
+      toast.error('Failed to mark all as read');
     }
   };
 

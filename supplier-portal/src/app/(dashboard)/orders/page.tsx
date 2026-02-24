@@ -472,6 +472,15 @@ export default function OrdersPage() {
       {selectedOrder && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          tabIndex={-1}
+          ref={(el) => { if (el) el.focus(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && !isAnyMutationPending) {
+              setSelectedOrder(null);
+              setShowNotesSection(false);
+              setNewNoteText('');
+            }
+          }}
           onClick={() => {
             // ISSUE-MICRO-004: Prevent modal close during in-flight mutations
             if (isAnyMutationPending) return;

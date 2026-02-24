@@ -135,7 +135,7 @@ export function DocumentsTab({
       {/* T-119: Document review modal with dirty guard on close */}
       {selectedDocument && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={handleCloseDocument}>
-          <div style={{ backgroundColor: "#1a1a2e", borderRadius: 8, padding: 24, maxWidth: "90vw", maxHeight: "90vh", overflow: "auto", minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ backgroundColor: "#ffffff", borderRadius: 8, padding: 24, maxWidth: "90vw", maxHeight: "90vh", overflow: "auto", minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>Review Document</h3>
               <button onClick={handleCloseDocument} style={{ padding: "4px 8px" }} aria-label="Close document review">✕</button>
@@ -147,7 +147,7 @@ export function DocumentsTab({
               <div style={{ marginBottom: 8 }}><strong>Uploaded:</strong> {formatDateTime(selectedDocument.uploaded_at)}</div>
             </div>
             {/* T-014: Document preview via authenticated blob URL */}
-            <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "#0f0f23", padding: 16, borderRadius: 4, minHeight: 120 }}>
+            <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "#f8fafc", padding: 16, borderRadius: 4, minHeight: 120 }}>
               {blobLoading ? (
                 <div style={{ color: "#888", padding: 40 }}>Loading document preview...</div>
               ) : blobError ? (
