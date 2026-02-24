@@ -60,44 +60,44 @@ export default function AnalyticsPage() {
     <div>
       <Breadcrumb items={[{ label: 'Dashboard', path: `/s/${storeCode}` }, { label: 'Sales Analytics' }]} />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-slate-800">Sales Analytics</h1>
-        <div className="flex items-center gap-2">
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>Sales Analytics</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input
             type="date"
             value={from}
             onChange={e => setFrom(e.target.value)}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            style={{ border: '1px solid #cbd5e1', borderRadius: '0.5rem', paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
           />
-          <span className="text-slate-400">to</span>
+          <span style={{ color: '#94a3b8' }}>to</span>
           <input
             type="date"
             value={to}
             onChange={e => setTo(e.target.value)}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            style={{ border: '1px solid #cbd5e1', borderRadius: '0.5rem', paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
           />
         </div>
       </div>
 
       {/* RET-C4-010: Warn if date range is invalid */}
       {from && to && from > to && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-amber-800 text-sm">
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '1rem', color: '#92400e', fontSize: '0.875rem' }}>
           Start date is after end date. Please adjust the date range.
         </div>
       )}
 
       {/* Error state */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-          <p className="text-red-800">{error}</p>
-          <button onClick={loadData} className="text-sm font-medium text-red-700 underline">Retry</button>
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ color: '#991b1b' }}>{error}</p>
+          <button onClick={loadData} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#b91c1c', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
         </div>
       )}
 
       {/* Loading state */}
       {loading && (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBlock: '4rem' }}>
+          <div style={{ borderRadius: '9999px', height: '2.5rem', width: '2.5rem', borderBottom: '2px solid #2563eb', animation: 'spin 1s linear infinite' }} />
         </div>
       )}
 
@@ -105,44 +105,43 @@ export default function AnalyticsPage() {
       {!loading && data && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Total Sales</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatCurrency(data.totals.totalSales)}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Sales</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{formatCurrency(data.totals.totalSales)}</p>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Total Bills</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{data.totals.totalBills}</p>
+            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Bills</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{data.totals.totalBills}</p>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Avg Bill Value</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatCurrency(data.totals.averageBillValue)}</p>
+            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Avg Bill Value</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{formatCurrency(data.totals.averageBillValue)}</p>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Days in Range</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{data.daily.length}</p>
+            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Days in Range</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{data.daily.length}</p>
             </div>
           </div>
 
           {/* Daily Sales Chart (simple bar chart using divs) */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-            <h2 className="font-semibold text-slate-700 mb-4">Daily Sales Trend</h2>
+          <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Daily Sales Trend</h2>
             {data.daily.length === 0 ? (
-              <p className="text-slate-400 text-center py-8">No sales data for this period</p>
+              <p style={{ color: '#94a3b8', textAlign: 'center', paddingBlock: '2rem' }}>No sales data for this period</p>
             ) : (
-              <div className="flex items-end gap-1 h-48">
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.25rem', height: '12rem' }}>
                 {data.daily.map(d => {
                   const pct = maxDailySales > 0 ? (d.totalSales / maxDailySales) * 100 : 0;
                   const dateLabel = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                   return (
-                    <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                    <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', position: 'relative' }}>
                       <div
-                        className="w-full bg-blue-500 rounded-t-sm min-h-[2px] transition-all group-hover:bg-blue-600"
-                        style={{ height: `${Math.max(pct, 1)}%` }}
+                        style={{ width: '100%', background: '#3b82f6', borderRadius: '0.125rem 0.125rem 0 0', minHeight: '2px', transition: 'all 0.15s ease', height: `${Math.max(pct, 1)}%` }}
                         title={`${dateLabel}: ${formatCurrency(d.totalSales)} (${d.bills} bills)`}
                       />
                       {data.daily.length <= 14 && (
-                        <span className="text-[10px] text-slate-400 mt-1 whitespace-nowrap">{dateLabel}</span>
+                        <span style={{ fontSize: '10px', color: '#94a3b8', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>{dateLabel}</span>
                       )}
                     </div>
                   );
@@ -152,41 +151,41 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Payment Breakdown + Top Products */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
             {/* Payment Breakdown */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h2 className="font-semibold text-slate-700 mb-4">Payment Breakdown</h2>
+            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
+              <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Payment Breakdown</h2>
               {paymentTotal === 0 ? (
-                <p className="text-slate-400 text-center py-4">No payment data</p>
+                <p style={{ color: '#94a3b8', textAlign: 'center', paddingBlock: '1rem' }}>No payment data</p>
               ) : (
                 <>
                   {/* Stacked bar */}
-                  <div className="flex h-6 rounded-full overflow-hidden mb-4">
-                    {cashPct > 0 && <div className="bg-green-500" style={{ width: `${cashPct}%` }} />}
-                    {upiPct > 0 && <div className="bg-blue-500" style={{ width: `${upiPct}%` }} />}
-                    {creditPct > 0 && <div className="bg-yellow-500" style={{ width: `${creditPct}%` }} />}
+                  <div style={{ display: 'flex', height: '1.5rem', borderRadius: '9999px', overflow: 'hidden', marginBottom: '1rem' }}>
+                    {cashPct > 0 && <div style={{ background: '#22c55e', width: `${cashPct}%` }} />}
+                    {upiPct > 0 && <div style={{ background: '#3b82f6', width: `${upiPct}%` }} />}
+                    {creditPct > 0 && <div style={{ background: '#eab308', width: `${creditPct}%` }} />}
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '9999px', background: '#22c55e', display: 'inline-block' }} />
                         Cash
                       </span>
-                      <span className="font-medium">{formatCurrency(data.paymentBreakdown.cash)} ({cashPct}%)</span>
+                      <span style={{ fontWeight: 500 }}>{formatCurrency(data.paymentBreakdown.cash)} ({cashPct}%)</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-blue-500 inline-block" />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '9999px', background: '#3b82f6', display: 'inline-block' }} />
                         UPI
                       </span>
-                      <span className="font-medium">{formatCurrency(data.paymentBreakdown.upi)} ({upiPct}%)</span>
+                      <span style={{ fontWeight: 500 }}>{formatCurrency(data.paymentBreakdown.upi)} ({upiPct}%)</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '9999px', background: '#eab308', display: 'inline-block' }} />
                         Credit/Due
                       </span>
-                      <span className="font-medium">{formatCurrency(data.paymentBreakdown.credit)} ({creditPct}%)</span>
+                      <span style={{ fontWeight: 500 }}>{formatCurrency(data.paymentBreakdown.credit)} ({creditPct}%)</span>
                     </div>
                   </div>
                 </>
@@ -194,21 +193,21 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Top Products */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h2 className="font-semibold text-slate-700 mb-4">Top Selling Products</h2>
+            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
+              <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Top Selling Products</h2>
               {data.topProducts.length === 0 ? (
-                <p className="text-slate-400 text-center py-4">No product data</p>
+                <p style={{ color: '#94a3b8', textAlign: 'center', paddingBlock: '1rem' }}>No product data</p>
               ) : (
-                <div className="space-y-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {data.topProducts.slice(0, 10).map((p, i) => (
-                    <div key={p.productId || i} className="flex items-center justify-between py-1 border-b border-slate-100 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400 w-5">#{i + 1}</span>
-                        <span className="text-sm text-slate-700 truncate max-w-[200px]">{p.productName}</span>
+                    <div key={p.productId || i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBlock: '0.25rem', borderBottom: i < Math.min(data.topProducts.length, 10) - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', width: '1.25rem' }}>#{i + 1}</span>
+                        <span style={{ fontSize: '0.875rem', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{p.productName}</span>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{formatCurrency(p.totalAmount)}</p>
-                        <p className="text-xs text-slate-400">{p.qtySold} sold</p>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 500 }}>{formatCurrency(p.totalAmount)}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{p.qtySold} sold</p>
                       </div>
                     </div>
                   ))}
@@ -219,32 +218,31 @@ export default function AnalyticsPage() {
 
           {/* PRA-007: Category Breakdown */}
           {categoryData && categoryData.salesByGroup.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-              <h2 className="font-semibold text-slate-700 mb-4">Sales by Category</h2>
+            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Sales by Category</h2>
               {categoryData.missingFields.includes('variants.category') && (
-                <p className="text-xs text-amber-600 mb-3">
+                <p style={{ fontSize: '0.75rem', color: '#d97706', marginBottom: '0.75rem' }}>
                   Category data is incomplete — some products may appear as &quot;Uncategorized&quot;.
                 </p>
               )}
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {categoryData.salesByGroup.map((cat, i) => {
                   const maxTotal = categoryData.salesByGroup[0]?.total_minor || 1;
                   const pct = Math.round((cat.total_minor / maxTotal) * 100);
                   return (
-                    <div key={cat.group || i} className="flex items-center gap-3">
-                      <span className="text-sm text-slate-600 w-32 truncate shrink-0" title={cat.group}>
+                    <div key={cat.group || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span style={{ fontSize: '0.875rem', color: '#475569', width: '8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }} title={cat.group}>
                         {cat.group}
                       </span>
-                      <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
+                      <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '9999px', height: '1.25rem', overflow: 'hidden' }}>
                         <div
-                          className="bg-indigo-500 h-full rounded-full transition-all"
-                          style={{ width: `${Math.max(pct, 2)}%` }}
+                          style={{ background: '#6366f1', height: '100%', borderRadius: '9999px', transition: 'all 0.15s ease', width: `${Math.max(pct, 2)}%` }}
                         />
                       </div>
-                      <span className="text-sm font-medium text-slate-700 w-24 text-right shrink-0">
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#334155', width: '6rem', textAlign: 'right', flexShrink: 0 }}>
                         {formatCurrency(cat.total_minor)}
                       </span>
-                      <span className="text-xs text-slate-400 w-16 text-right shrink-0">
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', width: '4rem', textAlign: 'right', flexShrink: 0 }}>
                         {cat.quantity} sold
                       </span>
                     </div>
@@ -258,9 +256,9 @@ export default function AnalyticsPage() {
 
       {/* Empty state */}
       {!loading && !error && data && data.totals.totalBills === 0 && (
-        <div className="text-center py-12 text-slate-500">
-          <p className="text-lg font-medium">No sales in this period</p>
-          <p className="text-sm mt-1">Try selecting a different date range.</p>
+        <div style={{ textAlign: 'center', paddingBlock: '3rem', color: '#64748b' }}>
+          <p style={{ fontSize: '1.125rem', fontWeight: 500 }}>No sales in this period</p>
+          <p style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>Try selecting a different date range.</p>
         </div>
       )}
     </div>

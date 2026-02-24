@@ -303,7 +303,7 @@ export default function ForgotPasswordPage() {
 
   const selectChannel = (ch: Channel) => {
     setChannel(ch);
-    setStep(ch === 'otp' ? 'phone' : 'phone');
+    setStep(ch === 'otp' ? 'phone' : 'emailEntry');
     setError('');
   };
 

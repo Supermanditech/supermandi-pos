@@ -132,19 +132,21 @@ export async function failSellPayment(
 
 /**
  * Get sell payment by ID
+ * R6.BE.002: store_id filter enforces store isolation
  */
-export async function getSellPaymentById(paymentId: string): Promise<SellPayment | null> {
-  const sql = `SELECT * FROM payments.sell_payments WHERE id = $1`;
-  const row = await queryOne<any>(sql, [paymentId]);
+export async function getSellPaymentById(paymentId: string, storeId: string): Promise<SellPayment | null> {
+  const sql = `SELECT * FROM payments.sell_payments WHERE id = $1 AND store_id = $2`;
+  const row = await queryOne<any>(sql, [paymentId, storeId]);
   return row ? mapSellPaymentRow(row) : null;
 }
 
 /**
  * Get sell payment by UPI order ID
+ * R6.BE.002: store_id filter enforces store isolation
  */
-export async function getSellPaymentByOrderId(upiOrderId: string): Promise<SellPayment | null> {
-  const sql = `SELECT * FROM payments.sell_payments WHERE upi_order_id = $1`;
-  const row = await queryOne<any>(sql, [upiOrderId]);
+export async function getSellPaymentByOrderId(upiOrderId: string, storeId: string): Promise<SellPayment | null> {
+  const sql = `SELECT * FROM payments.sell_payments WHERE upi_order_id = $1 AND store_id = $2`;
+  const row = await queryOne<any>(sql, [upiOrderId, storeId]);
   return row ? mapSellPaymentRow(row) : null;
 }
 

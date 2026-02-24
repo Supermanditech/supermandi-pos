@@ -1,8 +1,9 @@
 // Internal Routes - V3.0.9 compliant
-// Routes for service-to-service communication (no public auth required)
+// Routes for service-to-service communication (service token required)
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { ApiError } from '@supermandi/common';
+import { verifyServiceToken } from '../services/jwtService';
 import {
   createUserWithPassword,
   getUser,
@@ -28,6 +29,45 @@ import {
 } from '../services/roleService';
 
 const router: Router = Router();
+
+// =============================================================================
+// R6.BE.001: SERVICE-TO-SERVICE AUTHENTICATION (defense-in-depth)
+// =============================================================================
+
+function validateInternalService(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const serviceToken = req.headers['x-service-token'] as string;
+
+  if (!serviceToken) {
+    res.status(401).json({
+      error: {
+        code: 'MISSING_SERVICE_TOKEN',
+        message: 'X-Service-Token header is required for internal endpoints',
+      },
+    });
+    return;
+  }
+
+  const payload = verifyServiceToken(serviceToken);
+
+  if (!payload) {
+    res.status(401).json({
+      error: {
+        code: 'INVALID_SERVICE_TOKEN',
+        message: 'Invalid or expired service token',
+      },
+    });
+    return;
+  }
+
+  (req as Request & { internalService?: string }).internalService = payload.serviceName;
+  next();
+}
+
+router.use(validateInternalService);
 
 // =============================================================================
 // ROUTE PARAM TYPES

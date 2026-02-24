@@ -4,6 +4,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES, createIdempotencyMiddleware } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import {
   receiveGoods,
   getReceiveRecords,
@@ -12,6 +13,10 @@ import {
 } from '../services/grnService';
 
 const router: RouterType = Router();
+
+// R6.CROSS.001: Apply authentication to all receive routes (defense-in-depth)
+router.use(authenticate);
+router.use(requireStoreAccess);
 
 // =============================================================================
 // TYPES

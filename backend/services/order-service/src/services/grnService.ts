@@ -74,7 +74,8 @@ interface InventoryServiceResponse {
 
 /**
  * Call inventory-service to add stock (synchronous).
- * Uses POST /stores/{storeId}/stock with referenceType=grn_receive.
+ * R6.CROSS.002: Fixed to call POST /stores/{storeId}/inventory/transactions
+ * with correct payload format (items array, transactionType: purchase_received).
  */
 async function callInventoryService(
   storeId: string,
@@ -84,7 +85,7 @@ async function callInventoryService(
   referenceSubId: string,
   authToken?: string
 ): Promise<{ success: boolean; ledgerEntryId?: string; error?: string }> {
-  const url = `${config.services.inventoryService}/stores/${storeId}/stock`;
+  const url = `${config.services.inventoryService}/stores/${storeId}/inventory/transactions`;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -102,9 +103,9 @@ async function callInventoryService(
       method: 'POST',
       headers,
       body: JSON.stringify({
-        productId,
-        adjustmentQty: quantity,
-        referenceType: 'grn_receive',
+        items: [{ productId, quantity }],
+        transactionType: 'purchase_received',
+        referenceType: 'po',
         referenceId,
         referenceSubId,
         notes: `GRN receive for order ${referenceId}`,
@@ -113,7 +114,7 @@ async function callInventoryService(
 
     const data = (await response.json()) as InventoryServiceResponse;
 
-    if (!response.ok || !data.success) {
+    if (!response.ok) {
       return {
         success: false,
         error: data.error?.message ?? `Inventory service returned ${response.status}`,
