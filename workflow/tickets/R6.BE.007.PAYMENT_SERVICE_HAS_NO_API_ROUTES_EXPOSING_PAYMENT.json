@@ -1,0 +1,236 @@
+{
+  "ticketId": "R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT",
+  "screenId": "R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT",
+  "orderInScreen": 7,
+  "surface": "backend",
+  "riskClass": "medium",
+  "title": "payment-service has no API routes exposing payment operations — db queries exist but no route handlers create/read/update payments",
+  "description": "R6 deep audit finding. Dimension: api_contract. Severity: P2. Source SHA: bbd487a3. Scope: R6_DEEP_AUDIT_WAVE. The payment-service entry point (index.ts line 25) only mounts health routes: `app.use('/', healthRoutes)`. The service has complete db query functions for sell_payments (create, update, complete, fail, get by ID, get by order ID), buy_payments (create, update, complete), and BNPL drawdowns (create, list) — but NONE of these are exposed via HTTP routes. The Razorpay client has order creation, payment fetching, signature verification, payout creation, fund account and contact management — all unreachable. This means the entire payment system is a dead-code scaffold that cannot be called by any other service or client.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "fail",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [],
+    "cloudRunServices": [
+      "main-backend"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT"
+    ],
+    "impactedServices": [
+      "main-backend"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-r6-audit",
+    "reproSteps": [
+      "Review R6 finding R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT from R6 deep audit wave at HEAD bbd487a3"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-24T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22305359033",
+      "staging_commit=badc3fbe",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "audit_sha=bbd487a3",
+      "staging_baseline=badc3fbe"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-24T18:00:00.000Z",
+    "updatedAt": "2026-02-24T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": false,
+    "notes": "R6 deep audit finding. Code-first review at HEAD bbd487a3. Staging baseline badc3fbe validated via github://run/22305359033.",
+    "evidence": [
+      "https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "backend",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "main-backend",
+    "actualCloudRunServices": [
+      "main-backend"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "R6 audit scope."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "R6 deep audit finding. Awaiting implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "fix/r6-be-007-payment_service_has_no_api_routes_exposing_payment",
+    "changeScope": "R6.BE.007.PAYMENT_SERVICE_HAS_NO_API_ROUTES_EXPOSING_PAYMENT",
+    "lastValidatedCommit": "bbd487a3",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "R6 audit ticketization at HEAD bbd487a3"
+    ]
+  }
+}

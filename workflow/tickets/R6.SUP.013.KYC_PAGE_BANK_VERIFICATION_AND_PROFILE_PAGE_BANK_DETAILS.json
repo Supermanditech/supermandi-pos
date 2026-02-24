@@ -1,0 +1,236 @@
+{
+  "ticketId": "R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS",
+  "screenId": "R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS",
+  "orderInScreen": 13,
+  "surface": "supplier_web",
+  "riskClass": "medium",
+  "title": "KYC page bank verification and Profile page bank details update the same data through different APIs",
+  "description": "R6 deep audit finding. Dimension: wiring. Severity: P2. Source SHA: bbd487a3. Scope: R6_DEEP_AUDIT_WAVE. The KYC page has a Bank Verification tab that calls `verifyBankAccount()` (api.ts line 853) which hits `/api/v1/supplier/kyc/verify-bank`. The Profile page Bank Details tab calls `updateSupplierProfile({ bankDetails: ... })` which hits a different endpoint. Both update the supplier's bank information, but through completely separate API paths with different validation rules. The KYC bank flow includes IFSC lookup validation and sets bankVerificationStatus, while the Profile flow just saves raw data. A user could save bank details in Profile bypassing the KYC verification flow entirely.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "fail",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [],
+    "cloudRunServices": [
+      "supplier-portal"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS"
+    ],
+    "impactedServices": [
+      "supplier-portal"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-r6-audit",
+    "reproSteps": [
+      "Review R6 finding R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS from R6 deep audit wave at HEAD bbd487a3"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-24T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22305359033",
+      "staging_commit=badc3fbe",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "audit_sha=bbd487a3",
+      "staging_baseline=badc3fbe"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-24T18:00:00.000Z",
+    "updatedAt": "2026-02-24T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": false,
+    "notes": "R6 deep audit finding. Code-first review at HEAD bbd487a3. Staging baseline badc3fbe validated via github://run/22305359033.",
+    "evidence": [
+      "https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "supplier_web",
+    "expectedBasePath": "/supplier",
+    "expectedPrimaryService": "supplier-portal",
+    "actualCloudRunServices": [
+      "supplier-portal"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "R6 audit scope."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "R6 deep audit finding. Awaiting implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "fix/r6-sup-013-kyc_page_bank_verification_and_profile_page_bank_",
+    "changeScope": "R6.SUP.013.KYC_PAGE_BANK_VERIFICATION_AND_PROFILE_PAGE_BANK_DETAILS",
+    "lastValidatedCommit": "bbd487a3",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "R6 audit ticketization at HEAD bbd487a3"
+    ]
+  }
+}

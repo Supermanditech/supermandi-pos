@@ -1,0 +1,236 @@
+{
+  "ticketId": "R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT",
+  "screenId": "R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT",
+  "orderInScreen": 12,
+  "surface": "retailer_web",
+  "riskClass": "critical",
+  "title": "AnalyticsPage uses Tailwind CSS classes but Tailwind is NOT installed - page renders unstyled",
+  "description": "R6 deep audit finding. Dimension: UI. Severity: P0. Source SHA: bbd487a3. Scope: R6_DEEP_AUDIT_WAVE. AnalyticsPage exclusively uses Tailwind CSS utility classes (e.g., 'grid grid-cols-1 md:grid-cols-2 gap-6 mb-6' on line 155, 'bg-white rounded-xl border border-slate-200 p-4' on line 157, 'text-center py-12 text-slate-500' on line 261). CONFIRMED: Tailwind CSS is NOT installed in retailer-admin — there is no tailwindcss in package.json, no tailwind.config.* file, and the only mention of 'tailwind' is a comment in index.css referencing the supplier-portal's Tailwind config. This means ALL Tailwind utility classes on the AnalyticsPage are inert — the page renders as completely unstyled content with no grid layout, no backgrounds, no padding, no typography, no responsive behavior.",
+  "status": "todo",
+  "severity": "P0",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [],
+    "cloudRunServices": [
+      "retailer-admin"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT"
+    ],
+    "impactedServices": [
+      "retailer-admin"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-r6-audit",
+    "reproSteps": [
+      "Review R6 finding R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT from R6 deep audit wave at HEAD bbd487a3"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-24T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22305359033",
+      "staging_commit=badc3fbe",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "audit_sha=bbd487a3",
+      "staging_baseline=badc3fbe"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-24T18:00:00.000Z",
+    "updatedAt": "2026-02-24T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": false,
+    "notes": "R6 deep audit finding. Code-first review at HEAD bbd487a3. Staging baseline badc3fbe validated via github://run/22305359033.",
+    "evidence": [
+      "https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "retailer_web",
+    "expectedBasePath": "/retailer",
+    "expectedPrimaryService": "retailer-admin",
+    "actualCloudRunServices": [
+      "retailer-admin"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "R6 audit scope."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "R6 deep audit finding. Awaiting implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "fix/r6-ret-012-analyticspage_uses_tailwind_css_classes_but_tailw",
+    "changeScope": "R6.RET.012.ANALYTICSPAGE_USES_TAILWIND_CSS_CLASSES_BUT_TAILWIND_IS_NOT",
+    "lastValidatedCommit": "bbd487a3",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "R6 audit ticketization at HEAD bbd487a3"
+    ]
+  }
+}

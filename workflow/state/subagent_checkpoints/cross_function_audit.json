@@ -1,0 +1,182 @@
+{
+  "audit_id": "DA6-CROSS",
+  "surface": "cross_function",
+  "commit": "bbd487a3",
+  "flows_audited": ["retailer_supplier", "retailer_pos", "supplier_pos"],
+  "deduplication": {
+    "checked_against": "dedupe_index.json",
+    "duplicates_suppressed": [
+      "LIVE.DB.SALES_STATUS_ENUM_PARITY.001",
+      "LIVE.BE.STORE_ISOLATION.*",
+      "R5.BE.001"
+    ]
+  },
+  "findings": [
+    {
+      "id": "DA6-CROSS-001",
+      "title": "Order status transition routes in order-service lack authentication middleware",
+      "flow": "retailer_pos",
+      "dimension": "api_contract",
+      "severity": "P0",
+      "riskClass": "critical",
+      "files": ["backend/services/order-service/src/routes/statusTransitions.ts", "backend/services/order-service/src/routes/receive.ts"],
+      "description": "statusTransitions.ts and receive.ts in order-service do NOT apply authenticate or requireStoreAccess middleware. Any request bypassing the gateway can transition order statuses and receive goods without authentication.",
+      "impact": "Defense-in-depth violation. If order-service port is accessible within VPC, unauthenticated requests can submit/cancel/confirm/ship orders and record GRN entries.",
+      "recommendation": "Add router.use(authenticate); router.use(requireStoreAccess); at the top of both files, matching purchaseOrders.ts pattern.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-002",
+      "title": "GRN service calls non-existent inventory-service endpoint POST /stores/:storeId/stock",
+      "flow": "supplier_pos",
+      "dimension": "api_contract",
+      "severity": "P0",
+      "riskClass": "critical",
+      "files": ["backend/services/order-service/src/services/grnService.ts", "backend/services/inventory-service/src/index.ts"],
+      "description": "grnService.ts calls POST /stores/${storeId}/stock but inventory-service has no such route. Available routes are /stores/:storeId/inventory/transactions and /internal/stock/:storeId/batch. GRN will always get 404.",
+      "impact": "Entire GRN goods receiving flow is non-functional. Stock never updates when retailer receives goods from purchase orders.",
+      "recommendation": "Change grnService.ts to call /stores/${storeId}/inventory/transactions with transactionType: 'purchase_received'. Align payload format (adjustmentQty -> items[].quantity).",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-003",
+      "title": "Supplier status transition state machine differs from order-service state machine",
+      "flow": "retailer_supplier",
+      "dimension": "data_model",
+      "severity": "P1",
+      "riskClass": "high",
+      "files": ["backend/src/routes/v1/supplier/orders.ts", "backend/services/order-service/src/utils/stateMachine.ts"],
+      "description": "Two independent state machines: order-service allows shipped->partial_received, supplier route omits partial_received entirely and includes nonexistent 'pending' status.",
+      "impact": "Supplier cannot interact with partially received orders. Duplicate state machines will diverge further over time.",
+      "recommendation": "Extract validTransitions into shared package. Remove duplicate definition from supplier route.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-004",
+      "title": "Supplier order status update bypasses order-service outbox and event logging",
+      "flow": "retailer_supplier",
+      "dimension": "state_sync",
+      "severity": "P1",
+      "riskClass": "high",
+      "files": ["backend/src/routes/v1/supplier/orders.ts", "backend/services/order-service/src/services/statusService.ts"],
+      "description": "Supplier status changes do not write to the outbox. Downstream event consumers (reorder-service, analytics) miss supplier-initiated status changes.",
+      "impact": "Async workflows for supplier confirm/ship/cancel events will not fire.",
+      "recommendation": "Refactor supplier route to call statusService.transitionStatus() or add outbox writes.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-005",
+      "title": "POS canReceive() allows 'confirmed' status but backend only allows 'shipped' or 'partial_received'",
+      "flow": "retailer_pos",
+      "dimension": "data_model",
+      "severity": "P1",
+      "riskClass": "high",
+      "files": ["src/services/api/orderApi.ts", "backend/services/order-service/src/utils/stateMachine.ts"],
+      "description": "POS canReceive() includes 'confirmed' but backend rejects GRN for confirmed orders.",
+      "impact": "POS shows 'Receive Goods' button for confirmed orders but tap always fails with backend error.",
+      "recommendation": "Remove 'confirmed' from POS canReceive() to match backend.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-006",
+      "title": "Retailer admin purchase order status enum missing 4 of 7 backend statuses",
+      "flow": "retailer_supplier",
+      "dimension": "data_model",
+      "severity": "P1",
+      "riskClass": "high",
+      "files": ["retailer-admin/src/pages/PurchaseOrdersPage.tsx", "backend/services/order-service/src/utils/stateMachine.ts"],
+      "description": "Retailer-admin knows only 4 statuses (pending, confirmed, delivered, cancelled). Missing: draft, submitted, shipped, partial_received. Includes nonexistent 'pending'.",
+      "impact": "Orders in shipped/submitted/partial_received states have no color, no filter option in retailer admin.",
+      "recommendation": "Update to complete 7-status enum matching backend.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-007",
+      "title": "Supplier delivery-confirm skips GRN flow, marks delivered without inventory update",
+      "flow": "supplier_pos",
+      "dimension": "state_sync",
+      "severity": "P1",
+      "riskClass": "high",
+      "files": ["backend/src/routes/v1/supplier/orders.ts", "backend/services/order-service/src/services/grnService.ts"],
+      "description": "Supplier delivery-confirm directly sets status to 'delivered' without triggering GRN, inventory-service call, or receive_record creation.",
+      "impact": "Orders marked delivered but stock_balances not incremented. Permanent inventory understatement.",
+      "recommendation": "Remove supplier delivery-confirm or make it trigger GRN flow internally.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-008",
+      "title": "Receive records endpoint does not enforce store isolation via storeId",
+      "flow": "retailer_pos",
+      "dimension": "store_isolation",
+      "severity": "P2",
+      "riskClass": "medium",
+      "files": ["backend/services/order-service/src/routes/receive.ts"],
+      "description": "GET /stores/:storeId/orders/:orderId/receives ignores storeId parameter entirely.",
+      "impact": "Cross-store receive record leakage if orderId is known.",
+      "recommendation": "Pass storeId to getReceiveRecords() and add WHERE clause.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-009",
+      "title": "Order events endpoint does not enforce store isolation",
+      "flow": "retailer_pos",
+      "dimension": "store_isolation",
+      "severity": "P2",
+      "riskClass": "medium",
+      "files": ["backend/services/order-service/src/routes/statusTransitions.ts"],
+      "description": "GET /stores/:storeId/orders/:orderId/events ignores storeId, leaks order event history cross-store.",
+      "impact": "Order event history (status transitions, timestamps) accessible cross-store.",
+      "recommendation": "Pass storeId to getOrderEvents() and validate order belongs to store.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-010",
+      "title": "Supplier can set received_quantity on items without triggering inventory adjustment",
+      "flow": "supplier_pos",
+      "dimension": "state_sync",
+      "severity": "P1",
+      "riskClass": "high",
+      "files": ["backend/src/routes/v1/supplier/orders.ts", "backend/services/order-service/src/services/grnService.ts"],
+      "description": "PATCH supplier item status endpoint allows setting receivedQuantity directly in DB without inventory-service call or receive_record.",
+      "impact": "purchase_order_items.received_quantity > 0 but stock_balances shows no corresponding stock. Permanent data inconsistency.",
+      "recommendation": "Remove receivedQuantity from supplier item status endpoint. Only set via GRN flow.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-011",
+      "title": "POS sends unitPrice in create order but backend silently ignores it with no price-change warning",
+      "flow": "retailer_pos",
+      "dimension": "data_model",
+      "severity": "P2",
+      "riskClass": "medium",
+      "files": ["src/services/api/orderApi.ts", "backend/services/order-service/src/services/purchaseOrderService.ts"],
+      "description": "POS sends unitPrice in cart items, backend uses snapshot prices. No warning when prices differ.",
+      "impact": "Order total may differ from what POS user expected if supplier changed prices between cart and submit.",
+      "recommendation": "Add server-side price comparison and return warning field in response if prices changed.",
+      "status": "NET_NEW"
+    },
+    {
+      "id": "DA6-CROSS-012",
+      "title": "Three surfaces return purchase orders with different field names and response shapes",
+      "flow": "retailer_supplier",
+      "dimension": "data_model",
+      "severity": "P2",
+      "riskClass": "medium",
+      "files": ["backend/services/order-service/src/routes/purchaseOrders.ts", "backend/src/routes/v1/supplier/orders.ts", "backend/src/routes/v1/retailer-admin/purchaseOrders.ts"],
+      "description": "Same entity returned as orderNumber vs poNumber, totalAmount vs totalMinor, different pagination formats across 3 endpoints.",
+      "impact": "Three frontends must maintain different parsing logic for the same data.",
+      "recommendation": "Create shared order DTO transformer. Standardize field names and pagination format.",
+      "status": "NET_NEW"
+    }
+  ],
+  "summary": {
+    "flows_audited": 3,
+    "total_findings": 12,
+    "net_new_findings": 12,
+    "severity_breakdown": { "P0": 2, "P1": 6, "P2": 4 },
+    "critical_blockers": [
+      "DA6-CROSS-001: Status transition and GRN routes lack authentication",
+      "DA6-CROSS-002: GRN calls non-existent inventory endpoint -- goods receiving flow broken"
+    ]
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "ticketId": "R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY",
+  "screenId": "R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY",
+  "orderInScreen": 6,
+  "surface": "backend",
+  "riskClass": "medium",
+  "title": "inventory-service transaction route accepts any transactionType string without enum validation",
+  "description": "R6 deep audit finding. Dimension: input_validation. Severity: P2. Source SHA: bbd487a3. Scope: R6_DEEP_AUDIT_WAVE. The POST /stores/:storeId/inventory/transactions route (lines 97-128) accepts `body.transactionType` directly from request body and passes it to `createTransaction` without validating it against the allowed enum values ('sale', 'sale_return', 'purchase_received', 'adjustment', 'opening_stock'). The TypeScript type `TransactionType` only provides compile-time checking, not runtime validation. An attacker could send `transactionType: 'foo'` which would either: (1) be inserted into the DB if the column has no CHECK constraint, creating invalid ledger data, or (2) cause a DB error that propagates as a 500 instead of a clean 400 validation error. Similarly, `referenceType` is not validated at the route level.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "fail",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [],
+    "cloudRunServices": [
+      "main-backend"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY"
+    ],
+    "impactedServices": [
+      "main-backend"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-r6-audit",
+    "reproSteps": [
+      "Review R6 finding R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY from R6 deep audit wave at HEAD bbd487a3"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "",
+    "cloudWorkspaceValidated": false,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-24T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "deploy_ref=github://run/22305359033",
+      "staging_commit=badc3fbe",
+      "api_health_200=https://staging.supermandi.tech/api/v1/health"
+    ],
+    "parityProof": [
+      "audit_sha=bbd487a3",
+      "staging_baseline=badc3fbe"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-24T18:00:00.000Z",
+    "updatedAt": "2026-02-24T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": false,
+    "notes": "R6 deep audit finding. Code-first review at HEAD bbd487a3. Staging baseline badc3fbe validated via github://run/22305359033.",
+    "evidence": [
+      "https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "backend",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "main-backend",
+    "actualCloudRunServices": [
+      "main-backend"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "R6 audit scope."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "offlineFirstSafeSync": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending R6 implementation for R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "R6 deep audit finding. Awaiting implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "fix/r6-be-006-inventory_service_transaction_route_accepts_any",
+    "changeScope": "R6.BE.006.INVENTORY_SERVICE_TRANSACTION_ROUTE_ACCEPTS_ANY",
+    "lastValidatedCommit": "bbd487a3",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "R6 audit ticketization at HEAD bbd487a3"
+    ]
+  }
+}
