@@ -358,7 +358,8 @@ export default function ReorderSettingsScreen({
           </View>
 
           {/* Auto Approve Threshold */}
-          {settings?.autoApproveThreshold !== null && (
+          {/* R6.POS.004: Use != null to also guard against undefined */}
+          {settings?.autoApproveThreshold != null && (
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <View style={styles.settingIconContainer}>

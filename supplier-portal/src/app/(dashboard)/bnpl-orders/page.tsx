@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Breadcrumb from '@/components/Breadcrumb';
 import EmptyState from '@/components/EmptyState';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import { apiFetch } from '@/lib/api';
 import { ShieldCheck, Package, Banknote, AlertTriangle, CheckCircle2, Activity } from 'lucide-react';
 
@@ -50,11 +50,7 @@ async function fetchBnplOrders(status?: string, page = 1): Promise<{ orders: Bnp
   return { orders: json.orders || [], summary: json.summary || {} as BnplSummary, total: json.total ?? json.orders?.length ?? 0 };
 }
 
-function fmtDate(iso: string): string {
-  if (!iso) return '-';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
+// R6.SUP.019: Use shared formatDate for consistent IST-aware date display
 
 const statusBadgeStyles: Record<string, string> = {
   active: 'bg-blue-100 text-blue-700',
@@ -188,7 +184,7 @@ export default function BnplOrdersPage() {
                     <td className={`px-4 py-3 text-right font-mono font-semibold ${order.outstandingMinor > 0 ? 'text-red-600' : ''}`}>
                       {formatCurrency(order.outstandingMinor)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{fmtDate(order.dueDate)}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatDate(order.dueDate)}</td>
                     <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
                     <td className="px-4 py-3">
                       {order.paymentGuaranteed ? (

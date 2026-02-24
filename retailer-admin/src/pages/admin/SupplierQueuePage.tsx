@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { authFetch, safeJson } from '../../lib/api';
+import { formatDateTime } from '../../lib/formatters';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../../components/Breadcrumb';
 
@@ -122,16 +123,7 @@ export default function SupplierQueuePage() {
     setShowRejectModal(true);
   };
 
-  // Format date
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // R6.RET.016: Use shared formatDateTime for consistent date display
 
   return (
     <>
@@ -236,7 +228,7 @@ export default function SupplierQueuePage() {
                       <span className="badge badge-info">{supplier.productCount} products</span>
                     </td>
                     <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      {formatDate(supplier.createdAt)}
+                      {formatDateTime(supplier.createdAt)}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -287,6 +279,7 @@ export default function SupplierQueuePage() {
             zIndex: 1000,
           }}
           onClick={() => setShowRejectModal(false)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowRejectModal(false); }}
         >
           <div
             className="card"

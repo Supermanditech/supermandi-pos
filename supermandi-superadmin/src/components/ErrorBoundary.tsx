@@ -41,8 +41,9 @@ export class ErrorBoundary extends React.Component<
             An unexpected error occurred. Please try refreshing the page.
           </p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {/* R6.SA.021: Try Again resets error state before full page reload */}
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => this.setState({ hasError: false, error: null })}
               style={{
                 padding: '0.5rem 1.5rem',
                 background: '#3b82f6',
@@ -53,7 +54,7 @@ export class ErrorBoundary extends React.Component<
                 fontWeight: 500,
               }}
             >
-              Refresh Page
+              Try Again
             </button>
             <button
               onClick={() => { window.location.href = '/admin/'; }}

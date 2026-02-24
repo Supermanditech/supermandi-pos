@@ -210,9 +210,9 @@ export default function SettingsPage() {
           showTaxBreakdown: settings.showTaxBreakdown,
         },
       };
+      // R6.RET.007: Removed redundant Content-Type header — authFetch sets it automatically
       const response = await authFetch('/api/v1/retailer-admin/settings', accessToken, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 

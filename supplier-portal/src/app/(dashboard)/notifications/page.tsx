@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, CheckCheck, RefreshCw, Truck, Package, AlertTriangle } from 'lucide-react';
+import { formatDateTime } from '@/lib/formatters';
 import toast from 'react-hot-toast';
 import Breadcrumb from '@/components/Breadcrumb';
 import { apiFetch } from '@/lib/api';
@@ -150,7 +151,7 @@ export default function NotificationsPage() {
                 <div className="flex justify-between items-baseline">
                   <h3 className={`text-sm ${n.isRead ? 'font-medium' : 'font-semibold'} text-gray-900`}>{n.title}</h3>
                   <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                    {new Date(n.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {formatDateTime(n.createdAt)}
                   </span>
                 </div>
                 <p className="text-xs text-gray-600 mt-1 leading-relaxed">{n.body}</p>

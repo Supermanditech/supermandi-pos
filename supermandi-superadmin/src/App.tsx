@@ -3145,8 +3145,8 @@ export default function App() {
           />
           {/* #331: Activation code success modal */}
           {approvalResult && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 32, maxWidth: 420, width: "90%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }}>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }} onClick={() => setApprovalResult(null)} onKeyDown={(e) => { if (e.key === 'Escape') setApprovalResult(null); }}>
+              <div style={{ background: "#fff", borderRadius: 12, padding: 32, maxWidth: 420, width: "90%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>&#10003;</div>
                 <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Store Approved!</h2>
                 <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>

@@ -232,7 +232,9 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
       }
     } catch (blacklistError) {
       // T-184: Fail open — if Redis is down, allow the request through
-      // The downstream services still check DB-based revocation as a fallback
+      // R6.BE.018: Explicit trade-off: fail-open chosen to preserve availability.
+      // Downstream services validate session in DB as secondary revocation check.
+      // If stricter security is needed, change to fail-closed (return 503).
       console.warn('[T-184] Redis blacklist check failed (failing open):', blacklistError);
     }
 

@@ -39,8 +39,9 @@ interface StockItem {
 }
 
 function StockCard({ item }: { item: StockItem }) {
-  const statusColor = getStockStatusColor(item.stockStatus as any);
-  const statusLabel = getStockStatusLabel(item.stockStatus as any);
+  // R6.POS.006: Remove unnecessary 'as any' — StockStatus is string
+  const statusColor = getStockStatusColor(item.stockStatus as StockStatus);
+  const statusLabel = getStockStatusLabel(item.stockStatus as StockStatus);
 
   return (
     <View style={styles.card}>

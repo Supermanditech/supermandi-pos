@@ -55,6 +55,8 @@ interface VoiceRequest {
 
 // Simple in-memory store (use Redis in production)
 const requestStore = new Map<string, VoiceRequest>();
+// R6.BE.017: Cap store size to prevent unbounded memory growth
+const MAX_REQUEST_STORE_SIZE = 10_000;
 
 // Cleanup old requests every 5 minutes
 setInterval(() => {
@@ -135,6 +137,11 @@ router.post(
         createdAt: new Date(),
         executed: false,
       };
+      // R6.BE.017: Evict oldest entry if store is at capacity
+      if (requestStore.size >= MAX_REQUEST_STORE_SIZE) {
+        const oldestKey = requestStore.keys().next().value;
+        if (oldestKey) requestStore.delete(oldestKey);
+      }
       requestStore.set(requestId, voiceRequest);
 
       // Return interpretation result

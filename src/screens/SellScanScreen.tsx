@@ -2083,7 +2083,8 @@ export default function SellScanScreen({
       const e = asError(_e);
       console.error("[SellScanScreen] Product edit failed:", e);
       // RET-POS-SYNC-009: Handle 409 conflict (server has newer data from Dashboard)
-      if ((e as { status?: number }).status === 409) {
+      // R6.POS.007: Use CaughtError.status directly (asError already types it)
+      if (e.status === 409) {
         setEditProductError("Product was updated elsewhere. Close and reopen to see latest values.");
       } else {
         setEditProductError("Update failed. Try again.");

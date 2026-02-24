@@ -149,6 +149,11 @@ router.get(
         );
       }
 
+      // R6.BE.009: Enforce store isolation — verify policy belongs to caller's store
+      if (req.user && req.user.actorType === 'store' && policy.storeId !== req.user.actorId) {
+        throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
+      }
+
       res.json({
         success: true,
         data: policy,
@@ -237,6 +242,15 @@ router.put(
       const { policyId } = req.params;
       const { minStock, targetStock, preferredSupplierId, isEnabled } = req.body;
 
+      // R6.BE.009: Enforce store isolation before update
+      const existing = await getPolicyByIdService(policyId);
+      if (!existing) {
+        throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
+      }
+      if (req.user && req.user.actorType === 'store' && existing.storeId !== req.user.actorId) {
+        throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
+      }
+
       const policy = await updatePolicyService(policyId, {
         minStock,
         targetStock,
@@ -263,6 +277,15 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { policyId } = req.params;
+
+      // R6.BE.009: Enforce store isolation before delete
+      const existing = await getPolicyByIdService(policyId);
+      if (!existing) {
+        throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
+      }
+      if (req.user && req.user.actorType === 'store' && existing.storeId !== req.user.actorId) {
+        throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
+      }
 
       await deletePolicyService(policyId);
 

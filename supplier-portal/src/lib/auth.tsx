@@ -48,7 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (lastActivity) {
       const elapsed = Date.now() - parseInt(lastActivity, 10);
       if (elapsed > IDLE_TIMEOUT_MS) {
-        // Session expired due to inactivity
+        // R6.SUP.027: Session expired due to inactivity — also invalidate server session
+        logoutApi();
         clearAuthToken();
         localStorage.removeItem(LAST_ACTIVITY_KEY);
         setSupplier(null);

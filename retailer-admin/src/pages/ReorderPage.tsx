@@ -1,5 +1,6 @@
 // T-244: Reorder dashboard — fixed to match T-243 canonical schema (migration 007 + 150)
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
@@ -60,6 +61,7 @@ function formatCurrency(minor: number | null): string {
 // =============================================================================
 
 export default function ReorderPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [activeTab, setActiveTab] = useState<'suggestions' | 'pending' | 'settings'>('suggestions');
 
@@ -179,7 +181,8 @@ export default function ReorderPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Home', path: '.' }, { label: 'Reorder Suggestions' }]} />
+      {/* R6.RET.015: Use absolute path consistent with other pages */}
+      <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Reorder Suggestions' }]} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0 }}>Reorder Suggestions</h2>
       </div>
