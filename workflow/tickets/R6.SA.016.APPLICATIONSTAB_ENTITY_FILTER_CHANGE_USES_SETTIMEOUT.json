@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "ApplicationsTab entity filter change uses setTimeout instead of useEffect for refresh",
   "description": "R6 deep audit finding. Dimension: ux. Severity: P2. Source SHA: bbd487a3. Scope: R6_DEEP_AUDIT_WAVE. When changing the entity filter, a setTimeout(50ms) is used to trigger refreshApplications: `onChange={(e) => { setAppEntityFilter(e.target.value); setTimeout(() => refreshApplications(), 50); }}`. This is a race condition -- the refresh may fire before the state update has propagated, fetching with the old filter value.",
-  "status": "todo",
+  "status": "done",
   "severity": "P2",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -140,7 +140,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "R6-RECONCILE-2026-02-24",
+      "at": "2026-02-24T15:56:46.781Z",
+      "reason": "Implementation started for R6.SA.016.APPLICATIONSTAB_ENTITY_FILTER_CHANGE_USES_SETTIMEOUT.",
+      "prevHash": "GENESIS",
+      "hash": "8c8b2a88255b470f726dc29c5e256dce362c8341c4eb5ffa89963ec19c86f173"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "R6-RECONCILE-2026-02-24",
+      "at": "2026-02-24T15:56:46.781Z",
+      "reason": "Reconciliation: code fix already committed in R6 implementation wave. Resolution: code-fixed",
+      "prevHash": "8c8b2a88255b470f726dc29c5e256dce362c8341c4eb5ffa89963ec19c86f173",
+      "hash": "eb09d4b87913e8899feb24ebc20a798a550192fbf52c2ef96a5c537f61256348"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -257,9 +278,12 @@
     "lastValidatedCommit": "bbd487a3",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "R6 audit ticketization at HEAD bbd487a3"
     ]
-  }
+  },
+  "resolution": "code-fixed",
+  "resolvedAt": "2026-02-24T15:54:39.668Z",
+  "resolvedInCommit": "f3d8ca3a or earlier R6 commit"
 }

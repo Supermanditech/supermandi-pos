@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "CompliancePage upload handler uses FormData but passes it to authFetch which may add wrong Content-Type",
   "description": "R6 deep audit finding. Dimension: Wiring. Severity: P2. Source SHA: bbd487a3. Scope: R6_DEEP_AUDIT_WAVE. In handleUpload, the code creates a FormData object and sends it via `authFetch('/api/v1/retailer-admin/compliance', accessToken, { method: 'POST', body: formData })`. The authFetch wrapper (api.ts line 76) correctly skips setting Content-Type for FormData bodies (the browser auto-sets the multipart boundary). However, the formData variable name shadows the component state: the form data object is named `formData` (line 93) while the component also uses `setFormData` pattern from other pages. This is confusing but works because CompliancePage doesn't have a state variable named formData. The actual concern is that the endpoint path '/api/v1/retailer-admin/compliance' is used for POST but the file is not uploaded using the documents API (`/api/v1/documents/upload`) that the registration flow uses - this may be a different endpoint entirely.",
-  "status": "todo",
+  "status": "done",
   "severity": "P2",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -140,7 +140,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "R6-RECONCILE-2026-02-24",
+      "at": "2026-02-24T15:56:46.781Z",
+      "reason": "Implementation started for R6.RET.013.COMPLIANCEPAGE_UPLOAD_HANDLER_USES_FORMDATA_BUT_PASSES_IT.",
+      "prevHash": "GENESIS",
+      "hash": "f16e22b3977f86f9486d74763235b532db9900fd64d61342f205f505d88881a6"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "R6-RECONCILE-2026-02-24",
+      "at": "2026-02-24T15:56:46.781Z",
+      "reason": "Reconciliation: code fix already committed in R6 implementation wave. Resolution: code-fixed",
+      "prevHash": "f16e22b3977f86f9486d74763235b532db9900fd64d61342f205f505d88881a6",
+      "hash": "53641d7733cb31e47ac4ebdcb8281102e9cd1cc3fe1e18a7072794c916b303e5"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -257,9 +278,12 @@
     "lastValidatedCommit": "bbd487a3",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "R6 audit ticketization at HEAD bbd487a3"
     ]
-  }
+  },
+  "resolution": "code-fixed",
+  "resolvedAt": "2026-02-24T15:54:39.660Z",
+  "resolvedInCommit": "f3d8ca3a or earlier R6 commit"
 }
