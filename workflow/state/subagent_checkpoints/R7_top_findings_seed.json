@@ -1,0 +1,423 @@
+{
+  "generatedAt": "2026-02-24T20:14:04.6926613Z",
+  "source": "R7 summary-derived seed only",
+  "totalFindings": 52,
+  "findings": [
+    {
+      "id": "PA-01",
+      "surface": "POS",
+      "severity": "P0",
+      "title": "submittingRef.current never reset on failure, permanently blocking payments",
+      "issue": "submittingRef.current never reset on failure, permanently blocking payments",
+      "description": "Source: R7 frontend summary topFindings; context=PaymentScreen"
+    },
+    {
+      "id": "F1-01",
+      "surface": "POS",
+      "severity": "P1",
+      "title": "APP_STORE_URL empty for iOS, directs to Play Store",
+      "issue": "APP_STORE_URL empty for iOS, directs to Play Store",
+      "description": "Source: R7 frontend summary topFindings; context=ForceUpdateScreen"
+    },
+    {
+      "id": "CR-01",
+      "surface": "POS",
+      "severity": "P1",
+      "title": "PAN/Aadhaar PII in component state without sanitization",
+      "issue": "PAN/Aadhaar PII in component state without sanitization",
+      "description": "Source: R7 frontend summary topFindings; context=CreditScreen"
+    },
+    {
+      "id": "E1-01",
+      "surface": "POS",
+      "severity": "P1",
+      "title": "No client-side rate limiting on phone lookup",
+      "issue": "No client-side rate limiting on phone lookup",
+      "description": "Source: R7 frontend summary topFindings; context=EnrollDeviceScreen"
+    },
+    {
+      "id": "R1-01",
+      "surface": "POS",
+      "severity": "P1",
+      "title": "Tab switch Alert can be silently dismissed",
+      "issue": "Tab switch Alert can be silently dismissed",
+      "description": "Source: R7 frontend summary topFindings; context=PosRootLayout"
+    },
+    {
+      "id": "SS-01",
+      "surface": "POS",
+      "severity": "P1",
+      "title": "Silent 1000 product cap on offline sync",
+      "issue": "Silent 1000 product cap on offline sync",
+      "description": "Source: R7 frontend summary topFindings; context=SellScanScreen"
+    },
+    {
+      "id": "ONB-001",
+      "surface": "RET",
+      "severity": "P1",
+      "title": "Unauthenticated document upload (mitigated: page deprecated/unreachable)",
+      "issue": "Unauthenticated document upload (mitigated: page deprecated/unreachable)",
+      "description": "Source: R7 frontend summary topFindings; context=RetailerOnboardingPage"
+    },
+    {
+      "id": "ONB-002",
+      "surface": "RET",
+      "severity": "P1",
+      "title": "Unauthenticated KYC submission (mitigated: page deprecated/unreachable)",
+      "issue": "Unauthenticated KYC submission (mitigated: page deprecated/unreachable)",
+      "description": "Source: R7 frontend summary topFindings; context=RetailerOnboardingPage"
+    },
+    {
+      "id": "PG-023",
+      "surface": "SUP",
+      "severity": "P0",
+      "title": "Document upload XHR missing auth credentials (withCredentials not set, no Authorization header)",
+      "issue": "Document upload XHR missing auth credentials (withCredentials not set, no Authorization header)",
+      "description": "Source: R7 frontend summary topFindings; context=Register"
+    },
+    {
+      "id": "PG-024",
+      "surface": "SUP",
+      "severity": "P1",
+      "title": "Upload endpoint differs from api.ts uploadSupplierDocument (different URL + field naming)",
+      "issue": "Upload endpoint differs from api.ts uploadSupplierDocument (different URL + field naming)",
+      "description": "Source: R7 frontend summary topFindings; context=Register"
+    },
+    {
+      "id": "PG-019",
+      "surface": "SUP",
+      "severity": "P1",
+      "title": "Duplicate registration flow with different step ordering from /register",
+      "issue": "Duplicate registration flow with different step ordering from /register",
+      "description": "Source: R7 frontend summary topFindings; context=Onboard"
+    },
+    {
+      "id": "PG-013",
+      "surface": "SUP",
+      "severity": "P1",
+      "title": "emailReset step is unreachable dead code (lines 590-662)",
+      "issue": "emailReset step is unreachable dead code (lines 590-662)",
+      "description": "Source: R7 frontend summary topFindings; context=ForgotPassword"
+    },
+    {
+      "id": "F-045",
+      "surface": "SUP",
+      "severity": "P1",
+      "title": "Entire page uses inline styles instead of Tailwind, breaks dark mode",
+      "issue": "Entire page uses inline styles instead of Tailwind, breaks dark mode",
+      "description": "Source: R7 frontend summary topFindings; context=Chat"
+    },
+    {
+      "id": "F-046",
+      "surface": "SUP",
+      "severity": "P1",
+      "title": "Height calc(100vh-64px) overflows layout, overlaps footer",
+      "issue": "Height calc(100vh-64px) overflows layout, overlaps footer",
+      "description": "Source: R7 frontend summary topFindings; context=Chat"
+    },
+    {
+      "id": "SA-S1-01",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "Native confirm() used instead of ConfirmDialog for feature kill switch",
+      "issue": "Native confirm() used instead of ConfirmDialog for feature kill switch",
+      "description": "Source: R7 frontend summary topFindings; context=SettingsTab"
+    },
+    {
+      "id": "SA-S1-02",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "badgeErr CSS class does not exist (should be badgeError)",
+      "issue": "badgeErr CSS class does not exist (should be badgeError)",
+      "description": "Source: R7 frontend summary topFindings; context=SettingsTab+UsersTab"
+    },
+    {
+      "id": "SA-S1-03",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "Rejection label says min 10 chars but code enforces 5",
+      "issue": "Rejection label says min 10 chars but code enforces 5",
+      "description": "Source: R7 frontend summary topFindings; context=ApplicationsTab"
+    },
+    {
+      "id": "SA-S1-04",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "No loading state indicator",
+      "issue": "No loading state indicator",
+      "description": "Source: R7 frontend summary topFindings; context=EventsTab"
+    },
+    {
+      "id": "SA-S1-05",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "No error state display",
+      "issue": "No error state display",
+      "description": "Source: R7 frontend summary topFindings; context=EventsTab"
+    },
+    {
+      "id": "SA-S2-QUAL-002",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "Passed test suites show RED badge (same as failed)",
+      "issue": "Passed test suites show RED badge (same as failed)",
+      "description": "Source: R7 frontend summary topFindings; context=QualityDashboard"
+    },
+    {
+      "id": "SA-S2-REF-001",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "No confirmation for refund approval (triggers money movement)",
+      "issue": "No confirmation for refund approval (triggers money movement)",
+      "description": "Source: R7 frontend summary topFindings; context=RefundsTab"
+    },
+    {
+      "id": "SA-S2-WA-001",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "No confirmation for single WhatsApp send (irrevocable)",
+      "issue": "No confirmation for single WhatsApp send (irrevocable)",
+      "description": "Source: R7 frontend summary topFindings; context=WhatsAppTab"
+    },
+    {
+      "id": "SA-S2-GST-005",
+      "surface": "SA",
+      "severity": "P1",
+      "title": "HTTP status codes leaked in error messages",
+      "issue": "HTTP status codes leaked in error messages",
+      "description": "Source: R7 frontend summary topFindings; context=GstComplianceTab"
+    },
+    {
+      "id": "BE-GW-001",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "Token blacklist fail-open on Redis outage — revoked tokens still accepted",
+      "issue": "Token blacklist fail-open on Redis outage — revoked tokens still accepted",
+      "description": "Source: R7 backend summary BE-1a (api-gateway + auth-service); service=api-gateway"
+    },
+    {
+      "id": "BE-GW-002",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "Admin /status endpoint leaks active session count",
+      "issue": "Admin /status endpoint leaks active session count",
+      "description": "Source: R7 backend summary BE-1a (api-gateway + auth-service); service=api-gateway"
+    },
+    {
+      "id": "BE-AUTH-001",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "Internal routes rely on shared JWT_SECRET instead of dedicated service token",
+      "issue": "Internal routes rely on shared JWT_SECRET instead of dedicated service token",
+      "description": "Source: R7 backend summary BE-1a (api-gateway + auth-service); service=auth-service"
+    },
+    {
+      "id": "BE-AUTH-002",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "No UUID validation on route params (path traversal risk)",
+      "issue": "No UUID validation on route params (path traversal risk)",
+      "description": "Source: R7 backend summary BE-1a (api-gateway + auth-service); service=auth-service"
+    },
+    {
+      "id": "BE-INV-001",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Internal routes have ZERO authentication (no validateInternalService)",
+      "issue": "Internal routes have ZERO authentication (no validateInternalService)",
+      "description": "Source: R7 backend summary BE-1b (supplier + catalog + inventory); service=inventory-service"
+    },
+    {
+      "id": "BE-INV-002",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Stock non-negative invariant has adjustment bypass — transactionType=adjustment skips check",
+      "issue": "Stock non-negative invariant has adjustment bypass — transactionType=adjustment skips check",
+      "description": "Source: R7 backend summary BE-1b (supplier + catalog + inventory); service=inventory-service"
+    },
+    {
+      "id": "BE-SUP-001",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "userId from x-user-id header is spoofable",
+      "issue": "userId from x-user-id header is spoofable",
+      "description": "Source: R7 backend summary BE-1b (supplier + catalog + inventory); service=supplier-service"
+    },
+    {
+      "id": "BE-CAT-001",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "5 unauthenticated catalog endpoints (search, categories, etc.)",
+      "issue": "5 unauthenticated catalog endpoints (search, categories, etc.)",
+      "description": "Source: R7 backend summary BE-1b (supplier + catalog + inventory); service=catalog-service"
+    },
+    {
+      "id": "BE-CAT-002",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "GSTIN validate endpoint is unauthenticated",
+      "issue": "GSTIN validate endpoint is unauthenticated",
+      "description": "Source: R7 backend summary BE-1b (supplier + catalog + inventory); service=catalog-service"
+    },
+    {
+      "id": "BE-PLAT-001",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Admin routes have NO service-level auth middleware",
+      "issue": "Admin routes have NO service-level auth middleware",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=platform-service"
+    },
+    {
+      "id": "BE-PLAT-002",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Store routes CRUD have NO auth middleware at all",
+      "issue": "Store routes CRUD have NO auth middleware at all",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=platform-service"
+    },
+    {
+      "id": "BE-VOICE-001",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "GET /status/:requestId has NO auth check",
+      "issue": "GET /status/:requestId has NO auth check",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=voice-service"
+    },
+    {
+      "id": "BE-PLAT-003",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "GET /suppliers leaks PostgreSQL error details",
+      "issue": "GET /suppliers leaks PostgreSQL error details",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=platform-service"
+    },
+    {
+      "id": "BE-PLAT-004",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "PATCH /products updates shared catalog (not store-scoped)",
+      "issue": "PATCH /products updates shared catalog (not store-scoped)",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=platform-service"
+    },
+    {
+      "id": "BE-PLAT-005",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "retailerAdmin admin ID from untrusted header",
+      "issue": "retailerAdmin admin ID from untrusted header",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=platform-service"
+    },
+    {
+      "id": "BE-PLAT-006",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "retailerPortal storeId from header not JWT",
+      "issue": "retailerPortal storeId from header not JWT",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=platform-service"
+    },
+    {
+      "id": "BE-VOICE-002",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "No authenticate middleware on any voice endpoint",
+      "issue": "No authenticate middleware on any voice endpoint",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=voice-service"
+    },
+    {
+      "id": "BE-REORDER-001",
+      "surface": "BE",
+      "severity": "P1",
+      "title": "Soft store isolation pattern — silently passes if req.user is undefined",
+      "issue": "Soft store isolation pattern — silently passes if req.user is undefined",
+      "description": "Source: R7 backend summary BE-S2 (platform + order + payment + reorder + voice); service=reorder-service"
+    },
+    {
+      "id": "CROSS-SP-003",
+      "surface": "CROSS",
+      "severity": "P1",
+      "title": "Supplier cannot transition order status (confirm/ship) — blocked by requireStoreAccess",
+      "issue": "Supplier cannot transition order status (confirm/ship) — blocked by requireStoreAccess",
+      "description": "Source: R7 cross summary; flow=SUP<>POS"
+    },
+    {
+      "id": "CROSS-RP-001",
+      "surface": "CROSS",
+      "severity": "P1",
+      "title": "Dual stock sources diverge — inventory.stock_balances vs catalog.store_products.current_stock",
+      "issue": "Dual stock sources diverge — inventory.stock_balances vs catalog.store_products.current_stock",
+      "description": "Source: R7 cross summary; flow=RET<>POS"
+    },
+    {
+      "id": "CROSS-RP-002",
+      "surface": "CROSS",
+      "severity": "P1",
+      "title": "Offline queue not store-scoped — single global storage key",
+      "issue": "Offline queue not store-scoped — single global storage key",
+      "description": "Source: R7 cross summary; flow=RET<>POS"
+    },
+    {
+      "id": "CROSS-RS-005",
+      "surface": "CROSS",
+      "severity": "P1",
+      "title": "Catalog price cache staleness — no TTL or invalidation mechanism",
+      "issue": "Catalog price cache staleness — no TTL or invalidation mechanism",
+      "description": "Source: R7 cross summary; flow=RET<>SUP"
+    },
+    {
+      "id": "PA-01",
+      "surface": "POS",
+      "severity": "P0",
+      "title": "PaymentScreen submittingRef.current never reset on failure, permanently blocking payments",
+      "issue": "PaymentScreen submittingRef.current never reset on failure, permanently blocking payments",
+      "description": "Source: R7 p0CriticalFindings"
+    },
+    {
+      "id": "PG-023",
+      "surface": "SUP",
+      "severity": "P0",
+      "title": "Supplier Register page document upload XHR missing auth credentials",
+      "issue": "Supplier Register page document upload XHR missing auth credentials",
+      "description": "Source: R7 p0CriticalFindings"
+    },
+    {
+      "id": "BE-INV-001",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Inventory-service internal routes have ZERO authentication",
+      "issue": "Inventory-service internal routes have ZERO authentication",
+      "description": "Source: R7 p0CriticalFindings"
+    },
+    {
+      "id": "BE-INV-002",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Stock non-negative invariant has adjustment bypass",
+      "issue": "Stock non-negative invariant has adjustment bypass",
+      "description": "Source: R7 p0CriticalFindings"
+    },
+    {
+      "id": "BE-PLAT-001",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Platform-service admin routes have NO service-level auth",
+      "issue": "Platform-service admin routes have NO service-level auth",
+      "description": "Source: R7 p0CriticalFindings"
+    },
+    {
+      "id": "BE-PLAT-002",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Platform-service store routes CRUD have NO auth",
+      "issue": "Platform-service store routes CRUD have NO auth",
+      "description": "Source: R7 p0CriticalFindings"
+    },
+    {
+      "id": "BE-VOICE-001",
+      "surface": "BE",
+      "severity": "P0",
+      "title": "Voice /status/:requestId has NO auth check",
+      "issue": "Voice /status/:requestId has NO auth check",
+      "description": "Source: R7 p0CriticalFindings"
+    }
+  ]
+}

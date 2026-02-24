@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-02-24T20:15:23.297Z",
+  "headSha": "bc841bcc",
+  "source": {
+    "frontendSummary": "workflow\\state\\subagent_checkpoints\\R7_frontend_summary.json",
+    "backendCrossSummary": "workflow\\state\\subagent_checkpoints\\R7_backend_cross_summary.json",
+    "seedDedupe": "workflow\\state\\subagent_checkpoints\\R7_top_findings_seed_dedupe_203_172_116.json"
+  },
+  "totals": {
+    "r7TotalFindings": 535,
+    "recoveredDetailedFindings": 52,
+    "netNewWithinRecovered": 52,
+    "remainingDetailedFindingsToRecover": 483
+  },
+  "severityTotals": {
+    "P0": 7,
+    "P1": 44,
+    "P2": 198,
+    "P3": 286,
+    "total": 535
+  },
+  "notes": [
+    "Recovered set currently reflects summary-derived top findings only.",
+    "Full per-finding detailed dataset is still required for complete R7 ticketization.",
+    "Dedupe policy is strict: canonical203 + R5(172) + R6(116)."
+  ]
+}
