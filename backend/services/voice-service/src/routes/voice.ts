@@ -303,12 +303,29 @@ router.get(
   '/status/:requestId',
   async (req: Request, res: Response): Promise<void> => {
     const { requestId } = req.params;
+    const storeId = req.headers['x-actor-id'] as string;
+
+    if (!storeId) {
+      res.status(401).json({
+        success: false,
+        error: 'Authentication required (missing store context)',
+      });
+      return;
+    }
 
     const voiceRequest = requestStore.get(requestId as string);
     if (!voiceRequest) {
       res.status(404).json({
         success: false,
         error: 'Request not found or expired',
+      });
+      return;
+    }
+
+    if (voiceRequest.storeId !== storeId) {
+      res.status(403).json({
+        success: false,
+        error: 'Store mismatch',
       });
       return;
     }
