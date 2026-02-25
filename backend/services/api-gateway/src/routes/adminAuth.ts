@@ -9,7 +9,6 @@ import {
   revokeAdminSession,
   refreshAdminSession,
   isMasterTokenConfigured,
-  getActiveSessionCount,
 } from '../services/adminSessionService';
 import { config } from '../config';
 
@@ -218,7 +217,6 @@ adminAuthRouter.post('/refresh', async (req: Request, res: Response): Promise<vo
 adminAuthRouter.get('/status', (_req: Request, res: Response): void => {
   res.json({
     configured: isMasterTokenConfigured(),
-    activeSessions: getActiveSessionCount(),
   });
 });
 
