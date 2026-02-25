@@ -1,7 +1,8 @@
 // Internal Routes - V3.0.9 compliant
-// Service-to-service endpoints (no auth required - trusted network)
+// Service-to-service endpoints secured by service token authentication
 
 import { Router, Request, Response, NextFunction } from 'express';
+import { verifyServiceToken } from '@supermandi/auth-service/exports';
 import {
   getStock,
   getStockForMultipleProducts,
@@ -12,6 +13,35 @@ import {
 import { getCurrentStock } from '../db/queries';
 
 const router: Router = Router();
+
+function validateInternalService(req: Request, res: Response, next: NextFunction): void {
+  const serviceToken = req.headers['x-service-token'] as string;
+  if (!serviceToken) {
+    res.status(401).json({
+      error: {
+        code: 'MISSING_SERVICE_TOKEN',
+        message: 'X-Service-Token header is required for internal endpoints',
+      },
+    });
+    return;
+  }
+
+  const payload = verifyServiceToken(serviceToken);
+  if (!payload) {
+    res.status(401).json({
+      error: {
+        code: 'INVALID_SERVICE_TOKEN',
+        message: 'Invalid or expired service token',
+      },
+    });
+    return;
+  }
+
+  (req as Request & { internalService?: string }).internalService = payload.serviceName;
+  next();
+}
+
+router.use(validateInternalService);
 
 // =============================================================================
 // ASYNC HANDLER
