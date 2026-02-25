@@ -5,6 +5,8 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { ApiError } from '@supermandi/common';
+import { authenticate } from '../middleware/authenticate';
+import { requireActorType } from '../middleware/authorize';
 import {
   createUserWithPassword,
   getUsers,
@@ -17,6 +19,11 @@ import {
 } from '../services/userService';
 
 const router: Router = Router();
+
+// R7.BE.010: Service-level authorization for admin routes.
+// Keep API-gateway checks as primary, but enforce auth-service defense-in-depth.
+router.use(authenticate);
+router.use(requireActorType('platform'));
 
 // =============================================================================
 // ASYNC HANDLER
