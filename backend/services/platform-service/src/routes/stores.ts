@@ -2,6 +2,7 @@
 // Public store endpoints
 
 import { Router, Request, Response, NextFunction } from 'express';
+import { ApiError } from '@supermandi/common';
 import {
   listStores,
   getStore,
@@ -14,6 +15,26 @@ import {
 import { getFlagsForStore } from '../services/flagService';
 
 const router: Router = Router();
+
+// R7.BE.011: Enforce service-level authentication and platform actor authorization.
+function requirePlatformAdmin(req: Request, _res: Response, next: NextFunction): void {
+  const userId = req.headers['x-user-id'] as string | undefined;
+  const actorType = req.headers['x-actor-type'] as string | undefined;
+
+  if (!userId || !actorType) {
+    next(ApiError.unauthorized('Authentication required'));
+    return;
+  }
+
+  if (actorType !== 'platform') {
+    next(ApiError.forbidden('Platform actor required'));
+    return;
+  }
+
+  next();
+}
+
+router.use(requirePlatformAdmin);
 
 // =============================================================================
 // ASYNC HANDLER
