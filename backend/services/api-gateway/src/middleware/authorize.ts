@@ -81,7 +81,7 @@ export function actorTypeMiddleware(req: Request, res: Response, next: NextFunct
         code: 'FORBIDDEN',
         message: 'You do not have permission to access this resource.',
       },
-      requestId: (req as any).correlationId,
+      requestId: req.correlationId,
     });
     return;
   }
