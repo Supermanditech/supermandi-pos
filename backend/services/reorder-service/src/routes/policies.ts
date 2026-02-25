@@ -4,7 +4,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError } from '@supermandi/common';
-import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
+import { authenticate, requireStoreAccess, requireActorType, getAuthUser } from '@supermandi/auth-service/exports';
 import {
   getPolicyByProduct,
   getPolicyByIdService,
@@ -135,6 +135,7 @@ router.get(
  */
 router.get(
   '/policies/:policyId',
+  requireActorType('store', 'platform'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { policyId } = req.params;
@@ -149,8 +150,9 @@ router.get(
         );
       }
 
-      // R6.BE.009: Enforce store isolation — verify policy belongs to caller's store
-      if (req.user && req.user.actorType === 'store' && policy.storeId !== req.user.actorId) {
+      // R7.BE.018: Enforce store isolation with authenticated actor context.
+      const actor = getAuthUser(req);
+      if (actor.actorType === 'store' && policy.storeId !== actor.actorId) {
         throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
       }
 
@@ -237,6 +239,7 @@ router.post(
  */
 router.put(
   '/policies/:policyId',
+  requireActorType('store', 'platform'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { policyId } = req.params;
@@ -247,7 +250,8 @@ router.put(
       if (!existing) {
         throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
       }
-      if (req.user && req.user.actorType === 'store' && existing.storeId !== req.user.actorId) {
+      const actor = getAuthUser(req);
+      if (actor.actorType === 'store' && existing.storeId !== actor.actorId) {
         throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
       }
 
@@ -274,6 +278,7 @@ router.put(
  */
 router.delete(
   '/policies/:policyId',
+  requireActorType('store', 'platform'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { policyId } = req.params;
@@ -283,7 +288,8 @@ router.delete(
       if (!existing) {
         throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
       }
-      if (req.user && req.user.actorType === 'store' && existing.storeId !== req.user.actorId) {
+      const actor = getAuthUser(req);
+      if (actor.actorType === 'store' && existing.storeId !== actor.actorId) {
         throw new ApiError(404, 'POLICY_NOT_FOUND', `Policy ${policyId} not found`);
       }
 
