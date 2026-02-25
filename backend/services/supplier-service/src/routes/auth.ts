@@ -5,135 +5,28 @@ import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
 import { validateGstin } from '../utils/gstin';
 import { config } from '../config';
+import {
+  isValidBankAccountNumber,
+  isValidIfscCode,
+  isValidUpiVpa,
+  validatePasswordStrength,
+  generateSupplierToken,
+  getJwtIssuer,
+  type RegisterBody,
+  type LoginBody,
+  type SupplierRow,
+} from './authSupport';
 
 const router: RouterType = Router();
-
-// =============================================================================
-// GL-AUD-008: Bank Detail Validation Functions
-// =============================================================================
-
-/**
- * Validate Indian bank account number
- * Indian bank account numbers are typically 9-18 digits
- */
-function isValidBankAccountNumber(accountNumber: string): boolean {
-  const trimmed = accountNumber.replace(/\s/g, '');
-  // Must be 9-18 digits only
-  return /^\d{9,18}$/.test(trimmed);
-}
-
-/**
- * Validate IFSC code
- * Format: 4 letters (bank code) + 0 + 6 alphanumeric characters (branch code)
- * Example: SBIN0001234, HDFC0000001
- */
-function isValidIfscCode(ifsc: string): boolean {
-  const trimmed = ifsc.toUpperCase().trim();
-  // 4 letters + 0 + 6 alphanumeric
-  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(trimmed);
-}
-
-/**
- * Validate UPI VPA
- * Format: username@bankhandle
- * Example: merchant@paytm, shop123@ybl
- */
-function isValidUpiVpa(vpa: string): boolean {
-  const trimmed = vpa.trim().toLowerCase();
-  // T-215: Canonical UPI VPA pattern — min 3 chars before @, min 2 after @, max 100 total
-  return /^[a-z0-9._-]{3,}@[a-z0-9]{2,}$/.test(trimmed) && trimmed.length >= 6 && trimmed.length <= 100;
-}
-
-// =============================================================================
-// T-214 PARITY: Password Strength Validation (matches auth-service)
-// =============================================================================
-
-const COMMON_PASSWORDS = new Set([
-  'password', 'password1', '12345678', '123456789', '1234567890',
-  'qwerty12', 'qwertyui', 'letmein1', 'welcome1', 'monkey12',
-  'dragon12', 'master12', 'abc12345', 'abcd1234', 'football',
-  'baseball', 'iloveyou', 'trustno1', 'sunshine', 'princess',
-  'admin123', 'passw0rd', 'shadow12', 'michael1', 'jennifer',
-]);
-
-const PASSWORD_STRENGTH_REGEX = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
-
-function validatePasswordStrength(password: string): string | null {
-  if (!password || password.length < 8) {
-    return 'Password must be at least 8 characters';
-  }
-  if (!PASSWORD_STRENGTH_REGEX.test(password)) {
-    return 'Password must contain at least one letter and one number';
-  }
-  if (COMMON_PASSWORDS.has(password.toLowerCase())) {
-    return 'This password is too common. Please choose a stronger password.';
-  }
-  return null;
-}
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface RegisterBody {
-  businessName: string;
-  gstin: string;
-  email: string;
-  phone: string;
-  password: string;
-  bankAccountNumber?: string;
-  bankIfsc?: string;
-  bankAccountName?: string;
-  upiVpa?: string;
-}
-
-interface LoginBody {
-  email: string;
-  password: string;
-}
-
-interface SupplierRow {
-  id: string;
-  gstin: string;
-  business_name: string;
-  primary_email: string;
-  primary_phone: string;
-  password_hash: string | null;
-  verification_status: string;
-  status: string;
-}
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
 const BCRYPT_COST = 12;
-
-// JWT issuer must match main-backend for cross-service token validation
-const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
-
-function generateSupplierToken(supplierId: string, email: string): string {
-  // Payload structure must match main-backend expectations
-  const payload = {
-    sub: supplierId,
-    jti: crypto.randomUUID(), // R6.BE.004: Enable future blacklisting
-    actorType: 'SUPPLIER',
-    actorId: supplierId,
-    email,
-    // Also include supplierId for backward compatibility with supplier-service middleware
-    supplierId,
-    permissions: ['supplier:read', 'supplier:write', 'products:read', 'products:write'],
-  };
-
-  return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: '1h',  // R6.BE.004: Reduced from 24h — use /auth/refresh for renewal
-    issuer: JWT_ISSUER,
-  });
-}
 
 // =============================================================================
 // AUTH ENDPOINTS
@@ -407,7 +300,7 @@ router.get(
         actorType: string
       };
       try {
-        decoded = jwt.verify(token, config.jwtSecret, { issuer: JWT_ISSUER }) as typeof decoded;
+        decoded = jwt.verify(token, config.jwtSecret, { issuer: getJwtIssuer() }) as typeof decoded;
       } catch {
         throw new ApiError(
           401,
@@ -496,7 +389,7 @@ router.post(
         actorType: string;
       };
       try {
-        decoded = jwt.verify(token, config.jwtSecret, { issuer: JWT_ISSUER }) as typeof decoded;
+        decoded = jwt.verify(token, config.jwtSecret, { issuer: getJwtIssuer() }) as typeof decoded;
       } catch {
         throw new ApiError(
           401,
