@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-25T10:55:27.619Z",
+  "updatedAt": "2026-02-25T11:07:01.145Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1711,7 +1711,7 @@
   },
   "summary": {
     "totalTickets": 1129,
-    "activeTickets": 525,
+    "activeTickets": 524,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
