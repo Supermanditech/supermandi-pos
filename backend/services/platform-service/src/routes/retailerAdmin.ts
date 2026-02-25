@@ -31,6 +31,30 @@ const router: Router = Router();
 // GCP-PARITY: Use env var for portal base URL (staging vs production)
 const PORTAL_BASE_URL = process.env.PORTAL_BASE_URL || 'https://supermandi.tech';
 
+interface AdminContext {
+  adminUserId: string;
+}
+
+function getTrustedAdminContext<P = Record<string, string>>(req: Request<P>): AdminContext {
+  const adminUserId = req.headers['x-user-id'] as string | undefined;
+  const actorId = req.headers['x-actor-id'] as string | undefined;
+  const actorType = req.headers['x-actor-type'] as string | undefined;
+
+  if (!adminUserId || !actorId || !actorType) {
+    throw ApiError.unauthorized('Trusted admin context required');
+  }
+
+  if (actorType !== 'platform') {
+    throw ApiError.forbidden('Platform actor required');
+  }
+
+  if (actorId !== adminUserId) {
+    throw ApiError.forbidden('Invalid admin identity context');
+  }
+
+  return { adminUserId };
+}
+
 // =============================================================================
 // ASYNC HANDLER
 // =============================================================================
@@ -102,10 +126,7 @@ router.post(
     }
 
     // Get admin user ID from JWT (set by API gateway)
-    const adminUserId = req.headers['x-user-id'] as string;
-    if (!adminUserId) {
-      throw ApiError.unauthorized('Admin user ID required');
-    }
+    const { adminUserId } = getTrustedAdminContext(req);
 
     // For now, we'll create the user record when they first login via Firebase
     // Just enable the portal with the phone number
@@ -266,10 +287,7 @@ router.post(
     }
 
     // Get admin user ID from JWT
-    const adminUserId = req.headers['x-user-id'] as string;
-    if (!adminUserId) {
-      throw ApiError.unauthorized('Admin user ID required');
-    }
+    const { adminUserId } = getTrustedAdminContext(req);
 
     // Token expires in 15 minutes
     const tokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
@@ -439,10 +457,7 @@ router.patch(
     }
 
     // Get admin user ID
-    const adminUserId = req.headers['x-user-id'] as string;
-    if (!adminUserId) {
-      throw ApiError.unauthorized('Admin user ID required');
-    }
+    const { adminUserId } = getTrustedAdminContext(req);
 
     const doc = await getComplianceDocumentById(id);
     if (!doc || doc.store_id !== storeId) {

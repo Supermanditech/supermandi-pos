@@ -138,6 +138,12 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
     const session = await verifyAdminSession(sessionToken);
 
     if (session) {
+      // Stamp trusted admin context headers for downstream services.
+      // Client-supplied values are already stripped by stripClientAuthHeaders.
+      req.headers['x-user-id'] = session.sessionId;
+      req.headers['x-actor-id'] = session.sessionId;
+      req.headers['x-actor-type'] = 'platform';
+      req.headers['x-permissions'] = '[]';
       clearFailedAttempts(clientIp);
       console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via session JWT`);
       return next();
@@ -163,6 +169,11 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
   if (legacyTokenStr) {
     // Verify using timing-safe comparison
     if (verifyMasterToken(legacyTokenStr)) {
+      // Legacy token flow has no user identity; use deterministic service principal.
+      req.headers['x-user-id'] = 'legacy-admin';
+      req.headers['x-actor-id'] = 'legacy-admin';
+      req.headers['x-actor-type'] = 'platform';
+      req.headers['x-permissions'] = '[]';
       clearFailedAttempts(clientIp);
       console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via legacy x-admin-token (DEPRECATED)`);
       return next();
