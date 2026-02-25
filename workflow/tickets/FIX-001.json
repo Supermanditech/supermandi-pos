@@ -6,7 +6,7 @@
   "riskClass": "critical",
   "title": "Trigger mega-batch staging deploy — 6 services + 25 migrations",
   "description": "Deploy all 6 Cloud Run services to GCP staging (supermandi-backend, asia-south1). Mega-batch: 500+ tickets code-complete, 3416 tests pass, 25 DB migrations (141-166). Cloud SQL backup 1771600046441 created.",
-  "status": "ready_for_operator_test",
+  "status": "todo",
   "severity": "P0",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -181,6 +181,16 @@
       "reason": "Reconciliation: implementation complete, awaiting operator test",
       "prevHash": "54966f680eeab910a3ce7927c58b0d6702999f3b84b2515919c22abcdf818c1e",
       "hash": "7e95f7f0e934f85db426f757f8ab21b4646ba236f81556da1c8da08aed3942c8"
+    },
+    {
+      "from": "ready_for_operator_test",
+      "to": "todo",
+      "actor": "claude",
+      "sessionId": "r7-exec-20260225-1",
+      "at": "2026-02-25T09:52:23.427Z",
+      "reason": "Park deploy orchestration while executing R7 queue",
+      "prevHash": "7e95f7f0e934f85db426f757f8ab21b4646ba236f81556da1c8da08aed3942c8",
+      "hash": "8de7b1e5294692620eb8d37655d4541112c36d561649a7eb3cdaadc573a63edf"
     }
   ],
   "evidence": {
@@ -197,7 +207,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-20T12:00:00+05:30",
-    "updatedAt": "2026-02-23T20:51:06.848Z",
+    "updatedAt": "2026-02-25T09:52:23.428Z",
     "lockedAt": null
   },
   "truthDeclaration": {
