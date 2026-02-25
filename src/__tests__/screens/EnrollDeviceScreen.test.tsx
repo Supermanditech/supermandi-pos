@@ -1,8 +1,8 @@
 /**
- * #404 + #405 + #409 + #411: EnrollDeviceScreen tests
- * Covers: render, inputs, label requirement, enroll flow, offline detection, error codes, a11y,
- *         phone lookup (lookupActivation), PaymentSetup routing (upiVpa + AsyncStorage),
- *         store reset, event logging, inactive store, settings update
+ * #404 + #405 + #411: EnrollDeviceScreen tests
+ * Covers: render, code-first activation flow, label requirement, offline detection,
+ *         error codes, PaymentSetup routing (upiVpa + AsyncStorage),
+ *         store reset, event logging, inactive store, settings update.
  */
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react-native";
@@ -41,10 +41,8 @@ jest.mock("expo-device", () => ({
 
 // Mock services
 const mockEnrollDevice = jest.fn();
-const mockLookupActivation = jest.fn();
 jest.mock("../../services/api/enrollApi", () => ({
   enrollDevice: (...args: unknown[]) => mockEnrollDevice(...args),
-  lookupActivation: (...args: unknown[]) => mockLookupActivation(...args),
 }));
 
 const mockGetDeviceSession = jest.fn().mockResolvedValue(null);
@@ -105,6 +103,18 @@ jest.mock("../../stores/productsStore", () => ({
 jest.mock("../../stores/settingsStore", () => ({
   useSettingsStore: { getState: () => ({ setStoreName: mockSetStoreName, setStoreCode: mockSetStoreCode }) },
 }));
+jest.mock("../../theme", () => {
+  const actual = jest.requireActual("../../theme");
+  return {
+    ...actual,
+    useThemeColors: () => ({
+      textPrimary: "#111827",
+      textSecondary: "#4b5563",
+      textTertiary: "#9ca3af",
+      warning: "#f59e0b",
+    }),
+  };
+});
 
 import EnrollDeviceScreen from "../../screens/EnrollDeviceScreen";
 
@@ -130,11 +140,9 @@ describe("EnrollDeviceScreen", () => {
     render(<EnrollDeviceScreen />);
     expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
     expect(screen.getByText("Activate Your POS")).toBeTruthy();
-    expect(screen.getByTestId("enroll-phone-input")).toBeTruthy();
     expect(screen.getByTestId("enroll-code-input")).toBeTruthy();
     expect(screen.getByTestId("enroll-label-input")).toBeTruthy();
     expect(screen.getByTestId("enroll-submit-button")).toBeTruthy();
-    expect(screen.getByTestId("enroll-lookup-button")).toBeTruthy();
   });
 
   it("pre-fills enrollment code from route params", () => {
@@ -263,69 +271,7 @@ describe("EnrollDeviceScreen", () => {
   });
 
   // =========================================================================
-  // #409: Phone Lookup (lookupActivation) tests
-  // =========================================================================
-
-  it("looks up activation code by phone number", async () => {
-    mockLookupActivation.mockResolvedValue({ code: "SM-FOUND1", storeName: "My Store" });
-    render(<EnrollDeviceScreen />);
-
-    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "9876543210");
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
-    });
-
-    await waitFor(() => {
-      expect(mockLookupActivation).toHaveBeenCalledWith("9876543210");
-      // Code input should be filled with the looked-up code
-      expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-FOUND1");
-    });
-  });
-
-  it("shows error for invalid phone number in lookup", async () => {
-    render(<EnrollDeviceScreen />);
-
-    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "12345");
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
-    });
-
-    // Should NOT call the API
-    expect(mockLookupActivation).not.toHaveBeenCalled();
-  });
-
-  it("shows error when lookup returns STORE_NOT_FOUND", async () => {
-    const { ApiError } = require("../../services/api/apiClient");
-    mockLookupActivation.mockRejectedValue(new ApiError("STORE_NOT_FOUND", 404));
-    render(<EnrollDeviceScreen />);
-
-    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "9876543210");
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
-    });
-
-    // lookupActivation was called
-    expect(mockLookupActivation).toHaveBeenCalledWith("9876543210");
-  });
-
-  it("blocks lookup when offline", async () => {
-    mockNetInfoFetch.mockResolvedValue({ isConnected: false });
-    render(<EnrollDeviceScreen />);
-
-    fireEvent.changeText(screen.getByTestId("enroll-phone-input"), "9876543210");
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId("enroll-lookup-button"));
-    });
-
-    expect(mockLookupActivation).not.toHaveBeenCalled();
-  });
-
-  // =========================================================================
-  // #409: PaymentSetup routing tests (upiVpa + AsyncStorage)
+  // PaymentSetup routing tests (upiVpa + AsyncStorage)
   // =========================================================================
 
   it("navigates to PaymentSetup when upiVpa is missing and not prompted before", async () => {

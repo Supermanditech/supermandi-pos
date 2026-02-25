@@ -1,14 +1,15 @@
 /**
- * #329-332: POS Activation Screen with Phone Lookup
+ * POS Activation Screen (Code-only enrollment)
  *
- * After registration on Retailer Web + SuperAdmin approval:
- * 1. Primary: Enter phone number → auto-fetch activation code → activate
- * 2. Fallback: Manual code entry (for deep links, admin-shared codes)
+ * Flow:
+ * 1. Retailer registers on retailer web
+ * 2. SuperAdmin activates the retailer account
+ * 3. POS enters activation code and enrolls device
  *
- * Post-activation: Routes to PaymentSetup if no UPI VPA set, else SellScan.
+ * Post-activation: routes to PaymentSetup if no UPI VPA set, else SellScan.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -28,7 +29,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { enrollDevice, lookupActivation } from "../services/api/enrollApi";
+import { enrollDevice } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
@@ -124,10 +125,6 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
     message: "Daily activation limit reached for this store.",
     hint: "Please try again tomorrow or contact support."
   },
-  // Phone lookup error codes (from /pos/phone-lookup endpoint)
-  PHONE_REQUIRED: { message: "Phone number is required.", hint: "Enter your 10-digit mobile number." },
-  PHONE_INVALID: { message: "Enter a valid 10-digit Indian mobile number.", hint: "Phone number must start with 6-9." },
-  LOOKUP_FAILED: { message: "Could not look up your phone number.", hint: "Try again. If the problem persists, contact support." },
   // Legacy error codes
   enrollment_invalid: { message: "Activation code is invalid or expired.", hint: "Contact support for a new code." },
   enrollment_expired: { message: "This activation code has expired.", hint: "Contact support for a new code." },
@@ -171,12 +168,6 @@ export default function EnrollDeviceScreen() {
   const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || route.params?.code || "");
   const [loading, setLoading] = useState(false);
 
-  // Phone lookup state
-  const [phoneInput, setPhoneInput] = useState("");
-  const [lookupLoading, setLookupLoading] = useState(false);
-  const [lookupStoreName, setLookupStoreName] = useState("");
-  const [lookupError, setLookupError] = useState("");
-
   // #404: Device label (required by backend for device identification)
   // Default to device model name for convenience
   const defaultLabel = Device.modelName || Device.deviceName || "";
@@ -214,67 +205,13 @@ export default function EnrollDeviceScreen() {
     return () => subscription.remove();
   }, []);
 
-  const handleLookup = useCallback(async () => {
-    // Strip non-digit chars and validate
-    const digits = phoneInput.replace(/\D/g, "");
-    let phone10 = digits;
-    if (digits.length === 12 && digits.startsWith("91")) {
-      phone10 = digits.slice(2);
-    } else if (digits.length === 13 && digits.startsWith("+91")) {
-      phone10 = digits.slice(3);
-    }
-    if (phone10.length !== 10 || !/^[6-9]/.test(phone10)) {
-      setLookupError("Enter a valid 10-digit mobile number");
-      return;
-    }
-
-    // Offline check
-    try {
-      const netState = await NetInfo.fetch();
-      if (!netState.isConnected) {
-        setLookupError("No internet connection. Connect and try again.");
-        return;
-      }
-    } catch {
-      // proceed
-    }
-
-    setLookupLoading(true);
-    setLookupError("");
-    setLookupStoreName("");
-
-    try {
-      const result = await lookupActivation(phone10);
-      setCodeInput(result.code);
-      setLookupStoreName(result.storeName);
-      // POS-1: Show code + store name, let user confirm before activating
-      // (removed auto-activate — user must press "Activate" button)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.message === "STORE_NOT_FOUND") {
-          setLookupError("No store found for this phone number. Your registration may be pending approval, or register at supermandi.tech/retailer/register.");
-        } else if (err.message === "NO_ACTIVE_CODE") {
-          setLookupError("Your store is pending approval. Contact SuperMandi support.");
-        } else if (err.status === 429) {
-          setLookupError("Too many attempts. Please wait a few minutes.");
-        } else {
-          setLookupError(err.message || "Lookup failed. Try entering the code manually.");
-        }
-      } else {
-        setLookupError("Network error. Check your connection and try again.");
-      }
-    } finally {
-      setLookupLoading(false);
-    }
-  }, [phoneInput]);
-
-  // Ref for auto-activate callback (avoids stale closure in timer)
-  const handleActivateRef = useRef<(() => void) | null>(null);
-
   const handleActivate = useCallback(async () => {
     const activationCode = parseActivationCode(codeInput);
     if (!activationCode) {
-      Alert.alert("Missing Code", "Enter your phone number above to look up the code, or enter it manually.");
+      Alert.alert(
+        "Missing Code",
+        "Enter the activation code shared after retailer registration and superadmin account activation."
+      );
       return;
     }
 
@@ -413,9 +350,6 @@ export default function EnrollDeviceScreen() {
     }
   }, [codeInput, labelInput, deviceMeta, navigation]);
 
-  // Keep ref current for auto-activate timer
-  handleActivateRef.current = handleActivate;
-
   return (
     <ScrollView
       style={styles.scrollView}
@@ -440,69 +374,8 @@ export default function EnrollDeviceScreen() {
           Activate Your POS
         </Text>
         <Text style={styles.subtitle} testID="enroll-subtitle">
-          Enter your registered phone number to activate, or enter the code manually.
+          Use your activation code after retailer registration on web and superadmin account activation.
         </Text>
-      </View>
-
-      {/* Phone Lookup Section */}
-      <View style={styles.inputSection}>
-        <Text style={styles.label}>Registered Phone Number</Text>
-        <TextInput
-          style={styles.phoneInput}
-          placeholder="+91 98765 43210"
-          keyboardType="phone-pad"
-          value={phoneInput}
-          onChangeText={(t) => {
-            setPhoneInput(t);
-            if (lookupError) setLookupError("");
-            // POS-4: Only clear code if phone actually changed (not on focus)
-            if (lookupStoreName && t !== phoneInput) {
-              setLookupStoreName("");
-              setCodeInput("");
-            }
-          }}
-          testID="enroll-phone-input"
-          accessibilityLabel="Registered phone number"
-          autoFocus={!codeInput}
-          editable={!lookupLoading && !loading}
-        />
-
-        {lookupStoreName ? (
-          <View style={styles.lookupSuccess}>
-            <Text style={styles.lookupSuccessText}>
-              Store found: {lookupStoreName} ✓
-            </Text>
-          </View>
-        ) : null}
-
-        {lookupError ? (
-          <Text style={styles.lookupErrorText}>{lookupError}</Text>
-        ) : null}
-
-        <Pressable
-          style={[styles.lookupButton, (lookupLoading || loading) && styles.buttonDisabled]}
-          onPress={handleLookup}
-          disabled={lookupLoading || loading}
-          testID="enroll-lookup-button"
-          accessibilityLabel={lookupLoading ? "Looking up code" : "Look up my code"}
-          accessibilityRole="button"
-        >
-          {lookupLoading ? (
-            <View style={styles.activatingRow}>
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.lookupButtonText}>Looking up...</Text>
-            </View>
-          ) : (
-            <Text style={styles.lookupButtonText}>Look Up My Code</Text>
-          )}
-        </Pressable>
-      </View>
-
-      {/* Divider */}
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or enter code manually</Text>
-        <View style={styles.dividerLine} />
       </View>
 
       {/* Manual Code Input */}
@@ -517,6 +390,7 @@ export default function EnrollDeviceScreen() {
           testID="enroll-code-input"
           accessibilityLabel="Activation code"
           returnKeyType="next"
+          autoFocus
           editable={!loading}
         />
       </View>
@@ -566,13 +440,13 @@ export default function EnrollDeviceScreen() {
       {/* Help Text */}
       <View style={styles.helpSection}>
         <Text style={styles.helpText}>
-          Don't have a store yet? Register at{" "}
+          Register your retailer account at{" "}
           <Text style={styles.helpLink} onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}>
             supermandi.tech/retailer/register
           </Text>
         </Text>
         <Text style={styles.helpTextSmall}>
-          After registration, SuperMandi will review your application. Once approved, enter your phone number above to activate.
+          After registration, wait for superadmin account activation. Then enter your activation code here.
         </Text>
         <Text style={styles.helpTextSmall}>
           Need help?{" "}
