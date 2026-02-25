@@ -56,6 +56,22 @@ interface VoiceRequest {
   executed: boolean;
 }
 
+interface ExecuteRequestBody {
+  requestId: string;
+}
+
+function parseExecuteRequestBody(value: unknown): ExecuteRequestBody {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Request body must be a JSON object');
+  }
+  const body = value as Record<string, unknown>;
+  const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : '';
+  if (!requestId) {
+    throw new Error('requestId is required');
+  }
+  return { requestId };
+}
+
 // Simple in-memory store (use Redis in production)
 const requestStore = new Map<string, VoiceRequest>();
 // R6.BE.017: Cap store size to prevent unbounded memory growth
@@ -193,18 +209,18 @@ router.post(
   '/execute',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { requestId } = req.body;
-      // R7.BE.017: Derive store identity from authenticated JWT claims.
-      const storeId = getAuthUser(req).actorId;
-
-      // Validate request
-      if (!requestId) {
+      let requestId: string;
+      try {
+        requestId = parseExecuteRequestBody(req.body).requestId;
+      } catch (parseError) {
         res.status(400).json({
           success: false,
-          error: 'requestId is required',
+          error: parseError instanceof Error ? parseError.message : 'Invalid request body',
         });
         return;
       }
+      // R7.BE.017: Derive store identity from authenticated JWT claims.
+      const storeId = getAuthUser(req).actorId;
       if (!storeId) {
         res.status(401).json({
           success: false,
