@@ -338,7 +338,7 @@ export function generateServiceToken(serviceName: string): string {
       serviceName,
       type: 'service',
     },
-    config.jwt.secret,
+    config.jwt.serviceTokenSecret,
     {
       expiresIn: 300, // 5 minutes - short-lived for security
       issuer: config.jwt.issuer,
@@ -370,7 +370,7 @@ export interface ServiceTokenVerifyResult {
 export function verifyServiceTokenWithError(token: string): ServiceTokenVerifyResult {
   try {
     // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
-    const decoded = jwt.verify(token, config.jwt.secret, {
+    const decoded = jwt.verify(token, config.jwt.serviceTokenSecret, {
       issuer: config.jwt.issuer,
       algorithms: ['HS256'],
     }) as jwt.JwtPayload;

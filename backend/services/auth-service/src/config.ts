@@ -7,6 +7,7 @@ export interface AuthServiceConfig {
   passwordMinLength: number;
   jwt: {
     secret: string;
+    serviceTokenSecret: string;
     accessTokenExpiresIn: string;
     refreshTokenExpiresInDays: number;
     issuer: string;
@@ -39,6 +40,9 @@ function getEnvRequired(key: string): string {
     if (key === 'JWT_SECRET' && (env === 'development' || env === 'test')) {
       return 'dev-secret-change-in-prod';
     }
+    if (key === 'SERVICE_TOKEN_SECRET' && (env === 'development' || env === 'test')) {
+      return 'dev-service-token-secret-change-in-prod';
+    }
     throw new Error(`Required environment variable ${key} is not set`);
   }
   return value;
@@ -52,6 +56,7 @@ export const config: AuthServiceConfig = {
   passwordMinLength: getEnvIntOrDefault('PASSWORD_MIN_LENGTH', 8),
   jwt: {
     secret: getEnvRequired('JWT_SECRET'),
+    serviceTokenSecret: getEnvRequired('SERVICE_TOKEN_SECRET'),
     accessTokenExpiresIn: getEnvOrDefault('JWT_ACCESS_TOKEN_EXPIRES_IN', '15m'),
     refreshTokenExpiresInDays: getEnvIntOrDefault('JWT_REFRESH_TOKEN_EXPIRES_DAYS', 7),
     issuer: getEnvOrDefault('JWT_ISSUER', 'supermandi-auth'),
