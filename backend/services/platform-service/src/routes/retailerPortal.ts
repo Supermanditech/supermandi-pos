@@ -1723,22 +1723,16 @@ router.get('/suppliers', async (req, res) => {
       stack: pgErr.stack,
     });
 
-    // Return error with debug info in dev
+    // Never return raw DB error details to client (prevents SQL/schema leakage).
     return res.status(500).json({
       error: {
-        code: 'INTERNAL_ERROR',
-        message: isDev ? pgErr.message : 'An unexpected error occurred',
+        code: 'SUPPLIERS_FETCH_FAILED',
+        message: 'Failed to load suppliers',
       },
       _debug: isDev
         ? {
             reqId,
-            message: pgErr.message,
-            pgCode: pgErr.code,
-            pgDetail: pgErr.detail,
-            pgHint: pgErr.hint,
-            pgSchema: pgErr.schema,
-            pgTable: pgErr.table,
-            pgColumn: pgErr.column,
+            note: 'See server logs by reqId for internal error details.',
           }
         : undefined,
     });
