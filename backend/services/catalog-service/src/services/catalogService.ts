@@ -5,109 +5,24 @@
 import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
 import { config } from '../config';
 import { cacheGetOrSet, catalogCacheKey } from '../cache/redis';
+import {
+  mapCatalogProduct,
+  mapCatalogProducts,
+  mapSupplierRows,
+  mapSupplierRowsByProduct,
+  type CatalogProduct,
+  type CatalogProductRow,
+  type GetCatalogInput,
+  type GetCatalogResult,
+  type SupplierDetailRow,
+} from './catalogServiceSupport';
 
-// =============================================================================
-// TYPES
-// =============================================================================
-
-export interface CatalogProduct {
-  id: string;
-  name: string;
-  description?: string;
-  brand?: string;
-  category?: string;
-  unit?: string;
-  packSize?: number;
-  primaryBarcode?: string;
-  hsnCode?: string;
-  defaultGstRate?: number;
-  isActive: boolean;
-  imageUrl?: string;       // T-206: Product image URL
-  thumbnailUrl?: string;   // T-206: Thumbnail for list views
-  // Aggregated from suppliers
-  bestPrice: number;
-  minMoq: number;
-  supplierCount: number;
-  stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock';
-  suppliers: CatalogSupplierInfo[];
-}
-
-export interface CatalogSupplierInfo {
-  supplierId: string;
-  supplierName: string;
-  supplierProductId: string;
-  purchasePrice: number;
-  /** SM-003: Retailer price = purchasePrice + SuperMandi margin */
-  retailerPrice: number;
-  /** SM-003: SuperMandi margin in minor units (paise) */
-  margin: number;
-  mrp?: number;
-  moq: number;
-  maxQty?: number;
-  stockQuantity: number;
-  stockStatus: string;
-  isPreferred: boolean;
-  /** SM-003: BNPL eligibility from product approval */
-  bnplEligible: boolean;
-  /** SM-003: Max BNPL days if eligible */
-  bnplMaxDays?: number;
-}
-
-export interface GetCatalogInput {
-  storeId: string;
-  search?: string;
-  category?: string;
-  inStockOnly?: boolean;
-  page?: number;
-  limit?: number;
-}
-
-export interface GetCatalogResult {
-  products: CatalogProduct[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-}
-
-// Database row types
-interface CatalogProductRow {
-  product_id: string;
-  product_name: string;
-  description: string | null;
-  brand: string | null;
-  category: string | null;
-  unit: string | null;
-  pack_size: number | null;
-  primary_barcode: string | null;
-  hsn_code: string | null;
-  default_gst_rate: string | null;
-  is_active: boolean;
-  image_url: string | null;      // T-206
-  thumbnail_url: string | null;  // T-206
-  best_price: string;
-  min_moq: number;
-  supplier_count: string;
-  total_stock: string;
-}
-
-interface SupplierDetailRow {
-  product_id: string;
-  supplier_id: string;
-  supplier_name: string;
-  supplier_product_id: string;
-  purchase_price: string;
-  mrp: string | null;
-  moq: number;
-  max_qty: number | null;
-  stock_quantity: number;
-  stock_status: string;
-  is_preferred: boolean;
-  // SM-003: Margin and BNPL fields
-  supermandi_margin_minor: number | null;
-  bnpl_eligible: boolean | null;
-  bnpl_max_days: number | null;
-}
+export type {
+  CatalogProduct,
+  CatalogSupplierInfo,
+  GetCatalogInput,
+  GetCatalogResult,
+} from './catalogServiceSupport';
 
 // =============================================================================
 // UNIFIED CATALOG QUERY
@@ -324,68 +239,9 @@ async function fetchStoreCatalog(
     [storeId, productIds]
   );
 
-  // Group supplier details by product
-  // SM-003: Include margin and BNPL fields in response
-  const suppliersByProduct = new Map<string, CatalogSupplierInfo[]>();
-  for (const row of supplierRows) {
-    const suppliers = suppliersByProduct.get(row.product_id) || [];
-    const purchasePrice = parseFloat(row.purchase_price);
-    const margin = row.supermandi_margin_minor ?? 0;
-    suppliers.push({
-      supplierId: row.supplier_id,
-      supplierName: row.supplier_name,
-      supplierProductId: row.supplier_product_id,
-      purchasePrice,
-      retailerPrice: purchasePrice + margin,  // SM-003: Apply margin
-      margin,
-      mrp: row.mrp ? parseFloat(row.mrp) : undefined,
-      moq: row.moq,
-      maxQty: row.max_qty ?? undefined,
-      stockQuantity: row.stock_quantity,
-      stockStatus: row.stock_status,
-      isPreferred: row.is_preferred,
-      bnplEligible: row.bnpl_eligible ?? false,
-      bnplMaxDays: row.bnpl_max_days ?? undefined,
-    });
-    suppliersByProduct.set(row.product_id, suppliers);
-  }
-
-  // Map to CatalogProduct
-  const products: CatalogProduct[] = productRows.map((row) => {
-    const suppliers = suppliersByProduct.get(row.product_id) || [];
-    const totalStock = parseInt(row.total_stock || '0', 10);
-
-    // Determine overall stock status
-    let stockStatus: CatalogProduct['stockStatus'] = 'out_of_stock';
-    if (totalStock > 100) {
-      stockStatus = 'in_stock';
-    } else if (totalStock > 0) {
-      stockStatus = 'low_stock';
-    }
-
-    return {
-      id: row.product_id,
-      name: row.product_name,
-      description: row.description ?? undefined,
-      brand: row.brand ?? undefined,
-      category: row.category ?? undefined,
-      unit: row.unit ?? undefined,
-      packSize: row.pack_size ?? undefined,
-      primaryBarcode: row.primary_barcode ?? undefined,
-      hsnCode: row.hsn_code ?? undefined,
-      defaultGstRate: row.default_gst_rate
-        ? parseFloat(row.default_gst_rate)
-        : undefined,
-      isActive: row.is_active,
-      imageUrl: row.image_url ?? undefined,         // T-206
-      thumbnailUrl: row.thumbnail_url ?? undefined,  // T-206
-      bestPrice: parseFloat(row.best_price),
-      minMoq: row.min_moq,
-      supplierCount: parseInt(row.supplier_count, 10),
-      stockStatus,
-      suppliers,
-    };
-  });
+  // Group suppliers and map consolidated product response using shared mappers.
+  const suppliersByProduct = mapSupplierRowsByProduct(supplierRows);
+  const products = mapCatalogProducts(productRows, suppliersByProduct);
 
   return { products, total };
 }
@@ -520,55 +376,6 @@ export async function getStoreCatalogProduct(
     [storeId, productId]
   );
 
-  const suppliers: CatalogSupplierInfo[] = supplierRows.map((row) => {
-    const purchasePrice = parseFloat(row.purchase_price);
-    const margin = row.supermandi_margin_minor ?? 0;
-    return {
-      supplierId: row.supplier_id,
-      supplierName: row.supplier_name,
-      supplierProductId: row.supplier_product_id,
-      purchasePrice,
-      retailerPrice: purchasePrice + margin,
-      margin,
-      mrp: row.mrp ? parseFloat(row.mrp) : undefined,
-      moq: row.moq,
-      maxQty: row.max_qty ?? undefined,
-      stockQuantity: row.stock_quantity,
-      stockStatus: row.stock_status,
-      isPreferred: row.is_preferred,
-      bnplEligible: row.bnpl_eligible ?? false,
-      bnplMaxDays: row.bnpl_max_days ?? undefined,
-    };
-  });
-
-  const totalStock = parseInt(productRow.total_stock || '0', 10);
-  let stockStatus: CatalogProduct['stockStatus'] = 'out_of_stock';
-  if (totalStock > 100) {
-    stockStatus = 'in_stock';
-  } else if (totalStock > 0) {
-    stockStatus = 'low_stock';
-  }
-
-  return {
-    id: productRow.product_id,
-    name: productRow.product_name,
-    description: productRow.description ?? undefined,
-    brand: productRow.brand ?? undefined,
-    category: productRow.category ?? undefined,
-    unit: productRow.unit ?? undefined,
-    packSize: productRow.pack_size ?? undefined,
-    primaryBarcode: productRow.primary_barcode ?? undefined,
-    hsnCode: productRow.hsn_code ?? undefined,
-    defaultGstRate: productRow.default_gst_rate
-      ? parseFloat(productRow.default_gst_rate)
-      : undefined,
-    isActive: productRow.is_active,
-    imageUrl: productRow.image_url ?? undefined,         // T-206
-    thumbnailUrl: productRow.thumbnail_url ?? undefined,  // T-206
-    bestPrice: parseFloat(productRow.best_price),
-    minMoq: productRow.min_moq,
-    supplierCount: parseInt(productRow.supplier_count, 10),
-    stockStatus,
-    suppliers,
-  };
+  const suppliers = mapSupplierRows(supplierRows);
+  return mapCatalogProduct(productRow, suppliers);
 }
