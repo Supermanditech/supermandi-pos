@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-25T21:14:43.792Z",
+  "updatedAt": "2026-02-25T21:23:20.802Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1112,7 +1112,6 @@
         "complete": false,
         "summary": "R7 execution initialized: 535 tickets queued from source-first audit.",
         "remainingTicketIds": [
-          "R7.BE.032.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_5",
           "R7.BE.033.API_GATEWAY_STATE_API_CONSISTENCY_REVIEW_6",
           "R7.BE.034.AUTH_SERVICE_STATE_API_CONSISTENCY_REVIEW_7",
           "R7.BE.035.PLATFORM_SERVICE_STATE_API_CONSISTENCY_REVIEW_8",
@@ -1648,9 +1647,10 @@
           "R7.BE.028.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_1",
           "R7.BE.029.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_2",
           "R7.BE.030.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_3",
-          "R7.BE.031.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_4"
+          "R7.BE.031.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_4",
+          "R7.BE.032.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_5"
         ],
-        "lastUpdatedAt": "2026-02-25T21:14:43.792Z"
+        "lastUpdatedAt": "2026-02-25T21:23:20.802Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1711,7 +1711,7 @@
   },
   "summary": {
     "totalTickets": 1129,
-    "activeTickets": 506,
+    "activeTickets": 505,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
@@ -1761,7 +1761,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-25T21:14:43.792Z"
+    "updatedAt": "2026-02-25T21:23:20.802Z"
   },
-  "lastUpdated": "2026-02-25T21:14:43.792Z"
+  "lastUpdated": "2026-02-25T21:23:20.802Z"
 }
