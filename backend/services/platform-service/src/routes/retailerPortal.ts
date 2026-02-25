@@ -4,6 +4,7 @@
 
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { ApiError, query, withTransaction } from '@supermandi/common';
 import { config } from '../config';
 import {
@@ -81,11 +82,43 @@ interface RetailerContext {
 }
 
 function getRetailerContext(req: Request): RetailerContext {
-  const userId = req.headers['x-user-id'] as string;
-  const storeId = req.headers['x-actor-id'] as string;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
 
-  if (!userId || !storeId) {
+  if (!token) {
     throw ApiError.unauthorized('Authentication required');
+  }
+
+  const jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
+  const jwtIssuer = process.env.JWT_ISSUER || 'supermandi-auth';
+
+  let decoded: jwt.JwtPayload;
+  try {
+    decoded = jwt.verify(token, jwtSecret, {
+      algorithms: ['HS256'],
+      issuer: jwtIssuer,
+    }) as jwt.JwtPayload;
+  } catch {
+    throw ApiError.unauthorized('Invalid or expired token');
+  }
+
+  const userId = typeof decoded.sub === 'string' ? decoded.sub : '';
+  const storeId = typeof decoded.actorId === 'string' ? decoded.actorId : '';
+  const actorType = typeof decoded.actorType === 'string' ? decoded.actorType : '';
+  const headerUserId = req.headers['x-user-id'] as string | undefined;
+  const headerStoreId = req.headers['x-actor-id'] as string | undefined;
+
+  if (!userId || !storeId || !actorType) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  if (actorType !== 'store') {
+    throw ApiError.forbidden('Store actor required');
+  }
+
+  // Defense-in-depth: reject mismatched forwarded headers if present.
+  if ((headerUserId && headerUserId !== userId) || (headerStoreId && headerStoreId !== storeId)) {
+    throw ApiError.forbidden('Invalid auth context header mismatch');
   }
 
   return { userId, storeId };
@@ -1454,9 +1487,7 @@ router.get('/suppliers', async (req, res) => {
   };
 
   try {
-    // Extract context - may throw if headers missing
-    const userId = req.headers['x-user-id'] as string;
-    const storeId = req.headers['x-actor-id'] as string;
+    const { userId, storeId } = getRetailerContext(req);
 
     // Parse query parameters for server-side filtering (RCAT-SUP-API-001)
     const searchQuery = (req.query.query as string)?.trim() || '';
@@ -1464,14 +1495,6 @@ router.get('/suppliers', async (req, res) => {
     const offset = Math.max(parseInt(req.query.offset as string) || 0, 0); // default 0
 
     log('info', 'Request received', { userId, storeId, searchQuery, limit, offset, headers: isDev ? req.headers : undefined });
-
-    if (!userId || !storeId) {
-      log('error', 'Missing auth headers', { userId: !!userId, storeId: !!storeId });
-      return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-        _debug: isDev ? { reqId, reason: 'Missing x-user-id or x-actor-id header' } : undefined,
-      });
-    }
 
     // Check migration 014 before querying extended columns (RCAT-SUP-DB-001 / RCAT-SUP-API-001)
     const extendedColumnsExist = await checkMigration014Applied();
@@ -1654,6 +1677,20 @@ router.get('/suppliers', async (req, res) => {
       _debug: isDev ? { reqId, searchQuery } : undefined,
     });
   } catch (err: unknown) {
+    if (err instanceof ApiError) {
+      log('error', 'Auth/context validation failed', {
+        code: err.code,
+        message: err.message,
+      });
+      return res.status(err.statusCode).json({
+        error: {
+          code: err.code,
+          message: err.message,
+        },
+        _debug: isDev ? { reqId } : undefined,
+      });
+    }
+
     // Extract postgres-specific error fields
     const pgErr = err as {
       message?: string;
