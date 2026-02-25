@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-25T10:27:02.136Z",
+  "updatedAt": "2026-02-25T10:35:44.830Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1112,7 +1112,6 @@
         "complete": false,
         "summary": "R7 execution initialized: 535 tickets queued from source-first audit.",
         "remainingTicketIds": [
-          "R7.BE.007.USERID_FROM_X_USER_ID_HEADER_IS",
           "R7.BE.008.5_UNAUTHENTICATED_CATALOG_ENDPOINTS_SEARCH_CATEGORIES_ETC",
           "R7.BE.009.GSTIN_VALIDATE_ENDPOINT_IS_UNAUTHENTICATED",
           "R7.BE.010.ADMIN_ROUTES_HAVE_NO_SERVICE_LEVEL_AUTH",
@@ -1648,9 +1647,10 @@
           "R7.BE.003.INTERNAL_ROUTES_RELY_ON_SHARED_JWT_SECRET",
           "R7.BE.004.NO_UUID_VALIDATION_ON_ROUTE_PARAMS_PATH",
           "R7.BE.005.INTERNAL_ROUTES_HAVE_ZERO_AUTHENTICATION_NO_VALIDATEINTERNALSERVICE",
-          "R7.BE.006.STOCK_NON_NEGATIVE_INVARIANT_HAS_ADJUSTMENT_BYPASS"
+          "R7.BE.006.STOCK_NON_NEGATIVE_INVARIANT_HAS_ADJUSTMENT_BYPASS",
+          "R7.BE.007.USERID_FROM_X_USER_ID_HEADER_IS"
         ],
-        "lastUpdatedAt": "2026-02-25T10:29:52.340Z"
+        "lastUpdatedAt": "2026-02-25T10:35:44.830Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1711,7 +1711,7 @@
   },
   "summary": {
     "totalTickets": 1129,
-    "activeTickets": 531,
+    "activeTickets": 530,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
@@ -1761,7 +1761,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-25T10:29:52.341Z"
+    "updatedAt": "2026-02-25T10:35:44.830Z"
   },
-  "lastUpdated": "2026-02-25T10:29:52.341Z"
+  "lastUpdated": "2026-02-25T10:35:44.830Z"
 }

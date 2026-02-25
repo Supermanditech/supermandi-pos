@@ -5,7 +5,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES } from '@supermandi/common';
-import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
+import { authenticate, requireStoreAccess, getAuthUser } from '@supermandi/auth-service/exports';
 import {
   getUnmatchedProducts,
   createMapping,
@@ -116,8 +116,7 @@ router.post(
         );
       }
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       const result = await createMapping({
         storeId,
@@ -185,8 +184,7 @@ router.delete(
       const { storeId, mapId } = req.params;
       const body = req.body as DeleteMappingBody;
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       await deleteMapping({
         storeId,
@@ -218,8 +216,7 @@ router.post(
     try {
       const { storeId, mapId } = req.params;
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       // FIX-005: Pass storeId for store ownership verification
       const mapping = await verifyMapping(mapId, userId, storeId);

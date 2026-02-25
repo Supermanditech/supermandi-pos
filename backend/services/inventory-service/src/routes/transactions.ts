@@ -11,7 +11,7 @@ import {
   TransactionType,
   ReferenceType,
 } from '../services/transactionService';
-import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
+import { authenticate, requireStoreAccess, getAuthUser } from '@supermandi/auth-service/exports';
 
 const router: Router = Router();
 
@@ -44,6 +44,7 @@ function asyncHandler<P = Record<string, string>>(fn: AsyncHandler<P>): AsyncHan
 // =============================================================================
 
 interface StoreIdParams {
+  [key: string]: string;
   storeId: string;
 }
 
@@ -98,7 +99,7 @@ router.post(
   '/:storeId/inventory/transactions',
   asyncHandler<StoreIdParams>(async (req: Request<StoreIdParams>, res: Response) => {
     const body = req.body as TransactionRequestBody;
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = getAuthUser(req).id;
 
     // R6.BE.006: Runtime enum validation for transactionType and referenceType
     const VALID_TRANSACTION_TYPES = ['sale', 'sale_return', 'purchase_received', 'adjustment', 'opening_stock'] as const;
@@ -154,7 +155,7 @@ router.post(
   '/:storeId/inventory/adjust',
   asyncHandler<StoreIdParams>(async (req: Request<StoreIdParams>, res: Response) => {
     const body = req.body as AdjustmentRequestBody;
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = getAuthUser(req).id;
 
     const input: AdjustmentInput = {
       storeId: req.params.storeId,

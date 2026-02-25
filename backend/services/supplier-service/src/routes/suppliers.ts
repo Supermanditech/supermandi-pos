@@ -5,7 +5,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES } from '@supermandi/common';
-import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
+import { authenticate, requireStoreAccess, getAuthUser } from '@supermandi/auth-service/exports';
 import {
   searchSuppliersService,
   getStoreSuppliers,
@@ -207,8 +207,7 @@ router.post(
         );
       }
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       const result = await linkSupplierToStore({
         supplierId: body.supplierId,
@@ -256,8 +255,7 @@ router.put(
       const { storeId, supplierId } = req.params;
       const body = req.body as UpdateSupplierLinkBody;
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       const result = await updateSupplierLinkService({
         storeId,
@@ -301,8 +299,7 @@ router.delete(
       const { storeId, supplierId } = req.params;
       const body = req.body as UnlinkSupplierBody;
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       const result = await unlinkSupplierService({
         storeId,
@@ -338,8 +335,7 @@ router.post(
     try {
       const { storeId, supplierId } = req.params;
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       const result = await reactivateSupplierLinkService(
         storeId,
@@ -383,8 +379,7 @@ router.post(
       const { storeId } = req.params;
       const body = req.body as RequestSupplierBody;
 
-      // Get user ID from request (if authenticated)
-      const userId = (req as Request & { userId?: string }).userId;
+      const userId = getAuthUser(req).id;
 
       const request = await requestNewSupplier({
         storeId,
