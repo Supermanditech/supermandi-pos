@@ -1,0 +1,2693 @@
+{
+  "generatedAt": "2026-02-24T20:48:32.599Z",
+  "headSha": "6886c3a5",
+  "dedupeInput": "workflow/state/subagent_checkpoints/R7_dedupe_result.json",
+  "netNewCount": 535,
+  "duplicateCount": 0,
+  "createdTicketCount": 535,
+  "createdBySurface": {
+    "POS": 201,
+    "RET": 89,
+    "SUP": 83,
+    "SA": 72,
+    "BE": 69,
+    "CROSS": 21
+  },
+  "created": [
+    {
+      "ticketId": "R7.POS.001.SUBMITTINGREF_CURRENT_NEVER_RESET_ON_FAILURE_PERMANENTLY",
+      "file": "workflow/tickets/R7.POS.001.SUBMITTINGREF_CURRENT_NEVER_RESET_ON_FAILURE_PERMANENTLY.json",
+      "sourceFindingId": "PA-01"
+    },
+    {
+      "ticketId": "R7.POS.002.APP_STORE_URL_EMPTY_FOR_IOS_DIRECTS",
+      "file": "workflow/tickets/R7.POS.002.APP_STORE_URL_EMPTY_FOR_IOS_DIRECTS.json",
+      "sourceFindingId": "F1-01"
+    },
+    {
+      "ticketId": "R7.POS.003.PAN_AADHAAR_PII_IN_COMPONENT_STATE_WITHOUT",
+      "file": "workflow/tickets/R7.POS.003.PAN_AADHAAR_PII_IN_COMPONENT_STATE_WITHOUT.json",
+      "sourceFindingId": "CR-01"
+    },
+    {
+      "ticketId": "R7.POS.004.NO_CLIENT_SIDE_RATE_LIMITING_ON_PHONE",
+      "file": "workflow/tickets/R7.POS.004.NO_CLIENT_SIDE_RATE_LIMITING_ON_PHONE.json",
+      "sourceFindingId": "E1-01"
+    },
+    {
+      "ticketId": "R7.POS.005.TAB_SWITCH_ALERT_CAN_BE_SILENTLY_DISMISSED",
+      "file": "workflow/tickets/R7.POS.005.TAB_SWITCH_ALERT_CAN_BE_SILENTLY_DISMISSED.json",
+      "sourceFindingId": "R1-01"
+    },
+    {
+      "ticketId": "R7.POS.006.SILENT_1000_PRODUCT_CAP_ON_OFFLINE_SYNC",
+      "file": "workflow/tickets/R7.POS.006.SILENT_1000_PRODUCT_CAP_ON_OFFLINE_SYNC.json",
+      "sourceFindingId": "SS-01"
+    },
+    {
+      "ticketId": "R7.RET.001.UNAUTHENTICATED_DOCUMENT_UPLOAD_MITIGATED_PAGE_DEPRECATED_UNREACHABLE",
+      "file": "workflow/tickets/R7.RET.001.UNAUTHENTICATED_DOCUMENT_UPLOAD_MITIGATED_PAGE_DEPRECATED_UNREACHABLE.json",
+      "sourceFindingId": "ONB-001"
+    },
+    {
+      "ticketId": "R7.RET.002.UNAUTHENTICATED_KYC_SUBMISSION_MITIGATED_PAGE_DEPRECATED_UNREACHABLE",
+      "file": "workflow/tickets/R7.RET.002.UNAUTHENTICATED_KYC_SUBMISSION_MITIGATED_PAGE_DEPRECATED_UNREACHABLE.json",
+      "sourceFindingId": "ONB-002"
+    },
+    {
+      "ticketId": "R7.SUP.001.DOCUMENT_UPLOAD_XHR_MISSING_AUTH_CREDENTIALS_WITHCREDENTIALS",
+      "file": "workflow/tickets/R7.SUP.001.DOCUMENT_UPLOAD_XHR_MISSING_AUTH_CREDENTIALS_WITHCREDENTIALS.json",
+      "sourceFindingId": "PG-023"
+    },
+    {
+      "ticketId": "R7.SUP.002.UPLOAD_ENDPOINT_DIFFERS_FROM_API_TS_UPLOADSUPPLIERDOCUMENT",
+      "file": "workflow/tickets/R7.SUP.002.UPLOAD_ENDPOINT_DIFFERS_FROM_API_TS_UPLOADSUPPLIERDOCUMENT.json",
+      "sourceFindingId": "PG-024"
+    },
+    {
+      "ticketId": "R7.SUP.003.DUPLICATE_REGISTRATION_FLOW_WITH_DIFFERENT_STEP_ORDERING",
+      "file": "workflow/tickets/R7.SUP.003.DUPLICATE_REGISTRATION_FLOW_WITH_DIFFERENT_STEP_ORDERING.json",
+      "sourceFindingId": "PG-019"
+    },
+    {
+      "ticketId": "R7.SUP.004.EMAILRESET_STEP_IS_UNREACHABLE_DEAD_CODE_LINES",
+      "file": "workflow/tickets/R7.SUP.004.EMAILRESET_STEP_IS_UNREACHABLE_DEAD_CODE_LINES.json",
+      "sourceFindingId": "PG-013"
+    },
+    {
+      "ticketId": "R7.SUP.005.ENTIRE_PAGE_USES_INLINE_STYLES_INSTEAD_OF",
+      "file": "workflow/tickets/R7.SUP.005.ENTIRE_PAGE_USES_INLINE_STYLES_INSTEAD_OF.json",
+      "sourceFindingId": "F-045"
+    },
+    {
+      "ticketId": "R7.SUP.006.HEIGHT_CALC_100VH_64PX_OVERFLOWS_LAYOUT_OVERLAPS",
+      "file": "workflow/tickets/R7.SUP.006.HEIGHT_CALC_100VH_64PX_OVERFLOWS_LAYOUT_OVERLAPS.json",
+      "sourceFindingId": "F-046"
+    },
+    {
+      "ticketId": "R7.SA.001.NATIVE_CONFIRM_USED_INSTEAD_OF_CONFIRMDIALOG_FOR",
+      "file": "workflow/tickets/R7.SA.001.NATIVE_CONFIRM_USED_INSTEAD_OF_CONFIRMDIALOG_FOR.json",
+      "sourceFindingId": "SA-S1-01"
+    },
+    {
+      "ticketId": "R7.SA.002.BADGEERR_CSS_CLASS_DOES_NOT_EXIST_SHOULD",
+      "file": "workflow/tickets/R7.SA.002.BADGEERR_CSS_CLASS_DOES_NOT_EXIST_SHOULD.json",
+      "sourceFindingId": "SA-S1-02"
+    },
+    {
+      "ticketId": "R7.SA.003.REJECTION_LABEL_SAYS_MIN_10_CHARS_BUT",
+      "file": "workflow/tickets/R7.SA.003.REJECTION_LABEL_SAYS_MIN_10_CHARS_BUT.json",
+      "sourceFindingId": "SA-S1-03"
+    },
+    {
+      "ticketId": "R7.SA.004.NO_LOADING_STATE_INDICATOR",
+      "file": "workflow/tickets/R7.SA.004.NO_LOADING_STATE_INDICATOR.json",
+      "sourceFindingId": "SA-S1-04"
+    },
+    {
+      "ticketId": "R7.SA.005.NO_ERROR_STATE_DISPLAY",
+      "file": "workflow/tickets/R7.SA.005.NO_ERROR_STATE_DISPLAY.json",
+      "sourceFindingId": "SA-S1-05"
+    },
+    {
+      "ticketId": "R7.SA.006.PASSED_TEST_SUITES_SHOW_RED_BADGE_SAME",
+      "file": "workflow/tickets/R7.SA.006.PASSED_TEST_SUITES_SHOW_RED_BADGE_SAME.json",
+      "sourceFindingId": "SA-S2-QUAL-002"
+    },
+    {
+      "ticketId": "R7.SA.007.NO_CONFIRMATION_FOR_REFUND_APPROVAL_TRIGGERS_MONEY",
+      "file": "workflow/tickets/R7.SA.007.NO_CONFIRMATION_FOR_REFUND_APPROVAL_TRIGGERS_MONEY.json",
+      "sourceFindingId": "SA-S2-REF-001"
+    },
+    {
+      "ticketId": "R7.SA.008.NO_CONFIRMATION_FOR_SINGLE_WHATSAPP_SEND_IRREVOCABLE",
+      "file": "workflow/tickets/R7.SA.008.NO_CONFIRMATION_FOR_SINGLE_WHATSAPP_SEND_IRREVOCABLE.json",
+      "sourceFindingId": "SA-S2-WA-001"
+    },
+    {
+      "ticketId": "R7.SA.009.HTTP_STATUS_CODES_LEAKED_IN_ERROR_MESSAGES",
+      "file": "workflow/tickets/R7.SA.009.HTTP_STATUS_CODES_LEAKED_IN_ERROR_MESSAGES.json",
+      "sourceFindingId": "SA-S2-GST-005"
+    },
+    {
+      "ticketId": "R7.BE.001.TOKEN_BLACKLIST_FAIL_OPEN_ON_REDIS_OUTAGE",
+      "file": "workflow/tickets/R7.BE.001.TOKEN_BLACKLIST_FAIL_OPEN_ON_REDIS_OUTAGE.json",
+      "sourceFindingId": "BE-GW-001"
+    },
+    {
+      "ticketId": "R7.BE.002.ADMIN_STATUS_ENDPOINT_LEAKS_ACTIVE_SESSION_COUNT",
+      "file": "workflow/tickets/R7.BE.002.ADMIN_STATUS_ENDPOINT_LEAKS_ACTIVE_SESSION_COUNT.json",
+      "sourceFindingId": "BE-GW-002"
+    },
+    {
+      "ticketId": "R7.BE.003.INTERNAL_ROUTES_RELY_ON_SHARED_JWT_SECRET",
+      "file": "workflow/tickets/R7.BE.003.INTERNAL_ROUTES_RELY_ON_SHARED_JWT_SECRET.json",
+      "sourceFindingId": "BE-AUTH-001"
+    },
+    {
+      "ticketId": "R7.BE.004.NO_UUID_VALIDATION_ON_ROUTE_PARAMS_PATH",
+      "file": "workflow/tickets/R7.BE.004.NO_UUID_VALIDATION_ON_ROUTE_PARAMS_PATH.json",
+      "sourceFindingId": "BE-AUTH-002"
+    },
+    {
+      "ticketId": "R7.BE.005.INTERNAL_ROUTES_HAVE_ZERO_AUTHENTICATION_NO_VALIDATEINTERNALSERVICE",
+      "file": "workflow/tickets/R7.BE.005.INTERNAL_ROUTES_HAVE_ZERO_AUTHENTICATION_NO_VALIDATEINTERNALSERVICE.json",
+      "sourceFindingId": "BE-INV-001"
+    },
+    {
+      "ticketId": "R7.BE.006.STOCK_NON_NEGATIVE_INVARIANT_HAS_ADJUSTMENT_BYPASS",
+      "file": "workflow/tickets/R7.BE.006.STOCK_NON_NEGATIVE_INVARIANT_HAS_ADJUSTMENT_BYPASS.json",
+      "sourceFindingId": "BE-INV-002"
+    },
+    {
+      "ticketId": "R7.BE.007.USERID_FROM_X_USER_ID_HEADER_IS",
+      "file": "workflow/tickets/R7.BE.007.USERID_FROM_X_USER_ID_HEADER_IS.json",
+      "sourceFindingId": "BE-SUP-001"
+    },
+    {
+      "ticketId": "R7.BE.008.5_UNAUTHENTICATED_CATALOG_ENDPOINTS_SEARCH_CATEGORIES_ETC",
+      "file": "workflow/tickets/R7.BE.008.5_UNAUTHENTICATED_CATALOG_ENDPOINTS_SEARCH_CATEGORIES_ETC.json",
+      "sourceFindingId": "BE-CAT-001"
+    },
+    {
+      "ticketId": "R7.BE.009.GSTIN_VALIDATE_ENDPOINT_IS_UNAUTHENTICATED",
+      "file": "workflow/tickets/R7.BE.009.GSTIN_VALIDATE_ENDPOINT_IS_UNAUTHENTICATED.json",
+      "sourceFindingId": "BE-CAT-002"
+    },
+    {
+      "ticketId": "R7.BE.010.ADMIN_ROUTES_HAVE_NO_SERVICE_LEVEL_AUTH",
+      "file": "workflow/tickets/R7.BE.010.ADMIN_ROUTES_HAVE_NO_SERVICE_LEVEL_AUTH.json",
+      "sourceFindingId": "BE-PLAT-001"
+    },
+    {
+      "ticketId": "R7.BE.011.STORE_ROUTES_CRUD_HAVE_NO_AUTH_MIDDLEWARE",
+      "file": "workflow/tickets/R7.BE.011.STORE_ROUTES_CRUD_HAVE_NO_AUTH_MIDDLEWARE.json",
+      "sourceFindingId": "BE-PLAT-002"
+    },
+    {
+      "ticketId": "R7.BE.012.GET_STATUS_REQUESTID_HAS_NO_AUTH_CHECK",
+      "file": "workflow/tickets/R7.BE.012.GET_STATUS_REQUESTID_HAS_NO_AUTH_CHECK.json",
+      "sourceFindingId": "BE-VOICE-001"
+    },
+    {
+      "ticketId": "R7.BE.013.GET_SUPPLIERS_LEAKS_POSTGRESQL_ERROR_DETAILS",
+      "file": "workflow/tickets/R7.BE.013.GET_SUPPLIERS_LEAKS_POSTGRESQL_ERROR_DETAILS.json",
+      "sourceFindingId": "BE-PLAT-003"
+    },
+    {
+      "ticketId": "R7.BE.014.PATCH_PRODUCTS_UPDATES_SHARED_CATALOG_NOT_STORE",
+      "file": "workflow/tickets/R7.BE.014.PATCH_PRODUCTS_UPDATES_SHARED_CATALOG_NOT_STORE.json",
+      "sourceFindingId": "BE-PLAT-004"
+    },
+    {
+      "ticketId": "R7.BE.015.RETAILERADMIN_ADMIN_ID_FROM_UNTRUSTED_HEADER",
+      "file": "workflow/tickets/R7.BE.015.RETAILERADMIN_ADMIN_ID_FROM_UNTRUSTED_HEADER.json",
+      "sourceFindingId": "BE-PLAT-005"
+    },
+    {
+      "ticketId": "R7.BE.016.RETAILERPORTAL_STOREID_FROM_HEADER_NOT_JWT",
+      "file": "workflow/tickets/R7.BE.016.RETAILERPORTAL_STOREID_FROM_HEADER_NOT_JWT.json",
+      "sourceFindingId": "BE-PLAT-006"
+    },
+    {
+      "ticketId": "R7.BE.017.NO_AUTHENTICATE_MIDDLEWARE_ON_ANY_VOICE_ENDPOINT",
+      "file": "workflow/tickets/R7.BE.017.NO_AUTHENTICATE_MIDDLEWARE_ON_ANY_VOICE_ENDPOINT.json",
+      "sourceFindingId": "BE-VOICE-002"
+    },
+    {
+      "ticketId": "R7.BE.018.SOFT_STORE_ISOLATION_PATTERN_SILENTLY_PASSES_IF",
+      "file": "workflow/tickets/R7.BE.018.SOFT_STORE_ISOLATION_PATTERN_SILENTLY_PASSES_IF.json",
+      "sourceFindingId": "BE-REORDER-001"
+    },
+    {
+      "ticketId": "R7.CROSS.001.SUPPLIER_CANNOT_TRANSITION_ORDER_STATUS_CONFIRM_SHIP",
+      "file": "workflow/tickets/R7.CROSS.001.SUPPLIER_CANNOT_TRANSITION_ORDER_STATUS_CONFIRM_SHIP.json",
+      "sourceFindingId": "CROSS-SP-003"
+    },
+    {
+      "ticketId": "R7.CROSS.002.DUAL_STOCK_SOURCES_DIVERGE_INVENTORY_STOCK_BALANCES",
+      "file": "workflow/tickets/R7.CROSS.002.DUAL_STOCK_SOURCES_DIVERGE_INVENTORY_STOCK_BALANCES.json",
+      "sourceFindingId": "CROSS-RP-001"
+    },
+    {
+      "ticketId": "R7.CROSS.003.OFFLINE_QUEUE_NOT_STORE_SCOPED_SINGLE_GLOBAL",
+      "file": "workflow/tickets/R7.CROSS.003.OFFLINE_QUEUE_NOT_STORE_SCOPED_SINGLE_GLOBAL.json",
+      "sourceFindingId": "CROSS-RP-002"
+    },
+    {
+      "ticketId": "R7.CROSS.004.CATALOG_PRICE_CACHE_STALENESS_NO_TTL_OR",
+      "file": "workflow/tickets/R7.CROSS.004.CATALOG_PRICE_CACHE_STALENESS_NO_TTL_OR.json",
+      "sourceFindingId": "CROSS-RS-005"
+    },
+    {
+      "ticketId": "R7.POS.007.ENROLLDEVICESCREEN_HARDCODED_EXTERNAL_URL_S_DETECTED",
+      "file": "workflow/tickets/R7.POS.007.ENROLLDEVICESCREEN_HARDCODED_EXTERNAL_URL_S_DETECTED.json",
+      "sourceFindingId": "R7-POS-P1-CODE-001"
+    },
+    {
+      "ticketId": "R7.POS.008.ENROLLDEVICESCREEN_HIGH_COMPLEXITY_FILE_SIZE",
+      "file": "workflow/tickets/R7.POS.008.ENROLLDEVICESCREEN_HIGH_COMPLEXITY_FILE_SIZE.json",
+      "sourceFindingId": "R7-POS-P1-CODE-002"
+    },
+    {
+      "ticketId": "R7.POS.009.SPLASHSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.009.SPLASHSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-001"
+    },
+    {
+      "ticketId": "R7.POS.010.ENROLLDEVICESCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.010.ENROLLDEVICESCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-002"
+    },
+    {
+      "ticketId": "R7.POS.011.ENROLLDEVICESCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.011.ENROLLDEVICESCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-003"
+    },
+    {
+      "ticketId": "R7.POS.012.ENROLLDEVICESCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD",
+      "file": "workflow/tickets/R7.POS.012.ENROLLDEVICESCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD.json",
+      "sourceFindingId": "R7-POS-P2-CODE-004"
+    },
+    {
+      "ticketId": "R7.POS.013.ENROLLDEVICESCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.013.ENROLLDEVICESCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-005"
+    },
+    {
+      "ticketId": "R7.POS.014.FORCEUPDATESCREEN_TODO_FIXME_MARKERS_IN_PRODUCTION_PATH",
+      "file": "workflow/tickets/R7.POS.014.FORCEUPDATESCREEN_TODO_FIXME_MARKERS_IN_PRODUCTION_PATH.json",
+      "sourceFindingId": "R7-POS-P2-CODE-006"
+    },
+    {
+      "ticketId": "R7.POS.015.FORCEUPDATESCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.015.FORCEUPDATESCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-007"
+    },
+    {
+      "ticketId": "R7.POS.016.FORCEUPDATESCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD",
+      "file": "workflow/tickets/R7.POS.016.FORCEUPDATESCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD.json",
+      "sourceFindingId": "R7-POS-P2-CODE-008"
+    },
+    {
+      "ticketId": "R7.POS.017.FORCEUPDATESCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.017.FORCEUPDATESCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-009"
+    },
+    {
+      "ticketId": "R7.POS.018.DEVICEBLOCKEDSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.018.DEVICEBLOCKEDSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-010"
+    },
+    {
+      "ticketId": "R7.POS.019.DEVICEBLOCKEDSCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD",
+      "file": "workflow/tickets/R7.POS.019.DEVICEBLOCKEDSCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD.json",
+      "sourceFindingId": "R7-POS-P2-CODE-011"
+    },
+    {
+      "ticketId": "R7.POS.020.DEVICEBLOCKEDSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.020.DEVICEBLOCKEDSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-012"
+    },
+    {
+      "ticketId": "R7.POS.021.PAYMENTSETUPSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.021.PAYMENTSETUPSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-013"
+    },
+    {
+      "ticketId": "R7.POS.022.PAYMENTSETUPSCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD",
+      "file": "workflow/tickets/R7.POS.022.PAYMENTSETUPSCREEN_NETWORK_CALLS_WITHOUT_ABORT_GUARD.json",
+      "sourceFindingId": "R7-POS-P2-CODE-014"
+    },
+    {
+      "ticketId": "R7.POS.023.POSROOTLAYOUT_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.023.POSROOTLAYOUT_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-015"
+    },
+    {
+      "ticketId": "R7.POS.024.POSROOTLAYOUT_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.024.POSROOTLAYOUT_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-016"
+    },
+    {
+      "ticketId": "R7.POS.025.POSROOTLAYOUT_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.POS.025.POSROOTLAYOUT_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-POS-P2-CODE-017"
+    },
+    {
+      "ticketId": "R7.POS.026.POSROOTLAYOUT_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.026.POSROOTLAYOUT_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-018"
+    },
+    {
+      "ticketId": "R7.POS.027.SELLSCANSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.027.SELLSCANSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-019"
+    },
+    {
+      "ticketId": "R7.POS.028.SELLSCANSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.028.SELLSCANSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-020"
+    },
+    {
+      "ticketId": "R7.POS.029.SELLSCANSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.POS.029.SELLSCANSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-POS-P2-CODE-021"
+    },
+    {
+      "ticketId": "R7.POS.030.SELLSCANSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.030.SELLSCANSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-022"
+    },
+    {
+      "ticketId": "R7.POS.031.MENUSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.031.MENUSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-023"
+    },
+    {
+      "ticketId": "R7.POS.032.MENUSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.032.MENUSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-024"
+    },
+    {
+      "ticketId": "R7.POS.033.MENUSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.033.MENUSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-025"
+    },
+    {
+      "ticketId": "R7.POS.034.PURCHASESCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.034.PURCHASESCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-026"
+    },
+    {
+      "ticketId": "R7.POS.035.PURCHASESCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.035.PURCHASESCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-027"
+    },
+    {
+      "ticketId": "R7.POS.036.PURCHASESCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.POS.036.PURCHASESCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-POS-P2-CODE-028"
+    },
+    {
+      "ticketId": "R7.POS.037.PURCHASESCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.037.PURCHASESCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-029"
+    },
+    {
+      "ticketId": "R7.POS.038.REORDERSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.038.REORDERSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-030"
+    },
+    {
+      "ticketId": "R7.POS.039.REORDERSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.039.REORDERSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-031"
+    },
+    {
+      "ticketId": "R7.POS.040.REORDERSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.040.REORDERSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-032"
+    },
+    {
+      "ticketId": "R7.POS.041.CREDITSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.041.CREDITSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-033"
+    },
+    {
+      "ticketId": "R7.POS.042.CREDITSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.POS.042.CREDITSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-POS-P2-CODE-034"
+    },
+    {
+      "ticketId": "R7.POS.043.CREDITSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.043.CREDITSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-035"
+    },
+    {
+      "ticketId": "R7.POS.044.STAFFLOGINSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.044.STAFFLOGINSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-036"
+    },
+    {
+      "ticketId": "R7.POS.045.STAFFLOGINSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.045.STAFFLOGINSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-037"
+    },
+    {
+      "ticketId": "R7.POS.046.PAYMENTSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.046.PAYMENTSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-038"
+    },
+    {
+      "ticketId": "R7.POS.047.PAYMENTSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.047.PAYMENTSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-039"
+    },
+    {
+      "ticketId": "R7.POS.048.PAYMENTSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.POS.048.PAYMENTSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-POS-P2-CODE-040"
+    },
+    {
+      "ticketId": "R7.POS.049.PAYMENTSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.049.PAYMENTSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-041"
+    },
+    {
+      "ticketId": "R7.POS.050.SUCCESSPRINTSCREENV2_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.050.SUCCESSPRINTSCREENV2_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-042"
+    },
+    {
+      "ticketId": "R7.POS.051.SUCCESSPRINTSCREENV2_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.051.SUCCESSPRINTSCREENV2_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-043"
+    },
+    {
+      "ticketId": "R7.POS.052.SUCCESSPRINTSCREENV2_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.052.SUCCESSPRINTSCREENV2_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-044"
+    },
+    {
+      "ticketId": "R7.POS.053.BILLDETAILSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.053.BILLDETAILSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-045"
+    },
+    {
+      "ticketId": "R7.POS.054.BILLDETAILSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.054.BILLDETAILSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-046"
+    },
+    {
+      "ticketId": "R7.POS.055.GRNSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.055.GRNSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-047"
+    },
+    {
+      "ticketId": "R7.POS.056.GRNSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.056.GRNSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-048"
+    },
+    {
+      "ticketId": "R7.POS.057.GRNSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.057.GRNSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-049"
+    },
+    {
+      "ticketId": "R7.POS.058.INWARDSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.058.INWARDSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-050"
+    },
+    {
+      "ticketId": "R7.POS.059.INWARDSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.059.INWARDSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-051"
+    },
+    {
+      "ticketId": "R7.POS.060.PURCHASEHISTORYSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.060.PURCHASEHISTORYSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-052"
+    },
+    {
+      "ticketId": "R7.POS.061.OPENINGSTOCKSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.061.OPENINGSTOCKSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-053"
+    },
+    {
+      "ticketId": "R7.POS.062.OPENINGSTOCKSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.POS.062.OPENINGSTOCKSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-POS-P2-CODE-054"
+    },
+    {
+      "ticketId": "R7.POS.063.BARCODESHEETSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.063.BARCODESHEETSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-055"
+    },
+    {
+      "ticketId": "R7.POS.064.BARCODESHEETSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.064.BARCODESHEETSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-056"
+    },
+    {
+      "ticketId": "R7.POS.065.BARCODESHEETSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.065.BARCODESHEETSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-057"
+    },
+    {
+      "ticketId": "R7.POS.066.ORDERHISTORYSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.066.ORDERHISTORYSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-058"
+    },
+    {
+      "ticketId": "R7.POS.067.ORDERHISTORYSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.067.ORDERHISTORYSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-059"
+    },
+    {
+      "ticketId": "R7.POS.068.ORDERHISTORYSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.068.ORDERHISTORYSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-060"
+    },
+    {
+      "ticketId": "R7.POS.069.ORDERDETAILSCREEN_TODO_FIXME_MARKERS_IN_PRODUCTION_PATH",
+      "file": "workflow/tickets/R7.POS.069.ORDERDETAILSCREEN_TODO_FIXME_MARKERS_IN_PRODUCTION_PATH.json",
+      "sourceFindingId": "R7-POS-P2-CODE-061"
+    },
+    {
+      "ticketId": "R7.POS.070.ORDERDETAILSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.070.ORDERDETAILSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-062"
+    },
+    {
+      "ticketId": "R7.POS.071.ORDERDETAILSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.POS.071.ORDERDETAILSCREEN_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-POS-P2-CODE-063"
+    },
+    {
+      "ticketId": "R7.POS.072.ORDERDETAILSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.072.ORDERDETAILSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-064"
+    },
+    {
+      "ticketId": "R7.POS.073.REORDERSETTINGSSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.073.REORDERSETTINGSSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-065"
+    },
+    {
+      "ticketId": "R7.POS.074.REORDERSETTINGSSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.074.REORDERSETTINGSSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-066"
+    },
+    {
+      "ticketId": "R7.POS.075.REORDERSETTINGSSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.075.REORDERSETTINGSSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-067"
+    },
+    {
+      "ticketId": "R7.POS.076.REORDERPOLICIESSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.076.REORDERPOLICIESSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-068"
+    },
+    {
+      "ticketId": "R7.POS.077.REORDERPOLICIESSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.077.REORDERPOLICIESSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-069"
+    },
+    {
+      "ticketId": "R7.POS.078.REORDERPOLICIESSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.078.REORDERPOLICIESSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-070"
+    },
+    {
+      "ticketId": "R7.POS.079.SALESHISTORYSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.079.SALESHISTORYSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-071"
+    },
+    {
+      "ticketId": "R7.POS.080.SALESSTATEMENTSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.080.SALESSTATEMENTSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-072"
+    },
+    {
+      "ticketId": "R7.POS.081.SALESSTATEMENTSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.081.SALESSTATEMENTSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-073"
+    },
+    {
+      "ticketId": "R7.POS.082.STOCKSTATEMENTSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.082.STOCKSTATEMENTSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-074"
+    },
+    {
+      "ticketId": "R7.POS.083.STOCKSTATEMENTSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.POS.083.STOCKSTATEMENTSCREEN_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-POS-P2-CODE-075"
+    },
+    {
+      "ticketId": "R7.POS.084.STOCKSTATEMENTSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.POS.084.STOCKSTATEMENTSCREEN_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-POS-P2-CODE-076"
+    },
+    {
+      "ticketId": "R7.POS.085.DAILYREPORTSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW",
+      "file": "workflow/tickets/R7.POS.085.DAILYREPORTSCREEN_NATIVE_ALERT_CONFIRM_INTERACTION_IN_WORKFLOW.json",
+      "sourceFindingId": "R7-POS-P2-CODE-077"
+    },
+    {
+      "ticketId": "R7.POS.086.AIINSIGHTSSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.POS.086.AIINSIGHTSSCREEN_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-POS-P2-CODE-078"
+    },
+    {
+      "ticketId": "R7.POS.087.SPLASHSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.087.SPLASHSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-001"
+    },
+    {
+      "ticketId": "R7.POS.088.SPLASHSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.088.SPLASHSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-002"
+    },
+    {
+      "ticketId": "R7.POS.089.SPLASHSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.089.SPLASHSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-003"
+    },
+    {
+      "ticketId": "R7.POS.090.ENROLLDEVICESCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.090.ENROLLDEVICESCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-004"
+    },
+    {
+      "ticketId": "R7.POS.091.ENROLLDEVICESCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.091.ENROLLDEVICESCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-005"
+    },
+    {
+      "ticketId": "R7.POS.092.FORCEUPDATESCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.092.FORCEUPDATESCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-006"
+    },
+    {
+      "ticketId": "R7.POS.093.FORCEUPDATESCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.093.FORCEUPDATESCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-007"
+    },
+    {
+      "ticketId": "R7.POS.094.DEVICEBLOCKEDSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.094.DEVICEBLOCKEDSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-008"
+    },
+    {
+      "ticketId": "R7.POS.095.PAYMENTSETUPSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.095.PAYMENTSETUPSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-009"
+    },
+    {
+      "ticketId": "R7.POS.096.PAYMENTSETUPSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.096.PAYMENTSETUPSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-010"
+    },
+    {
+      "ticketId": "R7.POS.097.POSROOTLAYOUT_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.097.POSROOTLAYOUT_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-011"
+    },
+    {
+      "ticketId": "R7.POS.098.SELLSCANSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.098.SELLSCANSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-012"
+    },
+    {
+      "ticketId": "R7.POS.099.MENUSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.099.MENUSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-013"
+    },
+    {
+      "ticketId": "R7.POS.100.PURCHASESCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.100.PURCHASESCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-014"
+    },
+    {
+      "ticketId": "R7.POS.101.REORDERSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.101.REORDERSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-015"
+    },
+    {
+      "ticketId": "R7.POS.102.CREDITSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.102.CREDITSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-016"
+    },
+    {
+      "ticketId": "R7.POS.103.STAFFLOGINSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.103.STAFFLOGINSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-017"
+    },
+    {
+      "ticketId": "R7.POS.104.STAFFLOGINSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.104.STAFFLOGINSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-018"
+    },
+    {
+      "ticketId": "R7.POS.105.PAYMENTSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.105.PAYMENTSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-019"
+    },
+    {
+      "ticketId": "R7.POS.106.PAYMENTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.106.PAYMENTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-020"
+    },
+    {
+      "ticketId": "R7.POS.107.SUCCESSPRINTSCREENV2_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.107.SUCCESSPRINTSCREENV2_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-021"
+    },
+    {
+      "ticketId": "R7.POS.108.BILLDETAILSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.108.BILLDETAILSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-022"
+    },
+    {
+      "ticketId": "R7.POS.109.GRNSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.109.GRNSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-023"
+    },
+    {
+      "ticketId": "R7.POS.110.GRNSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.110.GRNSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-024"
+    },
+    {
+      "ticketId": "R7.POS.111.INWARDSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.111.INWARDSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-025"
+    },
+    {
+      "ticketId": "R7.POS.112.OPENINGSTOCKSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.112.OPENINGSTOCKSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-026"
+    },
+    {
+      "ticketId": "R7.POS.113.OPENINGSTOCKSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.113.OPENINGSTOCKSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-027"
+    },
+    {
+      "ticketId": "R7.POS.114.BARCODESHEETSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.114.BARCODESHEETSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-028"
+    },
+    {
+      "ticketId": "R7.POS.115.ORDERHISTORYSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.115.ORDERHISTORYSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-029"
+    },
+    {
+      "ticketId": "R7.POS.116.ORDERHISTORYSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.116.ORDERHISTORYSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-030"
+    },
+    {
+      "ticketId": "R7.POS.117.ORDERDETAILSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.117.ORDERDETAILSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-031"
+    },
+    {
+      "ticketId": "R7.POS.118.ORDERDETAILSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.118.ORDERDETAILSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-032"
+    },
+    {
+      "ticketId": "R7.POS.119.REORDERSETTINGSSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.119.REORDERSETTINGSSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-033"
+    },
+    {
+      "ticketId": "R7.POS.120.REORDERPOLICIESSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.120.REORDERPOLICIESSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-034"
+    },
+    {
+      "ticketId": "R7.POS.121.REORDERPOLICIESSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.121.REORDERPOLICIESSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-035"
+    },
+    {
+      "ticketId": "R7.POS.122.SALESHISTORYSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.122.SALESHISTORYSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-036"
+    },
+    {
+      "ticketId": "R7.POS.123.SALESSTATEMENTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.123.SALESSTATEMENTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-037"
+    },
+    {
+      "ticketId": "R7.POS.124.STOCKSTATEMENTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.124.STOCKSTATEMENTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-038"
+    },
+    {
+      "ticketId": "R7.POS.125.DAILYREPORTSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.125.DAILYREPORTSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-039"
+    },
+    {
+      "ticketId": "R7.POS.126.DAILYREPORTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.126.DAILYREPORTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-040"
+    },
+    {
+      "ticketId": "R7.POS.127.AIINSIGHTSSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.127.AIINSIGHTSSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-041"
+    },
+    {
+      "ticketId": "R7.POS.128.AIINSIGHTSSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.128.AIINSIGHTSSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-042"
+    },
+    {
+      "ticketId": "R7.POS.129.CUSTOMERLISTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.129.CUSTOMERLISTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-043"
+    },
+    {
+      "ticketId": "R7.POS.130.KHATASCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.130.KHATASCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-044"
+    },
+    {
+      "ticketId": "R7.POS.131.BNPLDUESSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.131.BNPLDUESSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-045"
+    },
+    {
+      "ticketId": "R7.POS.132.OVERDUEDUESSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.132.OVERDUEDUESSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-046"
+    },
+    {
+      "ticketId": "R7.POS.133.OVERDUEDUESSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.133.OVERDUEDUESSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-047"
+    },
+    {
+      "ticketId": "R7.POS.134.RETURNSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.134.RETURNSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-048"
+    },
+    {
+      "ticketId": "R7.POS.135.RETURNSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.135.RETURNSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-049"
+    },
+    {
+      "ticketId": "R7.POS.136.SHIFTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.136.SHIFTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-050"
+    },
+    {
+      "ticketId": "R7.POS.137.PRINTERSETTINGSSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.137.PRINTERSETTINGSSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-051"
+    },
+    {
+      "ticketId": "R7.POS.138.CHATLISTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.138.CHATLISTSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-052"
+    },
+    {
+      "ticketId": "R7.POS.139.CHATLISTSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.139.CHATLISTSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-053"
+    },
+    {
+      "ticketId": "R7.POS.140.CHATCONVERSATIONSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.140.CHATCONVERSATIONSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-054"
+    },
+    {
+      "ticketId": "R7.POS.141.CHATCONVERSATIONSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.141.CHATCONVERSATIONSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-055"
+    },
+    {
+      "ticketId": "R7.POS.142.BULKPURCHASECREDITSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.142.BULKPURCHASECREDITSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-056"
+    },
+    {
+      "ticketId": "R7.POS.143.BULKPURCHASECREDITSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.143.BULKPURCHASECREDITSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-057"
+    },
+    {
+      "ticketId": "R7.POS.144.BUYSCREEN_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.POS.144.BUYSCREEN_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-POS-P3-CODE-058"
+    },
+    {
+      "ticketId": "R7.POS.145.HELPSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.145.HELPSCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-059"
+    },
+    {
+      "ticketId": "R7.POS.146.HELPSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.POS.146.HELPSCREEN_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-POS-P3-CODE-060"
+    },
+    {
+      "ticketId": "R7.POS.147.UISHOWCASESCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.POS.147.UISHOWCASESCREEN_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-POS-P3-CODE-061"
+    },
+    {
+      "ticketId": "R7.POS.148.PURCHASEHISTORYSCREEN_UI_UX_PARITY_REVIEW_1",
+      "file": "workflow/tickets/R7.POS.148.PURCHASEHISTORYSCREEN_UI_UX_PARITY_REVIEW_1.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-001"
+    },
+    {
+      "ticketId": "R7.POS.149.OPENINGSTOCKSCREEN_UI_UX_PARITY_REVIEW_2",
+      "file": "workflow/tickets/R7.POS.149.OPENINGSTOCKSCREEN_UI_UX_PARITY_REVIEW_2.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-002"
+    },
+    {
+      "ticketId": "R7.POS.150.BARCODESHEETSCREEN_UI_UX_PARITY_REVIEW_3",
+      "file": "workflow/tickets/R7.POS.150.BARCODESHEETSCREEN_UI_UX_PARITY_REVIEW_3.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-003"
+    },
+    {
+      "ticketId": "R7.POS.151.ORDERHISTORYSCREEN_UI_UX_PARITY_REVIEW_4",
+      "file": "workflow/tickets/R7.POS.151.ORDERHISTORYSCREEN_UI_UX_PARITY_REVIEW_4.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-004"
+    },
+    {
+      "ticketId": "R7.POS.152.ORDERDETAILSCREEN_UI_UX_PARITY_REVIEW_5",
+      "file": "workflow/tickets/R7.POS.152.ORDERDETAILSCREEN_UI_UX_PARITY_REVIEW_5.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-005"
+    },
+    {
+      "ticketId": "R7.POS.153.REORDERSETTINGSSCREEN_UI_UX_PARITY_REVIEW_6",
+      "file": "workflow/tickets/R7.POS.153.REORDERSETTINGSSCREEN_UI_UX_PARITY_REVIEW_6.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-006"
+    },
+    {
+      "ticketId": "R7.POS.154.REORDERPOLICIESSCREEN_UI_UX_PARITY_REVIEW_7",
+      "file": "workflow/tickets/R7.POS.154.REORDERPOLICIESSCREEN_UI_UX_PARITY_REVIEW_7.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-007"
+    },
+    {
+      "ticketId": "R7.POS.155.SALESHISTORYSCREEN_UI_UX_PARITY_REVIEW_8",
+      "file": "workflow/tickets/R7.POS.155.SALESHISTORYSCREEN_UI_UX_PARITY_REVIEW_8.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-008"
+    },
+    {
+      "ticketId": "R7.POS.156.SALESSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_9",
+      "file": "workflow/tickets/R7.POS.156.SALESSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_9.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-009"
+    },
+    {
+      "ticketId": "R7.POS.157.STOCKSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_10",
+      "file": "workflow/tickets/R7.POS.157.STOCKSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_10.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-010"
+    },
+    {
+      "ticketId": "R7.POS.158.DAILYREPORTSCREEN_UI_UX_PARITY_REVIEW_11",
+      "file": "workflow/tickets/R7.POS.158.DAILYREPORTSCREEN_UI_UX_PARITY_REVIEW_11.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-011"
+    },
+    {
+      "ticketId": "R7.POS.159.AIINSIGHTSSCREEN_UI_UX_PARITY_REVIEW_12",
+      "file": "workflow/tickets/R7.POS.159.AIINSIGHTSSCREEN_UI_UX_PARITY_REVIEW_12.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-012"
+    },
+    {
+      "ticketId": "R7.POS.160.CUSTOMERLISTSCREEN_UI_UX_PARITY_REVIEW_13",
+      "file": "workflow/tickets/R7.POS.160.CUSTOMERLISTSCREEN_UI_UX_PARITY_REVIEW_13.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-013"
+    },
+    {
+      "ticketId": "R7.POS.161.CUSTOMERMANAGEMENTSCREEN_UI_UX_PARITY_REVIEW_14",
+      "file": "workflow/tickets/R7.POS.161.CUSTOMERMANAGEMENTSCREEN_UI_UX_PARITY_REVIEW_14.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-014"
+    },
+    {
+      "ticketId": "R7.POS.162.KHATASCREEN_UI_UX_PARITY_REVIEW_15",
+      "file": "workflow/tickets/R7.POS.162.KHATASCREEN_UI_UX_PARITY_REVIEW_15.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-015"
+    },
+    {
+      "ticketId": "R7.POS.163.BNPLDUESSCREEN_UI_UX_PARITY_REVIEW_16",
+      "file": "workflow/tickets/R7.POS.163.BNPLDUESSCREEN_UI_UX_PARITY_REVIEW_16.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-016"
+    },
+    {
+      "ticketId": "R7.POS.164.OVERDUEDUESSCREEN_UI_UX_PARITY_REVIEW_17",
+      "file": "workflow/tickets/R7.POS.164.OVERDUEDUESSCREEN_UI_UX_PARITY_REVIEW_17.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-017"
+    },
+    {
+      "ticketId": "R7.POS.165.RETURNSCREEN_UI_UX_PARITY_REVIEW_18",
+      "file": "workflow/tickets/R7.POS.165.RETURNSCREEN_UI_UX_PARITY_REVIEW_18.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-018"
+    },
+    {
+      "ticketId": "R7.POS.166.DAILYCLOSINGSCREEN_UI_UX_PARITY_REVIEW_19",
+      "file": "workflow/tickets/R7.POS.166.DAILYCLOSINGSCREEN_UI_UX_PARITY_REVIEW_19.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-019"
+    },
+    {
+      "ticketId": "R7.POS.167.SHIFTSCREEN_UI_UX_PARITY_REVIEW_20",
+      "file": "workflow/tickets/R7.POS.167.SHIFTSCREEN_UI_UX_PARITY_REVIEW_20.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-020"
+    },
+    {
+      "ticketId": "R7.POS.168.PRINTERSETTINGSSCREEN_UI_UX_PARITY_REVIEW_21",
+      "file": "workflow/tickets/R7.POS.168.PRINTERSETTINGSSCREEN_UI_UX_PARITY_REVIEW_21.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-021"
+    },
+    {
+      "ticketId": "R7.POS.169.CHATLISTSCREEN_UI_UX_PARITY_REVIEW_22",
+      "file": "workflow/tickets/R7.POS.169.CHATLISTSCREEN_UI_UX_PARITY_REVIEW_22.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-022"
+    },
+    {
+      "ticketId": "R7.POS.170.CHATCONVERSATIONSCREEN_UI_UX_PARITY_REVIEW_23",
+      "file": "workflow/tickets/R7.POS.170.CHATCONVERSATIONSCREEN_UI_UX_PARITY_REVIEW_23.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-023"
+    },
+    {
+      "ticketId": "R7.POS.171.BULKPURCHASECREDITSCREEN_UI_UX_PARITY_REVIEW_24",
+      "file": "workflow/tickets/R7.POS.171.BULKPURCHASECREDITSCREEN_UI_UX_PARITY_REVIEW_24.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-024"
+    },
+    {
+      "ticketId": "R7.POS.172.BUYSCREEN_UI_UX_PARITY_REVIEW_25",
+      "file": "workflow/tickets/R7.POS.172.BUYSCREEN_UI_UX_PARITY_REVIEW_25.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-025"
+    },
+    {
+      "ticketId": "R7.POS.173.HELPSCREEN_UI_UX_PARITY_REVIEW_26",
+      "file": "workflow/tickets/R7.POS.173.HELPSCREEN_UI_UX_PARITY_REVIEW_26.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-026"
+    },
+    {
+      "ticketId": "R7.POS.174.UISHOWCASESCREEN_UI_UX_PARITY_REVIEW_27",
+      "file": "workflow/tickets/R7.POS.174.UISHOWCASESCREEN_UI_UX_PARITY_REVIEW_27.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-027"
+    },
+    {
+      "ticketId": "R7.POS.175.SPLASHSCREEN_UI_UX_PARITY_REVIEW_28",
+      "file": "workflow/tickets/R7.POS.175.SPLASHSCREEN_UI_UX_PARITY_REVIEW_28.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-028"
+    },
+    {
+      "ticketId": "R7.POS.176.ENROLLDEVICESCREEN_UI_UX_PARITY_REVIEW_29",
+      "file": "workflow/tickets/R7.POS.176.ENROLLDEVICESCREEN_UI_UX_PARITY_REVIEW_29.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-029"
+    },
+    {
+      "ticketId": "R7.POS.177.FORCEUPDATESCREEN_UI_UX_PARITY_REVIEW_30",
+      "file": "workflow/tickets/R7.POS.177.FORCEUPDATESCREEN_UI_UX_PARITY_REVIEW_30.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-030"
+    },
+    {
+      "ticketId": "R7.POS.178.DEVICEBLOCKEDSCREEN_UI_UX_PARITY_REVIEW_31",
+      "file": "workflow/tickets/R7.POS.178.DEVICEBLOCKEDSCREEN_UI_UX_PARITY_REVIEW_31.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-031"
+    },
+    {
+      "ticketId": "R7.POS.179.PAYMENTSETUPSCREEN_UI_UX_PARITY_REVIEW_32",
+      "file": "workflow/tickets/R7.POS.179.PAYMENTSETUPSCREEN_UI_UX_PARITY_REVIEW_32.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-032"
+    },
+    {
+      "ticketId": "R7.POS.180.POSROOTLAYOUT_UI_UX_PARITY_REVIEW_33",
+      "file": "workflow/tickets/R7.POS.180.POSROOTLAYOUT_UI_UX_PARITY_REVIEW_33.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-033"
+    },
+    {
+      "ticketId": "R7.POS.181.SELLSCANSCREEN_UI_UX_PARITY_REVIEW_34",
+      "file": "workflow/tickets/R7.POS.181.SELLSCANSCREEN_UI_UX_PARITY_REVIEW_34.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-034"
+    },
+    {
+      "ticketId": "R7.POS.182.MENUSCREEN_UI_UX_PARITY_REVIEW_35",
+      "file": "workflow/tickets/R7.POS.182.MENUSCREEN_UI_UX_PARITY_REVIEW_35.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-035"
+    },
+    {
+      "ticketId": "R7.POS.183.PURCHASESCREEN_UI_UX_PARITY_REVIEW_36",
+      "file": "workflow/tickets/R7.POS.183.PURCHASESCREEN_UI_UX_PARITY_REVIEW_36.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-036"
+    },
+    {
+      "ticketId": "R7.POS.184.REORDERSCREEN_UI_UX_PARITY_REVIEW_37",
+      "file": "workflow/tickets/R7.POS.184.REORDERSCREEN_UI_UX_PARITY_REVIEW_37.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-037"
+    },
+    {
+      "ticketId": "R7.POS.185.CREDITSCREEN_UI_UX_PARITY_REVIEW_38",
+      "file": "workflow/tickets/R7.POS.185.CREDITSCREEN_UI_UX_PARITY_REVIEW_38.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-038"
+    },
+    {
+      "ticketId": "R7.POS.186.STAFFLOGINSCREEN_UI_UX_PARITY_REVIEW_39",
+      "file": "workflow/tickets/R7.POS.186.STAFFLOGINSCREEN_UI_UX_PARITY_REVIEW_39.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-039"
+    },
+    {
+      "ticketId": "R7.POS.187.PAYMENTSCREEN_UI_UX_PARITY_REVIEW_40",
+      "file": "workflow/tickets/R7.POS.187.PAYMENTSCREEN_UI_UX_PARITY_REVIEW_40.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-040"
+    },
+    {
+      "ticketId": "R7.POS.188.SUCCESSPRINTSCREENV2_UI_UX_PARITY_REVIEW_41",
+      "file": "workflow/tickets/R7.POS.188.SUCCESSPRINTSCREENV2_UI_UX_PARITY_REVIEW_41.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-041"
+    },
+    {
+      "ticketId": "R7.POS.189.BILLDETAILSCREEN_UI_UX_PARITY_REVIEW_42",
+      "file": "workflow/tickets/R7.POS.189.BILLDETAILSCREEN_UI_UX_PARITY_REVIEW_42.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-042"
+    },
+    {
+      "ticketId": "R7.POS.190.GRNSCREEN_UI_UX_PARITY_REVIEW_43",
+      "file": "workflow/tickets/R7.POS.190.GRNSCREEN_UI_UX_PARITY_REVIEW_43.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-043"
+    },
+    {
+      "ticketId": "R7.POS.191.INWARDSCREEN_UI_UX_PARITY_REVIEW_44",
+      "file": "workflow/tickets/R7.POS.191.INWARDSCREEN_UI_UX_PARITY_REVIEW_44.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-044"
+    },
+    {
+      "ticketId": "R7.POS.192.PURCHASEHISTORYSCREEN_UI_UX_PARITY_REVIEW_45",
+      "file": "workflow/tickets/R7.POS.192.PURCHASEHISTORYSCREEN_UI_UX_PARITY_REVIEW_45.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-045"
+    },
+    {
+      "ticketId": "R7.POS.193.OPENINGSTOCKSCREEN_UI_UX_PARITY_REVIEW_46",
+      "file": "workflow/tickets/R7.POS.193.OPENINGSTOCKSCREEN_UI_UX_PARITY_REVIEW_46.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-046"
+    },
+    {
+      "ticketId": "R7.POS.194.BARCODESHEETSCREEN_UI_UX_PARITY_REVIEW_47",
+      "file": "workflow/tickets/R7.POS.194.BARCODESHEETSCREEN_UI_UX_PARITY_REVIEW_47.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-047"
+    },
+    {
+      "ticketId": "R7.POS.195.ORDERHISTORYSCREEN_UI_UX_PARITY_REVIEW_48",
+      "file": "workflow/tickets/R7.POS.195.ORDERHISTORYSCREEN_UI_UX_PARITY_REVIEW_48.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-048"
+    },
+    {
+      "ticketId": "R7.POS.196.ORDERDETAILSCREEN_UI_UX_PARITY_REVIEW_49",
+      "file": "workflow/tickets/R7.POS.196.ORDERDETAILSCREEN_UI_UX_PARITY_REVIEW_49.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-049"
+    },
+    {
+      "ticketId": "R7.POS.197.REORDERSETTINGSSCREEN_UI_UX_PARITY_REVIEW_50",
+      "file": "workflow/tickets/R7.POS.197.REORDERSETTINGSSCREEN_UI_UX_PARITY_REVIEW_50.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-050"
+    },
+    {
+      "ticketId": "R7.POS.198.REORDERPOLICIESSCREEN_UI_UX_PARITY_REVIEW_51",
+      "file": "workflow/tickets/R7.POS.198.REORDERPOLICIESSCREEN_UI_UX_PARITY_REVIEW_51.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-051"
+    },
+    {
+      "ticketId": "R7.POS.199.SALESHISTORYSCREEN_UI_UX_PARITY_REVIEW_52",
+      "file": "workflow/tickets/R7.POS.199.SALESHISTORYSCREEN_UI_UX_PARITY_REVIEW_52.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-052"
+    },
+    {
+      "ticketId": "R7.POS.200.SALESSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_53",
+      "file": "workflow/tickets/R7.POS.200.SALESSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_53.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-053"
+    },
+    {
+      "ticketId": "R7.POS.201.STOCKSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_54",
+      "file": "workflow/tickets/R7.POS.201.STOCKSTATEMENTSCREEN_UI_UX_PARITY_REVIEW_54.json",
+      "sourceFindingId": "R7-POS-P3-AUTO-054"
+    },
+    {
+      "ticketId": "R7.RET.003.LOGINPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.003.LOGINPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-001"
+    },
+    {
+      "ticketId": "R7.RET.004.LOGINPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW",
+      "file": "workflow/tickets/R7.RET.004.LOGINPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW.json",
+      "sourceFindingId": "R7-RET-P2-CODE-002"
+    },
+    {
+      "ticketId": "R7.RET.005.REGISTERPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.005.REGISTERPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-003"
+    },
+    {
+      "ticketId": "R7.RET.006.REGISTERPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW",
+      "file": "workflow/tickets/R7.RET.006.REGISTERPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW.json",
+      "sourceFindingId": "R7-RET-P2-CODE-004"
+    },
+    {
+      "ticketId": "R7.RET.007.FORGOTPASSWORDPAGE_NETWORK_CALLS_WITHOUT_ABORT_GUARD",
+      "file": "workflow/tickets/R7.RET.007.FORGOTPASSWORDPAGE_NETWORK_CALLS_WITHOUT_ABORT_GUARD.json",
+      "sourceFindingId": "R7-RET-P2-CODE-005"
+    },
+    {
+      "ticketId": "R7.RET.008.FORGOTPASSWORDPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.RET.008.FORGOTPASSWORDPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-RET-P2-CODE-006"
+    },
+    {
+      "ticketId": "R7.RET.009.RESETPASSWORDPAGE_NETWORK_CALLS_WITHOUT_ABORT_GUARD",
+      "file": "workflow/tickets/R7.RET.009.RESETPASSWORDPAGE_NETWORK_CALLS_WITHOUT_ABORT_GUARD.json",
+      "sourceFindingId": "R7-RET-P2-CODE-007"
+    },
+    {
+      "ticketId": "R7.RET.010.DASHBOARDPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.RET.010.DASHBOARDPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-RET-P2-CODE-008"
+    },
+    {
+      "ticketId": "R7.RET.011.PRODUCTSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.011.PRODUCTSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-009"
+    },
+    {
+      "ticketId": "R7.RET.012.PRODUCTSPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.RET.012.PRODUCTSPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-RET-P2-CODE-010"
+    },
+    {
+      "ticketId": "R7.RET.013.IMPORTPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.013.IMPORTPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-011"
+    },
+    {
+      "ticketId": "R7.RET.014.IMPORTPAGE_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.RET.014.IMPORTPAGE_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-RET-P2-CODE-012"
+    },
+    {
+      "ticketId": "R7.RET.015.IMPORTPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.RET.015.IMPORTPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-RET-P2-CODE-013"
+    },
+    {
+      "ticketId": "R7.RET.016.IMPORTPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.RET.016.IMPORTPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-RET-P2-CODE-014"
+    },
+    {
+      "ticketId": "R7.RET.017.INVENTORYPAGE_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.RET.017.INVENTORYPAGE_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-RET-P2-CODE-015"
+    },
+    {
+      "ticketId": "R7.RET.018.INVENTORYPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.RET.018.INVENTORYPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-RET-P2-CODE-016"
+    },
+    {
+      "ticketId": "R7.RET.019.SUPPLIERSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.019.SUPPLIERSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-017"
+    },
+    {
+      "ticketId": "R7.RET.020.SUPPLIERSPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.RET.020.SUPPLIERSPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-RET-P2-CODE-018"
+    },
+    {
+      "ticketId": "R7.RET.021.COMPLIANCEPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.RET.021.COMPLIANCEPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-RET-P2-CODE-019"
+    },
+    {
+      "ticketId": "R7.RET.022.SETTINGSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.022.SETTINGSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-020"
+    },
+    {
+      "ticketId": "R7.RET.023.PAYMENTSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.023.PAYMENTSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-021"
+    },
+    {
+      "ticketId": "R7.RET.024.PAYMENTSPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.RET.024.PAYMENTSPAGE_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-RET-P2-CODE-022"
+    },
+    {
+      "ticketId": "R7.RET.025.PAYMENTSPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.RET.025.PAYMENTSPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-RET-P2-CODE-023"
+    },
+    {
+      "ticketId": "R7.RET.026.DEVICEACTIVATIONPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.026.DEVICEACTIVATIONPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-024"
+    },
+    {
+      "ticketId": "R7.RET.027.DEVICEACTIVATIONPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.RET.027.DEVICEACTIVATIONPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-RET-P2-CODE-025"
+    },
+    {
+      "ticketId": "R7.RET.028.INVOICESPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.028.INVOICESPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-026"
+    },
+    {
+      "ticketId": "R7.RET.029.INVOICESPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.RET.029.INVOICESPAGE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-RET-P2-CODE-027"
+    },
+    {
+      "ticketId": "R7.RET.030.CREDITDASHBOARDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.030.CREDITDASHBOARDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-028"
+    },
+    {
+      "ticketId": "R7.RET.031.PURCHASEORDERSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.031.PURCHASEORDERSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-029"
+    },
+    {
+      "ticketId": "R7.RET.032.REORDERPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.032.REORDERPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-030"
+    },
+    {
+      "ticketId": "R7.RET.033.ANALYTICSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.RET.033.ANALYTICSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-RET-P2-CODE-031"
+    },
+    {
+      "ticketId": "R7.RET.034.LOGINPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.034.LOGINPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-001"
+    },
+    {
+      "ticketId": "R7.RET.035.LOGINPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.035.LOGINPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-002"
+    },
+    {
+      "ticketId": "R7.RET.036.REGISTERPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.036.REGISTERPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-003"
+    },
+    {
+      "ticketId": "R7.RET.037.REGISTERPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.037.REGISTERPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-004"
+    },
+    {
+      "ticketId": "R7.RET.038.FORGOTPASSWORDPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.038.FORGOTPASSWORDPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-005"
+    },
+    {
+      "ticketId": "R7.RET.039.FORGOTPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.039.FORGOTPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-006"
+    },
+    {
+      "ticketId": "R7.RET.040.RESETPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.040.RESETPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-007"
+    },
+    {
+      "ticketId": "R7.RET.041.RESETPASSWORDPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.041.RESETPASSWORDPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-008"
+    },
+    {
+      "ticketId": "R7.RET.042.DASHBOARDPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.042.DASHBOARDPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-009"
+    },
+    {
+      "ticketId": "R7.RET.043.DASHBOARDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.043.DASHBOARDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-010"
+    },
+    {
+      "ticketId": "R7.RET.044.PRODUCTSPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.044.PRODUCTSPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-011"
+    },
+    {
+      "ticketId": "R7.RET.045.PRODUCTSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.045.PRODUCTSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-012"
+    },
+    {
+      "ticketId": "R7.RET.046.IMPORTPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.046.IMPORTPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-013"
+    },
+    {
+      "ticketId": "R7.RET.047.INVENTORYPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.047.INVENTORYPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-014"
+    },
+    {
+      "ticketId": "R7.RET.048.INVENTORYPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.048.INVENTORYPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-015"
+    },
+    {
+      "ticketId": "R7.RET.049.SUPPLIERSPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.049.SUPPLIERSPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-016"
+    },
+    {
+      "ticketId": "R7.RET.050.SUPPLIERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.050.SUPPLIERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-017"
+    },
+    {
+      "ticketId": "R7.RET.051.SUPPLIERCATALOGPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.051.SUPPLIERCATALOGPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-018"
+    },
+    {
+      "ticketId": "R7.RET.052.SUPPLIERCATALOGPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.052.SUPPLIERCATALOGPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-019"
+    },
+    {
+      "ticketId": "R7.RET.053.SUPPLIERCATALOGPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.053.SUPPLIERCATALOGPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-020"
+    },
+    {
+      "ticketId": "R7.RET.054.COMPLIANCEPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.054.COMPLIANCEPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-021"
+    },
+    {
+      "ticketId": "R7.RET.055.COMPLIANCEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.055.COMPLIANCEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-022"
+    },
+    {
+      "ticketId": "R7.RET.056.COMPLIANCEPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.056.COMPLIANCEPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-023"
+    },
+    {
+      "ticketId": "R7.RET.057.SETTINGSPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.057.SETTINGSPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-024"
+    },
+    {
+      "ticketId": "R7.RET.058.SETTINGSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.058.SETTINGSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-025"
+    },
+    {
+      "ticketId": "R7.RET.059.PAYMENTSPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.059.PAYMENTSPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-026"
+    },
+    {
+      "ticketId": "R7.RET.060.PAYMENTSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.060.PAYMENTSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-027"
+    },
+    {
+      "ticketId": "R7.RET.061.DEVICEACTIVATIONPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.061.DEVICEACTIVATIONPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-028"
+    },
+    {
+      "ticketId": "R7.RET.062.DEVICEACTIVATIONPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.062.DEVICEACTIVATIONPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-029"
+    },
+    {
+      "ticketId": "R7.RET.063.INVOICESPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.063.INVOICESPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-030"
+    },
+    {
+      "ticketId": "R7.RET.064.INVOICESPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.064.INVOICESPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-031"
+    },
+    {
+      "ticketId": "R7.RET.065.RECONCILIATIONPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.065.RECONCILIATIONPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-032"
+    },
+    {
+      "ticketId": "R7.RET.066.RECONCILIATIONPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.066.RECONCILIATIONPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-033"
+    },
+    {
+      "ticketId": "R7.RET.067.CREDITDASHBOARDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.067.CREDITDASHBOARDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-034"
+    },
+    {
+      "ticketId": "R7.RET.068.CREDITDASHBOARDPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.068.CREDITDASHBOARDPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-035"
+    },
+    {
+      "ticketId": "R7.RET.069.PURCHASEORDERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.069.PURCHASEORDERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-036"
+    },
+    {
+      "ticketId": "R7.RET.070.PURCHASEORDERSPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.070.PURCHASEORDERSPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-037"
+    },
+    {
+      "ticketId": "R7.RET.071.REORDERPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.071.REORDERPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-038"
+    },
+    {
+      "ticketId": "R7.RET.072.REORDERPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.072.REORDERPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-039"
+    },
+    {
+      "ticketId": "R7.RET.073.ANALYTICSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.073.ANALYTICSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-040"
+    },
+    {
+      "ticketId": "R7.RET.074.ANALYTICSPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.074.ANALYTICSPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-041"
+    },
+    {
+      "ticketId": "R7.RET.075.CUSTOMERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.075.CUSTOMERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-042"
+    },
+    {
+      "ticketId": "R7.RET.076.CUSTOMERSPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.076.CUSTOMERSPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-043"
+    },
+    {
+      "ticketId": "R7.RET.077.CHATPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.077.CHATPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-044"
+    },
+    {
+      "ticketId": "R7.RET.078.CHATPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.078.CHATPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-045"
+    },
+    {
+      "ticketId": "R7.RET.079.NOTIFICATIONSPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.079.NOTIFICATIONSPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-046"
+    },
+    {
+      "ticketId": "R7.RET.080.NOTIFICATIONSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.080.NOTIFICATIONSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-047"
+    },
+    {
+      "ticketId": "R7.RET.081.SUPPLIERQUEUEPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.081.SUPPLIERQUEUEPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-048"
+    },
+    {
+      "ticketId": "R7.RET.082.SUPPLIERQUEUEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.082.SUPPLIERQUEUEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-049"
+    },
+    {
+      "ticketId": "R7.RET.083.SUPPLIERQUEUEPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.RET.083.SUPPLIERQUEUEPAGE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-RET-P3-CODE-050"
+    },
+    {
+      "ticketId": "R7.RET.084.PRODUCTQUEUEPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.084.PRODUCTQUEUEPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-051"
+    },
+    {
+      "ticketId": "R7.RET.085.PRODUCTQUEUEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.085.PRODUCTQUEUEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-052"
+    },
+    {
+      "ticketId": "R7.RET.086.ALLPAGESPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.086.ALLPAGESPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-053"
+    },
+    {
+      "ticketId": "R7.RET.087.RETAILERONBOARDINGPAGE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.RET.087.RETAILERONBOARDINGPAGE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-RET-P3-CODE-054"
+    },
+    {
+      "ticketId": "R7.RET.088.RETAILERONBOARDINGPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.RET.088.RETAILERONBOARDINGPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-RET-P3-CODE-055"
+    },
+    {
+      "ticketId": "R7.RET.089.SUPPLIERQUEUEPAGE_UI_UX_PARITY_REVIEW_1",
+      "file": "workflow/tickets/R7.RET.089.SUPPLIERQUEUEPAGE_UI_UX_PARITY_REVIEW_1.json",
+      "sourceFindingId": "R7-RET-P3-AUTO-001"
+    },
+    {
+      "ticketId": "R7.SUP.007.AUTHLAYOUT_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW",
+      "file": "workflow/tickets/R7.SUP.007.AUTHLAYOUT_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-001"
+    },
+    {
+      "ticketId": "R7.SUP.008.LOGINPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.008.LOGINPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-002"
+    },
+    {
+      "ticketId": "R7.SUP.009.FORGOTPASSWORDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.009.FORGOTPASSWORDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-003"
+    },
+    {
+      "ticketId": "R7.SUP.010.RESETPASSWORDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.010.RESETPASSWORDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-004"
+    },
+    {
+      "ticketId": "R7.SUP.011.PENDINGAPPROVALPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.011.PENDINGAPPROVALPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-005"
+    },
+    {
+      "ticketId": "R7.SUP.012.REGISTERLAYOUT_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.012.REGISTERLAYOUT_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-006"
+    },
+    {
+      "ticketId": "R7.SUP.013.REGISTERLAYOUT_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW",
+      "file": "workflow/tickets/R7.SUP.013.REGISTERLAYOUT_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-007"
+    },
+    {
+      "ticketId": "R7.SUP.014.REGISTERPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.014.REGISTERPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-008"
+    },
+    {
+      "ticketId": "R7.SUP.015.REGISTERPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW",
+      "file": "workflow/tickets/R7.SUP.015.REGISTERPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-009"
+    },
+    {
+      "ticketId": "R7.SUP.016.DASHBOARDLAYOUT_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.016.DASHBOARDLAYOUT_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-010"
+    },
+    {
+      "ticketId": "R7.SUP.017.DASHBOARDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.017.DASHBOARDPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-011"
+    },
+    {
+      "ticketId": "R7.SUP.018.PRODUCTSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.018.PRODUCTSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-012"
+    },
+    {
+      "ticketId": "R7.SUP.019.ORDERSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.019.ORDERSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-013"
+    },
+    {
+      "ticketId": "R7.SUP.020.KYCPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.020.KYCPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-014"
+    },
+    {
+      "ticketId": "R7.SUP.021.EARNINGSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.021.EARNINGSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-015"
+    },
+    {
+      "ticketId": "R7.SUP.022.INVOICESPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.022.INVOICESPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-016"
+    },
+    {
+      "ticketId": "R7.SUP.023.NOTIFICATIONSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SUP.023.NOTIFICATIONSPAGE_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-017"
+    },
+    {
+      "ticketId": "R7.SUP.024.NOTIFICATIONSPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW",
+      "file": "workflow/tickets/R7.SUP.024.NOTIFICATIONSPAGE_BROWSER_STORAGE_ACCESS_REQUIRES_POLICY_REVIEW.json",
+      "sourceFindingId": "R7-SUP-P2-CODE-018"
+    },
+    {
+      "ticketId": "R7.SUP.025.DASHBOARDPAGE_STATE_API_CONSISTENCY_REVIEW_1",
+      "file": "workflow/tickets/R7.SUP.025.DASHBOARDPAGE_STATE_API_CONSISTENCY_REVIEW_1.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-001"
+    },
+    {
+      "ticketId": "R7.SUP.026.PRODUCTSPAGE_STATE_API_CONSISTENCY_REVIEW_2",
+      "file": "workflow/tickets/R7.SUP.026.PRODUCTSPAGE_STATE_API_CONSISTENCY_REVIEW_2.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-002"
+    },
+    {
+      "ticketId": "R7.SUP.027.UPLOADPAGE_STATE_API_CONSISTENCY_REVIEW_3",
+      "file": "workflow/tickets/R7.SUP.027.UPLOADPAGE_STATE_API_CONSISTENCY_REVIEW_3.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-003"
+    },
+    {
+      "ticketId": "R7.SUP.028.ORDERSPAGE_STATE_API_CONSISTENCY_REVIEW_4",
+      "file": "workflow/tickets/R7.SUP.028.ORDERSPAGE_STATE_API_CONSISTENCY_REVIEW_4.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-004"
+    },
+    {
+      "ticketId": "R7.SUP.029.KYCPAGE_STATE_API_CONSISTENCY_REVIEW_5",
+      "file": "workflow/tickets/R7.SUP.029.KYCPAGE_STATE_API_CONSISTENCY_REVIEW_5.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-005"
+    },
+    {
+      "ticketId": "R7.SUP.030.EARNINGSPAGE_STATE_API_CONSISTENCY_REVIEW_6",
+      "file": "workflow/tickets/R7.SUP.030.EARNINGSPAGE_STATE_API_CONSISTENCY_REVIEW_6.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-006"
+    },
+    {
+      "ticketId": "R7.SUP.031.INVOICESPAGE_STATE_API_CONSISTENCY_REVIEW_7",
+      "file": "workflow/tickets/R7.SUP.031.INVOICESPAGE_STATE_API_CONSISTENCY_REVIEW_7.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-007"
+    },
+    {
+      "ticketId": "R7.SUP.032.NOTIFICATIONSPAGE_STATE_API_CONSISTENCY_REVIEW_8",
+      "file": "workflow/tickets/R7.SUP.032.NOTIFICATIONSPAGE_STATE_API_CONSISTENCY_REVIEW_8.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-008"
+    },
+    {
+      "ticketId": "R7.SUP.033.CHATPAGE_STATE_API_CONSISTENCY_REVIEW_9",
+      "file": "workflow/tickets/R7.SUP.033.CHATPAGE_STATE_API_CONSISTENCY_REVIEW_9.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-009"
+    },
+    {
+      "ticketId": "R7.SUP.034.BNPLORDERSPAGE_STATE_API_CONSISTENCY_REVIEW_10",
+      "file": "workflow/tickets/R7.SUP.034.BNPLORDERSPAGE_STATE_API_CONSISTENCY_REVIEW_10.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-010"
+    },
+    {
+      "ticketId": "R7.SUP.035.PROFILEPAGE_STATE_API_CONSISTENCY_REVIEW_11",
+      "file": "workflow/tickets/R7.SUP.035.PROFILEPAGE_STATE_API_CONSISTENCY_REVIEW_11.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-011"
+    },
+    {
+      "ticketId": "R7.SUP.036.ROOTPAGE_STATE_API_CONSISTENCY_REVIEW_12",
+      "file": "workflow/tickets/R7.SUP.036.ROOTPAGE_STATE_API_CONSISTENCY_REVIEW_12.json",
+      "sourceFindingId": "R7-SUP-P2-AUTO-012"
+    },
+    {
+      "ticketId": "R7.SUP.037.APPERROR_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.SUP.037.APPERROR_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-001"
+    },
+    {
+      "ticketId": "R7.SUP.038.GLOBALERROR_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.SUP.038.GLOBALERROR_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-002"
+    },
+    {
+      "ticketId": "R7.SUP.039.GLOBALERROR_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.039.GLOBALERROR_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-003"
+    },
+    {
+      "ticketId": "R7.SUP.040.LOGINPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.040.LOGINPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-004"
+    },
+    {
+      "ticketId": "R7.SUP.041.FORGOTPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.041.FORGOTPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-005"
+    },
+    {
+      "ticketId": "R7.SUP.042.RESETPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.042.RESETPASSWORDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-006"
+    },
+    {
+      "ticketId": "R7.SUP.043.REGISTERLAYOUT_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.043.REGISTERLAYOUT_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-007"
+    },
+    {
+      "ticketId": "R7.SUP.044.REGISTERPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.044.REGISTERPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-008"
+    },
+    {
+      "ticketId": "R7.SUP.045.DASHBOARDLAYOUT_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.045.DASHBOARDLAYOUT_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-009"
+    },
+    {
+      "ticketId": "R7.SUP.046.DASHBOARDERROR_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.SUP.046.DASHBOARDERROR_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-010"
+    },
+    {
+      "ticketId": "R7.SUP.047.DASHBOARDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.047.DASHBOARDPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-011"
+    },
+    {
+      "ticketId": "R7.SUP.048.PRODUCTSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.048.PRODUCTSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-012"
+    },
+    {
+      "ticketId": "R7.SUP.049.UPLOADPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.049.UPLOADPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-013"
+    },
+    {
+      "ticketId": "R7.SUP.050.ORDERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.050.ORDERSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-014"
+    },
+    {
+      "ticketId": "R7.SUP.051.KYCPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.051.KYCPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-015"
+    },
+    {
+      "ticketId": "R7.SUP.052.EARNINGSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.052.EARNINGSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-016"
+    },
+    {
+      "ticketId": "R7.SUP.053.INVOICESPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.053.INVOICESPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-017"
+    },
+    {
+      "ticketId": "R7.SUP.054.NOTIFICATIONSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.054.NOTIFICATIONSPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-018"
+    },
+    {
+      "ticketId": "R7.SUP.055.PROFILEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SUP.055.PROFILEPAGE_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SUP-P3-CODE-019"
+    },
+    {
+      "ticketId": "R7.SUP.056.PRODUCTSPAGE_UI_UX_PARITY_REVIEW_13",
+      "file": "workflow/tickets/R7.SUP.056.PRODUCTSPAGE_UI_UX_PARITY_REVIEW_13.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-013"
+    },
+    {
+      "ticketId": "R7.SUP.057.UPLOADPAGE_UI_UX_PARITY_REVIEW_14",
+      "file": "workflow/tickets/R7.SUP.057.UPLOADPAGE_UI_UX_PARITY_REVIEW_14.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-014"
+    },
+    {
+      "ticketId": "R7.SUP.058.ORDERSPAGE_UI_UX_PARITY_REVIEW_15",
+      "file": "workflow/tickets/R7.SUP.058.ORDERSPAGE_UI_UX_PARITY_REVIEW_15.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-015"
+    },
+    {
+      "ticketId": "R7.SUP.059.KYCPAGE_UI_UX_PARITY_REVIEW_16",
+      "file": "workflow/tickets/R7.SUP.059.KYCPAGE_UI_UX_PARITY_REVIEW_16.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-016"
+    },
+    {
+      "ticketId": "R7.SUP.060.EARNINGSPAGE_UI_UX_PARITY_REVIEW_17",
+      "file": "workflow/tickets/R7.SUP.060.EARNINGSPAGE_UI_UX_PARITY_REVIEW_17.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-017"
+    },
+    {
+      "ticketId": "R7.SUP.061.INVOICESPAGE_UI_UX_PARITY_REVIEW_18",
+      "file": "workflow/tickets/R7.SUP.061.INVOICESPAGE_UI_UX_PARITY_REVIEW_18.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-018"
+    },
+    {
+      "ticketId": "R7.SUP.062.NOTIFICATIONSPAGE_UI_UX_PARITY_REVIEW_19",
+      "file": "workflow/tickets/R7.SUP.062.NOTIFICATIONSPAGE_UI_UX_PARITY_REVIEW_19.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-019"
+    },
+    {
+      "ticketId": "R7.SUP.063.CHATPAGE_UI_UX_PARITY_REVIEW_20",
+      "file": "workflow/tickets/R7.SUP.063.CHATPAGE_UI_UX_PARITY_REVIEW_20.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-020"
+    },
+    {
+      "ticketId": "R7.SUP.064.BNPLORDERSPAGE_UI_UX_PARITY_REVIEW_21",
+      "file": "workflow/tickets/R7.SUP.064.BNPLORDERSPAGE_UI_UX_PARITY_REVIEW_21.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-021"
+    },
+    {
+      "ticketId": "R7.SUP.065.PROFILEPAGE_UI_UX_PARITY_REVIEW_22",
+      "file": "workflow/tickets/R7.SUP.065.PROFILEPAGE_UI_UX_PARITY_REVIEW_22.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-022"
+    },
+    {
+      "ticketId": "R7.SUP.066.ROOTPAGE_UI_UX_PARITY_REVIEW_23",
+      "file": "workflow/tickets/R7.SUP.066.ROOTPAGE_UI_UX_PARITY_REVIEW_23.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-023"
+    },
+    {
+      "ticketId": "R7.SUP.067.ROOTLAYOUT_UI_UX_PARITY_REVIEW_24",
+      "file": "workflow/tickets/R7.SUP.067.ROOTLAYOUT_UI_UX_PARITY_REVIEW_24.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-024"
+    },
+    {
+      "ticketId": "R7.SUP.068.APPERROR_UI_UX_PARITY_REVIEW_25",
+      "file": "workflow/tickets/R7.SUP.068.APPERROR_UI_UX_PARITY_REVIEW_25.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-025"
+    },
+    {
+      "ticketId": "R7.SUP.069.GLOBALERROR_UI_UX_PARITY_REVIEW_26",
+      "file": "workflow/tickets/R7.SUP.069.GLOBALERROR_UI_UX_PARITY_REVIEW_26.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-026"
+    },
+    {
+      "ticketId": "R7.SUP.070.NOTFOUND_UI_UX_PARITY_REVIEW_27",
+      "file": "workflow/tickets/R7.SUP.070.NOTFOUND_UI_UX_PARITY_REVIEW_27.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-027"
+    },
+    {
+      "ticketId": "R7.SUP.071.AUTHLAYOUT_UI_UX_PARITY_REVIEW_28",
+      "file": "workflow/tickets/R7.SUP.071.AUTHLAYOUT_UI_UX_PARITY_REVIEW_28.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-028"
+    },
+    {
+      "ticketId": "R7.SUP.072.LOGINPAGE_UI_UX_PARITY_REVIEW_29",
+      "file": "workflow/tickets/R7.SUP.072.LOGINPAGE_UI_UX_PARITY_REVIEW_29.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-029"
+    },
+    {
+      "ticketId": "R7.SUP.073.FORGOTPASSWORDPAGE_UI_UX_PARITY_REVIEW_30",
+      "file": "workflow/tickets/R7.SUP.073.FORGOTPASSWORDPAGE_UI_UX_PARITY_REVIEW_30.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-030"
+    },
+    {
+      "ticketId": "R7.SUP.074.RESETPASSWORDPAGE_UI_UX_PARITY_REVIEW_31",
+      "file": "workflow/tickets/R7.SUP.074.RESETPASSWORDPAGE_UI_UX_PARITY_REVIEW_31.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-031"
+    },
+    {
+      "ticketId": "R7.SUP.075.PENDINGAPPROVALPAGE_UI_UX_PARITY_REVIEW_32",
+      "file": "workflow/tickets/R7.SUP.075.PENDINGAPPROVALPAGE_UI_UX_PARITY_REVIEW_32.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-032"
+    },
+    {
+      "ticketId": "R7.SUP.076.ONBOARDPAGE_UI_UX_PARITY_REVIEW_33",
+      "file": "workflow/tickets/R7.SUP.076.ONBOARDPAGE_UI_UX_PARITY_REVIEW_33.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-033"
+    },
+    {
+      "ticketId": "R7.SUP.077.REGISTERLAYOUT_UI_UX_PARITY_REVIEW_34",
+      "file": "workflow/tickets/R7.SUP.077.REGISTERLAYOUT_UI_UX_PARITY_REVIEW_34.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-034"
+    },
+    {
+      "ticketId": "R7.SUP.078.REGISTERPAGE_UI_UX_PARITY_REVIEW_35",
+      "file": "workflow/tickets/R7.SUP.078.REGISTERPAGE_UI_UX_PARITY_REVIEW_35.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-035"
+    },
+    {
+      "ticketId": "R7.SUP.079.HELPLAYOUT_UI_UX_PARITY_REVIEW_36",
+      "file": "workflow/tickets/R7.SUP.079.HELPLAYOUT_UI_UX_PARITY_REVIEW_36.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-036"
+    },
+    {
+      "ticketId": "R7.SUP.080.HELPPAGE_UI_UX_PARITY_REVIEW_37",
+      "file": "workflow/tickets/R7.SUP.080.HELPPAGE_UI_UX_PARITY_REVIEW_37.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-037"
+    },
+    {
+      "ticketId": "R7.SUP.081.DASHBOARDLAYOUT_UI_UX_PARITY_REVIEW_38",
+      "file": "workflow/tickets/R7.SUP.081.DASHBOARDLAYOUT_UI_UX_PARITY_REVIEW_38.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-038"
+    },
+    {
+      "ticketId": "R7.SUP.082.DASHBOARDERROR_UI_UX_PARITY_REVIEW_39",
+      "file": "workflow/tickets/R7.SUP.082.DASHBOARDERROR_UI_UX_PARITY_REVIEW_39.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-039"
+    },
+    {
+      "ticketId": "R7.SUP.083.DASHBOARDLOADING_UI_UX_PARITY_REVIEW_40",
+      "file": "workflow/tickets/R7.SUP.083.DASHBOARDLOADING_UI_UX_PARITY_REVIEW_40.json",
+      "sourceFindingId": "R7-SUP-P3-AUTO-040"
+    },
+    {
+      "ticketId": "R7.SA.010.STORESTAB_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.SA.010.STORESTAB_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-SA-P2-CODE-001"
+    },
+    {
+      "ticketId": "R7.SA.011.SUPPLIERSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.011.SUPPLIERSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-002"
+    },
+    {
+      "ticketId": "R7.SA.012.ANALYTICSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.012.ANALYTICSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-003"
+    },
+    {
+      "ticketId": "R7.SA.013.ANALYTICSTAB_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.SA.013.ANALYTICSTAB_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-SA-P2-CODE-004"
+    },
+    {
+      "ticketId": "R7.SA.014.SETTINGSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.014.SETTINGSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-005"
+    },
+    {
+      "ticketId": "R7.SA.015.REGISTRATIONSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.015.REGISTRATIONSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-006"
+    },
+    {
+      "ticketId": "R7.SA.016.STAFFTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.016.STAFFTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-007"
+    },
+    {
+      "ticketId": "R7.SA.017.GRNALERTSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.017.GRNALERTSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-008"
+    },
+    {
+      "ticketId": "R7.SA.018.INVOICESTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.018.INVOICESTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-009"
+    },
+    {
+      "ticketId": "R7.SA.019.REFUNDSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS",
+      "file": "workflow/tickets/R7.SA.019.REFUNDSTAB_TYPE_SAFETY_GAP_VIA_ANY_CASTS.json",
+      "sourceFindingId": "R7-SA-P2-CODE-010"
+    },
+    {
+      "ticketId": "R7.SA.020.MONITORINGTAB_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.SA.020.MONITORINGTAB_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-SA-P2-CODE-011"
+    },
+    {
+      "ticketId": "R7.SA.021.QUALITYDASHBOARDTAB_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION",
+      "file": "workflow/tickets/R7.SA.021.QUALITYDASHBOARDTAB_POLLING_TIMER_LIFECYCLE_NEEDS_PARITY_VALIDATION.json",
+      "sourceFindingId": "R7-SA-P2-CODE-012"
+    },
+    {
+      "ticketId": "R7.SA.022.SUPPORTQUEUETAB_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.SA.022.SUPPORTQUEUETAB_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-SA-P2-CODE-013"
+    },
+    {
+      "ticketId": "R7.SA.023.WHATSAPPTAB_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED",
+      "file": "workflow/tickets/R7.SA.023.WHATSAPPTAB_USEEFFECT_EMPTY_DEPENDENCY_REVIEW_REQUIRED.json",
+      "sourceFindingId": "R7-SA-P2-CODE-014"
+    },
+    {
+      "ticketId": "R7.SA.024.WHATSAPPTAB_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.SA.024.WHATSAPPTAB_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-SA-P2-CODE-015"
+    },
+    {
+      "ticketId": "R7.SA.025.GSTCOMPLIANCETAB_STATE_API_CONSISTENCY_REVIEW_1",
+      "file": "workflow/tickets/R7.SA.025.GSTCOMPLIANCETAB_STATE_API_CONSISTENCY_REVIEW_1.json",
+      "sourceFindingId": "R7-SA-P2-AUTO-001"
+    },
+    {
+      "ticketId": "R7.SA.026.REFUNDSTAB_STATE_API_CONSISTENCY_REVIEW_2",
+      "file": "workflow/tickets/R7.SA.026.REFUNDSTAB_STATE_API_CONSISTENCY_REVIEW_2.json",
+      "sourceFindingId": "R7-SA-P2-AUTO-002"
+    },
+    {
+      "ticketId": "R7.SA.027.MONITORINGTAB_STATE_API_CONSISTENCY_REVIEW_3",
+      "file": "workflow/tickets/R7.SA.027.MONITORINGTAB_STATE_API_CONSISTENCY_REVIEW_3.json",
+      "sourceFindingId": "R7-SA-P2-AUTO-003"
+    },
+    {
+      "ticketId": "R7.SA.028.QUALITYDASHBOARDTAB_STATE_API_CONSISTENCY_REVIEW_4",
+      "file": "workflow/tickets/R7.SA.028.QUALITYDASHBOARDTAB_STATE_API_CONSISTENCY_REVIEW_4.json",
+      "sourceFindingId": "R7-SA-P2-AUTO-004"
+    },
+    {
+      "ticketId": "R7.SA.029.CREDITPROVIDERSTAB_STATE_API_CONSISTENCY_REVIEW_5",
+      "file": "workflow/tickets/R7.SA.029.CREDITPROVIDERSTAB_STATE_API_CONSISTENCY_REVIEW_5.json",
+      "sourceFindingId": "R7-SA-P2-AUTO-005"
+    },
+    {
+      "ticketId": "R7.SA.030.SUPPORTQUEUETAB_STATE_API_CONSISTENCY_REVIEW_6",
+      "file": "workflow/tickets/R7.SA.030.SUPPORTQUEUETAB_STATE_API_CONSISTENCY_REVIEW_6.json",
+      "sourceFindingId": "R7-SA-P2-AUTO-006"
+    },
+    {
+      "ticketId": "R7.SA.031.AIINSIGHTSTAB_STATE_API_CONSISTENCY_REVIEW_7",
+      "file": "workflow/tickets/R7.SA.031.AIINSIGHTSTAB_STATE_API_CONSISTENCY_REVIEW_7.json",
+      "sourceFindingId": "R7-SA-P2-AUTO-007"
+    },
+    {
+      "ticketId": "R7.SA.032.EVENTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.032.EVENTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-001"
+    },
+    {
+      "ticketId": "R7.SA.033.DEVICESTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.033.DEVICESTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-002"
+    },
+    {
+      "ticketId": "R7.SA.034.DEVICESTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.034.DEVICESTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-003"
+    },
+    {
+      "ticketId": "R7.SA.035.STORESTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.035.STORESTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-004"
+    },
+    {
+      "ticketId": "R7.SA.036.SUPPLIERSTAB_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.SA.036.SUPPLIERSTAB_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-SA-P3-CODE-005"
+    },
+    {
+      "ticketId": "R7.SA.037.SUPPLIERSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.037.SUPPLIERSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-006"
+    },
+    {
+      "ticketId": "R7.SA.038.APPLICATIONSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.038.APPLICATIONSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-007"
+    },
+    {
+      "ticketId": "R7.SA.039.ANALYTICSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.039.ANALYTICSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-008"
+    },
+    {
+      "ticketId": "R7.SA.040.AUDITTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.040.AUDITTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-009"
+    },
+    {
+      "ticketId": "R7.SA.041.AUDITTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.041.AUDITTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-010"
+    },
+    {
+      "ticketId": "R7.SA.042.USERSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.042.USERSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-011"
+    },
+    {
+      "ticketId": "R7.SA.043.SETTINGSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.043.SETTINGSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-012"
+    },
+    {
+      "ticketId": "R7.SA.044.SETTINGSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.044.SETTINGSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-013"
+    },
+    {
+      "ticketId": "R7.SA.045.DOCUMENTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.045.DOCUMENTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-014"
+    },
+    {
+      "ticketId": "R7.SA.046.REGISTRATIONSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.046.REGISTRATIONSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-015"
+    },
+    {
+      "ticketId": "R7.SA.047.REGISTRATIONSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.047.REGISTRATIONSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-016"
+    },
+    {
+      "ticketId": "R7.SA.048.STAFFTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.048.STAFFTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-017"
+    },
+    {
+      "ticketId": "R7.SA.049.GRNALERTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.049.GRNALERTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-018"
+    },
+    {
+      "ticketId": "R7.SA.050.INVOICESTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.050.INVOICESTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-019"
+    },
+    {
+      "ticketId": "R7.SA.051.INVOICESTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.051.INVOICESTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-020"
+    },
+    {
+      "ticketId": "R7.SA.052.GSTCOMPLIANCETAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.052.GSTCOMPLIANCETAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-021"
+    },
+    {
+      "ticketId": "R7.SA.053.GSTCOMPLIANCETAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.053.GSTCOMPLIANCETAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-022"
+    },
+    {
+      "ticketId": "R7.SA.054.REFUNDSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.054.REFUNDSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-023"
+    },
+    {
+      "ticketId": "R7.SA.055.REFUNDSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.055.REFUNDSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-024"
+    },
+    {
+      "ticketId": "R7.SA.056.MONITORINGTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.056.MONITORINGTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-025"
+    },
+    {
+      "ticketId": "R7.SA.057.MONITORINGTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.057.MONITORINGTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-026"
+    },
+    {
+      "ticketId": "R7.SA.058.QUALITYDASHBOARDTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.058.QUALITYDASHBOARDTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-027"
+    },
+    {
+      "ticketId": "R7.SA.059.CREDITPROVIDERSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.059.CREDITPROVIDERSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-028"
+    },
+    {
+      "ticketId": "R7.SA.060.CREDITPROVIDERSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.060.CREDITPROVIDERSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-029"
+    },
+    {
+      "ticketId": "R7.SA.061.SUPPORTQUEUETAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.061.SUPPORTQUEUETAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-030"
+    },
+    {
+      "ticketId": "R7.SA.062.SUPPORTQUEUETAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.062.SUPPORTQUEUETAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-031"
+    },
+    {
+      "ticketId": "R7.SA.063.AIINSIGHTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.063.AIINSIGHTSTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-032"
+    },
+    {
+      "ticketId": "R7.SA.064.AIINSIGHTSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT",
+      "file": "workflow/tickets/R7.SA.064.AIINSIGHTSTAB_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO_AUDIT.json",
+      "sourceFindingId": "R7-SA-P3-CODE-033"
+    },
+    {
+      "ticketId": "R7.SA.065.WHATSAPPTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK",
+      "file": "workflow/tickets/R7.SA.065.WHATSAPPTAB_I18N_COVERAGE_GAP_NO_USETRANSLATION_HOOK.json",
+      "sourceFindingId": "R7-SA-P3-CODE-034"
+    },
+    {
+      "ticketId": "R7.SA.066.REGISTRATIONSTAB_UI_UX_PARITY_REVIEW_8",
+      "file": "workflow/tickets/R7.SA.066.REGISTRATIONSTAB_UI_UX_PARITY_REVIEW_8.json",
+      "sourceFindingId": "R7-SA-P3-AUTO-008"
+    },
+    {
+      "ticketId": "R7.SA.067.STAFFTAB_UI_UX_PARITY_REVIEW_9",
+      "file": "workflow/tickets/R7.SA.067.STAFFTAB_UI_UX_PARITY_REVIEW_9.json",
+      "sourceFindingId": "R7-SA-P3-AUTO-009"
+    },
+    {
+      "ticketId": "R7.SA.068.GRNALERTSTAB_UI_UX_PARITY_REVIEW_10",
+      "file": "workflow/tickets/R7.SA.068.GRNALERTSTAB_UI_UX_PARITY_REVIEW_10.json",
+      "sourceFindingId": "R7-SA-P3-AUTO-010"
+    },
+    {
+      "ticketId": "R7.SA.069.INVOICESTAB_UI_UX_PARITY_REVIEW_11",
+      "file": "workflow/tickets/R7.SA.069.INVOICESTAB_UI_UX_PARITY_REVIEW_11.json",
+      "sourceFindingId": "R7-SA-P3-AUTO-011"
+    },
+    {
+      "ticketId": "R7.SA.070.GSTCOMPLIANCETAB_UI_UX_PARITY_REVIEW_12",
+      "file": "workflow/tickets/R7.SA.070.GSTCOMPLIANCETAB_UI_UX_PARITY_REVIEW_12.json",
+      "sourceFindingId": "R7-SA-P3-AUTO-012"
+    },
+    {
+      "ticketId": "R7.SA.071.REFUNDSTAB_UI_UX_PARITY_REVIEW_13",
+      "file": "workflow/tickets/R7.SA.071.REFUNDSTAB_UI_UX_PARITY_REVIEW_13.json",
+      "sourceFindingId": "R7-SA-P3-AUTO-013"
+    },
+    {
+      "ticketId": "R7.SA.072.MONITORINGTAB_UI_UX_PARITY_REVIEW_14",
+      "file": "workflow/tickets/R7.SA.072.MONITORINGTAB_UI_UX_PARITY_REVIEW_14.json",
+      "sourceFindingId": "R7-SA-P3-AUTO-014"
+    },
+    {
+      "ticketId": "R7.BE.019.API_GATEWAY_HIGH_COMPLEXITY_FILE_SIZE",
+      "file": "workflow/tickets/R7.BE.019.API_GATEWAY_HIGH_COMPLEXITY_FILE_SIZE.json",
+      "sourceFindingId": "R7-BE-P1-CODE-001"
+    },
+    {
+      "ticketId": "R7.BE.020.AUTH_SERVICE_ROUTE_HANDLERS_WITHOUT_AUTH_MIDDLEWARE",
+      "file": "workflow/tickets/R7.BE.020.AUTH_SERVICE_ROUTE_HANDLERS_WITHOUT_AUTH_MIDDLEWARE.json",
+      "sourceFindingId": "R7-BE-P1-CODE-002"
+    },
+    {
+      "ticketId": "R7.BE.021.AUTH_SERVICE_SQL_PATH_WITHOUT_EXPLICIT_STORE",
+      "file": "workflow/tickets/R7.BE.021.AUTH_SERVICE_SQL_PATH_WITHOUT_EXPLICIT_STORE.json",
+      "sourceFindingId": "R7-BE-P1-CODE-003"
+    },
+    {
+      "ticketId": "R7.BE.022.SUPPLIER_SERVICE_HIGH_COMPLEXITY_FILE_SIZE",
+      "file": "workflow/tickets/R7.BE.022.SUPPLIER_SERVICE_HIGH_COMPLEXITY_FILE_SIZE.json",
+      "sourceFindingId": "R7-BE-P1-CODE-004"
+    },
+    {
+      "ticketId": "R7.BE.023.API_GATEWAY_TYPE_SAFETY_GAP_VIA_ANY",
+      "file": "workflow/tickets/R7.BE.023.API_GATEWAY_TYPE_SAFETY_GAP_VIA_ANY.json",
+      "sourceFindingId": "R7-BE-P2-CODE-001"
+    },
+    {
+      "ticketId": "R7.BE.024.AUTH_SERVICE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.BE.024.AUTH_SERVICE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-BE-P2-CODE-002"
+    },
+    {
+      "ticketId": "R7.BE.025.AUTH_SERVICE_REQ_BODY_USAGE_WITHOUT_VISIBLE",
+      "file": "workflow/tickets/R7.BE.025.AUTH_SERVICE_REQ_BODY_USAGE_WITHOUT_VISIBLE.json",
+      "sourceFindingId": "R7-BE-P2-CODE-003"
+    },
+    {
+      "ticketId": "R7.BE.026.CATALOG_SERVICE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+      "file": "workflow/tickets/R7.BE.026.CATALOG_SERVICE_LARGE_COMPONENT_MODULE_COMPLEXITY.json",
+      "sourceFindingId": "R7-BE-P2-CODE-004"
+    },
+    {
+      "ticketId": "R7.BE.027.VOICE_SERVICE_REQ_BODY_USAGE_WITHOUT_VISIBLE",
+      "file": "workflow/tickets/R7.BE.027.VOICE_SERVICE_REQ_BODY_USAGE_WITHOUT_VISIBLE.json",
+      "sourceFindingId": "R7-BE-P2-CODE-005"
+    },
+    {
+      "ticketId": "R7.BE.028.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_1",
+      "file": "workflow/tickets/R7.BE.028.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_1.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-001"
+    },
+    {
+      "ticketId": "R7.BE.029.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_2",
+      "file": "workflow/tickets/R7.BE.029.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_2.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-002"
+    },
+    {
+      "ticketId": "R7.BE.030.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_3",
+      "file": "workflow/tickets/R7.BE.030.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_3.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-003"
+    },
+    {
+      "ticketId": "R7.BE.031.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_4",
+      "file": "workflow/tickets/R7.BE.031.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_4.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-004"
+    },
+    {
+      "ticketId": "R7.BE.032.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_5",
+      "file": "workflow/tickets/R7.BE.032.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_5.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-005"
+    },
+    {
+      "ticketId": "R7.BE.033.API_GATEWAY_STATE_API_CONSISTENCY_REVIEW_6",
+      "file": "workflow/tickets/R7.BE.033.API_GATEWAY_STATE_API_CONSISTENCY_REVIEW_6.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-006"
+    },
+    {
+      "ticketId": "R7.BE.034.AUTH_SERVICE_STATE_API_CONSISTENCY_REVIEW_7",
+      "file": "workflow/tickets/R7.BE.034.AUTH_SERVICE_STATE_API_CONSISTENCY_REVIEW_7.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-007"
+    },
+    {
+      "ticketId": "R7.BE.035.PLATFORM_SERVICE_STATE_API_CONSISTENCY_REVIEW_8",
+      "file": "workflow/tickets/R7.BE.035.PLATFORM_SERVICE_STATE_API_CONSISTENCY_REVIEW_8.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-008"
+    },
+    {
+      "ticketId": "R7.BE.036.SUPPLIER_SERVICE_STATE_API_CONSISTENCY_REVIEW_9",
+      "file": "workflow/tickets/R7.BE.036.SUPPLIER_SERVICE_STATE_API_CONSISTENCY_REVIEW_9.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-009"
+    },
+    {
+      "ticketId": "R7.BE.037.CATALOG_SERVICE_STATE_API_CONSISTENCY_REVIEW_10",
+      "file": "workflow/tickets/R7.BE.037.CATALOG_SERVICE_STATE_API_CONSISTENCY_REVIEW_10.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-010"
+    },
+    {
+      "ticketId": "R7.BE.038.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_11",
+      "file": "workflow/tickets/R7.BE.038.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_11.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-011"
+    },
+    {
+      "ticketId": "R7.BE.039.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_12",
+      "file": "workflow/tickets/R7.BE.039.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_12.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-012"
+    },
+    {
+      "ticketId": "R7.BE.040.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_13",
+      "file": "workflow/tickets/R7.BE.040.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_13.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-013"
+    },
+    {
+      "ticketId": "R7.BE.041.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_14",
+      "file": "workflow/tickets/R7.BE.041.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_14.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-014"
+    },
+    {
+      "ticketId": "R7.BE.042.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_15",
+      "file": "workflow/tickets/R7.BE.042.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_15.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-015"
+    },
+    {
+      "ticketId": "R7.BE.043.API_GATEWAY_STATE_API_CONSISTENCY_REVIEW_16",
+      "file": "workflow/tickets/R7.BE.043.API_GATEWAY_STATE_API_CONSISTENCY_REVIEW_16.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-016"
+    },
+    {
+      "ticketId": "R7.BE.044.AUTH_SERVICE_STATE_API_CONSISTENCY_REVIEW_17",
+      "file": "workflow/tickets/R7.BE.044.AUTH_SERVICE_STATE_API_CONSISTENCY_REVIEW_17.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-017"
+    },
+    {
+      "ticketId": "R7.BE.045.PLATFORM_SERVICE_STATE_API_CONSISTENCY_REVIEW_18",
+      "file": "workflow/tickets/R7.BE.045.PLATFORM_SERVICE_STATE_API_CONSISTENCY_REVIEW_18.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-018"
+    },
+    {
+      "ticketId": "R7.BE.046.SUPPLIER_SERVICE_STATE_API_CONSISTENCY_REVIEW_19",
+      "file": "workflow/tickets/R7.BE.046.SUPPLIER_SERVICE_STATE_API_CONSISTENCY_REVIEW_19.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-019"
+    },
+    {
+      "ticketId": "R7.BE.047.CATALOG_SERVICE_STATE_API_CONSISTENCY_REVIEW_20",
+      "file": "workflow/tickets/R7.BE.047.CATALOG_SERVICE_STATE_API_CONSISTENCY_REVIEW_20.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-020"
+    },
+    {
+      "ticketId": "R7.BE.048.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_21",
+      "file": "workflow/tickets/R7.BE.048.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_21.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-021"
+    },
+    {
+      "ticketId": "R7.BE.049.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_22",
+      "file": "workflow/tickets/R7.BE.049.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_22.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-022"
+    },
+    {
+      "ticketId": "R7.BE.050.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_23",
+      "file": "workflow/tickets/R7.BE.050.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_23.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-023"
+    },
+    {
+      "ticketId": "R7.BE.051.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_24",
+      "file": "workflow/tickets/R7.BE.051.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_24.json",
+      "sourceFindingId": "R7-BE-P2-AUTO-024"
+    },
+    {
+      "ticketId": "R7.BE.052.SUPPLIER_SERVICE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.BE.052.SUPPLIER_SERVICE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-BE-P3-CODE-001"
+    },
+    {
+      "ticketId": "R7.BE.053.VOICE_SERVICE_RESIDUAL_CONSOLE_LOGGING",
+      "file": "workflow/tickets/R7.BE.053.VOICE_SERVICE_RESIDUAL_CONSOLE_LOGGING.json",
+      "sourceFindingId": "R7-BE-P3-CODE-002"
+    },
+    {
+      "ticketId": "R7.BE.054.VOICE_SERVICE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO",
+      "file": "workflow/tickets/R7.BE.054.VOICE_SERVICE_MEDIUM_COMPLEXITY_MODULE_WARRANTS_MICRO.json",
+      "sourceFindingId": "R7-BE-P3-CODE-003"
+    },
+    {
+      "ticketId": "R7.BE.055.SUPPLIER_SERVICE_UI_UX_PARITY_REVIEW_25",
+      "file": "workflow/tickets/R7.BE.055.SUPPLIER_SERVICE_UI_UX_PARITY_REVIEW_25.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-025"
+    },
+    {
+      "ticketId": "R7.BE.056.CATALOG_SERVICE_UI_UX_PARITY_REVIEW_26",
+      "file": "workflow/tickets/R7.BE.056.CATALOG_SERVICE_UI_UX_PARITY_REVIEW_26.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-026"
+    },
+    {
+      "ticketId": "R7.BE.057.INVENTORY_SERVICE_UI_UX_PARITY_REVIEW_27",
+      "file": "workflow/tickets/R7.BE.057.INVENTORY_SERVICE_UI_UX_PARITY_REVIEW_27.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-027"
+    },
+    {
+      "ticketId": "R7.BE.058.ORDER_SERVICE_UI_UX_PARITY_REVIEW_28",
+      "file": "workflow/tickets/R7.BE.058.ORDER_SERVICE_UI_UX_PARITY_REVIEW_28.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-028"
+    },
+    {
+      "ticketId": "R7.BE.059.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_29",
+      "file": "workflow/tickets/R7.BE.059.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_29.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-029"
+    },
+    {
+      "ticketId": "R7.BE.060.REORDER_SERVICE_UI_UX_PARITY_REVIEW_30",
+      "file": "workflow/tickets/R7.BE.060.REORDER_SERVICE_UI_UX_PARITY_REVIEW_30.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-030"
+    },
+    {
+      "ticketId": "R7.BE.061.VOICE_SERVICE_UI_UX_PARITY_REVIEW_31",
+      "file": "workflow/tickets/R7.BE.061.VOICE_SERVICE_UI_UX_PARITY_REVIEW_31.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-031"
+    },
+    {
+      "ticketId": "R7.BE.062.API_GATEWAY_UI_UX_PARITY_REVIEW_32",
+      "file": "workflow/tickets/R7.BE.062.API_GATEWAY_UI_UX_PARITY_REVIEW_32.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-032"
+    },
+    {
+      "ticketId": "R7.BE.063.AUTH_SERVICE_UI_UX_PARITY_REVIEW_33",
+      "file": "workflow/tickets/R7.BE.063.AUTH_SERVICE_UI_UX_PARITY_REVIEW_33.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-033"
+    },
+    {
+      "ticketId": "R7.BE.064.PLATFORM_SERVICE_UI_UX_PARITY_REVIEW_34",
+      "file": "workflow/tickets/R7.BE.064.PLATFORM_SERVICE_UI_UX_PARITY_REVIEW_34.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-034"
+    },
+    {
+      "ticketId": "R7.BE.065.SUPPLIER_SERVICE_UI_UX_PARITY_REVIEW_35",
+      "file": "workflow/tickets/R7.BE.065.SUPPLIER_SERVICE_UI_UX_PARITY_REVIEW_35.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-035"
+    },
+    {
+      "ticketId": "R7.BE.066.CATALOG_SERVICE_UI_UX_PARITY_REVIEW_36",
+      "file": "workflow/tickets/R7.BE.066.CATALOG_SERVICE_UI_UX_PARITY_REVIEW_36.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-036"
+    },
+    {
+      "ticketId": "R7.BE.067.INVENTORY_SERVICE_UI_UX_PARITY_REVIEW_37",
+      "file": "workflow/tickets/R7.BE.067.INVENTORY_SERVICE_UI_UX_PARITY_REVIEW_37.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-037"
+    },
+    {
+      "ticketId": "R7.BE.068.ORDER_SERVICE_UI_UX_PARITY_REVIEW_38",
+      "file": "workflow/tickets/R7.BE.068.ORDER_SERVICE_UI_UX_PARITY_REVIEW_38.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-038"
+    },
+    {
+      "ticketId": "R7.BE.069.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_39",
+      "file": "workflow/tickets/R7.BE.069.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_39.json",
+      "sourceFindingId": "R7-BE-P3-AUTO-039"
+    },
+    {
+      "ticketId": "R7.CROSS.005.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE",
+      "file": "workflow/tickets/R7.CROSS.005.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE.json",
+      "sourceFindingId": "R7-CROSS-P2-CODE-001"
+    },
+    {
+      "ticketId": "R7.CROSS.006.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.006.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P2-CODE-002"
+    },
+    {
+      "ticketId": "R7.CROSS.007.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.007.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P2-AUTO-001"
+    },
+    {
+      "ticketId": "R7.CROSS.008.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.008.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P2-AUTO-002"
+    },
+    {
+      "ticketId": "R7.CROSS.009.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE",
+      "file": "workflow/tickets/R7.CROSS.009.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE.json",
+      "sourceFindingId": "R7-CROSS-P2-AUTO-003"
+    },
+    {
+      "ticketId": "R7.CROSS.010.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.010.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P2-AUTO-004"
+    },
+    {
+      "ticketId": "R7.CROSS.011.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.011.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P2-AUTO-005"
+    },
+    {
+      "ticketId": "R7.CROSS.012.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE",
+      "file": "workflow/tickets/R7.CROSS.012.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE.json",
+      "sourceFindingId": "R7-CROSS-P2-AUTO-006"
+    },
+    {
+      "ticketId": "R7.CROSS.013.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.013.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-007"
+    },
+    {
+      "ticketId": "R7.CROSS.014.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE",
+      "file": "workflow/tickets/R7.CROSS.014.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-008"
+    },
+    {
+      "ticketId": "R7.CROSS.015.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.015.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-009"
+    },
+    {
+      "ticketId": "R7.CROSS.016.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.016.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-010"
+    },
+    {
+      "ticketId": "R7.CROSS.017.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE",
+      "file": "workflow/tickets/R7.CROSS.017.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-011"
+    },
+    {
+      "ticketId": "R7.CROSS.018.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.018.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-012"
+    },
+    {
+      "ticketId": "R7.CROSS.019.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.019.RET_SUP_SUPPLIER_LINKING_PRODUCT_SOURCING_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-013"
+    },
+    {
+      "ticketId": "R7.CROSS.020.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE",
+      "file": "workflow/tickets/R7.CROSS.020.RET_POS_DEVICE_ENROLLMENT_STOCK_SYNC_SALE.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-014"
+    },
+    {
+      "ticketId": "R7.CROSS.021.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG",
+      "file": "workflow/tickets/R7.CROSS.021.SUP_POS_PURCHASE_ORDERS_GRN_SUPPLIER_CATALOG.json",
+      "sourceFindingId": "R7-CROSS-P3-AUTO-015"
+    }
+  ]
+}
