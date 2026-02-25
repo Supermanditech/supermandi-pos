@@ -76,8 +76,8 @@ async function createLedgerEntryWithClient(
   const currentQty = balanceResult.rows[0]?.currentQty ?? 0;
   const newQty = currentQty + input.deltaQty;
 
-  // Validate non-negative stock (except for adjustments)
-  if (newQty < 0 && input.transactionType !== 'adjustment') {
+  // Enforce non-negative stock invariant for all transaction types, including adjustment.
+  if (newQty < 0) {
     throw new Error(
       `Insufficient stock for product ${input.productId}. Current: ${currentQty}, Requested: ${Math.abs(input.deltaQty)}`
     );

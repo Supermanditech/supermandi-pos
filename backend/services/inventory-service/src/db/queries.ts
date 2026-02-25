@@ -257,8 +257,8 @@ export async function createLedgerEntryWithBalanceUpdate(
     const currentQty = balanceResult.rows[0]?.currentQty ?? 0;
     const newQty = currentQty + input.deltaQty;
 
-    // Validate non-negative stock (except for adjustments which can go negative temporarily)
-    if (newQty < 0 && input.transactionType !== 'adjustment') {
+    // Enforce non-negative stock invariant for all transaction types.
+    if (newQty < 0) {
       throw new Error(`Insufficient stock. Current: ${currentQty}, Delta: ${input.deltaQty}`);
     }
 
@@ -382,8 +382,8 @@ async function createLedgerEntryWithClient(
   const currentQty = balanceResult.rows[0]?.currentQty ?? 0;
   const newQty = currentQty + input.deltaQty;
 
-  // Validate non-negative stock
-  if (newQty < 0 && input.transactionType !== 'adjustment') {
+  // Enforce non-negative stock invariant for all transaction types.
+  if (newQty < 0) {
     throw new Error(
       `Insufficient stock for product ${input.productId}. Current: ${currentQty}, Delta: ${input.deltaQty}`
     );
