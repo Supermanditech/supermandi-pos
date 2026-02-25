@@ -15,8 +15,8 @@ import {
   validatePasswordStrength,
   generateSupplierToken,
   getJwtIssuer,
-  type RegisterBody,
-  type LoginBody,
+  parseRegisterBody,
+  parseLoginBody,
   type SupplierRow,
 } from './authSupport';
 
@@ -40,16 +40,7 @@ router.post(
   '/auth/register',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const body = req.body as RegisterBody;
-
-      // Validate required fields
-      if (!body.businessName || !body.gstin || !body.email || !body.phone || !body.password) {
-        throw new ApiError(
-          422,
-          ERROR_CODES.VALIDATION_ERROR,
-          'Missing required fields: businessName, gstin, email, phone, password'
-        );
-      }
+      const body = parseRegisterBody(req.body);
 
       // Validate GSTIN format
       const gstinResult = validateGstin(body.gstin);
@@ -199,16 +190,7 @@ router.post(
   '/auth/login',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const body = req.body as LoginBody;
-
-      // Validate required fields
-      if (!body.email || !body.password) {
-        throw new ApiError(
-          422,
-          ERROR_CODES.VALIDATION_ERROR,
-          'Missing required fields: email, password'
-        );
-      }
+      const body = parseLoginBody(req.body);
 
       // Find supplier by email
       const supplier = await queryOne<SupplierRow>(

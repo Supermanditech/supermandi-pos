@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-25T19:47:40.971Z",
+  "updatedAt": "2026-02-25T20:03:47.742Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1112,7 +1112,6 @@
         "complete": false,
         "summary": "R7 execution initialized: 535 tickets queued from source-first audit.",
         "remainingTicketIds": [
-          "R7.BE.025.AUTH_SERVICE_REQ_BODY_USAGE_WITHOUT_VISIBLE",
           "R7.BE.026.CATALOG_SERVICE_LARGE_COMPONENT_MODULE_COMPLEXITY",
           "R7.BE.027.VOICE_SERVICE_REQ_BODY_USAGE_WITHOUT_VISIBLE",
           "R7.BE.028.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_1",
@@ -1648,9 +1647,10 @@
           "R7.BE.021.AUTH_SERVICE_SQL_PATH_WITHOUT_EXPLICIT_STORE",
           "R7.BE.022.SUPPLIER_SERVICE_HIGH_COMPLEXITY_FILE_SIZE",
           "R7.BE.023.API_GATEWAY_TYPE_SAFETY_GAP_VIA_ANY",
-          "R7.BE.024.AUTH_SERVICE_LARGE_COMPONENT_MODULE_COMPLEXITY"
+          "R7.BE.024.AUTH_SERVICE_LARGE_COMPONENT_MODULE_COMPLEXITY",
+          "R7.BE.025.AUTH_SERVICE_REQ_BODY_USAGE_WITHOUT_VISIBLE"
         ],
-        "lastUpdatedAt": "2026-02-25T19:47:40.971Z"
+        "lastUpdatedAt": "2026-02-25T20:03:47.742Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1711,7 +1711,7 @@
   },
   "summary": {
     "totalTickets": 1129,
-    "activeTickets": 513,
+    "activeTickets": 512,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
@@ -1761,7 +1761,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-25T19:47:40.971Z"
+    "updatedAt": "2026-02-25T20:03:47.742Z"
   },
-  "lastUpdated": "2026-02-25T19:47:40.971Z"
+  "lastUpdated": "2026-02-25T20:03:47.742Z"
 }

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { ApiError, ERROR_CODES } from '@supermandi/common';
 import { config } from '../config';
 
 // =============================================================================
@@ -92,6 +93,85 @@ export interface SupplierRow {
   password_hash: string | null;
   verification_status: string;
   status: string;
+}
+
+// =============================================================================
+// Request body schema parsing
+// =============================================================================
+
+type BodyRecord = Record<string, unknown>;
+
+function toBodyRecord(value: unknown): BodyRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ApiError(422, ERROR_CODES.VALIDATION_ERROR, 'Request body must be a JSON object');
+  }
+  return value as BodyRecord;
+}
+
+function readOptionalString(body: BodyRecord, field: string): string | undefined {
+  const value = body[field];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== 'string') {
+    throw new ApiError(422, ERROR_CODES.VALIDATION_ERROR, `Field ${field} must be a string`);
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+export function parseRegisterBody(value: unknown): RegisterBody {
+  const body = toBodyRecord(value);
+
+  const requiredFields = ['businessName', 'gstin', 'email', 'phone', 'password'] as const;
+  const missingFields = requiredFields.filter((field) => {
+    const fieldValue = body[field];
+    return typeof fieldValue !== 'string' || fieldValue.trim().length === 0;
+  });
+
+  if (missingFields.length > 0) {
+    throw new ApiError(
+      422,
+      ERROR_CODES.VALIDATION_ERROR,
+      `Missing required fields: ${missingFields.join(', ')}`
+    );
+  }
+
+  return {
+    businessName: (body.businessName as string).trim(),
+    gstin: (body.gstin as string).trim(),
+    email: (body.email as string).trim(),
+    phone: (body.phone as string).trim(),
+    password: body.password as string,
+    bankAccountNumber: readOptionalString(body, 'bankAccountNumber'),
+    bankIfsc: readOptionalString(body, 'bankIfsc'),
+    bankAccountName: readOptionalString(body, 'bankAccountName'),
+    upiVpa: readOptionalString(body, 'upiVpa'),
+  };
+}
+
+export function parseLoginBody(value: unknown): LoginBody {
+  const body = toBodyRecord(value);
+
+  const requiredFields = ['email', 'password'] as const;
+  const missingFields = requiredFields.filter((field) => {
+    const fieldValue = body[field];
+    return typeof fieldValue !== 'string' || fieldValue.trim().length === 0;
+  });
+
+  if (missingFields.length > 0) {
+    throw new ApiError(
+      422,
+      ERROR_CODES.VALIDATION_ERROR,
+      `Missing required fields: ${missingFields.join(', ')}`
+    );
+  }
+
+  return {
+    email: (body.email as string).trim(),
+    password: body.password as string,
+  };
 }
 
 // =============================================================================
