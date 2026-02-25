@@ -114,6 +114,7 @@ router.get(
  */
 router.post(
   '/gstin/validate',
+  authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { gstin } = req.body as { gstin?: string };
