@@ -231,11 +231,17 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
         return;
       }
     } catch (blacklistError) {
-      // T-184: Fail open — if Redis is down, allow the request through
-      // R6.BE.018: Explicit trade-off: fail-open chosen to preserve availability.
-      // Downstream services validate session in DB as secondary revocation check.
-      // If stricter security is needed, change to fail-closed (return 503).
-      console.warn('[T-184] Redis blacklist check failed (failing open):', blacklistError);
+      // R7.BE.001: Fail closed when revocation store is unavailable.
+      // This prevents revoked tokens from being accepted during Redis outages.
+      console.error('[T-184] Redis blacklist check failed (failing closed):', blacklistError);
+      res.status(503).json({
+        error: {
+          code: 'AUTH_VALIDATION_UNAVAILABLE',
+          message: 'Session validation is temporarily unavailable. Please retry shortly.',
+        },
+        requestId: req.correlationId,
+      });
+      return;
     }
 
     // Validate required claims
