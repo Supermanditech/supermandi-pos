@@ -7,12 +7,15 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { authenticate, requireActorType, getAuthUser } from '@supermandi/auth-service/exports';
 
 import { config } from '../config';
 import { transcribeAudio } from '../services/sttService';
 import { parseIntent, type ParsedIntent } from '../services/intentParser';
 
 const router: ReturnType<typeof Router> = Router();
+router.use(authenticate);
+router.use(requireActorType('store'));
 
 // =============================================================================
 // MULTER SETUP FOR FILE UPLOADS
@@ -107,12 +110,12 @@ router.post(
         return;
       }
 
-      // SEC-005: Derive storeId from gateway JWT headers, NOT from request body
-      const storeId = req.headers['x-actor-id'] as string;
+      // R7.BE.017: Derive store identity from authenticated JWT claims.
+      const storeId = getAuthUser(req).actorId;
       if (!storeId) {
         res.status(401).json({
           success: false,
-          error: 'Authentication required (missing store context)',
+          error: 'Authentication required (missing authenticated store context)',
         });
         return;
       }
@@ -191,8 +194,8 @@ router.post(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { requestId } = req.body;
-      // SEC-005: Derive storeId from gateway JWT headers, NOT from request body
-      const storeId = req.headers['x-actor-id'] as string;
+      // R7.BE.017: Derive store identity from authenticated JWT claims.
+      const storeId = getAuthUser(req).actorId;
 
       // Validate request
       if (!requestId) {
@@ -205,7 +208,7 @@ router.post(
       if (!storeId) {
         res.status(401).json({
           success: false,
-          error: 'Authentication required (missing store context)',
+          error: 'Authentication required (missing authenticated store context)',
         });
         return;
       }
@@ -303,12 +306,12 @@ router.get(
   '/status/:requestId',
   async (req: Request, res: Response): Promise<void> => {
     const { requestId } = req.params;
-    const storeId = req.headers['x-actor-id'] as string;
+    const storeId = getAuthUser(req).actorId;
 
     if (!storeId) {
       res.status(401).json({
         success: false,
-        error: 'Authentication required (missing store context)',
+        error: 'Authentication required (missing authenticated store context)',
       });
       return;
     }
