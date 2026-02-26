@@ -244,7 +244,30 @@ export default function EnrollDeviceScreen() {
 
       const previousSession = await getDeviceSession();
       const previousStoreId = previousSession?.storeId ?? null;
-      const res = await enrollDevice({ enrollmentCode: activationCode, deviceMeta: { ...deviceMeta, label: trimmedLabel } });
+
+      // P2-1: Retry with exponential backoff for transient errors
+      // Enrollment is idempotent so retries are safe (same code + device fingerprint)
+      const MAX_ENROLL_RETRIES = 3;
+      const ENROLL_BASE_DELAY_MS = 1000;
+      let res: Awaited<ReturnType<typeof enrollDevice>> | null = null;
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt <= MAX_ENROLL_RETRIES; attempt++) {
+        try {
+          res = await enrollDevice({ enrollmentCode: activationCode, deviceMeta: { ...deviceMeta, label: trimmedLabel } });
+          break;
+        } catch (err) {
+          lastError = err;
+          const isTransient =
+            (err instanceof TypeError && err.message?.includes("Network")) ||
+            (err instanceof Error && err.message?.toLowerCase().includes("timeout")) ||
+            (err instanceof ApiError && err.status != null && err.status >= 500);
+          if (!isTransient || attempt === MAX_ENROLL_RETRIES) throw err;
+          const delayMs = ENROLL_BASE_DELAY_MS * Math.pow(2, attempt);
+          if (__DEV__) console.log(`[Activate] Transient error — retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_ENROLL_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+      if (!res) throw lastError;
       const storeChanged = previousStoreId !== res.storeId;
 
       if (storeChanged) {
