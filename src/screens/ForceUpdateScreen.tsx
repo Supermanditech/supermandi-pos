@@ -28,9 +28,11 @@ const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.supermanditech.supermandipos";
 // REQ.AUDIT.W4.POS.APPSTORE-URL-MISSING.001: Read from env var so the operator
 // can set EXPO_PUBLIC_APP_STORE_URL without a code change after App Store submission.
-// When the env var is absent or empty, the Update Now button falls back to the
-// Play Store link (see handleUpdate). The iOS button is never shown as a broken link.
+// POS-APPSTORE-IOS-FALLBACK: When env var is absent/empty on iOS, handleUpdate shows
+// a "coming soon" alert instead of silently trying to open the Play Store on iOS
+// (the Play Store URL cannot be opened on iOS — it would always fail).
 const APP_STORE_URL = process.env.EXPO_PUBLIC_APP_STORE_URL ?? "";
+const IOS_MISSING_STORE_URL = Platform.OS === "ios" && !APP_STORE_URL;
 
 /** S2-8: Theme token constants for icon/layout sizes */
 const ICON_SIZE = 28;
@@ -58,7 +60,17 @@ export default function ForceUpdateScreen() {
   const requiredVersion = rawRequired && rawRequired.trim() ? rawRequired.trim() : "unknown";
 
   const handleUpdate = () => {
-    const url = Platform.OS === "ios" && APP_STORE_URL ? APP_STORE_URL : PLAY_STORE_URL;
+    // POS-APPSTORE-IOS-FALLBACK: On iOS before App Store listing is live,
+    // show a clear message rather than silently trying the Play Store URL (which fails on iOS).
+    if (IOS_MISSING_STORE_URL) {
+      Alert.alert(
+        "iOS Update Coming Soon",
+        "The iOS App Store listing is being prepared. Please check back soon or contact support.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    const url = Platform.OS === "ios" ? APP_STORE_URL : PLAY_STORE_URL;
     Linking.openURL(url).catch(() =>
       Alert.alert("Cannot Open Store", "Please update the app manually from your app store.")
     );
@@ -169,12 +181,18 @@ export default function ForceUpdateScreen() {
           style={styles.button}
           onPress={handleUpdate}
           testID="force-update-update-button"
-          accessibilityLabel="Update now — opens app store"
+          accessibilityLabel={IOS_MISSING_STORE_URL ? "iOS App Store listing coming soon" : "Update now — opens app store"}
           accessibilityRole="button"
         >
           <MaterialCommunityIcons name="download" size={18} color={colors.textInverse} style={{ marginRight: 6 }} accessibilityElementsHidden />
           <Text style={styles.buttonText}>Update Now</Text>
         </Pressable>
+        {/* POS-APPSTORE-IOS-FALLBACK: Show informative note on iOS until App Store listing is live */}
+        {IOS_MISSING_STORE_URL && (
+          <Text style={styles.iosNote} testID="force-update-ios-note">
+            iOS App Store listing coming soon
+          </Text>
+        )}
 
         <Pressable
           style={[styles.secondaryButton, checking && styles.buttonDisabled]}
@@ -312,5 +330,12 @@ const styles = StyleSheet.create({
   checkingRow: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  iosNote: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: spacing.xs,
+    fontSize: 11,
   },
 });
