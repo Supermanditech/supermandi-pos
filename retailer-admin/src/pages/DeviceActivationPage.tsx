@@ -10,6 +10,7 @@ import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 // UIUX-RET-002: Styled modal instead of window.confirm
 import Modal from '../components/Modal';
+import { logger } from '../lib/logger';
 
 interface Device {
   id: string;
@@ -110,7 +111,7 @@ export default function DeviceActivationPage() {
         setError(data?.error?.message || `Failed to load devices (${response.status})`);
       }
     } catch (err) {
-      console.error('Failed to load devices:', err);
+      logger.error('Failed to load devices:', err);
       setError(err instanceof Error && err.name === 'AbortError'
         ? 'Request timed out. Please try again.'
         : 'Network error loading devices. Please check your connection.');
@@ -170,7 +171,7 @@ export default function DeviceActivationPage() {
         }
       }
     } catch (err: any) {
-      console.error('Device activation error:', err);
+      logger.error('Device activation error:', err);
       setError(err.message || 'Network error. Please check your connection.');
     } finally {
       setActivating(false);
@@ -212,7 +213,7 @@ export default function DeviceActivationPage() {
         setError(data?.error?.message || `Failed to ${action} device.`);
       }
     } catch (err: any) {
-      console.error('Device toggle error:', err);
+      logger.error('Device toggle error:', err);
       setError(err.message || 'Network error. Please check your connection.');
     } finally {
       setDeactivatingDeviceId(null);

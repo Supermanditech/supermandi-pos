@@ -8,6 +8,7 @@ import { authFetch, safeJson } from '../../lib/api';
 import { useEscapeKey } from '../../lib/hooks';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../../components/Breadcrumb';
+import { logger } from '../../lib/logger';
 
 interface PendingProduct {
   id: string;
@@ -88,7 +89,7 @@ export default function ProductQueuePage() {
       const data = await safeJson(response);
       setPendingProducts(data.data || []);
     } catch (err) {
-      console.error('Error fetching pending products:', err);
+      logger.error('Error fetching pending products:', err);
       setError('Failed to load pending products. Please try again.');
     } finally {
       setIsLoading(false);

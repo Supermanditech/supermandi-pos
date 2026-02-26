@@ -30,6 +30,7 @@ import {
 import { BuildStamp } from '../components/BuildStamp';
 // REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
 import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_LABEL } from '../lib/fileLimits';
+import { logger } from '../lib/logger';
 
 // GSTIN: 15 chars, position 14 can be any alphanumeric (GL-CRIT-0031)
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/;
@@ -298,7 +299,7 @@ export default function RegisterPage() {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
       } catch (err) {
-        console.error('Failed to setup reCAPTCHA:', err);
+        logger.error('Failed to setup reCAPTCHA:', err);
       }
     }
     return () => { cleanup(); recaptchaInitialized.current = false; };

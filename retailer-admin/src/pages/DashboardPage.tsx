@@ -11,6 +11,7 @@ import { getCategoryIcon as getCategoryIconFromConfig } from '../config/category
 import Breadcrumb from '../components/Breadcrumb';
 // TZ-FORMAT-001 + CURRENCY-FORMAT-001: Use shared formatters
 import { formatCurrencyWhole, formatCurrency, formatDateShort } from '../lib/formatters';
+import { logger } from '../lib/logger';
 
 export default function DashboardPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
@@ -94,7 +95,7 @@ export default function DashboardPage() {
         setCatEditError(data.error?.message || 'Failed to rename category. Please try again.');
       }
     } catch (err) {
-      console.error('Failed to rename category:', err);
+      logger.error('Failed to rename category:', err);
       // GL-CRIT-0039: Show network error to user
       setCatEditError('Network error. Please check your connection and try again.');
     } finally {
@@ -122,7 +123,7 @@ export default function DashboardPage() {
         setCatToggleError(data.error?.message || `Failed to ${category.isHidden ? 'show' : 'hide'} category. Please try again.`);
       }
     } catch (err) {
-      console.error('Failed to toggle category visibility:', err);
+      logger.error('Failed to toggle category visibility:', err);
       // RET-AUD-040: Show network error to user
       setCatToggleError('Network error. Please check your connection and try again.');
     }
@@ -142,7 +143,7 @@ export default function DashboardPage() {
           setInventoryTotals(result.totals);
         }
       } catch (err) {
-        console.error('Failed to load inventory:', err);
+        logger.error('Failed to load inventory:', err);
         setInventoryError('Failed to load inventory');
         setInventory([]);
       } finally {
@@ -157,7 +158,7 @@ export default function DashboardPage() {
         // Filter out the "All" category (sortOrder 0) for display
         setCategories((result.data || []).filter(c => c.sortOrder > 0));
       } catch (err) {
-        console.error('Failed to load categories:', err);
+        logger.error('Failed to load categories:', err);
         setCategories([]);
       } finally {
         setCategoriesLoading(false);
@@ -172,7 +173,7 @@ export default function DashboardPage() {
         const result = await fetchDailySummary(accessToken);
         setDailySummary(result.data || null);
       } catch (err) {
-        console.error('Failed to load daily summary:', err);
+        logger.error('Failed to load daily summary:', err);
         setDailySummaryError('Failed to load daily summary');
         setDailySummary(null);
       } finally {

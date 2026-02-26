@@ -7,6 +7,7 @@ import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 // REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
 import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_LABEL } from '../lib/fileLimits';
+import { logger } from '../lib/logger';
 
 interface Document {
   id: string;
@@ -56,7 +57,7 @@ export default function CompliancePage() {
           if (data.data?.message) setStatusMessage(data.data.message);
         }
       } catch (err) {
-        console.error('Failed to fetch documents:', err);
+        logger.error('Failed to fetch documents:', err);
         setError('Failed to load compliance documents. Please refresh the page.');
       } finally {
         setIsLoading(false);

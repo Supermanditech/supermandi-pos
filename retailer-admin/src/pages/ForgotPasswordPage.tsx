@@ -4,6 +4,7 @@ import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { logger } from '../lib/logger';
 
 // R7.RET.007: AbortController ref to cancel in-flight fetch calls on unmount
 
@@ -67,7 +68,7 @@ export default function ForgotPasswordPage() {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
       } catch (err) {
-        console.error('Failed to setup reCAPTCHA:', err);
+        logger.error('Failed to setup reCAPTCHA:', err);
       }
     }
     return () => {

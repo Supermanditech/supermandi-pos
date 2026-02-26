@@ -7,6 +7,7 @@ import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+import { logger } from '../lib/logger';
 
 interface SupplierProduct {
   productId: string;
@@ -79,7 +80,7 @@ export default function SupplierCatalogPage() {
       }
       setPagination(pag);
     } catch (err) {
-      console.error('Error fetching catalog:', err);
+      logger.error('Error fetching catalog:', err);
       setError('Failed to load supplier catalog. Please try again.');
     } finally {
       setIsLoading(false);

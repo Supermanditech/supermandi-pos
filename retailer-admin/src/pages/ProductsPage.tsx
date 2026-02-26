@@ -15,6 +15,7 @@ import { useUrlState } from '../hooks/useUrlState';
 import EmptyState from '../components/EmptyState';
 import { Package } from 'lucide-react';
 import { useUnsavedChanges } from '../hooks/useNavigationSafety';
+import { logger } from '../lib/logger';
 
 interface Supplier {
   id: string;
@@ -244,7 +245,7 @@ export default function ProductsPage() {
     } catch (err) {
       // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      console.error('Error fetching products:', err);
+      logger.error('Error fetching products:', err);
       setError('Failed to load products. Please try again.');
     } finally {
       setIsLoading(false);
@@ -269,7 +270,7 @@ export default function ProductsPage() {
     } catch (err) {
       // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      console.error('Error fetching suppliers:', err);
+      logger.error('Error fetching suppliers:', err);
       // RET-AUD-040: Show feedback that supplier list couldn't be loaded
       setSupplierFetchError(true);
     }
@@ -299,7 +300,7 @@ export default function ProductsPage() {
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        console.error('Failed to load categories:', err);
+        logger.error('Failed to load categories:', err);
         // T-187: Use static fallback when API fails
         setCategories(FALLBACK_FMCG_CATEGORIES);
       } finally {
@@ -501,7 +502,7 @@ export default function ProductsPage() {
       const purchasePriceNum = parseFloat(formData.purchasePrice);
       if (sellPriceNum < purchasePriceNum) {
         // Allow it but this is a data integrity signal; backend handles margin calculations
-        console.warn('[RET-005] Sell price is below purchase price — negative margin');
+        logger.warn('[RET-005] Sell price is below purchase price — negative margin');
       }
 
       // GL-CRIT-0035: Validate barcode format

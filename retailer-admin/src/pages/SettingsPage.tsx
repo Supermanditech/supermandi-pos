@@ -10,6 +10,7 @@ import Breadcrumb from '../components/Breadcrumb';
 // RET-005: Import shared UPI validation (single source of truth)
 import { validateUpiVpa } from '../components/UpiInput';
 import { useUnsavedChanges } from '../hooks/useNavigationSafety';
+import { logger } from '../lib/logger';
 
 interface StoreSettings {
   upiVpa: string;
@@ -114,7 +115,7 @@ export default function SettingsPage() {
           initialSettingsRef.current = JSON.stringify(loaded);
         }
       } catch (err) {
-        console.error('Failed to load settings:', err);
+        logger.error('Failed to load settings:', err);
         setLoadError('Failed to load settings. Some fields may show defaults.');
         // Use store defaults
         setSettings(prev => ({
@@ -225,7 +226,7 @@ export default function SettingsPage() {
         setSaveError(data.error || 'Failed to save settings');
       }
     } catch (err: any) {
-      console.error('Failed to save settings:', err);
+      logger.error('Failed to save settings:', err);
       setSaveError(err.message || 'Failed to save settings');
     } finally {
       setSaving(false);

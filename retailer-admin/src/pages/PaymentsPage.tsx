@@ -9,6 +9,7 @@ import { authFetch, safeJson } from '../lib/api';
 import UpiInput, { validateUpiVpa } from '../components/UpiInput';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+import { logger } from '../lib/logger';
 
 interface PaymentSettings {
   upiVpa: string;
@@ -51,7 +52,7 @@ export default function PaymentsPage() {
         });
       }
     } catch (err) {
-      console.error('Failed to load payment settings:', err);
+      logger.error('Failed to load payment settings:', err);
       setLoadError('Failed to load payment settings.');
     } finally {
       setLoading(false);
@@ -162,7 +163,7 @@ export default function PaymentsPage() {
         setStatusTransitioned(false);
       }, 5000);
     } catch (err: any) {
-      console.error('Failed to save payment settings:', err);
+      logger.error('Failed to save payment settings:', err);
       setSaveError(err.message || 'Failed to save payment settings');
     } finally {
       setSaving(false);

@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 import { Bell, CheckCheck, RefreshCw, AlertTriangle, Package, CreditCard, Truck } from 'lucide-react';
+import { logger } from '../lib/logger';
 
 interface Notification {
   id: string;
@@ -39,7 +40,7 @@ export default function NotificationsPage() {
         setTotal(data?.pagination?.total || 0);
       }
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      logger.error('Failed to fetch notifications:', err);
       setError('Failed to load notifications. Please try again.');
     } finally {
       setLoading(false);

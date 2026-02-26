@@ -8,6 +8,7 @@ import { authFetch, safeJson } from '../../lib/api';
 import { formatDateTime } from '../../lib/formatters';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../../components/Breadcrumb';
+import { logger } from '../../lib/logger';
 
 interface PendingSupplier {
   id: string;
@@ -47,7 +48,7 @@ export default function SupplierQueuePage() {
       const data = await safeJson(response);
       setPendingSuppliers(data.data || []);
     } catch (err) {
-      console.error('Error fetching pending suppliers:', err);
+      logger.error('Error fetching pending suppliers:', err);
       setError('Failed to load pending suppliers. Please try again.');
     } finally {
       setIsLoading(false);

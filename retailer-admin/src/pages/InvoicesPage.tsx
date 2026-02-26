@@ -13,6 +13,7 @@ import { useUrlState } from '../hooks/useUrlState';
 import EmptyState from '../components/EmptyState';
 import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { FileText } from 'lucide-react';
+import { logger } from '../lib/logger';
 
 interface InvoiceListItem {
   id: string;
@@ -154,7 +155,7 @@ export default function InvoicesPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("PDF download failed:", err);
+      logger.error("PDF download failed:", err);
       setError("Failed to download PDF. Please try again.");
     }
   };

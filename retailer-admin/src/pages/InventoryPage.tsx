@@ -11,6 +11,7 @@ import { useUrlState } from '../hooks/useUrlState';
 // GAP-2: EmptyState component for consistent empty states
 import EmptyState from '../components/EmptyState';
 import { ClipboardList, RefreshCw } from 'lucide-react';
+import { logger } from '../lib/logger';
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -128,7 +129,7 @@ export default function InventoryPage() {
         setTimeout(() => setRefreshFlash(false), 600);
       }
     } catch (err) {
-      console.error('Failed to load ledger:', err);
+      logger.error('Failed to load ledger:', err);
       setError('Failed to load inventory ledger. Please try again.');
       setLedgerEntries([]);
     } finally {

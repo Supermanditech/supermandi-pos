@@ -6,6 +6,7 @@ import { BuildStamp } from '../components/BuildStamp';
 import { useUnsavedChanges } from '../hooks/useNavigationSafety';
 // REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
 import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_LABEL } from '../lib/fileLimits';
+import { logger } from '../lib/logger';
 
 // UI-SPEC-002: Stripe-level calm infrastructure design for registration
 // Layout: Header (64px) + Wide container (1024px) + Footer - solid #F7F9FC background
@@ -362,7 +363,7 @@ export default function RetailerOnboardingPage() {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
       } catch (err) {
-        console.error('Failed to setup reCAPTCHA:', err);
+        logger.error('Failed to setup reCAPTCHA:', err);
       }
     }
 

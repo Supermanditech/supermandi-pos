@@ -10,6 +10,7 @@ import { useUrlState } from '../hooks/useUrlState';
 import EmptyState from '../components/EmptyState';
 import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { Truck } from 'lucide-react';
+import { logger } from '../lib/logger';
 
 // Debounce delay for server-side search (RCAT-SUP-API-001)
 const SEARCH_DEBOUNCE_MS = 350;
@@ -286,7 +287,7 @@ export default function SuppliersPage() {
       const data = await safeJson(response);
       setSuppliers(data.data || []);
     } catch (err) {
-      console.error('Error fetching suppliers:', err);
+      logger.error('Error fetching suppliers:', err);
       setError('Failed to load suppliers. Please try again.');
     } finally {
       setIsLoading(false);

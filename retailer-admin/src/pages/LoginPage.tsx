@@ -5,6 +5,7 @@ import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { logger } from '../lib/logger';
 
 // UI-SPEC-001: Stripe-level calm infrastructure design
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
@@ -68,7 +69,7 @@ export default function LoginPage() {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
       } catch (err) {
-        console.error('Failed to setup reCAPTCHA:', err);
+        logger.error('Failed to setup reCAPTCHA:', err);
       }
     }
 
