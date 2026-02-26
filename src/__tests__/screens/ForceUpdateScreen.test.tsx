@@ -176,12 +176,13 @@ describe("ForceUpdateScreen", () => {
   // #411: iOS Linking + error + throttle tests
   // =========================================================================
 
-  it("falls back to Play Store on iOS when APP_STORE_URL is empty", () => {
+  it("falls back to Play Store on iOS when EXPO_PUBLIC_APP_STORE_URL is unset", () => {
     const spy = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined as any);
     Platform.OS = "ios";
+    // In test environment EXPO_PUBLIC_APP_STORE_URL is not set → APP_STORE_URL = "" → falsy
+    // → handleUpdate falls back to PLAY_STORE_URL (REQ.AUDIT.W4.POS.APPSTORE-URL-MISSING.001)
     render(<ForceUpdateScreen />);
     fireEvent.press(screen.getByTestId("force-update-update-button"));
-    // APP_STORE_URL is empty ("") → condition falsy → falls back to PLAY_STORE_URL
     expect(spy).toHaveBeenCalledWith(expect.stringContaining("play.google.com"));
     spy.mockRestore();
     Platform.OS = "android"; // restore
