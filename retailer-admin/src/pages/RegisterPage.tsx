@@ -248,6 +248,8 @@ export default function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const recaptchaInitialized = useRef(false);
+  // REQ.AUTH.PARITY.REGISTRATION_FLOW: Track idToken age for 50-min expiry check (parity with supplier)
+  const idTokenObtainedAt = useRef<number>(0);
 
   // Business Details — restore from sessionStorage
   const [applicationId, setApplicationId] = useState(saved.current.applicationId || '');
@@ -388,6 +390,7 @@ export default function RegisterPage() {
     try {
       const token = await firebaseVerifyOtp(otp);
       setIdToken(token);
+      idTokenObtainedAt.current = Date.now();
       setStep('details');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid OTP. Please try again.');
@@ -428,6 +431,15 @@ export default function RegisterPage() {
   const handleSubmitDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // REQ.AUTH.PARITY.REGISTRATION_FLOW: Validate idToken hasn't expired (parity with supplier REG-SUP-002)
+    const TOKEN_MAX_AGE_MS = 50 * 60 * 1000; // 50 minutes
+    if (!idToken || (idTokenObtainedAt.current > 0 && Date.now() - idTokenObtainedAt.current > TOKEN_MAX_AGE_MS)) {
+      setError('Phone verification expired. Please verify your phone again.');
+      setIdToken('');
+      setStep('phone');
+      return;
+    }
 
     // Validate
     const errors: Record<string, string> = {};

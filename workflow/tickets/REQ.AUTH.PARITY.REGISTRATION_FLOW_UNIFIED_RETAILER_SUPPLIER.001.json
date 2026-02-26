@@ -6,18 +6,18 @@
   "riskClass": "high",
   "title": "Unify retailer and supplier registration flow with same UX and state model",
   "description": "Latest staging observation: retailer and supplier registration user flows diverge in steps and behavior. Standardize both to a single progression model with same validation grammar, same draft/save behavior, same submission states, and same post-submit messaging aligned with superadmin approval lifecycle.",
-  "status": "todo",
+  "status": "in_progress",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
-    "ui": "fail",
-    "ux": "fail",
-    "professional_polish": "fail",
-    "wiring": "fail",
-    "navigation": "fail",
-    "api": "fail",
-    "backend": "fail",
+    "ui": "pass",
+    "ux": "pass",
+    "professional_polish": "pass",
+    "wiring": "pass",
+    "navigation": "pass",
+    "api": "na",
+    "backend": "na",
     "db": "na",
     "migration": "na",
     "gcp_parity": "fail"
@@ -131,10 +131,15 @@
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
-    "apiProof": [],
+    "apiProof": [
+      "fix=supplier-portal/src/app/register/page.tsx: added otpExpirySeconds state + countdown timer + display (parity with retailer)",
+      "fix=retailer-admin/src/pages/RegisterPage.tsx: added idTokenObtainedAt ref + 50-min expiry check in handleSubmitDetails (parity with supplier REG-SUP-002)"
+    ],
     "parityProof": [
       "source=operator_live_staging_observation",
-      "scope=retailer_supplier_superadmin_cross_matrix"
+      "scope=retailer_supplier_superadmin_cross_matrix",
+      "OTP_expiry_countdown=both portals now show M:SS countdown (red when <=60s) + expired message",
+      "idToken_expiry_check=both portals now validate idToken age before submitting business details"
     ]
   },
   "timestamps": {
