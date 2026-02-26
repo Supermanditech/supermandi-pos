@@ -17,6 +17,8 @@ import {
 import { formatCurrency } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_PRODUCT_IMAGE_SIZE_BYTES, MAX_PRODUCT_IMAGE_SIZE_LABEL } from '@/lib/fileLimits';
 // T-121: URL state for search persistence
 import { useUrlState } from '@/hooks/useUrlState';
 // GAP-3: EmptyState component for consistent empty states
@@ -267,8 +269,8 @@ export default function ProductsPage() {
       toast.error('Only JPEG, PNG, and WebP images are allowed');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image file size must be under 5MB');
+    if (file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
+      toast.error(`Image file size must be under ${MAX_PRODUCT_IMAGE_SIZE_LABEL}`);
       return;
     }
     setImageFile(file);
@@ -621,7 +623,7 @@ export default function ProductsPage() {
                       <span className="font-medium text-primary-600">Click to upload</span> or drag and drop
                     </div>
                     <div className="text-xs text-slate-400">
-                      JPEG, PNG, or WebP (max 5MB)
+                      JPEG, PNG, or WebP (max {MAX_PRODUCT_IMAGE_SIZE_LABEL})
                     </div>
                   </div>
                 </div>

@@ -7,6 +7,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_KYC_DOCUMENT_SIZE_BYTES, MAX_KYC_DOCUMENT_SIZE_LABEL } from '@/lib/fileLimits';
 import {
   createSupplierApplication,
   verifySupplierOtp,
@@ -350,8 +352,8 @@ export default function SupplierOnboardingPage() {
   const handleFileChange = (setter: (file: File | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('File size must be less than 5MB');
+      if (file.size > MAX_KYC_DOCUMENT_SIZE_BYTES) {
+        setError(`File size must be less than ${MAX_KYC_DOCUMENT_SIZE_LABEL}`);
         return;
       }
       const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];

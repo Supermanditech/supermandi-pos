@@ -28,6 +28,8 @@ import {
   cleanup,
 } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_LABEL } from '../lib/fileLimits';
 
 // GSTIN: 15 chars, position 14 can be any alphanumeric (GL-CRIT-0031)
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/;
@@ -548,10 +550,10 @@ export default function RegisterPage() {
 
   // === STEP 4: Document Upload ===
   const handleFileSelect = async (docType: string, file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
       setDocuments(prev => ({
         ...prev,
-        [docType]: { ...prev[docType], status: 'error', error: 'File must be under 5MB' },
+        [docType]: { ...prev[docType], status: 'error', error: `File must be under ${MAX_DOCUMENT_SIZE_LABEL}` },
       }));
       return;
     }
@@ -937,7 +939,7 @@ export default function RegisterPage() {
                 <h4 style={{ fontWeight: 500, marginBottom: '0.5rem', fontSize: '0.9375rem' }}>Document Upload Guidelines</h4>
                 <ul style={{ fontSize: '0.875rem', margin: 0, paddingLeft: '1.25rem', lineHeight: 1.8 }}>
                   <li>Supported formats: JPEG, PNG, PDF</li>
-                  <li>Maximum file size: 5MB per document</li>
+                  <li>Maximum file size: {MAX_DOCUMENT_SIZE_LABEL} per document</li>
                   <li>Ensure documents are clear and readable</li>
                 </ul>
               </div>

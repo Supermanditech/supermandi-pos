@@ -4,6 +4,8 @@ import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp as firebaseSendOtp, verifyOtp as firebaseVerifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
 import { useUnsavedChanges } from '../hooks/useNavigationSafety';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_LABEL } from '../lib/fileLimits';
 
 // UI-SPEC-002: Stripe-level calm infrastructure design for registration
 // Layout: Header (64px) + Wide container (1024px) + Footer - solid #F7F9FC background
@@ -580,11 +582,11 @@ export default function RetailerOnboardingPage() {
   const handleDocumentSelect = useCallback((docType: string, file: File | null) => {
     if (!file) return;
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001)
+    if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
       setDocuments(prev => ({
         ...prev,
-        [docType]: { ...prev[docType], error: 'File size must be less than 5MB', status: 'error' }
+        [docType]: { ...prev[docType], error: `File size must be less than ${MAX_DOCUMENT_SIZE_LABEL}`, status: 'error' }
       }));
       return;
     }
@@ -1178,7 +1180,7 @@ export default function RetailerOnboardingPage() {
               <h4 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Document Upload Guidelines</h4>
               <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
                 <li>Supported formats: JPEG, PNG, PDF</li>
-                <li>Maximum file size: 5MB per document</li>
+                <li>Maximum file size: {MAX_DOCUMENT_SIZE_LABEL} per document</li>
                 <li>Ensure documents are clear and readable</li>
               </ul>
             </div>

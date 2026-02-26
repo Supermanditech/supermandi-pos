@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { uploadProductsCsv, CsvUploadResult } from '@/lib/api';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_CSV_UPLOAD_SIZE_BYTES, MAX_CSV_UPLOAD_SIZE_LABEL } from '@/lib/fileLimits';
 
 export default function UploadPage() {
   const queryClient = useQueryClient();
@@ -44,9 +46,9 @@ export default function UploadPage() {
 
     const file = e.dataTransfer.files[0];
     if (file && (file.name.endsWith('.csv') || file.type === 'text/csv')) {
-      // GO-LIVE-024: Fixed file size validation (5MB limit matches API)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+      // GO-LIVE-024 / REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+      if (file.size > MAX_CSV_UPLOAD_SIZE_BYTES) {
+        toast.error(`File size must be less than ${MAX_CSV_UPLOAD_SIZE_LABEL}`);
         return;
       }
       setSelectedFile(file);
@@ -60,9 +62,9 @@ export default function UploadPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        // GO-LIVE-024: Fixed file size validation (5MB limit matches API)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error('File size must be less than 5MB');
+        // GO-LIVE-024 / REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+        if (file.size > MAX_CSV_UPLOAD_SIZE_BYTES) {
+          toast.error(`File size must be less than ${MAX_CSV_UPLOAD_SIZE_LABEL}`);
           e.target.value = ''; // Reset input
           return;
         }
@@ -181,7 +183,7 @@ export default function UploadPage() {
               />
             </label>
             <p className="text-sm text-slate-400 mt-4">
-              Supported format: CSV (max 5MB)
+              Supported format: CSV (max {MAX_CSV_UPLOAD_SIZE_LABEL})
             </p>
           </div>
         )}

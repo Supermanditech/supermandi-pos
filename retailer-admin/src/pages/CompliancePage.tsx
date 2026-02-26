@@ -5,6 +5,8 @@ import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_LABEL } from '../lib/fileLimits';
 
 interface Document {
   id: string;
@@ -83,9 +85,9 @@ export default function CompliancePage() {
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
+    // Validate file size (REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001)
+    if (selectedFile.size > MAX_DOCUMENT_SIZE_BYTES) {
+      setError(`File size must be less than ${MAX_DOCUMENT_SIZE_LABEL}`);
       return;
     }
 
@@ -252,7 +254,7 @@ export default function CompliancePage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">File * (PDF, JPG, PNG - max 5MB)</label>
+                  <label className="form-label">File * (PDF, JPG, PNG - max {MAX_DOCUMENT_SIZE_LABEL})</label>
                   <input
                     type="file"
                     className="form-input"
