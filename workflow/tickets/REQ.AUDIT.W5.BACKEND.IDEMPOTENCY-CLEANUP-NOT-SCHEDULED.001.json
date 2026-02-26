@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "Idempotency cleanup function exists in migration 065 but no scheduler calls it — table grows unbounded",
   "description": "cleanup_expired_idempotency_keys() documented as needing daily cron but no cron/scheduler exists in codebase.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -94,10 +94,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "backend/src/services/syncCleanupScheduler.ts",
+      "workflow/tickets/REQ.AUDIT.W5.BACKEND.IDEMPOTENCY-CLEANUP-NOT-SCHEDULED.001.json"
     ]
   },
   "operatorChecks": {
@@ -122,7 +146,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-backend-batch-1772147747366",
+      "at": "2026-02-26T23:15:47.366Z",
+      "reason": "schedule application-level cleanup of expired idempotency keys",
+      "prevHash": "GENESIS",
+      "hash": "474b8fb885045d6bed58d3ed8624ccdd8b72b500d45b70174fecf1c4bde5d80c"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-backend-batch-1772147747366",
+      "at": "2026-02-26T23:15:47.366Z",
+      "reason": "cleanupExpiredIdempotencyKeys() added to syncCleanupScheduler.ts; runs every 24h using public.cleanup_expired_idempotency_keys()",
+      "prevHash": "474b8fb885045d6bed58d3ed8624ccdd8b72b500d45b70174fecf1c4bde5d80c",
+      "hash": "4aa7f125e8d998dea6c2b5c57921cfaee00932f55fd29fb63420db23e19da711"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -233,12 +278,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.BACKEND.IDEMPOTENCY-CLEANUP-NOT-SCHEDULED.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "66c8580a",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=66c8580a"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "backend/src/services/syncCleanupScheduler.ts",
+      "description": "IDEMPOTENCY_CLEANUP_INTERVAL_MS constant + cleanupExpiredIdempotencyKeys() function + added to setTimeout + setInterval"
+    }
   }
 }

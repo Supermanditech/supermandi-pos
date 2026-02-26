@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "Main backend (port 3001) lacks CSRF middleware — direct backend access bypasses api-gateway CSRF protection",
   "description": "api-gateway has AUTH-CSRF-001 but main backend (port 3001) app.ts does not. Direct backend access bypasses CSRF.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -94,10 +94,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "backend/src/app.ts",
+      "workflow/tickets/REQ.AUDIT.W5.BACKEND.CSRF-PROTECTION-BACKEND-MISSING.001.json"
     ]
   },
   "operatorChecks": {
@@ -122,7 +146,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-backend-batch-1772147747366",
+      "at": "2026-02-26T23:15:47.366Z",
+      "reason": "add CSRF double-submit header check to main backend",
+      "prevHash": "GENESIS",
+      "hash": "4e41fd4f7aea5cabe0d3cc7572a798be4587ae1bd2c842c34c9d89195de9cd00"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-backend-batch-1772147747366",
+      "at": "2026-02-26T23:15:47.366Z",
+      "reason": "CSRF middleware added to app.ts before apiRouter; requires Content-Type:json or X-Requested-With on POST/PUT/PATCH/DELETE",
+      "prevHash": "4e41fd4f7aea5cabe0d3cc7572a798be4587ae1bd2c842c34c9d89195de9cd00",
+      "hash": "091e57146b5227105b4b655f6762528fa1b3246cf53b440caf9d0685a394f9f0"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -233,12 +278,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.BACKEND.CSRF-PROTECTION-BACKEND-MISSING.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "66c8580a",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=66c8580a"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "backend/src/app.ts",
+      "description": "CSRF_STATE_CHANGING + CSRF_EXEMPT_PREFIXES + app.use /api CSRF middleware at line 132"
+    }
   }
 }

@@ -129,6 +129,22 @@ app.get("/health/translation", (_req, res) => {
   res.json(health);
 });
 
+// CSRF-PROTECTION-BACKEND-MISSING: CSRF check on state-changing methods
+// All legitimate API clients send Content-Type: application/json or X-Requested-With.
+// Cross-origin HTML form submissions cannot set these headers (prevents CSRF).
+const CSRF_STATE_CHANGING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const CSRF_EXEMPT_PREFIXES = ['/api/v1/health', '/api/v1/ready', '/api/v1/webhooks', '/health', '/ready', '/version'];
+app.use('/api', (req, res, next) => {
+  if (!CSRF_STATE_CHANGING.has(req.method)) return next();
+  const p = req.path.toLowerCase();
+  if (CSRF_EXEMPT_PREFIXES.some(prefix => p.startsWith(prefix))) return next();
+  const requestedWith = req.headers['x-requested-with'];
+  const contentType = req.headers['content-type'];
+  if (requestedWith || (contentType && contentType.includes('application/json'))) return next();
+  logger.warn(`[CSRF] Blocked ${req.method} ${req.path} — missing Content-Type:json or X-Requested-With`);
+  res.status(403).json({ error: { code: 'CSRF_VALIDATION_FAILED', message: 'Include Content-Type: application/json or X-Requested-With header.' } });
+});
+
 // CACHE-000: Enforce no-cache headers on all dynamic API responses
 app.use("/api", noCacheHeaders, apiRouter);
 

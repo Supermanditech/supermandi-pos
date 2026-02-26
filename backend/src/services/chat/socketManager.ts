@@ -38,6 +38,31 @@ const userSockets = new Map<string, string>(); // userId → socketId
 // UUID pattern for validating conversation IDs
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// WEBSOCKET-RATE-LIMIT-MISSING: Per-connection sliding window rate limiter.
+// Prevents a single client from flooding events (typing, read receipts, etc.).
+const WS_RATE_LIMIT_MAX = 20;       // max events per window
+const WS_RATE_LIMIT_WINDOW_MS = 1000; // 1-second window
+
+interface WsRateSlot {
+  count: number;
+  resetAt: number;
+}
+const wsRateLimits = new Map<string, WsRateSlot>();
+
+function checkWsRateLimit(socketId: string): boolean {
+  const now = Date.now();
+  const slot = wsRateLimits.get(socketId);
+  if (!slot || now >= slot.resetAt) {
+    wsRateLimits.set(socketId, { count: 1, resetAt: now + WS_RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (slot.count >= WS_RATE_LIMIT_MAX) {
+    return false; // over limit
+  }
+  slot.count++;
+  return true;
+}
+
 // =============================================================================
 // SOCKET.IO INITIALIZATION
 // =============================================================================
@@ -146,6 +171,7 @@ export async function initChatSocket(
 
     // Handle typing indicators
     socket.on('typing:start', (data: { conversationId: string; displayName: string }) => {
+      if (!checkWsRateLimit(socket.id)) return;
       if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
       const safeName = String(data.displayName || '').substring(0, 100);
       socket.to(`conv:${data.conversationId}`).emit('typing', {
@@ -157,6 +183,7 @@ export async function initChatSocket(
     });
 
     socket.on('typing:stop', (data: { conversationId: string }) => {
+      if (!checkWsRateLimit(socket.id)) return;
       if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
       socket.to(`conv:${data.conversationId}`).emit('typing', {
         conversationId: data.conversationId,
@@ -168,6 +195,7 @@ export async function initChatSocket(
 
     // Handle read receipt
     socket.on('message:read', (data: { conversationId: string }) => {
+      if (!checkWsRateLimit(socket.id)) return;
       if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
       socket.to(`conv:${data.conversationId}`).emit('message:read', {
         conversationId: data.conversationId,
@@ -177,6 +205,7 @@ export async function initChatSocket(
 
     // Handle join conversation room — verify user is actually a participant
     socket.on('conversation:join', async (data: { conversationId: string }) => {
+      if (!checkWsRateLimit(socket.id)) return;
       if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
       try {
         const check = await pool.query(
@@ -196,6 +225,7 @@ export async function initChatSocket(
     socket.on('disconnect', () => {
       onlineUsers.delete(userId);
       userSockets.delete(userId);
+      wsRateLimits.delete(socket.id);
       socket.broadcast.emit('user:offline', { userId });
     });
   });

@@ -21,6 +21,8 @@ import { asError } from "../lib/errorUtils";
 const SYNC_LOCKS_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;        // 5 minutes
 const PROCESSED_EVENTS_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const FAILED_EVENTS_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;    // 1 hour
+// IDEMPOTENCY-CLEANUP-NOT-SCHEDULED: GL-CRIT-0029 requires daily cleanup of expired idempotency keys
+const IDEMPOTENCY_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 // STBT-177: Statement timeout to prevent cleanup queries from hanging DB connections
 const CLEANUP_QUERY_TIMEOUT_MS = 30_000; // 30 seconds max per cleanup query
 
@@ -35,6 +37,7 @@ const stats: Record<string, CleanupStats> = {
   sync_locks: { lastRun: null, rowsCleaned: 0, errors: 0 },
   processed_events: { lastRun: null, rowsCleaned: 0, errors: 0 },
   failed_events: { lastRun: null, rowsCleaned: 0, errors: 0 },
+  idempotency_keys: { lastRun: null, rowsCleaned: 0, errors: 0 },
 };
 
 let intervalIds: NodeJS.Timeout[] = [];
@@ -146,6 +149,41 @@ async function cleanupOldFailedEvents(): Promise<number> {
   }
 }
 
+/**
+ * IDEMPOTENCY-CLEANUP-NOT-SCHEDULED: Clean up expired idempotency keys (older than 24h)
+ * GL-CRIT-0029: Prevents api_idempotency_keys table from growing unboundedly.
+ * pg_cron may not be available; this application-level scheduler is the fallback.
+ */
+async function cleanupExpiredIdempotencyKeys(): Promise<number> {
+  const pool = getPool();
+  if (!pool) return 0;
+
+  const client = await pool.connect();
+  try {
+    await client.query(`SET statement_timeout = ${CLEANUP_QUERY_TIMEOUT_MS}`);
+    const result = await client.query(
+      "SELECT public.cleanup_expired_idempotency_keys() AS count"
+    );
+    const count = result.rows[0]?.count ?? 0;
+
+    stats.idempotency_keys.lastRun = new Date();
+    stats.idempotency_keys.rowsCleaned += count;
+
+    if (count > 0) {
+      log.info(`[SyncCleanup] Cleaned ${count} expired idempotency keys`);
+    }
+
+    return count;
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    stats.idempotency_keys.errors++;
+    log.error("[SyncCleanup] Error cleaning idempotency keys:", error?.message);
+    return 0;
+  } finally {
+    client.release();
+  }
+}
+
 // =============================================================================
 // SCHEDULER
 // =============================================================================
@@ -162,12 +200,14 @@ export function startSyncCleanupScheduler(): void {
   log.info(`  - Sync locks: every ${SYNC_LOCKS_CLEANUP_INTERVAL_MS / 1000}s`);
   log.info(`  - Processed events: every ${PROCESSED_EVENTS_CLEANUP_INTERVAL_MS / 60000}min`);
   log.info(`  - Failed events: every ${FAILED_EVENTS_CLEANUP_INTERVAL_MS / 60000}min`);
+  log.info(`  - Idempotency keys: every ${IDEMPOTENCY_CLEANUP_INTERVAL_MS / 3600000}h`);
 
   // Run initial cleanup after 30 seconds (let DB connections settle)
   setTimeout(() => {
     cleanupStaleSyncLocks();
     cleanupOldProcessedEvents();
     cleanupOldFailedEvents();
+    cleanupExpiredIdempotencyKeys();
   }, 30000);
 
   // Schedule periodic cleanups
@@ -179,6 +219,9 @@ export function startSyncCleanupScheduler(): void {
   );
   intervalIds.push(
     setInterval(cleanupOldFailedEvents, FAILED_EVENTS_CLEANUP_INTERVAL_MS)
+  );
+  intervalIds.push(
+    setInterval(cleanupExpiredIdempotencyKeys, IDEMPOTENCY_CLEANUP_INTERVAL_MS)
   );
 }
 
@@ -206,15 +249,17 @@ export function getSyncCleanupStats(): Record<string, CleanupStats> {
  * Useful for manual maintenance
  */
 export async function runAllCleanups(): Promise<Record<string, number>> {
-  const [locks, processed, failed] = await Promise.all([
+  const [locks, processed, failed, idempotency] = await Promise.all([
     cleanupStaleSyncLocks(),
     cleanupOldProcessedEvents(),
     cleanupOldFailedEvents(),
+    cleanupExpiredIdempotencyKeys(),
   ]);
 
   return {
     sync_locks: locks,
     processed_events: processed,
     failed_events: failed,
+    idempotency_keys: idempotency,
   };
 }
