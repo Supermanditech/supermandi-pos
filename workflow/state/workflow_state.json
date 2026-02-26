@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-26T09:37:21.125Z",
+  "updatedAt": "2026-02-26T09:39:10.419Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1112,10 +1112,6 @@
         "complete": false,
         "summary": "R7 execution initialized: 535 tickets queued from source-first audit.",
         "remainingTicketIds": [
-          "R7.BE.042.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_15",
-          "R7.BE.044.AUTH_SERVICE_STATE_API_CONSISTENCY_REVIEW_17",
-          "R7.BE.046.SUPPLIER_SERVICE_STATE_API_CONSISTENCY_REVIEW_19",
-          "R7.BE.047.CATALOG_SERVICE_STATE_API_CONSISTENCY_REVIEW_20",
           "R7.BE.051.REORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_24",
           "R7.BE.052.SUPPLIER_SERVICE_RESIDUAL_CONSOLE_LOGGING",
           "R7.BE.053.VOICE_SERVICE_RESIDUAL_CONSOLE_LOGGING",
@@ -1648,9 +1644,13 @@
           "R7.BE.045.PLATFORM_SERVICE_STATE_API_CONSISTENCY_REVIEW_18",
           "R7.BE.048.INVENTORY_SERVICE_STATE_API_CONSISTENCY_REVIEW_21",
           "R7.BE.049.ORDER_SERVICE_STATE_API_CONSISTENCY_REVIEW_22",
-          "R7.BE.050.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_23"
+          "R7.BE.050.PAYMENT_SERVICE_STATE_API_CONSISTENCY_REVIEW_23",
+          "R7.BE.042.VOICE_SERVICE_STATE_API_CONSISTENCY_REVIEW_15",
+          "R7.BE.044.AUTH_SERVICE_STATE_API_CONSISTENCY_REVIEW_17",
+          "R7.BE.046.SUPPLIER_SERVICE_STATE_API_CONSISTENCY_REVIEW_19",
+          "R7.BE.047.CATALOG_SERVICE_STATE_API_CONSISTENCY_REVIEW_20"
         ],
-        "lastUpdatedAt": "2026-02-26T09:37:21.125Z"
+        "lastUpdatedAt": "2026-02-26T09:39:10.419Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1711,7 +1711,7 @@
   },
   "summary": {
     "totalTickets": 1129,
-    "activeTickets": 491,
+    "activeTickets": 487,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
@@ -1761,7 +1761,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-26T09:37:21.125Z"
+    "updatedAt": "2026-02-26T09:39:10.419Z"
   },
-  "lastUpdated": "2026-02-26T09:37:21.125Z"
+  "lastUpdated": "2026-02-26T09:39:10.419Z"
 }
