@@ -858,13 +858,14 @@ function RegisterPage() {
             </div>
 
             {/* REQ.AUTH.PARITY.REGISTRATION_FLOW: OTP expiry countdown (parity with retailer) */}
+            {/* REQ.REGRESSION.AUTH.REGISTRATION.OTP_EXPIRY_SUBMIT_GUARD: show expired message regardless of otp length */}
             <div aria-live="polite" className="text-center">
               {otpExpirySeconds > 0 && (
                 <p className={`text-xs ${otpExpirySeconds <= 60 ? 'text-red-600' : 'text-slate-500'}`}>
                   Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
                 </p>
               )}
-              {otpExpirySeconds === 0 && otp.length === 0 && (
+              {otpExpirySeconds === 0 && (
                 <p className="text-xs text-red-600">Code expired. Please resend OTP.</p>
               )}
             </div>
@@ -872,7 +873,7 @@ function RegisterPage() {
             <button
               type="submit"
               className="btn btn-primary w-full py-3 text-base"
-              disabled={isLoading || otp.length !== 6}
+              disabled={isLoading || otp.length !== 6 || otpExpirySeconds === 0}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
