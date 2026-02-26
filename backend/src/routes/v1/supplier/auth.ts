@@ -1792,8 +1792,9 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
       return;
     }
 
-    // Check if account is pending approval
-    if (supplier.status === 'pending') {
+    // REQ.AUTH.BACKEND_DB_MIGRATION_PARITY_IF_REQUIRED: Check correct field for pending approval.
+    // supplier.status is always 'active' on registration; supplier.verification_status tracks approval.
+    if (supplier.verification_status === 'pending') {
       res.status(200).json({
         success: true,
         status: 'pending',
@@ -1824,7 +1825,8 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
     }
 
     // SA-P1-005: Block suspended suppliers
-    if (supplier.verification_status === 'SUSPENDED') {
+    // REQ.AUTH.BACKEND_DB_MIGRATION_PARITY_IF_REQUIRED: verification_status stored lowercase ('suspended', not 'SUSPENDED')
+    if (supplier.verification_status === 'suspended') {
       res.status(403).json({
         error: { code: 'ACCOUNT_SUSPENDED', message: 'Your account has been suspended. Please contact support.' }
       });
