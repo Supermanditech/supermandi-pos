@@ -9,21 +9,22 @@ import { getGatewayRedis } from '../redis';
 // LIVE.GW.RATE_LIMIT_REDIS_BACKED.001: Redis-backed rate limit store for distributed limiting
 // Falls back to in-memory when Redis is unavailable (single-instance still works)
 class RedisRateLimitStore implements Store {
-  private prefix: string;
-  private windowMs: number;
+  // Use _prefix/_windowMs to avoid structural conflict with Store.prefix?: string
+  private _prefix: string;
+  private _windowMs: number;
   private localStore = new Map<string, { totalHits: number; resetTime: Date }>();
 
   constructor(prefix: string, windowMs: number) {
-    this.prefix = `rl:${prefix}:`;
-    this.windowMs = windowMs;
+    this._prefix = `rl:${prefix}:`;
+    this._windowMs = windowMs;
   }
 
   async increment(key: string): Promise<IncrementResponse> {
     const redis = getGatewayRedis();
     if (redis) {
       try {
-        const redisKey = this.prefix + key;
-        const ttlSeconds = Math.ceil(this.windowMs / 1000);
+        const redisKey = this._prefix + key;
+        const ttlSeconds = Math.ceil(this._windowMs / 1000);
         const hits = await redis.incr(redisKey);
         if (hits === 1) await redis.expire(redisKey, ttlSeconds);
         const ttl = await redis.ttl(redisKey);
@@ -37,7 +38,7 @@ class RedisRateLimitStore implements Store {
       entry.totalHits++;
       return { totalHits: entry.totalHits, resetTime: entry.resetTime };
     }
-    const resetTime = new Date(now + this.windowMs);
+    const resetTime = new Date(now + this._windowMs);
     this.localStore.set(key, { totalHits: 1, resetTime });
     return { totalHits: 1, resetTime };
   }
@@ -45,7 +46,7 @@ class RedisRateLimitStore implements Store {
   async decrement(key: string): Promise<void> {
     const redis = getGatewayRedis();
     if (redis) {
-      try { await redis.decr(this.prefix + key); return; } catch { /* fall through */ }
+      try { await redis.decr(this._prefix + key); return; } catch { /* fall through */ }
     }
     const entry = this.localStore.get(key);
     if (entry && entry.totalHits > 0) entry.totalHits--;
@@ -54,7 +55,7 @@ class RedisRateLimitStore implements Store {
   async resetKey(key: string): Promise<void> {
     const redis = getGatewayRedis();
     if (redis) {
-      try { await redis.del(this.prefix + key); } catch { /* fall through */ }
+      try { await redis.del(this._prefix + key); } catch { /* fall through */ }
     }
     this.localStore.delete(key);
   }
