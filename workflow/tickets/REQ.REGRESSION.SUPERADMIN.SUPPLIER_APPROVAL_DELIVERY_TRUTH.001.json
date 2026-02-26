@@ -114,7 +114,26 @@
     "validatedCloudRunRevisionIds": []
   },
   "statusHistory": [
-    { "from": "todo", "to": "done", "at": "2026-02-26T15:00:00.000Z", "by": "claude" }
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:00:00.000Z",
+      "reason": "Start implementation for REQ.REGRESSION.SUPERADMIN.SUPPLIER_APPROVAL_DELIVERY_TRUTH.001",
+      "prevHash": "GENESIS",
+      "hash": "f02fe31495434784f3256883ee355a46f81651820fa2658c41d8823de12374d3"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:05:00.000Z",
+      "reason": "Gated superadmin supplier approval dialog on actual email delivery success",
+      "prevHash": "f02fe31495434784f3256883ee355a46f81651820fa2658c41d8823de12374d3",
+      "hash": "693b8b95e534c5c7682ef0961b194d3269be24a3ddc5df384c8b5e3b512eba05"
+    }
   ],
   "evidence": {
     "beforeVisual": [],
@@ -244,13 +263,14 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.REGRESSION.SUPERADMIN.SUPPLIER_APPROVAL_DELIVERY_TRUTH.001",
-    "lastValidatedCommit": "d291f48a",
+    "lastValidatedCommit": "a25c9bf9",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "created_by=codex",
-      "source_commit=d291f48a"
+      "pr=438",
+      "merge_commit=a25c9bf9",
+      "ci=passed"
     ]
   },
   "ticketId": "REQ.REGRESSION.SUPERADMIN.SUPPLIER_APPROVAL_DELIVERY_TRUTH.001",

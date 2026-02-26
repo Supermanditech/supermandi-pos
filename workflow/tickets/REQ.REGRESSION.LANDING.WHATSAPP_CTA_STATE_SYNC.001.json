@@ -113,19 +113,38 @@
     "validatedCloudRunRevisionIds": []
   },
   "statusHistory": [
-    { "from": "todo", "to": "done", "at": "2026-02-26T15:10:00.000Z", "by": "claude" }
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:08:00.000Z",
+      "reason": "Start implementation for REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001",
+      "prevHash": "GENESIS",
+      "hash": "0e4f0caee94974ebc7b9cafbee1495cd9dbf20e36aa8561382842bd8b9287254"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:10:00.000Z",
+      "reason": "Removed unstable operator comment from landing WA CTA, synced end-to-end ticket to done",
+      "prevHash": "0e4f0caee94974ebc7b9cafbee1495cd9dbf20e36aa8561382842bd8b9287254",
+      "hash": "b1139a69d9954737ac3c23c253706ca08c1565623d43fe850cf5d2b35d8b310d"
+    }
   ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
-      "REQ.LANDING.WHATSAPP_CTA_END_TO_END.001.json: status synced todo→done with full evidence block",
+      "REQ.LANDING.WHATSAPP_CTA_END_TO_END.001.json: status synced todo\u00e2\u2020\u2019done with full evidence block",
       "supermandi-landing/index.html: unstable 'OPERATOR: replace' comment removed; config documented as intentional (same number for both targets until separate line provisioned)",
       "WA.enabled=true, superadmin.number=919251893684, company.number=919251893684 (intentional parity)"
     ],
     "parityProof": [
       "landing_commit_refs=a3e696c3,c300c627",
-      "config comment now stable — no dangling operator action items"
+      "config comment now stable \u00e2\u20ac\u201d no dangling operator action items"
     ]
   },
   "timestamps": {
@@ -243,13 +262,14 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001",
-    "lastValidatedCommit": "d291f48a",
+    "lastValidatedCommit": "87102b39",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "created_by=codex",
-      "source_commit=d291f48a"
+      "pr=440",
+      "merge_commit=87102b39",
+      "ci=passed"
     ]
   },
   "ticketId": "REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001",

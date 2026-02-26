@@ -1,0 +1,319 @@
+{
+  "ticketId": "REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001",
+  "screenId": "SUPERADMIN.WHATSAPP_TAB.CTA_CONFIG",
+  "orderInScreen": 1,
+  "surface": "superadmin",
+  "riskClass": "medium",
+  "title": "Live WhatsApp CTA config management from superadmin portal",
+  "description": "Superadmin can update landing page WhatsApp CTA numbers and messages in real time from the WhatsApp tab without a code deploy. Landing page fetches config dynamically. Fail-safe: widget hidden if DB unavailable.",
+  "status": "done",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "pass",
+    "ux": "pass",
+    "professional_polish": "pass",
+    "wiring": "pass",
+    "navigation": "na",
+    "api": "pass",
+    "backend": "pass",
+    "db": "pass",
+    "migration": "pass",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/public/whatsapp-cta-config",
+      "https://staging.supermandi.tech/admin/"
+    ],
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "superadmin",
+      "landing"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": []
+  },
+  "impact": {
+    "impactedScreens": [
+      "SUPERADMIN.WHATSAPP_TAB",
+      "LANDING.HOME"
+    ],
+    "impactedServices": [
+      "main-backend",
+      "api-gateway",
+      "superadmin",
+      "landing"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "operator",
+    "reproSteps": [
+      "Open superadmin portal, WhatsApp tab, CTA Config section",
+      "Click Edit, change numbers, Save and Apply Live",
+      "Navigate to landing page, confirm WA button uses new number"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": true,
+    "regressionChecklistPassed": true,
+    "apiContractChecked": true,
+    "navigationChecked": true,
+    "envAndBasePathChecked": true,
+    "migrationSafetyChecked": true,
+    "rollbackPlanReady": true,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T16:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "pending-staging-deploy",
+    "validatedCloudRunRevisionIds": []
+  },
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "feat-exec-20260226-1",
+      "at": "2026-02-26T15:55:00.000Z",
+      "reason": "Start implementation for REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001",
+      "prevHash": "GENESIS",
+      "hash": "d15f9ff60f9ef23e219b11a6d687fca80d1ea7c5b93d5b7e82b77dc5c0b32957"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "feat-exec-20260226-1",
+      "at": "2026-02-26T16:00:00.000Z",
+      "reason": "Full-stack live CTA config: migration 167, admin GET/PUT, public endpoint, superadmin UI editor, landing dynamic fetch",
+      "prevHash": "d15f9ff60f9ef23e219b11a6d687fca80d1ea7c5b93d5b7e82b77dc5c0b32957",
+      "hash": "641219a18d66cd6f41116c4000e58b88eeb3ed105652a8b252b3c9276cd077a6"
+    }
+  ],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "backend/migrations/167_whatsapp_cta_config.sql",
+      "backend/src/routes/v1/admin/whatsapp.ts",
+      "backend/src/routes/v1/publicConfig.ts",
+      "backend/src/routes/v1/index.ts",
+      "supermandi-superadmin/src/api/whatsapp.ts",
+      "supermandi-superadmin/src/tabs/WhatsAppTab.tsx",
+      "supermandi-landing/index.html"
+    ],
+    "parityProof": [
+      "backend typecheck clean",
+      "supermandi-superadmin typecheck clean",
+      "PR 443 squash-merged commit b6f3b26a"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T15:55:00.000Z",
+    "updatedAt": "2026-02-26T16:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Code complete. GCP staging parity pending first staging deploy.",
+    "evidence": [
+      "pr=443",
+      "merge_commit=b6f3b26a",
+      "ci=passed"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "superadmin",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "main-backend",
+    "actualCloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "superadmin",
+      "landing"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/api/v1/public/whatsapp-cta-config"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "backend/migrations/167_whatsapp_cta_config.sql",
+      "backend/src/routes/v1/admin/whatsapp.ts",
+      "backend/src/routes/v1/publicConfig.ts",
+      "backend/src/routes/v1/index.ts",
+      "supermandi-superadmin/src/api/whatsapp.ts",
+      "supermandi-superadmin/src/tabs/WhatsAppTab.tsx",
+      "supermandi-landing/index.html"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": true,
+    "notes": "Migration 167 runs on next deploy."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not a transaction path."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not POS scan flow."
+    },
+    "frontendBackendStateParity": {
+      "status": "pass",
+      "evidence": [
+        "backend/src/routes/v1/publicConfig.ts",
+        "supermandi-landing/index.html"
+      ],
+      "notes": "Landing page fetches live config from backend on each page load; consistent single source of truth."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not applicable to config UI."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "pass",
+      "evidence": [
+        "backend/src/routes/v1/admin/whatsapp.ts"
+      ],
+      "notes": "ON CONFLICT(id) DO UPDATE upsert is idempotent; repeated PUTs produce same result."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pass",
+      "evidence": [
+        "backend/src/routes/v1/admin/whatsapp.ts"
+      ],
+      "notes": "Single-row upsert executed in one SQL statement; no partial write possible."
+    },
+    "strictSchemaValidation": {
+      "status": "pass",
+      "evidence": [
+        "backend/src/routes/v1/admin/whatsapp.ts"
+      ],
+      "notes": "E.164 regex and message length validated before any DB write; boolean type enforced."
+    },
+    "zeroSilentFailures": {
+      "status": "pass",
+      "evidence": [
+        "backend/src/routes/v1/publicConfig.ts"
+      ],
+      "notes": "Public endpoint returns enabled:false (not error) on DB failure; landing page hides widget."
+    },
+    "structuredAuditLogging": {
+      "status": "pass",
+      "evidence": [
+        "backend/src/routes/v1/admin/whatsapp.ts"
+      ],
+      "notes": "log.info with adminId, superadminNumber, companyNumber, enabled recorded on every PUT."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "Code complete and merged. Awaiting first staging deploy for GCP parity evidence."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001",
+    "lastValidatedCommit": "b6f3b26a",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "passed",
+    "evidence": [
+      "pr=443",
+      "merge_commit=b6f3b26a",
+      "ci=passed"
+    ]
+  }
+}

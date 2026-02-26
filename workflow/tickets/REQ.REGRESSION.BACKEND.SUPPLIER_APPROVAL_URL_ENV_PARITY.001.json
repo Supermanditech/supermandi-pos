@@ -113,14 +113,33 @@
     "validatedCloudRunRevisionIds": []
   },
   "statusHistory": [
-    { "from": "todo", "to": "done", "at": "2026-02-26T15:05:00.000Z", "by": "claude" }
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:05:00.000Z",
+      "reason": "Start implementation for REQ.REGRESSION.BACKEND.SUPPLIER_APPROVAL_URL_ENV_PARITY.001",
+      "prevHash": "GENESIS",
+      "hash": "30e35ecf092257e74f2d8d3b45fb5ec6c9ad472e0fc30aaad0ae775dce6d977d"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:08:00.000Z",
+      "reason": "Derived supplier approval email portal URL from PORTAL_BASE_URL env var",
+      "prevHash": "30e35ecf092257e74f2d8d3b45fb5ec6c9ad472e0fc30aaad0ae775dce6d977d",
+      "hash": "91b47dee49de14b4c6feab1448662df7e710210a14baf81369e3fa5bab5b37af"
+    }
   ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
       "notificationService.ts: portalUrl now derived from PORTAL_BASE_URL (e.g. staging.supermandi.tech) as canonical fallback",
-      "notificationService.ts: websiteUrl also uses baseDomain (PORTAL_BASE_URL || production) — no standalone WEBSITE_URL dependency",
+      "notificationService.ts: websiteUrl also uses baseDomain (PORTAL_BASE_URL || production) \u00e2\u20ac\u201d no standalone WEBSITE_URL dependency",
       "SUPPLIER_PORTAL_URL still takes precedence when explicitly set"
     ],
     "parityProof": [
@@ -237,13 +256,14 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.REGRESSION.BACKEND.SUPPLIER_APPROVAL_URL_ENV_PARITY.001",
-    "lastValidatedCommit": "d291f48a",
+    "lastValidatedCommit": "ac6d3845",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "created_by=codex",
-      "source_commit=d291f48a"
+      "pr=439",
+      "merge_commit=ac6d3845",
+      "ci=passed"
     ]
   },
   "ticketId": "REQ.REGRESSION.BACKEND.SUPPLIER_APPROVAL_URL_ENV_PARITY.001",
