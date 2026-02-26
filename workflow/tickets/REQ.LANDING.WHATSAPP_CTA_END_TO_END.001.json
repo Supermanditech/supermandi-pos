@@ -6,7 +6,7 @@
   "riskClass": "high",
   "title": "Implement landing WhatsApp CTA with dual targets (SuperAdmin + Company)",
   "description": "When a user visits supermandi.tech, a WhatsApp icon must be visible and usable. The CTA must support messaging both (1) SuperAdmin WhatsApp and (2) Company WhatsApp number. Recommended UX: single floating WhatsApp icon opens a small chooser with two clear actions (Chat with SuperAdmin, Chat with Company). Scope includes responsive UI, E.164 normalization for both numbers, encoded prefilled message templates per target, feature-flag/env configuration, safe outbound handling, accessibility, click telemetry by target, graceful fallback, and staging parity evidence for landing deployment.",
-  "status": "in_progress",
+  "status": "todo",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -20,7 +20,7 @@
     "backend": "na",
     "db": "na",
     "migration": "na",
-    "gcp_parity": "pending"
+    "gcp_parity": "fail"
   },
   "gcpParity": {
     "stagingValidated": false,
@@ -119,7 +119,7 @@
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
-      "wa.me deeplink=https://wa.me/{E164}?text={encodedMessage}",
+      "staging_observation=https://staging.supermandi.tech/",
       "dual_target=superadmin+company",
       "feature_flag=WA.enabled:false_until_operator_provides_numbers"
     ],
@@ -131,7 +131,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-26T11:42:28.5240740Z",
-    "updatedAt": "2026-02-26T13:45:00.000Z",
+    "updatedAt": "2026-02-26T12:33:51.721Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -248,7 +248,7 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.LANDING.WHATSAPP_CTA_END_TO_END.001",
-    "lastValidatedCommit": "04996ca0",
+    "lastValidatedCommit": "393c0dd6",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "pending",

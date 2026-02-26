@@ -26,7 +26,8 @@ export function ThemeToggle() {
     localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light');
   };
 
-  if (!mounted) return null;
+  // REQ.AUTH.THEME.ICON_TOGGLE_PARITY: preserve layout space during SSR hydration (no layout shift)
+  if (!mounted) return <span style={{ display: 'inline-flex', width: 32, height: 32 }} aria-hidden="true" />;
 
   return (
     <button
