@@ -40,6 +40,9 @@ export default function LoginPage() {
   const [authMode, setAuthMode] = useState<AuthMode>('otp');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // REQ.AUTH.PARITY.LOGIN_FLOW: show/hide password toggle + email validation (parity with retailer)
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
 
   // Track if component has mounted (for SSR compatibility)
   const [mounted, setMounted] = useState(false);
@@ -413,25 +416,42 @@ export default function LoginPage() {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setEmailTouched(true)}
               className="input"
               placeholder="you@example.com"
               disabled={isLoading}
               autoFocus
             />
+            {/* REQ.AUTH.PARITY.LOGIN_FLOW: email validation on blur — parity with retailer */}
+            {emailTouched && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && (
+              <p className="text-xs text-red-600 mt-1">Please enter a valid email address</p>
+            )}
           </div>
           <div>
             <label htmlFor="password" className="label">
               Password
             </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              placeholder="Enter your password"
-              disabled={isLoading}
-            />
+            {/* REQ.AUTH.PARITY.LOGIN_FLOW: show/hide toggle — parity with retailer */}
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input pr-12"
+                placeholder="Enter your password"
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium"
+                tabIndex={-1}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
 
           <button
@@ -469,7 +489,7 @@ export default function LoginPage() {
             <button
               type="button"
               className="text-primary-600 hover:text-primary-700 font-medium"
-              onClick={() => { setAuthMode('otp'); setError(''); setEmail(''); setPassword(''); }}
+              onClick={() => { setAuthMode('otp'); setError(''); setEmail(''); setPassword(''); setShowPassword(false); setEmailTouched(false); }}
             >
               Sign in with OTP instead
             </button>
