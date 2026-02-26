@@ -114,7 +114,26 @@
     "validatedCloudRunRevisionIds": []
   },
   "statusHistory": [
-    { "from": "todo", "to": "done", "at": "2026-02-26T15:20:00.000Z", "by": "claude" }
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:15:00.000Z",
+      "reason": "Start implementation for REQ.REGRESSION.AUTH.REGISTRATION.OTP_EXPIRY_SUBMIT_GUARD.001",
+      "prevHash": "GENESIS",
+      "hash": "7e51e1f8e31d5736cc4e8871bc9b580016a91a4741f7a6c308b85e1ded32078a"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-1",
+      "at": "2026-02-26T15:20:00.000Z",
+      "reason": "Blocked expired OTP submit in supplier registration; expiry=0 disables button and shows persistent expired message",
+      "prevHash": "7e51e1f8e31d5736cc4e8871bc9b580016a91a4741f7a6c308b85e1ded32078a",
+      "hash": "b675b3a4ace00b23bf3bad261780655e14a562c0496ee5433550ceced8456bb3"
+    }
   ],
   "evidence": {
     "beforeVisual": [],
@@ -237,13 +256,14 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.REGRESSION.AUTH.REGISTRATION.OTP_EXPIRY_SUBMIT_GUARD.001",
-    "lastValidatedCommit": "d291f48a",
+    "lastValidatedCommit": "e241de1f",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "created_by=codex",
-      "source_commit=d291f48a"
+      "pr=442",
+      "merge_commit=e241de1f",
+      "ci=passed"
     ]
   },
   "ticketId": "REQ.REGRESSION.AUTH.REGISTRATION.OTP_EXPIRY_SUBMIT_GUARD.001",
