@@ -4,7 +4,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 // UIUX-SA-001: Use centralized auth (getSessionToken + fetchWithTimeout) instead of wrong 'superadmin_token' key
-import { getSessionToken, fetchWithTimeout } from '../api/authToken';
+// P2-4: Use getAuthHeaders() to include X-Request-ID correlation tracing
+import { getAuthHeaders, fetchWithTimeout } from '../api/authToken';
 // UIUX-SA-005: Use parseError for sanitized error messages instead of generic 'API error: {status}'
 import { parseError } from '../api/errorSanitizer';
 import { ConfirmDialog, type ConfirmDialogConfig } from '../components/ConfirmDialog';
@@ -40,13 +41,13 @@ interface MessageTemplate {
   isActive: boolean;
 }
 
-// UIUX-SA-001: Centralized auth via getSessionToken (reads 'supermandi_admin_session')
+// P2-4: Use getAuthHeaders() for full auth context (Authorization + X-Request-ID correlation)
 // UIUX-SA-004: All chat admin routes use /api/v1/admin/chat/ prefix
+// fetchWithTimeout handles 401 auto-logout via handleAutoLogout()
 async function apiFetch(url: string, options?: RequestInit) {
-  const token = getSessionToken() || '';
   const res = await fetchWithTimeout(url, {
     ...options,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders(), ...options?.headers },
   });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();

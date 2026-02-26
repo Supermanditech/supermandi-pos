@@ -4,7 +4,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 // UIUX-SA-003: Use centralized auth instead of wrong 'superadmin_token' key
-import { getSessionToken, fetchWithTimeout } from '../api/authToken';
+// P2-4: Use getAuthHeaders() to include X-Request-ID correlation tracing
+import { getAuthHeaders, fetchWithTimeout } from '../api/authToken';
 // UIUX-SA-007: Use parseError for sanitized error messages instead of generic 'API error: {status}'
 import { parseError } from '../api/errorSanitizer';
 // UIUX-SA-011: Styled confirmation dialog for provider toggle
@@ -46,12 +47,12 @@ function fmt(minorStr: string | number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format((minor || 0) / 100);
 }
 
-// UIUX-SA-003: Centralized auth via getSessionToken (reads 'supermandi_admin_session')
+// P2-4: Use getAuthHeaders() for full auth context (Authorization + X-Request-ID correlation)
+// fetchWithTimeout handles 401 auto-logout via handleAutoLogout()
 async function apiFetch(url: string, options?: RequestInit) {
-  const token = getSessionToken() || '';
   const res = await fetchWithTimeout(url, {
     ...options,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders(), ...options?.headers },
   });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
