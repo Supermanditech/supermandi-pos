@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -72,6 +72,9 @@ export default function ProductsPage() {
   // ISSUE-MICRO-005: Pagination synced to URL for refresh/back-button persistence
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
   const pageSize = 20;
+
+  // REQ.AUDIT.W5.SUPPLIER.PRODUCTS-SAVE-DOUBLE-SUBMIT.001: synchronous guard against rapid double-submit
+  const submitInflightRef = useRef(false);
 
   // T-161: Image upload state
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -310,58 +313,67 @@ export default function ProductsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // SUP-004: Product name validation — min 2 chars, max 200
-    if (!formData.name.trim()) {
-      toast.error('Product name is required');
-      return;
-    }
-    if (formData.name.trim().length < 2) {
-      toast.error('Product name must be at least 2 characters');
-      return;
-    }
-    if (formData.name.trim().length > 200) {
-      toast.error('Product name cannot exceed 200 characters');
-      return;
-    }
-    if (!formData.purchasePrice || formData.purchasePrice <= 0) {
-      toast.error('Valid purchase price is required');
-      return;
-    }
+    // REQ.AUDIT.W5.SUPPLIER.PRODUCTS-SAVE-DOUBLE-SUBMIT.001: block concurrent invocations
+    if (submitInflightRef.current || isSubmitting) return;
+    submitInflightRef.current = true;
 
-    // GL-WF-017: Validate MRP >= Purchase Price
-    if (formData.mrp && formData.mrp < formData.purchasePrice) {
-      toast.error('MRP must be greater than or equal to purchase price');
-      return;
-    }
-
-    // GL-WF-056: Validate barcode format
-    if (formData.barcode && !isValidBarcode(formData.barcode)) {
-      toast.error('Barcode must be a valid GTIN format (8, 12, 13, or 14 digits)');
-      return;
-    }
-
-    // T-161: Upload image first if a new file is selected
-    let submitData = { ...formData };
-    if (imageFile) {
-      try {
-        setIsUploadingImage(true);
-        setImageUploadProgress(0);
-        const result = await uploadProductImage(imageFile, {
-          onProgress: setImageUploadProgress,
-        });
-        submitData = { ...submitData, imageUrl: result.imageUrl };
-        setIsUploadingImage(false);
-      } catch (error) {
-        setIsUploadingImage(false);
-        toast.error(error instanceof Error ? error.message : 'Failed to upload image');
+    try {
+      // SUP-004: Product name validation — min 2 chars, max 200
+      if (!formData.name.trim()) {
+        toast.error('Product name is required');
         return;
       }
-    }
+      if (formData.name.trim().length < 2) {
+        toast.error('Product name must be at least 2 characters');
+        return;
+      }
+      if (formData.name.trim().length > 200) {
+        toast.error('Product name cannot exceed 200 characters');
+        return;
+      }
+      if (!formData.purchasePrice || formData.purchasePrice <= 0) {
+        toast.error('Valid purchase price is required');
+        return;
+      }
 
-    if (editingProduct) {
-      updateMutation.mutate({ id: editingProduct.id, data: submitData });
-    } else {
-      createMutation.mutate(submitData);
+      // GL-WF-017: Validate MRP >= Purchase Price
+      if (formData.mrp && formData.mrp < formData.purchasePrice) {
+        toast.error('MRP must be greater than or equal to purchase price');
+        return;
+      }
+
+      // GL-WF-056: Validate barcode format
+      if (formData.barcode && !isValidBarcode(formData.barcode)) {
+        toast.error('Barcode must be a valid GTIN format (8, 12, 13, or 14 digits)');
+        return;
+      }
+
+      // T-161: Upload image first if a new file is selected
+      let submitData = { ...formData };
+      if (imageFile) {
+        try {
+          setIsUploadingImage(true);
+          setImageUploadProgress(0);
+          const result = await uploadProductImage(imageFile, {
+            onProgress: setImageUploadProgress,
+          });
+          submitData = { ...submitData, imageUrl: result.imageUrl };
+          setIsUploadingImage(false);
+        } catch (error) {
+          setIsUploadingImage(false);
+          toast.error(error instanceof Error ? error.message : 'Failed to upload image');
+          return;
+        }
+      }
+
+      if (editingProduct) {
+        updateMutation.mutate({ id: editingProduct.id, data: submitData });
+      } else {
+        createMutation.mutate(submitData);
+      }
+    } finally {
+      // Reset synchronous guard — mutation isPending state takes over from here
+      submitInflightRef.current = false;
     }
   };
 
