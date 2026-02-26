@@ -1,0 +1,252 @@
+{
+  "ticketId": "REQ.AUDIT.W4.SUPPLIER.DASHBOARD-STATS-CLIENT-FALLBACK.001",
+  "screenId": "SUPPLIER.DASHBOARD",
+  "orderInScreen": 1,
+  "surface": "supplier_web",
+  "riskClass": "high",
+  "title": "Supplier dashboard stats fallback uses client-side page-1 count instead of server total (wrong numbers)",
+  "description": "supplier-portal/src/app/(auth)/dashboard/page.tsx uses `products?.length` as fallback for total product count when API call fails. This only reflects the first page (default 20 items), causing the dashboard to show '20 total products' when the supplier actually has 100+. This violates the frontendBackendStateParity invariant and can silently mislead suppliers about their catalog size.",
+  "status": "todo",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "pass",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "fail",
+    "navigation": "na",
+    "api": "fail",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/supplier/dashboard/"
+    ],
+    "cloudRunServices": [
+      "supplier-portal",
+      "api-gateway",
+      "main-backend"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "SUPPLIER.DASHBOARD"
+    ],
+    "impactedServices": [
+      "supplier-portal",
+      "api-gateway",
+      "main-backend"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w4-audit",
+    "reproSteps": [
+      "Login to supplier portal",
+      "Open dashboard",
+      "Ensure you have >20 products",
+      "Observe product count widget shows 20 instead of actual total",
+      "Inspect: dashboard/page.tsx line ~65-89 uses products?.length as fallback"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/live_page_manifest.json",
+      "RELEASES/CLAUDE_STATE.md"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T18:00:00.000Z",
+    "updatedAt": "2026-02-26T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Source-level audit at HEAD 078c21b2. No staging deploy yet.",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "supplier_web",
+    "expectedBasePath": "/supplier",
+    "expectedPrimaryService": "supplier-portal",
+    "actualCloudRunServices": [
+      "supplier-portal",
+      "api-gateway",
+      "main-backend"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/supplier/dashboard/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [
+      "immutable-core-mode: existing code must not be modified without operator approval"
+    ],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Fix requires modifying supplier-portal/src/app/(auth)/dashboard/page.tsx to remove client-side fallback. immutable-core: BLOCKED. Minimal-touch: 2-line change \u2014 remove fallback calculation, show null/dash when API total unavailable."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "fix_implementation_pending",
+      "staging_parity_pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "Dashboard shows wrong product total (page-1 count not server total). BLOCKED under immutable-core. Minimal-touch: 2-line fix in dashboard/page.tsx."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W4.SUPPLIER.DASHBOARD-STATS-CLIENT-FALLBACK.001",
+    "lastValidatedCommit": "078c21b2",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  }
+}
