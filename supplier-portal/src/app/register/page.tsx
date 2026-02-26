@@ -120,6 +120,8 @@ function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  // REQ.AUTH.PARITY.REGISTRATION_FLOW: OTP expiry countdown (parity with retailer — 5 min)
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const recaptchaInitialized = useRef(false);
   const [idToken, setIdToken] = useState('');
   const idTokenObtainedAt = useRef<number>(0);
@@ -253,6 +255,14 @@ function RegisterPage() {
     }
   }, [resendCooldown]);
 
+  // REQ.AUTH.PARITY.REGISTRATION_FLOW: OTP expiry countdown timer (parity with retailer)
+  useEffect(() => {
+    if (otpExpirySeconds > 0) {
+      const t = setTimeout(() => setOtpExpirySeconds(otpExpirySeconds - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [otpExpirySeconds]);
+
   // FIX-030: Validate phone — enforce Indian format (+91 prefix + 10 digits starting 6-9)
   const validatePhone = (value: string): boolean => {
     const cleaned = value.replace(/[\s-]/g, '');
@@ -290,6 +300,7 @@ function RegisterPage() {
       await sendOtp(phone);
       setStep('otp');
       setResendCooldown(60);
+      setOtpExpirySeconds(300);
       toast.success('OTP sent successfully!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
@@ -332,6 +343,7 @@ function RegisterPage() {
 
       await sendOtp(phone);
       setResendCooldown(60);
+      setOtpExpirySeconds(300);
       toast.success('OTP sent successfully!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
@@ -843,6 +855,18 @@ function RegisterPage() {
                 disabled={isLoading}
                 autoFocus
               />
+            </div>
+
+            {/* REQ.AUTH.PARITY.REGISTRATION_FLOW: OTP expiry countdown (parity with retailer) */}
+            <div aria-live="polite" className="text-center">
+              {otpExpirySeconds > 0 && (
+                <p className={`text-xs ${otpExpirySeconds <= 60 ? 'text-red-600' : 'text-slate-500'}`}>
+                  Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
+                </p>
+              )}
+              {otpExpirySeconds === 0 && otp.length === 0 && (
+                <p className="text-xs text-red-600">Code expired. Please resend OTP.</p>
+              )}
             </div>
 
             <button
