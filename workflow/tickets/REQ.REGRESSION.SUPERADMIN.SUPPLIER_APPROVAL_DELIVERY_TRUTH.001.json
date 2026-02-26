@@ -113,21 +113,28 @@
     "validatedDeploymentRef": "github://run/22305359033",
     "validatedCloudRunRevisionIds": []
   },
-  "statusHistory": [],
+  "statusHistory": [
+    { "from": "todo", "to": "done", "at": "2026-02-26T15:00:00.000Z", "by": "claude" }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
-      "backend/src/routes/v1/admin/applications.ts: codeSentTo assigned before async send result",
-      "supermandi-superadmin/src/App.tsx: supplier modal prints \"Email sent to\" whenever codeSentTo exists"
+      "applications.ts: supplier notification now awaited; emailDelivered set from notifResult.emailSent",
+      "applications.ts: codeSentTo and codeSentVia only populated if emailSent===true",
+      "applications.ts: emailDelivered included in response JSON",
+      "api/applications.ts: ApprovalResponse extended with emailDelivered?: boolean",
+      "App.tsx: approvalResult state carries emailDelivered",
+      "App.tsx: modal branches on emailDelivered===true (\"Email sent\") / false (\"could not send\") / undefined (neutral)"
     ],
     "parityProof": [
-      "audit_range=37902d6b..d291f48a"
+      "backend typecheck clean post-fix",
+      "superadmin typecheck clean post-fix"
     ]
   },
   "timestamps": {
     "createdAt": "2026-02-26T14:07:12.784Z",
-    "updatedAt": "2026-02-26T14:07:43.820Z",
+    "updatedAt": "2026-02-26T15:00:00.000Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -253,16 +260,16 @@
   "riskClass": "high",
   "title": "Do not show supplier approval email as sent unless delivery success is confirmed",
   "description": "Current flow always returns codeSentTo for supplier approvals when email exists, so UI states \"Email sent to...\" even when notification send fails. Gate UI copy on actual delivery signal and expose failure/partial-send states.",
-  "status": "todo",
+  "status": "done",
   "severity": "P1",
   "layers": {
-    "ui": "fail",
-    "ux": "fail",
-    "professional_polish": "fail",
-    "wiring": "fail",
+    "ui": "pass",
+    "ux": "pass",
+    "professional_polish": "pass",
+    "wiring": "pass",
     "navigation": "na",
-    "api": "fail",
-    "backend": "fail",
+    "api": "pass",
+    "backend": "pass",
     "db": "na",
     "migration": "na",
     "gcp_parity": "fail"

@@ -688,7 +688,8 @@ export default function App() {
   const [appEntityFilter, setAppEntityFilter] = useState<string>("");
   // #331: Activation code shown after approval
   // REQ.SUPERADMIN.APPROVAL_MATRIX: entityType distinguishes retailer (activationCode) vs supplier (email confirmation)
-  const [approvalResult, setApprovalResult] = useState<{ entityType: string; activationCode?: string; codeSentTo: string; codeSentVia: string[] } | null>(null);
+  // REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: emailDelivered carries actual backend send outcome
+  const [approvalResult, setApprovalResult] = useState<{ entityType: string; activationCode?: string; codeSentTo: string; codeSentVia: string[]; emailDelivered?: boolean } | null>(null);
   const applicationsInFlightRef = useRef(false);
 
   // Filters (apply to event table + payments view)
@@ -1673,12 +1674,14 @@ export default function App() {
       setApplicationsTotal((prev) => Math.max(0, prev - 1));
       // #331: Show activation code for retailers; show confirmation for suppliers
       // REQ.SUPERADMIN.APPROVAL_MATRIX: both entity types now get a post-approval dialog
+      // REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: pass emailDelivered through to modal
       if (result.activationCode || result.entityType === 'supplier') {
         setApprovalResult({
           entityType: result.entityType || 'retailer',
           activationCode: result.activationCode,
           codeSentTo: result.codeSentTo || "",
           codeSentVia: result.codeSentVia || [],
+          emailDelivered: result.emailDelivered,
         });
       }
     } catch (e: any) {
@@ -3157,13 +3160,25 @@ export default function App() {
                 {approvalResult.entityType === 'supplier' ? (
                   <>
                     <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Supplier Approved!</h2>
-                    <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
-                      An approval email has been sent to the supplier. They can now log in to the Supplier Portal.
-                    </p>
-                    {approvalResult.codeSentTo && (
-                      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
-                        Email sent to: <strong>{approvalResult.codeSentTo}</strong>
-                        {approvalResult.codeSentVia.length > 0 && ` via ${approvalResult.codeSentVia.join(", ")}`}
+                    {/* REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: branch on actual delivery signal */}
+                    {approvalResult.emailDelivered === false ? (
+                      <p style={{ color: "#b45309", margin: "0 0 16px", fontSize: 14 }}>
+                        The supplier has been approved but the notification email could not be sent. Please contact them directly.
+                      </p>
+                    ) : approvalResult.emailDelivered === true ? (
+                      <>
+                        <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                          An approval email has been sent to the supplier. They can now log in to the Supplier Portal.
+                        </p>
+                        {approvalResult.codeSentTo && (
+                          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
+                            Email sent to: <strong>{approvalResult.codeSentTo}</strong>
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                        The supplier has been approved. They can now log in to the Supplier Portal.
                       </p>
                     )}
                   </>
