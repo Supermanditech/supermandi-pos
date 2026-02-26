@@ -409,9 +409,11 @@ adminApplicationsRouter.post(
       await client.query('COMMIT');
 
       // #330: For retailers, auto-generate activation code + send WhatsApp/Email (fire-and-forget)
+      // REQ.REGRESSION.SUPERADMIN.SUPPLIER_APPROVAL_DELIVERY_TRUTH.001: track actual email delivery
       let activationCode: string | undefined;
       let codeSentTo: string | undefined;
       const codeSentVia: string[] = [];
+      let emailDelivered: boolean | undefined;
 
       if (app.entity_type === 'retailer' && approvedEntityId) {
         try {
@@ -445,19 +447,25 @@ adminApplicationsRouter.post(
           // Non-blocking: approval still succeeds without activation code
         }
       } else if (app.entity_type === 'supplier' && approvedEntityId && app.email) {
-        // REQ.SUPERADMIN.APPROVAL_MATRIX: Send supplier approval email (parity with retailer welcome notification)
-        sendSupplierApprovalNotification({
-          email: app.email,
-          contactName: app.owner_name || undefined,
-          businessName: app.business_name,
-          supplierId: approvedEntityId,
-        }).then((result) => {
-          if (result.emailSent) codeSentVia.push('email');
-          log.info(`[admin/applications] Supplier approval email sent: ${result.emailSent}`);
-        }).catch((err) => {
-          log.warn(`[admin/applications] Supplier approval notification failed:`, err?.message);
-        });
-        codeSentTo = app.email;
+        // REQ.SUPERADMIN.APPROVAL_MATRIX: Send supplier approval email
+        // REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: await delivery so response reflects actual send outcome
+        try {
+          const notifResult = await sendSupplierApprovalNotification({
+            email: app.email,
+            contactName: app.owner_name || undefined,
+            businessName: app.business_name,
+            supplierId: approvedEntityId,
+          });
+          emailDelivered = notifResult.emailSent;
+          if (notifResult.emailSent) {
+            codeSentTo = app.email;
+            codeSentVia.push('email');
+          }
+          log.info(`[admin/applications] Supplier approval email delivered=${notifResult.emailSent} to ${app.email}`);
+        } catch (err: any) {
+          emailDelivered = false;
+          log.warn(`[admin/applications] Supplier approval notification threw:`, err?.message);
+        }
       }
 
       res.json({
@@ -469,6 +477,8 @@ adminApplicationsRouter.post(
         ...(activationCode && { activationCode }),
         ...(codeSentTo && { codeSentTo }),
         ...(codeSentVia.length > 0 && { codeSentVia }),
+        // REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: explicit delivery truth for supplier email
+        ...(emailDelivered !== undefined && { emailDelivered }),
       });
     } catch (err: any) {
       await client.query('ROLLBACK');

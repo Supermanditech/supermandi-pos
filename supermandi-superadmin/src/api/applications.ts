@@ -122,6 +122,7 @@ export async function fetchApplicationDetail(id: string): Promise<ApplicationDet
 
 // #331: Enhanced approval response includes activation code
 // REQ.SUPERADMIN.APPROVAL_MATRIX: entityType added for supplier-specific confirmation dialog
+// REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: emailDelivered reflects actual send outcome
 export type ApprovalResponse = {
   success: boolean;
   approvedEntityId?: string;
@@ -130,6 +131,7 @@ export type ApprovalResponse = {
   activationCode?: string;
   codeSentTo?: string;
   codeSentVia?: string[];
+  emailDelivered?: boolean;
 };
 
 /**
