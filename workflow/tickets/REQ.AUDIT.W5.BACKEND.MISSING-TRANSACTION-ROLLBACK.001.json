@@ -3,11 +3,11 @@
   "screenId": "BACKEND.MISSING-TRANSACTION-ROLLBACK",
   "orderInScreen": 1,
   "surface": "backend",
-  "riskClass": "high",
+  "riskClass": "critical",
   "title": "POS sales/purchases: not all error paths call ROLLBACK — partial failures can leave orphaned ledger entries",
   "description": "Some async operations may COMMIT before all preconditions verified. Sale stays PENDING indefinitely if QR generation fails.",
   "status": "todo",
-  "severity": "P2",
+  "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
@@ -171,7 +171,7 @@
     "blockers": [],
     "disclosedToOperator": false,
     "operatorAcknowledged": false,
-    "notes": "Acceptance: All mutations MUST be in single transaction. Add post-commit invariant checks. Test rollback scenarios."
+    "notes": "Upgraded P2→P1: Partial transaction failures leave orphaned ledger entries — violates atomicDatabaseWrites production invariant. Acceptance: All mutations MUST be in single transaction. Add post-commit invariant checks. Test rollback scenarios."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {

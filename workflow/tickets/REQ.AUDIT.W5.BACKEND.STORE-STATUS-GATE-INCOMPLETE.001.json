@@ -3,11 +3,11 @@
   "screenId": "BACKEND.STORE-STATUS-GATE-INCOMPLETE",
   "orderInScreen": 1,
   "surface": "backend",
-  "riskClass": "high",
+  "riskClass": "critical",
   "title": "requireActiveStore middleware not uniformly applied — suspended stores bypass restrictions on some routes",
   "description": "storeStatusGate selectively applied. Some routes missing it (BUG-003 comments). Cache TTL 5 minutes delays suspension enforcement.",
   "status": "todo",
-  "severity": "P2",
+  "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
@@ -171,7 +171,7 @@
     "blockers": [],
     "disclosedToOperator": false,
     "operatorAcknowledged": false,
-    "notes": "Acceptance: Apply requireActiveStore to ALL financial/mutation routes. Reduce cache TTL to 1 min. E2E: suspend → all operations fail."
+    "notes": "Upgraded P2→P1: Suspended stores bypass restrictions on unguarded routes — violates access control enforcement invariant. Acceptance: Apply requireActiveStore to ALL financial/mutation routes. Reduce cache TTL to 1 min. E2E: suspend → all operations fail."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {

@@ -3,11 +3,11 @@
   "screenId": "BACKEND.FINANCIAL-IDEMPOTENCY-NOT-ENFORCED",
   "orderInScreen": 1,
   "surface": "backend",
-  "riskClass": "high",
+  "riskClass": "critical",
   "title": "Payment/refund endpoints do not enforce Idempotency-Key header — network retries create duplicate payments",
   "description": "No Idempotency-Key header enforcement on payment endpoints. Network retry creates two payment records.",
   "status": "todo",
-  "severity": "P2",
+  "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
@@ -171,7 +171,7 @@
     "blockers": [],
     "disclosedToOperator": false,
     "operatorAcknowledged": false,
-    "notes": "Acceptance: Enforce Idempotency-Key header on all state-mutating POST endpoints. Cache response for duplicate keys."
+    "notes": "Upgraded P2→P1: No Idempotency-Key enforcement on payment endpoints — network retries cause real duplicate charges (financial loss). Acceptance: Enforce Idempotency-Key header on all state-mutating POST endpoints. Cache response for duplicate keys."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {

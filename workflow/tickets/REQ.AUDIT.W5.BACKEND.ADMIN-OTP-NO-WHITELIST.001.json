@@ -3,11 +3,11 @@
   "screenId": "BACKEND.ADMIN-OTP-NO-WHITELIST",
   "orderInScreen": 1,
   "surface": "backend",
-  "riskClass": "high",
+  "riskClass": "critical",
   "title": "Admin OTP endpoint sends OTP to any email without whitelist check — enables targeted attack on admin access",
   "description": "Whitelist check is in verification (adminAuth.ts) but NOT in OTP send (adminOtp.ts). Attacker can request OTP for any email.",
   "status": "todo",
-  "severity": "P2",
+  "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
@@ -171,7 +171,7 @@
     "blockers": [],
     "disclosedToOperator": false,
     "operatorAcknowledged": false,
-    "notes": "Acceptance: Validate email against whitelist BEFORE sending OTP. Make ADMIN_EMAILS required. Use strong OTP (10+ digits). Rate-limit OTP requests."
+    "notes": "Upgraded P2→P1: OTP sent to any email bypasses admin whitelist — direct admin authentication exploit path. Acceptance: Validate email against whitelist BEFORE sending OTP. Make ADMIN_EMAILS required. Use strong OTP (10+ digits). Rate-limit OTP requests."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {

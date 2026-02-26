@@ -3,11 +3,11 @@
   "screenId": "BACKEND.SQL-INJECTION-DYNAMIC-QUERIES",
   "orderInScreen": 1,
   "surface": "backend",
-  "riskClass": "high",
+  "riskClass": "critical",
   "title": "Backend: dynamic SQL construction in inventory/storeProducts lacks comprehensive parameterization audit",
   "description": "Some sorting/ordering clauses and barcode patterns may accept user input without whitelist validation. Comprehensive parameterization audit required.",
   "status": "todo",
-  "severity": "P2",
+  "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
@@ -171,7 +171,7 @@
     "blockers": [],
     "disclosedToOperator": false,
     "operatorAcknowledged": false,
-    "notes": "Acceptance: Audit all SQL construction for user input. Enforce parameterization OR whitelist OR escaping. Add CI linter rule."
+    "notes": "Upgraded P2→P1: SQL injection is always critical — dynamic query construction with user-controlled sort/barcode input. Acceptance: Audit all SQL construction for user input. Enforce parameterization OR whitelist OR escaping. Add CI linter rule."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {
