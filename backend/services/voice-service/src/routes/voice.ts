@@ -136,15 +136,11 @@ router.post(
         return;
       }
 
-      console.log(`[VOICE] Processing audio for store: ${storeId.substring(0, 8)}...`);
-
       // Step 1: Transcribe audio
       const transcription = await transcribeAudio(audioFile.path);
-      console.log(`[VOICE] Transcript: ${transcription.text}`);
 
       // Step 2: Parse intent
       const intent = parseIntent(transcription.text);
-      console.log(`[VOICE] Intent:`, JSON.stringify(intent));
 
       // Step 3: Store request for execute step
       const requestId = uuidv4();
