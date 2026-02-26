@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireEnrolledStore } from "../../../middleware/storeStatusGate";
 import { logger } from "../../../lib/logger";
 
 export const posStoreRouter = Router();
@@ -15,7 +16,7 @@ function isValidUpiVpa(vpa: string): boolean {
   return vpaRegex.test(vpa) && vpa.length >= 6 && vpa.length <= 100;
 }
 
-posStoreRouter.patch("/store/payment-settings", requireDeviceToken, async (req, res) => {
+posStoreRouter.patch("/store/payment-settings", requireDeviceToken, requireEnrolledStore, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 

@@ -5,6 +5,7 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
 
@@ -405,7 +406,7 @@ posSuppliersRouter.get("/suppliers/browse/available", requireDeviceToken, async 
 
 // T-182: Request supplier link
 // POST /api/v1/pos/suppliers/:supplierId/request-link
-posSuppliersRouter.post("/suppliers/:supplierId/request-link", requireDeviceToken, async (req, res) => {
+posSuppliersRouter.post("/suppliers/:supplierId/request-link", requireDeviceToken, requireActiveStore, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 

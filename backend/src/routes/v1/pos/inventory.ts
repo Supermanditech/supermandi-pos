@@ -4,6 +4,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { randomUUID } from "crypto";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
@@ -247,7 +248,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
  * POST /api/v1/pos/inventory/transactions
  * Record stock transactions (inward, sale, adjustment)
  */
-posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -498,7 +499,7 @@ posInventoryRouter.get("/inventory/stock/:productId", requireDeviceToken, async 
  * Body: { productIds: string[] }
  * Returns: { data: Array<{ storeId, productId, currentQty }> }
  */
-posInventoryRouter.post("/inventory/stock/batch", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/stock/batch", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -800,7 +801,7 @@ posInventoryRouter.get("/inventory/valuation", requireDeviceToken, async (req: R
  *
  * Returns: { success: true, message: string }
  */
-posInventoryRouter.post("/inventory/stock/refresh", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/stock/refresh", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   if (!storeId) {
     return res.status(400).json({ error: "Store not configured" });
@@ -838,7 +839,7 @@ posInventoryRouter.post("/inventory/stock/refresh", requireDeviceToken, async (r
  *
  * Returns: { success: true, before: number, after: number, ledgerEntries: number }
  */
-posInventoryRouter.post("/inventory/stock/recompute", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/stock/recompute", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -932,7 +933,7 @@ posInventoryRouter.post("/inventory/stock/recompute", requireDeviceToken, async 
  *
  * Returns: { success: true, productsChecked: number, productsFixed: number }
  */
-posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -1042,7 +1043,7 @@ posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, as
  *
  * Returns: { success: true, before: number, after: number, adjustment: number }
  */
-posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -1183,7 +1184,7 @@ posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, async (re
  *
  * Returns: { success: true, countId: string, startedAt: string }
  */
-posInventoryRouter.post("/inventory/physical-count/start", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/physical-count/start", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -1256,7 +1257,7 @@ posInventoryRouter.post("/inventory/physical-count/start", requireDeviceToken, a
  *
  * Returns: { success: true, productId: string, expected: number, counted: number, variance: number }
  */
-posInventoryRouter.post("/inventory/physical-count/:countId/record", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/physical-count/:countId/record", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -1332,7 +1333,7 @@ posInventoryRouter.post("/inventory/physical-count/:countId/record", requireDevi
  *
  * Returns: { success: true, itemsCounted: number, variancesFound: number, adjustmentsApplied: boolean }
  */
-posInventoryRouter.post("/inventory/physical-count/:countId/complete", requireDeviceToken, async (req: Request, res: Response) => {
+posInventoryRouter.post("/inventory/physical-count/:countId/complete", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 

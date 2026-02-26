@@ -10,6 +10,7 @@
 
 import { Router, Request, Response } from 'express';
 import { requireDeviceToken } from '../../../middleware/deviceToken';
+import { requireActiveStore } from '../../../middleware/storeStatusGate';
 import { getPool } from '../../../db/client';
 import { log } from "../../../lib/logger";
 
@@ -18,7 +19,7 @@ export const posRefundRequestsRouter = Router();
 posRefundRequestsRouter.use(requireDeviceToken);
 
 // POST /refund-requests — Initiate a UPI refund request
-posRefundRequestsRouter.post('/refund-requests', async (req: Request, res: Response) => {
+posRefundRequestsRouter.post('/refund-requests', requireActiveStore, async (req: Request, res: Response) => {
   const storeId = (req as any).storeId;
   const userId = (req as any).deviceUserId || (req as any).storeUserId;
   if (!storeId) return res.status(401).json({ error: 'Store context required' });
@@ -238,7 +239,7 @@ posRefundRequestsRouter.get('/refund-requests/:id', async (req: Request, res: Re
 });
 
 // POST /refund-requests/:id/cancel — Cancel a pending refund request
-posRefundRequestsRouter.post('/refund-requests/:id/cancel', async (req: Request, res: Response) => {
+posRefundRequestsRouter.post('/refund-requests/:id/cancel', requireActiveStore, async (req: Request, res: Response) => {
   const storeId = (req as any).storeId;
   if (!storeId) return res.status(401).json({ error: 'Store context required' });
 

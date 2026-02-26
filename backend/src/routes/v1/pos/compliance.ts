@@ -6,6 +6,7 @@ import multer from "multer";
 import crypto from "crypto";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireEnrolledStore } from "../../../middleware/storeStatusGate";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
 
@@ -134,7 +135,7 @@ posComplianceRouter.get("/compliance/status", requireDeviceToken, async (req: Re
 // T-190: Upload a compliance document from POS
 // =============================================================================
 
-posComplianceRouter.post("/compliance/upload", requireDeviceToken, (req: Request, res: Response) => {
+posComplianceRouter.post("/compliance/upload", requireDeviceToken, requireEnrolledStore, (req: Request, res: Response) => {
   upload.single("document")(req, res, async (multerErr: any) => {
     if (multerErr) {
       if (multerErr.code === "LIMIT_FILE_SIZE") {
