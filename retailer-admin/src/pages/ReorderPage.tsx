@@ -209,7 +209,7 @@ export default function ReorderPage() {
         <div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
             <span style={{ fontSize: 13, color: '#666' }}>Products below their reorder threshold (per-product policy)</span>
-            <button onClick={fetchSuggestions} disabled={suggestionsLoading} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+            <button aria-label="Refresh reorder suggestions" onClick={fetchSuggestions} disabled={suggestionsLoading} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
               <RefreshCw size={14} className={suggestionsLoading ? 'spin' : ''} /> Refresh
             </button>
           </div>
@@ -261,7 +261,7 @@ export default function ReorderPage() {
       {activeTab === 'pending' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-            <button onClick={fetchPending} disabled={pendingLoading} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button aria-label="Refresh pending reorders" onClick={fetchPending} disabled={pendingLoading} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <RefreshCw size={14} className={pendingLoading ? 'spin' : ''} /> Refresh
             </button>
           </div>

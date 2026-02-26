@@ -196,6 +196,7 @@ export default function InventoryPage() {
             </span>
             {/* T-183: Manual refresh button */}
             <button
+              aria-label="Refresh inventory data"
               className="btn btn-secondary"
               onClick={() => fetchLedger()}
               disabled={loading}

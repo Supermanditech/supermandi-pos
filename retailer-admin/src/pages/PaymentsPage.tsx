@@ -215,7 +215,7 @@ export default function PaymentsPage() {
       {loadError && (
         <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '1rem', color: '#991b1b', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>{loadError}</span>
-          <button onClick={fetchSettings} className="btn btn-secondary" style={{ fontSize: '0.8rem', marginLeft: '1rem' }}>Retry</button>
+          <button aria-label="Retry loading payment settings" onClick={fetchSettings} className="btn btn-secondary" style={{ fontSize: '0.8rem', marginLeft: '1rem' }}>Retry</button>
         </div>
       )}
 

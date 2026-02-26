@@ -248,12 +248,12 @@ export default function InvoicesPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginTop: "1rem", alignItems: "center" }}>
-          <button disabled={currentPage <= 1} onClick={() => setOffset(offset - limit)}
+          <button aria-label="Previous page of invoices" disabled={currentPage <= 1} onClick={() => setOffset(offset - limit)}
             style={{ padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 4, cursor: currentPage <= 1 ? "default" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1 }}>
             Prev
           </button>
           <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>Page {currentPage} of {totalPages}</span>
-          <button disabled={currentPage >= totalPages} onClick={() => setOffset(offset + limit)}
+          <button aria-label="Next page of invoices" disabled={currentPage >= totalPages} onClick={() => setOffset(offset + limit)}
             style={{ padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 4, cursor: currentPage >= totalPages ? "default" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1 }}>
             Next
           </button>
@@ -280,7 +280,7 @@ export default function InvoicesPage() {
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>{detail.invoiceNumber}</h3>
-                  <button onClick={() => setDetail(null)}
+                  <button aria-label="Close invoice detail" onClick={() => setDetail(null)}
                     style={{ background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer" }}>X</button>
                 </div>
 

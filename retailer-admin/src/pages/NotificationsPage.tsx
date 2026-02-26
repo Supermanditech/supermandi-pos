@@ -95,6 +95,7 @@ export default function NotificationsPage() {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {unreadCount > 0 && (
             <button
+              aria-label="Mark all notifications as read"
               onClick={markAllAsRead}
               style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '0.375rem', cursor: 'pointer' }}
             >
@@ -102,6 +103,7 @@ export default function NotificationsPage() {
             </button>
           )}
           <button
+            aria-label="Refresh notifications list"
             onClick={fetchNotifications}
             style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', background: '#f9fafb', color: '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer' }}
           >
@@ -113,7 +115,7 @@ export default function NotificationsPage() {
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p style={{ color: '#991b1b', fontSize: '0.875rem' }}>{error}</p>
-          <button onClick={() => { setError(null); fetchNotifications(); }} style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+          <button aria-label="Retry loading notifications" onClick={() => { setError(null); fetchNotifications(); }} style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
         </div>
       )}
 
@@ -158,6 +160,7 @@ export default function NotificationsPage() {
           {total > limit && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
               <button
+                aria-label="Previous page of notifications"
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - limit))}
                 style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: offset === 0 ? 'not-allowed' : 'pointer', opacity: offset === 0 ? 0.5 : 1 }}
@@ -168,6 +171,7 @@ export default function NotificationsPage() {
                 {offset + 1}–{Math.min(offset + limit, total)} of {total}
               </span>
               <button
+                aria-label="Next page of notifications"
                 disabled={offset + limit >= total}
                 onClick={() => setOffset((o) => o + limit)}
                 style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: offset + limit >= total ? 'not-allowed' : 'pointer', opacity: offset + limit >= total ? 0.5 : 1 }}

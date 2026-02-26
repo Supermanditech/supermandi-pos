@@ -109,7 +109,7 @@ export default function CreditDashboardPage() {
         {error && (
           <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem 1rem', borderRadius: '0.375rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
             {error}
-            <button onClick={fetchDashboard} className="btn btn-secondary" style={{ marginLeft: '1rem', fontSize: '0.8rem' }}>Retry</button>
+            <button aria-label="Retry loading credit dashboard" onClick={fetchDashboard} className="btn btn-secondary" style={{ marginLeft: '1rem', fontSize: '0.8rem' }}>Retry</button>
           </div>
         )}
 
