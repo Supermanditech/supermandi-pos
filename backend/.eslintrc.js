@@ -23,9 +23,19 @@ module.exports = {
     '@typescript-eslint/no-var-requires': 'warn',
     '@typescript-eslint/ban-types': 'warn',
     '@typescript-eslint/no-namespace': 'warn',
-    'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
+    // REQ.AUDIT.W4.BACKEND.UNSTRUCTURED-CONSOLE-LOGGING.001:
+    // Warn on all direct console.* calls — use src/lib/logger instead.
+    // logger.ts is exempted via overrides (it IS the structured emit layer).
+    'no-console': 'warn',
     'prefer-const': 'error',
     'no-var': 'error',
   },
+  overrides: [
+    {
+      // logger.ts is the structured emit layer — it wraps console.* intentionally.
+      files: ['src/lib/logger.ts'],
+      rules: { 'no-console': 'off' },
+    },
+  ],
   ignorePatterns: ['dist/', 'node_modules/', '*.js', '!.eslintrc.js', 'scripts/', 'tests/'],
 };
