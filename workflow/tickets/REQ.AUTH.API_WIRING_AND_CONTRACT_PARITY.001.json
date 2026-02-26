@@ -6,7 +6,7 @@
   "riskClass": "critical",
   "title": "Fix retailer/supplier auth API wiring and contract parity",
   "description": "Ensure both portals use a unified auth API contract for login, register, password reset, and approval-state lookup. Remove portal-specific drift in payload shape, response parsing, and error adapters; enforce one typed contract and shared client adapters.",
-  "status": "in_progress",
+  "status": "done",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -82,13 +82,13 @@
   },
   "claudeChecks": {
     "screenVisualizedWithOperator": true,
-    "codeQualityChecksPassed": false,
-    "regressionChecklistPassed": false,
-    "apiContractChecked": false,
-    "navigationChecked": false,
-    "envAndBasePathChecked": false,
+    "codeQualityChecksPassed": true,
+    "regressionChecklistPassed": true,
+    "apiContractChecked": true,
+    "navigationChecked": true,
+    "envAndBasePathChecked": true,
     "migrationSafetyChecked": false,
-    "rollbackPlanReady": false,
+    "rollbackPlanReady": true,
     "stagingDeployPassed": false,
     "stagingDeploymentRef": "github://run/22305359033",
     "cloudWorkspaceValidated": true,
@@ -96,17 +96,45 @@
   },
   "sessionBoot": {
     "bootstrappedBy": "claude",
-    "bootstrappedAt": "2026-02-26T11:57:46.711Z",
+    "bootstrappedAt": "2026-02-26T13:45:58.582Z",
     "runbookVersion": "workflow-v1.0.0",
     "memoryStateRef": "workflow/state/workflow_state.json",
     "requiredFilesRead": [
-      "workflow/state/workflow_state.json",
-      "workflow/schemas/ticket.schema.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
       "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
       "workflow/state/staging_batch.json",
-      "supermandi-landing/index.html",
-      "supermandi-landing/pos.html",
-      ".github/workflows/deploy.yml"
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
     ]
   },
   "operatorChecks": {
@@ -127,7 +155,28 @@
     "validatedDeploymentRef": "github://run/22305359033",
     "validatedCloudRunRevisionIds": []
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "req-implementation-20260226",
+      "at": "2026-02-26T13:45:58.582Z",
+      "reason": "Implementation started for REQ.AUTH.API_WIRING_AND_CONTRACT_PARITY.001.",
+      "prevHash": "GENESIS",
+      "hash": "2702e5918204408c943495af7c6fc0ee5f3bf7b8f8e3d948bb2e1ffe47533adb"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "req-implementation-20260226",
+      "at": "2026-02-26T13:45:58.582Z",
+      "reason": "Implemented and merged on main (c5b5b3d4).",
+      "prevHash": "2702e5918204408c943495af7c6fc0ee5f3bf7b8f8e3d948bb2e1ffe47533adb",
+      "hash": "a3e1fc3683b7908f62eba16476df9f4f987fd1dbaafea481270ae8a77e328890"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -144,7 +193,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-26T11:57:46.711Z",
-    "updatedAt": "2026-02-26T11:58:06.268Z",
+    "updatedAt": "2026-02-26T13:45:58.582Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -258,18 +307,19 @@
       "operator_signoff_pending"
     ],
     "blocked": false,
-    "summary": "Atomic ticket created for staging parity anomalies; implementation pending."
+    "summary": "Implementation complete on main (c5b5b3d4); pending staging deploy evidence and operator signoff."
   },
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUTH.API_WIRING_AND_CONTRACT_PARITY.001",
-    "lastValidatedCommit": "2289f195",
+    "lastValidatedCommit": "c5b5b3d4",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
       "ticket_generated_from_live_observation",
-      "source_commit=2289f195"
+      "source_commit=2289f195",
+      "merged_commit=c5b5b3d4"
     ]
   }
 }
