@@ -12,6 +12,10 @@ interface EventsTabProps {
   page: number;
   setPage: (fn: (p: number) => number) => void;
   pageSize: number;
+  // R7.SA.004: Loading state indicator
+  loading?: boolean;
+  // R7.SA.005: Error state display
+  error?: string;
 }
 
 export function EventsTab({
@@ -22,6 +26,8 @@ export function EventsTab({
   page,
   setPage,
   pageSize,
+  loading,
+  error,
 }: EventsTabProps) {
   return (
     <section className="card">
@@ -29,6 +35,20 @@ export function EventsTab({
         <div className="cardTitle">Event Stream</div>
         <div className="muted">Showing {filteredEvents.length} events (newest first)</div>
       </div>
+
+      {/* R7.SA.005: Error state display */}
+      {error && (
+        <div className="banner" role="alert" style={{ margin: "0 0 12px" }}>
+          {error}
+        </div>
+      )}
+
+      {/* R7.SA.004: Loading state indicator */}
+      {loading && (
+        <div className="muted" style={{ padding: "8px 0", textAlign: "center" }}>
+          Loading events…
+        </div>
+      )}
 
       {groupBy !== "none" && (
         <div className="tableWrap">

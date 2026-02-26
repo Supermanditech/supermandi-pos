@@ -101,7 +101,7 @@ export function UsersTab({
                 <td>{user.email ?? "-"}</td>
                 <td>{user.phone ?? "-"}</td>
                 <td><span className="badge">{user.actor_type}</span></td>
-                <td><span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeErr" : "badgeWarn"}`}>{user.status}</span></td>
+                <td><span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeError" : "badgeWarn"}`}>{user.status}</span></td>
                 <td>{new Date(user.created_at).toLocaleDateString()}</td>
                 <td>
                   <select value={user.status} onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")} disabled={userStatusSaving[user.id]} style={{ minWidth: 100 }}>

@@ -814,7 +814,7 @@ export async function listPurchaseOrders(
 // ORDER EVENTS (Status Transition Log)
 // =============================================================================
 
-export type ActorType = 'user' | 'system' | 'service';
+export type ActorType = 'user' | 'system' | 'service' | 'store' | 'supplier' | 'platform';
 
 export interface OrderEvent extends BaseEntity {
   orderId: string;

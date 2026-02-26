@@ -4,7 +4,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES } from '@supermandi/common';
-import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
+import {
+  authenticate,
+  requireStoreAccess,
+  requireActorType,
+  getAuthUser,
+} from '@supermandi/auth-service/exports';
 import {
   submitOrder,
   cancelOrder,
@@ -12,25 +17,23 @@ import {
   shipOrder,
   TransitionActor,
 } from '../services/statusService';
-import { getOrderEvents, getPurchaseOrderByIdAndStore } from '../db/queries';
+import { getOrderEvents, getPurchaseOrderByIdAndStore, getPurchaseOrderById } from '../db/queries';
 
 const router: RouterType = Router();
 
 // R6.CROSS.001: Apply authentication to all status transition routes (defense-in-depth)
+// R7.CROSS.001: requireStoreAccess is applied per-route; confirm/ship also allow suppliers
 router.use(authenticate);
-router.use(requireStoreAccess);
 
 // =============================================================================
 // HELPER: Extract actor from request
 // =============================================================================
 
 function getActorFromRequest(req: Request): TransitionActor {
-  const userId = (req as Request & { userId?: string }).userId;
-  const userRole = (req as Request & { userRole?: string }).userRole;
-
+  const user = getAuthUser(req);
   return {
-    actorId: userId,
-    actorType: userId ? 'user' : 'system',
+    actorId: user.actorId,
+    actorType: user.actorType as TransitionActor['actorType'],
   };
 }
 
@@ -40,11 +43,12 @@ function getActorFromRequest(req: Request): TransitionActor {
 
 /**
  * POST /stores/:storeId/orders/:orderId/submit
- * Submit a draft order.
+ * Submit a draft order. Store-only action.
  * V3.0.9: Validates order has items before submission.
  */
 router.post(
   '/stores/:storeId/orders/:orderId/submit',
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, orderId } = req.params;
@@ -68,11 +72,12 @@ router.post(
 
 /**
  * POST /stores/:storeId/orders/:orderId/cancel
- * Cancel an order.
+ * Cancel an order. Store-only action.
  * Can only cancel from draft, submitted, or confirmed status.
  */
 router.post(
   '/stores/:storeId/orders/:orderId/cancel',
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, orderId } = req.params;
@@ -97,14 +102,28 @@ router.post(
 
 /**
  * POST /stores/:storeId/orders/:orderId/confirm
- * Confirm a submitted order.
+ * Confirm a submitted order. Accessible by store, supplier, or platform.
+ * R7.CROSS.001: Suppliers must own the order (supplierId match).
  */
 router.post(
   '/stores/:storeId/orders/:orderId/confirm',
+  requireActorType('store', 'supplier', 'platform'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, orderId } = req.params;
       const actor = getActorFromRequest(req);
+
+      // R7.CROSS.001: For supplier actors, verify order supplierId matches
+      const authUser = getAuthUser(req);
+      if (authUser.actorType === 'supplier') {
+        const order = await getPurchaseOrderById(orderId);
+        if (!order || order.storeId !== storeId) {
+          throw new ApiError(404, ERROR_CODES.NOT_FOUND, `Order not found: ${orderId}`);
+        }
+        if (order.supplierId !== authUser.actorId) {
+          throw new ApiError(403, ERROR_CODES.FORBIDDEN, 'Supplier does not own this order');
+        }
+      }
 
       const result = await confirmOrder(orderId, storeId, actor);
 
@@ -124,10 +143,12 @@ router.post(
 
 /**
  * POST /stores/:storeId/orders/:orderId/ship
- * Mark order as shipped.
+ * Mark order as shipped. Accessible by store, supplier, or platform.
+ * R7.CROSS.001: Suppliers must own the order (supplierId match).
  */
 router.post(
   '/stores/:storeId/orders/:orderId/ship',
+  requireActorType('store', 'supplier', 'platform'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, orderId } = req.params;
@@ -136,6 +157,18 @@ router.post(
         carrier?: string;
       };
       const actor = getActorFromRequest(req);
+
+      // R7.CROSS.001: For supplier actors, verify order supplierId matches
+      const authUser = getAuthUser(req);
+      if (authUser.actorType === 'supplier') {
+        const order = await getPurchaseOrderById(orderId);
+        if (!order || order.storeId !== storeId) {
+          throw new ApiError(404, ERROR_CODES.NOT_FOUND, `Order not found: ${orderId}`);
+        }
+        if (order.supplierId !== authUser.actorId) {
+          throw new ApiError(403, ERROR_CODES.FORBIDDEN, 'Supplier does not own this order');
+        }
+      }
 
       const result = await shipOrder(orderId, storeId, actor, {
         trackingNumber,
@@ -158,10 +191,11 @@ router.post(
 
 /**
  * GET /stores/:storeId/orders/:orderId/events
- * Get order event history.
+ * Get order event history. Accessible by store, supplier, or platform.
  */
 router.get(
   '/stores/:storeId/orders/:orderId/events',
+  requireActorType('store', 'supplier', 'platform'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, orderId } = req.params;

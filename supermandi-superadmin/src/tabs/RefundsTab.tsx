@@ -1,6 +1,8 @@
 // T-219: SuperAdmin Refund Management Tab
 import { useCallback, useEffect, useState } from "react";
 import { fetchRefunds, approveRefund, rejectRefund, type RefundRequest, type RefundStatus } from "../api/refunds";
+// R7.SA.007: Confirmation dialog before money-movement actions
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 function formatCurrency(minor: number): string {
   return "\u20B9" + (minor / 100).toFixed(2);
@@ -24,6 +26,8 @@ export function RefundsTab() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  // R7.SA.007: Confirmation dialog state for money-movement actions
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   const limit = 50;
 
   const refresh = useCallback(async () => {
@@ -46,7 +50,8 @@ export function RefundsTab() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const handleApprove = async (id: string) => {
+  // R7.SA.007: Actual approve — only called after user confirms in dialog
+  const executeApprove = async (id: string) => {
     setActionLoading(id);
     try {
       await approveRefund(id);
@@ -56,6 +61,20 @@ export function RefundsTab() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // R7.SA.007: Show confirmation before triggering money movement
+  const handleApprove = (id: string, amount: number) => {
+    setConfirmDialog({
+      title: "Approve Refund",
+      message: `Approve refund of ${formatCurrency(amount)}? This will initiate a credit/bank transfer.`,
+      confirmLabel: "Approve",
+      variant: "warning",
+      onConfirm: () => {
+        setConfirmDialog(null);
+        executeApprove(id);
+      },
+    });
   };
 
   const handleReject = async () => {
@@ -80,6 +99,8 @@ export function RefundsTab() {
 
   return (
     <div style={{ padding: "1.5rem" }}>
+      {/* R7.SA.007: Confirmation dialog for refund approval */}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={actionLoading !== null} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
           <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>Refund Management</h2>
@@ -155,7 +176,7 @@ export function RefundsTab() {
                       {r.status === "initiated" && (
                         <div style={{ display: "flex", gap: "0.25rem", justifyContent: "center" }}>
                           <button
-                            onClick={() => handleApprove(r.id)}
+                            onClick={() => handleApprove(r.id, r.refundAmount)}
                             disabled={actionLoading === r.id}
                             style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", borderRadius: "0.25rem", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
                           >

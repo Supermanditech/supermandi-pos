@@ -63,7 +63,7 @@ export async function searchSuppliersService(
   if (trimmedQuery.length === 15) {
     const gstinValidation = validateGstin(trimmedQuery);
     if (!gstinValidation.isValid) {
-      console.log(`GSTIN validation failed for search: ${gstinValidation.errors.join(', ')}`);
+      // Not a valid GSTIN — fall through to name/keyword search
     }
   }
 

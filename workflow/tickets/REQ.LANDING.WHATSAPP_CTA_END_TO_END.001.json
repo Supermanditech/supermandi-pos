@@ -1,0 +1,260 @@
+{
+  "ticketId": "REQ.LANDING.WHATSAPP_CTA_END_TO_END.001",
+  "screenId": "LANDING.HOME.WHATSAPP_CTA",
+  "orderInScreen": 1,
+  "surface": "shared",
+  "riskClass": "high",
+  "title": "Implement landing WhatsApp CTA with dual targets (SuperAdmin + Company)",
+  "description": "When a user visits supermandi.tech, a WhatsApp icon must be visible and usable. The CTA must support messaging both (1) SuperAdmin WhatsApp and (2) Company WhatsApp number. Recommended UX: single floating WhatsApp icon opens a small chooser with two clear actions (Chat with SuperAdmin, Chat with Company). Scope includes responsive UI, E.164 normalization for both numbers, encoded prefilled message templates per target, feature-flag/env configuration, safe outbound handling, accessibility, click telemetry by target, graceful fallback, and staging parity evidence for landing deployment.",
+  "status": "in_progress",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "pass",
+    "ux": "pass",
+    "professional_polish": "pass",
+    "wiring": "pass",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "pending"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "cloudRunServices": [
+      "landing"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "LANDING.HOME",
+      "LANDING.POS"
+    ],
+    "impactedServices": [
+      "landing"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "operator",
+    "reproSteps": [
+      "Open supermandi.tech landing page on desktop and mobile breakpoints.",
+      "Verify WhatsApp icon is visible and accessible on initial page load.",
+      "Open WhatsApp action and verify both options are available: SuperAdmin and Company.",
+      "Click each option and verify wa.me opens correct target number with correct prefilled message."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": true,
+    "regressionChecklistPassed": true,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22305359033",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T11:42:28.5240740Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "supermandi-landing/index.html",
+      "supermandi-landing/pos.html",
+      ".github/workflows/deploy.yml"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/"
+    ],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": []
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "wa.me deeplink=https://wa.me/{E164}?text={encodedMessage}",
+      "dual_target=superadmin+company",
+      "feature_flag=WA.enabled:false_until_operator_provides_numbers"
+    ],
+    "parityProof": [
+      "reference_image=operator_supplied_whatsapp_cta_layout",
+      "implementation=supermandi-landing/index.html (pos.html excluded — retailer setup flow, no noise)",
+      "accessibility=aria-expanded+aria-controls+role-dialog+esc-close+focus-return"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T11:42:28.5240740Z",
+    "updatedAt": "2026-02-26T13:45:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Feature request ticket from operator direction with reference image; staging validation pending implementation.",
+    "evidence": [
+      "request=landing_whatsapp_cta_end_to_end"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "landing",
+    "actualCloudRunServices": [
+      "landing"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "supermandi-landing/index.html",
+      "supermandi-landing/pos.html"
+    ],
+    "externalDependencies": [
+      "wa.me deep link format"
+    ],
+    "pendingDependencies": [
+      "superadmin_whatsapp_number_e164",
+      "company_whatsapp_number_e164",
+      "default_prefilled_message_superadmin",
+      "default_prefilled_message_company"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Operator must provide final SuperAdmin and Company WhatsApp destination numbers in E.164 plus default prefilled messages before lock."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Landing-only change."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not impacted."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Validate staging runtime config parity for landing service."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not applicable."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No transaction writes."
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No DB writes."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Validate dual-target config schema (superadmin/company), URL encoding, and phone normalization guardrails."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Fallback path and telemetry must be implemented."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Track CTA click events separately for superadmin and company targets."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [],
+    "pendingExternal": [
+      "operator_superadmin_whatsapp_e164",
+      "operator_company_whatsapp_e164"
+    ],
+    "pendingOps": [
+      "operator_fill_wa_numbers_and_set_enabled_true",
+      "staging_deploy_pending",
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "Implementation complete. Feature flag enabled=false guards production until operator sets both E.164 numbers in WA config block (index.html only) and flips enabled=true. pos.html intentionally excluded — retailer setup flow requires zero distraction."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.LANDING.WHATSAPP_CTA_END_TO_END.001",
+    "lastValidatedCommit": "04996ca0",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "ticket_created_by=codex",
+      "source_commit=04996ca0"
+    ]
+  }
+}

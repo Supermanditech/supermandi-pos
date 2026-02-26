@@ -1,6 +1,8 @@
 // SA-001: Settings tab extracted from App.tsx
 // T-234: Per-store feature flag overrides UI
+// UIUX-SA-011: Styled confirmation dialog instead of bare confirm()
 import { useState, useCallback } from "react";
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import type { SystemSettings, SystemStats } from "../api/settings";
 import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
 import { fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride } from "../api/featureFlags";
@@ -28,6 +30,7 @@ export function SettingsTab({
   refreshSettings, refreshFeatureFlags, handleToggleGlobalFlag,
   storeDirectory,
 }: SettingsTabProps) {
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   // T-234: Per-store feature flag override state
   const [selectedStoreId, setSelectedStoreId] = useState("");
   const [storeFlags, setStoreFlags] = useState<StoreFeatureFlag[]>([]);
@@ -98,7 +101,7 @@ export function SettingsTab({
               <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#666" }}>Version:</span><span className="mono">{systemSettings.version}</span></div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#666" }}>Environment:</span><span className={`badge ${systemSettings.environment === "production" ? "badgeOk" : "badgeWarn"}`}>{systemSettings.environment}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#666" }}>Database:</span><span className={`badge ${systemSettings.database.connected ? "badgeOk" : "badgeErr"}`}>{systemSettings.database.connected ? "Connected" : "Disconnected"}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#666" }}>Database:</span><span className={`badge ${systemSettings.database.connected ? "badgeOk" : "badgeError"}`}>{systemSettings.database.connected ? "Connected" : "Disconnected"}</span></div>
               </div>
             ) : (<div style={{ color: "#888", fontSize: 13 }}>Loading...</div>)}
           </div>
@@ -138,10 +141,10 @@ export function SettingsTab({
                   <tr key={flag.flag_key}>
                     <td><span className="mono">{flag.flag_key}</span></td>
                     <td style={{ fontSize: 12, color: "#666" }}>{flag.description || "\u2014"}</td>
-                    <td><span className={`badge ${flag.enabled ? "badgeOk" : "badgeErr"}`}>{flag.enabled ? "ENABLED" : "DISABLED"}</span></td>
+                    <td><span className={`badge ${flag.enabled ? "badgeOk" : "badgeError"}`}>{flag.enabled ? "ENABLED" : "DISABLED"}</span></td>
                     <td>{flag.flag_key === "minAppVersion" ? (<span style={{ fontSize: 12, color: "#666" }}>Auto (from build)</span>) : (<span style={{ color: "#999", fontSize: 11 }}>{"\u2014"}</span>)}</td>
                     <td>
-                      <button onClick={() => { if (flag.enabled && !confirm(`Kill feature "${flag.flag_key}"? This will affect all stores.`)) return; handleToggleGlobalFlag(flag.flag_key, !flag.enabled); }} disabled={featureFlagSaving[flag.flag_key]} style={{ background: flag.enabled ? "#ef4444" : "#22c55e", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer", fontSize: 12 }}>
+                      <button onClick={() => { if (flag.enabled) { setConfirmDialog({ title: "Kill Feature Flag", message: `Kill feature "${flag.flag_key}"? This will affect all stores.`, onConfirm: () => { setConfirmDialog(null); handleToggleGlobalFlag(flag.flag_key, false); }, confirmLabel: "Kill", variant: "danger" }); } else { handleToggleGlobalFlag(flag.flag_key, true); } }} disabled={featureFlagSaving[flag.flag_key]} style={{ background: flag.enabled ? "#ef4444" : "#22c55e", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer", fontSize: 12 }}>
                         {featureFlagSaving[flag.flag_key] ? "Saving..." : flag.enabled ? "KILL" : "Enable"}
                       </button>
                     </td>
@@ -188,14 +191,14 @@ export function SettingsTab({
                   {storeFlags.map((flag) => (
                     <tr key={flag.flag_key}>
                       <td><span className="mono">{flag.flag_key}</span></td>
-                      <td><span className={`badge ${flag.global_enabled ? "badgeOk" : "badgeErr"}`}>{flag.global_enabled ? "ON" : "OFF"}</span></td>
+                      <td><span className={`badge ${flag.global_enabled ? "badgeOk" : "badgeError"}`}>{flag.global_enabled ? "ON" : "OFF"}</span></td>
                       <td>
                         {flag.store_override === null
                           ? <span style={{ color: "#999", fontSize: 11 }}>No override</span>
-                          : <span className={`badge ${flag.store_override ? "badgeOk" : "badgeErr"}`}>{flag.store_override ? "ON" : "OFF"}</span>
+                          : <span className={`badge ${flag.store_override ? "badgeOk" : "badgeError"}`}>{flag.store_override ? "ON" : "OFF"}</span>
                         }
                       </td>
-                      <td><span className={`badge ${flag.effective ? "badgeOk" : "badgeErr"}`}>{flag.effective ? "ENABLED" : "DISABLED"}</span></td>
+                      <td><span className={`badge ${flag.effective ? "badgeOk" : "badgeError"}`}>{flag.effective ? "ENABLED" : "DISABLED"}</span></td>
                       <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         {flag.store_override !== true && (
                           <button
@@ -230,6 +233,7 @@ export function SettingsTab({
           )}
         </div>
       </div>
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
     </section>
   );
 }

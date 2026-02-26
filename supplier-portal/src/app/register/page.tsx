@@ -592,6 +592,8 @@ function RegisterPage() {
       };
 
       xhr.open('POST', `${API_BASE_URL}/api/v1/documents/upload`);
+      // R7.SUP.001: Send auth credentials (HttpOnly cookies) with XHR upload
+      xhr.withCredentials = true;
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       xhr.send(formData);
     });

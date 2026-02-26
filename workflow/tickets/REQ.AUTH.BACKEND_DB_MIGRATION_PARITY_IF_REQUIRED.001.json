@@ -1,0 +1,271 @@
+{
+  "ticketId": "REQ.AUTH.BACKEND_DB_MIGRATION_PARITY_IF_REQUIRED.001",
+  "screenId": "AUTH.BACKEND.DB.PARITY",
+  "orderInScreen": 1,
+  "surface": "shared",
+  "riskClass": "critical",
+  "title": "Harden backend + DB approval-state model parity (migration if required)",
+  "description": "If staging investigation confirms schema/state drift, implement backend and DB parity for onboarding/approval statuses used by retailer and supplier auth gates. Include migration plan only if required, with rollback-safe path and no mixed-state reads.",
+  "status": "todo",
+  "severity": "P1",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "fail",
+    "navigation": "na",
+    "api": "fail",
+    "backend": "fail",
+    "db": "fail",
+    "migration": "fail",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/supplier/login/",
+      "https://staging.supermandi.tech/retailer/register",
+      "https://staging.supermandi.tech/supplier/register/",
+      "https://staging.supermandi.tech/admin/",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "SUPERADMIN.APPLICATIONS",
+      "RETAILER.AUTH",
+      "SUPPLIER.AUTH"
+    ],
+    "impactedServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "operator-staging-observation",
+    "reproSteps": [
+      "Open latest staging for retailer and supplier auth flows and compare behavior side-by-side.",
+      "Verify theme icon/toggle behavior and end-to-end flow consistency.",
+      "Verify superadmin approval state reflects consistently in both portals.",
+      "Record API response parity and navigation outcomes for same scenario."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": true,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "github://run/22305359033",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T11:57:46.711Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "supermandi-landing/index.html",
+      "supermandi-landing/pos.html",
+      ".github/workflows/deploy.yml"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/supplier/login/"
+    ],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": []
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": [
+      "source=operator_live_staging_observation",
+      "scope=retailer_supplier_superadmin_cross_matrix"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T11:57:46.711Z",
+    "updatedAt": "2026-02-26T11:58:06.270Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket generated from latest staging observation for production-grade parity remediation.",
+    "evidence": [
+      "staging_domain=staging.supermandi.tech",
+      "deployment_ref=github://run/22305359033"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "main-backend",
+    "actualCloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/retailer/login",
+      "https://staging.supermandi.tech/supplier/login/",
+      "https://staging.supermandi.tech/admin/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "retailer-admin auth pages",
+      "supplier-portal auth pages",
+      "superadmin approval tabs",
+      "api-gateway auth endpoints",
+      "main-backend onboarding/approval handlers"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Atomic parity remediation ticket generated from live staging anomaly set."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Must preserve retailer-supplier role isolation while unifying auth flows."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not impacted."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Auth/approval UI state must match backend truth for both portals."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not applicable."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No transaction writes."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "If migration required, ensure atomic status transition writes."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Validate dual-target config schema (superadmin/company), URL encoding, and phone normalization guardrails."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Fallback path and telemetry must be implemented."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Track CTA click events separately for superadmin and company targets."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "implementation_pending",
+      "parity_validation_pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "staging_redeploy_pending",
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "Atomic ticket created for staging parity anomalies; implementation pending."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUTH.BACKEND_DB_MIGRATION_PARITY_IF_REQUIRED.001",
+    "lastValidatedCommit": "2289f195",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "ticket_generated_from_live_observation",
+      "source_commit=2289f195"
+    ]
+  }
+}

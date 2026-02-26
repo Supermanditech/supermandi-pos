@@ -1,5 +1,7 @@
 // T-295: Supplier Portal Chat UI
 // Two-panel layout: conversation list (left) + message thread (right)
+// R7.SUP.005: Converted inline styles to Tailwind classes
+// R7.SUP.006: Fixed height using flex layout instead of calc(100vh - 64px)
 
 'use client';
 
@@ -7,7 +9,7 @@ import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { MessageSquare, Send, ArrowLeft, Search, Headphones, Image, Paperclip } from 'lucide-react';
+import { MessageSquare, Send, Search, Headphones, Image, Paperclip } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 // UIUX-SUP-006: Use centralized apiFetch (auth via HttpOnly cookies, 401 redirect, 30s timeout)
 import { apiFetch as globalApiFetch } from '@/lib/api';
@@ -57,7 +59,7 @@ function formatTime(iso: string | null): string {
 
 export default function SupplierChatPageWrapper() {
   return (
-    <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading chat...</div>}>
+    <Suspense fallback={<div className="p-6 text-center text-slate-400 dark:text-slate-500">Loading chat...</div>}>
       <SupplierChatPage />
     </Suspense>
   );
@@ -155,43 +157,40 @@ function SupplierChatPage() {
       )
     : conversations;
 
+  // R7.SUP.006: Use flex h-full layout to avoid calc(100vh - 64px) overflow
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 64px)', background: '#f8fafc' }}>
+    <div className="flex h-full bg-slate-50 dark:bg-gray-950 min-h-0">
       {/* Left Panel: Conversation List */}
-      <div style={{ width: 340, borderRight: '1px solid #e2e8f0', background: '#fff', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0' }}>
-          <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem', fontWeight: 600 }}>Messages</h2>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: 10, top: 9, color: '#94a3b8' }} />
+      <div className="w-80 border-r border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col min-h-0 flex-shrink-0">
+        <div className="px-4 py-4 border-b border-slate-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-100">Messages</h2>
+          <div className="relative">
+            <Search size={16} className="absolute left-2.5 top-2.5 text-slate-400 dark:text-slate-500" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%', padding: '0.5rem 0.5rem 0.5rem 2rem', borderRadius: 8,
-                border: '1px solid #e2e8f0', fontSize: '0.85rem', outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="w-full pl-8 pr-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 text-sm outline-none bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 box-border"
             />
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="flex-1 overflow-y-auto min-h-0">
           {convLoading ? (
-            <div style={{ padding: '0.75rem 1rem' }}>
+            <div className="px-4 py-3">
               {[...Array(6)].map((_, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 0', borderBottom: '1px solid #f1f5f9' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 20, background: '#e2e8f0' }} className="animate-pulse" />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ height: 12, background: '#e2e8f0', borderRadius: 4, width: '60%', marginBottom: 6 }} className="animate-pulse" />
-                    <div style={{ height: 10, background: '#f1f5f9', borderRadius: 4, width: '80%' }} className="animate-pulse" />
+                <div key={i} className="flex items-center gap-3 py-3 border-b border-slate-100 dark:border-gray-800">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="h-3 bg-slate-200 dark:bg-gray-700 rounded w-3/5 mb-1.5 animate-pulse" />
+                    <div className="h-2.5 bg-slate-100 dark:bg-gray-800 rounded w-4/5 animate-pulse" />
                   </div>
                 </div>
               ))}
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+            <div className="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
               No conversations yet
             </div>
           ) : (
@@ -199,42 +198,38 @@ function SupplierChatPage() {
               <div
                 key={conv.id}
                 onClick={() => setSelectedConvId(conv.id)}
-                style={{
-                  padding: '0.75rem 1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  borderBottom: '1px solid #f1f5f9',
-                  background: selectedConvId === conv.id ? '#f0f9ff' : 'transparent',
-                }}
+                className={`px-4 py-3 cursor-pointer flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 transition-colors ${
+                  selectedConvId === conv.id
+                    ? 'bg-sky-50 dark:bg-sky-950'
+                    : 'hover:bg-slate-50 dark:hover:bg-gray-800'
+                }`}
               >
-                <div style={{
-                  width: 40, height: 40, borderRadius: 20,
-                  background: conv.type === 'support' ? '#f5f3ff' : '#f0fdf4',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  conv.type === 'support'
+                    ? 'bg-violet-100 dark:bg-violet-900'
+                    : 'bg-green-50 dark:bg-green-900'
+                }`}>
                   {conv.type === 'support' ? (
-                    <Headphones size={18} color="#7c3aed" />
+                    <Headphones size={18} className="text-violet-600 dark:text-violet-400" />
                   ) : (
-                    <MessageSquare size={18} color="#16a34a" />
+                    <MessageSquare size={18} className="text-green-600 dark:text-green-400" />
                   )}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 500, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-sm truncate text-slate-800 dark:text-slate-100">
                       {conv.title || conv.otherParticipantName || 'Conversation'}
                     </span>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', flexShrink: 0 }}>
+                    <span className="text-[0.7rem] text-slate-400 dark:text-slate-500 flex-shrink-0 ml-2">
                       {formatTime(conv.lastMessageAt)}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="flex justify-between items-center mt-0.5">
+                    <span className="text-[0.8rem] text-slate-500 dark:text-slate-400 truncate">
                       {conv.lastMessagePreview || 'No messages'}
                     </span>
                     {conv.unreadCount > 0 && (
-                      <span style={{
-                        minWidth: 18, height: 18, borderRadius: 9, background: '#16a34a',
-                        color: '#fff', fontSize: '0.65rem', fontWeight: 700, display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', padding: '0 5px', flexShrink: 0,
-                      }}>
+                      <span className="min-w-[18px] h-[18px] rounded-full bg-green-600 dark:bg-green-500 text-white text-[0.65rem] font-bold flex items-center justify-center px-1 flex-shrink-0 ml-1">
                         {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                       </span>
                     )}
@@ -246,7 +241,7 @@ function SupplierChatPage() {
           {conversations.length >= convLimit && (
             <button
               onClick={() => setConvLimit(l => l + 50)}
-              style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', color: '#2563eb', background: '#f8fafc', border: 'none', borderTop: '1px solid #e2e8f0', cursor: 'pointer' }}
+              className="w-full py-2 text-sm text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-gray-900 border-none border-t border-slate-200 dark:border-gray-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
             >
               Load more conversations
             </button>
@@ -255,9 +250,9 @@ function SupplierChatPage() {
       </div>
 
       {/* Right Panel: Message Thread */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className="flex-1 flex flex-col min-h-0">
         {!selectedConvId ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="flex-1 flex items-center justify-center">
             <EmptyState
               icon={MessageSquare}
               title="Select a conversation"
@@ -267,21 +262,21 @@ function SupplierChatPage() {
         ) : (
           <>
             {/* Thread Header */}
-            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-center gap-3 flex-shrink-0">
+              <h3 className="text-[0.95rem] font-semibold m-0 text-slate-800 dark:text-slate-100">
                 {selectedConv?.title || selectedConv?.otherParticipantName || 'Chat'}
               </h3>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {selectedConv?.type === 'support' ? 'Support' : 'Direct'}
               </span>
             </div>
 
             {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+            <div className="flex-1 overflow-y-auto p-4 min-h-0">
               {msgLoading ? (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>Loading messages...</div>
+                <div className="text-center text-slate-500 dark:text-slate-400 py-8">Loading messages...</div>
               ) : messages.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>No messages yet. Start the conversation!</div>
+                <div className="text-center text-slate-400 dark:text-slate-500 py-8">No messages yet. Start the conversation!</div>
               ) : (
                 messages.map(msg => {
                   const isSystem = msg.senderType === 'system';
@@ -289,8 +284,8 @@ function SupplierChatPage() {
 
                   if (isSystem) {
                     return (
-                      <div key={msg.id} style={{ textAlign: 'center', margin: '0.5rem 0' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', background: '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: 8 }}>
+                      <div key={msg.id} className="text-center my-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 italic bg-slate-100 dark:bg-gray-800 px-3 py-1 rounded-lg">
                           {msg.content}
                         </span>
                       </div>
@@ -298,22 +293,23 @@ function SupplierChatPage() {
                   }
 
                   return (
-                    <div key={msg.id} style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: '0.5rem' }}>
-                      <div style={{
-                        maxWidth: '70%', padding: '0.5rem 0.75rem', borderRadius: 12,
-                        background: isOwn ? '#16a34a' : '#fff',
-                        color: isOwn ? '#fff' : '#1e293b',
-                        border: isOwn ? 'none' : '1px solid #e2e8f0',
-                        borderBottomRightRadius: isOwn ? 4 : 12,
-                        borderBottomLeftRadius: isOwn ? 12 : 4,
-                      }}>
+                    <div key={msg.id} className={`flex mb-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[70%] px-3 py-2 rounded-xl text-sm leading-snug ${
+                        isOwn
+                          ? 'bg-green-600 dark:bg-green-700 text-white rounded-br-sm'
+                          : 'bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-gray-700 rounded-bl-sm'
+                      }`}>
                         {msg.attachmentName && (
-                          <div style={{ fontSize: '0.75rem', color: isOwn ? 'rgba(255,255,255,0.8)' : '#64748b', marginBottom: 4 }}>
-                            {msg.messageType === 'image' ? <Image size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> : <Paperclip size={12} style={{ display: 'inline', verticalAlign: 'middle' }} />} {msg.attachmentName}
+                          <div className={`text-xs mb-1 ${isOwn ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                            {msg.messageType === 'image'
+                              ? <Image size={12} className="inline align-middle mr-1" />
+                              : <Paperclip size={12} className="inline align-middle mr-1" />
+                            }
+                            {msg.attachmentName}
                           </div>
                         )}
-                        {msg.content && <div style={{ fontSize: '0.85rem', lineHeight: 1.4 }}>{msg.content}</div>}
-                        <div style={{ fontSize: '0.65rem', color: isOwn ? 'rgba(255,255,255,0.6)' : '#94a3b8', marginTop: 2, textAlign: 'right' }}>
+                        {msg.content && <div>{msg.content}</div>}
+                        <div className={`text-[0.65rem] mt-0.5 text-right ${isOwn ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'}`}>
                           {formatTime(msg.createdAt)}
                         </div>
                       </div>
@@ -325,28 +321,23 @@ function SupplierChatPage() {
             </div>
 
             {/* Input Bar */}
-            <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #e2e8f0', background: '#fff', display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+            <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex gap-2 items-end flex-shrink-0">
               <textarea
                 value={messageText}
                 onChange={e => setMessageText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 rows={1}
-                style={{
-                  flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #e2e8f0',
-                  fontSize: '0.85rem', resize: 'none', maxHeight: 100, outline: 'none',
-                  fontFamily: 'inherit',
-                }}
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 text-sm resize-none max-h-24 outline-none font-inherit bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
               />
               <button
                 onClick={handleSend}
                 disabled={!messageText.trim() || sendMutation.isPending}
-                style={{
-                  padding: '0.5rem', borderRadius: 8, border: 'none',
-                  background: messageText.trim() ? '#16a34a' : '#94a3b8',
-                  color: '#fff', cursor: messageText.trim() ? 'pointer' : 'default',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
+                className={`p-2 rounded-lg border-none flex items-center justify-center transition-colors ${
+                  messageText.trim()
+                    ? 'bg-green-600 dark:bg-green-700 text-white cursor-pointer hover:bg-green-700 dark:hover:bg-green-600'
+                    : 'bg-slate-300 dark:bg-gray-700 text-white cursor-default'
+                }`}
               >
                 <Send size={18} />
               </button>

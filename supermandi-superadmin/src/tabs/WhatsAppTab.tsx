@@ -83,8 +83,8 @@ export function WhatsAppTab() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleSend = async () => {
-    if (!sendPhone.trim() || !sendMessage.trim()) return;
+  // R7.SA.008: Actual send — only called after user confirms in dialog
+  const executeSend = async () => {
     setSending(true);
     setSendResult(null);
     try {
@@ -106,6 +106,22 @@ export function WhatsAppTab() {
     } finally {
       setSending(false);
     }
+  };
+
+  // R7.SA.008: Show confirmation before single WhatsApp send (irrevocable action)
+  const handleSend = () => {
+    if (!sendPhone.trim() || !sendMessage.trim()) return;
+    setConfirmDialog({
+      title: "Send WhatsApp Message",
+      message: `Send this message to ${sendPhone.trim()}? WhatsApp messages cannot be unsent.`,
+      detail: `Preview: "${sendMessage.trim().slice(0, 80)}${sendMessage.trim().length > 80 ? "..." : ""}"`,
+      confirmLabel: "Send",
+      variant: "warning",
+      onConfirm: () => {
+        setConfirmDialog(null);
+        executeSend();
+      },
+    });
   };
 
   const executeBroadcast = async (phones: string[]) => {
