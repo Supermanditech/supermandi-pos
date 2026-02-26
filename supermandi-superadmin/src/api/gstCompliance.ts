@@ -58,7 +58,8 @@ export async function fetchGstSummary(storeId: string, month?: string): Promise<
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/gst/summary/${encodeURIComponent(storeId)}${qs}`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`GST summary failed: ${res.status}`);
+  // R7.SA.009: Use human-readable error messages instead of HTTP status codes
+  if (!res.ok) throw new Error(res.status === 404 ? "GST data not found for this store and period" : res.status === 403 ? "Access denied" : "Failed to load GST summary");
   const json = await res.json();
   // Backend returns data wrapper or direct — handle both
   const raw = json.data || json;
@@ -86,7 +87,8 @@ export async function exportGstr1(storeId: string, month?: string): Promise<Blob
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/gst/summary/${encodeURIComponent(storeId)}/export${qs}`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`GSTR-1 export failed: ${res.status}`);
+  // R7.SA.009: Human-readable error message instead of HTTP status code
+  if (!res.ok) throw new Error(res.status === 404 ? "No GST data available for export in this period" : res.status === 403 ? "Access denied" : "Failed to export GSTR-1");
   return res.blob();
 }
 
@@ -95,7 +97,8 @@ export async function fetchGstStoresOverview(month?: string): Promise<GstStoresO
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/gst/stores-overview${qs}`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`GST stores overview failed: ${res.status}`);
+  // R7.SA.009: Human-readable error message instead of HTTP status code
+  if (!res.ok) throw new Error(res.status === 403 ? "Access denied" : "Failed to load GST stores overview");
   const json = await res.json();
   // Backend returns { success, period, totals, stores, filingDeadline } at top level
   const raw = json.data || json;

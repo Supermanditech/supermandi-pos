@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { BuildStamp } from '../components/BuildStamp';
@@ -21,6 +21,14 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // R7.RET.009: AbortController ref to cancel in-flight fetch on unmount
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +64,10 @@ export default function ResetPasswordPage() {
     }
 
     setIsLoading(true);
+    // R7.RET.009: Abort any previous request; create new controller for this fetch
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
       const response = await fetch(
         `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/email-reset`,
@@ -68,6 +80,7 @@ export default function ResetPasswordPage() {
             newPassword,
           }),
           credentials: 'include',
+          signal: controller.signal,
         }
       );
       const data = await safeJson(response);

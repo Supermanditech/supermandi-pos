@@ -558,12 +558,14 @@ export default function ForgotPasswordPage() {
           </div>
 
           <div className="space-y-3">
-            <Link
-              href="/reset-password"
-              className="btn btn-primary w-full py-3 block text-center"
+            {/* R7.SUP.004: Wire button to emailReset step (was linking to /reset-password, making emailReset dead code) */}
+            <button
+              type="button"
+              onClick={() => { setStep('emailReset'); setError(''); }}
+              className="btn btn-primary w-full py-3"
             >
               I Have a Reset Token
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => { setStep('email'); setError(''); }}

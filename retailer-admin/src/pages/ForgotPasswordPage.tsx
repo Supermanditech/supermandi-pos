@@ -5,6 +5,8 @@ import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '..
 import { BuildStamp } from '../components/BuildStamp';
 import { ThemeToggle } from '../components/ThemeToggle';
 
+// R7.RET.007: AbortController ref to cancel in-flight fetch calls on unmount
+
 // AUTH-PARITY-002: Dual-channel forgot password (OTP + Email)
 // Channel 1: Phone → OTP verify → new password
 // Channel 2: Email → reset link → token form → new password
@@ -45,6 +47,15 @@ export default function ForgotPasswordPage() {
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const [idToken, setIdToken] = useState('');
   const recaptchaInitialized = useRef(false);
+  // R7.RET.007: Track the active AbortController for any in-flight fetch
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // R7.RET.007: Abort any in-flight request on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   // Setup reCAPTCHA when on phone step
   useEffect(() => {
@@ -88,6 +99,10 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
+    // R7.RET.007: Abort any previous request; create new controller for this fetch
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
       // Verify account exists
       const response = await fetch(
@@ -97,6 +112,7 @@ export default function ForgotPasswordPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: cleanedPhone }),
           credentials: 'include',
+          signal: controller.signal,
         }
       );
       const data = await safeJson(response);
@@ -167,6 +183,10 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
+    // R7.RET.007: Abort any previous request; create new controller for this fetch
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
       const response = await fetch(
         `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/reset`,
@@ -175,6 +195,7 @@ export default function ForgotPasswordPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken, newPassword }),
           credentials: 'include',
+          signal: controller.signal,
         }
       );
       const data = await safeJson(response);
@@ -204,6 +225,10 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
+    // R7.RET.007: Abort any previous request; create new controller for this fetch
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
       const response = await fetch(
         `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/email-request`,
@@ -212,6 +237,7 @@ export default function ForgotPasswordPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email.trim().toLowerCase() }),
           credentials: 'include',
+          signal: controller.signal,
         }
       );
       await safeJson(response);
@@ -255,6 +281,10 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
+    // R7.RET.007: Abort any previous request; create new controller for this fetch
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
       const response = await fetch(
         `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/email-reset`,
@@ -263,6 +293,7 @@ export default function ForgotPasswordPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email.trim().toLowerCase(), token: resetToken.trim(), newPassword }),
           credentials: 'include',
+          signal: controller.signal,
         }
       );
       const data = await safeJson(response);

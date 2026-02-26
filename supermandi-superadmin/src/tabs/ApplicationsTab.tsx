@@ -126,11 +126,11 @@ export function ApplicationsTab({
                 </div>
 
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Rejection Reason (required for reject, min 10 chars):</label>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Rejection Reason (required for reject, min 5 chars):</label>
                   <textarea
                     className="tableInput"
                     style={{ width: "100%", marginBottom: 8, minHeight: 48, resize: "vertical" }}
-                    placeholder="Describe what the applicant needs to fix (min 10 characters)..."
+                    placeholder="Describe what the applicant needs to fix (min 5 characters)..."
                     value={appRejectReason[app.id] || ""}
                     onChange={(e) => setAppRejectReason((prev) => ({ ...prev, [app.id]: e.target.value }))}
                   />

@@ -2974,6 +2974,8 @@ export default function App() {
           page={page}
           setPage={setPage}
           pageSize={pageSize}
+          loading={eventsLoading}
+          error={eventsError || undefined}
         />
       )}
 
