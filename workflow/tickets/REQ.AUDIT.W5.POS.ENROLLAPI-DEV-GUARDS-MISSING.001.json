@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "enrollApi.ts and config/api.ts: console.log calls not wrapped in __DEV__ — emit API base URL in release builds",
   "description": "enrollApi.ts and config/api.ts have production console.log calls not guarded by __DEV__, revealing API URLs in Logcat.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,35 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "src/services/api/enrollApi.ts",
+      "src/config/api.ts",
+      "workflow/tickets/REQ.AUDIT.W5.POS.ENROLLAPI-DEV-GUARDS-MISSING.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +145,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "add __DEV__ guards to enrollApi.ts console calls",
+      "prevHash": "GENESIS",
+      "hash": "e216d55e516651cf4817822e67830a92e6bb5b2227b4da5924dc2be20f822b1b"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "all 4 console.log/error calls in enrollApi.ts (lines 66,68,73,75) wrapped with if (__DEV__); config/api.ts was already guarded (false positive portion)",
+      "prevHash": "e216d55e516651cf4817822e67830a92e6bb5b2227b4da5924dc2be20f822b1b",
+      "hash": "ada262f24bbf0aa2335da82599631f613d6e7a9e4b48243d920e53cd1ba70013"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +276,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.ENROLLAPI-DEV-GUARDS-MISSING.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "600adeab",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=600adeab"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "src/services/api/enrollApi.ts",
+      "description": "Lines 66,68,73-76 wrapped with if (__DEV__) block; prevents API URL and error codes leaking in Logcat on release builds"
+    }
   }
 }

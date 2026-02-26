@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "SplashScreen and EnrollDeviceScreen: console.warn/log not guarded by __DEV__ — executes in release builds",
   "description": "SplashScreen and EnrollDeviceScreen use console.warn/log directly without __DEV__ guards. Emits in release builds.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -93,10 +93,35 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "src/screens/SplashScreen.tsx",
+      "src/screens/EnrollDeviceScreen.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.POS.SCREENS-CONSOLE-LOG-IN-PROD.001.json"
     ]
   },
   "operatorChecks": {
@@ -121,7 +146,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "add __DEV__ guards to console.warn/log in SplashScreen and EnrollDeviceScreen",
+      "prevHash": "GENESIS",
+      "hash": "35bc0a3d00a9147ae87987725c611aa03411807a6c8c5f0c5b0c1f326b781447"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "all 5 console.warn calls in SplashScreen.tsx and 4 unguarded console.log/error/warn in EnrollDeviceScreen.tsx wrapped with if (__DEV__)",
+      "prevHash": "35bc0a3d00a9147ae87987725c611aa03411807a6c8c5f0c5b0c1f326b781447",
+      "hash": "c91b1c4498eaeac2f0597c8c3990bd552732bd5fd860fb3496edf51cf96c72dd"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -231,12 +277,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.SCREENS-CONSOLE-LOG-IN-PROD.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "600adeab",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=600adeab"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "src/screens/SplashScreen.tsx",
+      "description": "SplashScreen lines 85,91,106,109,112 wrapped; EnrollDeviceScreen lines 285,289,292,294,297,309 wrapped with if (__DEV__)"
+    }
   }
 }

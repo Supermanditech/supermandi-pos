@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "SellScanScreen: stock resolution failure shows \"Unknown\" without error indicator — user may checkout with stale stock data",
   "description": "When resolveStockForCartItem() fails, item shows \"In stock: Unknown\" but no error badge. Unlike price errors which show priceErrorMessage.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "src/screens/SellScanScreen.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.POS.CART-STOCK-ERROR-NOT-SHOWN.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +144,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "add error indicator when stock resolution returns null in cart items",
+      "prevHash": "GENESIS",
+      "hash": "b38bb583de3bf9b3ada14c460cf0e323a85a56b8390a65f93a13bd4a6a56e35c"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "error badge added to SellScanScreen cart item row when stockValue===null; uses same priceErrorRow styles as price resolution errors",
+      "prevHash": "b38bb583de3bf9b3ada14c460cf0e323a85a56b8390a65f93a13bd4a6a56e35c",
+      "hash": "ef8e5e8dcb999b1927d482c233d278a057a4e94c9bc774bc4cd162f7b5d88216"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +275,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.CART-STOCK-ERROR-NOT-SHOWN.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "600adeab",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=600adeab"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "src/screens/SellScanScreen.tsx",
+      "description": "Added {showStock && stockValue === null} conditional rendering alert-circle-outline badge with \"Stock data unavailable\" message"
+    }
   }
 }

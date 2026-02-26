@@ -29,6 +29,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { enrollDevice } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
@@ -167,6 +168,10 @@ export default function EnrollDeviceScreen() {
   // #342: Accept both ?enrollmentCode=X and ?code=X from deep links
   const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || route.params?.code || "");
   const [loading, setLoading] = useState(false);
+  // ENROLL-MISSING-ERROR-STATE-UI: persistent inline error shown after API failure
+  const [enrollError, setEnrollError] = useState<string | null>(null);
+  // ENROLL-SESSION-CHECK-RACE-CONDITION: hide form until session check completes
+  const [checkingSession, setCheckingSession] = useState(true);
 
   // #404: Device label (required by backend for device identification)
   // Default to device model name for convenience
@@ -182,12 +187,21 @@ export default function EnrollDeviceScreen() {
   }), []);
 
   // Check existing session on mount — skip to SellScan if already enrolled
+  // ENROLL-SESSION-CHECK-RACE-CONDITION: wait for check before showing form to avoid flash
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const session = await getDeviceSession();
-      if (cancelled || !session) return;
-      navigation.replace("SellScan");
+      try {
+        const session = await getDeviceSession();
+        if (cancelled) return;
+        if (session) {
+          navigation.replace("SellScan");
+        } else {
+          setCheckingSession(false);
+        }
+      } catch {
+        if (!cancelled) setCheckingSession(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [navigation]);
@@ -282,19 +296,20 @@ export default function EnrollDeviceScreen() {
         deviceToken: res.deviceToken,
         deviceType: "RETAILER_PHONE",
       });
-      console.log(`[Activate] Success: token saved (len=${res.deviceToken?.length ?? 0})`);
+      // SCREENS-CONSOLE-LOG-IN-PROD: guard diagnostic logs from release builds
+      if (__DEV__) console.log(`[Activate] Success: token saved (len=${res.deviceToken?.length ?? 0})`);
 
       // Go-Live invariant check
       try {
-        console.log("[Activate] Running invariant check: calling ui-status...");
+        if (__DEV__) console.log("[Activate] Running invariant check: calling ui-status...");
         const uiStatus = await fetchUiStatus();
         if (uiStatus.storeActive === false) {
-          console.log("[Activate] Store is inactive");
+          if (__DEV__) console.log("[Activate] Store is inactive");
         } else {
-          console.log("[Activate] Invariant check PASSED");
+          if (__DEV__) console.log("[Activate] Invariant check PASSED");
         }
       } catch (invariantError) {
-        console.error("[Activate] INVARIANT CHECK FAILED:", invariantError);
+        if (__DEV__) console.error("[Activate] INVARIANT CHECK FAILED:", invariantError);
         const is401 = invariantError instanceof ApiError &&
           (invariantError.status === 401 || invariantError.message === "DEVICE_SESSION_MISSING" || invariantError.message === "device_unauthorized");
         if (is401) {
@@ -306,7 +321,7 @@ export default function EnrollDeviceScreen() {
           );
           return;
         }
-        console.warn("[Activate] Non-critical invariant check error:", invariantError);
+        if (__DEV__) console.warn("[Activate] Non-critical invariant check error:", invariantError);
       }
 
       // Persist store info
@@ -367,11 +382,21 @@ export default function EnrollDeviceScreen() {
       debugParts.push(`api: ${API_BASE_URL}`);
       if (Updates.channel) debugParts.push(`channel: ${Updates.channel}`);
 
-      Alert.alert("Activation Failed", `${message}\n\n${hint}\n\n(${debugParts.join(", ")})`);
+        Alert.alert("Activation Failed", `${message}\n\n${hint}\n\n(${debugParts.join(", ")})`);
+      setEnrollError(`${message} ${hint}`);
     } finally {
       setLoading(false);
     }
   }, [codeInput, labelInput, deviceMeta, navigation]);
+
+  // ENROLL-SESSION-CHECK-RACE-CONDITION: show spinner until session check completes
+  if (checkingSession) {
+    return (
+      <View style={styles.sessionCheckContainer} testID="enroll-session-checking">
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -409,7 +434,7 @@ export default function EnrollDeviceScreen() {
           placeholder="SM-XXXXXX"
           autoCapitalize="characters"
           value={codeInput}
-          onChangeText={setCodeInput}
+          onChangeText={(v) => { setCodeInput(v); setEnrollError(null); }}
           testID="enroll-code-input"
           accessibilityLabel="Activation code"
           returnKeyType="next"
@@ -459,6 +484,14 @@ export default function EnrollDeviceScreen() {
           )}
         </Pressable>
       </View>
+
+      {/* ENROLL-MISSING-ERROR-STATE-UI: Persistent inline error banner after API failure */}
+      {enrollError ? (
+        <View style={styles.enrollErrorBanner} testID="enroll-error-banner">
+          <MaterialCommunityIcons name="alert-circle" size={16} color={theme.colors.error} />
+          <Text style={styles.enrollErrorText}>{enrollError}</Text>
+        </View>
+      ) : null}
 
       {/* Help Text */}
       <View style={styles.helpSection}>
@@ -674,6 +707,27 @@ const styles = StyleSheet.create({
   activatingRow: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  sessionCheckContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enrollErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.error + '20',
+    padding: spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  enrollErrorText: {
+    ...typography.caption,
+    color: colors.error,
+    flex: 1,
+    lineHeight: 18,
   },
   helpSection: {
     backgroundColor: colors.surfaceAlt,

@@ -63,16 +63,19 @@ export async function enrollDevice(input: {
   };
 
   try {
-    console.log("[enrollDevice] Calling gateway:", API_BASE_URL);
+    // ENROLLAPI-DEV-GUARDS-MISSING: guard API URL logging to prevent Logcat leakage in release builds
+    if (__DEV__) console.log("[enrollDevice] Calling gateway:", API_BASE_URL);
     const response = await apiClient.post<DeviceEnrollResponse>("/api/v1/pos/enroll", requestBody);
-    console.log("[enrollDevice] Success:", response.deviceId, response.storeId, response.reEnrolled ? "(re-enrolled)" : "");
+    if (__DEV__) console.log("[enrollDevice] Success:", response.deviceId, response.storeId, response.reEnrolled ? "(re-enrolled)" : "");
     return response;
   } catch (error) {
-    // Log detailed error for debugging
-    if (error instanceof ApiError) {
-      console.error("[enrollDevice] Failed:", error.status, error.message, error.payload);
-    } else {
-      console.error("[enrollDevice] Failed:", error);
+    // Log detailed error for debugging (dev only — avoids leaking error codes in Logcat)
+    if (__DEV__) {
+      if (error instanceof ApiError) {
+        console.error("[enrollDevice] Failed:", error.status, error.message, error.payload);
+      } else {
+        console.error("[enrollDevice] Failed:", error);
+      }
     }
     throw error;
   }

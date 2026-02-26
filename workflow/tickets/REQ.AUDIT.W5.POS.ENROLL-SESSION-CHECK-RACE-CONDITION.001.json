@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "EnrollDeviceScreen: async session check not awaited — enrollment form renders 100ms before redirect on enrolled device",
   "description": "Mount session check async, not awaited. Form renders immediately. Already-enrolled device sees form flash before SellScan redirect.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "src/screens/EnrollDeviceScreen.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.POS.ENROLL-SESSION-CHECK-RACE-CONDITION.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +144,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "fix session check race condition on EnrollDeviceScreen mount",
+      "prevHash": "GENESIS",
+      "hash": "218fb3da7d9c84df4f1598c8a23da644e05c9a2c6970ed320036a89b3933a964"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "checkingSession state added; form hidden behind ActivityIndicator while session check runs; setCheckingSession(false) called only after check completes",
+      "prevHash": "218fb3da7d9c84df4f1598c8a23da644e05c9a2c6970ed320036a89b3933a964",
+      "hash": "974ded2ac1461a6e8ca542d1646c60aa2792e9223ce441dac4eb8dff7d6e11cf"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +275,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.ENROLL-SESSION-CHECK-RACE-CONDITION.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "600adeab",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=600adeab"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "src/screens/EnrollDeviceScreen.tsx",
+      "description": "checkingSession useState(true); early return with spinner while true; session check sets false after getDeviceSession() resolves"
+    }
   }
 }

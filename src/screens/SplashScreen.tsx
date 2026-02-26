@@ -81,14 +81,14 @@ export default function SplashScreen() {
         }
       } catch (uiErr) {
         // Network/parse error — proceed to SellScan (offline-first).
-        // Log for operator debugging when gate bypass occurs.
-        console.warn("[SplashScreen] fetchUiStatus failed, proceeding offline-first:", uiErr instanceof Error ? uiErr.message : uiErr);
+        // SCREENS-CONSOLE-LOG-IN-PROD: guard diagnostic logs from release builds
+        if (__DEV__) console.warn("[SplashScreen] fetchUiStatus failed, proceeding offline-first:", uiErr instanceof Error ? uiErr.message : uiErr);
       }
 
       navigation.replace("SellScan");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
-      console.warn("[SplashScreen] Session check failed:", msg);
+      if (__DEV__) console.warn("[SplashScreen] Session check failed:", msg);
       setErrorState(msg);
     }
   }, [navigation, getSessionWithTimeout]);
@@ -102,15 +102,15 @@ export default function SplashScreen() {
   useEffect(() => {
     // S1-6: Non-blocking infra boot with error logging (not silent swallow)
     startCloudEventLogger();
-    printerService.initialize().catch((err) =>
-      console.warn("[SplashScreen] Printer init failed:", err)
-    );
-    initOfflineDb().catch((err) =>
-      console.warn("[SplashScreen] OfflineDB init failed:", err)
-    );
-    syncOutbox().catch((err) =>
-      console.warn("[SplashScreen] SyncOutbox failed:", err)
-    );
+    printerService.initialize().catch((err) => {
+      if (__DEV__) console.warn("[SplashScreen] Printer init failed:", err);
+    });
+    initOfflineDb().catch((err) => {
+      if (__DEV__) console.warn("[SplashScreen] OfflineDB init failed:", err);
+    });
+    syncOutbox().catch((err) => {
+      if (__DEV__) console.warn("[SplashScreen] SyncOutbox failed:", err);
+    });
     startAutoSync();
 
     let cancelled = false;

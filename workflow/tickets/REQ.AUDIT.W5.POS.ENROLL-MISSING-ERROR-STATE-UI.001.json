@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "EnrollDeviceScreen: no error state UI after API failure — screen stuck in loading state after error alert dismissed",
   "description": "Only loading boolean and Alert for errors. After API failure, screen stays in loading state (button disabled, inputs locked) after alert dismissed. No retry button like SplashScreen.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "src/screens/EnrollDeviceScreen.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.POS.ENROLL-MISSING-ERROR-STATE-UI.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +144,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "add persistent inline error state to EnrollDeviceScreen after API failure",
+      "prevHash": "GENESIS",
+      "hash": "4341eee668a7c8f4546eadce49ac633637fa260f91f0bf138aaac3e303f6cd1f"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b1-1772148919265",
+      "at": "2026-02-26T23:35:19.265Z",
+      "reason": "enrollError state added; set in catch block; cleared on input change; rendered as enrollErrorBanner with alert-circle icon below activate button",
+      "prevHash": "4341eee668a7c8f4546eadce49ac633637fa260f91f0bf138aaac3e303f6cd1f",
+      "hash": "8205f0903c9e9eb30327d787b0e6ca6a32f81c14be333054350c6407714ade6e"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +275,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.ENROLL-MISSING-ERROR-STATE-UI.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "600adeab",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=600adeab"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "src/screens/EnrollDeviceScreen.tsx",
+      "description": "enrollError useState + setEnrollError in catch + enrollErrorBanner/enrollErrorText styles + conditional render before help section"
+    }
   }
 }

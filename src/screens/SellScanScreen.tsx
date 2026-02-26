@@ -686,6 +686,13 @@ function CartItemRow({
           </Text>
         </View>
       ) : null}
+      {/* CART-STOCK-ERROR-NOT-SHOWN: Show error badge when stock data failed to resolve */}
+      {showStock && stockValue === null && (
+        <View style={styles.priceErrorRow}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={14} color={theme.colors.warning} />
+          <Text style={styles.priceErrorText}>Stock data unavailable — check connection</Text>
+        </View>
+      )}
       {/* GL-RJ-007: Price resolution error warning */}
       {hasPriceError && (
         <View style={styles.priceErrorRow}>
