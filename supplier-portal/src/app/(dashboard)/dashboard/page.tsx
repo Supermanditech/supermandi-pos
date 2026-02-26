@@ -72,21 +72,17 @@ export default function DashboardPage() {
     queryKey: ['products'],
     queryFn: () => getProducts({ page: 1, limit: 100 }),
   });
-  const products = productsResponse?.data;
 
-  // GL-CRIT-0099: Always prefer server-provided totals over client calculations
-  // Client-side calculation from paginated data is inaccurate (only shows first page)
-  const displayStats = stats
-    ? stats
-    : {
-        // Fallback to pagination totals if available, then client-side as last resort
-        totalProducts: productsResponse?.pagination?.total ?? products?.length ?? 0,
-        pendingProducts: products?.filter((p) => p.approvalStatus === 'pending').length ?? 0,
-        approvedProducts: products?.filter((p) => p.approvalStatus === 'approved').length ?? 0,
-        totalOrders: ordersResponse?.pagination?.total ?? recentOrders?.length ?? 0,
-        pendingOrders: recentOrders?.filter((o) => o.status === 'submitted').length ?? 0,
-        totalRevenue: recentOrders?.reduce((sum, o) => sum + o.totalAmount, 0) ?? 0,
-      };
+  // GL-CRIT-0099: Server totals only — client-side pagination counts are inaccurate
+  // (W4-FIX: removed products?.length and recentOrders?.length client-side fallbacks)
+  const displayStats = stats ?? {
+    totalProducts: productsResponse?.pagination?.total ?? null,
+    pendingProducts: null,
+    approvedProducts: null,
+    totalOrders: ordersResponse?.pagination?.total ?? null,
+    pendingOrders: null,
+    totalRevenue: null,
+  };
 
   return (
     <div>
@@ -103,12 +99,12 @@ export default function DashboardPage() {
       </div>
 
       {/* GL-WF-058: Pending products visibility indicator */}
-      {displayStats.pendingProducts > 0 && (
+      {(displayStats.pendingProducts ?? 0) > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
           <AlertTriangle className="text-amber-500 flex-shrink-0" size={20} />
           <div>
             <p className="font-medium text-amber-800">
-              {displayStats.pendingProducts} product{displayStats.pendingProducts > 1 ? 's' : ''} pending approval
+              {displayStats.pendingProducts} product{(displayStats.pendingProducts ?? 0) > 1 ? 's' : ''} pending approval
             </p>
             <p className="text-sm text-amber-700 mt-1">
               Pending products are <strong>not visible to retailers</strong> until approved by SuperMandi.
@@ -141,28 +137,28 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           title="Total Products"
-          value={statsLoading ? '-' : displayStats.totalProducts}
+          value={statsLoading ? '-' : (displayStats.totalProducts ?? '—')}
           icon={<Package size={24} className="text-blue-600" />}
           color="bg-blue-100"
           href="/products"
         />
         <StatCard
           title="Pending Approval"
-          value={statsLoading ? '-' : displayStats.pendingProducts}
+          value={statsLoading ? '-' : (displayStats.pendingProducts ?? '—')}
           icon={<Clock size={24} className="text-yellow-600" />}
           color="bg-yellow-100"
           href="/products"
         />
         <StatCard
           title="Active Orders"
-          value={statsLoading ? '-' : displayStats.pendingOrders}
+          value={statsLoading ? '-' : (displayStats.pendingOrders ?? '—')}
           icon={<ShoppingCart size={24} className="text-green-600" />}
           color="bg-green-100"
           href="/orders"
         />
         <StatCard
           title="Total Revenue"
-          value={statsLoading ? '-' : formatCurrency(displayStats.totalRevenue)}
+          value={statsLoading ? '-' : (displayStats.totalRevenue != null ? formatCurrency(displayStats.totalRevenue) : '—')}
           icon={<DollarSign size={24} className="text-purple-600" />}
           color="bg-purple-100"
         />
