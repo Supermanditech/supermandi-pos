@@ -226,11 +226,13 @@ export default function LoginPage() {
       recaptchaInitialized.current = true;
 
       await sendOtp(phone);
+      // REQ.AUDIT.W5.SUPPLIER.LOGIN-OTP-RESEND-NO-FIELD-CLEAR.001: clear stale OTP on resend
+      setOtp('');
       // FIX-064: Persist cooldown end timestamp
       sessionStorage.setItem(COOLDOWN_KEY, String(Date.now() + 60 * 1000));
       setResendCooldown(60);
       setOtpExpirySeconds(300); // AUTH-OTP-001: Reset expiry on resend
-      toast.success('OTP sent successfully!');
+      toast.success('New code sent — please enter the new code.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
     } finally {

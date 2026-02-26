@@ -111,6 +111,15 @@ export default function ReorderPage() {
   }, [accessToken]);
 
   const saveSettings = useCallback(async () => {
+    // REQ.AUDIT.W5.RETAILER.REORDER-NEGATIVE-THRESHOLD-ALLOWED.001: block negative/invalid numeric values
+    if (editDefaultLeadDays < 1 || editDefaultLeadDays > 90) {
+      setSettingsError('Lead days must be between 1 and 90');
+      return;
+    }
+    if (editAutoApproveThreshold !== '' && Number(editAutoApproveThreshold) < 0) {
+      setSettingsError('Auto-approve threshold cannot be negative');
+      return;
+    }
     setSettingsSaving(true);
     setSettingsError('');
     try {
