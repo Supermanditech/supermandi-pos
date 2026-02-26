@@ -9,6 +9,19 @@ import { log } from "../../../lib/logger";
 
 export const adminOtpRouter = Router();
 
+// P1-5: Admin email allowlist — same env var as adminAuth.ts
+// OTP requests are only honoured for emails in this list
+const ADMIN_EMAIL_ALLOWLIST = (process.env.ADMIN_EMAIL_ALLOWLIST || '')
+  .split(',')
+  .map((e: string) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdminEmailAllowed(email: string): boolean {
+  // Fail-safe: if no allowlist configured, block all OTP requests
+  if (ADMIN_EMAIL_ALLOWLIST.length === 0) return false;
+  return ADMIN_EMAIL_ALLOWLIST.includes(email.toLowerCase().trim());
+}
+
 // =============================================================================
 // T1-002: Redis-backed OTP storage with in-memory fallback
 // Redis keys use prefix "supermandi:otp:" with TTL auto-expiry
@@ -87,7 +100,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Generate a random OTP
  */
 function generateOtp(): string {
-  return crypto.randomInt(100000, 999999).toString();
+  return crypto.randomInt(10000000, 99999999).toString();
 }
 
 /**
@@ -108,6 +121,12 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
 
   if (!purpose) {
     return res.status(400).json({ error: "purpose_required" });
+  }
+
+  // P1-5: Whitelist check — only allowlisted admins may request OTP
+  if (!isAdminEmailAllowed(email.trim())) {
+    log.warn(`[GL-CRIT-0053] OTP request rejected — email not in admin allowlist: ${email}`);
+    return res.status(403).json({ error: "not_authorized", message: "This email is not authorized for admin operations" });
   }
 
   // T1-002: Rate limiting (Redis-backed with Map fallback)
