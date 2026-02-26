@@ -6,6 +6,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SuperMandi - Retailer Portal</title>
+    <!-- REQ.AUTH.THEME.ICON_TOGGLE_PARITY: Apply persisted theme before React mounts to prevent FOUC -->
+    <script>(function(){try{if(localStorage.getItem('supermandi-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
   </head>
   <body>
     <div id="root"></div>
