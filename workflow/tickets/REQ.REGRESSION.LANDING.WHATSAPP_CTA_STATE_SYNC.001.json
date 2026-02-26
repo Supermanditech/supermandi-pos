@@ -1,0 +1,282 @@
+{
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/api/health"
+    ],
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway",
+      "retailer-admin",
+      "supplier-portal",
+      "superadmin",
+      "landing"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "operator": {
+    "reportedBy": "codex-regression-audit",
+    "reproSteps": [
+      "Open landing page and verify dual-target WhatsApp chooser behavior.",
+      "Cross-check REQ.LANDING.WHATSAPP_CTA_END_TO_END.001 status versus committed code state.",
+      "Validate final numbers/messages are operator-approved and deployment evidence is attached."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T14:07:12.784Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": []
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "supermandi-landing/index.html contains active WA config with enabled=true and hardcoded numbers",
+      "workflow/tickets/REQ.LANDING.WHATSAPP_CTA_END_TO_END.001.json still marked todo/pending"
+    ],
+    "parityProof": [
+      "landing_commit_refs=a3e696c3,c300c627"
+    ]
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T14:07:12.784Z",
+    "updatedAt": "2026-02-26T14:08:01.654Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Ticket generated from source-first regression audit after T1-T9 merge window.",
+    "evidence": [
+      "audit_ref=37902d6b..d291f48a"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "landing",
+    "actualCloudRunServices": [
+      "landing"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "supermandi-landing/index.html",
+      "workflow/tickets/REQ.LANDING.WHATSAPP_CTA_END_TO_END.001.json"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [
+      "operator_confirm_superadmin_number",
+      "operator_confirm_company_number"
+    ],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Awaiting implementation and staging retest."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Must remain intact."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not POS scan flow."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Requires staging validation."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not applicable."
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "No transaction write path changed."
+    },
+    "atomicDatabaseWrites": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Verify approval state write/read consistency."
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Validate request/response contracts."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "User-visible error state required."
+    },
+    "structuredAuditLogging": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Need explicit runtime evidence lines."
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "implementation_pending",
+      "staging_retest_pending"
+    ],
+    "pendingExternal": [
+      "operator_number_confirmation"
+    ],
+    "pendingOps": [
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "Queued from post-implementation regression audit."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001",
+    "lastValidatedCommit": "d291f48a",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "created_by=codex",
+      "source_commit=d291f48a"
+    ]
+  },
+  "ticketId": "REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001",
+  "screenId": "LANDING.HOME.WHATSAPP_CTA",
+  "orderInScreen": 2,
+  "surface": "shared",
+  "riskClass": "medium",
+  "title": "Sync WhatsApp CTA implementation state and runtime config governance",
+  "description": "Landing WhatsApp code is live in source while REQ.LANDING.WHATSAPP_CTA_END_TO_END.001 remains todo/pending. Bring ticket/runtime config to one truth: explicit env-backed numbers, target separation, and accurate workflow status evidence.",
+  "status": "todo",
+  "severity": "P2",
+  "layers": {
+    "ui": "pass",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "fail",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "impact": {
+    "impactedScreens": [
+      "LANDING.HOME"
+    ],
+    "impactedServices": [
+      "landing"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  }
+}
