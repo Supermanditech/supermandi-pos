@@ -3,8 +3,10 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
+import { ApiError, ERROR_CODES, healthCheck, createLogger } from '@supermandi/common';
 import { config } from './config';
+
+const logger = createLogger({ service: 'reorder-service', level: process.env.LOG_LEVEL || 'info' });
 import settingsRoutes from './routes/settings';
 import policiesRoutes from './routes/policies';
 import pendingRoutes from './routes/pending';
@@ -25,7 +27,7 @@ app.use(express.json());
 
 // Request logging
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -85,7 +87,7 @@ app.use((req: Request, res: Response) => {
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(`[ERROR] ${err.message}`, err.stack);
+  logger.error(`[ERROR] ${err.message}`, err instanceof Error ? err : undefined);
 
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
@@ -110,14 +112,14 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // =============================================================================
 
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   stopStockMonitor();
   await stopInventoryConsumer();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   stopStockMonitor();
   await stopInventoryConsumer();
   process.exit(0);
@@ -134,11 +136,5 @@ app.listen(config.port, () => {
   // Start stock monitor cron job
   startStockMonitor();
 
-  console.log(`
-====================================================
-  SuperMandi Reorder Service v3.0.9
-  Running on port ${config.port}
-  Environment: ${config.env}
-====================================================
-  `);
+  logger.info('SuperMandi Reorder Service v3.0.9 started', { port: config.port, env: config.env });
 });

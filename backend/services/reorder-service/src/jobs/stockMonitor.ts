@@ -3,7 +3,9 @@
 // Creates pending reorders for low stock items
 
 import cron from 'node-cron';
-import { getClient, queryOne } from '@supermandi/common';
+import { getClient, queryOne, createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'reorder-service', level: process.env.LOG_LEVEL || 'info' });
 import {
   getStoresWithReorderEnabled,
   getStoreProductsForReorder,
@@ -53,21 +55,21 @@ let isRunning = false;
  */
 export async function runStockMonitor(): Promise<void> {
   if (isRunning) {
-    console.log(`[${JOB_NAME}] Already running, skipping this execution`);
+    logger.info(`[${JOB_NAME}] Already running, skipping this execution`);
     return;
   }
 
   isRunning = true;
   const startTime = new Date();
-  console.log(`[${JOB_NAME}] Starting stock monitor run at ${startTime.toISOString()}`);
+  logger.info(`[${JOB_NAME}] Starting stock monitor run`, { startTime: startTime.toISOString() });
 
   try {
     // Get all stores with reorder enabled
     const storeIds = await getStoresWithReorderEnabled();
-    console.log(`[${JOB_NAME}] Found ${storeIds.length} stores with reorder enabled`);
+    logger.info(`[${JOB_NAME}] Found stores with reorder enabled`, { count: storeIds.length });
 
     if (storeIds.length === 0) {
-      console.log(`[${JOB_NAME}] No stores with reorder enabled, nothing to do`);
+      logger.info(`[${JOB_NAME}] No stores with reorder enabled, nothing to do`);
       return;
     }
 
@@ -76,9 +78,10 @@ export async function runStockMonitor(): Promise<void> {
       try {
         await processStore(storeId);
       } catch (error) {
-        console.error(
-          `[${JOB_NAME}] Error processing store ${storeId}:`,
-          error instanceof Error ? error.message : error
+        logger.error(
+          `[${JOB_NAME}] Error processing store`,
+          error instanceof Error ? error : undefined,
+          { storeId, detail: error instanceof Error ? undefined : String(error) }
         );
         // Continue with next store
       }
@@ -86,13 +89,12 @@ export async function runStockMonitor(): Promise<void> {
 
     const endTime = new Date();
     const durationMs = endTime.getTime() - startTime.getTime();
-    console.log(
-      `[${JOB_NAME}] Completed stock monitor run in ${durationMs}ms`
-    );
+    logger.info(`[${JOB_NAME}] Completed stock monitor run`, { durationMs });
   } catch (error) {
-    console.error(
-      `[${JOB_NAME}] Fatal error in stock monitor:`,
-      error instanceof Error ? error.message : error
+    logger.error(
+      `[${JOB_NAME}] Fatal error in stock monitor`,
+      error instanceof Error ? error : undefined,
+      { detail: error instanceof Error ? undefined : String(error) }
     );
   } finally {
     isRunning = false;
@@ -104,7 +106,7 @@ export async function runStockMonitor(): Promise<void> {
  */
 async function processStore(storeId: string): Promise<void> {
   const startedAt = new Date();
-  console.log(`[${JOB_NAME}] Processing store ${storeId}`);
+  logger.info(`[${JOB_NAME}] Processing store`, { storeId });
 
   const client = await getClient();
   let runId: string | null = null;
@@ -141,10 +143,7 @@ async function processStore(storeId: string): Promise<void> {
     errors: [],
   };
 
-  console.log(
-    `[${JOB_NAME}] Store ${storeId}: evaluating ${products.length} products, ` +
-    `${existingPendingIds.size} have existing pending reorders`
-  );
+  logger.info(`[${JOB_NAME}] Store evaluation started`, { storeId, productCount: products.length, existingPendingCount: existingPendingIds.size });
 
   // Calculate expiry time
   const expiresAt = new Date();
@@ -172,9 +171,7 @@ async function processStore(storeId: string): Promise<void> {
       );
 
       if (!supplier) {
-        console.log(
-          `[${JOB_NAME}] No supplier found for product ${product.productId}, skipping`
-        );
+        logger.info(`[${JOB_NAME}] No supplier found for product, skipping`, { productId: product.productId });
         continue;
       }
 
@@ -209,9 +206,7 @@ async function processStore(storeId: string): Promise<void> {
 
         if (created) {
           stats.createdPending++;
-          console.log(
-            `[${JOB_NAME}] Created pending reorder for product ${product.productId}`
-          );
+          logger.info(`[${JOB_NAME}] Created pending reorder for product`, { productId: product.productId });
         } else {
           // Conflict - another process created it
           stats.skippedExisting++;
@@ -220,9 +215,10 @@ async function processStore(storeId: string): Promise<void> {
         await pendingClient.query('ROLLBACK');
         const errMsg = productError instanceof Error ? productError.message : String(productError);
         stats.errors.push(`Product ${product.productId}: ${errMsg}`);
-        console.error(
-          `[${JOB_NAME}] Error creating pending reorder for ${product.productId}:`,
-          errMsg
+        logger.error(
+          `[${JOB_NAME}] Error creating pending reorder`,
+          productError instanceof Error ? productError : undefined,
+          { productId: product.productId, errMsg }
         );
       } finally {
         pendingClient.release();
@@ -251,16 +247,12 @@ async function processStore(storeId: string): Promise<void> {
     await updateClient.query('COMMIT');
   } catch (error) {
     await updateClient.query('ROLLBACK');
-    console.error(`[${JOB_NAME}] Error updating run record:`, error);
+    logger.error(`[${JOB_NAME}] Error updating run record`, error instanceof Error ? error : undefined, { detail: error instanceof Error ? undefined : String(error) });
   } finally {
     updateClient.release();
   }
 
-  console.log(
-    `[${JOB_NAME}] Store ${storeId} complete: ` +
-    `evaluated=${stats.evaluatedProducts}, created=${stats.createdPending}, ` +
-    `skipped=${stats.skippedExisting}, errors=${stats.errors.length}`
-  );
+  logger.info(`[${JOB_NAME}] Store complete`, { storeId, evaluated: stats.evaluatedProducts, created: stats.createdPending, skipped: stats.skippedExisting, errors: stats.errors.length });
 }
 
 /**
@@ -357,17 +349,17 @@ async function findBestSupplier(
  */
 export function startStockMonitor(): void {
   if (cronTask) {
-    console.log(`[${JOB_NAME}] Stock monitor already running`);
+    logger.info(`[${JOB_NAME}] Stock monitor already running`);
     return;
   }
 
   cronTask = cron.schedule(CRON_SCHEDULE, () => {
     runStockMonitor().catch((error) => {
-      console.error(`[${JOB_NAME}] Unhandled error in cron job:`, error);
+      logger.error(`[${JOB_NAME}] Unhandled error in cron job`, error instanceof Error ? error : undefined, { detail: error instanceof Error ? undefined : String(error) });
     });
   });
 
-  console.log(`[${JOB_NAME}] Stock monitor cron job started (schedule: ${CRON_SCHEDULE})`);
+  logger.info(`[${JOB_NAME}] Stock monitor cron job started`, { schedule: CRON_SCHEDULE });
 }
 
 /**
@@ -377,7 +369,7 @@ export function stopStockMonitor(): void {
   if (cronTask) {
     cronTask.stop();
     cronTask = null;
-    console.log(`[${JOB_NAME}] Stock monitor cron job stopped`);
+    logger.info(`[${JOB_NAME}] Stock monitor cron job stopped`);
   }
 }
 
@@ -393,6 +385,6 @@ export function isStockMonitorRunning(): boolean {
  * Useful for testing or manual runs.
  */
 export async function triggerStockMonitor(): Promise<void> {
-  console.log(`[${JOB_NAME}] Manually triggered stock monitor run`);
+  logger.info(`[${JOB_NAME}] Manually triggered stock monitor run`);
   await runStockMonitor();
 }

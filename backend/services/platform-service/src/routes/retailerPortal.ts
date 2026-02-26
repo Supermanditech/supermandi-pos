@@ -5,7 +5,9 @@
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { ApiError, query, withTransaction } from '@supermandi/common';
+import { ApiError, query, withTransaction, createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'platform-service', level: process.env.LOG_LEVEL || 'info' });
 import { config } from '../config';
 import {
   generateSignedUploadUrl,
@@ -175,7 +177,7 @@ async function writeAuditLog(params: {
   ).catch((err) => {
     // Don't fail the main operation if audit logging fails
     // But do log it for monitoring
-    console.error('[audit_log] Failed to write audit log:', err);
+    logger.error('[audit_log] Failed to write audit log', err instanceof Error ? err : undefined, typeof err === 'object' && !(err instanceof Error) ? (err as object) : undefined);
   });
 }
 
@@ -210,10 +212,10 @@ async function checkMigration014Applied(): Promise<boolean> {
       ) as exists`
     );
     migration014ColumnsExist = result[0]?.exists === true;
-    console.log(`[migration014] Extended supplier columns exist: ${migration014ColumnsExist}`);
+    logger.info(`[migration014] Extended supplier columns exist`, { exists: migration014ColumnsExist });
     return migration014ColumnsExist;
   } catch (err) {
-    console.error('[migration014] Failed to check column existence:', err);
+    logger.error('[migration014] Failed to check column existence', err instanceof Error ? err : undefined, typeof err === 'object' && !(err instanceof Error) ? (err as object) : undefined);
     // Assume columns don't exist on error - safer default
     migration014ColumnsExist = false;
     return false;
@@ -841,7 +843,7 @@ router.post(
         ledgerEntryId = inventoryData.data?.ledgerEntries?.[0]?.id || null;
       } catch (error) {
         // Log but don't fail product creation - ledger entry is important but not critical
-        console.error('Opening stock ledger entry failed:', error);
+        logger.error('Opening stock ledger entry failed', error instanceof Error ? error : undefined, typeof error === 'object' && !(error instanceof Error) ? (error as object) : undefined);
         // Fallback: create ledger entry directly if inventory-service is unavailable
         const ledgerResult = await query<{ id: string }>(
           `INSERT INTO inventory.inventory_ledger
@@ -1478,11 +1480,11 @@ router.get('/suppliers', async (req, res) => {
 
   // Structured log helper
   const log = (level: 'info' | 'error', msg: string, extra?: Record<string, unknown>) => {
-    const entry = { reqId, endpoint: 'GET /suppliers', level, msg, ts: new Date().toISOString(), ...extra };
+    const ctx = { reqId, endpoint: 'GET /suppliers', ...extra };
     if (level === 'error') {
-      console.error(JSON.stringify(entry));
+      logger.error(msg, undefined, ctx);
     } else {
-      console.log(JSON.stringify(entry));
+      logger.info(msg, ctx);
     }
   };
 

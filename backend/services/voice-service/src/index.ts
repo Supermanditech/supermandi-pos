@@ -4,8 +4,11 @@
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import { createLogger } from '@supermandi/common';
 
 import { config } from './config';
+
+const logger = createLogger({ service: 'voice-service', level: process.env.LOG_LEVEL || 'info' });
 import voiceRoutes from './routes/voice';
 
 const app = express();
@@ -33,7 +36,7 @@ app.use(express.json());
 
 // Request logging
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -91,7 +94,7 @@ app.use((req: Request, res: Response) => {
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(`[ERROR] ${err.message}`, err.stack);
+  logger.error(`[ERROR] ${err.message}`, err instanceof Error ? err : undefined);
 
   // Multer file size error
   if (err.message.includes('File too large')) {
@@ -122,12 +125,12 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // =============================================================================
 
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   process.exit(0);
 });
 
@@ -136,12 +139,5 @@ process.on('SIGINT', async () => {
 // =============================================================================
 
 app.listen(config.port, () => {
-  console.log(`
-====================================================
-  SuperMandi Voice Service v1.2.0
-  Running on port ${config.port}
-  Environment: ${config.env}
-  OpenAI Whisper: ${config.openai.apiKey ? 'Configured' : 'Not configured (mock mode)'}
-====================================================
-  `);
+  logger.info('SuperMandi Voice Service v1.2.0 started', { port: config.port, env: config.env, openai: config.openai.apiKey ? 'configured' : 'mock mode' });
 });

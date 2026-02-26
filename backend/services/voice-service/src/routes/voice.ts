@@ -8,8 +8,11 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { authenticate, requireActorType, getAuthUser } from '@supermandi/auth-service/exports';
+import { createLogger } from '@supermandi/common';
 
 import { config } from '../config';
+
+const logger = createLogger({ service: 'voice-service', level: process.env.LOG_LEVEL || 'info' });
 import { transcribeAudio } from '../services/sttService';
 import { parseIntent, type ParsedIntent } from '../services/intentParser';
 
@@ -170,13 +173,13 @@ router.post(
         },
       });
     } catch (error) {
-      console.error('[VOICE] Interpret error:', error);
+      logger.error('[VOICE] Interpret error', error instanceof Error ? error : undefined, typeof error === 'object' && !(error instanceof Error) ? (error as object) : undefined);
       next(error);
     } finally {
       // Clean up temp file
       if (audioFile?.path) {
         fs.unlink(audioFile.path, (err) => {
-          if (err) console.warn('[VOICE] Failed to delete temp file:', err);
+          if (err) logger.warn('[VOICE] Failed to delete temp file', { err: err.message });
         });
       }
     }
@@ -304,7 +307,7 @@ router.post(
         data,
       });
     } catch (error) {
-      console.error('[VOICE] Execute error:', error);
+      logger.error('[VOICE] Execute error', error instanceof Error ? error : undefined, typeof error === 'object' && !(error instanceof Error) ? (error as object) : undefined);
       next(error);
     }
   }
