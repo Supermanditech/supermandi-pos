@@ -1,0 +1,241 @@
+{
+  "ticketId": "REQ.AUDIT.W5.SUPPLIER.PRODUCTS-PAGINATION-URL-STATE-LOST.001",
+  "screenId": "SUPPLIER.PRODUCTS-PAGINATION-URL-STATE-LOST",
+  "orderInScreen": 1,
+  "surface": "supplier_web",
+  "riskClass": "medium",
+  "title": "Products page: filter and search state reset on page refresh but URL retains page number — mismatched view",
+  "description": "URL supports page but search/status filter not persisted to/from URL. After refresh, URL says page=2 but filter shows empty search.",
+  "status": "todo",
+  "severity": "P3",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "fail",
+    "navigation": "fail",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/supplier/products/"
+    ],
+    "cloudRunServices": [
+      "supplier-portal"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "/supplier/products/"
+    ],
+    "impactedServices": [
+      "supplier-portal"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w5-audit-cd72771c",
+    "reproSteps": [
+      "Filter products, go to page 2, refresh — search clears, page stays, wrong data shown."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T20:15:33.270Z",
+    "runbookVersion": "w5-audit-2026-02-27",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "workflow/state/live_page_manifest.json",
+      "workflow/templates/ticket.example.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T20:15:33.270Z",
+    "updatedAt": "2026-02-26T20:15:33.270Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "W5 fresh code audit at HEAD cd72771c",
+    "evidence": [
+      "audit_sha=cd72771c",
+      "source=claude-w5-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "supplier_web",
+    "expectedBasePath": "/supplier",
+    "expectedPrimaryService": "supplier-portal",
+    "actualCloudRunServices": [
+      "supplier-portal"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "Acceptance: Implement bidirectional URL state sync for search, status filter, and page."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "zeroSilentFailures": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Implement bidirectional URL state sync for search, status filter, and page."
+    ],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "TODO: Products page: filter and search state reset on page refresh but URL retains page number — mismatched view"
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W5.SUPPLIER.PRODUCTS-PAGINATION-URL-STATE-LOST.001",
+    "lastValidatedCommit": "cd72771c",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "audit_sha=cd72771c"
+    ]
+  }
+}

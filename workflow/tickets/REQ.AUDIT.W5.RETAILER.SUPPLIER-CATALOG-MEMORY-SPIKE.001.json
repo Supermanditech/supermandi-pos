@@ -1,0 +1,242 @@
+{
+  "ticketId": "REQ.AUDIT.W5.RETAILER.SUPPLIER-CATALOG-MEMORY-SPIKE.001",
+  "screenId": "RETAILER.SUPPLIER-CATALOG-MEMORY-SPIKE",
+  "orderInScreen": 1,
+  "surface": "retailer_web",
+  "riskClass": "low",
+  "title": "SupplierCatalogPage: infinite scroll state-append causes memory spike on large catalogs (1000+ items)",
+  "description": "Pagination uses prev=>[...prev,...items]. With 1000+ items, O(n) memory growth causes tab memory spike and UI lag.",
+  "status": "todo",
+  "severity": "P4",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/s/{storeCode}/supplier-catalog"
+    ],
+    "cloudRunServices": [
+      "retailer-admin"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "/s/{storeCode}/supplier-catalog"
+    ],
+    "impactedServices": [
+      "retailer-admin"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w5-audit-cd72771c",
+    "reproSteps": [
+      "Load supplier catalog, scroll to bottom 50+ times — browser tab memory spikes."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T20:15:33.270Z",
+    "runbookVersion": "w5-audit-2026-02-27",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "workflow/state/live_page_manifest.json",
+      "workflow/templates/ticket.example.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T20:15:33.270Z",
+    "updatedAt": "2026-02-26T20:15:33.270Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "W5 fresh code audit at HEAD cd72771c",
+    "evidence": [
+      "audit_sha=cd72771c",
+      "source=claude-w5-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "retailer_web",
+    "expectedBasePath": "/retailer",
+    "expectedPrimaryService": "retailer-admin",
+    "actualCloudRunServices": [
+      "retailer-admin"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "Acceptance: Implement virtual scrolling or cursor-based pagination."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "zeroSilentFailures": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Implement virtual scrolling or cursor-based pagination."
+    ],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "TODO: SupplierCatalogPage: infinite scroll state-append causes memory spike on large catalogs (1000+ items)"
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W5.RETAILER.SUPPLIER-CATALOG-MEMORY-SPIKE.001",
+    "lastValidatedCommit": "cd72771c",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "audit_sha=cd72771c"
+    ]
+  }
+}

@@ -1,0 +1,244 @@
+{
+  "ticketId": "REQ.AUDIT.W5.BACKEND.CORS-CACHE-TOO-LONG.001",
+  "screenId": "BACKEND.CORS-CACHE-TOO-LONG",
+  "orderInScreen": 1,
+  "surface": "backend",
+  "riskClass": "low",
+  "title": "CORS preflight cached 24 hours — emergency policy changes take full day to propagate to browsers",
+  "description": "maxAge=86400 means browsers cache old CORS policy for 24 hours after any policy update.",
+  "status": "todo",
+  "severity": "P4",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "fail",
+    "backend": "fail",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/"
+    ],
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "BACKEND.CORS-CACHE-TOO-LONG"
+    ],
+    "impactedServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w5-audit-cd72771c",
+    "reproSteps": [
+      "Update CORS origin whitelist — browsers retain old cached policy for 24 hours."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T20:15:33.270Z",
+    "runbookVersion": "w5-audit-2026-02-27",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "workflow/state/live_page_manifest.json",
+      "workflow/templates/ticket.example.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T20:15:33.270Z",
+    "updatedAt": "2026-02-26T20:15:33.270Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "W5 fresh code audit at HEAD cd72771c",
+    "evidence": [
+      "audit_sha=cd72771c",
+      "source=claude-w5-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "backend",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "main-backend",
+    "actualCloudRunServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "Acceptance: Reduce maxAge to 3600 (1 hour). Document in runbook: CORS changes take up to 1 hour to propagate."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "zeroSilentFailures": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Reduce maxAge to 3600 (1 hour). Document in runbook: CORS changes take up to 1 hour to propagate."
+    ],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "TODO: CORS preflight cached 24 hours — emergency policy changes take full day to propagate to browsers"
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W5.BACKEND.CORS-CACHE-TOO-LONG.001",
+    "lastValidatedCommit": "cd72771c",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "audit_sha=cd72771c"
+    ]
+  }
+}

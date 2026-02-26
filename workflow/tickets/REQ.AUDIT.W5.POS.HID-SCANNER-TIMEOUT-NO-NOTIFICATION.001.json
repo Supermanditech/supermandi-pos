@@ -1,0 +1,241 @@
+{
+  "ticketId": "REQ.AUDIT.W5.POS.HID-SCANNER-TIMEOUT-NO-NOTIFICATION.001",
+  "screenId": "POS.HID-SCANNER-TIMEOUT-NO-NOTIFICATION",
+  "orderInScreen": 1,
+  "surface": "pos_app",
+  "riskClass": "low",
+  "title": "PosRootLayout: no UI notification when HID scanner times out and switches to camera mode",
+  "description": "HID_ACTIVE_WINDOW_MS=15000ms timeout switches from HID to camera silently. User unexpectedly sees camera.",
+  "status": "todo",
+  "severity": "P4",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "na"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/pos"
+    ],
+    "cloudRunServices": [
+      "pos-app"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "SellScanScreen"
+    ],
+    "impactedServices": [
+      "pos-app"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w5-audit-cd72771c",
+    "reproSteps": [
+      "HID scanner idle 15+ seconds, tap to scan — camera opens without banner explaining HID timeout."
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T20:15:33.270Z",
+    "runbookVersion": "w5-audit-2026-02-27",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "workflow/state/live_page_manifest.json",
+      "workflow/templates/ticket.example.json"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": false,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": false,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T20:15:33.270Z",
+    "updatedAt": "2026-02-26T20:15:33.270Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "W5 fresh code audit at HEAD cd72771c",
+    "evidence": [
+      "audit_sha=cd72771c",
+      "source=claude-w5-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": false,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "pos_app",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "pos-app",
+    "actualCloudRunServices": [
+      "pos-app"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": false,
+    "stagingRouteEvidence": []
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": false,
+    "operatorAcknowledged": false,
+    "notes": "Acceptance: Show transient toast \"HID Scanner inactive—switched to camera\" when HID times out."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "zeroSilentFailures": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "Show transient toast \"HID Scanner inactive—switched to camera\" when HID times out."
+    ],
+    "pendingExternal": [],
+    "pendingOps": [],
+    "blocked": false,
+    "summary": "TODO: PosRootLayout: no UI notification when HID scanner times out and switches to camera mode"
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W5.POS.HID-SCANNER-TIMEOUT-NO-NOTIFICATION.001",
+    "lastValidatedCommit": "cd72771c",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "pending",
+    "evidence": [
+      "audit_sha=cd72771c"
+    ]
+  }
+}
