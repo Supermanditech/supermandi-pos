@@ -4,8 +4,8 @@
   "orderInScreen": 1,
   "surface": "shared",
   "riskClass": "high",
-  "title": "Implement landing WhatsApp CTA end-to-end (production grade)",
-  "description": "Add a production-grade WhatsApp CTA/widget on supermandi.tech landing aligned with provided reference intent (floating WhatsApp entry at bottom-right + clear CTA behavior). Scope: UI placement and responsive behavior, strict phone normalization (E.164), encoded prefilled message support, feature-flag/env-driven config, safe outbound link handling (noopener/noreferrer), graceful fallback when app cannot open, click telemetry, accessibility checks, and staging parity evidence for landing deploy.",
+  "title": "Implement landing WhatsApp CTA with dual targets (SuperAdmin + Company)",
+  "description": "When a user visits supermandi.tech, a WhatsApp icon must be visible and usable. The CTA must support messaging both (1) SuperAdmin WhatsApp and (2) Company WhatsApp number. Recommended UX: single floating WhatsApp icon opens a small chooser with two clear actions (Chat with SuperAdmin, Chat with Company). Scope includes responsive UI, E.164 normalization for both numbers, encoded prefilled message templates per target, feature-flag/env configuration, safe outbound handling, accessibility, click telemetry by target, graceful fallback, and staging parity evidence for landing deployment.",
   "status": "todo",
   "severity": "P1",
   "parentTicketId": null,
@@ -60,9 +60,10 @@
   "operator": {
     "reportedBy": "operator",
     "reproSteps": [
-      "Open staging landing page on desktop and mobile breakpoints.",
-      "Verify floating WhatsApp CTA visibility, non-overlap, and tap target size.",
-      "Click CTA and verify wa.me target includes configured phone and prefilled text."
+      "Open supermandi.tech landing page on desktop and mobile breakpoints.",
+      "Verify WhatsApp icon is visible and accessible on initial page load.",
+      "Open WhatsApp action and verify both options are available: SuperAdmin and Company.",
+      "Click each option and verify wa.me opens correct target number with correct prefilled message."
     ],
     "finalSignoff": false,
     "signoffAt": ""
@@ -124,7 +125,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-26T11:42:28.5240740Z",
-    "updatedAt": "2026-02-26T11:45:12.172Z",
+    "updatedAt": "2026-02-26T11:46:45.437Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -166,13 +167,15 @@
       "wa.me deep link format"
     ],
     "pendingDependencies": [
-      "final_whatsapp_business_number",
-      "default_prefilled_message"
+      "superadmin_whatsapp_number_e164",
+      "company_whatsapp_number_e164",
+      "default_prefilled_message_superadmin",
+      "default_prefilled_message_company"
     ],
     "blockers": [],
     "disclosedToOperator": true,
     "operatorAcknowledged": false,
-    "notes": "Operator must provide final destination number and default prefilled message before lock."
+    "notes": "Operator must provide final SuperAdmin and Company WhatsApp destination numbers in E.164 plus default prefilled messages before lock."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {
@@ -208,7 +211,7 @@
     "strictSchemaValidation": {
       "status": "pending",
       "evidence": [],
-      "notes": "Validate config and URL encoding guardrails."
+      "notes": "Validate dual-target config schema (superadmin/company), URL encoding, and phone normalization guardrails."
     },
     "zeroSilentFailures": {
       "status": "pending",
@@ -218,7 +221,7 @@
     "structuredAuditLogging": {
       "status": "pending",
       "evidence": [],
-      "notes": "Track CTA click events for auditability."
+      "notes": "Track CTA click events separately for superadmin and company targets."
     }
   },
   "readiness": {
@@ -235,7 +238,7 @@
       "operator_signoff_pending"
     ],
     "blocked": false,
-    "summary": "New ticket created for landing WhatsApp CTA end-to-end implementation."
+    "summary": "New ticket created for dual-target landing WhatsApp CTA (SuperAdmin + Company); implementation not started."
   },
   "gitDiscipline": {
     "workBranch": "main",
