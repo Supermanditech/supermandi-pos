@@ -449,6 +449,21 @@ export default function LoginPage() {
             )}
           </button>
 
+          {/* REQ.AUTH.NAVIGATION.PARITY: Forgot Password + Register links inside password form (parity with retailer) */}
+          <div className="text-center space-y-1.5">
+            <p className="text-slate-600 text-sm">
+              <Link href="/forgot-password" className="text-primary-600 hover:text-primary-700 font-medium">
+                Forgot Password?
+              </Link>
+            </p>
+            <p className="text-slate-600 text-sm">
+              Don&apos;t have an account?{' '}
+              <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+                Register
+              </Link>
+            </p>
+          </div>
+
           {/* Toggle back to OTP */}
           <p className="text-center text-sm">
             <button
