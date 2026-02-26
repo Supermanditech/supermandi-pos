@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-26T09:44:59.190Z",
+  "updatedAt": "2026-02-26T09:55:52.990Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1112,7 +1112,6 @@
         "complete": false,
         "summary": "R7 execution initialized: 535 tickets queued from source-first audit.",
         "remainingTicketIds": [
-          "R7.CROSS.001.SUPPLIER_CANNOT_TRANSITION_ORDER_STATUS_CONFIRM_SHIP",
           "R7.CROSS.002.DUAL_STOCK_SOURCES_DIVERGE_INVENTORY_STOCK_BALANCES",
           "R7.CROSS.003.OFFLINE_QUEUE_NOT_STORE_SCOPED_SINGLE_GLOBAL",
           "R7.CROSS.004.CATALOG_PRICE_CACHE_STALENESS_NO_TTL_OR",
@@ -1648,9 +1647,10 @@
           "R7.BE.066.CATALOG_SERVICE_UI_UX_PARITY_REVIEW_36",
           "R7.BE.067.INVENTORY_SERVICE_UI_UX_PARITY_REVIEW_37",
           "R7.BE.068.ORDER_SERVICE_UI_UX_PARITY_REVIEW_38",
-          "R7.BE.069.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_39"
+          "R7.BE.069.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_39",
+          "R7.CROSS.001.SUPPLIER_CANNOT_TRANSITION_ORDER_STATUS_CONFIRM_SHIP"
         ],
-        "lastUpdatedAt": "2026-02-26T09:44:59.190Z"
+        "lastUpdatedAt": "2026-02-26T09:55:52.990Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1711,7 +1711,7 @@
   },
   "summary": {
     "totalTickets": 1129,
-    "activeTickets": 468,
+    "activeTickets": 467,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
@@ -1761,7 +1761,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-26T09:44:59.190Z"
+    "updatedAt": "2026-02-26T09:55:52.990Z"
   },
-  "lastUpdated": "2026-02-26T09:44:59.190Z"
+  "lastUpdated": "2026-02-26T09:55:52.990Z"
 }
