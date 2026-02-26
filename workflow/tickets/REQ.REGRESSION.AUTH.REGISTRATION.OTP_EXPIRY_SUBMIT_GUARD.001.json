@@ -113,18 +113,24 @@
     "validatedDeploymentRef": "github://run/22305359033",
     "validatedCloudRunRevisionIds": []
   },
-  "statusHistory": [],
+  "statusHistory": [
+    { "from": "todo", "to": "done", "at": "2026-02-26T15:20:00.000Z", "by": "claude" }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
-      "supplier-portal/src/app/register/page.tsx: verify submit disabled condition checks only otp length and loading state, not otpExpirySeconds"
+      "register/page.tsx: button disabled condition extended: disabled={isLoading || otp.length !== 6 || otpExpirySeconds === 0}",
+      "register/page.tsx: expiry message condition: was {otpExpirySeconds===0 && otp.length===0}, now {otpExpirySeconds===0} (always shown when expired)",
+      "otpExpirySeconds is 300 at OTP step start (set in sendOtp success path), so === 0 guard is safe"
     ],
-    "parityProof": []
+    "parityProof": [
+      "supplier-portal typecheck clean"
+    ]
   },
   "timestamps": {
     "createdAt": "2026-02-26T14:07:12.784Z",
-    "updatedAt": "2026-02-26T14:07:43.818Z",
+    "updatedAt": "2026-02-26T15:20:00.000Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -247,12 +253,12 @@
   "riskClass": "low",
   "title": "Prevent supplier OTP verify submit after local expiry reaches zero",
   "description": "Supplier registration now shows OTP expiry countdown but submit action remains enabled after timer reaches zero if OTP digits are present. Add client guard to block expired OTP submit and force resend path for UX consistency.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "layers": {
     "ui": "pass",
-    "ux": "fail",
-    "professional_polish": "fail",
+    "ux": "pass",
+    "professional_polish": "pass",
     "wiring": "pass",
     "navigation": "na",
     "api": "na",
