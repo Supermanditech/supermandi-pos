@@ -93,6 +93,13 @@ export async function authFetch(
       cache: "no-store",
       signal: options.signal ?? controller.signal,
     });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    // REQ.AUTH.API_WIRING_AND_CONTRACT_PARITY: Handle AbortError (parity with supplier apiFetch)
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }

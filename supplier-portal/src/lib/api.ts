@@ -173,8 +173,10 @@ export async function apiFetch<T>(
   // AUTH-STORAGE-001: Get in-memory token (if available) for Authorization header
   const token = getAuthToken();
 
+  // REQ.AUTH.API_WIRING_AND_CONTRACT_PARITY: Skip Content-Type for FormData (parity with retailer authFetch)
+  // Browser must auto-set multipart boundary for file uploads
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
 
