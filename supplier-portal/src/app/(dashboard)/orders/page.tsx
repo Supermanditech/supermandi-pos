@@ -100,6 +100,8 @@ export default function OrdersPage() {
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   // UIUX-SUP-010: Confirmation state for shipping with pending items
   const [pendingShipConfirm, setPendingShipConfirm] = useState<{ count: number } | null>(null);
+  // REQ.AUDIT.W5.SUPPLIER.ORDERS-STATUS-NO-CONFIRMATION.001: Confirmation gate for irreversible status changes
+  const [pendingStatusConfirm, setPendingStatusConfirm] = useState<{ id: string; newStatus: Order['status'] } | null>(null);
   // REQ.AUDIT.W4.SUPPLIER.SSE-NO-RECONNECT.001: track live SSE connection state
   const [sseState, setSseState] = useState<SSEConnectionState>('connecting');
 
@@ -156,6 +158,7 @@ export default function OrdersPage() {
       setShowShipmentForm(false);
       setShowNotesSection(false);
       setNewNoteText('');
+      setPendingStatusConfirm(null);
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update order');
@@ -991,8 +994,38 @@ export default function OrdersPage() {
               </div>
             )}
 
+            {/* REQ.AUDIT.W5.SUPPLIER.ORDERS-STATUS-NO-CONFIRMATION.001: Confirmation gate */}
+            {pendingStatusConfirm && (
+              <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm font-medium text-orange-800 mb-1">
+                  Mark order as <strong>{pendingStatusConfirm.newStatus}</strong>?
+                </p>
+                <p className="text-xs text-orange-600 mb-3">This change cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPendingStatusConfirm(null)}
+                    className="px-3 py-1.5 text-xs border border-slate-200 rounded-md bg-white hover:bg-slate-50"
+                  >Cancel</button>
+                  <button
+                    onClick={() => {
+                      if (pendingStatusConfirm) {
+                        updateStatusMutation.mutate({ id: pendingStatusConfirm.id, status: pendingStatusConfirm.newStatus });
+                        setPendingStatusConfirm(null);
+                      }
+                    }}
+                    disabled={updateStatusMutation.isPending}
+                    className={`px-3 py-1.5 text-xs text-white rounded-md ${
+                      pendingStatusConfirm.newStatus === 'cancelled'
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >{updateStatusMutation.isPending ? 'Updating...' : 'Confirm'}</button>
+                </div>
+              </div>
+            )}
+
             {/* Status Actions */}
-            {statusFlow[selectedOrder.status]?.length > 0 && !showShipmentForm && !showDeliveryForm && !pendingShipConfirm && (
+            {statusFlow[selectedOrder.status]?.length > 0 && !showShipmentForm && !showDeliveryForm && !pendingShipConfirm && !pendingStatusConfirm && (
               <div className="mt-4">
                 <p className="text-sm text-slate-500 mb-3">Update Status</p>
                 <div className="flex gap-3">
@@ -1015,9 +1048,10 @@ export default function OrdersPage() {
                           // T-246: Use delivery confirmation form instead of generic status update
                           setShowDeliveryForm(true);
                         } else {
-                          updateStatusMutation.mutate({
+                          // REQ.AUDIT.W5.SUPPLIER.ORDERS-STATUS-NO-CONFIRMATION.001: confirm before any status change
+                          setPendingStatusConfirm({
                             id: selectedOrder.id,
-                            status: newStatus as Order['status'],
+                            newStatus: newStatus as Order['status'],
                           });
                         }
                       }}
