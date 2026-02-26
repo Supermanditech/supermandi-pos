@@ -2,6 +2,9 @@
 // Logs all incoming requests with correlation ID and timing
 
 import { Request, Response, NextFunction } from 'express';
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 interface LogEntry {
   timestamp: string;
@@ -13,13 +16,6 @@ interface LogEntry {
   userAgent: string;
   statusCode?: number;
   responseTime?: number;
-}
-
-/**
- * Format log entry as JSON string
- */
-function formatLog(entry: LogEntry): string {
-  return JSON.stringify(entry);
 }
 
 /**
@@ -46,7 +42,7 @@ export function requestLoggerMiddleware(
   };
 
   // Log request
-  console.log(`[REQ] ${formatLog(logEntry)}`);
+  logger.info('[REQ]', logEntry);
 
   // Intercept response to log completion
   const originalSend = res.send;
@@ -60,7 +56,7 @@ export function requestLoggerMiddleware(
       responseTime,
     };
 
-    console.log(`[RES] ${formatLog(responseLog)}`);
+    logger.info('[RES]', responseLog);
 
     return originalSend.call(this, body);
   };

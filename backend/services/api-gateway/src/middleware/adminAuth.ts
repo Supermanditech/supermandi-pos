@@ -4,11 +4,14 @@
 // GO-LIVE-003: Added rate limiting for admin token attempts
 
 import { Request, Response, NextFunction } from 'express';
+import { createLogger } from '@supermandi/common';
 import {
   verifyAdminSession,
   verifyMasterToken,
   isMasterTokenConfigured,
 } from '../services/adminSessionService';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // CONFIGURATION
@@ -107,7 +110,7 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
 
   // GO-LIVE-003: Check rate limiting first
   if (isRateLimited(clientIp)) {
-    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Rate limited (IP: ${clientIp})`);
+    logger.info(`[ADMIN-AUTH] ${req.method} ${req.path} - Rate limited (IP: ${clientIp})`);
     res.status(429).json({
       error: {
         code: 'ADMIN_RATE_LIMIT_EXCEEDED',
@@ -120,7 +123,7 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
 
   // Check if admin auth is configured
   if (!isMasterTokenConfigured()) {
-    console.error('[ADMIN-AUTH] ADMIN_TOKEN env var not set - admin APIs disabled');
+    logger.error('[ADMIN-AUTH] ADMIN_TOKEN env var not set - admin APIs disabled');
     res.status(503).json({
       error: {
         code: 'SERVICE_UNAVAILABLE',
@@ -145,13 +148,13 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
       req.headers['x-actor-type'] = 'platform';
       req.headers['x-permissions'] = '[]';
       clearFailedAttempts(clientIp);
-      console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via session JWT`);
+      logger.info(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via session JWT`);
       return next();
     }
 
     // Invalid session JWT
     recordFailedAttempt(clientIp);
-    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid session JWT (IP: ${clientIp})`);
+    logger.warn(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid session JWT (IP: ${clientIp})`);
     res.status(401).json({
       error: {
         code: 'INVALID_SESSION',
@@ -175,13 +178,13 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
       req.headers['x-actor-type'] = 'platform';
       req.headers['x-permissions'] = '[]';
       clearFailedAttempts(clientIp);
-      console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via legacy x-admin-token (DEPRECATED)`);
+      logger.warn(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via legacy x-admin-token (DEPRECATED)`);
       return next();
     }
 
     // Invalid legacy token
     recordFailedAttempt(clientIp);
-    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid x-admin-token (IP: ${clientIp})`);
+    logger.warn(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid x-admin-token (IP: ${clientIp})`);
     res.status(403).json({
       error: {
         code: 'FORBIDDEN',
@@ -195,7 +198,7 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
   // No authentication provided
   // RET-AUD-019: Do NOT count missing auth as failed attempt (only count actual invalid tokens)
   // This allows legitimate API discovery/testing while still blocking brute force attacks
-  console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - No authentication provided (IP: ${clientIp})`);
+  logger.info(`[ADMIN-AUTH] ${req.method} ${req.path} - No authentication provided (IP: ${clientIp})`);
   res.status(401).json({
     error: {
       code: 'UNAUTHORIZED',

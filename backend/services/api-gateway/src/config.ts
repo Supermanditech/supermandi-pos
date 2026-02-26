@@ -1,6 +1,10 @@
 // API Gateway Configuration - V3.0.10 compliant
 // RCAT-DEPLOY-001: Fixed service URL configuration for 10k store deployment
 
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
+
 export interface ServiceConfig {
   name: string;
   url: string;
@@ -47,7 +51,7 @@ export function getMainBackendUrl(): string {
   if (url) return url;
   // STAGE-005: Fail-fast in staging AND production (not just production)
   if (process.env['NODE_ENV'] !== 'development') {
-    console.error(`[config] FATAL: ADMIN_SERVICE_URL is required in ${process.env['NODE_ENV']} but not set`);
+    logger.error(`[config] FATAL: ADMIN_SERVICE_URL is required in ${process.env['NODE_ENV']} but not set`);
     process.exit(1);
   }
   return 'http://localhost:3010';

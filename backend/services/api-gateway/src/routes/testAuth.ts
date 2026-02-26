@@ -16,6 +16,9 @@
 
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 // SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
 const TEST_JWT_SECRET = (() => {
@@ -25,7 +28,7 @@ const TEST_JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    logger.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -56,11 +59,11 @@ export function createTestAuthRouter(): Router {
 
   if (!isDevelopment) {
     // Return router with no routes - all requests will 404
-    console.log(`[TEST-AUTH] Test auth routes DISABLED in ${process.env.NODE_ENV}`);
+    logger.info(`[TEST-AUTH] Test auth routes DISABLED in ${process.env.NODE_ENV}`);
     return router;
   }
 
-  console.log('[TEST-AUTH] Test auth routes ENABLED (development environment)');
+  logger.info('[TEST-AUTH] Test auth routes ENABLED (development environment)');
 
   /**
    * POST /api/test/mint-token
@@ -148,7 +151,7 @@ export function createTestAuthRouter(): Router {
         _warning: 'This endpoint is for testing only and is disabled in production',
       });
     } catch (error) {
-      console.error('[TEST-AUTH] Error minting token:', error);
+      logger.error('[TEST-AUTH] Error minting token:', error instanceof Error ? error : undefined);
       res.status(500).json({
         error: { code: 'MINT_FAILED', message: 'Failed to mint test token' },
       });
@@ -215,7 +218,7 @@ export function createTestAuthRouter(): Router {
         }
       }
     } catch (error) {
-      console.error('[TEST-AUTH] Error verifying token:', error);
+      logger.error('[TEST-AUTH] Error verifying token:', error instanceof Error ? error : undefined);
       res.status(500).json({
         error: { code: 'VERIFY_FAILED', message: 'Failed to verify token' },
       });
@@ -297,7 +300,7 @@ export function createTestAuthRouter(): Router {
         }
       }
     } catch (error) {
-      console.error('[TEST-AUTH] Error refreshing token:', error);
+      logger.error('[TEST-AUTH] Error refreshing token:', error instanceof Error ? error : undefined);
       res.status(500).json({
         error: { code: 'REFRESH_FAILED', message: 'Failed to refresh token' },
       });

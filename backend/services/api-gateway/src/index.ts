@@ -85,7 +85,7 @@ app.use((req, res, next) => {
   // STAGING-FIX-005: Support '*' wildcard in CORS_ALLOWED_ORIGINS
   // PRA-REAUDIT: Block wildcard + credentials in production (any-origin auth bypass)
   if (config.env === 'production' && allowedOrigins.includes('*')) {
-    console.error('[CORS] FATAL: Wildcard CORS_ALLOWED_ORIGINS is forbidden in production');
+    logger.error('[CORS] FATAL: Wildcard CORS_ALLOWED_ORIGINS is forbidden in production');
     res.status(500).json({ error: 'Server misconfiguration' });
     return;
   }
@@ -176,18 +176,18 @@ app.use((req, res, next) => {
   if (contentLength) {
     const bodySize = parseInt(contentLength, 10);
     const limit = getBodyLimitForPath(req.path);
-    console.log(`[GO-LIVE-194] Body check: path=${req.path}, size=${bodySize}, limit=${limit}, over=${bodySize > limit}`);
+    logger.info(`[GO-LIVE-194] Body check: path=${req.path}, size=${bodySize}, limit=${limit}, over=${bodySize > limit}`);
     if (bodySize > limit) {
       const limitKb = Math.round(limit / 1024);
       // GO-LIVE-194: Structured logging for body size rejection
-      console.log(JSON.stringify({
+      logger.info('body_too_large', {
         event: 'body_too_large',
         path: req.path,
         method: req.method,
         contentLength: bodySize,
         limit,
         ip: req.ip || 'unknown',
-      }));
+      });
       res.status(413).json({
         error: {
           code: 'BODY_TOO_LARGE',

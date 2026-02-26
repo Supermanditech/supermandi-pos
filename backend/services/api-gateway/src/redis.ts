@@ -2,6 +2,9 @@
 // Used for immediate token revocation on logout
 
 import Redis from 'ioredis';
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 let redisClient: Redis | null = null;
 
@@ -28,7 +31,7 @@ export function getGatewayRedis(): Redis | null {
   // LIVE.CONFIG.REDIS_FAIL_FAST_GLOBAL.001: Fail-fast if REDIS_HOST not set in non-dev
   const host = process.env.REDIS_HOST || (() => {
     if (process.env.NODE_ENV !== 'development') {
-      console.error('[Gateway Redis] FATAL: REDIS_HOST must be set in non-development environments');
+      logger.error('[Gateway Redis] FATAL: REDIS_HOST must be set in non-development environments');
       return undefined; // Will cause connection to fail fast
     }
     return 'localhost';
@@ -54,16 +57,16 @@ export function getGatewayRedis(): Redis | null {
     });
 
     redisClient.on('error', (err) => {
-      console.error('[Gateway Redis] Connection error:', err.message);
+      logger.error('[Gateway Redis] Connection error', undefined, { message: err.message });
     });
 
     redisClient.on('connect', () => {
-      console.log('[Gateway Redis] Connected');
+      logger.info('[Gateway Redis] Connected');
     });
 
     return redisClient;
   } catch (error) {
-    console.error('[Gateway Redis] Failed to initialize:', error);
+    logger.error('[Gateway Redis] Failed to initialize', error instanceof Error ? error : undefined, { raw: error });
     return null;
   }
 }
@@ -81,7 +84,7 @@ export async function isTokenBlacklisted(jtiOrHash: string): Promise<boolean> {
     const result = await client.get(BLACKLIST_PREFIX + jtiOrHash);
     return result !== null;
   } catch (error) {
-    console.error('[Gateway Redis] Blacklist check error:', error);
+    logger.error('[Gateway Redis] Blacklist check error', error instanceof Error ? error : undefined, { raw: error });
     return false; // Fail open
   }
 }
@@ -102,9 +105,9 @@ export async function blacklistToken(jtiOrHash: string, ttlSeconds: number): Pro
     const effectiveTtl = Math.max(1, Math.ceil(ttlSeconds));
     await client.setex(BLACKLIST_PREFIX + jtiOrHash, effectiveTtl, '1');
 
-    console.log(`[T-184] Token blacklisted: ${jtiOrHash.substring(0, 8)}..., TTL: ${effectiveTtl}s`);
+    logger.info(`[T-184] Token blacklisted: ${jtiOrHash.substring(0, 8)}..., TTL: ${effectiveTtl}s`);
   } catch (error) {
-    console.error('[Gateway Redis] Blacklist write error:', error);
+    logger.error('[Gateway Redis] Blacklist write error', error instanceof Error ? error : undefined, { raw: error });
     // Non-fatal — token will still be checked against DB on next request
   }
 }

@@ -3,8 +3,11 @@
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { createLogger } from '@supermandi/common';
 import type { JwtPayload, ActorType, UUID } from '@supermandi/common';
 import { config } from '../config';
+
+const logger = createLogger({ service: 'auth-service', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // TOKEN PAYLOAD TYPES
@@ -213,7 +216,7 @@ export function verifyAccessTokenWithError(token: string): JwtVerifyResult {
       return { payload: null, error: 'INVALID', message: error.message };
     }
     // Unknown error
-    console.error('[GO-LIVE-174] Unexpected JWT verification error:', error);
+    logger.error('[GO-LIVE-174] Unexpected JWT verification error', error instanceof Error ? error : undefined, { raw: error });
     return { payload: null, error: 'INVALID', message: 'Token verification failed' };
   }
 }
@@ -266,7 +269,7 @@ export function verifyRefreshTokenWithError(token: string): RefreshTokenVerifyRe
       }
       return { payload: null, error: 'INVALID', message: error.message };
     }
-    console.error('[GO-LIVE-174] Unexpected refresh token verification error:', error);
+    logger.error('[GO-LIVE-174] Unexpected refresh token verification error', error instanceof Error ? error : undefined, { raw: error });
     return { payload: null, error: 'INVALID', message: 'Token verification failed' };
   }
 }
@@ -402,7 +405,7 @@ export function verifyServiceTokenWithError(token: string): ServiceTokenVerifyRe
       }
       return { payload: null, error: 'INVALID', message: error.message };
     }
-    console.error('[GO-LIVE-174] Unexpected service token verification error:', error);
+    logger.error('[GO-LIVE-174] Unexpected service token verification error', error instanceof Error ? error : undefined, { raw: error });
     return { payload: null, error: 'INVALID', message: 'Token verification failed' };
   }
 }

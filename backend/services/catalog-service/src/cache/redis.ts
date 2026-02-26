@@ -2,7 +2,10 @@
 // Provides caching with configurable TTL
 
 import Redis from 'ioredis';
+import { createLogger } from '@supermandi/common';
 import { config } from '../config';
+
+const logger = createLogger({ service: 'catalog-service', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // REDIS CLIENT
@@ -26,18 +29,18 @@ export function getRedisClient(): Redis {
     retryStrategy: (times) => {
       // Exponential backoff with max 30 seconds
       const delay = Math.min(times * 100, 30000);
-      console.log(`Redis retry attempt ${times}, waiting ${delay}ms`);
+      logger.info(`Redis retry attempt ${times}, waiting ${delay}ms`);
       return delay;
     },
     maxRetriesPerRequest: 3,
   });
 
   redisClient.on('error', (err) => {
-    console.error('Redis connection error:', err.message);
+    logger.error('Redis connection error:', undefined, { message: err.message });
   });
 
   redisClient.on('connect', () => {
-    console.log('Redis connected');
+    logger.info('Redis connected');
   });
 
   return redisClient;
@@ -97,7 +100,7 @@ export async function cacheGet<T>(namespace: string, key: string): Promise<T | n
 
     return JSON.parse(value) as T;
   } catch (error) {
-    console.error(`Cache get error for ${namespace}:${key}:`, error);
+    logger.error(`Cache get error for ${namespace}:${key}:`, error instanceof Error ? error : undefined);
     return null;
   }
 }
@@ -116,7 +119,7 @@ export async function cacheSet<T>(
     const cacheKey = buildKey(namespace, key);
     await client.setex(cacheKey, ttlSeconds, JSON.stringify(value));
   } catch (error) {
-    console.error(`Cache set error for ${namespace}:${key}:`, error);
+    logger.error(`Cache set error for ${namespace}:${key}:`, error instanceof Error ? error : undefined);
     // Don't throw - cache failures shouldn't break the app
   }
 }
@@ -130,7 +133,7 @@ export async function cacheDelete(namespace: string, key: string): Promise<void>
     const cacheKey = buildKey(namespace, key);
     await client.del(cacheKey);
   } catch (error) {
-    console.error(`Cache delete error for ${namespace}:${key}:`, error);
+    logger.error(`Cache delete error for ${namespace}:${key}:`, error instanceof Error ? error : undefined);
   }
 }
 
@@ -147,7 +150,7 @@ export async function cacheDeletePattern(namespace: string, pattern: string): Pr
       await client.del(...keys);
     }
   } catch (error) {
-    console.error(`Cache delete pattern error for ${namespace}:${pattern}:`, error);
+    logger.error(`Cache delete pattern error for ${namespace}:${pattern}:`, error instanceof Error ? error : undefined);
   }
 }
 
@@ -172,7 +175,7 @@ export async function cacheGetOrSet<T>(
   // Store in cache (fire and forget)
   // FIX-014: Log cache write failures instead of silently swallowing
   cacheSet(namespace, key, value, ttlSeconds).catch((err) => {
-    console.warn(`[cache] Failed to set ${namespace}:${key}:`, err?.message || err);
+    logger.warn(`[cache] Failed to set ${namespace}:${key}:`, { message: (err as Error)?.message || String(err) });
   });
 
   return value;

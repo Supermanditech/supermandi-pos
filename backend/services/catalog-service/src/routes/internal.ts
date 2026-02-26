@@ -3,8 +3,10 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
-import { ApiError, getClient, query, queryOne } from '@supermandi/common';
+import { ApiError, getClient, query, queryOne, createLogger } from '@supermandi/common';
 import { verifyServiceToken } from '@supermandi/auth-service/exports';
+
+const logger = createLogger({ service: 'catalog-service', level: process.env.LOG_LEVEL || 'info' });
 
 const router: RouterType = Router();
 
@@ -104,9 +106,9 @@ router.post(
         throw new ApiError(400, 'VALIDATION_ERROR', 'storeId is required');
       }
 
-      console.log(
+      logger.info(
         `[internal] reconcile-stock called by ${(req as Request & { internalService?: string }).internalService}`,
-        `storeId=${storeId} productIds=${productIds?.length ?? 'all'}`
+        { storeId, productIdCount: productIds?.length ?? 'all' }
       );
 
       const result = await reconcileStock(storeId, productIds);
@@ -312,11 +314,9 @@ async function reconcileStock(
 
     await client.query('COMMIT');
 
-    console.log(
-      `[internal] reconcile-stock complete: ` +
-      `reconciled=${result.productsReconciled}, ` +
-      `storeProducts=${result.storeProductsUpdated}, ` +
-      `errors=${result.errors.length}`
+    logger.info(
+      `[internal] reconcile-stock complete`,
+      { reconciled: result.productsReconciled, storeProducts: result.storeProductsUpdated, errors: result.errors.length }
     );
 
     return result;
