@@ -14,6 +14,8 @@ import EmptyState from '@/components/EmptyState';
 import { ShoppingCart, Repeat } from 'lucide-react';
 // FIX-028: Close SSE on logout
 import { useAuth } from '@/lib/auth';
+// REQ.AUDIT.W4.SUPPLIER.SSE-NO-RECONNECT.001: reconnecting SSE wrapper
+import { ReconnectingEventSource, SSEConnectionState } from '@/lib/reconnectingEventSource';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 
 const statusColors: Record<string, string> = {
@@ -98,6 +100,8 @@ export default function OrdersPage() {
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   // UIUX-SUP-010: Confirmation state for shipping with pending items
   const [pendingShipConfirm, setPendingShipConfirm] = useState<{ count: number } | null>(null);
+  // REQ.AUDIT.W4.SUPPLIER.SSE-NO-RECONNECT.001: track live SSE connection state
+  const [sseState, setSseState] = useState<SSEConnectionState>('connecting');
 
   // GL-WF-063: Paginated orders query
   // PRA-REAUDIT: Added isError + refetch to prevent API failure showing as empty state
@@ -116,13 +120,14 @@ export default function OrdersPage() {
 
   // SUP-POS-012: SSE real-time order updates
   // FIX-028: Close SSE when isAuthenticated changes to false (logout)
-  const eventSourceRef = useRef<EventSource | null>(null);
+  // REQ.AUDIT.W4.SUPPLIER.SSE-NO-RECONNECT.001: use ReconnectingEventSource for auto-retry + UI state
+  const eventSourceRef = useRef<ReconnectingEventSource | null>(null);
   useEffect(() => {
     if (!isAuthenticated) return;
     const streamUrl = getOrderStreamUrl();
     if (!streamUrl) return;
 
-    const es = new EventSource(streamUrl);
+    const es = new ReconnectingEventSource(streamUrl, { onStateChange: setSseState });
     eventSourceRef.current = es;
 
     const handleOrderEvent = () => {
@@ -134,10 +139,6 @@ export default function OrdersPage() {
     es.addEventListener('order.payment_received', handleOrderEvent);
     es.addEventListener('order.delivery_confirmed', handleOrderEvent);  // T-247
     es.addEventListener('order.event', handleOrderEvent);
-
-    es.onerror = () => {
-      // EventSource auto-reconnects; no action needed
-    };
 
     return () => {
       es.close();
@@ -306,6 +307,14 @@ export default function OrdersPage() {
           customers informed.
         </p>
       </div>
+
+      {/* REQ.AUDIT.W4.SUPPLIER.SSE-NO-RECONNECT.001: live-update connection banner */}
+      {(sseState === 'reconnecting' || sseState === 'closed') && (
+        <div className={`mb-4 px-4 py-2 rounded-lg text-sm flex items-center gap-2 ${sseState === 'closed' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+          <span className={`w-2 h-2 rounded-full ${sseState === 'closed' ? 'bg-red-500' : 'bg-amber-500 animate-pulse'}`} />
+          {sseState === 'reconnecting' ? 'Reconnecting to live updates…' : 'Live updates disconnected. Refresh to reload.'}
+        </div>
+      )}
 
       {/* Status Filters */}
       <div className="card mb-6">
