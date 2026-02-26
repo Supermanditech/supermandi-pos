@@ -3,15 +3,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/* === REQ.RETAILER_SUPPLIER.PAGE_THEME_UNIFICATION.001: SUPERMANDI SHARED DESIGN TOKENS ===
+ * These variables MUST stay in sync with retailer-admin/src/index.css :root and :root.dark.
+ * Single source of truth for brand color, surface, border, text, and component sizing tokens.
+ * ======================================================================================== */
 :root {
+  /* Brand */
+  --primary:        #2563eb;
+  --primary-dark:   #1d4ed8;
+  --primary-light:  #eff6ff;
+  /* Semantic */
+  --secondary:      #64748b;
+  --success:        #22c55e;
+  --warning:        #f59e0b;
+  --danger:         #ef4444;
+  /* Surfaces */
+  --background:     #F7F9FC;
+  --surface:        #ffffff;
+  --border:         #e2e8f0;
+  /* Text */
+  --text:           #0F172A;
+  --text-muted:     #64748b;
+  /* Component sizing (matches retailer DESIGN_TOKENS.md) */
+  --btn-height:     46px;
+  --input-height:   42px;
+  --card-radius:    8px;
+  --card-max-width-auth: 448px;
+  /* Brand pill */
+  --brand-pill-bg:  #2563eb;
+  --brand-pill-text:#ffffff;
+  /* Foreground RGB for body color */
   --foreground-rgb: 15, 23, 42;
-  --background: #F7F9FC;
 }
 
 /* Dark mode token overrides */
 html.dark {
+  --primary-light:  #1e3a5f;
+  --background:     #0f172a;
+  --surface:        #1e293b;
+  --border:         #334155;
+  --text:           #f1f5f9;
+  --text-muted:     #94a3b8;
+  --brand-pill-bg:  #ffffff;
+  --brand-pill-text:#0b1220;
   --foreground-rgb: 241, 245, 249;
-  --background: #0f172a;
   color-scheme: dark;
 }
 
@@ -22,14 +57,14 @@ body {
   min-height: 100vh;
 }
 
-/* Theme toggle — subtle circular icon button */
+/* Theme toggle — subtle circular icon button (uses shared CSS variables — parity with retailer) */
 .theme-toggle {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border, #e2e8f0);
   background: transparent;
-  color: #64748b;
+  color: var(--text-muted, #64748b);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -39,24 +74,15 @@ body {
   flex-shrink: 0;
 }
 .theme-toggle:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  color: #0f172a;
+  background: var(--surface, #ffffff);
+  border-color: var(--secondary, #94a3b8);
+  color: var(--text, #0f172a);
 }
 .theme-toggle:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--primary, #2563eb);
   outline-offset: 2px;
 }
-
-html.dark .theme-toggle {
-  border-color: #475569;
-  color: #94a3b8;
-}
-html.dark .theme-toggle:hover {
-  background: #334155;
-  border-color: #64748b;
-  color: #f1f5f9;
-}
+/* Dark mode uses --border, --text-muted, --surface CSS vars (auto-applies via html.dark token overrides above) */
 
 /* Dark mode structural overrides for Tailwind utility classes */
 html.dark .bg-white { background-color: #1e293b; }
