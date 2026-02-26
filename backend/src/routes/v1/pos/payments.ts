@@ -118,6 +118,31 @@ posPaymentsRouter.post(
       return res.status(503).json({ error: "database unavailable" });
     }
 
+    // P1-7: Idempotency-Key header — return cached response for duplicate requests
+    const clientIdemKey = req.headers['idempotency-key'] as string | undefined;
+    if (clientIdemKey) {
+      try {
+        const idemCheck = await pool.query(
+          `SELECT id, upi_order_id, upi_qr_data, upi_vpa, created_at
+           FROM payments.sell_payments
+           WHERE idempotency_key = $1 AND store_id = $2::uuid AND mode = 'UPI'`,
+          [clientIdemKey, storeId]
+        );
+        if (idemCheck.rowCount && idemCheck.rows[0]) {
+          const idem = idemCheck.rows[0];
+          const expiresAt = new Date(new Date(idem.created_at).getTime() + QR_EXPIRY_MS);
+          log.info(`[P1-7] Idempotency hit upi/generate key=${clientIdemKey} paymentId=${idem.id}`);
+          return res.json({
+            paymentId: idem.id,
+            orderId: idem.upi_order_id,
+            qrData: idem.upi_qr_data,
+            upiVpa: idem.upi_vpa,
+            expiresAt: expiresAt.toISOString()
+          } as UpiInitResponse);
+        }
+      } catch (_idemErr) { /* non-fatal: proceed to normal flow */ }
+    }
+
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -256,7 +281,7 @@ posPaymentsRouter.post(
 
       // 6. Create payment record
       const paymentId = randomUUID();
-      const idempotencyKey = `upi_${saleId}_${Date.now()}`;
+      const idempotencyKey = clientIdemKey || `upi_${saleId}_${Date.now()}`;
 
       await client.query(
         `INSERT INTO payments.sell_payments (
@@ -404,6 +429,8 @@ posPaymentsRouter.post(
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId } = (req as unknown as PosRequest).posDevice;
     const { saleId, payments } = req.body as SplitPaymentRequest;
+    // P1-7: Idempotency-Key header — read early for use after pool init
+    const splitIdemKey = req.headers['idempotency-key'] as string | undefined;
 
     // Validate request
     if (!saleId) {
@@ -436,6 +463,26 @@ posPaymentsRouter.post(
       return res.status(503).json({ error: "database unavailable" });
     }
 
+    // P1-7: Idempotency-Key — if same key seen before, return cached payment IDs
+    if (splitIdemKey) {
+      try {
+        const idemSplit = await pool.query(
+          `SELECT id, mode, amount_minor, upi_order_id, upi_qr_data, upi_vpa, created_at, status
+           FROM payments.sell_payments
+           WHERE idempotency_key = $1 AND store_id = $2::uuid AND is_split = true`,
+          [splitIdemKey, storeId]
+        );
+        if (idemSplit.rowCount && idemSplit.rows.length > 0) {
+          log.info(`[P1-7] Idempotency hit split key=${splitIdemKey} saleId=${saleId}`);
+          return res.status(409).json({
+            error: "payment_already_initiated",
+            message: "Split payment already initiated for this idempotency key",
+            paymentIds: idemSplit.rows.map((r: any) => r.id)
+          });
+        }
+      } catch (_idemErr) { /* non-fatal: proceed to normal flow */ }
+    }
+
     // SA-P1-006: Validate each split payment mode against store settings
     const apmRes = await pool.query(
       `SELECT allowed_payment_methods FROM platform.stores WHERE id = $1::uuid`,
@@ -458,9 +505,11 @@ posPaymentsRouter.post(
 
       // 1. Verify sale exists and get total
       const saleResult = await client.query(
+        // P1-7: FOR UPDATE serializes concurrent split payment requests for same saleId
         `SELECT id, store_id, total_minor, status, payment_mode, customer_name, customer_phone
          FROM public.sales
-         WHERE id = $1 AND store_id = $2::uuid`,
+         WHERE id = $1 AND store_id = $2::uuid
+         FOR UPDATE`,
         [saleId, storeId]
       );
 
@@ -471,10 +520,18 @@ posPaymentsRouter.post(
 
       const sale = saleResult.rows[0];
 
-      // Check if sale is already paid
-      if (sale.status === 'PAID' || sale.status === 'completed' || sale.payment_mode) {
+      // Check if sale is already paid or payment already initiated
+      if (sale.status === 'PAID' || sale.status === 'completed') {
         await client.query("ROLLBACK");
-        return res.status(400).json({ error: "Sale is already paid" });
+        return res.status(409).json({ error: "sale_already_paid", message: "Sale is already paid" });
+      }
+      // P1-7: payment_mode already set means a split was committed — reject duplicate
+      if (sale.payment_mode) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          error: "payment_already_initiated",
+          message: "A split payment was already initiated for this sale"
+        });
       }
 
       // 2. Validate total matches
@@ -563,7 +620,7 @@ posPaymentsRouter.post(
           }
 
           const expiresAt = new Date(Date.now() + QR_EXPIRY_MS);
-          const idempotencyKey = `split_upi_${saleId}_${Date.now()}`;
+          const idempotencyKey = splitIdemKey ? `${splitIdemKey}_upi` : `split_upi_${saleId}_${Date.now()}`;
 
           await client.query(
             `INSERT INTO payments.sell_payments (
