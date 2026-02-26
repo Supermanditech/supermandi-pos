@@ -125,7 +125,7 @@
     ],
     "parityProof": [
       "reference_image=operator_supplied_whatsapp_cta_layout",
-      "implementation=supermandi-landing/index.html+pos.html",
+      "implementation=supermandi-landing/index.html (pos.html excluded — retailer setup flow, no noise)",
       "accessibility=aria-expanded+aria-controls+role-dialog+esc-close+focus-return"
     ]
   },
@@ -243,7 +243,7 @@
       "operator_signoff_pending"
     ],
     "blocked": false,
-    "summary": "Implementation complete. Feature flag enabled=false guards production until operator sets both E.164 numbers in WA config block (index.html + pos.html) and flips enabled=true."
+    "summary": "Implementation complete. Feature flag enabled=false guards production until operator sets both E.164 numbers in WA config block (index.html only) and flips enabled=true. pos.html intentionally excluded — retailer setup flow requires zero distraction."
   },
   "gitDiscipline": {
     "workBranch": "main",
