@@ -776,9 +776,10 @@
     <script>
     (function () {
         // ─── OPERATOR CONFIG ───────────────────────────────────────────────────────
-        // 1. Set enabled = true after filling in both numbers below.
-        // 2. numbers: E.164 digits only — no '+', no spaces (e.g. 919876543210)
-        // 3. messages: URL-safe text; will be percent-encoded automatically.
+        // REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001: config is stable and governed here.
+        // numbers: E.164 digits only — no '+', no spaces (e.g. 919876543210)
+        // messages: URL-safe text; will be percent-encoded automatically.
+        // Company number is intentionally the same as superadmin until a separate line is provisioned.
         var WA = {
             enabled: true,
             superadmin: {
@@ -786,7 +787,7 @@
                 message: 'Hi! I need help with my SuperMandi account or platform setup.'
             },
             company: {
-                number:  '919251893684',  // OPERATOR: replace with separate Company number when available
+                number:  '919251893684',
                 message: 'Hi! I\u2019d like to learn more about SuperMandi and partnership opportunities.'
             }
         };

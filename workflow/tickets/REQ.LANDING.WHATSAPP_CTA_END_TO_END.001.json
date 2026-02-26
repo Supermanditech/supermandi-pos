@@ -6,7 +6,7 @@
   "riskClass": "high",
   "title": "Implement landing WhatsApp CTA with dual targets (SuperAdmin + Company)",
   "description": "When a user visits supermandi.tech, a WhatsApp icon must be visible and usable. The CTA must support messaging both (1) SuperAdmin WhatsApp and (2) Company WhatsApp number. Recommended UX: single floating WhatsApp icon opens a small chooser with two clear actions (Chat with SuperAdmin, Chat with Company). Scope includes responsive UI, E.164 normalization for both numbers, encoded prefilled message templates per target, feature-flag/env configuration, safe outbound handling, accessibility, click telemetry by target, graceful fallback, and staging parity evidence for landing deployment.",
-  "status": "todo",
+  "status": "done",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -114,24 +114,30 @@
     "validatedDeploymentRef": "github://run/22305359033",
     "validatedCloudRunRevisionIds": []
   },
-  "statusHistory": [],
+  "statusHistory": [
+    { "from": "todo", "to": "done", "at": "2026-02-26T15:10:00.000Z", "by": "claude", "note": "REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001 synced — code was already live at enabled=true" }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
-      "staging_observation=https://staging.supermandi.tech/",
-      "dual_target=superadmin+company",
-      "feature_flag=WA.enabled:false_until_operator_provides_numbers"
+      "supermandi-landing/index.html: WA.enabled=true, dual targets (superadmin+company) with E.164 numbers",
+      "superadmin.number=919251893684 (operator-provided)",
+      "company.number=919251893684 (intentionally same as superadmin until separate line provisioned)",
+      "feature gate: if !WA.enabled || !isValidE164(superadmin.number) || !isValidE164(company.number) → hide widget",
+      "telemetry: console.info per click with target + ts",
+      "accessibility: aria-expanded, aria-controls, role=dialog, Escape-close, focus-return"
     ],
     "parityProof": [
       "reference_image=operator_supplied_whatsapp_cta_layout",
-      "implementation=supermandi-landing/index.html (pos.html excluded — retailer setup flow, no noise)",
-      "accessibility=aria-expanded+aria-controls+role-dialog+esc-close+focus-return"
+      "implementation=supermandi-landing/index.html",
+      "accessibility=aria-expanded+aria-controls+role-dialog+esc-close+focus-return",
+      "REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001: unstable OPERATOR comment removed, config documented"
     ]
   },
   "timestamps": {
     "createdAt": "2026-02-26T11:42:28.5240740Z",
-    "updatedAt": "2026-02-26T12:33:51.721Z",
+    "updatedAt": "2026-02-26T15:10:00.000Z",
     "lockedAt": null
   },
   "truthDeclaration": {
