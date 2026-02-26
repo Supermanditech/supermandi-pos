@@ -7,9 +7,12 @@ import { Router, Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { Options } from 'http-proxy-middleware';
 import type { ClientRequest, IncomingMessage } from 'http';
+import { createLogger } from '@supermandi/common';
 import { config, ServiceConfig } from '../config';
 import { CORRELATION_ID_HEADER } from '../middleware/correlationId';
 import { getMasterToken } from '../services/adminSessionService';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 const router: Router = Router();
 
@@ -102,20 +105,14 @@ function createProxyOptions(service: ServiceConfig): Options {
       }
 
       // Log proxy request
-      console.log(
-        `[PROXY] ${req.method} ${req.path} -> ${service.name} (${service.url})`
-      );
+      logger.info(`[PROXY] ${req.method} ${req.path} -> ${service.name} (${service.url})`);
     },
     onProxyRes: (proxyRes: IncomingMessage, req: Request) => {
       // Log proxy response
-      console.log(
-        `[PROXY] ${req.method} ${req.path} <- ${service.name} (${proxyRes.statusCode})`
-      );
+      logger.info(`[PROXY] ${req.method} ${req.path} <- ${service.name} (${proxyRes.statusCode})`);
     },
     onError: (err: Error, req: Request, res: Response) => {
-      console.error(
-        `[PROXY ERROR] ${req.method} ${req.path} -> ${service.name}: ${err.message}`
-      );
+      logger.error(`[PROXY ERROR] ${req.method} ${req.path} -> ${service.name}: ${err.message}`, err instanceof Error ? err : undefined);
 
       // Check if headers already sent
       if (!res.headersSent) {
@@ -139,9 +136,7 @@ export function setupProxyRoutes(): Router {
     const proxyOptions = createProxyOptions(service);
     router.use(service.pathPrefix, createProxyMiddleware(proxyOptions));
 
-    console.log(
-      `[PROXY] Configured: ${service.pathPrefix} -> ${service.url}`
-    );
+    logger.info(`[PROXY] Configured: ${service.pathPrefix} -> ${service.url}`);
   }
 
   return router;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { logger } from "../../../lib/logger";
 
 export const posStoreRouter = Router();
 
@@ -107,7 +108,7 @@ posStoreRouter.patch("/store/payment-settings", requireDeviceToken, async (req, 
       bankIfsc: row.bankIfsc || null,
     });
   } catch (err) {
-    console.error("[POS] payment-settings update error:", err);
+    logger.error("[POS] payment-settings update error:", { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ error: "internal server error" });
   }
 });

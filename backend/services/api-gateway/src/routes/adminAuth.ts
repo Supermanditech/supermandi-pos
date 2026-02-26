@@ -3,6 +3,7 @@
 // Replaces static admin token with time-bound JWT sessions
 
 import { Router, Request, Response } from 'express';
+import { createLogger } from '@supermandi/common';
 import {
   verifyMasterToken,
   createAdminSession,
@@ -11,6 +12,8 @@ import {
   isMasterTokenConfigured,
 } from '../services/adminSessionService';
 import { config } from '../config';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // RATE LIMITING FOR LOGIN
@@ -65,7 +68,7 @@ adminAuthRouter.post('/login', async (req: Request, res: Response): Promise<void
 
   // Check rate limiting
   if (isLoginRateLimited(clientIp)) {
-    console.log(`[AdminAuth] Login rate limited for IP: ${clientIp}`);
+    logger.info(`[AdminAuth] Login rate limited for IP: ${clientIp}`);
     res.status(429).json({
       error: {
         code: 'RATE_LIMIT_EXCEEDED',
@@ -78,7 +81,7 @@ adminAuthRouter.post('/login', async (req: Request, res: Response): Promise<void
 
   // Check master token is configured
   if (!isMasterTokenConfigured()) {
-    console.error('[AdminAuth] ADMIN_TOKEN not configured');
+    logger.error('[AdminAuth] ADMIN_TOKEN not configured');
     res.status(503).json({
       error: {
         code: 'SERVICE_UNAVAILABLE',
@@ -106,7 +109,7 @@ adminAuthRouter.post('/login', async (req: Request, res: Response): Promise<void
   // Verify master token
   if (!verifyMasterToken(token)) {
     recordLoginAttempt(clientIp);
-    console.log(`[AdminAuth] Invalid master token from IP: ${clientIp}`);
+    logger.warn(`[AdminAuth] Invalid master token from IP: ${clientIp}`);
     res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
@@ -123,7 +126,7 @@ adminAuthRouter.post('/login', async (req: Request, res: Response): Promise<void
   // T1-001: Create session (async — Redis-backed)
   const session = await createAdminSession(clientIp, userAgent);
 
-  console.log(`[AdminAuth] Admin login successful from IP: ${clientIp}`);
+  logger.info(`[AdminAuth] Admin login successful from IP: ${clientIp}`);
 
   res.json({
     sessionToken: session.token,
@@ -156,7 +159,7 @@ adminAuthRouter.post('/logout', async (req: Request, res: Response): Promise<voi
   const revoked = await revokeAdminSession(token);
 
   if (revoked) {
-    console.log(`[AdminAuth] Session revoked`);
+    logger.info('[AdminAuth] Session revoked');
     res.json({ success: true, message: 'Logged out successfully.' });
   } else {
     // Still return success - idempotent logout
@@ -201,7 +204,7 @@ adminAuthRouter.post('/refresh', async (req: Request, res: Response): Promise<vo
     return;
   }
 
-  console.log(`[AdminAuth] Session refreshed for IP: ${clientIp}`);
+  logger.info(`[AdminAuth] Session refreshed for IP: ${clientIp}`);
 
   res.json({
     sessionToken: newSession.token,
@@ -244,10 +247,10 @@ const emailOtpProxy = createProxyMiddleware({
       proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
       proxyReq.write(bodyData);
     }
-    console.log(`[AdminAuth] Proxying email OTP request: ${req.method} ${req.path} -> ${mainBackendUrl}`);
+    logger.info(`[AdminAuth] Proxying email OTP request: ${req.method} ${req.path} -> ${mainBackendUrl}`);
   },
   onError: (err, _req, res) => {
-    console.error('[AdminAuth] Email OTP proxy error:', err.message);
+    logger.error('[AdminAuth] Email OTP proxy error', err instanceof Error ? err : undefined, { message: err.message });
     if (!res.headersSent) {
       res.status(503).json({
         error: {

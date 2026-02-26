@@ -2,7 +2,10 @@
 // Uses OpenAI Whisper API for audio transcription
 
 import { createReadStream } from 'fs';
+import { createLogger } from '@supermandi/common';
 import { config } from '../config';
+
+const logger = createLogger({ service: 'voice-service', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // TYPES
@@ -26,7 +29,7 @@ export interface TranscriptionResult {
  */
 export async function transcribeAudio(audioFilePath: string): Promise<TranscriptionResult> {
   if (!config.openai.apiKey) {
-    console.warn('[STT] OpenAI API key not configured, using mock transcription');
+    logger.warn('[STT] OpenAI API key not configured, using mock transcription');
     return mockTranscribe(audioFilePath);
   }
 
@@ -47,7 +50,7 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
 
     const transcribedText = response.text?.trim() || '';
 
-    console.log('[STT] Whisper transcription successful:', transcribedText.slice(0, 50));
+    logger.info('[STT] Whisper transcription successful', { preview: transcribedText.slice(0, 50) });
 
     return {
       text: transcribedText,
@@ -55,9 +58,9 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
       duration: undefined,
     };
   } catch (error: any) {
-    console.error('[STT] Whisper transcription failed:', error?.message || error);
+    logger.error('[STT] Whisper transcription failed', error instanceof Error ? error : undefined, { detail: error instanceof Error ? undefined : String(error) });
     // Fallback to mock on error
-    console.warn('[STT] Falling back to mock transcription');
+    logger.warn('[STT] Falling back to mock transcription');
     return mockTranscribe(audioFilePath);
   }
 }
@@ -82,7 +85,7 @@ function mockTranscribe(_audioFilePath: string): TranscriptionResult {
 
   const randomIndex = Math.floor(Math.random() * mockResponses.length);
 
-  console.log('[STT] Using mock transcription:', mockResponses[randomIndex]);
+  logger.info('[STT] Using mock transcription', { text: mockResponses[randomIndex] });
 
   return {
     text: mockResponses[randomIndex]!,

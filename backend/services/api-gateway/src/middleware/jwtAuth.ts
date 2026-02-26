@@ -6,7 +6,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { createLogger } from '@supermandi/common';
 import { isTokenBlacklisted } from '../redis';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // TYPES
@@ -57,7 +60,7 @@ const JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    logger.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -203,7 +206,7 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
 
     // GO-LIVE-139: Reject demo tokens in production
     if (decoded.demo === true && isProduction()) {
-      console.warn(`[GO-LIVE-139] Rejected demo token in production: user=${decoded.sub}, actor=${decoded.actorId}`);
+      logger.warn(`[GO-LIVE-139] Rejected demo token in production: user=${decoded.sub}, actor=${decoded.actorId}`);
       res.status(403).json({
         error: {
           code: 'DEMO_TOKEN_REJECTED',
@@ -220,7 +223,7 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     try {
       const revoked = await isTokenBlacklisted(blacklistKey);
       if (revoked) {
-        console.warn(`[T-184] Rejected blacklisted token: key=${blacklistKey.substring(0, 8)}..., user=${decoded.sub}`);
+        logger.warn(`[T-184] Rejected blacklisted token: key=${blacklistKey.substring(0, 8)}..., user=${decoded.sub}`);
         res.status(401).json({
           error: {
             code: 'TOKEN_REVOKED',
@@ -233,7 +236,7 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     } catch (blacklistError) {
       // R7.BE.001: Fail closed when revocation store is unavailable.
       // This prevents revoked tokens from being accepted during Redis outages.
-      console.error('[T-184] Redis blacklist check failed (failing closed):', blacklistError);
+      logger.error('[T-184] Redis blacklist check failed (failing closed)', blacklistError instanceof Error ? blacklistError : undefined, { raw: blacklistError });
       res.status(503).json({
         error: {
           code: 'AUTH_VALIDATION_UNAVAILABLE',
@@ -288,7 +291,7 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     }
 
     // Unknown error
-    console.error('[AUTH ERROR]', error);
+    logger.error('[AUTH ERROR]', error instanceof Error ? error : undefined, { raw: error });
     res.status(500).json({
       error: {
         code: 'INTERNAL_ERROR',

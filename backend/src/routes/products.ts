@@ -5,7 +5,7 @@ import { requireDeviceToken } from "../middleware/deviceToken";
 import { listInventoryVariants } from "../services/inventoryService";
 import { createPurchase, type PurchaseItemInput } from "../services/purchaseService";
 import { normalizeScan } from "../services/scanNormalization";
-import { log } from "../lib/logger";
+import { log, logger } from "../lib/logger";
 import { asError } from "../lib/errorUtils";
 
 export const productsRouter = Router();
@@ -299,7 +299,7 @@ productsRouter.get("/lookup", requireDeviceToken, async (req, res) => {
       normalized.normalized_value
     );
     if (!globalMatch) {
-      console.info("lookup_miss", {
+      logger.info("lookup_miss", {
         deviceId,
         storeId,
         codeType: normalized.code_type,
@@ -325,7 +325,7 @@ productsRouter.get("/lookup", requireDeviceToken, async (req, res) => {
       globalMatch.globalName
     );
 
-    console.info("lookup_hit", {
+    logger.info("lookup_hit", {
       deviceId,
       storeId,
       codeType: normalized.code_type,
@@ -334,7 +334,7 @@ productsRouter.get("/lookup", requireDeviceToken, async (req, res) => {
     });
 
     if (payload.is_first_time_in_store) {
-      console.info("store_mapping_auto_created", {
+      logger.info("store_mapping_auto_created", {
         deviceId,
         storeId,
         globalProductId: globalMatch.globalProductId,
@@ -443,7 +443,7 @@ productsRouter.post("/create-from-scan", requireDeviceToken, async (req, res) =>
         );
 
         if (payload.is_first_time_in_store) {
-          console.info("store_mapping_auto_created", {
+          logger.info("store_mapping_auto_created", {
             deviceId,
             storeId,
             globalProductId: conflict.globalProductId,
@@ -467,7 +467,7 @@ productsRouter.post("/create-from-scan", requireDeviceToken, async (req, res) =>
     await client.query("COMMIT");
 
     if (payload.is_first_time_in_store) {
-      console.info("store_mapping_auto_created", {
+      logger.info("store_mapping_auto_created", {
         deviceId,
         storeId,
         globalProductId,
@@ -489,7 +489,7 @@ productsRouter.post("/create-from-scan", requireDeviceToken, async (req, res) =>
 // POST /api/products/receive
 productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
   const { storeId: reqStoreId, deviceId: reqDeviceId } = (req as any).posDevice ?? {};
-  console.info("[receive_start]", { storeId: reqStoreId, deviceId: reqDeviceId, body: JSON.stringify(req.body).slice(0, 500) });
+  logger.info("[receive_start]", { storeId: reqStoreId, deviceId: reqDeviceId, body: JSON.stringify(req.body).slice(0, 500) });
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
@@ -706,7 +706,7 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
 
     await client.query("COMMIT");
 
-    console.info("store_product_received", {
+    logger.info("store_product_received", {
       deviceId,
       storeId,
       globalProductId,

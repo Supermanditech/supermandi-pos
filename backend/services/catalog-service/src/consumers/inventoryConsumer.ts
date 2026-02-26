@@ -9,12 +9,15 @@ import { Worker } from 'bullmq';
 import {
   createEventHandler,
   initQueueManager,
+  createLogger,
   type DomainEvent,
   type EventContext,
 } from '@supermandi/common';
 import { getClient } from '@supermandi/common';
 import { config } from '../config';
 import { updateStoreProductStock } from '../db/queries';
+
+const logger = createLogger({ service: 'catalog-service', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // TYPES
@@ -72,10 +75,9 @@ async function processStockChangedEvent(
 ): Promise<void> {
   const { storeId, productId, newQty, ledgerCreatedAt } = event.payload;
 
-  console.log(
+  logger.info(
     `[${CONSUMER_NAME}] Processing stock change for store=${storeId} product=${productId}`,
-    `newQty=${newQty} ledgerCreatedAt=${ledgerCreatedAt}`,
-    `attempt=${context.attemptNumber}`
+    { newQty, ledgerCreatedAt, attempt: context.attemptNumber }
   );
 
   const client = await getClient();
@@ -97,15 +99,14 @@ async function processStockChangedEvent(
     );
 
     if (updated) {
-      console.log(
+      logger.info(
         `[${CONSUMER_NAME}] Updated stock for store=${storeId} product=${productId}`,
-        `newStock=${updated.currentStock}`
+        { newStock: updated.currentStock }
       );
     } else {
       // Either the store_product doesn't exist, or the event is out of order
-      console.log(
-        `[${CONSUMER_NAME}] Skipped stock update for store=${storeId} product=${productId}`,
-        `(out of order or product not found)`
+      logger.info(
+        `[${CONSUMER_NAME}] Skipped stock update for store=${storeId} product=${productId} (out of order or product not found)`
       );
     }
 
@@ -130,7 +131,7 @@ let worker: Worker | null = null;
  */
 export function startInventoryConsumer(): Worker {
   if (worker) {
-    console.log(`[${CONSUMER_NAME}] Inventory consumer already running`);
+    logger.info(`[${CONSUMER_NAME}] Inventory consumer already running`);
     return worker;
   }
 
@@ -152,7 +153,7 @@ export function startInventoryConsumer(): Worker {
 
       // Only process stock.changed events
       if (event.eventType !== 'inventory.stock.changed.v1') {
-        console.log(
+        logger.info(
           `[${CONSUMER_NAME}] Ignoring unknown event type: ${event.eventType}`
         );
         return;
@@ -174,23 +175,24 @@ export function startInventoryConsumer(): Worker {
 
   // Error handling
   worker.on('failed', (job, error) => {
-    console.error(
+    logger.error(
       `[${CONSUMER_NAME}] Job ${job?.id} failed:`,
-      error.message
+      error instanceof Error ? error : undefined,
+      { message: error.message }
     );
   });
 
   worker.on('error', (error) => {
-    console.error(`[${CONSUMER_NAME}] Worker error:`, error.message);
+    logger.error(`[${CONSUMER_NAME}] Worker error:`, error instanceof Error ? error : undefined, { message: error.message });
   });
 
   worker.on('completed', (job) => {
-    console.log(
+    logger.info(
       `[${CONSUMER_NAME}] Job ${job.id} completed for event ${job.data.eventId}`
     );
   });
 
-  console.log(
+  logger.info(
     `[${CONSUMER_NAME}] Started inventory consumer on queue: ${QUEUE_NAME}`
   );
 
@@ -204,7 +206,7 @@ export async function stopInventoryConsumer(): Promise<void> {
   if (worker) {
     await worker.close();
     worker = null;
-    console.log(`[${CONSUMER_NAME}] Inventory consumer stopped`);
+    logger.info(`[${CONSUMER_NAME}] Inventory consumer stopped`);
   }
 }
 

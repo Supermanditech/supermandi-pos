@@ -5,7 +5,10 @@
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { createLogger } from '@supermandi/common';
 import { getGatewayRedis } from '../redis';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // TYPES
@@ -45,7 +48,7 @@ const JWT_SECRET = (() => {
     if (env === 'development' || env === 'test') {
       return 'dev-secret-change-in-prod';
     }
-    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    logger.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
     process.exit(1);
   }
   return secret;
@@ -57,11 +60,11 @@ const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-admin';
 function loadAdminToken(): string | undefined {
   const envToken = process.env['ADMIN_TOKEN']?.trim();
   if (envToken) {
-    console.log('[AdminSession] ADMIN_TOKEN loaded from environment variable');
+    logger.info('[AdminSession] ADMIN_TOKEN loaded from environment variable');
     return envToken;
   }
   if (process.env['NODE_ENV'] === 'production') {
-    console.error('[AdminSession] FATAL: ADMIN_TOKEN is required in production but not set');
+    logger.error('[AdminSession] FATAL: ADMIN_TOKEN is required in production but not set');
     process.exit(1);
   }
   return undefined;
@@ -92,7 +95,7 @@ async function storeSession(sessionId: string, session: AdminSession): Promise<v
       );
       return;
     } catch (err) {
-      console.warn('[AdminSession] Redis store failed, using local fallback:', err);
+      logger.warn('[AdminSession] Redis store failed, using local fallback:', { err });
     }
   }
   localSessions.set(sessionId, session);
@@ -106,7 +109,7 @@ async function loadSession(sessionId: string): Promise<AdminSession | null> {
       if (data) return JSON.parse(data) as AdminSession;
       return null;
     } catch (err) {
-      console.warn('[AdminSession] Redis load failed, checking local fallback:', err);
+      logger.warn('[AdminSession] Redis load failed, checking local fallback:', { err });
     }
   }
   return localSessions.get(sessionId) ?? null;
@@ -118,7 +121,7 @@ async function removeSession(sessionId: string): Promise<void> {
     try {
       await redis.del(REDIS_SESSION_PREFIX + sessionId);
     } catch (err) {
-      console.warn('[AdminSession] Redis delete failed:', err);
+      logger.warn('[AdminSession] Redis delete failed:', { err });
     }
   }
   localSessions.delete(sessionId);
@@ -130,7 +133,7 @@ setInterval(() => {
   for (const [sessionId, session] of localSessions.entries()) {
     if (session.expiresAt < now) {
       localSessions.delete(sessionId);
-      console.log(`[AdminSession] Expired local session removed: ${sessionId.substring(0, 8)}...`);
+      logger.info(`[AdminSession] Expired local session removed: ${sessionId.substring(0, 8)}...`);
     }
   }
 }, 5 * 60 * 1000);
@@ -145,7 +148,7 @@ setInterval(() => {
  */
 export function verifyMasterToken(token: string): boolean {
   if (!ADMIN_TOKEN) {
-    console.error('[AdminSession] ADMIN_TOKEN not configured');
+    logger.error('[AdminSession] ADMIN_TOKEN not configured');
     return false;
   }
   // Timing-safe comparison to prevent timing attacks
@@ -189,7 +192,7 @@ export async function createAdminSession(ip: string, userAgent?: string): Promis
     issuer: JWT_ISSUER,
   });
 
-  console.log(`[AdminSession] Created session ${sessionId.substring(0, 8)}... for IP: ${ip}`);
+  logger.info(`[AdminSession] Created session ${sessionId.substring(0, 8)}... for IP: ${ip}`);
 
   return { token, expiresAt };
 }
@@ -212,20 +215,20 @@ export async function verifyAdminSession(token: string): Promise<AdminSession | 
 
       // Check it's an admin token
       if (decoded.type !== 'admin') {
-        console.log('[AdminSession] Token is not an admin session token');
+        logger.info('[AdminSession] Token is not an admin session token');
         return null;
       }
 
       // T1-001: Check session exists in Redis (or local fallback)
       const session = await loadSession(decoded.sub);
       if (!session) {
-        console.log(`[AdminSession] Session not found or revoked: ${decoded.sub.substring(0, 8)}...`);
+        logger.info(`[AdminSession] Session not found or revoked: ${decoded.sub.substring(0, 8)}...`);
         // Don't return null yet - might be an email OTP token
       } else {
         // Check session hasn't expired (belt and suspenders - JWT also checks)
         if (session.expiresAt < Date.now()) {
           await removeSession(decoded.sub);
-          console.log(`[AdminSession] Session expired: ${decoded.sub.substring(0, 8)}...`);
+          logger.info(`[AdminSession] Session expired: ${decoded.sub.substring(0, 8)}...`);
           return null;
         }
         return session;
@@ -240,7 +243,7 @@ export async function verifyAdminSession(token: string): Promise<AdminSession | 
     const emailOtpDecoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { email?: string; role?: string; type?: string; exp?: number };
 
     if (emailOtpDecoded.email && emailOtpDecoded.role === 'super_admin' && emailOtpDecoded.type === 'admin') {
-      console.log(`[AdminSession] Verified email OTP token for: ***@${emailOtpDecoded.email?.split('@')[1] || '***'}`);
+      logger.info(`[AdminSession] Verified email OTP token for: ***@${emailOtpDecoded.email?.split('@')[1] || '***'}`);
       // Return a synthetic session for email OTP tokens
       return {
         sessionId: `email-otp-${emailOtpDecoded.email}`,
@@ -251,15 +254,15 @@ export async function verifyAdminSession(token: string): Promise<AdminSession | 
       };
     }
 
-    console.log('[AdminSession] Token is not a valid admin or email OTP token');
+    logger.info('[AdminSession] Token is not a valid admin or email OTP token');
     return null;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      console.log('[AdminSession] Session token expired');
+      logger.info('[AdminSession] Session token expired');
     } else if (error instanceof jwt.JsonWebTokenError) {
-      console.log(`[AdminSession] Invalid token: ${error.message}`);
+      logger.info(`[AdminSession] Invalid token: ${error.message}`);
     } else {
-      console.error('[AdminSession] Token verification error:', error);
+      logger.error('[AdminSession] Token verification error:', error instanceof Error ? error : undefined);
     }
     return null;
   }
@@ -279,7 +282,7 @@ export async function revokeAdminSession(token: string): Promise<boolean> {
     }) as AdminSessionPayload;
 
     await removeSession(decoded.sub);
-    console.log(`[AdminSession] Session revoked: ${decoded.sub.substring(0, 8)}...`);
+    logger.info(`[AdminSession] Session revoked: ${decoded.sub.substring(0, 8)}...`);
     return true;
   } catch {
     return false;

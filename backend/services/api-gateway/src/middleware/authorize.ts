@@ -3,6 +3,9 @@
 // Backend services also validate permissions (fine-grained)
 
 import { Request, Response, NextFunction } from 'express';
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // ACTOR TYPE POLICY
@@ -71,7 +74,7 @@ export function actorTypeMiddleware(req: Request, res: Response, next: NextFunct
 
   // Check if actor type is allowed for this route namespace
   if (!policy.allowedActorTypes.includes(actorType)) {
-    console.warn(
+    logger.warn(
       `[AUTH-PERM-001] Cross-portal access BLOCKED: ` +
       `actorType=${actorType}, path=${req.path}, ` +
       `userId=${req.jwtPayload.sub}, allowed=${policy.allowedActorTypes.join(',')}`

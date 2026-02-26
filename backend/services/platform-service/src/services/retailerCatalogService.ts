@@ -17,7 +17,9 @@
  */
 
 import crypto from 'crypto';
-import { query } from '@supermandi/common';
+import { query, createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'platform-service', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // Types
@@ -443,6 +445,6 @@ export async function createSupplierProductLink(
     [supplierId, name, brand, purchasePrice]
   ).catch((err) => {
     // FIX-014: Log instead of silently swallowing — helps debug catalog issues
-    console.warn('[retailerCatalogService] createSupplierProductLink failed:', err?.message || err);
+    logger.warn('[retailerCatalogService] createSupplierProductLink failed', { detail: err?.message || String(err) });
   });
 }

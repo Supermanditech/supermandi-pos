@@ -1,7 +1,9 @@
 // Search Service - V3.0.9 compliant
 // Provides product search with trigram similarity and caching
 
-import { ApiError, ERROR_CODES } from '@supermandi/common';
+import { ApiError, ERROR_CODES, createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'catalog-service', level: process.env.LOG_LEVEL || 'info' });
 import { config } from '../config';
 import {
   searchProducts,
@@ -283,5 +285,5 @@ export async function invalidateSearchCache(): Promise<void> {
   // For simplicity, we don't clear search cache here
   // It will expire naturally based on TTL
   // In production, you might want to use pub/sub for cache invalidation
-  console.log('Search cache will expire based on TTL');
+  logger.info('Search cache will expire based on TTL');
 }

@@ -3,8 +3,10 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
+import { ApiError, ERROR_CODES, healthCheck, createLogger } from '@supermandi/common';
 import { config } from './config';
+
+const logger = createLogger({ service: 'platform-service', level: process.env.LOG_LEVEL || 'info' });
 import storeRoutes from './routes/stores';
 import flagRoutes from './routes/flags';
 import internalRoutes from './routes/internal';
@@ -49,7 +51,7 @@ app.use(express.json());
 
 // Request logging
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -128,7 +130,7 @@ app.use((req: Request, res: Response) => {
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(`[ERROR] ${err.message}`, err.stack);
+  logger.error(`[ERROR] ${err.message}`, err instanceof Error ? err : undefined);
 
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
@@ -153,20 +155,14 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // =============================================================================
 
 const server = app.listen(config.port, () => {
-  console.log(`
-====================================================
-  SuperMandi Platform Service v3.0.9
-  Running on port ${config.port}
-  Environment: ${config.env}
-====================================================
-  `);
+  logger.info('SuperMandi Platform Service v3.0.9 started', { port: config.port, env: config.env });
 });
 
 // T1-003: Graceful shutdown for Cloud Run SIGTERM
 process.on('SIGTERM', () => {
-  console.log('[platform-service] SIGTERM received, shutting down gracefully');
+  logger.info('[platform-service] SIGTERM received, shutting down gracefully');
   server.close(() => {
-    console.log('[platform-service] Server closed');
+    logger.info('[platform-service] Server closed');
     process.exit(0);
   });
   setTimeout(() => process.exit(1), 10000);

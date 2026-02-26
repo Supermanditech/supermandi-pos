@@ -1,6 +1,10 @@
 // Voice Service Configuration - VOICE-003
 // ENV-FAILFAST-001: Crash in production if required env vars are missing
 
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'voice-service', level: process.env.LOG_LEVEL || 'info' });
+
 const IS_PROD = process.env['NODE_ENV'] === 'production';
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
@@ -19,7 +23,7 @@ function requireEnv(key: string, devDefault: string): string {
   const value = process.env[key];
   if (value) return value;
   if (IS_PROD) {
-    console.error(`[config] FATAL: ${key} is required in production but not set`);
+    logger.error(`[config] FATAL: ${key} is required in production but not set`);
     process.exit(1);
   }
   return devDefault;

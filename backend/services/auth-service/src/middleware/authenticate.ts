@@ -2,10 +2,12 @@
 // JWT verification middleware for protected routes
 
 import { Request, Response, NextFunction } from 'express';
-import { ApiError } from '@supermandi/common';
+import { ApiError, createLogger } from '@supermandi/common';
 import type { JwtPayload, AuthUser } from '@supermandi/common';
 import { verifyAccessToken, verifyAccessTokenWithError } from '../services/jwtService';
 import { updateUserLastActivity } from '../db/tokenQueries';
+
+const logger = createLogger({ service: 'auth-service', level: process.env.LOG_LEVEL || 'info' });
 
 // AUTH-IDLE-001: Throttled activity tracking (max once per 5 min per user)
 const activityCache = new Map<string, number>();
@@ -19,7 +21,7 @@ function trackActivity(userId: string): void {
   activityCache.set(userId, now);
   // Fire-and-forget — do not block the request
   updateUserLastActivity(userId).catch((err) => {
-    console.warn('[AUTH-IDLE-001] Failed to update activity:', err);
+    logger.warn('[AUTH-IDLE-001] Failed to update activity:', { err });
   });
 
   // Periodically clean stale entries (every 100 calls)

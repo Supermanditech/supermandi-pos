@@ -3,12 +3,14 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import { ApiError, ERROR_CODES, healthCheck, initializeFirebase } from '@supermandi/common';
+import { ApiError, ERROR_CODES, healthCheck, initializeFirebase, createLogger } from '@supermandi/common';
 import { config } from './config';
 import internalRoutes from './routes/internal';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import retailerAuthRoutes from './routes/retailerAuth';
+
+const logger = createLogger({ service: 'auth-service', level: process.env.LOG_LEVEL || 'info' });
 
 // =============================================================================
 // FIREBASE INITIALIZATION
@@ -20,13 +22,13 @@ if (config.firebase.enabled) {
       serviceAccountPath: config.firebase.serviceAccountPath,
       projectId: config.firebase.projectId,
     });
-    console.log('[Auth Service] Firebase Admin SDK initialized');
+    logger.info('[Auth Service] Firebase Admin SDK initialized');
   } catch (error) {
-    console.error('[Auth Service] Failed to initialize Firebase:', error);
+    logger.error('[Auth Service] Failed to initialize Firebase:', error instanceof Error ? error : undefined);
     // Don't crash the service - retailer auth will fail gracefully
   }
 } else {
-  console.log('[Auth Service] Firebase disabled (FIREBASE_ENABLED != true)');
+  logger.info('[Auth Service] Firebase disabled (FIREBASE_ENABLED != true)');
 }
 
 const app = express();
@@ -43,7 +45,7 @@ app.use(express.json());
 
 // Request logging
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -111,7 +113,7 @@ app.use((req: Request, res: Response) => {
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(`[ERROR] ${err.message}`, err.stack);
+  logger.error(`[ERROR] ${err.message}`, err instanceof Error ? err : undefined);
 
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
@@ -136,25 +138,23 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // =============================================================================
 
 const server = app.listen(config.port, () => {
-  console.log(`
-====================================================
-  SuperMandi Auth Service v3.0.9
-  Running on port ${config.port}
-  Environment: ${config.env}
-====================================================
-  `);
+  logger.info('Auth Service started', {
+    port: config.port,
+    environment: config.env,
+    version: '3.0.9',
+  });
 });
 
 // ISSUE-MICRO-008: Graceful shutdown on SIGTERM/SIGINT (Cloud Run sends SIGTERM)
 const shutdown = (signal: string) => {
-  console.log(`[Auth Service] ${signal} received, shutting down gracefully`);
+  logger.info(`[Auth Service] ${signal} received, shutting down gracefully`);
   server.close(() => {
-    console.log('[Auth Service] Server closed');
+    logger.info('[Auth Service] Server closed');
     process.exit(0);
   });
   // Force exit after 10s if connections don't drain
   setTimeout(() => {
-    console.warn('[Auth Service] Forced shutdown after timeout');
+    logger.warn('[Auth Service] Forced shutdown after timeout');
     process.exit(1);
   }, 10_000).unref();
 };

@@ -4,6 +4,10 @@
 //   Core POS must run even when Razorpay is not configured.
 //   DATABASE_URL still crashes in production (no fallback possible).
 
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'payment-service', level: process.env.LOG_LEVEL || 'info' });
+
 const IS_PROD = process.env['NODE_ENV'] === 'production';
 
 export interface PaymentConfig {
@@ -36,7 +40,7 @@ function requireEnv(key: string, devDefault: string): string {
   const value = process.env[key];
   if (value) return value;
   if (IS_PROD) {
-    console.error(`[config] FATAL: ${key} is required in production but not set`);
+    logger.error(`[config] FATAL: ${key} is required in production but not set`);
     process.exit(1);
   }
   return devDefault;
@@ -54,7 +58,7 @@ if (!razorpayConfigured) {
     !razorpayKeySecret && 'RAZORPAY_KEY_SECRET',
     !razorpayAccountNumber && 'RAZORPAY_ACCOUNT_NUMBER',
   ].filter(Boolean);
-  console.warn(
+  logger.warn(
     `[payment-service] WARNING: Razorpay not configured (missing: ${missing.join(', ')}). ` +
     `UPI payments, payouts, and webhook verification are DISABLED. ` +
     `Core POS (scan, checkout, cash) will work normally.`

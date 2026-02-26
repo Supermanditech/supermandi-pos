@@ -9,10 +9,13 @@ import { Worker } from 'bullmq';
 import {
   createEventHandler,
   initQueueManager,
+  createLogger,
   type DomainEvent,
   type EventContext,
 } from '@supermandi/common';
 import { getClient, query, queryOne } from '@supermandi/common';
+
+const logger = createLogger({ service: 'reorder-service', level: process.env.LOG_LEVEL || 'info' });
 import { config } from '../config';
 import {
   getReorderPolicy,
@@ -91,61 +94,46 @@ async function processStockChangedEvent(
 ): Promise<void> {
   const { storeId, productId, newQty } = event.payload;
 
-  console.log(
-    `[${CONSUMER_NAME}] Processing stock change for store=${storeId} product=${productId}`,
-    `newQty=${newQty} attempt=${context.attemptNumber}`
-  );
+  logger.info(`[${CONSUMER_NAME}] Processing stock change`, { storeId, productId, newQty, attempt: context.attemptNumber });
 
   // 1. Check if store has reorder enabled
   const settings = await getStoreSettings(storeId);
   if (!settings || !settings.reorderEnabled) {
-    console.log(
-      `[${CONSUMER_NAME}] Reorder disabled for store=${storeId}, skipping`
-    );
+    logger.info(`[${CONSUMER_NAME}] Reorder disabled for store, skipping`, { storeId });
     return;
   }
 
   // 2. Get reorder policy for this product
   const policy = await getReorderPolicy(storeId, productId);
   if (!policy || !policy.isEnabled) {
-    console.log(
-      `[${CONSUMER_NAME}] No active policy for store=${storeId} product=${productId}, skipping`
-    );
+    logger.info(`[${CONSUMER_NAME}] No active policy, skipping`, { storeId, productId });
     return;
   }
 
   // 3. Check if stock is at or below threshold
   if (newQty > policy.minStock) {
-    console.log(
-      `[${CONSUMER_NAME}] Stock ${newQty} > threshold ${policy.minStock}, skipping`
-    );
+    logger.info(`[${CONSUMER_NAME}] Stock above threshold, skipping`, { newQty, minStock: policy.minStock });
     return;
   }
 
   // 4. Check if pending reorder already exists
   const hasPending = await hasPendingReorder(storeId, productId);
   if (hasPending) {
-    console.log(
-      `[${CONSUMER_NAME}] Pending reorder already exists for store=${storeId} product=${productId}, skipping`
-    );
+    logger.info(`[${CONSUMER_NAME}] Pending reorder already exists, skipping`, { storeId, productId });
     return;
   }
 
   // 5. Get product info
   const productInfo = await getProductInfo(productId);
   if (!productInfo) {
-    console.log(
-      `[${CONSUMER_NAME}] Product ${productId} not found, skipping`
-    );
+    logger.info(`[${CONSUMER_NAME}] Product not found, skipping`, { productId });
     return;
   }
 
   // 6. Find best supplier
   const supplier = await findBestSupplier(storeId, productId, policy.preferredSupplierId);
   if (!supplier) {
-    console.log(
-      `[${CONSUMER_NAME}] No supplier found for store=${storeId} product=${productId}, skipping`
-    );
+    logger.info(`[${CONSUMER_NAME}] No supplier found, skipping`, { storeId, productId });
     return;
   }
 
@@ -180,15 +168,10 @@ async function processStockChangedEvent(
     await client.query('COMMIT');
 
     if (pending) {
-      console.log(
-        `[${CONSUMER_NAME}] Created pending reorder ${pending.id}`,
-        `store=${storeId} product=${productId} qty=${suggestedQuantity}`
-      );
+      logger.info(`[${CONSUMER_NAME}] Created pending reorder`, { id: pending.id, storeId, productId, qty: suggestedQuantity });
     } else {
       // Conflict - another process created it first
-      console.log(
-        `[${CONSUMER_NAME}] Pending reorder already exists (conflict), skipping`
-      );
+      logger.info(`[${CONSUMER_NAME}] Pending reorder already exists (conflict), skipping`);
     }
   } catch (error) {
     await client.query('ROLLBACK');
@@ -323,7 +306,7 @@ let worker: Worker | null = null;
  */
 export function startInventoryConsumer(): Worker {
   if (worker) {
-    console.log(`[${CONSUMER_NAME}] Inventory consumer already running`);
+    logger.info(`[${CONSUMER_NAME}] Inventory consumer already running`);
     return worker;
   }
 
@@ -345,9 +328,7 @@ export function startInventoryConsumer(): Worker {
 
       // Only process stock.changed events
       if (event.eventType !== 'inventory.stock.changed.v1') {
-        console.log(
-          `[${CONSUMER_NAME}] Ignoring unknown event type: ${event.eventType}`
-        );
+        logger.info(`[${CONSUMER_NAME}] Ignoring unknown event type`, { eventType: event.eventType });
         return;
       }
 
@@ -367,25 +348,18 @@ export function startInventoryConsumer(): Worker {
 
   // Error handling
   worker.on('failed', (job, error) => {
-    console.error(
-      `[${CONSUMER_NAME}] Job ${job?.id} failed:`,
-      error.message
-    );
+    logger.error(`[${CONSUMER_NAME}] Job failed`, error instanceof Error ? error : undefined, { jobId: job?.id });
   });
 
   worker.on('error', (error) => {
-    console.error(`[${CONSUMER_NAME}] Worker error:`, error.message);
+    logger.error(`[${CONSUMER_NAME}] Worker error`, error instanceof Error ? error : undefined);
   });
 
   worker.on('completed', (job) => {
-    console.log(
-      `[${CONSUMER_NAME}] Job ${job.id} completed for event ${job.data.eventId}`
-    );
+    logger.info(`[${CONSUMER_NAME}] Job completed`, { jobId: job.id, eventId: job.data.eventId });
   });
 
-  console.log(
-    `[${CONSUMER_NAME}] Started inventory consumer on queue: ${QUEUE_NAME}`
-  );
+  logger.info(`[${CONSUMER_NAME}] Started inventory consumer`, { queue: QUEUE_NAME });
 
   return worker;
 }
@@ -397,7 +371,7 @@ export async function stopInventoryConsumer(): Promise<void> {
   if (worker) {
     await worker.close();
     worker = null;
-    console.log(`[${CONSUMER_NAME}] Inventory consumer stopped`);
+    logger.info(`[${CONSUMER_NAME}] Inventory consumer stopped`);
   }
 }
 

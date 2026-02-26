@@ -10,6 +10,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { logger } from "../../../../lib/logger";
 import { Pool } from "pg";
 import { randomUUID } from "crypto";
 
@@ -139,7 +140,7 @@ describe("Scan Endpoints", () => {
 
       // Skip if migration hasn't run
       if (res.rows.length === 0) {
-        console.log("Migration 019 not yet applied - skipping seeded data test");
+        logger.info("Migration 019 not yet applied - skipping seeded data test");
         return;
       }
 

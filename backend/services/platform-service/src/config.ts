@@ -1,5 +1,9 @@
 // Platform Service Configuration - V3.0.9 compliant
 
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'platform-service', level: process.env.LOG_LEVEL || 'info' });
+
 function getEnvRequired(key: string): string {
   const value = process.env[key];
   if (!value) {
@@ -47,7 +51,7 @@ export const config = {
       const url = process.env['INVENTORY_SERVICE_URL'];
       if (url) return url;
       if (process.env['NODE_ENV'] === 'production') {
-        console.error('[config] FATAL: INVENTORY_SERVICE_URL is required in production but not set');
+        logger.error('[config] FATAL: INVENTORY_SERVICE_URL is required in production but not set');
         process.exit(1);
       }
       return 'http://localhost:3004';

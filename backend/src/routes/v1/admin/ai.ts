@@ -7,7 +7,7 @@ import { requireAdminToken } from "../../../middleware/adminToken";
 import { rateLimitAi } from "../../../middleware/rateLimit";
 import { askSuperMandiAI, isSuperMandiAIConfigured } from "../../../services/ai/askSuperMandiAI";
 import { getHealthStatus, getRecentAuditLogs } from "../../../services/ai/openaiProvider";
-import { log } from "../../../lib/logger";
+import { log, logger } from "../../../lib/logger";
 
 export const adminAiRouter = Router();
 
@@ -53,11 +53,11 @@ async function handleAi(req: any, res: any) {
 
   // LOG-SAFE: Only log request id and timing, never question content
   const requestId = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  console.info("[AI] Request started", { requestId, at: new Date().toISOString() });
+  logger.info("[AI] Request started", { requestId, at: new Date().toISOString() });
 
   try {
     const answer = await askSuperMandiAI(question, { ip: req.ip });
-    console.info("[AI] Request completed", { requestId, durationMs: Date.now() - parseInt(requestId.split("-")[1]!) });
+    logger.info("[AI] Request completed", { requestId, durationMs: Date.now() - parseInt(requestId.split("-")[1]!) });
     res.json({ answer, requestId });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "AI unavailable";

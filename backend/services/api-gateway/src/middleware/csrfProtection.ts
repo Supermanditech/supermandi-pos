@@ -4,6 +4,9 @@
 // Works in conjunction with CORS (only allowed origins can make XHR requests).
 
 import { Request, Response, NextFunction } from 'express';
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -53,7 +56,7 @@ export function csrfProtectionMiddleware(
   }
 
   // Reject — likely a CSRF attempt or misconfigured client
-  console.warn(`[AUTH-CSRF-001] Blocked request without CSRF header: ${req.method} ${req.path}`);
+  logger.warn(`[AUTH-CSRF-001] Blocked request without CSRF header: ${req.method} ${req.path}`);
   res.status(403).json({
     error: {
       code: 'CSRF_VALIDATION_FAILED',
