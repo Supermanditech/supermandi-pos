@@ -45,6 +45,16 @@ function asNumber(value: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+// PAGINATION-LIMIT-UNCAPPED: cap pagination limit to prevent expensive full-table scans
+const MAX_PAGE_LIMIT = 1000;
+function asPageLimit(value: unknown, defaultVal = 50): number {
+  const n = asNumber(value);
+  return Math.min(Math.max(1, n ?? defaultVal), MAX_PAGE_LIMIT);
+}
+function asPageOffset(value: unknown): number {
+  return Math.max(0, asNumber(value) ?? 0);
+}
+
 // GO-LIVE-007: Date range validation for analytics endpoints
 const MAX_DATE_RANGE_DAYS = 365; // Maximum 1 year range to prevent expensive queries
 const DATE_ISO_PATTERN = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
@@ -125,8 +135,8 @@ adminAnalyticsRouter.get("/analytics/devices", async (req, res) => {
     const storeId = asString(req.query.storeId);
     const from = asString(req.query.from);
     const to = asString(req.query.to);
-    const limit = asNumber(req.query.limit);
-    const offset = asNumber(req.query.offset);
+    const limit = asPageLimit(req.query.limit);
+    const offset = asPageOffset(req.query.offset);
 
     // GO-LIVE-007: Validate date range
     const dateValidation = validateDateRange(from, to);
@@ -150,8 +160,8 @@ adminAnalyticsRouter.get("/analytics/products", async (req, res) => {
     const from = asString(req.query.from);
     const to = asString(req.query.to);
     const groupBy = asString(req.query.groupBy);
-    const limit = asNumber(req.query.limit);
-    const offset = asNumber(req.query.offset);
+    const limit = asPageLimit(req.query.limit);
+    const offset = asPageOffset(req.query.offset);
 
     // GO-LIVE-007: Validate date range
     const dateValidation = validateDateRange(from, to);
@@ -174,8 +184,8 @@ adminAnalyticsRouter.get("/analytics/purchases", async (req, res) => {
     const storeId = asString(req.query.storeId);
     const from = asString(req.query.from);
     const to = asString(req.query.to);
-    const limit = asNumber(req.query.limit);
-    const offset = asNumber(req.query.offset);
+    const limit = asPageLimit(req.query.limit);
+    const offset = asPageOffset(req.query.offset);
 
     // GO-LIVE-007: Validate date range
     const dateValidation = validateDateRange(from, to);
@@ -244,8 +254,8 @@ adminAnalyticsRouter.get("/analytics/dues", async (req, res) => {
     const storeId = asString(req.query.storeId);
     const from = asString(req.query.from);
     const to = asString(req.query.to);
-    const limit = asNumber(req.query.limit);
-    const offset = asNumber(req.query.offset);
+    const limit = asPageLimit(req.query.limit);
+    const offset = asPageOffset(req.query.offset);
 
     // GO-LIVE-007: Validate date range
     const dateValidation = validateDateRange(from, to);
@@ -275,8 +285,8 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
     const from = asString(req.query.from);
     const to = asString(req.query.to);
     const groupBy = asString(req.query.groupBy) || 'category'; // category | product
-    const limit = asNumber(req.query.limit) || 50;
-    const offset = asNumber(req.query.offset) || 0;
+    const limit = asPageLimit(req.query.limit);
+    const offset = asPageOffset(req.query.offset);
 
     // GO-LIVE-007: Validate date range
     const dateValidation = validateDateRange(from, to);
