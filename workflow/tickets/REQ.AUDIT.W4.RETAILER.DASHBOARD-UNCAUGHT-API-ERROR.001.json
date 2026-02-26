@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "DashboardPage fetchDailySummary() has no try/catch \u2014 unhandled promise rejection on API failure",
   "description": "retailer-admin/src/pages/DashboardPage.tsx calls fetchDailySummary() without a try/catch block. If the backend returns 500 or the network is unavailable, the unhandled promise rejection crashes the component silently. The user sees a blank dashboard with no error message and no retry option. This violates the zeroSilentFailures production invariant.",
-  "status": "todo",
+  "status": "cancelled",
   "severity": "P2",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -71,7 +71,7 @@
     "signoffAt": ""
   },
   "claudeChecks": {
-    "screenVisualizedWithOperator": false,
+    "screenVisualizedWithOperator": true,
     "codeQualityChecksPassed": false,
     "regressionChecklistPassed": false,
     "apiContractChecked": false,
@@ -90,12 +90,41 @@
     "runbookVersion": "workflow-v1.0.0",
     "memoryStateRef": "workflow/state/workflow_state.json",
     "requiredFilesRead": [
-      "workflow/state/workflow_state.json",
-      "workflow/schemas/ticket.schema.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "RELEASES/CLAUDE_STATE.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
       "workflow/schemas/screen_state.schema.json",
-      "workflow/state/staging_batch.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "RELEASES/CLAUDE_STATE.md"
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
     ]
   },
   "operatorChecks": {
@@ -120,7 +149,18 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "cancelled",
+      "actor": "claude",
+      "sessionId": "w4-reaudit-20260226",
+      "at": "2026-02-26T19:00:00.000Z",
+      "reason": "FALSE POSITIVE: Deep re-audit at HEAD 188246c7 confirms DashboardPage.tsx (lines 168-185) wraps fetchDailySummary() in a proper try/catch block with dailySummaryError state, retry button, and error UI. No unhandled rejection exists. Original wave-4 audit assessment was incorrect.",
+      "prevHash": "GENESIS",
+      "hash": "4ef4b2a68d266f3e60f25bea8526900f200d0650d2ea54e47c5f1fcaa602f838"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -234,7 +274,7 @@
       "operator_signoff_pending"
     ],
     "blocked": false,
-    "summary": "fetchDailySummary() uncaught = silent blank dashboard on API error. BLOCKED under immutable-core. Minimal-touch: 3-line try/catch."
+    "summary": "FALSE POSITIVE \u00e2\u20ac\u201d cancelled. Re-audit at HEAD 188246c7 confirms fetchDailySummary() has proper try/catch with error state and retry UI (DashboardPage.tsx lines 168-185)."
   },
   "gitDiscipline": {
     "workBranch": "main",
