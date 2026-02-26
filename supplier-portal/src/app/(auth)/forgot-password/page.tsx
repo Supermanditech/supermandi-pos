@@ -44,6 +44,9 @@ export default function ForgotPasswordPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const [idToken, setIdToken] = useState('');
+  // REQ.AUTH.PASSWORD_FLOW_PARITY: Show/hide toggle for new password fields (parity with retailer)
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const recaptchaInitialized = useRef(false);
 
   // Setup reCAPTCHA when on phone step
@@ -432,29 +435,35 @@ export default function ForgotPasswordPage() {
         <form onSubmit={handleOtpResetPassword} className="space-y-4">
           <div>
             <label htmlFor="newPassword" className="label">New Password</label>
-            <input
-              type="password"
-              id="newPassword"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="input"
-              placeholder="Enter new password"
-              disabled={isLoading}
-              autoFocus
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="input pr-12"
+                placeholder="Enter new password"
+                disabled={isLoading}
+                autoFocus
+              />
+              <button type="button" tabIndex={-1} onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showNewPassword ? 'Hide' : 'Show'}</button>
+            </div>
             <PasswordChecklist password={newPassword} />
           </div>
           <div>
             <label htmlFor="confirmPassword" className="label">Confirm Password</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="input"
-              placeholder="Confirm new password"
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="input pr-12"
+                placeholder="Confirm new password"
+                disabled={isLoading}
+              />
+              <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showConfirmPassword ? 'Hide' : 'Show'}</button>
+            </div>
           </div>
           <button type="submit" className="btn btn-primary w-full py-3" disabled={isLoading}>
             {isLoading ? (
@@ -626,28 +635,34 @@ export default function ForgotPasswordPage() {
           </div>
           <div>
             <label htmlFor="newPasswordEmail" className="label">New Password</label>
-            <input
-              type="password"
-              id="newPasswordEmail"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="input"
-              placeholder="Enter new password"
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                id="newPasswordEmail"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="input pr-12"
+                placeholder="Enter new password"
+                disabled={isLoading}
+              />
+              <button type="button" tabIndex={-1} onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showNewPassword ? 'Hide' : 'Show'}</button>
+            </div>
             <PasswordChecklist password={newPassword} />
           </div>
           <div>
             <label htmlFor="confirmPasswordEmail" className="label">Confirm Password</label>
-            <input
-              type="password"
-              id="confirmPasswordEmail"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="input"
-              placeholder="Confirm new password"
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPasswordEmail"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="input pr-12"
+                placeholder="Confirm new password"
+                disabled={isLoading}
+              />
+              <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showConfirmPassword ? 'Hide' : 'Show'}</button>
+            </div>
           </div>
           <button type="submit" className="btn btn-primary w-full py-3" disabled={isLoading}>
             {isLoading ? (
