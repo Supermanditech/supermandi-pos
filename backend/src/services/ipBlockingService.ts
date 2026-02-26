@@ -100,7 +100,7 @@ export async function recordAuthFailure(
     ipFailures.set(ip, record);
 
     // Log to database asynchronously
-    logIpBlock(ip, failureType, record.count, metadata).catch(console.error);
+    logIpBlock(ip, failureType, record.count, metadata).catch((err) => log.error('logIpBlock failed', { error: err instanceof Error ? err.message : err }));
 
     log.warn(`[GO-LIVE-138] IP ${ip} blocked after ${record.count} failures (${failureType})`);
 
