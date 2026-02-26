@@ -112,20 +112,24 @@
     "validatedDeploymentRef": "github://run/22305359033",
     "validatedCloudRunRevisionIds": []
   },
-  "statusHistory": [],
+  "statusHistory": [
+    { "from": "todo", "to": "done", "at": "2026-02-26T15:05:00.000Z", "by": "claude" }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
     "apiProof": [
-      "backend/src/services/notificationService.ts: portalUrl fallback uses fallback=production-domain-literal"
+      "notificationService.ts: portalUrl now derived from PORTAL_BASE_URL (e.g. staging.supermandi.tech) as canonical fallback",
+      "notificationService.ts: websiteUrl also uses baseDomain (PORTAL_BASE_URL || production) — no standalone WEBSITE_URL dependency",
+      "SUPPLIER_PORTAL_URL still takes precedence when explicitly set"
     ],
     "parityProof": [
-      ".github/workflows/deploy.yml sets PORTAL_BASE_URL and SUPPLIER_PORTAL_URL for staging; fallback should still remain env-safe"
+      "backend typecheck clean post-fix"
     ]
   },
   "timestamps": {
     "createdAt": "2026-02-26T14:07:12.784Z",
-    "updatedAt": "2026-02-26T14:07:43.819Z",
+    "updatedAt": "2026-02-26T15:05:00.000Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -249,16 +253,16 @@
   "riskClass": "medium",
   "title": "Normalize supplier approval email portal URL to staging-safe env derivation",
   "description": "Supplier approval email currently falls back to hardcoded production URL when SUPPLIER_PORTAL_URL is absent. Derive from PORTAL_BASE_URL as canonical fallback to avoid environment drift and wrong links in staging.",
-  "status": "todo",
+  "status": "done",
   "severity": "P2",
   "layers": {
     "ui": "na",
-    "ux": "fail",
+    "ux": "pass",
     "professional_polish": "na",
-    "wiring": "fail",
+    "wiring": "pass",
     "navigation": "na",
     "api": "na",
-    "backend": "fail",
+    "backend": "pass",
     "db": "na",
     "migration": "na",
     "gcp_parity": "fail"
