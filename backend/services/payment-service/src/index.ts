@@ -3,9 +3,11 @@
 
 import express from 'express';
 import helmet from 'helmet';
-import { getPool, closePool } from '@supermandi/common';
+import { getPool, closePool, createLogger } from '@supermandi/common';
 import { config } from './config';
 import healthRoutes from './routes/health';
+
+const logger = createLogger({ service: 'payment-service', level: process.env.LOG_LEVEL || 'info' });
 
 const app = express();
 
@@ -17,7 +19,7 @@ app.use(express.json());
 
 // Request logging
 app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -26,7 +28,7 @@ app.use('/', healthRoutes);
 
 // Graceful shutdown
 const shutdown = async (signal: string) => {
-  console.log(`\n${signal} received. Shutting down gracefully...`);
+  logger.info(`${signal} received. Shutting down gracefully...`);
   await closePool();
   process.exit(0);
 };
@@ -39,15 +41,15 @@ const startServer = async () => {
   try {
     // Initialize database connection pool
     getPool();
-    console.log('Database connection pool initialized');
+    logger.info('Database connection pool initialized');
 
     app.listen(config.port, () => {
-      console.log(`Payment service running on port ${config.port}`);
-      console.log(`Environment: ${config.env}`);
-      console.log(`Razorpay configured: ${config.razorpay.configured ? 'yes' : 'no'}`);
+      logger.info(`Payment service running on port ${config.port}`);
+      logger.info(`Environment: ${config.env}`);
+      logger.info(`Razorpay configured: ${config.razorpay.configured ? 'yes' : 'no'}`);
     });
   } catch (error) {
-    console.error('Failed to start payment service:', error);
+    logger.error('Failed to start payment service:', error instanceof Error ? error : undefined);
     process.exit(1);
   }
 };

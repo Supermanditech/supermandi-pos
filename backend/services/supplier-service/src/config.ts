@@ -1,6 +1,10 @@
 // Supplier Service Configuration - V3.0.9 compliant
 // ENV-FAILFAST-001: Crash in production if required env vars are missing
 
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'supplier-service', level: process.env.LOG_LEVEL || 'info' });
+
 // SEC-003: Only allow dev defaults when NODE_ENV is explicitly 'development' or 'test'
 const _env = (process.env['NODE_ENV'] || '').toLowerCase();
 const IS_DEV = _env === 'development' || _env === 'test';
@@ -21,7 +25,7 @@ function requireEnv(key: string, devDefault: string): string {
   const value = process.env[key];
   if (value) return value;
   if (!IS_DEV) {
-    console.error(`[config] FATAL: ${key} is required (NODE_ENV is not development/test)`);
+    logger.error(`[config] FATAL: ${key} is required (NODE_ENV is not development/test)`);
     process.exit(1);
   }
   return devDefault;

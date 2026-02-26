@@ -4,7 +4,10 @@
 
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { createLogger } from '@supermandi/common';
 import { config } from '../config';
+
+const logger = createLogger({ service: 'payment-service', level: process.env.LOG_LEVEL || 'info' });
 
 const RAZORPAY_API_BASE = 'https://api.razorpay.com/v1';
 
@@ -70,7 +73,7 @@ export async function checkRazorpayConnection(): Promise<boolean> {
     const rp = getRazorpay();
     return !!rp;
   } catch (error) {
-    console.error('[RazorpayClient] Connection check failed:', error);
+    logger.error('[RazorpayClient] Connection check failed:', error instanceof Error ? error : undefined);
     return false;
   }
 }

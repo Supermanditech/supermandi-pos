@@ -1,7 +1,9 @@
 // GRN Service - V3.0.9 compliant
 // Goods Received Note processing with inventory-service integration
 
-import { getClient, ApiError, ERROR_CODES } from '@supermandi/common';
+import { getClient, ApiError, ERROR_CODES, createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'order-service', level: process.env.LOG_LEVEL || 'info' });
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 import {
@@ -327,7 +329,7 @@ export async function receiveGoods(
       if (newStatus === 'delivered' && order.sourceReorderIds && order.sourceReorderIds.length > 0) {
         const fulfilledCount = await markPendingReordersFulfilled(client, input.orderId);
         if (fulfilledCount > 0) {
-          console.log(`[GRN] T-250: Auto-closed ${fulfilledCount} pending_reorders for PO ${order.orderNumber}`);
+          logger.info(`[GRN] T-250: Auto-closed ${fulfilledCount} pending_reorders for PO ${order.orderNumber}`);
         }
       }
     }
