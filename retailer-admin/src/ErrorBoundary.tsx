@@ -1,5 +1,7 @@
 // GO-LIVE-172: Error boundary to catch React rendering errors
+// REQ.AUDIT.W5.RETAILER.ERRORBOUNDARY-BROKEN-REDIRECT.001: fixed redirect target
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { logger } from './lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -22,8 +24,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('[GO-LIVE-172] React Error Boundary caught error:', error);
-    console.error('[GO-LIVE-172] Component stack:', errorInfo.componentStack);
+    logger.error('[GO-LIVE-172] React Error Boundary caught error:', error);
+    logger.error('[GO-LIVE-172] Component stack:');
     this.setState({ errorInfo });
   }
 
@@ -32,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = (): void => {
-    window.location.href = '/retailer/dashboard';
+    window.location.href = '/retailer/login';
   };
 
   render(): ReactNode {

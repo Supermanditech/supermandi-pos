@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import React, { Component, useEffect, Suspense, lazy } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
+import { logger } from './lib/logger';
 import { FeatureFlagProvider } from './lib/FeatureFlagContext';
 import ProtectedLayout from './components/ProtectedLayout';
 // FIX-020: Consolidated error boundary (was components/ErrorBoundary + ErrorBoundary)
@@ -79,8 +80,8 @@ class LazyErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error('[FIX-017] Lazy route chunk load failed:', error, info.componentStack);
+  componentDidCatch(error: Error, _info: ErrorInfo): void {
+    logger.error('[FIX-017] Lazy route chunk load failed:', error);
   }
 
   render(): ReactNode {
