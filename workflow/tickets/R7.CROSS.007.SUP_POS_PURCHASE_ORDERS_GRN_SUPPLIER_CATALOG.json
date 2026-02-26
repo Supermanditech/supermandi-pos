@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:59:39.332Z",
       "reason": "Review",
       "prevHash": "GENESIS",
-      "hash": "6033e42e50b48175f652f29701eab56aa3f05e53f0160d3afb97217263686a5e"
+      "hash": "1feaa336e81ec1ac3aeb8777c897290136c919876a59dae20706f2c5d131f676"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:59:39.332Z",
       "reason": "False positive: source is node_modules/typescript/lib. No production code change needed.",
-      "prevHash": "6033e42e50b48175f652f29701eab56aa3f05e53f0160d3afb97217263686a5e",
-      "hash": "78bc96c423eb7e7fcfbdbafd0cd30c3b2af6581b2507324b8a4ee53a17df30ac"
+      "prevHash": "1feaa336e81ec1ac3aeb8777c897290136c919876a59dae20706f2c5d131f676",
+      "hash": "58bff94efe86d69735a4efefe91c67ed23153b3457a14eb90099bf55cefa0040"
     }
   ],
   "evidence": {
@@ -180,7 +180,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.587Z",
-    "updatedAt": "2026-02-26T09:59:39.332Z",
+    "updatedAt": "2026-02-26T10:11:29.174Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -288,7 +288,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.587Z",
       "source_sha=6886c3a5"
