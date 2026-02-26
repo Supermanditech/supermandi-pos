@@ -2730,47 +2730,47 @@ export default function App() {
           {/* Operations */}
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Operations</div>
-            <button className={`sidebarItem ${tab === "events" ? "sidebarItemActive" : ""}`} onClick={() => setTab("events")}>
+            <button aria-current={tab === "events" ? "page" : undefined} className={`sidebarItem ${tab === "events" ? "sidebarItemActive" : ""}`} onClick={() => setTab("events")}>
               <span className="sidebarItemLabel"><Activity size={18} style={{ opacity: tab === "events" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Events</span>
             </button>
-            <button className={`sidebarItem ${tab === "stores" ? "sidebarItemActive" : ""}`} onClick={() => setTab("stores")}>
+            <button aria-current={tab === "stores" ? "page" : undefined} className={`sidebarItem ${tab === "stores" ? "sidebarItemActive" : ""}`} onClick={() => setTab("stores")}>
               <span className="sidebarItemLabel"><Store size={18} style={{ opacity: tab === "stores" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Stores</span>
             </button>
-            <button className={`sidebarItem ${tab === "devices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("devices")}>
+            <button aria-current={tab === "devices" ? "page" : undefined} className={`sidebarItem ${tab === "devices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("devices")}>
               <span className="sidebarItemLabel"><Smartphone size={18} style={{ opacity: tab === "devices" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Devices</span>
             </button>
-            <button className={`sidebarItem ${tab === "staff" ? "sidebarItemActive" : ""}`} onClick={() => setTab("staff")}>
+            <button aria-current={tab === "staff" ? "page" : undefined} className={`sidebarItem ${tab === "staff" ? "sidebarItemActive" : ""}`} onClick={() => setTab("staff")}>
               <span className="sidebarItemLabel"><Users size={18} style={{ opacity: tab === "staff" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Staff</span>
             </button>
-            <button className={`sidebarItem ${tab === "grn-alerts" ? "sidebarItemActive" : ""}`} onClick={() => setTab("grn-alerts")}>
+            <button aria-current={tab === "grn-alerts" ? "page" : undefined} className={`sidebarItem ${tab === "grn-alerts" ? "sidebarItemActive" : ""}`} onClick={() => setTab("grn-alerts")}>
               <span className="sidebarItemLabel"><AlertTriangle size={18} style={{ opacity: tab === "grn-alerts" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />GRN Alerts</span>
               {grnAlertsOpenCount > 0 && <span className="sidebarBadge">{grnAlertsOpenCount}</span>}
             </button>
-            <button className={`sidebarItem ${tab === "invoices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("invoices")}>
+            <button aria-current={tab === "invoices" ? "page" : undefined} className={`sidebarItem ${tab === "invoices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("invoices")}>
               <span className="sidebarItemLabel"><Receipt size={18} style={{ opacity: tab === "invoices" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Invoices</span>
             </button>
-            <button className={`sidebarItem ${tab === "gst-compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("gst-compliance")}>
+            <button aria-current={tab === "gst-compliance" ? "page" : undefined} className={`sidebarItem ${tab === "gst-compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("gst-compliance")}>
               <span className="sidebarItemLabel"><IndianRupee size={18} style={{ opacity: tab === "gst-compliance" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />GST Compliance</span>
             </button>
-            <button className={`sidebarItem ${tab === "refunds" ? "sidebarItemActive" : ""}`} onClick={() => setTab("refunds")}>
+            <button aria-current={tab === "refunds" ? "page" : undefined} className={`sidebarItem ${tab === "refunds" ? "sidebarItemActive" : ""}`} onClick={() => setTab("refunds")}>
               <span className="sidebarItemLabel"><ArrowLeftRight size={18} style={{ opacity: tab === "refunds" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Refunds</span>
             </button>
-            <button className={`sidebarItem ${tab === "monitoring" ? "sidebarItemActive" : ""}`} onClick={() => setTab("monitoring")}>
+            <button aria-current={tab === "monitoring" ? "page" : undefined} className={`sidebarItem ${tab === "monitoring" ? "sidebarItemActive" : ""}`} onClick={() => setTab("monitoring")}>
               <span className="sidebarItemLabel"><HeartPulse size={18} style={{ opacity: tab === "monitoring" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Monitoring</span>
             </button>
-            <button className={`sidebarItem ${tab === "quality" ? "sidebarItemActive" : ""}`} onClick={() => setTab("quality")}>
+            <button aria-current={tab === "quality" ? "page" : undefined} className={`sidebarItem ${tab === "quality" ? "sidebarItemActive" : ""}`} onClick={() => setTab("quality")}>
               <span className="sidebarItemLabel"><FlaskConical size={18} style={{ opacity: tab === "quality" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Quality</span>
             </button>
-            <button className={`sidebarItem ${tab === "credit-providers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("credit-providers")}>
+            <button aria-current={tab === "credit-providers" ? "page" : undefined} className={`sidebarItem ${tab === "credit-providers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("credit-providers")}>
               <span className="sidebarItemLabel"><CreditCard size={18} style={{ opacity: tab === "credit-providers" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Finance</span>
             </button>
-            <button className={`sidebarItem ${tab === "support" ? "sidebarItemActive" : ""}`} onClick={() => setTab("support")}>
+            <button aria-current={tab === "support" ? "page" : undefined} className={`sidebarItem ${tab === "support" ? "sidebarItemActive" : ""}`} onClick={() => setTab("support")}>
               <span className="sidebarItemLabel"><MessageSquare size={18} style={{ opacity: tab === "support" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Support</span>
             </button>
-            <button className={`sidebarItem ${tab === "ai-insights" ? "sidebarItemActive" : ""}`} onClick={() => setTab("ai-insights")}>
+            <button aria-current={tab === "ai-insights" ? "page" : undefined} className={`sidebarItem ${tab === "ai-insights" ? "sidebarItemActive" : ""}`} onClick={() => setTab("ai-insights")}>
               <span className="sidebarItemLabel"><Brain size={18} style={{ opacity: tab === "ai-insights" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />AI Intelligence</span>
             </button>
-            <button className={`sidebarItem ${tab === "whatsapp" ? "sidebarItemActive" : ""}`} onClick={() => setTab("whatsapp")}>
+            <button aria-current={tab === "whatsapp" ? "page" : undefined} className={`sidebarItem ${tab === "whatsapp" ? "sidebarItemActive" : ""}`} onClick={() => setTab("whatsapp")}>
               <span className="sidebarItemLabel"><MessageCircle size={18} style={{ opacity: tab === "whatsapp" ? 1 : 0.6, marginRight: 10, flexShrink: 0, color: tab === "whatsapp" ? "#25D366" : undefined }} />WhatsApp</span>
             </button>
           </div>
@@ -2778,17 +2778,17 @@ export default function App() {
           {/* Onboarding */}
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Onboarding</div>
-            <button className={`sidebarItem ${tab === "applications" ? "sidebarItemActive" : ""}`} onClick={() => setTab("applications")}>
+            <button aria-current={tab === "applications" ? "page" : undefined} className={`sidebarItem ${tab === "applications" ? "sidebarItemActive" : ""}`} onClick={() => setTab("applications")}>
               <span className="sidebarItemLabel"><FileCheck size={18} style={{ opacity: tab === "applications" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Applications</span>
               {applicationsTotal > 0 && <span className="sidebarBadge">{applicationsTotal}</span>}
             </button>
-            <button className={`sidebarItem ${tab === "registrations" ? "sidebarItemActive" : ""}`} onClick={() => setTab("registrations")}>
+            <button aria-current={tab === "registrations" ? "page" : undefined} className={`sidebarItem ${tab === "registrations" ? "sidebarItemActive" : ""}`} onClick={() => setTab("registrations")}>
               <span className="sidebarItemLabel"><UserPlus size={18} style={{ opacity: tab === "registrations" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Registrations</span>
               {tab !== "registrations" && regEventsTotal > regEventsLastSeenTotal && (
                 <span className="sidebarBadge sidebarBadgeError">{regEventsTotal - regEventsLastSeenTotal}</span>
               )}
             </button>
-            <button className={`sidebarItem ${tab === "documents" ? "sidebarItemActive" : ""}`} onClick={() => setTab("documents")}>
+            <button aria-current={tab === "documents" ? "page" : undefined} className={`sidebarItem ${tab === "documents" ? "sidebarItemActive" : ""}`} onClick={() => setTab("documents")}>
               <span className="sidebarItemLabel"><FileText size={18} style={{ opacity: tab === "documents" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Documents</span>
               {pendingDocuments.length > 0 && <span className="sidebarBadge">{pendingDocsTotal}</span>}
             </button>
@@ -2797,13 +2797,13 @@ export default function App() {
           {/* Commerce */}
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Commerce</div>
-            <button className={`sidebarItem ${tab === "suppliers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("suppliers")}>
+            <button aria-current={tab === "suppliers" ? "page" : undefined} className={`sidebarItem ${tab === "suppliers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("suppliers")}>
               <span className="sidebarItemLabel"><Truck size={18} style={{ opacity: tab === "suppliers" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Suppliers</span>
               {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length) > 0 && (
                 <span className="sidebarBadge">{pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length}</span>
               )}
             </button>
-            <button className={`sidebarItem ${tab === "payments" ? "sidebarItemActive" : ""}`} onClick={() => setTab("payments")}>
+            <button aria-current={tab === "payments" ? "page" : undefined} className={`sidebarItem ${tab === "payments" ? "sidebarItemActive" : ""}`} onClick={() => setTab("payments")}>
               <span className="sidebarItemLabel"><CreditCard size={18} style={{ opacity: tab === "payments" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Payments</span>
             </button>
           </div>
@@ -2811,10 +2811,10 @@ export default function App() {
           {/* Monitoring */}
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Monitoring</div>
-            <button className={`sidebarItem ${tab === "analytics" ? "sidebarItemActive" : ""}`} onClick={() => setTab("analytics")}>
+            <button aria-current={tab === "analytics" ? "page" : undefined} className={`sidebarItem ${tab === "analytics" ? "sidebarItemActive" : ""}`} onClick={() => setTab("analytics")}>
               <span className="sidebarItemLabel"><BarChart3 size={18} style={{ opacity: tab === "analytics" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Analytics</span>
             </button>
-            <button className={`sidebarItem ${tab === "audit" ? "sidebarItemActive" : ""}`} onClick={() => setTab("audit")}>
+            <button aria-current={tab === "audit" ? "page" : undefined} className={`sidebarItem ${tab === "audit" ? "sidebarItemActive" : ""}`} onClick={() => setTab("audit")}>
               <span className="sidebarItemLabel"><Shield size={18} style={{ opacity: tab === "audit" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Audit Logs</span>
             </button>
           </div>
@@ -2822,10 +2822,10 @@ export default function App() {
           {/* Platform */}
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Platform</div>
-            <button className={`sidebarItem ${tab === "users" ? "sidebarItemActive" : ""}`} onClick={() => setTab("users")}>
+            <button aria-current={tab === "users" ? "page" : undefined} className={`sidebarItem ${tab === "users" ? "sidebarItemActive" : ""}`} onClick={() => setTab("users")}>
               <span className="sidebarItemLabel"><UserCog size={18} style={{ opacity: tab === "users" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Users</span>
             </button>
-            <button className={`sidebarItem ${tab === "settings" ? "sidebarItemActive" : ""}`} onClick={() => setTab("settings")}>
+            <button aria-current={tab === "settings" ? "page" : undefined} className={`sidebarItem ${tab === "settings" ? "sidebarItemActive" : ""}`} onClick={() => setTab("settings")}>
               <span className="sidebarItemLabel"><Settings2 size={18} style={{ opacity: tab === "settings" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Settings</span>
             </button>
             <button
@@ -2844,30 +2844,30 @@ export default function App() {
         </aside>
 
         {/* Mobile fallback: flat tabs */}
-        <nav className="tabs" aria-label="Main navigation" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
-          <button className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>Events</button>
-          <button className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>Stores</button>
-          <button className={tab === "devices" ? "tab tabActive" : "tab"} onClick={() => setTab("devices")}>Devices</button>
-          <button className={tab === "suppliers" ? "tab tabActive" : "tab"} onClick={() => setTab("suppliers")}>Suppliers</button>
-          <button className={tab === "applications" ? "tab tabActive" : "tab"} onClick={() => setTab("applications")}>Applications</button>
-          <button className={tab === "analytics" ? "tab tabActive" : "tab"} onClick={() => setTab("analytics")}>Analytics</button>
-          <button className={tab === "payments" ? "tab tabActive" : "tab"} onClick={() => setTab("payments")}>Payments</button>
-          <button className={tab === "users" ? "tab tabActive" : "tab"} onClick={() => setTab("users")}>Users</button>
-          <button className={tab === "settings" ? "tab tabActive" : "tab"} onClick={() => setTab("settings")}>Settings</button>
-          <button className={tab === "documents" ? "tab tabActive" : "tab"} onClick={() => setTab("documents")}>Documents</button>
-          <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>Audit</button>
-          <button className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>Registrations</button>
-          <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>Staff</button>
-          <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN Alerts</button>
-          <button className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
-          <button className={tab === "gst-compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("gst-compliance")}>GST</button>
-          <button className={tab === "refunds" ? "tab tabActive" : "tab"} onClick={() => setTab("refunds")}>Refunds</button>
-          <button className={tab === "monitoring" ? "tab tabActive" : "tab"} onClick={() => setTab("monitoring")}>Monitoring</button>
-          <button className={tab === "quality" ? "tab tabActive" : "tab"} onClick={() => setTab("quality")}>Quality</button>
-          <button className={tab === "credit-providers" ? "tab tabActive" : "tab"} onClick={() => setTab("credit-providers")}>Finance</button>
-          <button className={tab === "support" ? "tab tabActive" : "tab"} onClick={() => setTab("support")}>Support</button>
-          <button className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI Intelligence</button>
-          <button className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
+        <nav className="tabs" aria-label="Main navigation" role="tablist" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
+          <button role="tab" aria-selected={tab === "events"} className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>Events</button>
+          <button role="tab" aria-selected={tab === "stores"} className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>Stores</button>
+          <button role="tab" aria-selected={tab === "devices"} className={tab === "devices" ? "tab tabActive" : "tab"} onClick={() => setTab("devices")}>Devices</button>
+          <button role="tab" aria-selected={tab === "suppliers"} className={tab === "suppliers" ? "tab tabActive" : "tab"} onClick={() => setTab("suppliers")}>Suppliers</button>
+          <button role="tab" aria-selected={tab === "applications"} className={tab === "applications" ? "tab tabActive" : "tab"} onClick={() => setTab("applications")}>Applications</button>
+          <button role="tab" aria-selected={tab === "analytics"} className={tab === "analytics" ? "tab tabActive" : "tab"} onClick={() => setTab("analytics")}>Analytics</button>
+          <button role="tab" aria-selected={tab === "payments"} className={tab === "payments" ? "tab tabActive" : "tab"} onClick={() => setTab("payments")}>Payments</button>
+          <button role="tab" aria-selected={tab === "users"} className={tab === "users" ? "tab tabActive" : "tab"} onClick={() => setTab("users")}>Users</button>
+          <button role="tab" aria-selected={tab === "settings"} className={tab === "settings" ? "tab tabActive" : "tab"} onClick={() => setTab("settings")}>Settings</button>
+          <button role="tab" aria-selected={tab === "documents"} className={tab === "documents" ? "tab tabActive" : "tab"} onClick={() => setTab("documents")}>Documents</button>
+          <button role="tab" aria-selected={tab === "audit"} className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>Audit</button>
+          <button role="tab" aria-selected={tab === "registrations"} className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>Registrations</button>
+          <button role="tab" aria-selected={tab === "staff"} className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>Staff</button>
+          <button role="tab" aria-selected={tab === "grn-alerts"} className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN Alerts</button>
+          <button role="tab" aria-selected={tab === "invoices"} className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
+          <button role="tab" aria-selected={tab === "gst-compliance"} className={tab === "gst-compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("gst-compliance")}>GST</button>
+          <button role="tab" aria-selected={tab === "refunds"} className={tab === "refunds" ? "tab tabActive" : "tab"} onClick={() => setTab("refunds")}>Refunds</button>
+          <button role="tab" aria-selected={tab === "monitoring"} className={tab === "monitoring" ? "tab tabActive" : "tab"} onClick={() => setTab("monitoring")}>Monitoring</button>
+          <button role="tab" aria-selected={tab === "quality"} className={tab === "quality" ? "tab tabActive" : "tab"} onClick={() => setTab("quality")}>Quality</button>
+          <button role="tab" aria-selected={tab === "credit-providers"} className={tab === "credit-providers" ? "tab tabActive" : "tab"} onClick={() => setTab("credit-providers")}>Finance</button>
+          <button role="tab" aria-selected={tab === "support"} className={tab === "support" ? "tab tabActive" : "tab"} onClick={() => setTab("support")}>Support</button>
+          <button role="tab" aria-selected={tab === "ai-insights"} className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI Intelligence</button>
+          <button role="tab" aria-selected={tab === "whatsapp"} className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
         </nav>
 
         <div id="main-content" className="mainContent" role="main">
