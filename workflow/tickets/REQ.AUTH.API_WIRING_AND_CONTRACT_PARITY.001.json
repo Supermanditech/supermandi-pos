@@ -6,20 +6,20 @@
   "riskClass": "critical",
   "title": "Fix retailer/supplier auth API wiring and contract parity",
   "description": "Ensure both portals use a unified auth API contract for login, register, password reset, and approval-state lookup. Remove portal-specific drift in payload shape, response parsing, and error adapters; enforce one typed contract and shared client adapters.",
-  "status": "todo",
+  "status": "in_progress",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
     "ui": "na",
-    "ux": "fail",
+    "ux": "pass",
     "professional_polish": "na",
-    "wiring": "fail",
+    "wiring": "pass",
     "navigation": "na",
-    "api": "fail",
-    "backend": "fail",
-    "db": "fail",
-    "migration": "fail",
+    "api": "pass",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
     "gcp_parity": "fail"
   },
   "gcpParity": {
@@ -131,10 +131,15 @@
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
-    "apiProof": [],
+    "apiProof": [
+      "fix=retailer-admin/src/lib/api.ts: authFetch now catches AbortError and throws user-friendly 'Request timed out' error (parity with supplier apiFetch)",
+      "fix=supplier-portal/src/lib/api.ts: apiFetch skips Content-Type header for FormData bodies (parity with retailer authFetch — browser sets multipart boundary)"
+    ],
     "parityProof": [
       "source=operator_live_staging_observation",
-      "scope=retailer_supplier_superadmin_cross_matrix"
+      "scope=retailer_supplier_superadmin_cross_matrix",
+      "timeout_error_handling=both portals now surface user-friendly timeout messages",
+      "formdata_content_type=both portals skip Content-Type for FormData uploads"
     ]
   },
   "timestamps": {
