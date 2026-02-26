@@ -172,6 +172,7 @@ function SupplierChatPage() {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-8 pr-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 text-sm outline-none bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 box-border"
+              aria-label="Search conversations"
             />
           </div>
         </div>
@@ -328,11 +329,13 @@ function SupplierChatPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 rows={1}
+                aria-label="Message input"
                 className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 text-sm resize-none max-h-24 outline-none font-inherit bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
               />
               <button
                 onClick={handleSend}
                 disabled={!messageText.trim() || sendMutation.isPending}
+                aria-label="Send message"
                 className={`p-2 rounded-lg border-none flex items-center justify-center transition-colors ${
                   messageText.trim()
                     ? 'bg-green-600 dark:bg-green-700 text-white cursor-pointer hover:bg-green-700 dark:hover:bg-green-600'
