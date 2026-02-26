@@ -8,6 +8,9 @@ import { getAuthHeaders, fetchWithTimeout } from '../api/authToken';
 // UIUX-SA-006: Use parseError for sanitized error messages instead of generic 'API error: {status}'
 import { parseError } from '../api/errorSanitizer';
 
+// AI-INSIGHTS-HARDCODED-ENDPOINTS: Use VITE_API_BASE_URL so dev proxy and prod base paths work
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
+
 interface AnomalyEvent {
   id: string;
   storeId: string;
@@ -32,7 +35,8 @@ interface Alert {
 
 // P2-4: Use getAuthHeaders() for full auth context (Authorization + X-Request-ID correlation)
 // fetchWithTimeout handles 401 auto-logout via handleAutoLogout()
-async function apiFetch(url: string, options?: RequestInit) {
+async function apiFetch(path: string, options?: RequestInit) {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
   const res = await fetchWithTimeout(url, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...getAuthHeaders(), ...options?.headers },

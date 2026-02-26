@@ -190,15 +190,21 @@ export function ApplicationsTab({
 
       <div style={{ padding: "12px 16px", fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 12 }}>
         <span>Showing {applications.length} of {applicationsTotal} pending applications</span>
-        {/* FIX-049: Load More button when more applications exist */}
-        {applications.length < applicationsTotal && onLoadMore && (
-          <button
-            onClick={onLoadMore}
-            disabled={applicationsLoading}
-            style={{ fontSize: 12, padding: "4px 12px", cursor: "pointer" }}
-          >
-            {applicationsLoading ? "Loading..." : "Load More"}
-          </button>
+        {/* APPLICATIONS-UNBOUNDED-LOADMORE: cap at 500 to prevent memory bloat */}
+        {applications.length >= 500 ? (
+          <span style={{ color: "#b45309", fontStyle: "italic" }}>
+            Max reached — use search to narrow results.
+          </span>
+        ) : (
+          applications.length < applicationsTotal && onLoadMore && (
+            <button
+              onClick={onLoadMore}
+              disabled={applicationsLoading}
+              style={{ fontSize: 12, padding: "4px 12px", cursor: "pointer" }}
+            >
+              {applicationsLoading ? "Loading..." : "Load More"}
+            </button>
+          )
         )}
       </div>
     </section>

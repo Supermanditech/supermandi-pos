@@ -975,6 +975,11 @@ export default function App() {
       setCreateUserError("Email is required");
       return;
     }
+    // USERS-PHONE-VALIDATION-MISSING: validate Indian mobile number format when provided
+    if (phone.trim() && !/^(\+91|0)?[6-9]\d{9}$/.test(phone.trim())) {
+      setCreateUserError("Phone must be a valid Indian mobile number (+91XXXXXXXXXX or 10-digit)");
+      return;
+    }
 
     // GL-CRIT-0053: Platform users require verification
     if (actor_type === "platform") {
@@ -1645,8 +1650,11 @@ export default function App() {
   }
 
   // FIX-049: Load more applications (append to existing list)
+  // APPLICATIONS-UNBOUNDED-LOADMORE: cap at MAX_APPLICATIONS to prevent memory bloat
+  const MAX_APPLICATIONS = 500;
   async function loadMoreApplications() {
     if (applicationsInFlightRef.current) return;
+    if (applications.length >= MAX_APPLICATIONS) return;
     applicationsInFlightRef.current = true;
     setApplicationsLoading(true);
     try {
@@ -1655,7 +1663,7 @@ export default function App() {
         limit: 100,
         offset: applications.length,
       });
-      setApplications(prev => [...prev, ...data.items]);
+      setApplications(prev => [...prev, ...data.items].slice(0, MAX_APPLICATIONS));
       setApplicationsTotal(data.total);
     } catch (e: any) {
       setApplicationsError(e?.message ? String(e.message) : "Failed to load more applications");
