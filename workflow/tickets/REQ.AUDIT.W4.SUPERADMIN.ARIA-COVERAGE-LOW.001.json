@@ -4,7 +4,7 @@
   "orderInScreen": 1,
   "surface": "superadmin_web",
   "riskClass": "medium",
-  "title": "Superadmin portal has only 8 aria-label attributes across 23 tabs — WCAG 2.1 4.1.2 violations",
+  "title": "Superadmin portal has only 8 aria-label attributes across 23 tabs \u00e2\u20ac\u201d WCAG 2.1 4.1.2 violations",
   "description": "Source audit reveals 23 superadmin tab files with only 8 total aria-label attributes. Destructive action buttons (approve, reject, revoke, delete staff) have no aria-label, aria-pressed, or role annotations. Screen reader users cannot identify what buttons do. WCAG 2.1 SC 4.1.2 requires name/role/value for all UI components.",
   "status": "done",
   "severity": "P2",
@@ -92,8 +92,37 @@
       "workflow/schemas/ticket.schema.json",
       "workflow/schemas/screen_state.schema.json",
       "workflow/state/staging_batch.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "RELEASES/CLAUDE_STATE.md"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
     ]
   },
   "operatorChecks": {
@@ -126,8 +155,8 @@
       "sessionId": "w4-impl-20260226",
       "at": "2026-02-26T20:00:00.000Z",
       "reason": "Starting ARIA tab implementation for superadmin portal",
-      "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "hash": "ed9c1524a38371333bde39369e69209b0b1078d9e8b4991eddc01108b449ec0a"
+      "prevHash": "GENESIS",
+      "hash": "40e2a8533e8710dcc08ea3f556fc3f67d0d64b1aadf9619c3727f501b46c91b5"
     },
     {
       "from": "in_progress",
@@ -136,8 +165,8 @@
       "sessionId": "w4-impl-20260226",
       "at": "2026-02-26T20:30:00.000Z",
       "reason": "Added role=tab+aria-selected to 23 mobile nav buttons, role=tablist to nav, aria-current=page to all sidebar nav buttons. TypeScript: 0 errors.",
-      "prevHash": "ed9c1524a38371333bde39369e69209b0b1078d9e8b4991eddc01108b449ec0a",
-      "hash": "992ddac9de34a11380172dd7e9103d4ee815578156e486ed18a386837ec70429"
+      "prevHash": "40e2a8533e8710dcc08ea3f556fc3f67d0d64b1aadf9619c3727f501b46c91b5",
+      "hash": "37f33bf8daebf3700f828f1bada71ed2728cf52d5b7e02dda2e8a8d7d6649c6c"
     }
   ],
   "evidence": {
