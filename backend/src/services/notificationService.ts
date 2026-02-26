@@ -679,6 +679,103 @@ function buildWelcomeEmailHtml(
 }
 
 // ---------------------------------------------------------------------------
+// Supplier Approval Notification
+// REQ.SUPERADMIN.APPROVAL_MATRIX: Parity — supplier gets email on approval, same as retailer.
+// ---------------------------------------------------------------------------
+export interface SupplierApprovalNotificationInput {
+  email: string;
+  contactName?: string;
+  businessName: string;
+  supplierId: string;
+}
+
+export interface SupplierApprovalNotificationResult {
+  emailSent: boolean;
+  emailError?: string;
+}
+
+export async function sendSupplierApprovalNotification(
+  input: SupplierApprovalNotificationInput
+): Promise<SupplierApprovalNotificationResult> {
+  const result: SupplierApprovalNotificationResult = { emailSent: false };
+
+  if (!isEmailServiceEnabled()) return result;
+
+  const portalUrl = process.env.SUPPLIER_PORTAL_URL || 'https://supermandi.tech/supplier/';
+  const websiteUrl = process.env.WEBSITE_URL || 'https://supermandi.tech';
+  const year = new Date().getFullYear();
+  const name = input.contactName || input.businessName;
+  const subject = `Your SuperMandi Supplier Account is Approved — Welcome Aboard!`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:32px 0;">
+<tr><td align="center">
+  <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <tr><td style="background:#16a34a;padding:28px 32px;text-align:center;">
+      <h1 style="margin:0;color:#ffffff;font-size:24px;letter-spacing:1px;">SuperMandi</h1>
+    </td></tr>
+    <tr><td style="padding:32px;">
+      <h2 style="color:#111827;margin:0 0 16px;">Your Supplier Account is Approved!</h2>
+      <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">Dear ${name},</p>
+      <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        Congratulations! Your supplier account for <strong>${input.businessName}</strong> has been approved on SuperMandi.
+        You can now log in to the Supplier Portal to manage your products, orders, and inventory.
+      </p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${portalUrl}" style="display:inline-block;background:#16a34a;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Go to Supplier Portal</a>
+      </div>
+      <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:24px 0 0;">
+        If you have any questions, visit <a href="${websiteUrl}" style="color:#16a34a;">${websiteUrl}</a>
+      </p>
+    </td></tr>
+    <tr><td style="background:#f3f4f6;padding:16px 32px;text-align:center;">
+      <p style="margin:0;color:#9ca3af;font-size:12px;">&copy; ${year} SuperMandi Tech Pvt Ltd. All rights reserved.</p>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  const text = `SUPERMANDI — Your Supplier Account is Approved!
+
+Dear ${name},
+
+Congratulations! Your supplier account for "${input.businessName}" has been approved on SuperMandi.
+
+Log in to the Supplier Portal to get started:
+${portalUrl}
+
+For any assistance, visit ${websiteUrl}
+
+Warm regards,
+SuperMandi Tech Pvt Ltd
+
+---
+© ${year} SuperMandi Tech Pvt Ltd. All rights reserved.
+`;
+
+  try {
+    const emailResult = await sendGenericEmail(input.email, subject, html, text);
+    result.emailSent = emailResult.sent;
+    if (!emailResult.sent) {
+      result.emailError = emailResult.errorMessage;
+      log.warn(`[NotificationService] Supplier approval email not sent to ${input.email}: ${emailResult.errorMessage}`);
+    } else {
+      log.info(`[NotificationService] Supplier approval email sent to ${input.email}`);
+    }
+  } catch (err) {
+    result.emailError = err instanceof Error ? err.message : 'Email failed';
+    log.warn(`[NotificationService] Supplier approval email error for ${input.email}:`, result.emailError);
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Email (plain text) — fallback for clients that don't render HTML
 // ---------------------------------------------------------------------------
 function buildWelcomeEmailText(

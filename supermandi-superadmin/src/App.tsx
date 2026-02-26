@@ -687,7 +687,8 @@ export default function App() {
   const [appRejectReason, setAppRejectReason] = useState<Record<string, string>>({});
   const [appEntityFilter, setAppEntityFilter] = useState<string>("");
   // #331: Activation code shown after approval
-  const [approvalResult, setApprovalResult] = useState<{ activationCode: string; codeSentTo: string; codeSentVia: string[] } | null>(null);
+  // REQ.SUPERADMIN.APPROVAL_MATRIX: entityType distinguishes retailer (activationCode) vs supplier (email confirmation)
+  const [approvalResult, setApprovalResult] = useState<{ entityType: string; activationCode?: string; codeSentTo: string; codeSentVia: string[] } | null>(null);
   const applicationsInFlightRef = useRef(false);
 
   // Filters (apply to event table + payments view)
@@ -1670,9 +1671,11 @@ export default function App() {
       const result = await approveApplication(appId);
       setApplications((prev) => prev.filter((a) => a.id !== appId));
       setApplicationsTotal((prev) => Math.max(0, prev - 1));
-      // #331: Show activation code if returned (retailer approval)
-      if (result.activationCode) {
+      // #331: Show activation code for retailers; show confirmation for suppliers
+      // REQ.SUPERADMIN.APPROVAL_MATRIX: both entity types now get a post-approval dialog
+      if (result.activationCode || result.entityType === 'supplier') {
         setApprovalResult({
+          entityType: result.entityType || 'retailer',
           activationCode: result.activationCode,
           codeSentTo: result.codeSentTo || "",
           codeSentVia: result.codeSentVia || [],
@@ -3145,32 +3148,52 @@ export default function App() {
             handleRejectApplication={confirmedRejectApplication}
             onLoadMore={loadMoreApplications}
           />
-          {/* #331: Activation code success modal */}
+          {/* #331: Approval success modal — retailer shows activation code, supplier shows email confirmation */}
+          {/* REQ.SUPERADMIN.APPROVAL_MATRIX: both entity types get post-approval confirmation dialog */}
           {approvalResult && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }} onClick={() => setApprovalResult(null)} onKeyDown={(e) => { if (e.key === 'Escape') setApprovalResult(null); }}>
               <div style={{ background: "#fff", borderRadius: 12, padding: 32, maxWidth: 420, width: "90%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>&#10003;</div>
-                <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Store Approved!</h2>
-                <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
-                  Welcome message sent to the retailer. The POS app will auto-fetch this code when the retailer enters their phone number.
-                </p>
-                <div style={{ background: "#f0fdf4", border: "2px dashed #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#166534", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Activation Code</div>
-                  <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 700, letterSpacing: 4, color: "#15803d" }}>{approvalResult.activationCode}</div>
-                </div>
-                {approvalResult.codeSentTo && (
-                  <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
-                    Sent to: <strong>{approvalResult.codeSentTo}</strong>
-                    {approvalResult.codeSentVia.length > 0 && ` via ${approvalResult.codeSentVia.join(", ")}`}
-                  </p>
+                {approvalResult.entityType === 'supplier' ? (
+                  <>
+                    <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Supplier Approved!</h2>
+                    <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                      An approval email has been sent to the supplier. They can now log in to the Supplier Portal.
+                    </p>
+                    {approvalResult.codeSentTo && (
+                      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
+                        Email sent to: <strong>{approvalResult.codeSentTo}</strong>
+                        {approvalResult.codeSentVia.length > 0 && ` via ${approvalResult.codeSentVia.join(", ")}`}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Store Approved!</h2>
+                    <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                      Welcome message sent to the retailer. The POS app will auto-fetch this code when the retailer enters their phone number.
+                    </p>
+                    <div style={{ background: "#f0fdf4", border: "2px dashed #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, color: "#166534", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Activation Code</div>
+                      <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 700, letterSpacing: 4, color: "#15803d" }}>{approvalResult.activationCode}</div>
+                    </div>
+                    {approvalResult.codeSentTo && (
+                      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
+                        Sent to: <strong>{approvalResult.codeSentTo}</strong>
+                        {approvalResult.codeSentVia.length > 0 && ` via ${approvalResult.codeSentVia.join(", ")}`}
+                      </p>
+                    )}
+                  </>
                 )}
                 <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(approvalResult.activationCode).catch(() => { /* clipboard unavailable in insecure context */ }); }}
-                    style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}
-                  >
-                    Copy Code
-                  </button>
+                  {approvalResult.entityType !== 'supplier' && approvalResult.activationCode && (
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(approvalResult.activationCode!).catch(() => { /* clipboard unavailable in insecure context */ }); }}
+                      style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}
+                    >
+                      Copy Code
+                    </button>
+                  )}
                   <button
                     onClick={() => setApprovalResult(null)}
                     style={{ padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
