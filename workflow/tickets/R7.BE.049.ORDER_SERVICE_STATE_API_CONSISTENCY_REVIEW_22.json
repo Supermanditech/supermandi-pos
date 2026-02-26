@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:37:21.125Z",
       "reason": "Review",
       "prevHash": "GENESIS",
-      "hash": "74f8a70de8261035d3889beebcce4d53f2cf7395ff62f1f1a6242182b5e92e38"
+      "hash": "fad5aae53de0a4d78b3b821e0acb90e2b674fca116445c4c883ede7d8bbd9330"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:37:21.125Z",
       "reason": "False positive: node_modules source file. No action needed.",
-      "prevHash": "74f8a70de8261035d3889beebcce4d53f2cf7395ff62f1f1a6242182b5e92e38",
-      "hash": "55234c35c1258e8ca79906dec6b1d500d57f0c0a279d7c78cfa22890e35aa4cb"
+      "prevHash": "fad5aae53de0a4d78b3b821e0acb90e2b674fca116445c4c883ede7d8bbd9330",
+      "hash": "940b312ecaa94a10844683a9d70347d3f8ea31ecc8e41a511276cd5cc59ac4e0"
     }
   ],
   "evidence": {
@@ -180,7 +180,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.573Z",
-    "updatedAt": "2026-02-26T09:37:21.125Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -288,7 +288,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.573Z",
       "source_sha=6886c3a5"

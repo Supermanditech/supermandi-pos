@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:44:59.190Z",
       "reason": "Review",
       "prevHash": "GENESIS",
-      "hash": "11bc678dccdbcc62f39314a7dbad9b4883bc604829e9b8473c02ae9accc18973"
+      "hash": "8dbdcf463f4184d5ea485245495412d9b574b0a429c432425140ea6c3949a534"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:44:59.190Z",
       "reason": "False positive: source is node_modules.",
-      "prevHash": "11bc678dccdbcc62f39314a7dbad9b4883bc604829e9b8473c02ae9accc18973",
-      "hash": "13e60f4bbf90d205f98981fb3939f050a19304af495333fb67d8d8c0b60078d4"
+      "prevHash": "8dbdcf463f4184d5ea485245495412d9b574b0a429c432425140ea6c3949a534",
+      "hash": "ee17406632ba8a7f4c468e06c8d77b592fbbd0b4f1e1061838020f0006fe442d"
     }
   ],
   "evidence": {
@@ -180,7 +180,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.584Z",
-    "updatedAt": "2026-02-26T09:44:59.190Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -288,7 +288,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.584Z",
       "source_sha=6886c3a5"

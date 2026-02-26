@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:39:10.419Z",
       "reason": "Review source",
       "prevHash": "GENESIS",
-      "hash": "55f13fd16ede8ebca5465b77b720e716d42fee7da9cb51368b383a7b22caa105"
+      "hash": "e5a97236fabd00271f23c18728e92f927b796b44fbb890561d199c8705094ff5"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:39:10.419Z",
       "reason": "By-design: voice requestStore is intentional in-memory Map with TTL for transient audio processing. Not an API↔DB mapping gap.",
-      "prevHash": "55f13fd16ede8ebca5465b77b720e716d42fee7da9cb51368b383a7b22caa105",
-      "hash": "e1bd29b04373a915bf31149b3fe9ae0a7a2ab4e710abf9c9638ccc3aa6f82744"
+      "prevHash": "e5a97236fabd00271f23c18728e92f927b796b44fbb890561d199c8705094ff5",
+      "hash": "a75d47f62bbfaab3fbf4197d7806b92c7f2d830ae5bbf0ee583012bc3910b549"
     }
   ],
   "evidence": {
@@ -181,7 +181,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.568Z",
-    "updatedAt": "2026-02-26T09:39:10.419Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -289,7 +289,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.568Z",
       "source_sha=6886c3a5"

@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:44:59.190Z",
       "reason": "Review",
       "prevHash": "GENESIS",
-      "hash": "f91015f45e0b7346d6134a20e375c91664229cda47c6985381efa847df1c0876"
+      "hash": "8dbdcf463f4184d5ea485245495412d9b574b0a429c432425140ea6c3949a534"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:44:59.190Z",
       "reason": "False positive: UI dimension on backend route file. Voice.ts console issues addressed in R7.BE.053.",
-      "prevHash": "f91015f45e0b7346d6134a20e375c91664229cda47c6985381efa847df1c0876",
-      "hash": "8537440eafce2a1c4e8339b50aa14607f19675a0fe833f884f609797f8e14c14"
+      "prevHash": "8dbdcf463f4184d5ea485245495412d9b574b0a429c432425140ea6c3949a534",
+      "hash": "d270d082bed12255a96fd7db9a41fb60c978c2500254bc54fcef047200d0fe78"
     }
   ],
   "evidence": {
@@ -180,7 +180,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.580Z",
-    "updatedAt": "2026-02-26T09:44:59.190Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -288,7 +288,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.580Z",
       "source_sha=6886c3a5"

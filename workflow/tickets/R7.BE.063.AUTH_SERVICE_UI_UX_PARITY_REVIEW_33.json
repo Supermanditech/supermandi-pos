@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:44:59.190Z",
       "reason": "Review",
       "prevHash": "GENESIS",
-      "hash": "f0f46624a56cfc3886a66ff2383f84e2fabc289aef52788bb8e6e780f6c772d1"
+      "hash": "8dbdcf463f4184d5ea485245495412d9b574b0a429c432425140ea6c3949a534"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:44:59.190Z",
       "reason": "False positive: supplier-service/src/routes/auth.ts has 416 lines; source SHA line 540 no longer exists.",
-      "prevHash": "f0f46624a56cfc3886a66ff2383f84e2fabc289aef52788bb8e6e780f6c772d1",
-      "hash": "914edb5b5939e02483001b9944e0bc1f8cb7095ca2fb484aeaf23fa5ca50f48f"
+      "prevHash": "8dbdcf463f4184d5ea485245495412d9b574b0a429c432425140ea6c3949a534",
+      "hash": "52ce5e0af195f6556aae7bfcf5fab5268af47e3a28bc58e757e244bdf5a8cfbc"
     }
   ],
   "evidence": {
@@ -180,7 +180,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.581Z",
-    "updatedAt": "2026-02-26T09:44:59.190Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -288,7 +288,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.581Z",
       "source_sha=6886c3a5"

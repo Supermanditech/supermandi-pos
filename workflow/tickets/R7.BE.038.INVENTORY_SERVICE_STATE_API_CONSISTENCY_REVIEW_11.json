@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:36:28.711Z",
       "reason": "Begin inventory-service API consistency review",
       "prevHash": "GENESIS",
-      "hash": "a84f2d98cbd0882e006c076d5ce117f1ee98a5400ed13d9f2ed0fbdd1cbb5a70"
+      "hash": "6860a2b94d4417c09e95492e577b9ca9cec6e408f1d8d31dbcc7e963ac34044b"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:36:28.711Z",
       "reason": "False positive: source path is node_modules file (zod locale), not production inventory-service code. No action needed.",
-      "prevHash": "a84f2d98cbd0882e006c076d5ce117f1ee98a5400ed13d9f2ed0fbdd1cbb5a70",
-      "hash": "36db88f2070e4593c08e6a766cbd872fb213a5fbb2a56f618453af7f48625d58"
+      "prevHash": "6860a2b94d4417c09e95492e577b9ca9cec6e408f1d8d31dbcc7e963ac34044b",
+      "hash": "08f2c066526044f578a6f9fe0d6dc7403b8c746a55588cd05c2beea5587a15e2"
     }
   ],
   "evidence": {
@@ -182,7 +182,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.565Z",
-    "updatedAt": "2026-02-26T09:36:28.711Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -290,7 +290,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.565Z",
       "source_sha=6886c3a5"

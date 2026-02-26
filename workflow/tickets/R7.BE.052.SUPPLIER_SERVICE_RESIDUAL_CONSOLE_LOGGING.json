@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:42:29.691Z",
       "reason": "Review",
       "prevHash": "GENESIS",
-      "hash": "d7f58b43875278af647cff8da8d5870096cc28d67c34970ea073a85d68245dba"
+      "hash": "f43b67b5381272a8f1c763ebca9d6c2092d0cf7d40672ae52c01a069261435db"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:42:29.691Z",
       "reason": "Fixed: removed console.log at supplierDiscoveryService.ts:66 (GSTIN validation leak). Typecheck pass.",
-      "prevHash": "d7f58b43875278af647cff8da8d5870096cc28d67c34970ea073a85d68245dba",
-      "hash": "8adbb76e13fa569737351d6d4f92149d3d4b0e6131c47107f3433bf808894478"
+      "prevHash": "f43b67b5381272a8f1c763ebca9d6c2092d0cf7d40672ae52c01a069261435db",
+      "hash": "6108c5a1e6e79e0eb02080e0973534d578fccada22e05774fa14afceffb38c52"
     }
   ],
   "evidence": {
@@ -180,7 +180,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.574Z",
-    "updatedAt": "2026-02-26T09:42:29.691Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -289,7 +289,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.574Z",
       "source_sha=6886c3a5"

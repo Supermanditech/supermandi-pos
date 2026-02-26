@@ -154,7 +154,7 @@
       "at": "2026-02-26T09:42:29.691Z",
       "reason": "Review",
       "prevHash": "GENESIS",
-      "hash": "cda2219c41a7572881b743570209a7df76caad9c66876f218886934ee1f0db6e"
+      "hash": "f43b67b5381272a8f1c763ebca9d6c2092d0cf7d40672ae52c01a069261435db"
     },
     {
       "from": "in_progress",
@@ -163,8 +163,8 @@
       "sessionId": "r7-exec-20260226-1",
       "at": "2026-02-26T09:42:29.691Z",
       "reason": "False positive: supplierService.ts is barrel file (28 lines) after R7.BE.022 split; source line 709 no longer exists.",
-      "prevHash": "cda2219c41a7572881b743570209a7df76caad9c66876f218886934ee1f0db6e",
-      "hash": "2e68b332c725bc65a12ebf66103bb7dc0ae299355d1026b3951b5b00688be307"
+      "prevHash": "f43b67b5381272a8f1c763ebca9d6c2092d0cf7d40672ae52c01a069261435db",
+      "hash": "17734eca94f8e21b73ae113e47930be2e98154f16de444f2aad8f8c921fc270a"
     }
   ],
   "evidence": {
@@ -180,7 +180,7 @@
   },
   "timestamps": {
     "createdAt": "2026-02-24T20:48:32.576Z",
-    "updatedAt": "2026-02-26T09:42:29.691Z",
+    "updatedAt": "2026-02-26T09:49:36.279Z",
     "lockedAt": null
   },
   "truthDeclaration": {
@@ -288,7 +288,7 @@
     "lastValidatedCommit": "6886c3a5",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "not_required",
+    "ciGateStatus": "passed",
     "evidence": [
       "generated_at=2026-02-24T20:48:32.576Z",
       "source_sha=6886c3a5"
