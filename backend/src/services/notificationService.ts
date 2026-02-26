@@ -701,8 +701,11 @@ export async function sendSupplierApprovalNotification(
 
   if (!isEmailServiceEnabled()) return result;
 
-  const portalUrl = process.env.SUPPLIER_PORTAL_URL || 'https://supermandi.tech/supplier/';
-  const websiteUrl = process.env.WEBSITE_URL || 'https://supermandi.tech';
+  // REQ.REGRESSION.BACKEND.SUPPLIER_APPROVAL_URL_ENV_PARITY: derive from PORTAL_BASE_URL so
+  // staging links point to staging domain, not production. Mirrors retailer onboarding pattern.
+  const baseDomain = process.env.PORTAL_BASE_URL || 'https://supermandi.tech';
+  const portalUrl = process.env.SUPPLIER_PORTAL_URL || `${baseDomain}/supplier/`;
+  const websiteUrl = process.env.WEBSITE_URL || baseDomain;
   const year = new Date().getFullYear();
   const name = input.contactName || input.businessName;
   const subject = `Your SuperMandi Supplier Account is Approved — Welcome Aboard!`;
