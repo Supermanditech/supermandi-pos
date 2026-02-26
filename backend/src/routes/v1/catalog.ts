@@ -321,7 +321,13 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
   const q = req.query.q as string | undefined;
   const category = req.query.category as string | undefined;
   const supplierId = req.query.supplierId as string | undefined;
-  const sort = req.query.sort as string | undefined; // SUP-POS-010: name|cheapest|recent
+  // W5-BACKEND-SQL-001: Explicit allowlist for sort parameter (defense-in-depth — ternary below also safe)
+  const CATALOG_SORT_ALLOWLIST = ['name', 'cheapest', 'recent'] as const;
+  type CatalogSort = typeof CATALOG_SORT_ALLOWLIST[number];
+  const sortRaw = req.query.sort as string | undefined;
+  const sort: CatalogSort | undefined = (sortRaw && CATALOG_SORT_ALLOWLIST.includes(sortRaw as CatalogSort))
+    ? sortRaw as CatalogSort
+    : undefined; // SUP-POS-010: name|cheapest|recent
   const page = parseInt(req.query.page as string) || 1;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
   const offset = (page - 1) * limit;
