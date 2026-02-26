@@ -286,12 +286,6 @@ export async function getStoreCatalogProduct(
     );
   }
 
-  // Fetch the product with supplier details
-  const result = await fetchStoreCatalog(storeId, {
-    limit: 1,
-    offset: 0,
-  });
-
   // Filter to the specific product
   // SM-003: Add visibility filter for verified suppliers + approved products
   const sql = `
