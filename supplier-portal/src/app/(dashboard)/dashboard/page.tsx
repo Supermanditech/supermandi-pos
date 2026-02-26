@@ -62,13 +62,14 @@ export default function DashboardPage() {
   });
 
   // GL-WF-063: Use paginated API calls
-  const { data: ordersResponse } = useQuery({
+  // REQ.AUDIT.W5.SUPPLIER.DASHBOARD-RETRY-WRONG-QUERY-SCOPE.001: expose refetch on all queries
+  const { data: ordersResponse, refetch: refetchOrders } = useQuery({
     queryKey: ['recent-orders'],
     queryFn: () => getOrders({ page: 1, limit: 5 }),
   });
   const recentOrders = ordersResponse?.data;
 
-  const { data: productsResponse } = useQuery({
+  const { data: productsResponse, refetch: refetchProducts } = useQuery({
     queryKey: ['products'],
     queryFn: () => getProducts({ page: 1, limit: 100 }),
   });
@@ -127,7 +128,7 @@ export default function DashboardPage() {
             <p className="font-medium text-red-800">Failed to load dashboard stats</p>
             <p className="text-sm text-red-600 mt-1">Please check your connection and try again.</p>
           </div>
-          <button onClick={() => refetchStats()} className="btn btn-secondary text-sm">
+          <button onClick={() => { void refetchStats(); void refetchOrders(); void refetchProducts(); }} className="btn btn-secondary text-sm">
             Retry
           </button>
         </div>
