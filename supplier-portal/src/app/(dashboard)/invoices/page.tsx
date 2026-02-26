@@ -86,6 +86,7 @@ export default function InvoicesPage() {
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+          aria-label="Filter by invoice status"
         >
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
@@ -167,7 +168,8 @@ export default function InvoicesPage() {
                         <button onClick={() => setSelectedId(inv.id)}
                           className="text-sm text-blue-600 hover:underline">View</button>
                         <button onClick={() => downloadPdf(inv.id, inv.invoiceNumber)}
-                          className="text-sm text-blue-600 hover:underline">PDF</button>
+                          className="text-sm text-blue-600 hover:underline"
+                          aria-label={`Download PDF for invoice ${inv.invoiceNumber}`}>PDF</button>
                       </div>
                     </td>
                   </tr>
@@ -182,10 +184,12 @@ export default function InvoicesPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 mt-4">
           <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
-            className="px-3 py-1 border border-slate-300 rounded text-sm disabled:opacity-50">Prev</button>
+            className="px-3 py-1 border border-slate-300 rounded text-sm disabled:opacity-50"
+            aria-label="Go to previous page">Prev</button>
           <span className="text-sm text-slate-500">Page {page} of {totalPages}</span>
           <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
-            className="px-3 py-1 border border-slate-300 rounded text-sm disabled:opacity-50">Next</button>
+            className="px-3 py-1 border border-slate-300 rounded text-sm disabled:opacity-50"
+            aria-label="Go to next page">Next</button>
         </div>
       )}
 
@@ -208,7 +212,7 @@ export default function InvoicesPage() {
               <>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-bold">{detail.invoiceNumber}</h2>
-                  <button onClick={() => setSelectedId(null)} className="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+                  <button onClick={() => setSelectedId(null)} className="text-slate-400 hover:text-slate-700 text-xl" aria-label="Close invoice detail">&times;</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-sm mb-4">

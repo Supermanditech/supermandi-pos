@@ -388,6 +388,7 @@ export default function KycPage() {
                         ref={(el) => { fileInputRefs.current[docType.key] = el; }}
                         accept=".jpg,.jpeg,.png,.pdf"
                         className="hidden"
+                        aria-label={`Upload ${docType.label}`}
                         onChange={(e) => handleFileSelect(docType.key, e.target.files?.[0] || null)}
                       />
                       <button
