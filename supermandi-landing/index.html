@@ -856,7 +856,11 @@
         }
 
         // Fetch live config from backend — fail-safe: widget stays hidden on any error.
-        fetch('/api/v1/public/whatsapp-cta-config', { credentials: 'omit' })
+        // REQ.REGRESSION.LANDING.WHATSAPP_CTA_FETCH_TIMEOUT.001: AbortController timeout (5s)
+        // prevents indefinite stall on slow/hanging backend; widget already hidden by default.
+        var _ctaController = new AbortController();
+        var _ctaTimeout = setTimeout(function () { _ctaController.abort(); }, 5000);
+        fetch('/api/v1/public/whatsapp-cta-config', { credentials: 'omit', signal: _ctaController.signal })
             .then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); })
             .then(function (data) {
                 if (!data || !data.enabled) return; // disabled — stay hidden
@@ -873,8 +877,9 @@
                 });
             })
             .catch(function () {
-                // Fetch failed (network error, DB unavailable) — widget stays hidden
-            });
+                // Fetch failed, timed out, or DB unavailable — widget stays hidden
+            })
+            .finally(function () { clearTimeout(_ctaTimeout); });
     })();
     </script>
 

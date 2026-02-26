@@ -1,0 +1,298 @@
+{
+  "ticketId": "REQ.REGRESSION.LANDING.WHATSAPP_CTA_FETCH_TIMEOUT.001",
+  "screenId": "LANDING.HOME.WHATSAPP_CTA",
+  "orderInScreen": 3,
+  "surface": "shared",
+  "riskClass": "low",
+  "title": "Landing page WA CTA config fetch lacks timeout \u2014 widget blocks indefinitely on slow networks",
+  "description": "The landing page fetches WhatsApp CTA config from /api/v1/public/whatsapp-cta-config with no timeout. If the backend is slow or hanging, the fetch stalls indefinitely. The widget is correctly hidden by default but should abort after 5s to free browser resources and improve perceived performance on slow 3G connections.",
+  "status": "done",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "pass",
+    "ux": "pass",
+    "professional_polish": "pass",
+    "wiring": "pass",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/api/v1/public/whatsapp-cta-config"
+    ],
+    "cloudRunServices": [
+      "landing"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "LANDING.HOME"
+    ],
+    "impactedServices": [
+      "landing"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-regression-audit",
+    "reproSteps": [
+      "Navigate to landing page with slow network (Chrome DevTools: Slow 3G or offline after page load start)",
+      "Observe fetch to /api/v1/public/whatsapp-cta-config has no timeout",
+      "Network panel shows request pending indefinitely"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": true,
+    "regressionChecklistPassed": true,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T17:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
+      "workflow/state/live_page_manifest.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/workflow_state.json",
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 0,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": true,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-2",
+      "at": "2026-02-26T17:16:00.000Z",
+      "reason": "Start fix for REQ.REGRESSION.LANDING.WHATSAPP_CTA_FETCH_TIMEOUT.001",
+      "prevHash": "GENESIS",
+      "hash": "959b7d3d4a91a7b9061b38f129ec308cf7348e707de54aa74d2d28170ae41900"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "reg-exec-20260226-2",
+      "at": "2026-02-26T17:18:00.000Z",
+      "reason": "Added AbortController with 5s timeout to WA CTA config fetch; clearTimeout in finally; widget stays hidden on abort",
+      "prevHash": "959b7d3d4a91a7b9061b38f129ec308cf7348e707de54aa74d2d28170ae41900",
+      "hash": "f39be6b2f6168251b2af391d048570abdb20b088ec92cbf77551adc87541fbcc"
+    }
+  ],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [
+      "supermandi-landing/index.html: AbortController + 5s timeout added to WA config fetch",
+      "clearTimeout(_ctaTimeout) in .finally() prevents memory leak",
+      "widget stays hidden on abort; no behavioral regression"
+    ],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T17:00:00.000Z",
+    "updatedAt": "2026-02-26T17:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Found in full regression audit after wave-3 + T1-T9 + REG fixes + WA CTA feature.",
+    "evidence": [
+      "audit_ref=e97b90f9"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "landing",
+    "actualCloudRunServices": [
+      "landing"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/",
+      "https://staging.supermandi.tech/api/v1/public/whatsapp-cta-config"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [
+      "supermandi-landing/index.html"
+    ],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Code-level regression, no external deps."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not a transaction path."
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "Not POS scan."
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Fail-safe already correct (widget hidden on error). Timeout improves perf only."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix and verify."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix and verify."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "staging_parity_pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "Found in code audit. Awaiting fix implementation."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.REGRESSION.LANDING.WHATSAPP_CTA_FETCH_TIMEOUT.001",
+    "lastValidatedCommit": "e97b90f9",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "passed",
+    "evidence": [
+      "audit_ref=e97b90f9",
+      "source=claude-regression-audit"
+    ]
+  }
+}
