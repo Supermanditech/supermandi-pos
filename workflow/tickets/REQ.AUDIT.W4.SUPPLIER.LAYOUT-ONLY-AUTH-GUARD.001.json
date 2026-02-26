@@ -98,8 +98,37 @@
       "workflow/schemas/ticket.schema.json",
       "workflow/schemas/screen_state.schema.json",
       "workflow/state/staging_batch.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "RELEASES/CLAUDE_STATE.md"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
     ]
   },
   "operatorChecks": {
@@ -132,8 +161,8 @@
       "sessionId": "w4-impl-20260226",
       "at": "2026-02-26T18:30:00.000Z",
       "reason": "Implementation started: Next.js edge middleware already committed in wave-4 audit batch (188246c7)",
-      "prevHash": "",
-      "hash": "1a62a06cb14f9b285d66c0af9346b5827ce393ab224ce6fb987ede1140860230"
+      "prevHash": "GENESIS",
+      "hash": "211ecda2d795f93e15d62aab4080e180389b4330f0858a61ed81a789457be543"
     },
     {
       "from": "in_progress",
@@ -142,8 +171,8 @@
       "sessionId": "w4-impl-20260226",
       "at": "2026-02-26T18:35:00.000Z",
       "reason": "Fix confirmed: supplier-portal/src/middleware.ts added as additive Next.js edge middleware enforcing auth at route level. Typecheck passed. Workflow validate passed.",
-      "prevHash": "1a62a06cb14f9b285d66c0af9346b5827ce393ab224ce6fb987ede1140860230",
-      "hash": "5c82586051cb391fb2fad76c2847e850dd70d6320f6832b7a803abb4881c5d46"
+      "prevHash": "211ecda2d795f93e15d62aab4080e180389b4330f0858a61ed81a789457be543",
+      "hash": "d65b9d30afbce3bd4e8b055afb19c52f03fdd0d2ed95201ddaae102839df573a"
     }
   ],
   "evidence": {

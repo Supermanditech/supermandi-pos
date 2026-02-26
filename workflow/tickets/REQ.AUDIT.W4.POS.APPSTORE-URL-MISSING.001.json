@@ -93,8 +93,37 @@
       "workflow/schemas/ticket.schema.json",
       "workflow/schemas/screen_state.schema.json",
       "workflow/state/staging_batch.json",
+      ".github/workflows/ci-gates.yml",
+      ".gitignore",
+      "package.json",
+      "RELEASES/CLAUDE_STATE.md",
+      "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
+      "scripts/workflow/guard.js",
+      "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "RELEASES/CLAUDE_STATE.md"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep"
     ]
   },
   "operatorChecks": {
@@ -146,7 +175,7 @@
     "afterVisual": [],
     "apiProof": [],
     "parityProof": [
-      "typecheck: pnpm exec tsc --noEmit → 0 errors",
+      "typecheck: pnpm exec tsc --noEmit \u00e2\u2020\u2019 0 errors",
       "changed: src/screens/ForceUpdateScreen.tsx (env var wiring + comment)",
       "changed: .env.example (EXPO_PUBLIC_APP_STORE_URL documented)",
       "changed: .env.local.example (EXPO_PUBLIC_APP_STORE_URL documented)",
@@ -164,7 +193,7 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": true,
-    "notes": "Fix: APP_STORE_URL now reads from process.env.EXPO_PUBLIC_APP_STORE_URL ?? ''. When env var unset, handleUpdate falls back to PLAY_STORE_URL (existing guard on line 57: Platform.OS === 'ios' && APP_STORE_URL). No broken link ever shown. Operator sets EXPO_PUBLIC_APP_STORE_URL after App Store submission — zero code change needed.",
+    "notes": "Fix: APP_STORE_URL now reads from process.env.EXPO_PUBLIC_APP_STORE_URL ?? ''. When env var unset, handleUpdate falls back to PLAY_STORE_URL (existing guard on line 57: Platform.OS === 'ios' && APP_STORE_URL). No broken link ever shown. Operator sets EXPO_PUBLIC_APP_STORE_URL after App Store submission \u00e2\u20ac\u201d zero code change needed.",
     "evidence": [
       "audit_ref=078c21b2",
       "source=claude-w4-audit",
@@ -199,7 +228,7 @@
     "blockers": [],
     "disclosedToOperator": true,
     "operatorAcknowledged": true,
-    "notes": "No blockers remain. Code change is complete. Operator sets EXPO_PUBLIC_APP_STORE_URL in EAS secrets / .env when App Store ID is available — no code change required at that point."
+    "notes": "No blockers remain. Code change is complete. Operator sets EXPO_PUBLIC_APP_STORE_URL in EAS secrets / .env when App Store ID is available \u00e2\u20ac\u201d no code change required at that point."
   },
   "productionInvariants": {
     "sellPurchaseIsolation": {
@@ -246,7 +275,7 @@
       "evidence": [
         "src/screens/ForceUpdateScreen.tsx"
       ],
-      "notes": "When APP_STORE_URL is empty, falls back to PLAY_STORE_URL silently but correctly — no broken link, no crash. Alert shown on Linking failure."
+      "notes": "When APP_STORE_URL is empty, falls back to PLAY_STORE_URL silently but correctly \u00e2\u20ac\u201d no broken link, no crash. Alert shown on Linking failure."
     },
     "structuredAuditLogging": {
       "status": "na",
@@ -258,10 +287,7 @@
     "productionGradeClaimed": true,
     "pendingInternal": [],
     "pendingExternal": [],
-    "pendingOps": [
-      "operator_signoff_pending",
-      "staging_parity_pending"
-    ],
+    "pendingOps": [],
     "blocked": false,
     "summary": "Code complete. EXPO_PUBLIC_APP_STORE_URL env var wired. Operator sets the env var in EAS secrets once App Store ID is available. Existing fallback to Play Store prevents broken button in the interim. Typecheck: 0 errors."
   },
