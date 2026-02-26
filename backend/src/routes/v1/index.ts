@@ -93,6 +93,7 @@ import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
 import { retailerMeRouter } from "./retailer/me";  // RO-005: Cross-surface login linking
 import { configStatusRouter } from "./configStatus";  // RO-009: Config status endpoint
+import { publicConfigRouter } from "./publicConfig";  // REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Public CTA config
 import { posNotificationsRouter } from "./pos/notifications";  // Phase 8: FCM push notifications
 import { posRefundRequestsRouter } from "./pos/refundRequests";  // T-219: UPI refund requests
 import { retailerNotificationsRouter } from "./retailer-admin/notifications";  // Phase 8: Retailer notifications
@@ -112,6 +113,9 @@ v1Router.use("/", microserviceHealthRouter);
 
 // RO-009: Config status (public, no auth, returns booleans only)
 v1Router.use("/", configStatusRouter);
+
+// REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Public CTA config (no auth, safe display data only)
+v1Router.use("/public", publicConfigRouter);
 
 v1Router.use("/pos", posEventsRouter);
 v1Router.use("/pos", posScanRouter);

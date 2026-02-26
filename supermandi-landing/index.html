@@ -772,27 +772,11 @@
     })();
     </script>
 
-    <!-- REQ.LANDING.WHATSAPP_CTA_END_TO_END.001: WhatsApp dual-target CTA logic -->
+    <!-- REQ.LANDING.WHATSAPP_CTA_END_TO_END.001 / REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001 -->
+    <!-- WhatsApp dual-target CTA — config fetched live from backend (no hardcoded numbers).       -->
+    <!-- Superadmin can update numbers at any time via the WhatsApp tab in the superadmin portal.  -->
     <script>
     (function () {
-        // ─── OPERATOR CONFIG ───────────────────────────────────────────────────────
-        // REQ.REGRESSION.LANDING.WHATSAPP_CTA_STATE_SYNC.001: config is stable and governed here.
-        // numbers: E.164 digits only — no '+', no spaces (e.g. 919876543210)
-        // messages: URL-safe text; will be percent-encoded automatically.
-        // Company number is intentionally the same as superadmin until a separate line is provisioned.
-        var WA = {
-            enabled: true,
-            superadmin: {
-                number:  '919251893684',
-                message: 'Hi! I need help with my SuperMandi account or platform setup.'
-            },
-            company: {
-                number:  '919251893684',
-                message: 'Hi! I\u2019d like to learn more about SuperMandi and partnership opportunities.'
-            }
-        };
-        // ──────────────────────────────────────────────────────────────────────────
-
         function isValidE164(n) {
             return typeof n === 'string' && /^\d{10,15}$/.test(n.trim());
         }
@@ -803,7 +787,6 @@
 
         function logClick(target) {
             try {
-                // Non-PII structured telemetry — replace with analytics call when analytics added
                 console.info('[supermandi][wa_cta]', { event: 'whatsapp_cta_click', target: target, ts: Date.now() });
             } catch (e) {}
         }
@@ -813,61 +796,85 @@
         var chooser = document.getElementById('wa-chooser');
         if (!wrapper || !fab || !chooser) return;
 
-        // Feature gate: hide widget if disabled or numbers are not configured
-        if (!WA.enabled || !isValidE164(WA.superadmin.number) || !isValidE164(WA.company.number)) {
-            wrapper.style.display = 'none';
-            return;
-        }
+        // Hide widget immediately; only show after config fetch confirms it's enabled and valid.
+        wrapper.style.display = 'none';
 
-        var isOpen = false;
+        function initWaCta(WA) {
+            if (!WA.enabled || !isValidE164(WA.superadmin.number) || !isValidE164(WA.company.number)) {
+                return; // keep hidden
+            }
 
-        function openChooser() {
-            isOpen = true;
-            chooser.hidden = false;
-            fab.setAttribute('aria-expanded', 'true');
-            fab.setAttribute('aria-label', 'Close WhatsApp contact options');
-            var firstItem = chooser.querySelector('.wa-chooser-item');
-            if (firstItem) firstItem.focus();
-        }
+            // Reveal the widget
+            wrapper.style.display = '';
 
-        function closeChooser() {
-            isOpen = false;
-            chooser.hidden = true;
-            fab.setAttribute('aria-expanded', 'false');
-            fab.setAttribute('aria-label', 'Contact us on WhatsApp');
-            fab.focus();
-        }
+            var isOpen = false;
 
-        fab.addEventListener('click', function () {
-            if (isOpen) { closeChooser(); } else { openChooser(); }
-        });
+            function openChooser() {
+                isOpen = true;
+                chooser.hidden = false;
+                fab.setAttribute('aria-expanded', 'true');
+                fab.setAttribute('aria-label', 'Close WhatsApp contact options');
+                var firstItem = chooser.querySelector('.wa-chooser-item');
+                if (firstItem) firstItem.focus();
+            }
 
-        // Handle chooser item clicks
-        var items = chooser.querySelectorAll('.wa-chooser-item');
-        items.forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var target = btn.getAttribute('data-wa-target');
-                var cfg = target === 'superadmin' ? WA.superadmin : WA.company;
-                logClick(target);
-                window.open(buildWaUrl(cfg.number, cfg.message), '_blank', 'noopener');
-                closeChooser();
+            function closeChooser() {
+                isOpen = false;
+                chooser.hidden = true;
+                fab.setAttribute('aria-expanded', 'false');
+                fab.setAttribute('aria-label', 'Contact us on WhatsApp');
+                fab.focus();
+            }
+
+            fab.addEventListener('click', function () {
+                if (isOpen) { closeChooser(); } else { openChooser(); }
             });
-        });
 
-        // Keyboard: ESC closes the chooser
-        document.addEventListener('keydown', function (e) {
-            if (isOpen && (e.key === 'Escape' || e.keyCode === 27)) {
-                e.stopPropagation();
-                closeChooser();
-            }
-        });
+            var items = chooser.querySelectorAll('.wa-chooser-item');
+            items.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var target = btn.getAttribute('data-wa-target');
+                    var cfg = target === 'superadmin' ? WA.superadmin : WA.company;
+                    logClick(target);
+                    window.open(buildWaUrl(cfg.number, cfg.message), '_blank', 'noopener');
+                    closeChooser();
+                });
+            });
 
-        // Pointer: click outside closes the chooser
-        document.addEventListener('pointerdown', function (e) {
-            if (isOpen && wrapper && !wrapper.contains(e.target)) {
-                closeChooser();
-            }
-        });
+            document.addEventListener('keydown', function (e) {
+                if (isOpen && (e.key === 'Escape' || e.keyCode === 27)) {
+                    e.stopPropagation();
+                    closeChooser();
+                }
+            });
+
+            document.addEventListener('pointerdown', function (e) {
+                if (isOpen && wrapper && !wrapper.contains(e.target)) {
+                    closeChooser();
+                }
+            });
+        }
+
+        // Fetch live config from backend — fail-safe: widget stays hidden on any error.
+        fetch('/api/v1/public/whatsapp-cta-config', { credentials: 'omit' })
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); })
+            .then(function (data) {
+                if (!data || !data.enabled) return; // disabled — stay hidden
+                initWaCta({
+                    enabled: true,
+                    superadmin: {
+                        number:  data.superadminNumber || '',
+                        message: data.superadminMessage || ''
+                    },
+                    company: {
+                        number:  data.companyNumber || '',
+                        message: data.companyMessage || ''
+                    }
+                });
+            })
+            .catch(function () {
+                // Fetch failed (network error, DB unavailable) — widget stays hidden
+            });
     })();
     </script>
 

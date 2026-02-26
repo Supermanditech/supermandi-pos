@@ -1,5 +1,5 @@
-// WA-002: SuperAdmin WhatsApp Dashboard
-// Message log viewer, stats, send form, broadcast
+// WA-002/REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: SuperAdmin WhatsApp Dashboard
+// Message log viewer, stats, send form, broadcast, and live CTA config editor
 import { useState, useEffect, useCallback } from "react";
 import {
   fetchWhatsAppStatus,
@@ -7,8 +7,11 @@ import {
   fetchWhatsAppLogs,
   sendWhatsAppMessage,
   sendWhatsAppBroadcast,
+  fetchWhatsAppCtaConfig,
+  updateWhatsAppCtaConfig,
   type WhatsAppLogEntry,
   type WhatsAppStats,
+  type WhatsAppCtaConfig,
 } from "../api/whatsapp";
 import { formatDateTime } from "../lib/formatters";
 // UIUX-SA-012: Styled confirmation dialog for broadcast
@@ -53,6 +56,22 @@ export function WhatsAppTab() {
   // UIUX-SA-012: Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
+  // REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: CTA config editor state
+  const [ctaConfig, setCtaConfig] = useState<WhatsAppCtaConfig | null>(null);
+  const [ctaLoading, setCtaLoading] = useState(true);
+  const [ctaError, setCtaError] = useState<string | null>(null);
+  const [ctaSaveResult, setCtaSaveResult] = useState<string | null>(null);
+  const [ctaSaving, setCtaSaving] = useState(false);
+  const [ctaEditing, setCtaEditing] = useState(false);
+  // Draft edit state
+  const [ctaDraft, setCtaDraft] = useState<Omit<WhatsAppCtaConfig, "updatedAt" | "updatedBy">>({
+    enabled: true,
+    superadminNumber: "",
+    superadminMessage: "",
+    companyNumber: "",
+    companyMessage: "",
+  });
+
   const limit = 25;
 
   const loadData = useCallback(async () => {
@@ -82,6 +101,73 @@ export function WhatsAppTab() {
   }, [offset, filterSender, filterStatus, filterContext]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Load CTA config
+  const loadCtaConfig = useCallback(async () => {
+    setCtaLoading(true);
+    setCtaError(null);
+    try {
+      const cfg = await fetchWhatsAppCtaConfig();
+      setCtaConfig(cfg);
+      setCtaDraft({
+        enabled: cfg.enabled,
+        superadminNumber: cfg.superadminNumber,
+        superadminMessage: cfg.superadminMessage,
+        companyNumber: cfg.companyNumber,
+        companyMessage: cfg.companyMessage,
+      });
+    } catch (err) {
+      setCtaError(err instanceof Error ? err.message : "Failed to load CTA config");
+    } finally {
+      setCtaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadCtaConfig(); }, [loadCtaConfig]);
+
+  const handleSaveCtaConfig = () => {
+    const e164 = /^\d{10,15}$/;
+    if (!e164.test(ctaDraft.superadminNumber.trim())) {
+      setCtaSaveResult("Error: Superadmin number must be E.164 digits only (10-15 digits, no + or spaces)");
+      return;
+    }
+    if (!e164.test(ctaDraft.companyNumber.trim())) {
+      setCtaSaveResult("Error: Company number must be E.164 digits only (10-15 digits, no + or spaces)");
+      return;
+    }
+    if (!ctaDraft.superadminMessage.trim() || !ctaDraft.companyMessage.trim()) {
+      setCtaSaveResult("Error: Messages cannot be empty");
+      return;
+    }
+    setConfirmDialog({
+      title: "Update WhatsApp CTA Config",
+      message: "This will immediately update the WhatsApp numbers shown on the live landing page.",
+      detail: `Superadmin: ${ctaDraft.superadminNumber.trim()} | Company: ${ctaDraft.companyNumber.trim()} | Enabled: ${ctaDraft.enabled}`,
+      confirmLabel: "Save & Apply",
+      variant: "warning",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setCtaSaving(true);
+        setCtaSaveResult(null);
+        try {
+          await updateWhatsAppCtaConfig({
+            enabled: ctaDraft.enabled,
+            superadminNumber: ctaDraft.superadminNumber.trim(),
+            superadminMessage: ctaDraft.superadminMessage.trim(),
+            companyNumber: ctaDraft.companyNumber.trim(),
+            companyMessage: ctaDraft.companyMessage.trim(),
+          });
+          setCtaSaveResult("Saved. Landing page will reflect the new numbers on next page load.");
+          setCtaEditing(false);
+          await loadCtaConfig();
+        } catch (err) {
+          setCtaSaveResult(`Error: ${err instanceof Error ? err.message : "Save failed"}`);
+        } finally {
+          setCtaSaving(false);
+        }
+      },
+    });
+  };
 
   // R7.SA.008: Actual send — only called after user confirms in dialog
   const executeSend = async () => {
@@ -165,7 +251,172 @@ export function WhatsAppTab() {
 
   return (
     <div style={{ padding: "0.5rem 0" }}>
-      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={broadcasting} />}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={ctaSaving || broadcasting} />}
+
+      {/* REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Landing Page CTA Config */}
+      <div style={{
+        padding: "1rem", background: "#fff", border: "1px solid #e2e8f0",
+        borderRadius: 8, marginBottom: "1rem",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ctaEditing ? "0.75rem" : 0 }}>
+          <h3 style={{ fontSize: "0.9rem", fontWeight: 600, margin: 0 }}>
+            Landing Page WhatsApp CTA Config
+          </h3>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            {ctaConfig && !ctaEditing && (
+              <span style={{
+                fontSize: "0.75rem", padding: "2px 8px", borderRadius: 10,
+                background: ctaConfig.enabled ? "#dcfce7" : "#f3f4f6",
+                color: ctaConfig.enabled ? "#166534" : "#6b7280",
+                fontWeight: 600,
+              }}>
+                {ctaConfig.enabled ? "Enabled" : "Disabled"}
+              </span>
+            )}
+            <button
+              onClick={() => {
+                if (ctaEditing) {
+                  // cancel — reset draft to saved config
+                  if (ctaConfig) {
+                    setCtaDraft({
+                      enabled: ctaConfig.enabled,
+                      superadminNumber: ctaConfig.superadminNumber,
+                      superadminMessage: ctaConfig.superadminMessage,
+                      companyNumber: ctaConfig.companyNumber,
+                      companyMessage: ctaConfig.companyMessage,
+                    });
+                  }
+                  setCtaSaveResult(null);
+                }
+                setCtaEditing(e => !e);
+              }}
+              style={{
+                padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 4,
+                background: ctaEditing ? "#f1f5f9" : "#fff", cursor: "pointer", fontSize: "0.8rem",
+              }}
+            >
+              {ctaEditing ? "Cancel" : "Edit"}
+            </button>
+          </div>
+        </div>
+
+        {ctaLoading && <div style={{ fontSize: "0.8rem", color: "#64748b" }}>Loading config...</div>}
+        {ctaError && !ctaLoading && (
+          <div style={{ fontSize: "0.8rem", color: "#991b1b", marginTop: "0.5rem" }}>
+            {ctaError} <button onClick={loadCtaConfig} style={{ marginLeft: 8, textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "#991b1b", fontSize: "0.8rem" }}>Retry</button>
+          </div>
+        )}
+
+        {!ctaLoading && !ctaError && ctaConfig && !ctaEditing && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem 1.5rem", marginTop: "0.5rem", fontSize: "0.8rem" }}>
+            <div>
+              <span style={{ color: "#64748b" }}>Superadmin number: </span>
+              <strong style={{ fontFamily: "monospace" }}>{ctaConfig.superadminNumber}</strong>
+            </div>
+            <div>
+              <span style={{ color: "#64748b" }}>Company number: </span>
+              <strong style={{ fontFamily: "monospace" }}>{ctaConfig.companyNumber}</strong>
+            </div>
+            <div style={{ gridColumn: "1 / -1", color: "#64748b", fontSize: "0.75rem" }}>
+              Superadmin msg: <em>{ctaConfig.superadminMessage}</em>
+            </div>
+            <div style={{ gridColumn: "1 / -1", color: "#64748b", fontSize: "0.75rem" }}>
+              Company msg: <em>{ctaConfig.companyMessage}</em>
+            </div>
+            {ctaConfig.updatedAt && (
+              <div style={{ gridColumn: "1 / -1", color: "#94a3b8", fontSize: "0.72rem", marginTop: "0.25rem" }}>
+                Last updated {formatDateTime(ctaConfig.updatedAt)}{ctaConfig.updatedBy ? ` by ${ctaConfig.updatedBy}` : ""}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!ctaLoading && ctaEditing && (
+          <div style={{ display: "grid", gap: "0.6rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <label style={{ fontSize: "0.8rem", color: "#374151", fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={ctaDraft.enabled}
+                  onChange={e => setCtaDraft(d => ({ ...d, enabled: e.target.checked }))}
+                  style={{ marginRight: "0.4rem" }}
+                />
+                Widget Enabled
+              </label>
+              <span style={{ fontSize: "0.72rem", color: "#64748b" }}>(uncheck to hide the floating button from the landing page)</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem 1rem" }}>
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "#64748b", display: "block", marginBottom: 2 }}>
+                  Superadmin Number <span style={{ color: "#94a3b8" }}>(E.164 digits, e.g. 919251893684)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={ctaDraft.superadminNumber}
+                  onChange={e => setCtaDraft(d => ({ ...d, superadminNumber: e.target.value }))}
+                  placeholder="919251893684"
+                  style={{ padding: "5px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: "0.85rem", width: "100%", fontFamily: "monospace" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "#64748b", display: "block", marginBottom: 2 }}>
+                  Company Number <span style={{ color: "#94a3b8" }}>(E.164 digits)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={ctaDraft.companyNumber}
+                  onChange={e => setCtaDraft(d => ({ ...d, companyNumber: e.target.value }))}
+                  placeholder="919251893684"
+                  style={{ padding: "5px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: "0.85rem", width: "100%", fontFamily: "monospace" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "#64748b", display: "block", marginBottom: 2 }}>Superadmin WhatsApp Pre-fill Message</label>
+                <input
+                  type="text"
+                  value={ctaDraft.superadminMessage}
+                  onChange={e => setCtaDraft(d => ({ ...d, superadminMessage: e.target.value }))}
+                  maxLength={1000}
+                  style={{ padding: "5px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: "0.82rem", width: "100%" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "#64748b", display: "block", marginBottom: 2 }}>Company WhatsApp Pre-fill Message</label>
+                <input
+                  type="text"
+                  value={ctaDraft.companyMessage}
+                  onChange={e => setCtaDraft(d => ({ ...d, companyMessage: e.target.value }))}
+                  maxLength={1000}
+                  style={{ padding: "5px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: "0.82rem", width: "100%" }}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <button
+                onClick={handleSaveCtaConfig}
+                disabled={ctaSaving}
+                style={{
+                  padding: "6px 18px", background: "#16a34a", color: "#fff", border: "none",
+                  borderRadius: 4, cursor: ctaSaving ? "default" : "pointer", fontSize: "0.85rem",
+                  fontWeight: 600, opacity: ctaSaving ? 0.6 : 1,
+                }}
+              >
+                {ctaSaving ? "Saving..." : "Save & Apply Live"}
+              </button>
+              {ctaSaveResult && (
+                <span style={{
+                  fontSize: "0.8rem", padding: "4px 8px", borderRadius: 4,
+                  background: ctaSaveResult.startsWith("Error") ? "#fee2e2" : "#dcfce7",
+                  color: ctaSaveResult.startsWith("Error") ? "#991b1b" : "#166534",
+                }}>
+                  {ctaSaveResult}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Status Banner */}
       <div style={{
         display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem",
