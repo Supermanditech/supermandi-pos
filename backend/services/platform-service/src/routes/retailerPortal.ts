@@ -91,7 +91,9 @@ function getRetailerContext(req: Request): RetailerContext {
     throw ApiError.unauthorized('Authentication required');
   }
 
-  const jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
+  // W5-BACKEND-JWT-001: JWT_SECRET must always be set; no hardcoded fallback
+  const jwtSecret = process.env['JWT_SECRET'];
+  if (!jwtSecret) { throw new Error('[FATAL] JWT_SECRET environment variable is not set'); }
   const jwtIssuer = process.env.JWT_ISSUER || 'supermandi-auth';
 
   let decoded: jwt.JwtPayload;

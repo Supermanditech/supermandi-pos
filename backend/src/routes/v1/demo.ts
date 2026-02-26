@@ -20,11 +20,8 @@ export const demoRouter = Router();
 const JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'];
   if (!secret || secret.length < 32) {
-    const env = (process.env.NODE_ENV || '').toLowerCase();
-    if (env === 'development' || env === 'test') {
-      return 'dev-secret-change-in-prod';
-    }
-    throw new Error('JWT_SECRET must be set and at least 32 characters');
+    // W5-BACKEND-JWT-001: JWT_SECRET must always be set and >=32 chars; no hardcoded fallback in any environment
+    throw new Error('[FATAL] JWT_SECRET must be set and at least 32 characters');
   }
   return secret;
 })();

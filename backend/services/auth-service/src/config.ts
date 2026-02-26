@@ -32,18 +32,11 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
   return value ? parseInt(value, 10) : defaultValue;
 }
 
-// SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
+// W5-BACKEND-JWT-001: No hardcoded fallback — all required env vars must be explicitly set in all environments
 function getEnvRequired(key: string): string {
   const value = process.env[key];
   if (!value) {
-    const env = (process.env.NODE_ENV || '').toLowerCase();
-    if (key === 'JWT_SECRET' && (env === 'development' || env === 'test')) {
-      return 'dev-secret-change-in-prod';
-    }
-    if (key === 'SERVICE_TOKEN_SECRET' && (env === 'development' || env === 'test')) {
-      return 'dev-service-token-secret-change-in-prod';
-    }
-    throw new Error(`Required environment variable ${key} is not set`);
+    throw new Error(`[FATAL] Required environment variable ${key} is not set — service startup aborted`);
   }
   return value;
 }

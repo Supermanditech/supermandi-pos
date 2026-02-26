@@ -39,16 +39,11 @@ const SESSION_EXPIRY_HOURS = 8; // 8 hour sessions
 const SESSION_EXPIRY_MS = SESSION_EXPIRY_HOURS * 60 * 60 * 1000;
 // T1-001: Max sessions enforced via Redis TTL (no longer needs in-memory limit)
 
-// SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
-// LIVE.AUTH.JWT_SECRET_FALLBACK_REMOVAL_STACK.001: Remove ADMIN_TOKEN fallback — JWT_SECRET only
+// W5-BACKEND-JWT-001: JWT_SECRET must always be set; no hardcoded fallback in any environment
 const JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'];
   if (!secret) {
-    const env = (process.env.NODE_ENV || '').toLowerCase();
-    if (env === 'development' || env === 'test') {
-      return 'dev-secret-change-in-prod';
-    }
-    logger.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    logger.error('[FATAL] JWT_SECRET environment variable is not set — service startup aborted');
     process.exit(1);
   }
   return secret;

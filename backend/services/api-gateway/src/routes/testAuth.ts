@@ -20,15 +20,11 @@ import { createLogger } from '@supermandi/common';
 
 const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
-// SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
+// W5-BACKEND-JWT-001: JWT_SECRET must always be set; no hardcoded fallback in any environment
 const TEST_JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'];
   if (!secret) {
-    const env = (process.env.NODE_ENV || '').toLowerCase();
-    if (env === 'development' || env === 'test') {
-      return 'dev-secret-change-in-prod';
-    }
-    logger.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    logger.error('[FATAL] JWT_SECRET environment variable is not set — service startup aborted');
     process.exit(1);
   }
   return secret;

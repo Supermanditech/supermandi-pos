@@ -49,18 +49,11 @@ declare global {
 // CONFIGURATION
 // =============================================================================
 
-// STAGING-FIX-005: Align fallback chain with backend's adminAuth.ts to prevent secret mismatches
-// AUDIT-API-007: Fail-fast in production if secrets missing; consistent dev fallback
-// SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
-// LIVE.AUTH.JWT_SECRET_FALLBACK_REMOVAL_STACK.001: Remove ADMIN_TOKEN fallback — JWT_SECRET only
+// W5-BACKEND-JWT-001: JWT_SECRET must always be set; no hardcoded fallback in any environment
 const JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'];
   if (!secret) {
-    const env = (process.env.NODE_ENV || '').toLowerCase();
-    if (env === 'development' || env === 'test') {
-      return 'dev-secret-change-in-prod';
-    }
-    logger.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    logger.error('[FATAL] JWT_SECRET environment variable is not set — service startup aborted');
     process.exit(1);
   }
   return secret;

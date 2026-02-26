@@ -38,8 +38,12 @@ export const config = {
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // JWT configuration for supplier auth (SM-005)
-  // ENV-FAILFAST-001: JWT_SECRET is CRITICAL — must not use dev default in production
-  jwtSecret: requireEnv('JWT_SECRET', 'dev-secret-change-in-prod'),
+  // W5-BACKEND-JWT-001: JWT_SECRET has no dev fallback — must be explicitly set in all environments
+  jwtSecret: (() => {
+    const s = process.env['JWT_SECRET'];
+    if (!s) { logger.error('[config] FATAL: JWT_SECRET is required in all environments'); process.exit(1); }
+    return s;
+  })(),
 
   // Database configuration (uses shared pool from @supermandi/common)
   // ENV-FAILFAST-001: DB credentials required in production
