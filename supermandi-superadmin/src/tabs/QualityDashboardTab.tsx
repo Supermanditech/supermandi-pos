@@ -81,7 +81,7 @@ export function QualityDashboardTab() {
   };
 
   const statusColor = (status: string) => {
-    if (status === "healthy" || status === "running" || status === "configured" || status === "enabled")
+    if (status === "healthy" || status === "running" || status === "configured" || status === "enabled" || status === "passed")
       return { bg: "#DCFCE7", text: "#166534", dot: "#22C55E" };
     if (status === "warning" || status === "degraded" || status === "scripts-ready")
       return { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" };
