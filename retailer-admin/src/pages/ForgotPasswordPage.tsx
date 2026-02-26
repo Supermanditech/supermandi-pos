@@ -46,6 +46,9 @@ export default function ForgotPasswordPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const [idToken, setIdToken] = useState('');
+  // REQ.AUTH.PASSWORD_FLOW_PARITY: Show/hide toggle for new password fields (parity with login)
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const recaptchaInitialized = useRef(false);
   // R7.RET.007: Track the active AbortController for any in-flight fetch
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -464,8 +467,9 @@ export default function ForgotPasswordPage() {
                   </div>
                   <h2 className="login-card-title">Check Your Email</h2>
                   <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
-                    We've sent a password reset link to <strong>{email}</strong>.
-                    Please check your inbox and spam folder. It may take a few minutes to arrive.
+                    {/* REQ.AUTH.PASSWORD_FLOW_PARITY: Anti-enumeration language (parity with supplier) */}
+                    If an account exists with <strong>{email}</strong>, we&apos;ve sent a password reset link.
+                    Please check your inbox and spam folder.
                   </p>
                   <button
                     onClick={() => setStep('emailReset')}
@@ -499,12 +503,18 @@ export default function ForgotPasswordPage() {
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="emailreset-new-password">New Password</label>
-                    <input id="emailreset-new-password" name="newPassword" type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
+                    <div style={{ position: 'relative' }}>
+                      <input id="emailreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
+                      <button type="button" tabIndex={-1} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
+                    </div>
                     <PasswordChecklist password={newPassword} />
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="emailreset-confirm-password">Confirm Password</label>
-                    <input id="emailreset-confirm-password" name="confirmPassword" type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                    <div style={{ position: 'relative' }}>
+                      <input id="emailreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                      <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
+                    </div>
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
                     {isLoading ? 'Resetting...' : 'Reset Password'}
@@ -576,12 +586,18 @@ export default function ForgotPasswordPage() {
                 <form onSubmit={handleOtpResetPassword}>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="otpreset-new-password">New Password</label>
-                    <input id="otpreset-new-password" name="newPassword" type="password" className="login-form-input" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
+                    <div style={{ position: 'relative' }}>
+                      <input id="otpreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
+                      <button type="button" tabIndex={-1} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
+                    </div>
                     <PasswordChecklist password={newPassword} />
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="otpreset-confirm-password">Confirm Password</label>
-                    <input id="otpreset-confirm-password" name="confirmPassword" type="password" className="login-form-input" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                    <div style={{ position: 'relative' }}>
+                      <input id="otpreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                      <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
+                    </div>
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
                     {isLoading ? 'Resetting...' : 'Reset Password'}
