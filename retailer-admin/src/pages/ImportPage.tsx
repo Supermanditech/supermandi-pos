@@ -4,6 +4,8 @@ import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_CSV_IMPORT_SIZE_BYTES, MAX_CSV_IMPORT_SIZE_LABEL } from '../lib/fileLimits';
 
 type ImportStep = 'upload' | 'validate' | 'review' | 'commit' | 'done';
 
@@ -49,11 +51,10 @@ export default function ImportPage() {
   // FIX-016: Mounted ref to prevent state updates after unmount
   const mountedRef = useRef(true);
 
-  // AUDIT-RET-022: 5MB file size limit for CSV imports
-  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  // AUDIT-RET-022 / REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
   const validateFile = (f: File): boolean => {
-    if (f.size > MAX_FILE_SIZE) {
-      setError(`File too large (${(f.size / 1024 / 1024).toFixed(1)}MB). Maximum is 5MB.`);
+    if (f.size > MAX_CSV_IMPORT_SIZE_BYTES) {
+      setError(`File too large (${(f.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_CSV_IMPORT_SIZE_LABEL}.`);
       return false;
     }
     setError('');

@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import { CheckCircle2, Clock } from 'lucide-react';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
+// REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
+import { MAX_KYC_DOCUMENT_SIZE_BYTES, MAX_KYC_DOCUMENT_SIZE_LABEL } from '@/lib/fileLimits';
 import {
   getKycDocuments,
   getKycStatus,
@@ -137,9 +139,9 @@ export default function KycPage() {
       return;
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
+    // Validate file size (REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001)
+    if (file.size > MAX_KYC_DOCUMENT_SIZE_BYTES) {
+      toast.error(`File size must be less than ${MAX_KYC_DOCUMENT_SIZE_LABEL}`);
       return;
     }
 
@@ -307,7 +309,7 @@ export default function KycPage() {
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-700">
-                  <strong>Accepted formats:</strong> JPEG, PNG, PDF (max 5MB per file).
+                  <strong>Accepted formats:</strong> JPEG, PNG, PDF (max {MAX_KYC_DOCUMENT_SIZE_LABEL} per file).
                   Documents are reviewed within 1-2 business days.
                 </p>
               </div>
