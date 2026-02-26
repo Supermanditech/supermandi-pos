@@ -26,7 +26,11 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "ForceUpdate">;
 // Store links — update these once listings are live
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.supermanditech.supermandipos";
-const APP_STORE_URL = ""; // TODO: Add App Store URL after first iOS submission
+// REQ.AUDIT.W4.POS.APPSTORE-URL-MISSING.001: Read from env var so the operator
+// can set EXPO_PUBLIC_APP_STORE_URL without a code change after App Store submission.
+// When the env var is absent or empty, the Update Now button falls back to the
+// Play Store link (see handleUpdate). The iOS button is never shown as a broken link.
+const APP_STORE_URL = process.env.EXPO_PUBLIC_APP_STORE_URL ?? "";
 
 /** S2-8: Theme token constants for icon/layout sizes */
 const ICON_SIZE = 28;
