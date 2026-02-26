@@ -33,6 +33,14 @@ const PLAY_STORE_URL =
 // (the Play Store URL cannot be opened on iOS — it would always fail).
 const APP_STORE_URL = process.env.EXPO_PUBLIC_APP_STORE_URL ?? "";
 const IOS_MISSING_STORE_URL = Platform.OS === "ios" && !APP_STORE_URL;
+// P2-2: Warn at module load time — visible in Expo/Metro logs and CI builds
+if (IOS_MISSING_STORE_URL) {
+  console.warn(
+    "[ForceUpdateScreen] EXPO_PUBLIC_APP_STORE_URL is not set. " +
+    "iOS users in force-update will see \"coming soon\" and cannot update. " +
+    "Set this env var before iOS App Store launch."
+  );
+}
 
 /** S2-8: Theme token constants for icon/layout sizes */
 const ICON_SIZE = 28;

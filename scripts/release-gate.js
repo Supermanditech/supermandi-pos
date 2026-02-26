@@ -299,6 +299,21 @@ function checkFlags(verbose) {
   const flagDefs = flagsFile.match(/(\w+):\s*(true|false)/g) || [];
   results.messages.push(`Defined flags: ${flagDefs.length}`);
 
+  // P2-2: Warn if EXPO_PUBLIC_APP_STORE_URL is not set
+  // iOS users entering force-update will see "coming soon" and cannot update
+  const appStoreUrl = process.env.EXPO_PUBLIC_APP_STORE_URL;
+  if (!appStoreUrl || !appStoreUrl.trim()) {
+    results.messages.push(
+      colorize(
+        'WARNING: EXPO_PUBLIC_APP_STORE_URL not set — iOS users in force-update will see "coming soon" and cannot update. Set this env var before iOS App Store launch.',
+        'yellow'
+      )
+    );
+    // Not a hard fail: Android unaffected; iOS App Store listing may not exist yet
+  } else {
+    results.messages.push(`EXPO_PUBLIC_APP_STORE_URL is set: ${appStoreUrl}`);
+  }
+
   return results;
 }
 
