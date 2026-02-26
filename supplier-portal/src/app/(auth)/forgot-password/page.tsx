@@ -446,7 +446,7 @@ export default function ForgotPasswordPage() {
                 disabled={isLoading}
                 autoFocus
               />
-              <button type="button" aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showNewPassword ? 'Hide' : 'Show'}</button>
+              <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showNewPassword ? 'Hide' : 'Show'}</button>
             </div>
             <PasswordChecklist password={newPassword} />
           </div>
@@ -462,7 +462,7 @@ export default function ForgotPasswordPage() {
                 placeholder="Confirm new password"
                 disabled={isLoading}
               />
-              <button type="button" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showConfirmPassword ? 'Hide' : 'Show'}</button>
+              <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showConfirmPassword ? 'Hide' : 'Show'}</button>
             </div>
           </div>
           <button type="submit" className="btn btn-primary w-full py-3" disabled={isLoading}>
@@ -645,7 +645,7 @@ export default function ForgotPasswordPage() {
                 placeholder="Enter new password"
                 disabled={isLoading}
               />
-              <button type="button" aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showNewPassword ? 'Hide' : 'Show'}</button>
+              <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showNewPassword ? 'Hide' : 'Show'}</button>
             </div>
             <PasswordChecklist password={newPassword} />
           </div>
@@ -661,7 +661,7 @@ export default function ForgotPasswordPage() {
                 placeholder="Confirm new password"
                 disabled={isLoading}
               />
-              <button type="button" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showConfirmPassword ? 'Hide' : 'Show'}</button>
+              <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium">{showConfirmPassword ? 'Hide' : 'Show'}</button>
             </div>
           </div>
           <button type="submit" className="btn btn-primary w-full py-3" disabled={isLoading}>

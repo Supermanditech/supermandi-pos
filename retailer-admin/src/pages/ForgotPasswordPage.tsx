@@ -505,7 +505,7 @@ export default function ForgotPasswordPage() {
                     <label className="login-form-label" htmlFor="emailreset-new-password">New Password</label>
                     <div style={{ position: 'relative' }}>
                       <input id="emailreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
-                      <button type="button" aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
+                      <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
                     </div>
                     <PasswordChecklist password={newPassword} />
                   </div>
@@ -513,7 +513,7 @@ export default function ForgotPasswordPage() {
                     <label className="login-form-label" htmlFor="emailreset-confirm-password">Confirm Password</label>
                     <div style={{ position: 'relative' }}>
                       <input id="emailreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
-                      <button type="button" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
+                      <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
                     </div>
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
@@ -588,7 +588,7 @@ export default function ForgotPasswordPage() {
                     <label className="login-form-label" htmlFor="otpreset-new-password">New Password</label>
                     <div style={{ position: 'relative' }}>
                       <input id="otpreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
-                      <button type="button" aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
+                      <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
                     </div>
                     <PasswordChecklist password={newPassword} />
                   </div>
@@ -596,7 +596,7 @@ export default function ForgotPasswordPage() {
                     <label className="login-form-label" htmlFor="otpreset-confirm-password">Confirm Password</label>
                     <div style={{ position: 'relative' }}>
                       <input id="otpreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
-                      <button type="button" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
+                      <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
                     </div>
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
