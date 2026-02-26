@@ -1,0 +1,249 @@
+{
+  "ticketId": "REQ.AUDIT.W4.POS.APPSTORE-URL-MISSING.001",
+  "screenId": "POS.FORCE-UPDATE",
+  "orderInScreen": 1,
+  "surface": "pos",
+  "riskClass": "medium",
+  "title": "ForceUpdateScreen APP_STORE_URL is empty string \u2014 iOS users cannot update app from force-update screen",
+  "description": "src/screens/ForceUpdateScreen.tsx line 29: APP_STORE_URL = '' with TODO comment. When iOS users are forced to update, the button links to empty string instead of App Store. The Play Store link is present. This means iOS users on outdated versions are stuck: they see the ForceUpdate screen but cannot tap through to update. The fix requires the operator to provide the App Store app ID.",
+  "status": "todo",
+  "severity": "P2",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "fail",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/version"
+    ],
+    "cloudRunServices": [
+      "api-gateway",
+      "main-backend"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "POS.FORCE-UPDATE"
+    ],
+    "impactedServices": [
+      "api-gateway",
+      "main-backend"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w4-audit",
+    "reproSteps": [
+      "Set min_app_version higher than current app version in backend",
+      "Open app on iOS device",
+      "ForceUpdate screen appears",
+      "Tap 'Update Now' \u2014 navigates to empty URL or crashes",
+      "Inspect: ForceUpdateScreen.tsx line 29, APP_STORE_URL = ''"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/live_page_manifest.json",
+      "RELEASES/CLAUDE_STATE.md"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T18:00:00.000Z",
+    "updatedAt": "2026-02-26T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Source-level audit at HEAD 078c21b2. No staging deploy yet.",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "pos",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "api-gateway",
+    "actualCloudRunServices": [
+      "api-gateway",
+      "main-backend"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/api/v1/version"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [
+      "immutable-core-mode: existing code must not be modified without operator approval"
+    ],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "BLOCKED-EXTERNAL: requires operator to provide App Store ID after first iOS submission. Fix: update ForceUpdateScreen.tsx line 29 with actual App Store URL. Single 1-line change once App Store ID is known."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "fix_implementation_pending",
+      "staging_parity_pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "iOS users cannot update from ForceUpdate screen. APP_STORE_URL=''. BLOCKED-EXTERNAL: needs App Store ID from operator."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W4.POS.APPSTORE-URL-MISSING.001",
+    "lastValidatedCommit": "078c21b2",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  }
+}

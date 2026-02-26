@@ -1,0 +1,251 @@
+{
+  "ticketId": "REQ.AUDIT.W4.RETAILER.MISSING-EMPTY-STATE-CTA.001",
+  "screenId": "RETAILER.PRODUCTS-INVENTORY-SUPPLIERS",
+  "orderInScreen": 1,
+  "surface": "retailer_web",
+  "riskClass": "low",
+  "title": "ProductsPage, InventoryPage, SuppliersPage show empty table with no call-to-action for first item",
+  "description": "Three retailer-admin pages (ProductsPage, InventoryPage, SuppliersPage) render an empty table when no data exists, with no explanation and no CTA to add the first item. The EmptyState component exists at retailer-admin/src/components/EmptyState.tsx but is not used in these pages. New retailers onboarding see a confusing blank table and don't know what to do next.",
+  "status": "todo",
+  "severity": "P3",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "fail",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/s/{storeCode}/products",
+      "https://staging.supermandi.tech/s/{storeCode}/inventory"
+    ],
+    "cloudRunServices": [
+      "retailer-admin"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "RETAILER.PRODUCTS",
+      "RETAILER.INVENTORY",
+      "RETAILER.SUPPLIERS"
+    ],
+    "impactedServices": [
+      "retailer-admin"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w4-audit",
+    "reproSteps": [
+      "Login to new retailer account (zero products/inventory/suppliers)",
+      "Navigate to Products page \u2192 empty table, no CTA",
+      "Navigate to Inventory page \u2192 empty table, no CTA",
+      "Navigate to Suppliers page \u2192 empty table, no CTA"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/live_page_manifest.json",
+      "RELEASES/CLAUDE_STATE.md"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T18:00:00.000Z",
+    "updatedAt": "2026-02-26T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Source-level audit at HEAD 078c21b2. No staging deploy yet.",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "retailer_web",
+    "expectedBasePath": "/retailer",
+    "expectedPrimaryService": "retailer-admin",
+    "actualCloudRunServices": [
+      "retailer-admin"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/retailer/",
+      "https://staging.supermandi.tech/s/{storeCode}/products",
+      "https://staging.supermandi.tech/s/{storeCode}/inventory"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [
+      "immutable-core-mode: existing code must not be modified without operator approval"
+    ],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Fix requires modifying 3 page files to add EmptyState component. immutable-core: BLOCKED. Minimal-touch: 1 conditional render per page (6 lines each, 18 total). EmptyState component already exists."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "fix_implementation_pending",
+      "staging_parity_pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "ProductsPage/InventoryPage/SuppliersPage missing empty state CTA. EmptyState component exists but unused. BLOCKED under immutable-core."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W4.RETAILER.MISSING-EMPTY-STATE-CTA.001",
+    "lastValidatedCommit": "078c21b2",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  }
+}

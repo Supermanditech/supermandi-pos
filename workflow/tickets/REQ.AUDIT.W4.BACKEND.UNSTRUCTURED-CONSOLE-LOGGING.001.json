@@ -1,0 +1,249 @@
+{
+  "ticketId": "REQ.AUDIT.W4.BACKEND.UNSTRUCTURED-CONSOLE-LOGGING.001",
+  "screenId": "BACKEND.ALL-SERVICES",
+  "orderInScreen": 1,
+  "surface": "backend",
+  "riskClass": "low",
+  "title": "191 console.log/warn/error calls in backend services bypass structured logger \u2014 Cloud Logging unqueryable",
+  "description": "Backend services contain 191 direct console.log/warn/error calls that bypass the structured logger. In production (Cloud Run), these appear as unstructured text logs in Cloud Logging, making them unsearchable by log severity, service, or trace ID. This breaks operational observability. A structured logger already exists in the codebase but is not universally used.",
+  "status": "todo",
+  "severity": "P3",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "na",
+    "professional_polish": "na",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "fail",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/health"
+    ],
+    "cloudRunServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "BACKEND.ALL-SERVICES"
+    ],
+    "impactedServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w4-audit",
+    "reproSteps": [
+      "Deploy to staging",
+      "Open GCP Cloud Logging",
+      "Filter by service=main-backend",
+      "Observe: mix of structured JSON logs and unstructured text logs",
+      "Structured logs are queryable; console.log output is not"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/live_page_manifest.json",
+      "RELEASES/CLAUDE_STATE.md"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T18:00:00.000Z",
+    "updatedAt": "2026-02-26T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Source-level audit at HEAD 078c21b2. No staging deploy yet.",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "backend",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "main-backend",
+    "actualCloudRunServices": [
+      "main-backend",
+      "api-gateway"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/api/v1/health"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [
+      "immutable-core-mode: existing code must not be modified without operator approval"
+    ],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Additive fix option: add ESLint no-console rule to backend .eslintrc (new config entry \u2014 additive). Full fix requires touching 191+ lines across all services. immutable-core: ESLint config is additive, source fixes are BLOCKED."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "fix_implementation_pending",
+      "staging_parity_pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "191 unstructured console calls across backend. ESLint no-console rule additive (will implement). Full source fix BLOCKED under immutable-core."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W4.BACKEND.UNSTRUCTURED-CONSOLE-LOGGING.001",
+    "lastValidatedCommit": "078c21b2",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  }
+}

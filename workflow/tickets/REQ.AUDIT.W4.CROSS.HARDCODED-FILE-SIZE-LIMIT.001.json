@@ -1,0 +1,254 @@
+{
+  "ticketId": "REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001",
+  "screenId": "CROSS.FILE-UPLOAD",
+  "orderInScreen": 1,
+  "surface": "shared",
+  "riskClass": "low",
+  "title": "5MB file size limit hardcoded in 3+ files across retailer-admin and supplier-portal \u2014 not env-configurable",
+  "description": "File size limits are hardcoded at 5MB in at least 3 files: retailer-admin/src/pages/ImportPage.tsx (MAX_FILE_SIZE = 5*1024*1024), supplier-portal/src/app/(auth)/products/page.tsx, and supplier-portal/src/app/(auth)/onboard/page.tsx. These values cannot be changed without code modification and redeployment. If ops needs to lower or raise the limit for compliance or performance, a code change and full redeploy is required.",
+  "status": "todo",
+  "severity": "P3",
+  "parentTicketId": null,
+  "subTicketIds": [],
+  "layers": {
+    "ui": "na",
+    "ux": "fail",
+    "professional_polish": "fail",
+    "wiring": "na",
+    "navigation": "na",
+    "api": "na",
+    "backend": "na",
+    "db": "na",
+    "migration": "na",
+    "gcp_parity": "fail"
+  },
+  "gcpParity": {
+    "stagingValidated": false,
+    "stagingUrls": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/s/{storeCode}/import",
+      "https://staging.supermandi.tech/supplier/products/"
+    ],
+    "cloudRunServices": [
+      "retailer-admin",
+      "supplier-portal"
+    ],
+    "basePathChecked": false,
+    "envParityChecked": false,
+    "routingChecked": false,
+    "apiContractChecked": false,
+    "dbConnectivityChecked": false,
+    "artifactDigestPinned": false,
+    "cloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "impact": {
+    "impactedScreens": [
+      "RETAILER.IMPORT",
+      "SUPPLIER.PRODUCTS",
+      "SUPPLIER.ONBOARD"
+    ],
+    "impactedServices": [
+      "retailer-admin",
+      "supplier-portal"
+    ],
+    "impactRetestRequired": true,
+    "impactRetestStatus": "pending"
+  },
+  "operator": {
+    "reportedBy": "claude-w4-audit",
+    "reproSteps": [
+      "Inspect retailer-admin/src/pages/ImportPage.tsx \u2014 const MAX_FILE_SIZE = 5 * 1024 * 1024",
+      "Inspect supplier-portal/src/app/(auth)/products/page.tsx \u2014 hardcoded 5MB",
+      "Inspect supplier-portal/src/app/(auth)/onboard/page.tsx \u2014 hardcoded 5MB",
+      "No env var override available"
+    ],
+    "finalSignoff": false,
+    "signoffAt": ""
+  },
+  "claudeChecks": {
+    "screenVisualizedWithOperator": false,
+    "codeQualityChecksPassed": false,
+    "regressionChecklistPassed": false,
+    "apiContractChecked": false,
+    "navigationChecked": false,
+    "envAndBasePathChecked": false,
+    "migrationSafetyChecked": false,
+    "rollbackPlanReady": false,
+    "stagingDeployPassed": false,
+    "stagingDeploymentRef": "pending",
+    "cloudWorkspaceValidated": true,
+    "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
+  },
+  "sessionBoot": {
+    "bootstrappedBy": "claude",
+    "bootstrappedAt": "2026-02-26T18:00:00.000Z",
+    "runbookVersion": "workflow-v1.0.0",
+    "memoryStateRef": "workflow/state/workflow_state.json",
+    "requiredFilesRead": [
+      "workflow/state/workflow_state.json",
+      "workflow/schemas/ticket.schema.json",
+      "workflow/schemas/screen_state.schema.json",
+      "workflow/state/staging_batch.json",
+      "workflow/state/live_page_manifest.json",
+      "RELEASES/CLAUDE_STATE.md"
+    ]
+  },
+  "operatorChecks": {
+    "stagingTestExecuted": false,
+    "testedOnRealTarget": false,
+    "testedOnLaptopBrowser": false,
+    "testedOnRedmi": false,
+    "stagingUrlsTested": [],
+    "issuesReproduced": true,
+    "fixVerified": false,
+    "blockingIssueCount": 1,
+    "nonBlockingIssueCount": 0,
+    "noBlockingIssueRemaining": false,
+    "evidenceAttached": true,
+    "validatedDeploymentRef": "github://run/22305359033",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00103-zbw",
+      "api-gateway-00084-7zh",
+      "retailer-admin-00084-pk6",
+      "supplier-portal-00078-wv8",
+      "superadmin-00077-r6c",
+      "landing-00077-gj7"
+    ]
+  },
+  "statusHistory": [],
+  "evidence": {
+    "beforeVisual": [],
+    "afterVisual": [],
+    "apiProof": [],
+    "parityProof": []
+  },
+  "timestamps": {
+    "createdAt": "2026-02-26T18:00:00.000Z",
+    "updatedAt": "2026-02-26T18:00:00.000Z",
+    "lockedAt": null
+  },
+  "truthDeclaration": {
+    "mockDataUsed": false,
+    "mockApisUsed": false,
+    "mockUsageApproved": false,
+    "productionDataTested": true,
+    "disclosedToOperator": true,
+    "notes": "Source-level audit at HEAD 078c21b2. No staging deploy yet.",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  },
+  "externalIntegrations": {
+    "touched": false,
+    "items": [],
+    "operatorDisclosureDone": true,
+    "allValidated": false
+  },
+  "buildMapping": {
+    "expectedSurface": "shared",
+    "expectedBasePath": "/api",
+    "expectedPrimaryService": "retailer-admin",
+    "actualCloudRunServices": [
+      "retailer-admin",
+      "supplier-portal"
+    ],
+    "urlMappingValidated": false,
+    "correctBuildTargetValidated": true,
+    "stagingRouteEvidence": [
+      "https://staging.supermandi.tech/api/v1/health",
+      "https://staging.supermandi.tech/s/{storeCode}/import",
+      "https://staging.supermandi.tech/supplier/products/"
+    ]
+  },
+  "dependencyDisclosure": {
+    "internalDependencies": [],
+    "externalDependencies": [],
+    "pendingDependencies": [],
+    "blockers": [
+      "immutable-core-mode: existing code must not be modified without operator approval"
+    ],
+    "disclosedToOperator": true,
+    "operatorAcknowledged": false,
+    "notes": "Additive fix: create retailer-admin/src/lib/fileLimits.ts and supplier-portal/src/lib/fileLimits.ts (new files with env-var driven constants). Wire-up requires modifying 3 existing files. immutable-core: new constants files are ADDITIVE, wire-up is BLOCKED."
+  },
+  "productionInvariants": {
+    "sellPurchaseIsolation": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "deterministicScanIntentResolution": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "frontendBackendStateParity": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "offlineFirstSafeSync": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "idempotentTransactionProcessing": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "atomicDatabaseWrites": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    },
+    "strictSchemaValidation": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "zeroSilentFailures": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "Pending fix."
+    },
+    "structuredAuditLogging": {
+      "status": "na",
+      "evidence": [],
+      "notes": "n/a"
+    }
+  },
+  "readiness": {
+    "productionGradeClaimed": false,
+    "pendingInternal": [
+      "fix_implementation_pending",
+      "staging_parity_pending"
+    ],
+    "pendingExternal": [],
+    "pendingOps": [
+      "operator_signoff_pending"
+    ],
+    "blocked": false,
+    "summary": "5MB file size limit hardcoded in 3 files. Constants files will be created (additive). Wire-up BLOCKED under immutable-core."
+  },
+  "gitDiscipline": {
+    "workBranch": "main",
+    "changeScope": "REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001",
+    "lastValidatedCommit": "078c21b2",
+    "noMixedScope": true,
+    "noConflictMarkers": true,
+    "ciGateStatus": "not_required",
+    "evidence": [
+      "audit_ref=078c21b2",
+      "source=claude-w4-audit"
+    ]
+  }
+}
