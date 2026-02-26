@@ -117,3 +117,38 @@ export async function sendWhatsAppBroadcast(params: {
   if (!res.ok) throw new Error(await parseErrorBody(res));
   return res.json();
 }
+
+// REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001
+
+export interface WhatsAppCtaConfig {
+  enabled: boolean;
+  superadminNumber: string;
+  superadminMessage: string;
+  companyNumber: string;
+  companyMessage: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export async function fetchWhatsAppCtaConfig(): Promise<WhatsAppCtaConfig> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/whatsapp/cta-config`, {
+    headers: { ...getAuthHeaders() },
+  });
+  if (!res.ok) throw new Error(await parseErrorBody(res));
+  return res.json();
+}
+
+export async function updateWhatsAppCtaConfig(
+  config: Omit<WhatsAppCtaConfig, "updatedAt" | "updatedBy">
+): Promise<{ success: boolean }> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/whatsapp/cta-config`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error(await parseErrorBody(res));
+  return res.json();
+}

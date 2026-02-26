@@ -1,6 +1,7 @@
-// WA-001/WA-002: SuperAdmin WhatsApp API Routes
+// WA-001/WA-002/REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: SuperAdmin WhatsApp API Routes
 // Enables superadmin to send messages to retailers and suppliers via WhatsApp Cloud API
 // WA-002: Added message log listing + stats endpoint
+// WA-CTA: Added CTA config read/write for live landing-page number management
 
 import { Router, Request, Response } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
@@ -256,6 +257,96 @@ adminWhatsAppRouter.post("/whatsapp/broadcast", async (req: Request, res: Respon
     return res.json({ sent, failed, total: phones.length, errors: errors.slice(0, 10) });
   } catch (err: unknown) {
     log.error("[WA-001] broadcast error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// =============================================================================
+// GET /admin/whatsapp/cta-config — Get landing-page WhatsApp CTA configuration
+// REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001
+// =============================================================================
+adminWhatsAppRouter.get("/whatsapp/cta-config", async (_req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
+
+    const result = await pool.query(
+      `SELECT enabled, superadmin_number as "superadminNumber", superadmin_message as "superadminMessage",
+              company_number as "companyNumber", company_message as "companyMessage",
+              updated_at as "updatedAt", updated_by as "updatedBy"
+       FROM platform.whatsapp_cta_config ORDER BY id ASC LIMIT 1`
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        enabled: true,
+        superadminNumber: "919251893684",
+        superadminMessage: "Hi! I need help with my SuperMandi account or platform setup.",
+        companyNumber: "919251893684",
+        companyMessage: "Hi! I\u2019d like to learn more about SuperMandi and partnership opportunities.",
+        updatedAt: null,
+        updatedBy: null,
+      });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (err: unknown) {
+    log.error("[WA-CTA] cta-config GET error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// =============================================================================
+// PUT /admin/whatsapp/cta-config — Update landing-page WhatsApp CTA configuration
+// REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001
+// =============================================================================
+const E164_DIGITS = /^\d{10,15}$/;
+
+adminWhatsAppRouter.put("/whatsapp/cta-config", async (req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
+
+    const { enabled, superadminNumber, superadminMessage, companyNumber, companyMessage } = req.body;
+
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "enabled must be a boolean" });
+    }
+    if (typeof superadminNumber !== "string" || !E164_DIGITS.test(superadminNumber.trim())) {
+      return res.status(400).json({ error: "superadminNumber must be E.164 digits only (10-15 digits, no + or spaces)" });
+    }
+    if (typeof companyNumber !== "string" || !E164_DIGITS.test(companyNumber.trim())) {
+      return res.status(400).json({ error: "companyNumber must be E.164 digits only (10-15 digits, no + or spaces)" });
+    }
+    if (typeof superadminMessage !== "string" || superadminMessage.trim().length === 0 || superadminMessage.length > 1000) {
+      return res.status(400).json({ error: "superadminMessage must be a non-empty string (max 1000 chars)" });
+    }
+    if (typeof companyMessage !== "string" || companyMessage.trim().length === 0 || companyMessage.length > 1000) {
+      return res.status(400).json({ error: "companyMessage must be a non-empty string (max 1000 chars)" });
+    }
+
+    const adminId = (req as any).adminId || "superadmin";
+
+    // Upsert: update row id=1 if exists, else insert
+    await pool.query(
+      `INSERT INTO platform.whatsapp_cta_config
+          (id, enabled, superadmin_number, superadmin_message, company_number, company_message, updated_at, updated_by)
+       VALUES (1, $1, $2, $3, $4, $5, NOW(), $6)
+       ON CONFLICT (id) DO UPDATE SET
+          enabled = EXCLUDED.enabled,
+          superadmin_number = EXCLUDED.superadmin_number,
+          superadmin_message = EXCLUDED.superadmin_message,
+          company_number = EXCLUDED.company_number,
+          company_message = EXCLUDED.company_message,
+          updated_at = NOW(),
+          updated_by = EXCLUDED.updated_by`,
+      [enabled, superadminNumber.trim(), superadminMessage.trim(), companyNumber.trim(), companyMessage.trim(), adminId]
+    );
+
+    log.info(`[WA-CTA] CTA config updated by ${adminId}: enabled=${enabled}, superadminNumber=${superadminNumber.trim()}, companyNumber=${companyNumber.trim()}`);
+    return res.json({ success: true });
+  } catch (err: unknown) {
+    log.error("[WA-CTA] cta-config PUT error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
