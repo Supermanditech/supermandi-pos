@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-26T09:42:29.691Z",
+  "updatedAt": "2026-02-26T09:44:59.190Z",
   "workflowMode": "LIVE_FIX",
   "machineEnforcement": {
     "enabled": true,
@@ -1112,15 +1112,6 @@
         "complete": false,
         "summary": "R7 execution initialized: 535 tickets queued from source-first audit.",
         "remainingTicketIds": [
-          "R7.BE.061.VOICE_SERVICE_UI_UX_PARITY_REVIEW_31",
-          "R7.BE.062.API_GATEWAY_UI_UX_PARITY_REVIEW_32",
-          "R7.BE.063.AUTH_SERVICE_UI_UX_PARITY_REVIEW_33",
-          "R7.BE.064.PLATFORM_SERVICE_UI_UX_PARITY_REVIEW_34",
-          "R7.BE.065.SUPPLIER_SERVICE_UI_UX_PARITY_REVIEW_35",
-          "R7.BE.066.CATALOG_SERVICE_UI_UX_PARITY_REVIEW_36",
-          "R7.BE.067.INVENTORY_SERVICE_UI_UX_PARITY_REVIEW_37",
-          "R7.BE.068.ORDER_SERVICE_UI_UX_PARITY_REVIEW_38",
-          "R7.BE.069.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_39",
           "R7.CROSS.001.SUPPLIER_CANNOT_TRANSITION_ORDER_STATUS_CONFIRM_SHIP",
           "R7.CROSS.002.DUAL_STOCK_SOURCES_DIVERGE_INVENTORY_STOCK_BALANCES",
           "R7.CROSS.003.OFFLINE_QUEUE_NOT_STORE_SCOPED_SINGLE_GLOBAL",
@@ -1648,9 +1639,18 @@
           "R7.BE.059.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_29",
           "R7.BE.060.REORDER_SERVICE_UI_UX_PARITY_REVIEW_30",
           "R7.BE.052.SUPPLIER_SERVICE_RESIDUAL_CONSOLE_LOGGING",
-          "R7.BE.053.VOICE_SERVICE_RESIDUAL_CONSOLE_LOGGING"
+          "R7.BE.053.VOICE_SERVICE_RESIDUAL_CONSOLE_LOGGING",
+          "R7.BE.061.VOICE_SERVICE_UI_UX_PARITY_REVIEW_31",
+          "R7.BE.062.API_GATEWAY_UI_UX_PARITY_REVIEW_32",
+          "R7.BE.063.AUTH_SERVICE_UI_UX_PARITY_REVIEW_33",
+          "R7.BE.064.PLATFORM_SERVICE_UI_UX_PARITY_REVIEW_34",
+          "R7.BE.065.SUPPLIER_SERVICE_UI_UX_PARITY_REVIEW_35",
+          "R7.BE.066.CATALOG_SERVICE_UI_UX_PARITY_REVIEW_36",
+          "R7.BE.067.INVENTORY_SERVICE_UI_UX_PARITY_REVIEW_37",
+          "R7.BE.068.ORDER_SERVICE_UI_UX_PARITY_REVIEW_38",
+          "R7.BE.069.PAYMENT_SERVICE_UI_UX_PARITY_REVIEW_39"
         ],
-        "lastUpdatedAt": "2026-02-26T09:42:29.691Z"
+        "lastUpdatedAt": "2026-02-26T09:44:59.190Z"
       },
       "deployApproval": {
         "approved": false,
@@ -1711,7 +1711,7 @@
   },
   "summary": {
     "totalTickets": 1129,
-    "activeTickets": 477,
+    "activeTickets": 468,
     "wipTickets": 1,
     "lockedTickets": 0,
     "totalScreens": 0,
@@ -1761,7 +1761,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-26T09:42:29.691Z"
+    "updatedAt": "2026-02-26T09:44:59.190Z"
   },
-  "lastUpdated": "2026-02-26T09:42:29.691Z"
+  "lastUpdated": "2026-02-26T09:44:59.190Z"
 }
