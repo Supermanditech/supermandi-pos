@@ -4,6 +4,7 @@
 // Manages supplier product catalog
 
 import { Router, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import { requireActiveSupplier, requireRegisteredSupplier } from "../../../middleware/supplierStatusGate";
@@ -12,6 +13,17 @@ import { parse } from "csv-parse/sync";
 import { validateMoq, validatePrice } from "@supermandi/common";
 import type { Pool } from "pg";
 import { log } from "../../../lib/logger";
+
+// SUPPLIER-IMPORT-NO-RATE-LIMIT: Limit CSV imports to 5 per supplier per hour.
+// CSV parsing is CPU-intensive; unbounded rate allows a single supplier to spike CPU.
+const csvImportRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many CSV imports. Maximum 5 per hour.' } },
+  keyGenerator: (req) => (req as SupplierAuthRequest).supplierId || req.ip || 'unknown',
+});
 
 const router = Router();
 
@@ -734,6 +746,7 @@ router.post(
   "/products/csv-upload",
   requireSupplierAuth,
   requireActiveSupplier,
+  csvImportRateLimit,
   upload.single('file'),
   async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
     try {

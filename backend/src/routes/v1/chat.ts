@@ -30,6 +30,21 @@ chatRouter.use(requireChatAuth);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isValidUUID(s: string): boolean { return UUID_RE.test(s); }
 
+// ERROR-RESPONSES-LEAK-DETAILS: Safe error message for production.
+// Known domain errors are safe to expose (they describe business state, not internals).
+// Unknown errors return generic message in production to prevent DB/stack trace leakage.
+const SAFE_CHAT_ERRORS = new Set([
+  'Authentication required',
+  'Not a participant in this conversation',
+  'Conversation not found',
+  'Message not found',
+]);
+function safeChatErr(err: unknown, fallback: string): string {
+  const msg = err instanceof Error ? err.message : fallback;
+  if (SAFE_CHAT_ERRORS.has(msg)) return msg;
+  return process.env.NODE_ENV === 'production' ? fallback : msg;
+}
+
 // Multer for attachment uploads (memory storage, 10MB limit)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -83,7 +98,7 @@ chatRouter.get('/conversations', async (req, res) => {
       offset,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to list conversations';
+    const message = safeChatErr(err, 'Failed to list conversations');
     res.status(message === 'Authentication required' ? 401 : 500).json({ error: message });
   }
 });
@@ -107,8 +122,7 @@ chatRouter.post('/conversations/direct', async (req, res) => {
 
     res.json({ conversation });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to create conversation';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to create conversation') });
   }
 });
 
@@ -125,8 +139,7 @@ chatRouter.post('/conversations/support', async (req, res) => {
 
     res.json({ conversation });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to create support conversation';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to create support conversation') });
   }
 });
 
@@ -146,7 +159,7 @@ chatRouter.get('/conversations/:id/messages', async (req, res) => {
 
     res.json({ messages });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to load messages';
+    const message = safeChatErr(err, 'Failed to load messages');
     const status = message === 'Not a participant in this conversation' ? 403 : 500;
     res.status(status).json({ error: message });
   }
@@ -213,7 +226,7 @@ chatRouter.post('/conversations/:id/messages', async (req, res) => {
 
     res.status(201).json({ message: msg });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to send message';
+    const message = safeChatErr(err, 'Failed to send message');
     const status = message === 'Not a participant in this conversation' ? 403 : 500;
     res.status(status).json({ error: message });
   }
@@ -236,7 +249,7 @@ chatRouter.patch('/conversations/:id/read', async (req, res) => {
 
     res.json({ success: true });
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to mark as read' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to mark as read') });
   }
 });
 
@@ -251,7 +264,7 @@ chatRouter.patch('/conversations/:id/mute', async (req, res) => {
 
     res.json({ isMuted });
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to toggle mute' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to toggle mute') });
   }
 });
 
@@ -264,7 +277,7 @@ chatRouter.get('/unread-count', async (req, res) => {
 
     res.json({ unreadCount: count });
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to get unread count' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to get unread count') });
   }
 });
 
@@ -318,8 +331,7 @@ chatRouter.post('/conversations/:id/upload', upload.single('file'), async (req, 
 
     res.status(201).json({ message: msg });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to upload';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to upload') });
   }
 });
 
@@ -344,7 +356,7 @@ chatRouter.get('/support/queue', async (req, res) => {
 
     res.json(result);
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to load support queue' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to load support queue') });
   }
 });
 
@@ -362,7 +374,7 @@ chatRouter.post('/support/:id/assign', async (req, res) => {
 
     res.json({ success: true });
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to assign agent' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to assign agent') });
   }
 });
 
@@ -379,7 +391,7 @@ chatRouter.post('/support/:id/resolve', async (req, res) => {
 
     res.json({ success: true });
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to resolve conversation' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to resolve conversation') });
   }
 });
 
@@ -394,7 +406,7 @@ chatRouter.get('/templates', async (req, res) => {
     const templates = await chatService.listTemplates(pool);
     res.json({ templates });
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to list templates' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to list templates') });
   }
 });
 
@@ -419,7 +431,7 @@ chatRouter.post('/templates', async (req, res) => {
 
     res.status(201).json(result);
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to save template' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to save template') });
   }
 });
 
@@ -443,6 +455,6 @@ chatRouter.post('/templates/send', async (req, res) => {
 
     res.status(201).json({ message: msg });
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to send template message' });
+    res.status(500).json({ error: safeChatErr(err, 'Failed to send template message') });
   }
 });

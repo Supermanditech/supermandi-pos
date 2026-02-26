@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "Some backend routes bypass global error handler and expose internal details in error responses",
   "description": "Individual routes expose validation format details, sale state, and PostgreSQL constraint names.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -96,10 +96,35 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "backend/src/routes/v1/chat.ts",
+      "backend/src/middleware/errorHandler.ts",
+      "workflow/tickets/REQ.AUDIT.W5.BACKEND.ERROR-RESPONSES-LEAK-DETAILS.001.json"
     ]
   },
   "operatorChecks": {
@@ -124,7 +149,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-backend-b2-1772148356350",
+      "at": "2026-02-26T23:25:56.350Z",
+      "reason": "fix routes that bypass global error handler and expose raw error messages",
+      "prevHash": "GENESIS",
+      "hash": "27f8750c7fc6f2841c5ab30cd502c5588689a8e5e6a020b411bb037d48db574f"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-backend-b2-1772148356350",
+      "at": "2026-02-26T23:25:56.350Z",
+      "reason": "safeChatErr() helper added to chat.ts; production returns generic fallback for unexpected errors; known domain errors remain for 401/403 control flow",
+      "prevHash": "27f8750c7fc6f2841c5ab30cd502c5588689a8e5e6a020b411bb037d48db574f",
+      "hash": "8d67a612d0988f251cc98cbaf6f3ed4d86df4611a9302177dc10b16ed8c39133"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -235,12 +281,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.BACKEND.ERROR-RESPONSES-LEAK-DETAILS.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "3ac8279c",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=3ac8279c"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "backend/src/routes/v1/chat.ts",
+      "description": "SAFE_CHAT_ERRORS set + safeChatErr() at line 32; all 10 catch blocks in chat.ts updated from raw err.message to safeChatErr(err, fallback)"
+    }
   }
 }
