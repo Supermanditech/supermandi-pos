@@ -17,7 +17,7 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
 import { createEnrollmentCode } from "../../../services/enrollmentCodeService";
-import { sendWelcomeNotification } from "../../../services/notificationService";
+import { sendWelcomeNotification, sendSupplierApprovalNotification } from "../../../services/notificationService";
 import rateLimit from "express-rate-limit";
 import { log } from "../../../lib/logger";
 
@@ -444,6 +444,20 @@ adminApplicationsRouter.post(
           log.warn(`[admin/applications] Activation code generation failed:`, err?.message);
           // Non-blocking: approval still succeeds without activation code
         }
+      } else if (app.entity_type === 'supplier' && approvedEntityId && app.email) {
+        // REQ.SUPERADMIN.APPROVAL_MATRIX: Send supplier approval email (parity with retailer welcome notification)
+        sendSupplierApprovalNotification({
+          email: app.email,
+          contactName: app.owner_name || undefined,
+          businessName: app.business_name,
+          supplierId: approvedEntityId,
+        }).then((result) => {
+          if (result.emailSent) codeSentVia.push('email');
+          log.info(`[admin/applications] Supplier approval email sent: ${result.emailSent}`);
+        }).catch((err) => {
+          log.warn(`[admin/applications] Supplier approval notification failed:`, err?.message);
+        });
+        codeSentTo = app.email;
       }
 
       res.json({

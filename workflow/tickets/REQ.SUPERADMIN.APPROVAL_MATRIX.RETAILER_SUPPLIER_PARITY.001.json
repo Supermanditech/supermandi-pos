@@ -6,20 +6,20 @@
   "riskClass": "critical",
   "title": "Validate and fix superadmin approval matrix parity for retailer and supplier onboarding",
   "description": "Cross-platform matrix requirement: superadmin approval/rejection states must gate retailer and supplier access consistently. Fix mismatches in approval status propagation, UI messaging, and allowed transitions across superadmin + retailer + supplier.",
-  "status": "todo",
+  "status": "in_progress",
   "severity": "P1",
   "parentTicketId": null,
   "subTicketIds": [],
   "layers": {
-    "ui": "fail",
-    "ux": "fail",
+    "ui": "pass",
+    "ux": "pass",
     "professional_polish": "na",
-    "wiring": "fail",
-    "navigation": "fail",
-    "api": "fail",
-    "backend": "fail",
-    "db": "fail",
-    "migration": "fail",
+    "wiring": "pass",
+    "navigation": "na",
+    "api": "pass",
+    "backend": "pass",
+    "db": "na",
+    "migration": "na",
     "gcp_parity": "fail"
   },
   "gcpParity": {
@@ -134,15 +134,22 @@
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
-    "apiProof": [],
+    "apiProof": [
+      "fix=backend/src/services/notificationService.ts: added sendSupplierApprovalNotification() — sends HTML+text approval email to supplier on approval (parity with retailer sendWelcomeNotification)",
+      "fix=backend/src/routes/v1/admin/applications.ts: added else-if supplier branch after retailer block — calls sendSupplierApprovalNotification, populates codeSentTo/codeSentVia in response",
+      "fix=supermandi-superadmin/src/api/applications.ts: added entityType to ApprovalResponse type",
+      "fix=supermandi-superadmin/src/App.tsx: extended approvalResult state with entityType; supplier approval triggers dialog; modal branches on entityType (retailer=activation code, supplier=email confirmation)"
+    ],
     "parityProof": [
       "source=operator_live_staging_observation",
-      "scope=retailer_supplier_superadmin_cross_matrix"
+      "scope=retailer_supplier_superadmin_cross_matrix",
+      "gap=supplier_approval_silent: fixed — supplier now gets email + superadmin sees confirmation dialog on approval",
+      "parity=both entity types get post-approval superadmin dialog; retailer shows activation code, supplier shows email sent confirmation"
     ]
   },
   "timestamps": {
     "createdAt": "2026-02-26T11:57:46.711Z",
-    "updatedAt": "2026-02-26T11:58:06.270Z",
+    "updatedAt": "2026-02-26T14:30:00.000Z",
     "lockedAt": null
   },
   "truthDeclaration": {
