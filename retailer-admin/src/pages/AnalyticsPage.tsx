@@ -90,7 +90,7 @@ export default function AnalyticsPage() {
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <p style={{ color: '#991b1b' }}>{error}</p>
-          <button onClick={loadData} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#b91c1c', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+          <button aria-label="Retry loading analytics data" onClick={loadData} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#b91c1c', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
         </div>
       )}
 

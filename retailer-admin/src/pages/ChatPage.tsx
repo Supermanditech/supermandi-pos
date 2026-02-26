@@ -143,7 +143,7 @@ export default function ChatPage() {
       </div>
       <header className="page-header">
         <h1 className="page-title">Messages</h1>
-        <button className="btn btn-secondary" onClick={createSupport} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button aria-label="Contact support via chat" className="btn btn-secondary" onClick={createSupport} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Headphones size={16} /> Contact Support
         </button>
       </header>
@@ -151,7 +151,7 @@ export default function ChatPage() {
       <div className="page-content" style={{ display: 'flex', height: 'calc(100dvh - 180px)', minHeight: '300px', gap: 0 }}>
         {error && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#fee2e2', color: '#991b1b', padding: '0.5rem 1rem', fontSize: '0.85rem', zIndex: 10 }}>
-            {error} <button onClick={() => setError(null)} style={{ marginLeft: 8, fontWeight: 600 }}>Dismiss</button>
+            {error} <button aria-label="Dismiss chat error" onClick={() => setError(null)} style={{ marginLeft: 8, fontWeight: 600 }}>Dismiss</button>
           </div>
         )}
 
@@ -248,6 +248,7 @@ export default function ChatPage() {
                   style={{ flex: 1 }}
                 />
                 <button
+                  aria-label="Send chat message"
                   onClick={handleSend}
                   disabled={!text.trim() || sending}
                   className="btn btn-primary"

@@ -333,6 +333,7 @@ export default function CompliancePage() {
                         </button>
                         {doc.status === 'rejected' && (
                           <button
+                            aria-label="Re-upload compliance document"
                             className="btn btn-primary"
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                             onClick={() => {

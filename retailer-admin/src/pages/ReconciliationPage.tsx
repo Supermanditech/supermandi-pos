@@ -132,6 +132,7 @@ export default function ReconciliationPage() {
           <h1 className="page-title">Payment Reconciliation</h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
+              aria-label="Refresh reconciliation data"
               className="btn btn-secondary"
               onClick={fetchReconciliation}
               disabled={loading}
@@ -141,6 +142,7 @@ export default function ReconciliationPage() {
               Refresh
             </button>
             <button
+              aria-label="Export reconciliation as CSV"
               className="btn btn-primary"
               onClick={handleExportCsv}
               disabled={rows.length === 0}

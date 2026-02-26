@@ -371,6 +371,7 @@ export default function ImportPage() {
                     {(file.size / 1024).toFixed(1)} KB
                   </p>
                   <button
+                    aria-label="Remove selected CSV file"
                     className="btn btn-secondary"
                     style={{ marginTop: '1rem' }}
                     onClick={() => setFile(null)}
@@ -385,6 +386,7 @@ export default function ImportPage() {
                   <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                     Browse Files
                     <input
+                      aria-label="Select CSV file for import"
                       type="file"
                       accept=".csv"
                       onChange={handleFileSelect}
