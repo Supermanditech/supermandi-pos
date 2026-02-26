@@ -129,7 +129,7 @@ async function getStoreByCode(code: string): Promise<(StoreWithPortal & { status
   const result = await query<StoreWithPortal & { status: string }>(
     `SELECT id, code, name, status, retailer_portal_enabled, retailer_portal_phone
      FROM platform.stores
-     WHERE code = $1`,
+     WHERE code = $1 AND deleted_at IS NULL`,
     [code]
   );
   return result[0] || null;
@@ -380,7 +380,7 @@ router.get(
       code: string;
       name: string;
     }>(
-      `SELECT id, code, name FROM platform.stores WHERE id = $1`,
+      `SELECT id, code, name FROM platform.stores WHERE id = $1 AND deleted_at IS NULL`,
       [storeId]
     );
     const store = storeResult[0];

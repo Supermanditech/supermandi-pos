@@ -128,9 +128,9 @@ async function storeExists(storeId: string): Promise<StoreInfo | null> {
   if (!pool) return null;
 
   try {
-    // GO-LIVE-129: Check status instead of deleted_at
+    // GO-LIVE-129: Filter soft-deleted stores (deleted_at set by migration 069)
     const result = await pool.query(
-      `SELECT id::TEXT as id, status, name FROM platform.stores WHERE id = $1::uuid`,
+      `SELECT id::TEXT as id, status, name FROM platform.stores WHERE id = $1::uuid AND deleted_at IS NULL`,
       [storeId]
     );
     if ((result.rowCount ?? 0) === 0) {

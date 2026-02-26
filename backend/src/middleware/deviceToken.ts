@@ -114,7 +114,7 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
            d.token_expires_at,
            d.token_revoked_at
     FROM pos_devices d
-    LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
+    LEFT JOIN platform.stores s ON s.id = d.store_id::uuid AND s.deleted_at IS NULL
     WHERE d.device_token = $1
     `,
     [token]

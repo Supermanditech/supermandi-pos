@@ -273,7 +273,7 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
     const storeResult = await pool.query(
       `SELECT id, code, name, status, retailer_portal_enabled, retailer_portal_phone
        FROM platform.stores
-       WHERE code = $1`,
+       WHERE code = $1 AND deleted_at IS NULL`,
       [storeCode.toUpperCase()]
     );
 
@@ -490,7 +490,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
       const storeByPhoneResult = await pool.query(
         `SELECT id, code, name FROM platform.stores
          WHERE retailer_portal_enabled = true
-         AND retailer_portal_phone = $1`,
+         AND retailer_portal_phone = $1 AND deleted_at IS NULL`,
         [phoneNormalized]
       );
 
@@ -525,7 +525,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
       `SELECT s.id, s.code, s.name, s.status
        FROM platform.stores s
        INNER JOIN auth.store_users su ON s.id = su.store_id
-       WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true
+       WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true AND s.deleted_at IS NULL
        ORDER BY s.name`,
       [user.id]
     );
@@ -538,7 +538,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
        AND s.retailer_portal_phone = $1
        AND s.id NOT IN (
          SELECT store_id FROM auth.store_users WHERE user_id = $2
-       )`,
+       ) AND s.deleted_at IS NULL`,
       [phoneNormalized, user.id]
     );
 
@@ -714,7 +714,7 @@ router.post("/auth/register", enhancedAuthProtection(), authRateLimiter, async (
     const storeResult = await pool.query(
       `SELECT id, code, name, retailer_portal_enabled
        FROM platform.stores
-       WHERE code = $1`,
+       WHERE code = $1 AND deleted_at IS NULL`,
       [storeCode.toUpperCase()]
     );
 
@@ -875,7 +875,7 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       `SELECT s.id, s.code, s.name, s.status
        FROM platform.stores s
        INNER JOIN auth.store_users su ON s.id = su.store_id
-       WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true
+       WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true AND s.deleted_at IS NULL
        ORDER BY s.name`,
       [user.id]
     );
@@ -1348,7 +1348,7 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
 
     // Get store info
     const storeResult = await pool.query(
-      `SELECT id, code, name FROM platform.stores WHERE id = $1`,
+      `SELECT id, code, name FROM platform.stores WHERE id = $1 AND deleted_at IS NULL`,
       [decoded.storeId]
     );
 
@@ -1428,7 +1428,7 @@ router.get("/auth/me", async (req: Request, res: Response, next: NextFunction) =
 
     // Get store info
     const storeResult = await pool.query(
-      `SELECT id, code, name FROM platform.stores WHERE id = $1`,
+      `SELECT id, code, name FROM platform.stores WHERE id = $1 AND deleted_at IS NULL`,
       [actorId]
     );
 
