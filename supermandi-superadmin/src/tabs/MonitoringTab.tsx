@@ -76,7 +76,10 @@ export function MonitoringTab() {
 
   const overallColor = health ? statusColor(health.status) : statusColor("unhealthy");
 
-  // Alert policies from infra/monitoring/alert-policies.yaml
+  // REQ.AUDIT.W5.SUPERADMIN.MONITORING-HARDCODED-ALERT-POLICIES.001:
+  // Alert policies are hardcoded to match infra/monitoring/alert-policies.yaml.
+  // TODO: Replace with an API endpoint (e.g. GET /api/v1/admin/monitoring/alert-policies)
+  // to keep this in sync with GCP Cloud Monitoring configuration automatically.
   const alertPolicies = [
     { name: "Cloud Run Latency", condition: "p95 > 2s", service: "All services" },
     { name: "5xx Error Rate", condition: "> 5% of requests", service: "All services" },
@@ -90,7 +93,8 @@ export function MonitoringTab() {
     { name: "Cold Start Duration", condition: "> 30s", service: "All services" },
   ];
 
-  // Services from GCP
+  // Hardcoded service list — mirrors GCP Cloud Run services.
+  // TODO: Fetch dynamically from admin API when available.
   const services = [
     { name: "api-gateway", port: 3000, type: "Express" },
     { name: "main-backend", port: 3010, type: "Express" },

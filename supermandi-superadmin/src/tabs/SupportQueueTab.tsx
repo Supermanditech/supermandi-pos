@@ -106,6 +106,7 @@ export function SupportQueueTab() {
     setSelectedConvId(convId);
     try {
       const result = await apiFetch(`/api/v1/admin/chat/conversations/${convId}/messages?limit=100`);
+      // API returns messages newest-first; reverse to show chronological order (oldest at top)
       setMessages((result.messages || []).slice().reverse());
     } catch (err: unknown) {
       setMessages([]);

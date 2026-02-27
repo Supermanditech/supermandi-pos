@@ -4,6 +4,16 @@ import { PayloadDetails } from "../components/PayloadDetails";
 import { formatDateTime } from "../lib/formatters";
 
 // #186.11: CSV export helper
+// REQ.AUDIT.W5.SUPERADMIN.AUDIT-CSV-NON-RFC4180.001: RFC 4180 compliant field escaping
+function escapeField(v: string | number | null | undefined): string {
+  const s = String(v ?? "");
+  // RFC 4180: quote fields containing comma, double-quote, or newline; escape inner quotes by doubling
+  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return `"${s}"`;
+}
+
 function exportAuditCsv(logs: AuditLogRecord[]) {
   const header = "Time,Action,Resource,ResourceID,Actor,Status,Error\n";
   const rows = logs.map(l =>
@@ -14,8 +24,8 @@ function exportAuditCsv(logs: AuditLogRecord[]) {
       l.resource_id || "",
       l.actor_user_id || l.actor_ip || "system",
       l.response_status ?? "",
-      (l.error_message || "").replace(/"/g, '""'),
-    ].map(v => `"${v}"`).join(",")
+      l.error_message || "",
+    ].map(escapeField).join(",")
   ).join("\n");
   const blob = new Blob([header + rows], { type: "text/csv" });
   const url = URL.createObjectURL(blob);

@@ -1373,6 +1373,8 @@ export default function App() {
     try {
       await approveDocument(docId);
       await logAdminAction("approve", "document", docId, { status: "approved" });
+      // REQ.AUDIT.W5.SUPERADMIN.DOCUMENTS-STAFF-NO-SUCCESS-TOAST.001
+      toast.success("Document approved successfully");
       setSelectedDocument(null);
       // T-119: Clear modal persistence on action complete
       setModalDirty(false);
@@ -1477,6 +1479,7 @@ export default function App() {
     try {
       await updateStaff(staffStoreId, staffId, { role: newRole });
       setStaffSuccess("Role updated successfully");
+      toast.success("Role updated successfully");
       refreshStaff();
     } catch (e: any) {
       setStaffError(e?.message || "Failed to change role");
@@ -1498,6 +1501,7 @@ export default function App() {
       setResetPinStaffId(null);
       setResetPinValue("");
       setStaffSuccess("PIN reset successfully");
+      toast.success("PIN reset successfully");
     } catch (e: any) {
       setStaffError(e?.message || "Failed to reset PIN");
     } finally {
