@@ -176,10 +176,10 @@
 ### STG-017: SuperAdmin — GST Compliance tab broken (wrong supplier schema + missing columns)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#gst-compliance`)
 - **Page**: GST Compliance
-- **Symptom**: Supplier breakdown will fail or return NULL values
-- **Root Cause**: Two bugs: (1) Line 100: `LEFT JOIN platform.suppliers sp` should be `LEFT JOIN supplier.suppliers sp` — migration 003 creates `supplier.suppliers`, not `platform.suppliers`. (2) Lines 76,87,172,218: References `buyer_state` and `seller_state` columns that do NOT exist in any migration — `invoicing.invoices` has no state columns. State-wise breakdown and GSTR-1 export will fail.
-- **Fix**: (1) Change `platform.suppliers` to `supplier.suppliers`. (2) Either add `buyer_state`/`seller_state` columns via migration, or remove state-wise breakdown from GST queries (return 'Unknown' for all).
-- **Files**: `backend/src/routes/v1/admin/gstCompliance.ts:76,87,100,172,218`
+- **Symptom**: ALL GST queries will 500 — entire module is coded against wrong schema. Currently shows "No GST data for 2026-02" with zeros (error caught, empty state shown).
+- **Root Cause**: The entire `gstCompliance.ts` was written against column names that don't match `invoicing.invoices` (migration 134). Every column is wrong: `store_id` (doesn't exist), `taxable_amount` (actual: `taxable_amount_minor`), `cgst_amount` (actual: `cgst_minor`), `sgst_amount` (actual: `sgst_minor`), `igst_amount` (actual: `igst_minor`), `cess_amount` (doesn't exist), `total_amount` (actual: `total_amount_minor`), `buyer_state` (doesn't exist), `seller_state` (doesn't exist). Also: `LEFT JOIN platform.suppliers` should be `supplier.suppliers` (line 100).
+- **Fix**: Rewrite all SQL queries in `gstCompliance.ts` to use correct column names from migration 134. Use `seller_id` with `seller_type` filter instead of `store_id`. Use `_minor` suffix columns. Add `buyer_state`/`seller_state` columns via new migration OR remove state breakdown.
+- **Files**: `backend/src/routes/v1/admin/gstCompliance.ts` (entire file — lines 54-108, 165-220, 271-310)
 - **Status**: DIAGNOSED
 
 ### STG-018: SuperAdmin — Support Queue tab broken (wrong API endpoint paths)
@@ -221,7 +221,43 @@
 - **Files**: `supermandi-superadmin/src/tabs/WhatsAppTab.tsx:131`, `backend/src/routes/v1/admin/whatsapp.ts:303`
 - **Status**: DIAGNOSED
 
-### STG-023:
+### STG-023: SuperAdmin — Enrollment code "Resend" fails — reads wrong phone column
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#stores`)
+- **Page**: Stores → QR Enrollment → Resend button
+- **Symptom**: Clicking "Resend" on an enrollment code returns "No phone number found for this store" even when the store has a contact phone set via the admin panel.
+- **Root Cause**: `deviceEnrollments.ts:346` queries `s.phone` (old column from migration 001, usually NULL) instead of `s.contact_phone` (column from migration 038, populated by admin panel). Same issue with `s.email` vs `s.contact_email`. The admin panel saves contact info into `contact_phone`/`contact_email`, but the resend endpoint reads from the legacy `phone`/`email` columns.
+- **Fix**: Change line 346 from `s.phone as store_phone, s.email as store_email` to `COALESCE(s.contact_phone, s.phone) as store_phone, COALESCE(s.contact_email, s.email) as store_email` — falls back to legacy columns if contact columns are empty.
+- **Files**: `backend/src/routes/v1/admin/deviceEnrollments.ts:346`
+- **Status**: DIAGNOSED
+
+### STG-024: SuperAdmin — Quality tab crashes with "Something went wrong" then logs out
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#quality`)
+- **Page**: Quality Dashboard
+- **Symptom**: Clicking Quality tab shows error boundary "Something went wrong. An unexpected error occurred." with Try Again / Go Home buttons. After the crash, the user gets logged out.
+- **Root Cause**: `QualityDashboardTab.tsx:314` renders `renderToolCard("Database Tests", "💾", overview.tools.databaseTests)` but the backend (`qualityDashboard.ts:103-112`) does NOT include `databaseTests` in the `tools` response. `overview.tools.databaseTests` is `undefined` → `renderToolCard` accesses `tool.status` on undefined → `TypeError: Cannot read properties of undefined (reading 'status')` → React error boundary catches it. The logout happens because subsequent health checks may hit 429 rate limit or the error boundary's "Go Home" clears the session.
+- **Fix**: Either (a) add `databaseTests: { installed: true, suites: 5, status: 'configured' }` to backend response tools object, or (b) add null guard in frontend: `overview.tools.databaseTests && renderToolCard(...)`.
+- **Files**: `supermandi-superadmin/src/tabs/QualityDashboardTab.tsx:314`, `backend/src/routes/v1/admin/qualityDashboard.ts:103-112`
+- **Status**: DIAGNOSED
+
+### STG-025: SuperAdmin — WhatsApp CTA Config shows "[object Object]" error
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#whatsapp`)
+- **Page**: WhatsApp → Landing Page WhatsApp CTA Config
+- **Symptom**: CTA Config section shows red text **"[object Object]"** with a "Retry" link. After retry, config loads correctly showing numbers and messages.
+- **Root Cause**: `whatsapp.ts:40` — `parseErrorBody()` returns `body?.error` which can be an object (`{ code: "...", message: "..." }`) instead of a string. When passed to `new Error(obj)`, `err.message` becomes `"[object Object]"` which renders in the UI at `WhatsAppTab.tsx:307-308`.
+- **Fix**: Change `parseErrorBody` to always return a string: `typeof body?.error === 'string' ? body.error : (body?.error?.message || body?.message || \`HTTP ${res.status}\`)`.
+- **Files**: `supermandi-superadmin/src/api/whatsapp.ts:37-44`, `supermandi-superadmin/src/tabs/WhatsAppTab.tsx:307`
+- **Status**: DIAGNOSED
+
+### STG-026: SuperAdmin — AI alerts engine queries wrong table for overdue payments
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#ai-insights` → Jobs → Run Alert Analysis)
+- **Page**: AI Intelligence → Jobs tab
+- **Symptom**: "Run Alert Analysis" job will fail with 500 when processing overdue payment checks — no payment alerts generated.
+- **Root Cause**: `alertsEngine.ts:142-153` queries `payments.sell_payments` with columns that don't exist: `customer_phone`, `due_date`, `amount`, `paid_amount`, status value `'due'`. The correct table is `payments.customer_dues` (migration 049) which has `customer_phone`, `due_date`, `amount_minor`, `paid_amount_minor`, status `'pending'`.
+- **Fix**: Change query to use `payments.customer_dues` table with correct column names (`amount_minor`, `paid_amount_minor`) and status value (`'pending'` instead of `'due'`).
+- **Files**: `backend/src/services/ai/alertsEngine.ts:142-153`
+- **Status**: DIAGNOSED
+
+### STG-027:
 - **Portal**:
 - **Page**:
 - **Symptom**:
@@ -236,11 +272,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 17 |
+| DIAGNOSED | 21 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **22** |
+| **Total** | **26** |
 
 ---
 
