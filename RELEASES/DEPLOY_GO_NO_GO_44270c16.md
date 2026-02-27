@@ -1,6 +1,6 @@
 # Deploy GO/NO-GO Decision
 
-> Target SHA: `665c875a` (locked — supersedes `83b2bffe` and `880def5f`)
+> Target SHA: `44270c16` (FINAL LOCK — supersedes `665c875a`, `83b2bffe`, `880def5f`)
 > Baseline SHA: `badc3fbe` (last deployed 2026-02-23)
 > Decision Date: 2026-02-27
 > Decision: **CONDITIONAL GO** — pending operator backup + deploy action
@@ -12,7 +12,7 @@
 
 | # | Gate | Status | Evidence |
 |---|------|--------|----------|
-| 1 | CI 20/20 Gates Green | **PASS** | Run `22491073144` on `665c875a` — all 20 jobs + "All Gates Passed" sentinel |
+| 1 | CI 20/20 Gates Green | **PASS** | Run `22492025902` on `44270c16` — all 20 jobs green |
 | 2 | Workflow Validation | **PASS** | `pnpm workflow:validate` → 1252 tickets valid |
 | 3 | TypeScript (0 errors) | **PASS** | CI TypeScript Check job |
 | 4 | Unit & Integration Tests | **PASS** | CI Unit & Integration Tests job (3m11s) |

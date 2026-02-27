@@ -1,6 +1,6 @@
 # Pre-Go-Live Gate V1
 
-> Target SHA: `665c875a`
+> Target SHA: `44270c16`
 > Baseline SHA: `badc3fbe` (deployed 2026-02-23)
 > Generated: 2026-02-27
 > Overall Status: **CONDITIONAL GO — STAGING READY**
@@ -11,7 +11,7 @@
 
 | # | Gate | Status | Evidence | Blocker? |
 |---|------|--------|----------|----------|
-| 1 | Single Target SHA Lock | **PASS** | `665c875a` locked across all artifacts | NO |
+| 1 | Single Target SHA Lock | **PASS** | `44270c16` locked across all artifacts | NO |
 | 2 | lane/r7-backend Reconciliation | **CONDITIONAL PASS** | 6 backend fixes deferred with mitigating controls; blocks production, not staging | NO |
 | 3 | Ticket-to-Code Trace | **PASS** | 120 fix commits traced, all non-empty | NO |
 | 4 | Mixed-Version Compatibility | **PASS** | Rolling deploy safe (RLS bypass when no store context) | NO |
@@ -34,13 +34,13 @@
 
 | Artifact | SHA | Aligned? |
 |----------|-----|----------|
-| `git rev-parse HEAD` | `665c875a` | YES |
-| `origin/main` | `665c875a` | YES |
-| CI run `22491073144` | `665c875a` (20/20 green) | YES |
-| `staging_batch.json` | `880def5f` → to be updated to `665c875a` | PENDING UPDATE |
+| `git rev-parse HEAD` | `44270c16` | YES |
+| `origin/main` | `44270c16` | YES |
+| CI run `22492025902` | `44270c16` (20/20 green) | YES |
+| `staging_batch.json` | `880def5f` → to be updated to `44270c16` | PENDING UPDATE |
 | Deploy tag | `deploy-ready-mega-batch-2026-02-27` → `83b2bffe` → needs retag | PENDING UPDATE |
 | GO/NO-GO doc | `83b2bffe` → updated in this commit | YES |
-| Runbook expected SHA | `880def5f` → to be updated to `665c875a` | PENDING UPDATE |
+| Runbook expected SHA | `880def5f` → to be updated to `44270c16` | PENDING UPDATE |
 
 **Action**: Update `staging_batch.json`, retag, and update runbook SHA references in this commit.
 
@@ -309,8 +309,8 @@ awk -F'|' '{print $2}' /tmp/soak-results.txt | sort -n | tail -1  # p100 latency
 
 | Field | Value |
 |-------|-------|
-| Target SHA | `665c875a` |
-| CI Run | `22491073144` (20/20 green) |
+| Target SHA | `44270c16` |
+| CI Run | `22492025902` (20/20 green) |
 | Deploy tag | `deploy-ready-mega-batch-2026-02-27` (to be retagged) |
 | Migrations | 27 (141–167) |
 | Services | 6 (strict order: main-backend → api-gateway → portals parallel) |
@@ -343,7 +343,7 @@ gcloud sql backups restore <BACKUP_ID> --restore-instance=supermandi-db --projec
 
 ```
 HEAD:    665c875a
-CI Run:  22491073144 (20/20 green)
+CI Run:  22492025902 (20/20 green)
 Tag:     deploy-ready-mega-batch-2026-02-27 (to be retagged to 665c875a)
 ```
 
