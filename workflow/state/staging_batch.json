@@ -4,7 +4,7 @@
   "targetEnvironment": "staging",
   "targetProject": "supermandi-backend",
   "targetRegion": "asia-south1",
-  "commitSha": "655e72da",
+  "commitSha": "880def5f",
   "deploymentRef": "pending-operator-go-deploy",
   "createdAt": "2026-02-27T14:00:00+05:30",
   "screenIds": [
@@ -68,5 +68,5 @@
     "operatorApproved": false,
     "completed": false
   },
-  "notes": "Mega-batch deploy-ready. 982 undeployed tickets, 244 commits since last deploy (badc3fbe). CI 20/20 green on 655e72da. Operator GO_DEPLOY required."
+  "notes": "Mega-batch deploy-ready. 982 undeployed tickets, 245 commits since last deploy (badc3fbe). CI 20/20 green on 880def5f (run 22489651563). Operator GO_DEPLOY required."
 }

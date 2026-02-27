@@ -7,14 +7,14 @@
 
 | Field | Value |
 |-------|-------|
-| HEAD | `655e72da` |
+| HEAD | `880def5f` |
 | Branch | `main` |
-| Origin sync | `655e72da` (pushed, 0 ahead) |
+| Origin sync | `880def5f` (pushed, 0 ahead) |
 | Working tree | Clean |
-| CI run | `22489293151` (20/20 gates green) |
+| CI run | `22489651563` (20/20 gates green) |
 | workflow:validate | PASS (tickets=1252) |
 | Last GCP deploy | `badc3fbe` (2026-02-23, run 22305359033) |
-| Commits since deploy | 244 |
+| Commits since deploy | 245 |
 
 ## Full Ticket Counts (All Waves)
 
@@ -137,11 +137,11 @@ These are the CURRENT running revisions. If deploy fails, rollback to these.
 
 ```bash
 # 1. Verify CI green on HEAD
-gh run view 22489293151 --repo Supermanditech/supermandi-pos
+gh run view 22489651563 --repo Supermanditech/supermandi-pos
 
 # 2. Verify HEAD SHA matches
 git log --oneline -1
-# Expected: 655e72da
+# Expected: 880def5f
 
 # 3. Cloud SQL backup (MANDATORY before migration 149)
 gcloud sql backups create --instance=supermandi-db --project=supermandi-backend
@@ -190,7 +190,7 @@ curl -s https://staging.supermandi.tech/ -o /dev/null -w "%{http_code}"
 
 # 8. Verify deployed SHA matches
 curl -s https://staging-api.supermandi.tech/health | jq .gitSha
-# Expected: 655e72da
+# Expected: 880def5f
 ```
 
 ### Rollback (If Needed)
