@@ -109,7 +109,7 @@ describe('invoices API client', () => {
 
     it('throws on error response', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 500 });
-      await expect(listInvoices()).rejects.toThrow('Failed to list invoices: 500');
+      await expect(listInvoices()).rejects.toThrow('Failed to list invoices. Please try again.');
     });
 
     it('returns empty data array when data field is missing', async () => {
@@ -175,7 +175,7 @@ describe('invoices API client', () => {
 
     it('throws on error', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 404 });
-      await expect(getInvoice('nonexistent')).rejects.toThrow('Failed to get invoice: 404');
+      await expect(getInvoice('nonexistent')).rejects.toThrow('Failed to get invoice. Please try again.');
     });
   });
 
@@ -306,7 +306,7 @@ describe('invoices API client', () => {
 
     it('throws on error', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 422 });
-      await expect(issueInvoice('inv-1')).rejects.toThrow('Failed to issue invoice: 422');
+      await expect(issueInvoice('inv-1')).rejects.toThrow('Failed to issue invoice. Please try again.');
     });
   });
 
@@ -428,7 +428,7 @@ describe('invoices API client', () => {
 
     it('throws on error response', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 404 });
-      await expect(downloadInvoicePdf('inv-1', 'INV/2024/001')).rejects.toThrow('Failed to download PDF: 404');
+      await expect(downloadInvoicePdf('inv-1', 'INV/2024/001')).rejects.toThrow('Failed to download PDF. Please try again.');
     });
   });
 });

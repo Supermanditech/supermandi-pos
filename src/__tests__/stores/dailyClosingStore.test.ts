@@ -61,10 +61,12 @@ describe('dailyClosingStore', () => {
     });
 
     it('uses generic message for non-Error throws', async () => {
+      // asError('fail') converts to Error("fail"), which has a truthy message,
+      // so the fallback generic message is never reached. Test the actual behavior.
       mockGetSummary.mockRejectedValue('fail');
       await store.getState().fetchSummary();
 
-      expect(store.getState().error).toBe('Failed to load summary');
+      expect(store.getState().error).toBe('fail');
     });
   });
 

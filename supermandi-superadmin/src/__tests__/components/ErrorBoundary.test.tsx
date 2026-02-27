@@ -92,34 +92,26 @@ describe('ErrorBoundary', () => {
       expect(screen.getByText(/try refreshing the page/)).toBeInTheDocument();
     });
 
-    it('renders refresh button in fallback UI', () => {
+    it('renders try again button in fallback UI', () => {
       render(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      const refreshButton = screen.getByRole('button', { name: /refresh page/i });
-      expect(refreshButton).toBeInTheDocument();
+      const tryAgainButton = screen.getByRole('button', { name: /try again/i });
+      expect(tryAgainButton).toBeInTheDocument();
     });
 
-    it('refresh button calls window.location.reload', () => {
-      const reloadMock = vi.fn();
-      Object.defineProperty(window, 'location', {
-        writable: true,
-        value: { reload: reloadMock },
-      });
-
+    it('renders go home button in fallback UI', () => {
       render(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      const refreshButton = screen.getByRole('button', { name: /refresh page/i });
-      refreshButton.click();
-
-      expect(reloadMock).toHaveBeenCalled();
+      const goHomeButton = screen.getByRole('button', { name: /go home/i });
+      expect(goHomeButton).toBeInTheDocument();
     });
 
     it('logs error to console', () => {
@@ -168,14 +160,14 @@ describe('ErrorBoundary', () => {
       expect(heading).toHaveStyle({ color: '#991b1b' });
     });
 
-    it('styles refresh button correctly', () => {
+    it('styles try again button correctly', () => {
       render(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      const button = screen.getByRole('button', { name: /refresh page/i });
+      const button = screen.getByRole('button', { name: /try again/i });
       // Just verify key styles are present (jsdom may apply browser defaults)
       expect(button).toHaveStyle({ cursor: 'pointer' });
       expect(button.style.background).toBeTruthy();

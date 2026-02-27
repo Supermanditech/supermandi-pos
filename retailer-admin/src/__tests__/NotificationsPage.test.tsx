@@ -103,9 +103,14 @@ describe('NotificationsPage', () => {
     });
   });
 
-  it('has refresh button', () => {
-    mockAuthFetch.mockReturnValue(new Promise(() => {}));
+  it('has refresh button', async () => {
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: [], pagination: { total: 0 } }),
+    });
     render(<MemoryRouter><NotificationsPage /></MemoryRouter>);
-    expect(screen.getByText('Refresh')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Refresh')).toBeInTheDocument();
+    });
   });
 });

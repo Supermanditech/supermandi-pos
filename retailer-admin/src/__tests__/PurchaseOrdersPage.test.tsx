@@ -86,7 +86,7 @@ describe('PurchaseOrdersPage', () => {
         data: [
           {
             id: 'po-1', poNumber: 'PO-001', supplierId: 's1', supplierName: 'Fresh Farms',
-            orderDate: '2026-01-15', totalMinor: 500000, status: 'pending',
+            orderDate: '2026-01-15', totalMinor: 500000, status: 'submitted',
             itemsCount: 5, createdAt: '2026-01-15',
           },
         ],
@@ -97,9 +97,9 @@ describe('PurchaseOrdersPage', () => {
     await waitFor(() => {
       expect(screen.getByText('PO-001')).toBeInTheDocument();
       expect(screen.getByText('Fresh Farms')).toBeInTheDocument();
-      // "Pending" appears both in the status filter dropdown and the order status
-      const pendingElems = screen.getAllByText('Pending');
-      expect(pendingElems.length).toBeGreaterThanOrEqual(1);
+      // "Submitted" appears both in the status filter dropdown and the order status
+      const submittedElems = screen.getAllByText('Submitted');
+      expect(submittedElems.length).toBeGreaterThanOrEqual(1);
     });
   });
 

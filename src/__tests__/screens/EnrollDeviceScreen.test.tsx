@@ -136,24 +136,34 @@ describe("EnrollDeviceScreen", () => {
     mockRouteParams.code = undefined;
   });
 
-  it("renders with key elements and a11y labels", () => {
+  it("renders with key elements and a11y labels", async () => {
+    // ENROLL-SESSION-CHECK-RACE-CONDITION: component shows spinner until
+    // getDeviceSession() resolves, so we must wait for form to appear
     render(<EnrollDeviceScreen />);
-    expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
     expect(screen.getByText("Activate Your POS")).toBeTruthy();
     expect(screen.getByTestId("enroll-code-input")).toBeTruthy();
     expect(screen.getByTestId("enroll-label-input")).toBeTruthy();
     expect(screen.getByTestId("enroll-submit-button")).toBeTruthy();
   });
 
-  it("pre-fills enrollment code from route params", () => {
+  it("pre-fills enrollment code from route params", async () => {
     mockRouteParams.enrollmentCode = "SM-ABC123";
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-code-input")).toBeTruthy();
+    });
     expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-ABC123");
   });
 
   it("shows alert for missing code", async () => {
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     // Clear default label, leave code empty
     fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
@@ -169,6 +179,9 @@ describe("EnrollDeviceScreen", () => {
   it("shows alert for missing label (#404)", async () => {
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     // Clear the default label
@@ -186,6 +199,9 @@ describe("EnrollDeviceScreen", () => {
     mockNetInfoFetch.mockResolvedValue({ isConnected: false });
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     // Label has default from device model ("TestDevice")
@@ -201,6 +217,9 @@ describe("EnrollDeviceScreen", () => {
 
   it("calls enrollDevice with label and navigates to SellScan on success", async () => {
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
@@ -223,6 +242,9 @@ describe("EnrollDeviceScreen", () => {
     mockEnrollDevice.mockRejectedValue(new ApiError("ENROLLMENT_CODE_EXPIRED", 409));
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-EXPIRED");
     // Label has default from device model
@@ -242,6 +264,9 @@ describe("EnrollDeviceScreen", () => {
     mockEnrollDevice.mockRejectedValue(new ApiError("ENROLLMENT_CODE_REVOKED", 409));
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-REVOKED");
 
@@ -264,8 +289,11 @@ describe("EnrollDeviceScreen", () => {
     });
   });
 
-  it("has default label from device model name", () => {
+  it("has default label from device model name", async () => {
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
     // expo-device mock has modelName: "TestDevice"
     expect(screen.getByTestId("enroll-label-input").props.value).toBe("TestDevice");
   });
@@ -288,6 +316,9 @@ describe("EnrollDeviceScreen", () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -314,6 +345,9 @@ describe("EnrollDeviceScreen", () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue("true");
 
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -329,6 +363,9 @@ describe("EnrollDeviceScreen", () => {
   it("navigates to SellScan when upiVpa is present (regardless of prompt state)", async () => {
     // Default mock has upiVpa: "test@upi"
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -359,6 +396,9 @@ describe("EnrollDeviceScreen", () => {
     });
 
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
@@ -385,6 +425,9 @@ describe("EnrollDeviceScreen", () => {
     });
 
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
     await act(async () => {
@@ -410,6 +453,9 @@ describe("EnrollDeviceScreen", () => {
 
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
+    });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -426,9 +472,12 @@ describe("EnrollDeviceScreen", () => {
     alertSpy.mockRestore();
   });
 
-  it("pre-fills code from 'code' route param (backward compat)", () => {
+  it("pre-fills code from 'code' route param (backward compat)", async () => {
     mockRouteParams.code = "SM-CODE99";
     render(<EnrollDeviceScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId("enroll-code-input")).toBeTruthy();
+    });
     expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-CODE99");
     mockRouteParams.code = undefined;
   });

@@ -49,13 +49,15 @@ jest.mock("../../services/deviceInfo", () => ({
   getDeviceMeta: () => ({ appVersion: "1.0.0" }),
 }));
 
-// Mock react-native-svg
+// Mock react-native-svg (BrandShortmark uses Svg, Rect, Circle)
 jest.mock("react-native-svg", () => {
   const React = require("react");
   return {
     __esModule: true,
     default: (props: any) => React.createElement("View", props),
     Path: (props: any) => React.createElement("View", props),
+    Rect: (props: any) => React.createElement("View", props),
+    Circle: (props: any) => React.createElement("View", props),
   };
 });
 

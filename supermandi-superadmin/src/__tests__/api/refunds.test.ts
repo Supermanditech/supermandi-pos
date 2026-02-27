@@ -126,7 +126,7 @@ describe('refunds API client', () => {
 
     it('throws on error response', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 500 });
-      await expect(fetchRefunds()).rejects.toThrow('Refunds fetch failed: 500');
+      await expect(fetchRefunds()).rejects.toThrow('Failed to load refunds. Please try again.');
     });
 
     it('returns empty data array when data is missing', async () => {
@@ -194,7 +194,7 @@ describe('refunds API client', () => {
 
     it('throws on error response', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 422 });
-      await expect(approveRefund('ref-1')).rejects.toThrow('Refund approve failed: 422');
+      await expect(approveRefund('ref-1')).rejects.toThrow('Failed to approve refund. Please try again.');
     });
   });
 
@@ -222,7 +222,7 @@ describe('refunds API client', () => {
 
     it('throws on error response', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 400 });
-      await expect(rejectRefund('ref-1', 'reason')).rejects.toThrow('Refund reject failed: 400');
+      await expect(rejectRefund('ref-1', 'reason')).rejects.toThrow('Failed to reject refund. Please try again.');
     });
   });
 });

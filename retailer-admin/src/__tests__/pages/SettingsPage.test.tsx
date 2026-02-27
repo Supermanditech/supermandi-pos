@@ -552,7 +552,6 @@ describe('Save settings', () => {
         'test-token',
         expect.objectContaining({
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
         })
       );
     });

@@ -179,7 +179,7 @@ describe('monitoring API client', () => {
         json: async () => ({ error: 'Internal error' }),
       });
 
-      await expect(triggerTokenCleanup()).rejects.toThrow('Token cleanup failed: 500');
+      await expect(triggerTokenCleanup()).rejects.toThrow('Token cleanup failed. Please try again.');
     });
 
     it('throws on 401 unauthorized', async () => {
@@ -189,7 +189,7 @@ describe('monitoring API client', () => {
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      await expect(triggerTokenCleanup()).rejects.toThrow('Token cleanup failed: 401');
+      await expect(triggerTokenCleanup()).rejects.toThrow('Token cleanup failed. Please try again.');
     });
 
     it('defaults to 0 for missing counts', async () => {

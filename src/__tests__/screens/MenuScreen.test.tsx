@@ -130,6 +130,8 @@ jest.mock("react-native-svg", () => {
     __esModule: true,
     default: (props: any) => React.createElement("View", props),
     Path: (props: any) => React.createElement("View", props),
+    Rect: (props: any) => React.createElement("View", props),
+    Circle: (props: any) => React.createElement("View", props),
   };
 });
 

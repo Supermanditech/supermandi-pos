@@ -136,7 +136,7 @@ describe('gstCompliance API client', () => {
 
     it('throws on error', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 500 });
-      await expect(fetchGstSummary('store-1')).rejects.toThrow('GST summary failed: 500');
+      await expect(fetchGstSummary('store-1')).rejects.toThrow('Failed to load GST summary');
     });
 
     it('encodes storeId in URL', async () => {
@@ -199,7 +199,7 @@ describe('gstCompliance API client', () => {
 
     it('throws on error', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 404 });
-      await expect(exportGstr1('store-1')).rejects.toThrow('GSTR-1 export failed: 404');
+      await expect(exportGstr1('store-1')).rejects.toThrow('No GST data available for export in this period');
     });
 
     it('includes auth headers', async () => {
@@ -312,7 +312,7 @@ describe('gstCompliance API client', () => {
 
     it('throws on error', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 500 });
-      await expect(fetchGstStoresOverview()).rejects.toThrow('GST stores overview failed: 500');
+      await expect(fetchGstStoresOverview()).rejects.toThrow('Failed to load GST stores overview');
     });
   });
 });

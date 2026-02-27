@@ -22,6 +22,7 @@ vi.mock('../components/EmptyState', () => ({
 
 vi.mock('../lib/formatters', () => ({
   formatDateTime: (d: string) => new Date(d).toLocaleDateString(),
+  formatCurrency: (v: number) => `Rs ${(v / 100).toFixed(2)}`,
 }));
 
 // Mock lucide-react icons

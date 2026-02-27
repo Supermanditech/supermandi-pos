@@ -18,9 +18,6 @@ vi.mock('../../api/errorSanitizer', () => ({
 function okResponse(data: unknown) {
   return { ok: true, json: () => Promise.resolve(data) };
 }
-function errResponse() {
-  return { ok: false, json: () => Promise.resolve({ error: 'Server Error' }) };
-}
 
 describe('AIInsightsTab', () => {
   beforeEach(() => {

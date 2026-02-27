@@ -49,6 +49,7 @@ describe('VariantManager', () => {
 
   it('shows empty state when no variants', async () => {
     mockAuthFetch.mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ ok: true, data: [] }),
     });
     render(<VariantManager {...defaultProps} />);
@@ -59,6 +60,7 @@ describe('VariantManager', () => {
 
   it('renders variant list when data loads', async () => {
     mockAuthFetch.mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({
         ok: true,
         data: [
@@ -76,6 +78,7 @@ describe('VariantManager', () => {
 
   it('shows add variant form when button clicked', async () => {
     mockAuthFetch.mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ ok: true, data: [] }),
     });
     render(<VariantManager {...defaultProps} />);
@@ -90,6 +93,7 @@ describe('VariantManager', () => {
 
   it('calls onClose when close button clicked', async () => {
     mockAuthFetch.mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ ok: true, data: [] }),
     });
     render(<VariantManager {...defaultProps} />);
