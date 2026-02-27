@@ -276,12 +276,12 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.SUPERADMIN.CREDIT-PROVIDERS-NO-TESTS.001",
-    "lastValidatedCommit": "PENDING",
+    "lastValidatedCommit": "5346c9f5",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=PENDING"
+      "audit_sha=5346c9f5"
     ]
   },
   "implementation": {

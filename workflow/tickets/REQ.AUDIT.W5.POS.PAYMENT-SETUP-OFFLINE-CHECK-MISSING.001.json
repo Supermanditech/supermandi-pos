@@ -275,12 +275,12 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.PAYMENT-SETUP-OFFLINE-CHECK-MISSING.001",
-    "lastValidatedCommit": "PENDING",
+    "lastValidatedCommit": "68b33ea2",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=PENDING"
+      "audit_sha=68b33ea2"
     ]
   },
   "implementation": {

@@ -282,12 +282,12 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.SUPPLIER.BREADCRUMB-WRONG-PROP.001",
-    "lastValidatedCommit": "PENDING",
+    "lastValidatedCommit": "08aef222",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=PENDING"
+      "audit_sha=08aef222"
     ]
   },
   "implementation": {

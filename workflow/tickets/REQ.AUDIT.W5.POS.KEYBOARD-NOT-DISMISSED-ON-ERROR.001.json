@@ -275,12 +275,12 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.KEYBOARD-NOT-DISMISSED-ON-ERROR.001",
-    "lastValidatedCommit": "PENDING",
+    "lastValidatedCommit": "9ec0d51a",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=PENDING"
+      "audit_sha=9ec0d51a"
     ]
   },
   "implementation": {

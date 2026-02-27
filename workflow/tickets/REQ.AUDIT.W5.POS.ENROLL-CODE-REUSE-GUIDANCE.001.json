@@ -275,12 +275,12 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.ENROLL-CODE-REUSE-GUIDANCE.001",
-    "lastValidatedCommit": "PENDING",
+    "lastValidatedCommit": "872f951c",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=PENDING"
+      "audit_sha=872f951c"
     ]
   },
   "implementation": {

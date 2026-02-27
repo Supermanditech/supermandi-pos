@@ -276,12 +276,12 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.RETAILER.NOTIFICATIONS-REFRESH-NO-DEBOUNCE.001",
-    "lastValidatedCommit": "PENDING",
+    "lastValidatedCommit": "c8166385",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=PENDING"
+      "audit_sha=c8166385"
     ]
   },
   "implementation": {

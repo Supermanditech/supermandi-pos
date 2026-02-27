@@ -278,12 +278,12 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.BACKEND.SYNC-CLEANUP-NO-RECOVERY.001",
-    "lastValidatedCommit": "PENDING",
+    "lastValidatedCommit": "92308348",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=PENDING"
+      "audit_sha=92308348"
     ]
   },
   "implementation": {
