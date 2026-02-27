@@ -66,11 +66,43 @@
 - **Fix**: Updated secret via `gcloud secrets versions add smtp-password` with valid App Password. Restarted main-backend (revision `main-backend-00112-db8`).
 - **Status**: FIXED (infra fix, no code change needed)
 
+### STG-005: ALL PORTALS — Remove "Made in India" from footer across all pages
+- **Portal**: ALL (Supplier, Retailer, SuperAdmin, POS, Landing)
+- **Page**: Every page with footer
+- **Symptom**: Footer shows "© 2026 SuperMandi Tech Pvt Ltd · Made in India" — operator wants "Made in India" removed
+- **Root Cause**: Hardcoded in 17 locations across all portals
+- **Files**: `supplier-portal/src/app/(dashboard)/layout.tsx:445`, `supplier-portal/src/app/register/layout.tsx:32`, `supplier-portal/src/app/help/page.tsx:57`, `supplier-portal/src/app/help/layout.tsx:32`, `supplier-portal/src/app/(auth)/layout.tsx:40`, `retailer-admin/src/components/ProtectedLayout.tsx:318`, `retailer-admin/src/components/HelpPageContent.tsx:131`, `retailer-admin/src/pages/RegisterPage.tsx:1119`, `retailer-admin/src/pages/LoginPage.tsx:730`, `retailer-admin/src/pages/ForgotPasswordPage.tsx:641`, `retailer-admin/src/pages/ResetPasswordPage.tsx:261`, `retailer-admin/src/pages/HelpPage.tsx:37`, `supermandi-superadmin/src/App.tsx:3490`, `supermandi-superadmin/src/components/LoginGate.tsx:191`, `src/screens/HelpScreen.tsx:226`
+- **Status**: DIAGNOSED
+
+### STG-006: ALL PORTALS — Hardcoded copyright year 2026 will go stale
+- **Portal**: ALL
+- **Page**: Every page with footer
+- **Symptom**: Footer shows `© 2026` — hardcoded, will be wrong in 2027
+- **Root Cause**: Hardcoded year string in same 17 locations as STG-005
+- **Fix**: Replace `2026` with dynamic `new Date().getFullYear()` (React) / `{new Date().getFullYear()}` (JSX)
+- **Status**: DIAGNOSED
+
+### STG-007: Supplier Portal — Dashboard orders/products queries missing loading states
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/dashboard/`)
+- **Page**: Dashboard
+- **Symptom**: "No orders yet." shows immediately even while API is still loading. No skeleton/spinner.
+- **Root Cause**: `useQuery` for orders and products doesn't destructure `isLoading`/`isError`. Recent Orders section treats "not loaded" same as "empty".
+- **Files**: `supplier-portal/src/app/(dashboard)/dashboard/page.tsx:66-75`
+- **Status**: DIAGNOSED
+
+### STG-008: Supplier Portal — Quick Actions don't check supplier verification status
+- **Portal**: Supplier
+- **Page**: Dashboard → Quick Actions
+- **Symptom**: "Add Product", "Upload CSV" buttons are enabled even for unverified suppliers — clicking leads to API permission error
+- **Root Cause**: Quick action `<Link>` components don't check `supplier.verificationStatus`. Layout has `LimitedModeBanner` but buttons aren't disabled.
+- **Files**: `supplier-portal/src/app/(dashboard)/dashboard/page.tsx:174-191`
+- **Status**: DIAGNOSED
+
 ---
 
 ## Pending Issues (add new issues below)
 
-### STG-005:
+### STG-009:
 - **Portal**:
 - **Page**:
 - **Symptom**:
@@ -85,11 +117,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
+| DIAGNOSED | 4 |
 | FOUND | 0 |
-| DIAGNOSED | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 0 |
-| **Total** | **4** |
+| **Total** | **8** |
 
 ---
 
