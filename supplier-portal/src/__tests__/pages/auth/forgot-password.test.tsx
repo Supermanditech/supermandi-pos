@@ -127,15 +127,16 @@ describe('ForgotPasswordPage', () => {
     });
   });
 
-  it('renders I Have a Reset Token link in sent step', async () => {
+  it('renders I Have a Reset Token button in sent step', async () => {
     mockApiFetch.mockResolvedValueOnce({ success: true });
     render(<ForgotPasswordPage />);
     fireEvent.click(screen.getByText('Reset via email link'));
     fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'test@test.com' } });
     fireEvent.click(screen.getByText('Send Reset Link'));
     await waitFor(() => {
-      const tokenLink = screen.getByText('I Have a Reset Token');
-      expect(tokenLink.closest('a')).toHaveAttribute('href', '/reset-password');
+      // R7.SUP.004: Changed from Link to button that navigates to emailReset step
+      const tokenBtn = screen.getByText('I Have a Reset Token');
+      expect(tokenBtn.tagName).toBe('BUTTON');
     });
   });
 

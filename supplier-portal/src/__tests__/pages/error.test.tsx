@@ -62,7 +62,7 @@ describe('Error Page', () => {
   it('navigates to home when Go Home is clicked', () => {
     render(<ErrorPage error={mockError} reset={mockReset} />);
     fireEvent.click(screen.getByText('Go Home'));
-    expect(window.location.href).toBe('/');
+    expect(window.location.href).toBe('/supplier/dashboard');
   });
 
   it('logs error to console', () => {

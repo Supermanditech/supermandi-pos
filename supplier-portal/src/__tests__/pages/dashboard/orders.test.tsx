@@ -90,6 +90,22 @@ jest.mock('lucide-react', () => ({
   Repeat: () => null,
 }));
 
+// Mock auth (FIX-028: OrdersPage uses useAuth for SSE logout cleanup)
+jest.mock('../../../lib/auth', () => ({
+  useAuth: () => ({ isAuthenticated: true }),
+}));
+
+// Mock reconnectingEventSource (REQ.AUDIT.W4)
+jest.mock('../../../lib/reconnectingEventSource', () => ({
+  ReconnectingEventSource: jest.fn(),
+  SSEConnectionState: { CONNECTING: 0, OPEN: 1, CLOSED: 2 },
+}));
+
+// Mock WhatsAppIcon
+jest.mock('../../../components/WhatsAppIcon', () => ({
+  WhatsAppIcon: () => null,
+}));
+
 // Mock API
 jest.mock('../../../lib/api', () => ({
   getOrders: jest.fn(),
@@ -127,7 +143,8 @@ describe('OrdersPage', () => {
   it('renders status filter buttons', () => {
     render(<OrdersPage />);
     expect(screen.getByText('All')).toBeInTheDocument();
-    expect(screen.getByText('Pending')).toBeInTheDocument();
+    // UIUX-XPLAT-001: 'submitted' replaced 'pending' as initial PO status
+    expect(screen.getByText('Submitted')).toBeInTheDocument();
     expect(screen.getByText('Confirmed')).toBeInTheDocument();
     expect(screen.getByText('Shipped')).toBeInTheDocument();
     expect(screen.getByText('Delivered')).toBeInTheDocument();
