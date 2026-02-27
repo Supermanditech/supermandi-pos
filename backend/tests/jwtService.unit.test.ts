@@ -8,6 +8,7 @@ jest.mock('../services/auth-service/src/config', () => ({
   config: {
     jwt: {
       secret: 'test-secret-key-for-unit-tests-minimum-32-chars',
+      serviceTokenSecret: 'test-service-token-secret-for-unit-tests-32c',
       accessTokenExpiresIn: '15m',
       refreshTokenExpiresInDays: 7,
       issuer: 'supermandi-auth',
@@ -275,10 +276,10 @@ describe('jwtService', () => {
 
   describe('verifyServiceTokenWithError', () => {
     it('returns UNKNOWN_SERVICE for unknown service in token', () => {
-      // Forge a token with unknown service name
+      // Forge a token with unknown service name, signed with the service token secret
       const token = jwt.sign(
         { serviceName: 'evil-service', type: 'service' },
-        'test-secret-key-for-unit-tests-minimum-32-chars',
+        'test-service-token-secret-for-unit-tests-32c',
         { issuer: 'supermandi-auth' }
       );
 

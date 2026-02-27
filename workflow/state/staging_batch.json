@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0.0",
-  "batchId": "MEGA-BATCH-2026-02-20",
+  "batchId": "MEGA-BATCH-2026-02-27",
   "targetEnvironment": "staging",
   "targetProject": "supermandi-backend",
   "targetRegion": "asia-south1",
-  "commitSha": "badc3fbe",
-  "deploymentRef": "github://run/22305359033",
-  "createdAt": "2026-02-20T15:10:00+05:30",
+  "commitSha": "655e72da",
+  "deploymentRef": "pending-operator-go-deploy",
+  "createdAt": "2026-02-27T14:00:00+05:30",
   "screenIds": [
     "INFRA.STAGING-DEPLOY"
   ],
@@ -35,7 +35,7 @@
   "secretVersionsPinned": true,
   "migrationSafety": {
     "required": true,
-    "planRef": "backend/migrations/141-166 (26 migrations, migration 149 = RLS on 27 tables)",
+    "planRef": "backend/migrations/141-167 (27 migrations, migration 149 = RLS on 27 tables)",
     "dryRunEvidence": [
       "backend/migrations/141_t144_batch_lot_expiry.sql",
       "backend/migrations/142_t145_purchase_cart_drafts.sql",
@@ -61,11 +61,12 @@
       "backend/migrations/163_wave3b_type_normalization.sql",
       "backend/migrations/164_wave3b_full_rls_coverage.sql",
       "backend/migrations/165_onboarding_schema_hardening.sql",
-      "backend/migrations/166_add_enrollment_code_hash.sql"
+      "backend/migrations/166_add_enrollment_code_hash.sql",
+      "backend/migrations/167_whatsapp_cta_config.sql"
     ],
-    "backupId": "1771600046441",
-    "operatorApproved": true,
-    "completed": true
+    "backupId": "pending",
+    "operatorApproved": false,
+    "completed": false
   },
-  "notes": "Latest cumulative staging deploy completed successfully on badc3fbe (run 22305359033). Next deploy requires fresh GO_DEPLOY after new implementation batch."
+  "notes": "Mega-batch deploy-ready. 982 undeployed tickets, 244 commits since last deploy (badc3fbe). CI 20/20 green on 655e72da. Operator GO_DEPLOY required."
 }

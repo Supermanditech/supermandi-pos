@@ -6,8 +6,10 @@
 
 // Mock the database queries
 jest.mock('../services/inventory-service/src/db/queries', () => ({
+  getCurrentStock: jest.fn(),
   getStockBalance: jest.fn(),
   getAllStockBalancesForStore: jest.fn(),
+  getStockBalancesForProducts: jest.fn(),
   getLowStockProducts: jest.fn(),
   getLedgerEntriesForProduct: jest.fn(),
   getLedgerEntriesByReference: jest.fn(),
@@ -27,12 +29,14 @@ import {
 import {
   getStockBalance,
   getAllStockBalancesForStore,
+  getStockBalancesForProducts,
   createLedgerEntryWithBalanceUpdate,
   createBatchLedgerEntries,
 } from '../services/inventory-service/src/db/queries';
 
 const mockGetStockBalance = getStockBalance as jest.MockedFunction<typeof getStockBalance>;
 const mockGetAllBalances = getAllStockBalancesForStore as jest.MockedFunction<typeof getAllStockBalancesForStore>;
+const mockGetStockBalancesForProducts = getStockBalancesForProducts as jest.MockedFunction<typeof getStockBalancesForProducts>;
 const mockCreateEntry = createLedgerEntryWithBalanceUpdate as jest.MockedFunction<typeof createLedgerEntryWithBalanceUpdate>;
 const mockBatchEntries = createBatchLedgerEntries as jest.MockedFunction<typeof createBatchLedgerEntries>;
 
@@ -64,7 +68,7 @@ describe('Ledger Service', () => {
 
   describe('getStockForMultipleProducts', () => {
     it('maps balances to product IDs', async () => {
-      mockGetAllBalances.mockResolvedValue([
+      mockGetStockBalancesForProducts.mockResolvedValue([
         { productId: 'p1', currentQty: 10 },
         { productId: 'p3', currentQty: 30 },
       ] as any);
