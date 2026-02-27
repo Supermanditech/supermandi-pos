@@ -50,7 +50,7 @@ let intervalIds: NodeJS.Timeout[] = [];
  * Clean up stale sync locks (older than 5 minutes)
  * Prevents orphaned locks from blocking new sync operations
  */
-async function cleanupStaleSyncLocks(): Promise<number> {
+async function cleanupStaleSyncLocks(attempt = 1): Promise<number> {
   const pool = getPool();
   if (!pool) return 0;
 
@@ -74,7 +74,14 @@ async function cleanupStaleSyncLocks(): Promise<number> {
   } catch (_error: unknown) {
     const error = asError(_error);
     stats.sync_locks.errors++;
-    log.error("[SyncCleanup] Error cleaning sync locks:", error?.message);
+    // REQ.AUDIT.W5.BACKEND.SYNC-CLEANUP-NO-RECOVERY.001: retry with backoff to prevent stale lock accumulation
+    if (attempt < 3) {
+      const delayMs = 1000 * Math.pow(2, attempt - 1);
+      log.warn(`[SyncCleanup] Retry ${attempt}/2 in ${delayMs}ms: ${error?.message}`);
+      await new Promise(r => setTimeout(r, delayMs));
+      return cleanupStaleSyncLocks(attempt + 1);
+    }
+    log.error("[SyncCleanup] Error cleaning sync locks after retries:", error?.message);
     return 0;
   } finally {
     client.release();

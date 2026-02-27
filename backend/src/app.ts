@@ -14,6 +14,8 @@ import { errorReportingMiddleware } from "./services/errorReporter";
 import { getTranslationHealth } from "./services/translationService";
 import { initializeFirebase } from "@supermandi/common";
 import { logger } from "./lib/logger";
+// REQ.AUDIT.W5.BACKEND.HEALTH-ENDPOINT-NO-DEPS-CHECK.001
+import { getPool } from "./db/client";
 
 // Always load backend env from `backend/.env` (not repo root `/.env`).
 // This prevents Prisma errors like missing DATABASE_URL when the process is started with a different CWD (e.g. pm2/systemd).
@@ -79,7 +81,8 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Token', 'X-Admin-Token', 'X-Request-ID'],
-  maxAge: 86400, // CORS-MAXAGE-001: Cache preflight for 24h (reduces OPTIONS requests)
+  // REQ.AUDIT.W5.BACKEND.CORS-CACHE-TOO-LONG.001: reduced from 24h to 1h for faster emergency policy propagation
+  maxAge: 3600,
 };
 app.use(cors(corsOptions));
 // T-210: Attach correlation ID to every request (from X-Request-Id or X-Cloud-Trace-Context)
@@ -100,16 +103,28 @@ app.use(express.json({
   },
 }));
 
-app.get("/health", (_req, res) => {
+app.get("/health", async (_req, res) => {
   // Cloud health-check contract: must be JSON { status: "ok" }
   // DEV-071: Include version info for deployment verification
-  res.json({
-    status: "ok",
+  // REQ.AUDIT.W5.BACKEND.HEALTH-ENDPOINT-NO-DEPS-CHECK.001: verify DB connectivity
+  const info: Record<string, unknown> = {
     service: "main-backend",
     gitSha: GIT_SHA,
     startTime: BUILD_TIME,
-    env: process.env.NODE_ENV || "development"
-  });
+    env: process.env.NODE_ENV || "development",
+  };
+  try {
+    const pool = getPool();
+    if (pool) {
+      await pool.query("SELECT 1");
+      info.db = "ok";
+    } else {
+      info.db = "no_pool";
+    }
+    res.json({ status: "ok", ...info });
+  } catch {
+    res.status(503).json({ status: "degraded", ...info, db: "unreachable" });
+  }
 });
 
 // CR-VERSION-001: Version endpoint for Cloud Run deploy verification

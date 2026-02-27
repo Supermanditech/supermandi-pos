@@ -104,6 +104,8 @@ app.use((req, res, next) => {
     // LIVE.GW.CORS_INTERNAL_HEADER_EXPOSURE.001: Only expose client-facing headers, not internal ones
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
+    // REQ.AUDIT.W5.BACKEND.CORS-CACHE-TOO-LONG.001: 1h preflight cache
+    res.header('Access-Control-Max-Age', '3600');
   }
 
   if (req.method === 'OPTIONS') {

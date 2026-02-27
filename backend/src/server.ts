@@ -1,6 +1,6 @@
 import app from "./app";
 import { logGcpValidationResults } from "./startup/validateGcp";
-import { startSyncCleanupScheduler } from "./services/syncCleanupScheduler";
+import { startSyncCleanupScheduler, stopSyncCleanupScheduler } from "./services/syncCleanupScheduler";
 import { loadOnboardingConfig } from "./config/onboardingConfig";
 import { logger } from "./lib/logger";
 import { initializeGcs } from "@supermandi/common";
@@ -62,8 +62,10 @@ async function start(): Promise<void> {
   });
 
   // SHUTDOWN-001: Graceful shutdown on SIGTERM/SIGINT (Cloud Run sends SIGTERM)
+  // REQ.AUDIT.W5.BACKEND.GRACEFUL-SHUTDOWN-INCOMPLETE.001: stop scheduler before closing server
   const shutdown = (signal: string) => {
     logger.info(`${signal} received, shutting down gracefully`);
+    stopSyncCleanupScheduler();
     server.close(() => {
       logger.info("Server closed");
       process.exit(0);
