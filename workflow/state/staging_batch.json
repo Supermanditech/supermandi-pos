@@ -5,7 +5,7 @@
   "targetProject": "supermandi-backend",
   "targetRegion": "asia-south1",
   "commitSha": "deploy-ready-mega-batch-2026-02-27",
-  "deploymentRef": "pending-operator-go-deploy",
+  "deploymentRef": "github-actions-run-22495881589",
   "createdAt": "2026-02-27T14:00:00+05:30",
   "screenIds": [
     "INFRA.STAGING-DEPLOY"
@@ -64,9 +64,9 @@
       "backend/migrations/166_add_enrollment_code_hash.sql",
       "backend/migrations/167_whatsapp_cta_config.sql"
     ],
-    "backupId": "pending",
-    "operatorApproved": false,
-    "completed": false
+    "backupId": "1772211476794",
+    "operatorApproved": true,
+    "completed": true
   },
-  "notes": "Mega-batch deploy-ready. 982 undeployed tickets. CI 20/20 green on HEAD (run 22492025902). Deploy SHA = HEAD of main at deploy time. Tag deploy-ready-mega-batch-2026-02-27 = deployment anchor. Operator GO_DEPLOY required."
+  "notes": "Mega-batch DEPLOYED to staging 2026-02-27. SHA e63dba14 (tag deploy-ready-mega-batch-2026-02-27). CD run 22495881589 — 7/7 jobs GREEN. Phase 8 STAGING VERIFIED (28/28 checks PASS). Cloud SQL backup 1772211476794. All 6 services at 100% traffic on new revisions. Awaiting operator browser test + final sign-off."
 }

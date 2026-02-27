@@ -4,8 +4,8 @@
   "orderInScreen": 1,
   "surface": "shared",
   "riskClass": "critical",
-  "title": "Trigger mega-batch staging deploy — 6 services + 25 migrations",
-  "description": "Deploy all 6 Cloud Run services to GCP staging (supermandi-backend, asia-south1). Mega-batch: 500+ tickets code-complete, 3416 tests pass, 25 DB migrations (141-166). Cloud SQL backup 1771600046441 created.",
+  "title": "Trigger mega-batch staging deploy — 6 services + 27 migrations",
+  "description": "Deploy all 6 Cloud Run services to GCP staging (supermandi-backend, asia-south1). Mega-batch: 982 undeployed tickets, CI 20/20 green, 27 DB migrations (141-167). Cloud SQL backup 1772211476794 created. Deployed SHA e63dba14. All 7 CD pipeline jobs GREEN.",
   "status": "todo",
   "severity": "P0",
   "parentTicketId": null,
@@ -46,12 +46,12 @@
     "dbConnectivityChecked": true,
     "artifactDigestPinned": true,
     "cloudRunRevisionIds": [
-      "pending-deploy-main-backend",
-      "pending-deploy-api-gateway",
-      "pending-deploy-retailer-admin",
-      "pending-deploy-supplier-portal",
-      "pending-deploy-superadmin",
-      "pending-deploy-landing"
+      "main-backend-00110-nw4",
+      "api-gateway-00091-5gc",
+      "retailer-admin-00091-swc",
+      "supplier-portal-00085-sdm",
+      "superadmin-00084-s68",
+      "landing-00084-txz"
     ]
   },
   "impact": {
@@ -73,12 +73,12 @@
     "reportedBy": "system",
     "reproSteps": [
       "Verify all pre-deploy gates pass (Phase A: 20 gates)",
-      "Create Cloud SQL backup before migration — DONE (backup 1771600046441)",
-      "Trigger CI deploy workflow on main branch HEAD",
-      "Monitor 25 migrations (141-166) — migration 149 is critical (RLS on 27 tables)",
-      "Verify 6 Cloud Run services deploy in order: main-backend → api-gateway → portals",
-      "Run Phase D: 44 automated verification gates",
-      "Browser-test all 6 portals + POS app against staging URLs"
+      "Create Cloud SQL backup before migration — DONE (backup 1772211476794, SUCCESSFUL 2026-02-27T16:57:56.803Z)",
+      "Trigger CI deploy workflow on main branch HEAD — DONE (run 22495881589, 7/7 GREEN)",
+      "Monitor 27 migrations (141-167) — migration 149 is critical (RLS on 27 tables) — auto-applied on container startup",
+      "Verify 6 Cloud Run services deploy in order: main-backend → api-gateway → portals — DONE (all 6 at 100% traffic)",
+      "Run Phase D: automated verification gates — DONE (10 smoke gates PASS, 25 routing checks PASS, 18 GCP flags PASS)",
+      "Browser-test all 4 portals + POS app against staging URLs — PENDING (operator action)"
     ],
     "finalSignoff": false,
     "signoffAt": ""
@@ -93,7 +93,7 @@
     "migrationSafetyChecked": true,
     "rollbackPlanReady": true,
     "stagingDeployPassed": true,
-    "stagingDeploymentRef": "deploy-mega-batch-2026-02-20",
+    "stagingDeploymentRef": "deploy-ready-mega-batch-2026-02-27",
     "cloudWorkspaceValidated": true,
     "cloudWorkspaceRef": "projects/supermandi-backend/locations/asia-south1"
   },
@@ -158,8 +158,15 @@
     "nonBlockingIssueCount": 0,
     "noBlockingIssueRemaining": true,
     "evidenceAttached": false,
-    "validatedDeploymentRef": "deploy-mega-batch-2026-02-20",
-    "validatedCloudRunRevisionIds": []
+    "validatedDeploymentRef": "deploy-ready-mega-batch-2026-02-27",
+    "validatedCloudRunRevisionIds": [
+      "main-backend-00110-nw4",
+      "api-gateway-00091-5gc",
+      "retailer-admin-00091-swc",
+      "supplier-portal-00085-sdm",
+      "superadmin-00084-s68",
+      "landing-00084-txz"
+    ]
   },
   "statusHistory": [
     {
@@ -216,7 +223,7 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": true,
-    "notes": "Deploy-orchestration ticket. All 500+ code tickets done. 3416 tests pass. GCP infrastructure verified via MCP gcloud. No mock data — real staging infra.",
+    "notes": "Deploy-orchestration ticket. 982 undeployed tickets. CI 20/20 green. Deployed to staging 2026-02-27 (SHA e63dba14, run 22495881589). Phase 8 STAGING VERIFIED (28/28 checks PASS). No mock data.",
     "evidence": [
       "workflow/state/staging_batch.json",
       "RELEASES/CLAUDE_CURRENT_STATE.json"
@@ -250,7 +257,7 @@
     "internalDependencies": [
       "All code-complete tickets (500+ done)",
       "CI pipeline (ci-gates.yml, deploy.yml)",
-      "25 DB migrations (141-166)"
+      "27 DB migrations (141-167)"
     ],
     "externalDependencies": [
       "GCP Cloud SQL (supermandi-staging)",
@@ -307,7 +314,7 @@
         "backend/migrations/149_t216_row_level_security.sql",
         "workflow/state/staging_batch.json"
       ],
-      "notes": "Deploy ticket — backup 1771600046441 created, migrations documented."
+      "notes": "Deploy ticket — backup 1772211476794 created (SUCCESSFUL), 172 migration files auto-applied on container startup."
     },
     "strictSchemaValidation": {
       "status": "pass",
@@ -338,12 +345,12 @@
     "pendingExternal": [],
     "pendingOps": [],
     "blocked": false,
-    "summary": "Code complete. Cloud SQL backup done. Migration plan documented. Ready for staging deploy."
+    "summary": "Staging deployed (SHA e63dba14). Phase 8 STAGING VERIFIED (28/28 PASS). Awaiting operator browser test + final sign-off for production."
   },
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "FIX-001",
-    "lastValidatedCommit": "43068a2",
+    "lastValidatedCommit": "e63dba14",
     "noMixedScope": true,
     "noConflictMarkers": true,
     "ciGateStatus": "passed",
