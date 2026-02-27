@@ -257,7 +257,34 @@
 - **Files**: `backend/src/services/ai/alertsEngine.ts:142-153`
 - **Status**: DIAGNOSED
 
-### STG-027:
+### STG-027: SuperAdmin — Device ID filter crashes query (UUID ILIKE mismatch)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#devices`)
+- **Page**: Devices → Device ID filter
+- **Symptom**: Typing any text into the device ID filter crashes the device listing — 500 error "operator does not exist: uuid ~~* text"
+- **Root Cause**: `devices.ts:45` uses `d.id ILIKE $N` but after migration 163, `pos_devices.id` was converted from TEXT to UUID. PostgreSQL does not support ILIKE on UUID columns.
+- **Fix**: Cast to text: change `d.id ILIKE $N` to `d.id::text ILIKE $N` at line 45 (and same for the COUNT query using the same conditions).
+- **Files**: `backend/src/routes/v1/admin/devices.ts:45`
+- **Status**: DIAGNOSED
+
+### STG-028: SuperAdmin — Staff "Stock-Ins" column always shows 0
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#staff`)
+- **Page**: Staff → Staff table → Stock-Ins column
+- **Symptom**: Every staff member shows "0" in the Stock-Ins column, regardless of how many stock-ins they performed.
+- **Root Cause**: `staff.ts:31` subquery searches `inventory.inventory_ledger.notes LIKE '%' || s.id::text || '%'` — but the stock-in route (`pos/stockIn.ts:287`) never writes the staff UUID into the `notes` field. The `inventory_ledger` table has no `staff_id` column at all.
+- **Fix**: Either (a) add `staff_id` column to `inventory.inventory_ledger` and populate from stock-in route, or (b) remove the Stock-Ins column from the staff table until data pipeline supports it.
+- **Files**: `backend/src/routes/v1/admin/staff.ts:31`, `backend/src/routes/v1/pos/stockIn.ts:287`
+- **Status**: DIAGNOSED
+
+### STG-029: SuperAdmin — Invoice View/Download fails for supplier invoices (wrong column)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#invoices`)
+- **Page**: Invoices → View or Download button
+- **Symptom**: Clicking View or Download on any purchase/commission invoice returns 500 error — "column phone does not exist"
+- **Root Cause**: `invoiceService.ts:507` queries `SELECT phone FROM supplier.suppliers` but the actual column name is `primary_phone` (migration 003 line 28). This crashes for any invoice where the seller is a supplier.
+- **Fix**: Change `SELECT phone` to `SELECT primary_phone AS phone` at `invoiceService.ts:507`.
+- **Files**: `backend/src/services/invoiceService.ts:507`
+- **Status**: DIAGNOSED
+
+### STG-030:
 - **Portal**:
 - **Page**:
 - **Symptom**:
@@ -272,11 +299,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 21 |
+| DIAGNOSED | 24 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **26** |
+| **Total** | **29** |
 
 ---
 
