@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "NotificationsPage: Previous button disabled at page 1 with no tooltip explaining why",
   "description": "Previous button disabled at offset=0 but no tooltip or message explains why. Confusing UX.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "supplier-portal/src/app/(dashboard)/notifications/page.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.SUPPLIER.NOTIFICATIONS-PAGINATION-UNCLEAR-UI.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +144,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-supplier-b1-1772186419222",
+      "at": "2026-02-27T10:00:19.223Z",
+      "reason": "add tooltip to disabled Previous/Next pagination buttons",
+      "prevHash": "GENESIS",
+      "hash": "5cd03f772a1002b7c1ba944c6fdeca4da35ea52f522a8f815bd5c0d22565c25d"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-supplier-b1-1772186419222",
+      "at": "2026-02-27T10:00:19.223Z",
+      "reason": "title attribute added: \"No earlier notifications\" when disabled at page 1; \"No more notifications\" when disabled at last page; Next also gets contextual tooltip",
+      "prevHash": "5cd03f772a1002b7c1ba944c6fdeca4da35ea52f522a8f815bd5c0d22565c25d",
+      "hash": "1846b4ac372af85122600379d284987820f84776f5bc36539b670354c37d38c9"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +275,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.SUPPLIER.NOTIFICATIONS-PAGINATION-UNCLEAR-UI.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "PENDING",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=PENDING"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "supplier-portal/src/app/(dashboard)/notifications/page.tsx",
+      "description": "title={offset === 0 ? \"No earlier notifications\" : \"Go to previous page\"} and title={offset + limit >= total ? \"No more notifications\" : \"Go to next page\"}"
+    }
   }
 }

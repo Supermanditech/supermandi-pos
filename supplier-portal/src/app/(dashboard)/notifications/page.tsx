@@ -166,6 +166,7 @@ export default function NotificationsPage() {
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - limit))}
                 className="px-3 py-1.5 text-xs border rounded-md disabled:opacity-50"
+                title={offset === 0 ? 'No earlier notifications' : 'Go to previous page'}
               >
                 Previous
               </button>
@@ -176,6 +177,7 @@ export default function NotificationsPage() {
                 disabled={offset + limit >= total}
                 onClick={() => setOffset((o) => o + limit)}
                 className="px-3 py-1.5 text-xs border rounded-md disabled:opacity-50"
+                title={offset + limit >= total ? 'No more notifications' : 'Go to next page'}
               >
                 Next
               </button>

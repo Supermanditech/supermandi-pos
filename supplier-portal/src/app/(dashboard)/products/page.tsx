@@ -421,6 +421,28 @@ export default function ProductsPage() {
     router.replace(`${pathname}${qs ? `?${qs}` : ''}`);
   };
 
+  // REQ.AUDIT.W5.SUPPLIER.PRODUCTS-FILTER-KEYBOARD-NAV.001: arrow key navigation for WCAG tab group
+  const handleFilterKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const statuses = ['all', 'pending', 'approved', 'rejected'];
+    const currentIndex = statuses.indexOf(statusFilter);
+    let newIndex = -1;
+    if (e.key === 'ArrowRight') {
+      newIndex = (currentIndex + 1) % statuses.length;
+    } else if (e.key === 'ArrowLeft') {
+      newIndex = (currentIndex - 1 + statuses.length) % statuses.length;
+    }
+    if (newIndex >= 0) {
+      e.preventDefault();
+      const newStatus = statuses[newIndex];
+      const p = new URLSearchParams(searchParams.toString());
+      if (newStatus === 'all') { p.delete('status'); } else { p.set('status', newStatus); }
+      p.delete('page');
+      router.push(`${pathname}?${p.toString()}`);
+      const buttons = e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+      buttons?.[newIndex]?.focus();
+    }
+  }, [statusFilter, searchParams, pathname, router]);
+
   return (
     <div>
       {/* T-113: Breadcrumb navigation */}
@@ -696,7 +718,7 @@ export default function ProductsPage() {
               placeholder="Search by name, barcode, or SKU..."
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="tablist">
             {['all', 'pending', 'approved', 'rejected'].map((status) => (
               <button
                 key={status}
@@ -707,13 +729,15 @@ export default function ProductsPage() {
                   params.delete('page');
                   router.push(`${pathname}?${params.toString()}`);
                 }}
+                onKeyDown={handleFilterKeyDown}
+                tabIndex={statusFilter === status ? 0 : -1}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   statusFilter === status
                     ? 'bg-primary-600 text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
                 role="tab"
-                aria-pressed={statusFilter === status}
+                aria-selected={statusFilter === status}
                 aria-label={`Filter by ${status === 'all' ? 'all statuses' : status}`}
               >
                 {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}

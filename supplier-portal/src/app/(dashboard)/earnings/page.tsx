@@ -39,7 +39,8 @@ export default function EarningsPage() {
 
   // GO-LIVE-031: Fetch payout orders when a payout is selected
   // R6.SUP.016: Include error state for payout orders query
-  const { data: payoutOrders, isLoading: ordersLoading, isError: ordersError } = useQuery({
+  // REQ.AUDIT.W5.SUPPLIER.EARNINGS-PAYOUT-MODAL-NO-RETRY.001: destructure refetch for retry button
+  const { data: payoutOrders, isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useQuery({
     queryKey: ['payout-orders', selectedPayoutId],
     queryFn: () => selectedPayoutId ? getPayoutOrders(selectedPayoutId) : Promise.resolve([]),
     enabled: !!selectedPayoutId,
@@ -404,7 +405,12 @@ export default function EarningsPage() {
                 ) : ordersError ? (
                   <div className="text-center py-4 text-red-600 text-sm">
                     <p className="font-medium">Failed to load order breakdown.</p>
-                    <p className="text-xs text-slate-500 mt-1">Please close and reopen this payout to retry.</p>
+                    <button
+                      onClick={() => refetchOrders()}
+                      className="mt-2 text-sm px-3 py-1.5 border border-red-200 rounded hover:bg-red-50"
+                    >
+                      Retry
+                    </button>
                   </div>
                 ) : payoutOrders && payoutOrders.length > 0 ? (
                   <div className="border border-slate-200 rounded-lg overflow-hidden">

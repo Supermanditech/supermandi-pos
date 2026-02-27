@@ -322,7 +322,9 @@ function SupplierChatPage() {
             </div>
 
             {/* Input Bar */}
-            <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex gap-2 items-end flex-shrink-0">
+            {/* REQ.AUDIT.W5.SUPPLIER.CHAT-SEND-FAILURE-NO-RETRY.001: error hint below input */}
+            <div className="px-4 py-3 border-t border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col gap-1 flex-shrink-0">
+              <div className="flex gap-2 items-end">
               <textarea
                 value={messageText}
                 onChange={e => setMessageText(e.target.value)}
@@ -344,6 +346,10 @@ function SupplierChatPage() {
               >
                 <Send size={18} />
               </button>
+              </div>
+              {sendMutation.isError && (
+                <p className="text-xs text-red-500 dark:text-red-400">Failed to send. Your message is preserved — press Send to retry.</p>
+              )}
             </div>
           </>
         )}

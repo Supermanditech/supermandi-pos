@@ -157,7 +157,9 @@ export default function KycPage() {
       return;
     }
     // ISSUE-MICRO-054: Track latest request to ignore stale results
+    // REQ.AUDIT.W5.SUPPLIER.KYC-IFSC-RACE-CONDITION.001: reset stale state before new lookup
     latestIfscRef.current = ifsc;
+    ifscMutation.reset();
     ifscMutation.mutate(ifsc);
   };
 
@@ -381,7 +383,8 @@ export default function KycPage() {
                           className="text-amber-600 hover:text-amber-700 text-sm font-medium"
                           disabled={uploadMutation.isPending}
                         >
-                          {uploadMutation.isPending ? 'Retrying...' : 'Retry'}
+                          {/* REQ.AUDIT.W5.SUPPLIER.KYC-UPLOAD-RETRY-NO-PROGRESS.001: spinner during retry */}
+                          {uploadMutation.isPending ? <><span className="inline-block w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin align-middle mr-1" />Retrying...</> : 'Retry'}
                         </button>
                       )}
 
