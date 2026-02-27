@@ -842,13 +842,758 @@
 - **Files**: `backend/src/routes/v1/supplier/auth.ts:817-824`
 - **Status**: DIAGNOSED
 
-### STG-092:
-- **Portal**:
-- **Page**:
-- **Symptom**:
-- **Root Cause**:
-- **Fix**:
-- **Status**: FOUND
+---
+
+## POS App Issues (STG-092 → STG-174)
+
+> **56 screens audited**: 5 auth/gate + 5 main tabs + 27 stack screens + 10 modals + 9 overlays/system
+
+### STG-092: POS — Enrollment fails: deviceType never sent in request payload
+- **Portal**: POS App
+- **Page**: EnrollDeviceScreen → "Activate POS" button
+- **Symptom**: Backend returns 400 `DEVICE_TYPE_REQUIRED`. No device can enroll.
+- **Root Cause**: `EnrollDeviceScreen.tsx:182-188` `deviceMeta` useMemo includes manufacturer/model/appVersion but NOT `deviceType`. Backend `enroll.ts:117-139` validates `meta.deviceType`, finds undefined → 400.
+- **Fix**: Add `deviceType: "RETAILER_PHONE"` to the `deviceMeta` useMemo.
+- **Files**: `src/screens/EnrollDeviceScreen.tsx:182-188,289`, `backend/src/routes/v1/pos/enroll.ts:117-139`
+- **Status**: DIAGNOSED
+
+### STG-093: POS — ui-status always returns upiVpa: null (const + missing SQL column)
+- **Portal**: POS App
+- **Page**: SplashScreen / PosRootLayout → ui-status polling
+- **Symptom**: `upiVpa` in ui-status is always null, even when store has UPI VPA set.
+- **Root Cause**: `uiStatus.ts:49` declares `const upiVpa: string | null = null` (can never be reassigned). SQL at line 72 does NOT select `upi_vpa` column.
+- **Fix**: Change `const` to `let`, add `upi_vpa` to SELECT, assign from query result.
+- **Files**: `backend/src/routes/v1/pos/uiStatus.ts:49,72,203`
+- **Status**: DIAGNOSED
+
+### STG-094: POS — Token refresh never returns new token, forces re-enrollment on every 401
+- **Portal**: POS App
+- **Page**: All authenticated screens (via apiClient 401 handler)
+- **Symptom**: On 401, client calls `POST /pos/token/refresh`, expects `data.deviceToken` in response, gets undefined → clears session → forces re-enrollment.
+- **Root Cause**: Client `apiClient.ts:248-249` reads `data?.deviceToken`. Server `tokenManagement.ts:37-43` returns `{ success, expiresAt, message }` — no token field. Server only extends expiry, doesn't generate new token.
+- **Fix**: Client should treat `data.success === true` as valid (existing token still works), not require a new token.
+- **Files**: `src/services/api/apiClient.ts:240-256`, `backend/src/routes/v1/pos/tokenManagement.ts:37-43`, `backend/src/middleware/tokenSecurity.ts:146-185`
+- **Status**: DIAGNOSED
+
+### STG-095: POS — ui-status reorderEnabled queries non-existent table (always defaults true)
+- **Portal**: POS App
+- **Page**: All POS screens → feature flags
+- **Symptom**: Reorder tab always shows even for stores that disabled reorder.
+- **Root Cause**: `uiStatus.ts:95` queries `SELECT reorder_enabled FROM reorder_settings` — table doesn't exist. Migration 150 dropped `reorder.store_settings`. Correct table: `reorder.store_reorder_settings` (migration 007). Error silently caught, defaults to true.
+- **Fix**: Change to `SELECT reorder_enabled FROM reorder.store_reorder_settings WHERE store_id = $1`.
+- **Files**: `backend/src/routes/v1/pos/uiStatus.ts:94-104`
+- **Status**: DIAGNOSED
+
+### STG-096: POS — Enrollment response missing activeDeviceCount (multi-device warning dead)
+- **Portal**: POS App
+- **Page**: EnrollDeviceScreen → post-enrollment
+- **Symptom**: Multi-device warning ("Store already has X active devices") never appears.
+- **Root Cause**: Frontend `EnrollDeviceScreen.tsx:359-364` checks `res.activeDeviceCount`. Backend `enroll.ts:566-575` never includes it in response, even though device count is already queried at line 371-375.
+- **Fix**: Add `activeDeviceCount` to enrollment response.
+- **Files**: `backend/src/routes/v1/pos/enroll.ts:566-575`, `src/screens/EnrollDeviceScreen.tsx:359-364`
+- **Status**: DIAGNOSED
+
+### STG-097: POS — fetchUiStatus/fetchUiStatusStrict bypass apiClient (no timeout, hangs on slow networks)
+- **Portal**: POS App
+- **Page**: SplashScreen, DeviceBlockedScreen, ForceUpdateScreen
+- **Symptom**: On slow/flaky networks, ui-status calls hang indefinitely — app stuck on splash.
+- **Root Cause**: `uiStatusApi.ts:142-147,198-203` use raw `fetch()` directly, bypassing apiClient's 60s timeout, rate limiting, and token refresh.
+- **Fix**: Add AbortController timeout (10s for splash, 15s for gate screens).
+- **Files**: `src/services/api/uiStatusApi.ts:142-147,198-203`
+- **Status**: DIAGNOSED
+
+### STG-098: POS — lookup-activation only checks `phone`, not `contact_phone`
+- **Portal**: POS App
+- **Page**: EnrollDeviceScreen → phone-based activation lookup
+- **Symptom**: Stores with phone number only in `contact_phone` column (not `phone`) won't be found.
+- **Root Cause**: `enroll.ts:741-746` queries `WHERE s.phone = ANY($1::text[])` only. Migration 038 added `contact_phone` as separate column.
+- **Fix**: Add `OR s.contact_phone = ANY($1::text[])` to WHERE clause.
+- **Files**: `backend/src/routes/v1/pos/enroll.ts:741-746`
+- **Status**: DIAGNOSED
+
+### STG-099: POS — Split payment_mode 'SPLIT' blocked by legacy CHECK constraint
+- **Portal**: POS App
+- **Page**: PaymentScreen → SplitPaymentModal → any split payment
+- **Symptom**: Split payment INSERT crashes with CHECK constraint violation on `payment_mode`.
+- **Root Cause**: Migration 018 creates `chk_sale_payment_mode CHECK (payment_mode IN ('CASH','UPI','DUE'))`. Migration 051 drops `chk_payment_mode` (different name!) and adds new one with 'SPLIT'. Original constraint never dropped.
+- **Fix**: New migration: `ALTER TABLE public.sales DROP CONSTRAINT IF EXISTS chk_sale_payment_mode`.
+- **Files**: `backend/migrations/018_sales_schema.sql:55-57`, `backend/migrations/051_split_payments.sql:9-11`, `backend/src/routes/v1/pos/payments.ts:684`
+- **Status**: DIAGNOSED
+
+### STG-100: POS — Payment endpoints ignore stock_quantity for retail variant sales (wrong deduction)
+- **Portal**: POS App
+- **Page**: PaymentScreen → Complete Payment (any mode)
+- **Symptom**: Selling 2 packs of "500g" variant deducts 2 KG instead of 1 KG from stock.
+- **Root Cause**: UPI confirm-manual (sales.ts:1850-1857), Cash (1995-2001), Due (2148-2154) only SELECT `variant_id, quantity` — not `stock_quantity`. The `/sales/:saleId/confirm` endpoint at 1385-1402 correctly uses `stock_quantity`.
+- **Fix**: Add `stock_quantity` to all three payment endpoint sale_items queries.
+- **Files**: `backend/src/routes/v1/pos/sales.ts:1850-1862,1995-2007,2148-2160`
+- **Status**: DIAGNOSED
+
+### STG-101: POS — Double inventory deduction: backend payment endpoints + frontend checkoutService
+- **Portal**: POS App
+- **Page**: PaymentScreen → Complete Payment (all modes)
+- **Symptom**: Stock deducted twice per sale — once by backend `applyBulkDeductions` and again by frontend `recordSaleTransaction` calling `/pos/inventory/transactions`.
+- **Root Cause**: `checkoutService.ts:80-130` calls both payment endpoint (which deducts via `applyBulkDeductions`) AND `recordSaleTransaction` (which deducts from `catalog.store_products.current_stock`). Two different stock systems both deducted.
+- **Fix**: Remove `recordSaleTransaction` call from `completeCheckout` — backend already handles deduction.
+- **Files**: `src/services/checkoutService.ts:80-130`, `backend/src/routes/v1/pos/sales.ts:1880-1884,2025-2029,2178-2182`, `backend/src/routes/v1/pos/inventory.ts:298-324`
+- **Status**: DIAGNOSED
+
+### STG-102: POS — customer_dues.sale_id is UUID but sales.id is VARCHAR(100) — type cast crash
+- **Portal**: POS App
+- **Page**: PaymentScreen → Complete Payment (DUE mode)
+- **Symptom**: DUE payment crashes with UUID cast error if sale ID is non-UUID format.
+- **Root Cause**: `payments.customer_dues.sale_id` is UUID (migration 049:273). `public.sales.id` is VARCHAR(100) (migration 018:23). DUE handler at `sales.ts:2212` casts `$2::uuid`.
+- **Fix**: Change `customer_dues.sale_id` to TEXT, or remove `::uuid` cast.
+- **Files**: `backend/migrations/049_payments_schema.sql:273`, `backend/migrations/018_sales_schema.sql:23`, `backend/src/routes/v1/pos/sales.ts:2212,1458`
+- **Status**: DIAGNOSED
+
+### STG-103: POS — sell_payments.sale_id is UUID but sales.id is VARCHAR(100) — type mismatch
+- **Portal**: POS App
+- **Page**: PaymentScreen → UPI QR generate / Split payment
+- **Symptom**: UPI payment generation may fail on UUID cast when joining `sell_payments` to `sales`.
+- **Root Cause**: `payments.sell_payments.sale_id` is UUID (migration 049:32). `public.sales.id` is VARCHAR(100). Query at `payments.ts:152-157` joins on mismatched types.
+- **Fix**: Change `sell_payments.sale_id` to TEXT.
+- **Files**: `backend/migrations/049_payments_schema.sql:32`, `backend/src/routes/v1/pos/payments.ts:152-157,201-205`
+- **Status**: DIAGNOSED
+
+### STG-104: POS — Daily summary split payment count always 0 (queries status='SPLIT' not payment_mode)
+- **Portal**: POS App
+- **Page**: MenuScreen → Daily Summary card
+- **Symptom**: Split payment count and total always show 0 in daily summary.
+- **Root Cause**: `sales.ts:633-637` filters `WHERE status = 'SPLIT'` but split payments set `payment_mode = 'SPLIT'` (payments.ts:684), not status. Status is `'completed'` (payments.ts:832).
+- **Fix**: Change to `COUNT(*) FILTER (WHERE payment_mode = 'SPLIT')`.
+- **Files**: `backend/src/routes/v1/pos/sales.ts:633-634`, `backend/src/routes/v1/pos/payments.ts:684,832`
+- **Status**: DIAGNOSED
+
+### STG-105: POS — Dual payment_status constraints block 'partial' status
+- **Portal**: POS App
+- **Page**: Any payment flow (edge case)
+- **Symptom**: Setting `payment_status = 'partial'` blocked by one of two conflicting CHECK constraints.
+- **Root Cause**: Migration 077 adds `chk_payment_status` with 'partial'. Migration 125 adds `chk_sale_payment_status` WITHOUT 'partial'. Both constraints active on same column.
+- **Fix**: Drop redundant `chk_payment_status`, ensure `chk_sale_payment_status` includes 'partial'.
+- **Files**: `backend/migrations/077_fix_payments_due_status_constraint.sql:25-29`, `backend/migrations/125_sa_p0_006_constraint_gaps.sql:19-23`
+- **Status**: DIAGNOSED
+
+### STG-106: POS — Split CASH+DUE (no UPI) skips stock deduction entirely
+- **Portal**: POS App
+- **Page**: SplitPaymentModal → Proceed (CASH + DUE without UPI)
+- **Symptom**: Stock never decremented for split CASH+DUE payments. Inventory becomes permanently wrong.
+- **Root Cause**: Split endpoint `payments.ts:580-686` creates payment records but never calls `applyBulkDeductions`. Cash confirm at 828-834 updates status but doesn't deduct stock. Frontend `SplitPaymentModal.tsx:282-332` doesn't call `completeCheckout`.
+- **Fix**: Add `applyBulkDeductions` to split cash-confirm when `pendingCount === 0` (all parts confirmed).
+- **Files**: `backend/src/routes/v1/pos/payments.ts:580-686,828-834`, `src/components/sell/SplitPaymentModal.tsx:282-332`
+- **Status**: DIAGNOSED
+
+### STG-107: POS — WhatsApp send-bill uses transactionId (random string) instead of saleId (UUID)
+- **Portal**: POS App
+- **Page**: SuccessPrintScreenV2 → WhatsApp Bill button
+- **Symptom**: WhatsApp bill lookup fails or sends wrong data because `transactionId` is a client-generated random string, not the backend sale UUID.
+- **Root Cause**: `SuccessPrintScreenV2.tsx:181` passes `saleId: transactionId`. `transactionId` is `${Date.now()}-${Math.random()}` not a UUID. Backend needs actual sale ID. PaymentScreen doesn't pass `saleId` to SuccessPrint route params.
+- **Fix**: Pass actual `saleId` in SuccessPrint route params from PaymentScreen.
+- **Files**: `src/screens/SuccessPrintScreenV2.tsx:181`, `src/screens/PaymentScreen.tsx:782-790`
+- **Status**: DIAGNOSED
+
+### STG-108: POS — Receipt discount display uses stale full-cart state for partial sales
+- **Portal**: POS App
+- **Page**: SuccessPrintScreenV2 → Print/Share receipt
+- **Symptom**: Receipt shows incorrect discount for partial sales — uses full cart subtotal instead of paid items only.
+- **Root Cause**: `SuccessPrintScreenV2.tsx:76-82` uses `subtotal` and `discountAmount` from `useCartStore()` as fallbacks. For partial sales, cart still has remaining items. `saleSubtotal` at line 76 uses `subtotal || saleTotalMinor` — full cart subtotal.
+- **Fix**: Always compute discount from `saleItems` and `saleTotalMinor` route params, not from cart store.
+- **Files**: `src/screens/SuccessPrintScreenV2.tsx:41,76-82`, `src/screens/PaymentScreen.tsx:782-790`
+- **Status**: DIAGNOSED
+
+### STG-109: POS — Buy catalog returns zero products (s.status='verified' is wrong column)
+- **Portal**: POS App
+- **Page**: PurchaseScreen / BuyScreen → Browse Supplier Catalog
+- **Symptom**: Buy catalog always empty. No supplier products displayed.
+- **Root Cause**: `catalog.ts:337` uses `WHERE s.status = 'verified'`. But `supplier.suppliers.status` CHECK (migration 003:47) allows `('active','inactive','suspended')` — never 'verified'. The `verified` value lives in `verification_status` column. Post migration 097, correct value is `'ACTIVE'`.
+- **Fix**: Change to `s.verification_status = 'ACTIVE'` at lines 337, 537, 601, 705.
+- **Files**: `backend/src/routes/v1/catalog.ts:337,537,601,705`
+- **Status**: DIAGNOSED
+
+### STG-110: POS — Buy catalog SQL crashes: s.name column does not exist on supplier.suppliers
+- **Portal**: POS App
+- **Page**: PurchaseScreen / BuyScreen → Browse Supplier Catalog
+- **Symptom**: SQL error 42703 "column s.name does not exist" (masked by catch → empty results).
+- **Root Cause**: `catalog.ts:411` uses `COALESCE(s.business_name, s.trade_name, s.name, 'Unknown')`. `supplier.suppliers` (migration 003) has NO `name` column. Same on line 691.
+- **Fix**: Remove `s.name` from COALESCE chain.
+- **Files**: `backend/src/routes/v1/catalog.ts:411,691`
+- **Status**: DIAGNOSED
+
+### STG-111: POS — Purchase order creation fails: total_price column does not exist
+- **Portal**: POS App
+- **Page**: PurchaseCartModal → Place Order
+- **Symptom**: Every purchase order creation returns 500 — column "total_price" does not exist.
+- **Root Cause**: `orders.ts:210` inserts `total_price` into `orders.purchase_order_items`. Correct column is `line_total` (migration 006:139).
+- **Fix**: Change `total_price` to `line_total` at lines 210, 220, 465.
+- **Files**: `backend/src/routes/v1/orders.ts:210,220,465`, `backend/migrations/006_orders_schema.sql:139`
+- **Status**: DIAGNOSED
+
+### STG-112: POS — Purchase order creation fails: missing NOT NULL product_name column
+- **Portal**: POS App
+- **Page**: PurchaseCartModal → Place Order
+- **Symptom**: Even after fixing STG-111, INSERT fails — `null value in column "product_name" violates not-null constraint`.
+- **Root Cause**: `orders.ts:208-211` INSERT omits `product_name`. Schema (migration 006:126) defines `product_name VARCHAR(500) NOT NULL` with no DEFAULT.
+- **Fix**: Add `product_name` to INSERT column list and values.
+- **Files**: `backend/src/routes/v1/orders.ts:208-223`, `backend/migrations/006_orders_schema.sql:126`
+- **Status**: DIAGNOSED
+
+### STG-113: POS — Purchase order supplier lookup crashes: supplier.name column does not exist
+- **Portal**: POS App
+- **Page**: PurchaseCartModal → Place Order (supplier verification step)
+- **Symptom**: Supplier verification query fails with SQL error before order is created.
+- **Root Cause**: `orders.ts:73` selects `name` from `supplier.suppliers` — column doesn't exist. Also used in fallback chain at line 81.
+- **Fix**: Remove `name` from SELECT; use `COALESCE(business_name, trade_name)` instead.
+- **Files**: `backend/src/routes/v1/orders.ts:73,81`
+- **Status**: DIAGNOSED
+
+### STG-114: POS — Reorder approve fails: total_price column does not exist (same as STG-111)
+- **Portal**: POS App
+- **Page**: ReorderScreen → Approve Selected
+- **Symptom**: Approving pending reorders returns 500 — same `total_price` column error.
+- **Root Cause**: `reorder.ts:531` uses `total_price` — correct column is `line_total`. Also omits NOT NULL `product_name`.
+- **Fix**: Change `total_price` to `line_total` and add `product_name` column.
+- **Files**: `backend/src/routes/v1/reorder.ts:530-531`, `backend/migrations/006_orders_schema.sql:139`
+- **Status**: DIAGNOSED
+
+### STG-115: POS — Reorder approve response missing items/supplierName, frontend crashes
+- **Portal**: POS App
+- **Page**: ReorderScreen → Approve Selected → Load into cart
+- **Symptom**: Frontend crashes with "Cannot read properties of undefined (reading 'map')" on `po.items.map()`.
+- **Root Cause**: Backend `reorder.ts:497-550` returns `draftPurchaseOrders` with only `{ id, orderNumber, supplierId, itemCount, totalAmount }`. Frontend `ReorderScreen.tsx:220-230` expects `items[]` array and `supplierName`.
+- **Fix**: Return full items array and supplier name in each draftPurchaseOrder, or rewrite frontend to use simple format.
+- **Files**: `src/screens/ReorderScreen.tsx:220-235`, `src/services/api/reorderApi.ts:46-60`, `backend/src/routes/v1/reorder.ts:497-570`
+- **Status**: DIAGNOSED
+
+### STG-116: POS — Reorder policies: backend returns minStock but frontend expects minThreshold
+- **Portal**: POS App
+- **Page**: ReorderPoliciesScreen → Policy list / Low Stock filter
+- **Symptom**: All policy `minThreshold` values show undefined. Low Stock filter shows 0 items.
+- **Root Cause**: Backend `reorder.ts:216` returns `rp.min_stock as "minStock"`. Frontend `reorderApi.ts:118` expects `minThreshold`. Filter `p.currentStock < p.minThreshold` compares against undefined → always false.
+- **Fix**: Change backend alias to `"minThreshold"` or update frontend type.
+- **Files**: `backend/src/routes/v1/reorder.ts:216,298,369`, `src/services/api/reorderApi.ts:118`, `src/screens/ReorderPoliciesScreen.tsx:123,133`
+- **Status**: DIAGNOSED
+
+### STG-117: POS — Pending reorders suggestedSupplierName hardcoded NULL
+- **Portal**: POS App
+- **Page**: ReorderScreen → Pending reorder cards
+- **Symptom**: Supplier name never shown on pending reorder cards.
+- **Root Cause**: `reorder.ts:373` hardcodes `NULL as "suggestedSupplierName"`. Column `suggested_supplier_name` exists in `pending_reorders` table (migration 007:95).
+- **Fix**: Change to `pr.suggested_supplier_name as "suggestedSupplierName"`.
+- **Files**: `backend/src/routes/v1/reorder.ts:373`, `backend/migrations/007_reorder_schema.sql:95`
+- **Status**: DIAGNOSED
+
+### STG-118: POS — Reorder policies preferredSupplierName hardcoded NULL
+- **Portal**: POS App
+- **Page**: ReorderPoliciesScreen → Policy list
+- **Symptom**: Preferred supplier name never shown on policy rows.
+- **Root Cause**: `reorder.ts:220` hardcodes `NULL as "preferredSupplierName"`. Should JOIN `supplier.suppliers` to resolve name from `preferred_supplier_id`.
+- **Fix**: Add `LEFT JOIN supplier.suppliers ps ON ps.id = rp.preferred_supplier_id` and return `COALESCE(ps.business_name, ps.trade_name)`.
+- **Files**: `backend/src/routes/v1/reorder.ts:209-232`
+- **Status**: DIAGNOSED
+
+### STG-119: POS — Pending reorders minThreshold/targetStock read from policies table not snapshot
+- **Portal**: POS App
+- **Page**: ReorderScreen → Pending reorder cards
+- **Symptom**: minThreshold and targetStock may show stale values from policies instead of snapshot from when reorder was created.
+- **Root Cause**: `reorder.ts:369-370` reads from `rp.min_stock` and `rp.target_stock` (policies table) via LEFT JOIN. `pending_reorders` table itself has `min_threshold` and `target_stock` snapshot columns (migration 007:89-90).
+- **Fix**: Use `pr.min_threshold as "minThreshold"` and `pr.target_stock as "targetStock"`.
+- **Files**: `backend/src/routes/v1/reorder.ts:369-370`, `backend/migrations/007_reorder_schema.sql:89-90`
+- **Status**: DIAGNOSED
+
+### STG-120: POS — Reorder update policy: frontend sends minThreshold but backend expects minStock
+- **Portal**: POS App
+- **Page**: ReorderPoliciesScreen → Edit Policy → Save
+- **Symptom**: Saving policy changes has no effect — min threshold not updated.
+- **Root Cause**: Frontend `reorderApi.ts:146` sends `minThreshold`. Backend `reorder.ts:281` destructures `minStock` → undefined → COALESCE keeps old value.
+- **Fix**: Align field names between frontend and backend.
+- **Files**: `src/services/api/reorderApi.ts:146`, `backend/src/routes/v1/reorder.ts:281,287`
+- **Status**: DIAGNOSED
+
+### STG-121: POS — Reorder approve doesn't set purchase_order_id on pending_reorders
+- **Portal**: POS App
+- **Page**: ReorderScreen → Approve Selected
+- **Symptom**: Approved reorders can't be tracked to their purchase orders. GRN auto-close lifecycle (T-250) broken.
+- **Root Cause**: `reorder.ts:555-559` updates status to `approved` but does NOT SET `purchase_order_id`. Column exists per migration 007:104. Index for GRN auto-close at migration 151 depends on this.
+- **Fix**: Map each pending_reorder to its created PO ID during approval loop and set `purchase_order_id`.
+- **Files**: `backend/src/routes/v1/reorder.ts:554-559`, `backend/migrations/007_reorder_schema.sql:104`
+- **Status**: DIAGNOSED
+
+### STG-122: POS — OpeningStockScreen search hits non-existent /products/search endpoint (404)
+- **Portal**: POS App
+- **Page**: OpeningStockScreen → Product Search
+- **Symptom**: User types product name, sees "Search Failed" error. No products found.
+- **Root Cause**: `OpeningStockScreen.tsx:51-54` calls `/api/v1/pos/products/search`. No such route exists. Correct endpoint: `/api/v1/pos/store-products/search` (registered in `storeProducts.ts:264`).
+- **Fix**: Change API path to `/api/v1/pos/store-products/search`.
+- **Files**: `src/screens/OpeningStockScreen.tsx:51-54`
+- **Status**: DIAGNOSED
+
+### STG-123: POS — OpeningStockScreen submit writes to non-existent tables
+- **Portal**: POS App
+- **Page**: OpeningStockScreen → Submit Opening Stock
+- **Symptom**: Submission fails with 500 — "relation does not exist".
+- **Root Cause**: `openingStock.ts:42-54` writes to `inventory_transactions` (doesn't exist — correct: `inventory.inventory_ledger`) and updates `store_products SET stock` (no `stock` column — correct: `catalog.store_products.current_stock`).
+- **Fix**: Rewrite to INSERT into `inventory.inventory_ledger` (type='opening_stock') and UPDATE `catalog.store_products SET current_stock`.
+- **Files**: `backend/src/routes/v1/pos/openingStock.ts:42-54`
+- **Status**: DIAGNOSED
+
+### STG-124: POS — Order list/detail always shows "Unknown Supplier" (s.name column missing)
+- **Portal**: POS App
+- **Page**: OrderHistoryScreen → Order list; OrderDetailScreen → Supplier name
+- **Symptom**: Every purchase order displays "Unknown Supplier".
+- **Root Cause**: `orders.ts:342,420` uses `COALESCE(s.name, 'Unknown Supplier')`. `supplier.suppliers` has `business_name` and `trade_name` — no `name` column.
+- **Fix**: Change to `COALESCE(s.business_name, s.trade_name, 'Unknown Supplier')`.
+- **Files**: `backend/src/routes/v1/orders.ts:342,420`
+- **Status**: DIAGNOSED
+
+### STG-125: POS — Order detail supplierPhone uses wrong column name
+- **Portal**: POS App
+- **Page**: OrderDetailScreen → WhatsApp Supplier button
+- **Symptom**: WhatsApp button opens generic link — no supplier phone number.
+- **Root Cause**: `orders.ts:421` uses `s.phone as "supplierPhone"`. Correct column: `s.primary_phone` (migration 003).
+- **Fix**: Change `s.phone` to `s.primary_phone`.
+- **Files**: `backend/src/routes/v1/orders.ts:421`
+- **Status**: DIAGNOSED
+
+### STG-126: POS — GRN "Receive Goods" button hidden for confirmed orders despite backend support
+- **Portal**: POS App
+- **Page**: OrderDetailScreen → Receive Goods button
+- **Symptom**: Cannot receive goods for confirmed orders — must wait for supplier to mark "shipped".
+- **Root Cause**: Frontend `orderApi.ts:504-506` only allows `["shipped", "partial_received"]`. Backend `orders.ts:1582` allows `["confirmed", "shipped", "partial_received"]`.
+- **Fix**: Add `"confirmed"` to frontend `canReceive()` allowed statuses.
+- **Files**: `src/services/api/orderApi.ts:504-506`
+- **Status**: DIAGNOSED
+
+### STG-127: POS — SalesHistoryScreen has no pagination (only first 50 bills visible)
+- **Portal**: POS App
+- **Page**: SalesHistoryScreen → Bills list
+- **Symptom**: Stores with >50 sales only see 50 most recent. No "load more".
+- **Root Cause**: `billingApi.ts:25` calls `/pos/bills` with no offset/limit params. Backend defaults to 50. `SalesHistoryScreen.tsx` has no `onEndReached` handler.
+- **Fix**: Add pagination state, pass limit/offset to API, implement infinite scroll.
+- **Files**: `src/screens/SalesHistoryScreen.tsx:40-44`, `src/services/api/billingApi.ts:7-52`
+- **Status**: DIAGNOSED
+
+### STG-128: POS — OrderHistoryScreen stats computed from paginated data (inaccurate for >20 orders)
+- **Portal**: POS App
+- **Page**: OrderHistoryScreen → Header subtitle stats
+- **Symptom**: "Active" and "receivable" counts only reflect first page of 20 orders.
+- **Root Cause**: `OrderHistoryScreen.tsx:146-154` computes stats from `orders` state array (max 20 items per page), not from backend-aggregated totals.
+- **Fix**: Add per-status counts to backend response or remove subtitle stats.
+- **Files**: `src/screens/OrderHistoryScreen.tsx:146-154`
+- **Status**: DIAGNOSED
+
+### STG-129: POS — StockStatementScreen uses sellPrice for stock valuation (should use purchasePrice)
+- **Portal**: POS App
+- **Page**: StockStatementScreen → Stock Value column
+- **Symptom**: Stock valuation overstated (shows sell price × qty instead of cost × qty).
+- **Root Cause**: `inventory.ts:630` computes `stockValue: currentStock * sellPrice`. Standard accounting uses purchase/cost price.
+- **Fix**: Change to `currentStock * (purchasePrice || sellPrice)`.
+- **Files**: `backend/src/routes/v1/pos/inventory.ts:630`, `src/screens/StockStatementScreen.tsx:128-138`
+- **Status**: DIAGNOSED
+
+### STG-130: POS — PurchaseHistoryScreen hardcoded limit of 100, no pagination
+- **Portal**: POS App
+- **Page**: PurchaseHistoryScreen → Purchase list
+- **Symptom**: Only 100 most recent purchases visible. No load more or indication of truncation.
+- **Root Cause**: `inventoryApi.ts:326-330` hardcodes `limit: 100`. No pagination controls in screen.
+- **Fix**: Add pagination support with offset/limit params.
+- **Files**: `src/services/api/inventoryApi.ts:321-332`, `src/screens/PurchaseHistoryScreen.tsx:145-164`
+- **Status**: DIAGNOSED
+
+### STG-131: POS — StockStatementScreen hardcoded limit of 200, no pagination
+- **Portal**: POS App
+- **Page**: StockStatementScreen → Stock list
+- **Symptom**: Stores with >200 products only see first 200. Summary bar shows "200 Products" even if store has more.
+- **Root Cause**: `StockStatementScreen.tsx:108` calls `getStockStatement(200, true)` hardcoded. No pagination support.
+- **Fix**: Add pagination or increase limit, add "showing X of Y" indicator.
+- **Files**: `src/screens/StockStatementScreen.tsx:108`, `src/services/api/inventoryApi.ts:387-414`
+- **Status**: DIAGNOSED
+
+### STG-132: POS — Khata add entry: frontend sends `type` but backend expects `entryType`
+- **Portal**: POS App
+- **Page**: KhataScreen → Add Credit / Record Payment
+- **Symptom**: Returns 400 "entryType must be 'credit', 'debit', or 'payment'". Credit/payment never recorded.
+- **Root Cause**: Frontend `khataService.ts:33` sends field as `type`. Backend `khata.ts:170` destructures `entryType`. Field name mismatch → undefined → validation fails.
+- **Fix**: Rename frontend field from `type` to `entryType`, or backend to read `type`.
+- **Files**: `src/services/khataService.ts:33`, `src/stores/khataStore.ts:93`, `src/screens/KhataScreen.tsx:157`, `backend/src/routes/v1/pos/khata.ts:170,176`
+- **Status**: DIAGNOSED
+
+### STG-133: POS — Khata sends UPPERCASE type values but backend validates lowercase
+- **Portal**: POS App
+- **Page**: KhataScreen → Add Credit / Record Payment
+- **Symptom**: Even after fixing STG-132, values `"CREDIT"` and `"PAYMENT"` fail validation — backend expects lowercase.
+- **Root Cause**: Frontend `khataService.ts:20` types as `"CREDIT"|"DEBIT"|"PAYMENT"`. Backend `khata.ts:176` validates `["credit","debit","payment"].includes()`. DB constraint (migration 139:46) also lowercase.
+- **Fix**: Frontend should send lowercase values, or backend should `.toLowerCase()`.
+- **Files**: `src/services/khataService.ts:20,33`, `src/screens/KhataScreen.tsx:157`, `backend/src/routes/v1/pos/khata.ts:176`, `backend/migrations/139_t154_khata_entries.sql:46`
+- **Status**: DIAGNOSED
+
+### STG-134: POS — Khata balanceMinor returned as BigInt string, frontend expects number
+- **Portal**: POS App
+- **Page**: KhataScreen → Customer list / Ledger
+- **Symptom**: Balance displays as NaN or "0". Comparison `balanceMinor > 0` is always true for non-empty string.
+- **Root Cause**: Backend `khata.ts:63` returns `balanceMinor: row.balance_minor.toString()` (string). Frontend `khataService.ts:12` declares `balanceMinor: number`.
+- **Fix**: Return `Number(row.balance_minor)` instead of `.toString()`.
+- **Files**: `backend/src/routes/v1/pos/khata.ts:63,138,265`, `src/services/khataService.ts:12`
+- **Status**: DIAGNOSED
+
+### STG-135: POS — Khata entries response: 6+ field name mismatches between backend and frontend
+- **Portal**: POS App
+- **Page**: KhataScreen → Ledger entries list
+- **Symptom**: Entry type, running balance, payment method all show undefined.
+- **Root Cause**: Backend returns `entryType` → frontend expects `type`. Backend returns `balanceMinor` → frontend expects `runningBalanceMinor`. Backend omits `customerId`, `paymentMethod`, `createdByStaffId`, `createdByStaffName`.
+- **Fix**: Align backend response aliases to match frontend `KhataEntry` interface.
+- **Files**: `backend/src/routes/v1/pos/khata.ts:93-107`, `src/services/khataService.ts:17-28`
+- **Status**: DIAGNOSED
+
+### STG-136: POS — CustomerList totalPurchasesMinor is BigInt string from PostgreSQL
+- **Portal**: POS App
+- **Page**: CustomerListScreen → Customer cards / Detail stats
+- **Symptom**: "Total Purchases" shows NaN or incorrect value.
+- **Root Cause**: `customer_profiles.total_purchases_minor` is BIGINT (migration 140:29). PostgreSQL node driver returns BIGINT as string. Backend doesn't convert.
+- **Fix**: Cast in SELECT: `total_purchases_minor::int AS "totalPurchasesMinor"`.
+- **Files**: `backend/src/routes/v1/pos/customers.ts:25-26`, `src/services/customerService.ts:14`
+- **Status**: DIAGNOSED
+
+### STG-137: POS — OverdueDuesScreen response key mismatch (reads `dues`, backend returns `overdues`)
+- **Portal**: POS App
+- **Page**: OverdueDuesScreen → Initial load
+- **Symptom**: Screen always shows empty list even when overdue payments exist.
+- **Root Cause**: Frontend `OverdueDuesScreen.tsx:83` reads `response.dues`. Backend `overduePayments.ts:60` returns `{ overdues: [...] }`. Key mismatch.
+- **Fix**: Change frontend to read `response.overdues` or backend to return `{ dues }`.
+- **Files**: `src/screens/OverdueDuesScreen.tsx:43-44,83`, `backend/src/routes/v1/pos/overduePayments.ts:60`
+- **Status**: DIAGNOSED
+
+### STG-138: POS — OverdueDuesScreen backend queries missing columns on public.sales
+- **Portal**: POS App
+- **Page**: OverdueDuesScreen → Initial load (backend)
+- **Symptom**: Backend returns 500 — "column due_date does not exist".
+- **Root Cause**: `overduePayments.ts:25-38` queries `s.due_date` and `s.paid_amount_minor` from `public.sales`. Neither column exists on that table (migration 018). These columns exist on `payments.sell_payments` (migration 146).
+- **Fix**: JOIN with `payments.sell_payments` or `payments.customer_dues` instead of querying `public.sales` directly.
+- **Files**: `backend/src/routes/v1/pos/overduePayments.ts:25-38`, `backend/migrations/018_sales_schema.sql:22-60`
+- **Status**: DIAGNOSED
+
+### STG-139: POS — OverdueDuesScreen frontend field names don't match backend response
+- **Portal**: POS App
+- **Page**: OverdueDuesScreen → Card display
+- **Symptom**: Due cards show undefined for most fields (saleId, amountMinor, reminderSentAt).
+- **Root Cause**: Frontend expects `saleId`, `amountMinor`, `reminderSentAt`. Backend returns `id`, `outstandingMinor`, no `reminderSentAt`.
+- **Fix**: Align frontend `OverdueDue` interface to match backend response fields.
+- **Files**: `src/screens/OverdueDuesScreen.tsx:31-41`, `backend/src/routes/v1/pos/overduePayments.ts:43-54`
+- **Status**: DIAGNOSED
+
+### STG-140: POS — Credit KYC submit crashes: 'kyc_verified' not in CHECK constraint
+- **Portal**: POS App
+- **Page**: CreditScreen → Apply → KYC Step
+- **Symptom**: Submitting KYC returns 500 — CHECK constraint violation.
+- **Root Cause**: `credit.ts:546` sets `status = 'kyc_verified'`. Constraint `chk_credit_app_status` (migration 049:256) only allows `('submitted','processing','approved','disbursed','rejected')`.
+- **Fix**: Add `'kyc_verified'` to constraint via migration. (Same root cause as STG-047 but different entry point.)
+- **Files**: `backend/src/routes/v1/pos/credit.ts:546`, `backend/migrations/049_payments_schema.sql:256`
+- **Status**: DIAGNOSED
+
+### STG-141: POS — Credit KYC success check expects "approved" but backend returns "kyc_verified"
+- **Portal**: POS App
+- **Page**: CreditScreen → KYC Step → Success display
+- **Symptom**: KYC success modal never shows. User sees "KYC verification failed" even on success.
+- **Root Cause**: Frontend `CreditScreen.tsx:254` checks `response.applicationStatus === "approved"`. Backend `credit.ts:558` returns `"kyc_verified"`. Mismatch → error branch.
+- **Fix**: Frontend should check for `"kyc_verified"` as positive outcome.
+- **Files**: `src/screens/CreditScreen.tsx:254`, `backend/src/routes/v1/pos/credit.ts:558`
+- **Status**: DIAGNOSED
+
+### STG-142: POS — BNPL partial payment crashes: 'partial' not in CHECK constraint
+- **Portal**: POS App
+- **Page**: BnplDuesScreen → Pay (CASH partial payment)
+- **Symptom**: Partial CASH payment returns 500 — CHECK constraint violation.
+- **Root Cause**: `bnpl.ts:314` sets `status = 'partial'`. Constraint `chk_bnpl_status` (migration 049:157) only allows `('active','paid','overdue','defaulted')`.
+- **Fix**: Add `'partial'` to constraint via migration.
+- **Files**: `backend/src/routes/v1/pos/bnpl.ts:312-316`, `backend/migrations/049_payments_schema.sql:157`
+- **Status**: DIAGNOSED
+
+### STG-143: POS — BNPL UPI payment crashes: dual constraints on buy_payments.status
+- **Portal**: POS App
+- **Page**: BnplDuesScreen → Pay (UPI mode)
+- **Symptom**: UPI payment initiation returns 500 — constraint violation.
+- **Root Cause**: `bnpl.ts:270` inserts `status = 'initiated'`. Migration 052 constraint allows it. But migration 071 adds SECOND constraint `buy_payments_status_check` that only allows `('pending','success','failed','refunded','cancelled','settled')` — excludes 'initiated' and 'completed'.
+- **Fix**: Drop `buy_payments_status_check` (migration 071) or reconcile to single constraint with all needed values.
+- **Files**: `backend/src/routes/v1/pos/bnpl.ts:270,337`, `backend/migrations/052_buy_payments_upi_columns.sql:15-16`, `backend/migrations/071_gl_crit_0009_complete_status_normalization.sql:65-66`
+- **Status**: DIAGNOSED
+
+### STG-144: POS — BulkPurchaseCreditScreen field names completely wrong vs backend response
+- **Portal**: POS App
+- **Page**: BulkPurchaseCreditScreen → Offer cards
+- **Symptom**: All offer cards show "undefined" for provider, amount, interest rate, tenure.
+- **Root Cause**: Local `CreditOffer` interface (BulkPurchaseCreditScreen.tsx:12-21) uses `providerName`, `maxAmount`, `interestRate`, `tenureDays`. Backend returns `source`, `amountMinor`, `interestRateAnnual`, `tenureMonths`.
+- **Fix**: Use shared `CreditOffer` type from `creditApi.ts:12-20` and update render logic.
+- **Files**: `src/screens/BulkPurchaseCreditScreen.tsx:12-21,91-138`, `backend/src/routes/v1/pos/credit.ts:275-286`
+- **Status**: DIAGNOSED
+
+### STG-145: POS — BulkPurchaseCredit apply sends only offerId, backend requires requestedAmountMinor
+- **Portal**: POS App
+- **Page**: BulkPurchaseCreditScreen → Apply button
+- **Symptom**: Returns 400 "Valid requestedAmountMinor is required".
+- **Root Cause**: Frontend `BulkPurchaseCreditScreen.tsx:70` sends `{ offerId }` only. Backend `credit.ts:375` requires both `offerId` AND `requestedAmountMinor`.
+- **Fix**: Show amount input before applying, or use offer's `amountMinor` as default.
+- **Files**: `src/screens/BulkPurchaseCreditScreen.tsx:70`, `backend/src/routes/v1/pos/credit.ts:370-377`
+- **Status**: DIAGNOSED
+
+### STG-146: POS — DailyReportScreen field name mismatches with backend (entire response unusable)
+- **Portal**: POS App
+- **Page**: DailyReportScreen → Load report
+- **Symptom**: Daily report shows empty/broken data across all sections.
+- **Root Cause**: Frontend `DailyReportData` type expects `productName`, `qtySold`, `transactionCount`, `totalRevenueMinor`, `paymentSplit`. Backend returns `name`, `quantitySold`, `totalBills`, `totalSalesMinor`, `paymentBreakdown`. Every field name differs.
+- **Fix**: Align frontend interface to backend response field names.
+- **Files**: `src/screens/DailyReportScreen.tsx:30-48`, `backend/src/routes/v1/pos/reports.ts:82-107`
+- **Status**: DIAGNOSED
+
+### STG-147: POS — DailyReportScreen backend queries non-existent item_count column on public.sales
+- **Portal**: POS App
+- **Page**: DailyReportScreen → Load report
+- **Symptom**: Backend returns 500 — "column item_count does not exist".
+- **Root Cause**: `reports.ts:31` queries `SUM(item_count)` from `public.sales`. Column only exists on `orders.purchase_orders` (migrations 041/044), not `public.sales`.
+- **Fix**: Compute from `sale_items` table: `SELECT SUM(quantity) FROM sale_items si JOIN sales s2 ON ...`.
+- **Files**: `backend/src/routes/v1/pos/reports.ts:31`
+- **Status**: DIAGNOSED
+
+### STG-148: POS — DailyReportScreen refunds query: wrong table name + wrong column
+- **Portal**: POS App
+- **Page**: DailyReportScreen → Refunds section
+- **Symptom**: Refund query fails — "relation refunds does not exist".
+- **Root Cause**: `reports.ts:46-48` queries `FROM refunds` (no schema prefix — correct: `orders.refunds`) and sums `amount_minor` (correct: `refund_amount_minor`, per migration 143:26).
+- **Fix**: Change to `FROM orders.refunds` and `SUM(refund_amount_minor)`.
+- **Files**: `backend/src/routes/v1/pos/reports.ts:46-48`, `backend/migrations/143_t150_refunds.sql:13,26`
+- **Status**: DIAGNOSED
+
+### STG-149: POS — Reports and DailyClosing query CARD payment mode which doesn't exist in constraint
+- **Portal**: POS App
+- **Page**: DailyReportScreen / DailyClosingScreen → Payment breakdown
+- **Symptom**: Card payment amount always 0 (dead code).
+- **Root Cause**: `reports.ts:35` and `dailyClosing.ts:30` query `WHEN payment_mode = 'CARD'`. Sales constraint (migration 018:55) only allows `('CASH','UPI','DUE')`. No 'CARD' value.
+- **Fix**: Either add 'CARD' to constraint or remove CARD queries and frontend rendering.
+- **Files**: `backend/src/routes/v1/pos/reports.ts:35`, `backend/src/routes/v1/pos/dailyClosing.ts:30`
+- **Status**: DIAGNOSED
+
+### STG-150: POS — DailyClosingScreen field name mismatches (summary + history broken)
+- **Portal**: POS App
+- **Page**: DailyClosingScreen → Summary tab / History tab
+- **Symptom**: Summary values show undefined. History items show device UUID instead of staff name.
+- **Root Cause**: Frontend expects `salesByPaymentType` → backend returns `salesByPaymentMode`. Frontend expects `transactionCount` → backend returns `salesCount`. Frontend expects `closedByStaffName` → backend returns `closedBy` (a device UUID, not staff ID). History `varianceMinor` → backend returns `differenceMinor`.
+- **Fix**: Align field names and resolve staff name via JOIN.
+- **Files**: `src/services/dailyClosingService.ts:8-35`, `backend/src/routes/v1/pos/dailyClosing.ts:67-81,211-237`
+- **Status**: DIAGNOSED
+
+### STG-151: POS — ShiftScreen field name mismatches (all shift data broken)
+- **Portal**: POS App
+- **Page**: ShiftScreen → Current shift / History tabs
+- **Symptom**: Shift shows undefined staff name, undefined times, no payment breakdown.
+- **Root Cause**: Frontend expects `startedAt`/`endedAt`/`staffName`/`salesByPaymentType`/`expectedCashMinor`. Backend returns `shiftStart`/`shiftEnd`/`staffUserId` (no name JOIN)/no payment breakdown/no expected cash on GET.
+- **Fix**: Rename backend response fields, add staff name JOIN, add payment breakdown query.
+- **Files**: `src/services/shiftService.ts:8-28`, `backend/src/routes/v1/pos/shifts.ts:29-55,233-267`
+- **Status**: DIAGNOSED
+
+### STG-152: POS — Chat screens return 401: POS uses device tokens but chat routes require JWT
+- **Portal**: POS App
+- **Page**: ChatListScreen / ChatConversationScreen → All actions
+- **Symptom**: "Failed to load conversations" — every chat call returns 401.
+- **Root Cause**: POS `apiClient.ts:300-305` sends `x-device-token`. Chat routes require JWT auth via gateway (`jwtAuth.ts:79`). Chat handler `chat.ts:17-24` needs `x-user-id` which device tokens don't provide.
+- **Fix**: Create POS-specific chat auth middleware that derives userId from device token, or have gateway translate device tokens for chat endpoints.
+- **Files**: `src/services/api/chatApi.ts:46-49`, `src/services/api/apiClient.ts:300-309`, `backend/services/api-gateway/src/middleware/jwtAuth.ts:79`, `backend/src/routes/v1/chat.ts:17-24`
+- **Status**: DIAGNOSED
+
+### STG-153: POS — SalesStatementScreen aggregates from paginated data (limit:100), totals wrong for large stores
+- **Portal**: POS App
+- **Page**: SalesStatementScreen → Summary bar
+- **Symptom**: Revenue, Sales count, Items count only reflect first 100 records.
+- **Root Cause**: `inventoryApi.ts:338-349` fetches with `limit: 100`. `SalesStatementScreen.tsx:165-169` reduces over paginated subset for totals.
+- **Fix**: Add server-side aggregate endpoint for sales summary totals.
+- **Files**: `src/screens/SalesStatementScreen.tsx:149,165-169`, `src/services/api/inventoryApi.ts:338-349`
+- **Status**: DIAGNOSED
+
+### STG-154: POS — SalesStatementScreen revenue computed from cost price, not sell price
+- **Portal**: POS App
+- **Page**: SalesStatementScreen → Revenue figures
+- **Symptom**: Revenue shows cost of goods instead of actual selling revenue.
+- **Root Cause**: `SalesStatementScreen.tsx:65` computes `Math.abs(deltaQty) * (unitCost || 0)`. `unitCost` is purchase/cost price from inventory ledger. Revenue should use sell price, which the ledger doesn't store.
+- **Fix**: Use sales data source (`public.sales`/`sale_items`) instead of inventory ledger for revenue calculation.
+- **Files**: `src/screens/SalesStatementScreen.tsx:65`, `src/services/api/inventoryApi.ts:338-349`
+- **Status**: DIAGNOSED
+
+### STG-155: POS — SalesStatementScreen date grouping uses UTC instead of IST
+- **Portal**: POS App
+- **Page**: SalesStatementScreen → Date grouping
+- **Symptom**: Sales between 00:00-05:30 IST appear under previous day.
+- **Root Cause**: `SalesStatementScreen.tsx:63` uses `new Date(createdAt).toISOString().split("T")[0]` — UTC date. IST is UTC+5:30.
+- **Fix**: Use `date.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })`.
+- **Files**: `src/screens/SalesStatementScreen.tsx:62-63`
+- **Status**: DIAGNOSED
+
+### STG-156: POS — All backend DATE() queries use UTC, not IST (reports, dailyClosing, daily-summary)
+- **Portal**: POS App
+- **Page**: DailyReportScreen / DailyClosingScreen / MenuScreen → date-filtered queries
+- **Symptom**: Sales between 00:00-05:30 IST attributed to previous day in all reports.
+- **Root Cause**: `reports.ts:37,47,73`, `dailyClosing.ts:33,43`, `sales.ts:638,660` all use `DATE(created_at)` or `created_at::date` — PostgreSQL applies server timezone (UTC on Cloud SQL).
+- **Fix**: Change all to `DATE(created_at AT TIME ZONE 'Asia/Kolkata')`.
+- **Files**: `backend/src/routes/v1/pos/reports.ts:37,47,73`, `backend/src/routes/v1/pos/dailyClosing.ts:33,43`, `backend/src/routes/v1/pos/sales.ts:638,660`
+- **Status**: DIAGNOSED
+
+### STG-157: POS — Reports backend includes cancelled/voided sales in totals (no status filter)
+- **Portal**: POS App
+- **Page**: DailyReportScreen → Totals
+- **Symptom**: Daily report totals inflated by cancelled/voided sales.
+- **Root Cause**: `reports.ts:37` queries `FROM sales WHERE store_id = $1 AND DATE(created_at) = $2` — no status filter. DailyClosing (`dailyClosing.ts:34`) correctly filters `status = 'completed'`.
+- **Fix**: Add `AND status IN ('completed','PAID_CASH','PAID_UPI','DUE')` to reports query.
+- **Files**: `backend/src/routes/v1/pos/reports.ts:37`
+- **Status**: DIAGNOSED
+
+### STG-158: POS — DailyClosingScreen BigInt string serialization, frontend expects numbers
+- **Portal**: POS App
+- **Page**: DailyClosingScreen → Summary values
+- **Symptom**: Values display as NaN or "0" because BigInt `.toString()` returns strings, not numbers.
+- **Root Cause**: `dailyClosing.ts:69-80` returns `totalSalesMinor: sales.total_sales_minor.toString()`, etc. Frontend `dailyClosingService.ts:9-20` declares these as `number`.
+- **Fix**: Return `Number()` or `parseInt()` instead of `.toString()`.
+- **Files**: `backend/src/routes/v1/pos/dailyClosing.ts:69-80`, `src/services/dailyClosingService.ts:8-20`
+- **Status**: DIAGNOSED
+
+### STG-159: POS — DailyClosingScreen closed_by stores deviceId instead of staff ID
+- **Portal**: POS App
+- **Page**: DailyClosingScreen → History tab → "Closed by" label
+- **Symptom**: History shows device UUID instead of staff member name.
+- **Root Cause**: `dailyClosing.ts:186` uses `(req as PosRequest).posDevice.deviceId` for `closed_by`. Should use `req.headers['x-staff-id']`. No JOIN to resolve staff name.
+- **Fix**: Use `req.headers['x-staff-id']` and add staff name JOIN in history query.
+- **Files**: `backend/src/routes/v1/pos/dailyClosing.ts:186`, `src/screens/DailyClosingScreen.tsx:198`
+- **Status**: DIAGNOSED
+
+### STG-160: POS — ShiftScreen start-shift stores deviceId as staff_user_id
+- **Portal**: POS App
+- **Page**: ShiftScreen → Start Shift
+- **Symptom**: Shift records show device ID instead of staff who started shift.
+- **Root Cause**: `shifts.ts:73` falls back to `posDevice.deviceId` because frontend `shiftStore.ts:67` doesn't pass `staffUserId`. Should use `req.headers['x-staff-id']`.
+- **Fix**: Read staff ID from `x-staff-id` header in backend, or include staffUserId from `useStaffSessionStore` in frontend request.
+- **Files**: `backend/src/routes/v1/pos/shifts.ts:67,73`, `src/stores/shiftStore.ts:67`
+- **Status**: DIAGNOSED
+
+### STG-161: POS — Menu/Reports/DailyClosing use 3 different status filters for "completed sales"
+- **Portal**: POS App
+- **Page**: MenuScreen vs DailyReportScreen vs DailyClosingScreen
+- **Symptom**: Same-day sales totals differ between menu summary, daily report, and daily closing.
+- **Root Cause**: `/pos/daily-summary` (sales.ts:637): `status IN ('PAID_CASH','PAID_UPI','DUE','completed','SPLIT')`. `/pos/daily-closing/summary` (dailyClosing.ts:34): `status = 'completed'`. `/pos/reports/daily` (reports.ts:37): no filter at all.
+- **Fix**: Standardize to single consistent filter across all three endpoints.
+- **Files**: `backend/src/routes/v1/pos/sales.ts:637`, `backend/src/routes/v1/pos/dailyClosing.ts:34`, `backend/src/routes/v1/pos/reports.ts:37`
+- **Status**: DIAGNOSED
+
+### STG-162: POS — StaffLoginScreen sends raw +91 phone but backend doesn't strip prefix
+- **Portal**: POS App
+- **Page**: StaffLoginScreen → Login button
+- **Symptom**: Staff login fails for phone numbers entered with +91 prefix.
+- **Root Cause**: Frontend `StaffLoginScreen.tsx:39` strips +91 for validation but line 51 sends original `trimmedPhone` (with +91). Backend `staff.ts:41` only trims whitespace, doesn't strip +91. DB stores 10-digit phone → no match.
+- **Fix**: Send normalized `phone10` (10-digit) instead of `trimmedPhone`, or strip +91 in backend.
+- **Files**: `src/screens/StaffLoginScreen.tsx:39,51`, `backend/src/routes/v1/pos/staff.ts:41`
+- **Status**: DIAGNOSED
+
+### STG-163: POS — DailyClosing/DailyReport getTodayString() uses UTC date, wrong between 00:00-05:30 IST
+- **Portal**: POS App
+- **Page**: DailyClosingScreen / DailyReportScreen → default date / "Today" badge
+- **Symptom**: Between midnight and 5:30 AM IST, "Today" badge shows on yesterday's date.
+- **Root Cause**: `DailyClosingScreen.tsx:30` and `DailyReportScreen.tsx:66` use `new Date().toISOString().split("T")[0]` — UTC date.
+- **Fix**: Use `new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })`.
+- **Files**: `src/screens/DailyClosingScreen.tsx:30-31`, `src/screens/DailyReportScreen.tsx:65-67`
+- **Status**: DIAGNOSED
+
+### STG-164: POS — AIInsightsScreen bypasses apiClient (wrong auth header, no rate limiting)
+- **Portal**: POS App
+- **Page**: AIInsightsScreen → All tabs
+- **Symptom**: AI calls may fail auth (sends `Authorization: Bearer` instead of `x-device-token` header) and are not rate-limited.
+- **Root Cause**: `aiApi.ts:7-18` uses raw `fetch()` with `Authorization: Bearer ${token}`. POS middleware expects `x-device-token` header. Bypasses apiClient's timeout, rate limiting, and token refresh.
+- **Fix**: Refactor to use `apiClient.get()`/`apiClient.patch()`.
+- **Files**: `src/services/api/aiApi.ts:7-18`, `src/services/api/apiClient.ts:300-309`
+- **Status**: DIAGNOSED
+
+### STG-165: POS — HelpScreen shows literal HTML entities (&amp; &apos;) in React Native Text
+- **Portal**: POS App
+- **Page**: HelpScreen → Title and subtitle
+- **Symptom**: Users see literal `&amp;` and `&apos;` text instead of `&` and `'`.
+- **Root Cause**: `HelpScreen.tsx:80-82` contains `Help &amp; Support` and `We&apos;re here`. React Native Text doesn't interpret HTML entities.
+- **Fix**: Replace `&amp;` with `&` and `&apos;` with `'`.
+- **Files**: `src/screens/HelpScreen.tsx:80,82`
+- **Status**: DIAGNOSED
+
+### STG-166: POS — Menu daily-summary BigInt serialization (totalSales/totalBills are strings)
+- **Portal**: POS App
+- **Page**: MenuScreen → Daily Summary card
+- **Symptom**: Total sales displays incorrectly — BigInt string vs number type mismatch.
+- **Root Cause**: `sales.ts:626-627` returns `::bigint` which serializes as string. Frontend `dailySummaryApi.ts:21-28` expects numbers. `formatMoney()` may produce NaN.
+- **Fix**: Parse to number in backend or frontend API layer.
+- **Files**: `src/services/api/dailySummaryApi.ts:8-28`, `backend/src/routes/v1/pos/sales.ts:626-627,677-693`
+- **Status**: DIAGNOSED
+
+### STG-167: POS — PaymentScreen sends item.id as productId (fragile multi-step resolution chain)
+- **Portal**: POS App
+- **Page**: PaymentScreen → Sale creation
+- **Symptom**: Product resolution may fail for barcode-scanned items (3-5 extra DB queries per item).
+- **Root Cause**: `PaymentScreen.tsx:389-390` sends `productId: item.id`. `item.id` can be UUID, barcode string, or other identifier. Backend `sales.ts:1012-1056` has fragile multi-step fallback resolution.
+- **Fix**: Always send `globalProductId`, `storeProductId`, and `barcode` as separate fields.
+- **Files**: `src/screens/PaymentScreen.tsx:373-399`, `backend/src/routes/v1/pos/sales.ts:1012-1075`
+- **Status**: DIAGNOSED
+
+### STG-168: POS — Split payment cash-collect step shows local amount, not backend-confirmed amount
+- **Portal**: POS App
+- **Page**: SplitPaymentModal → cash-collect step
+- **Symptom**: Cash amount shown may differ from backend-recorded amount if rounding differs.
+- **Root Cause**: `SplitPaymentModal.tsx:697-698` renders `cashMinor` from `Math.round(parseFloat(cashAmount) * 100)` (local state), not from backend response. Backend split response doesn't include `amountMinor` in cash payment.
+- **Fix**: Display `splitResponse?.cashPayment?.amountMinor` or add it to response.
+- **Files**: `src/components/sell/SplitPaymentModal.tsx:697-698`, `src/services/api/posApi.ts:215-218`
+- **Status**: DIAGNOSED
+
+### STG-169: POS — SalesHistoryScreen bill status filter uses 'CREATED' which is dead code
+- **Portal**: POS App
+- **Page**: SalesHistoryScreen → Backend bill list
+- **Symptom**: No user impact, but filter clause is dead code. Also 'PENDING' excluded uppercase only — lowercase 'pending' leaks.
+- **Root Cause**: `sales.ts:717` filters `status NOT IN ('CREATED','PENDING','CANCELLED')`. 'CREATED' is not in CHECK constraint. 'pending' (lowercase) not excluded.
+- **Fix**: Change to `NOT IN ('pending','PENDING','cancelled','CANCELLED')`.
+- **Files**: `backend/src/routes/v1/pos/sales.ts:717`
+- **Status**: DIAGNOSED
+
+### STG-170: POS — Reorder settings notifyOnLowStock exists in backend but missing from frontend type
+- **Portal**: POS App
+- **Page**: ReorderSettingsScreen → Toggle settings
+- **Symptom**: No UI toggle for notifyOnLowStock. PATCH requests may reset it.
+- **Root Cause**: Backend `reorder.ts:48,60-62` returns/handles `notifyOnLowStock`. Frontend `reorderApi.ts:83-91` ReorderSettings type doesn't include it.
+- **Fix**: Add `notifyOnLowStock: boolean` to frontend type and add toggle in settings screen.
+- **Files**: `src/services/api/reorderApi.ts:83-91`, `backend/src/routes/v1/reorder.ts:48,116`
+- **Status**: DIAGNOSED
+
+### STG-171: POS — PurchaseCartModal expectedDeliveryDate declared after callbacks that reference it
+- **Portal**: POS App
+- **Page**: PurchaseCartModal → Place Order
+- **Symptom**: No runtime crash (JavaScript hoisting), but fragile code ordering. Maintenance hazard.
+- **Root Cause**: `PurchaseCartModal.tsx:556` declares `expectedDeliveryDate` useState, but callbacks at lines 264 and 449 reference it. Works due to hoisting but confusing.
+- **Fix**: Move `expectedDeliveryDate` useState declaration above the callbacks (near lines 70-95).
+- **Files**: `src/components/buy/PurchaseCartModal.tsx:264,449,510,556`
+- **Status**: DIAGNOSED
+
+### STG-172: POS — DailyReportScreen shows zero-value report instead of empty state for no-data days
+- **Portal**: POS App
+- **Page**: DailyReportScreen → Navigate to date with no sales
+- **Symptom**: Shows a report full of zeroes instead of "No data for this date" empty state.
+- **Root Cause**: Backend always returns 200 with zero values. Frontend at `DailyReportScreen.tsx:392` renders report content when `!loading && !error && report` — no check for zero transactions.
+- **Fix**: Add empty-state check: if `report.transactionCount === 0`, show empty state.
+- **Files**: `src/screens/DailyReportScreen.tsx:254-256,392`
+- **Status**: DIAGNOSED
+
+### STG-173: POS — Credit feature behind CREDIT_ENABLED flag (all credit/BNPL routes return 403)
+- **Portal**: POS App
+- **Page**: CreditScreen / BulkPurchaseCreditScreen → All actions
+- **Symptom**: All credit/BNPL API calls return 403 unless env var set. No user-friendly "coming soon" message.
+- **Root Cause**: `credit.ts:16-30` gates all routes behind `CREDIT_ENABLED === "true"`. Frontend shows generic error instead of feature-disabled state.
+- **Fix**: Detect `credit_feature_disabled` error code in frontend and show user-friendly empty state.
+- **Files**: `backend/src/routes/v1/pos/credit.ts:16-30`, `src/screens/CreditScreen.tsx:117-122`, `src/screens/BulkPurchaseCreditScreen.tsx:52-53`
+- **Status**: DIAGNOSED
+
+### STG-174: POS — BNPL active query works correctly but blocked by STG-142 constraint fix
+- **Portal**: POS App
+- **Page**: BnplDuesScreen → List after partial CASH payment
+- **Symptom**: Depends on STG-142 fix. Query at `bnpl.ts:52` correctly includes `'partial'` but constraint prevents the status from ever being set.
+- **Root Cause**: Query filter is correct but blocked by CHECK constraint (STG-142).
+- **Fix**: Fix STG-142 first. This resolves automatically.
+- **Files**: `backend/src/routes/v1/pos/bnpl.ts:52`
+- **Status**: DIAGNOSED
 
 ---
 
@@ -857,11 +1602,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 86 |
+| DIAGNOSED | 169 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **91** |
+| **Total** | **174** |
 
 ---
 
