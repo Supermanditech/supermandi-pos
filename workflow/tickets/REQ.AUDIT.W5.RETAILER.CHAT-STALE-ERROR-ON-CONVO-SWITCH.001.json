@@ -6,7 +6,7 @@
   "riskClass": "low",
   "title": "ChatPage: error state persists when switching conversations after a failed message fetch",
   "description": "Error set on selectConversation failure is never cleared on conversation switch. Old error visible after successfully selecting different conversation.",
-  "status": "todo",
+  "status": "done",
   "severity": "P4",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -93,10 +93,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "retailer-admin/src/pages/ChatPage.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.RETAILER.CHAT-STALE-ERROR-ON-CONVO-SWITCH.001.json"
     ]
   },
   "operatorChecks": {
@@ -121,7 +145,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p4-retailer-b1-1772188637839",
+      "at": "2026-02-27T10:37:17.839Z",
+      "reason": "clear stale error when switching conversations",
+      "prevHash": "GENESIS",
+      "hash": "06a5e6e0f0ffc3a077fd53487e5560503c994245981248ddb5f7d9876a48adb3"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p4-retailer-b1-1772188637839",
+      "at": "2026-02-27T10:37:17.839Z",
+      "reason": "added setError(null) at start of selectConversation before API fetch",
+      "prevHash": "06a5e6e0f0ffc3a077fd53487e5560503c994245981248ddb5f7d9876a48adb3",
+      "hash": "3756d73f3cdc70480145aca4fc29fb481dd172b4fd155787d3b3f49e50491042"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -231,12 +276,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.RETAILER.CHAT-STALE-ERROR-ON-CONVO-SWITCH.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "PENDING",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=PENDING"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "retailer-admin/src/pages/ChatPage.tsx",
+      "description": "setError(null) added after setSelectedId(convId) and before try block"
+    }
   }
 }

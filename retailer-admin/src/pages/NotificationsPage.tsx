@@ -103,12 +103,14 @@ export default function NotificationsPage() {
               <CheckCheck size={14} /> Mark all read
             </button>
           )}
+          {/* REQ.AUDIT.W5.RETAILER.NOTIFICATIONS-REFRESH-NO-DEBOUNCE.001: disable during loading */}
           <button
             aria-label="Refresh notifications list"
             onClick={fetchNotifications}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', background: '#f9fafb', color: '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer' }}
+            disabled={loading}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', background: loading ? '#e5e7eb' : '#f9fafb', color: loading ? '#9ca3af' : '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: loading ? 'not-allowed' : 'pointer' }}
           >
-            <RefreshCw size={14} /> Refresh
+            <RefreshCw size={14} /> {loading ? 'Loading...' : 'Refresh'}
           </button>
         </div>
       </div>

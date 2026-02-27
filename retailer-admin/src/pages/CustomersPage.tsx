@@ -52,7 +52,8 @@ export default function CustomersPage() {
     setError('');
     try {
       const params = new URLSearchParams({ limit: '50' });
-      if (q) params.set('q', q);
+      // REQ.AUDIT.W5.RETAILER.CUSTOMERS-SEARCH-NO-INPUT-SANITIZE.001: trim whitespace
+      if (q && q.trim()) params.set('q', q.trim());
       const response = await authFetch(`/api/v1/retailer-admin/customers?${params}`, accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch customers');

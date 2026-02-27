@@ -9,6 +9,9 @@ import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 import { logger } from '../lib/logger';
 
+// REQ.AUDIT.W5.RETAILER.SUPPLIER-CATALOG-MEMORY-SPIKE.001: cap accumulated items to prevent memory growth
+const MAX_ACCUMULATED_ITEMS = 500;
+
 interface SupplierProduct {
   productId: string;
   productName: string;
@@ -71,7 +74,11 @@ export default function SupplierCatalogPage() {
       // GL-CRIT-0037: Append products when loading more (offset > 0), replace on new search (offset = 0)
       const items = data.data || [];
       if (offset > 0) {
-        setProducts(prev => [...prev, ...items]);
+        setProducts(prev => {
+          const merged = [...prev, ...items];
+          // Cap to prevent unbounded memory growth
+          return merged.length > MAX_ACCUMULATED_ITEMS ? merged.slice(-MAX_ACCUMULATED_ITEMS) : merged;
+        });
       } else {
         setProducts(items);
       }

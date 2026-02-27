@@ -21,6 +21,9 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // REQ.AUDIT.W5.RETAILER.RESET-PASSWORD-NO-VISIBILITY-TOGGLE.001
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // R7.RET.009: AbortController ref to cancel in-flight fetch on unmount
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -186,31 +189,51 @@ export default function ResetPasswordPage() {
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="reset-new-password">New Password</label>
-                    <input
-                      id="reset-new-password"
-                      name="newPassword"
-                      type="password"
-                      className="login-form-input"
-                      placeholder="Enter new password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isLoading}
-                      autoFocus={!!email && !!token}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="reset-new-password"
+                        name="newPassword"
+                        type={showNewPassword ? 'text' : 'password'}
+                        className="login-form-input"
+                        placeholder="Enter new password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        disabled={isLoading}
+                        autoFocus={!!email && !!token}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8125rem', padding: 0 }}
+                        tabIndex={-1}
+                      >
+                        {showNewPassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                     <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="reset-confirm-password">Confirm Password</label>
-                    <input
-                      id="reset-confirm-password"
-                      name="confirmPassword"
-                      type="password"
-                      className="login-form-input"
-                      placeholder="Confirm new password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isLoading}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="reset-confirm-password"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        className="login-form-input"
+                        placeholder="Confirm new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8125rem', padding: 0 }}
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
                     {isLoading ? 'Resetting...' : 'Reset Password'}

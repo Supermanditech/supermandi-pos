@@ -288,6 +288,12 @@ export default function PaymentsPage() {
             UPI Payment
           </h2>
 
+          {/* REQ.AUDIT.W5.RETAILER.PAYMENTS-PAGE-NO-EMPTY-STATE.001: guidance when UPI not set */}
+          {!settings.upiVpa && (
+            <p style={{ fontSize: '0.8125rem', color: '#64748b', margin: '0 0 0.75rem' }}>
+              Enter your UPI address to start receiving digital payments from customers.
+            </p>
+          )}
           <div style={{ maxWidth: '400px' }}>
             <UpiInput
               value={settings.upiVpa}

@@ -29,6 +29,8 @@ export default function AnalyticsPage() {
 
   const loadData = useCallback(async () => {
     if (!accessToken) return;
+    // REQ.AUDIT.W5.RETAILER.ANALYTICS-INVALID-DATE-RANGE-NO-BLOCK.001: skip API when range invalid
+    if (from && to && from > to) return;
     setLoading(true);
     setError(null);
     try {

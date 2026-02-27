@@ -75,6 +75,8 @@ export default function ChatPage() {
   const selectConversation = async (convId: string) => {
     if (!accessToken) return;
     setSelectedId(convId);
+    // REQ.AUDIT.W5.RETAILER.CHAT-STALE-ERROR-ON-CONVO-SWITCH.001: clear stale error on conversation switch
+    setError(null);
     try {
       const res = await authFetch(`/api/v1/chat/conversations/${convId}/messages?limit=100`, accessToken);
       if (!res.ok) throw new Error(`${res.status}`);

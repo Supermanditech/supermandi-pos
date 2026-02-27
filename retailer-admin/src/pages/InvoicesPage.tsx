@@ -123,6 +123,9 @@ export default function InvoicesPage() {
 
   useEffect(() => { loadInvoices(); }, [loadInvoices]);
 
+  // REQ.AUDIT.W5.RETAILER.INVOICES-STALE-MODAL-ON-PAGINATION.001: close detail when list changes
+  useEffect(() => { setDetail(null); }, [offset, statusFilter]);
+
   const openDetail = async (invoiceId: string) => {
     if (!accessToken) return;
     setDetailLoading(true);

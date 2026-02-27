@@ -7,6 +7,9 @@ import Breadcrumb from '../components/Breadcrumb';
 // REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
 import { MAX_CSV_IMPORT_SIZE_BYTES, MAX_CSV_IMPORT_SIZE_LABEL } from '../lib/fileLimits';
 
+// REQ.AUDIT.W5.RETAILER.IMPORT-POLL-INTERVAL-HARDCODED.001: named constant for polling interval
+const IMPORT_POLL_INTERVAL_MS = 2000;
+
 type ImportStep = 'upload' | 'validate' | 'review' | 'commit' | 'done';
 
 interface ValidationResult {
@@ -253,7 +256,7 @@ export default function ImportPage() {
       } catch {
         // Polling errors are transient; keep retrying
       }
-    }, 2000);
+    }, IMPORT_POLL_INTERVAL_MS);
   };
 
   // RCAT-CSV-002 + RET-POS-SYNC-003: Commit (async with polling)
