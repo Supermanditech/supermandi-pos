@@ -7,7 +7,7 @@
  * If skipped, SellScan shows a banner prompting setup.
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
 import {
   View,
@@ -51,6 +51,14 @@ export default function PaymentSetupScreen() {
   const [ifsc, setIfsc] = useState("");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // PAYMENT-SETUP-OFFLINE-CHECK-MISSING: track connectivity on mount and via listener
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    NetInfo.fetch().then((state) => setIsOffline(!state.isConnected));
+    const unsubscribe = NetInfo.addEventListener((state) => setIsOffline(!state.isConnected));
+    return () => unsubscribe();
+  }, []);
 
   function validate(): Record<string, string> {
     const errs: Record<string, string> = {};
@@ -108,6 +116,11 @@ export default function PaymentSetupScreen() {
       await AsyncStorage.setItem(PAYMENT_PROMPTED_KEY, "1");
       navigation.replace("SellScan");
     } catch (err) {
+      // PAYMENT-SETUP-AUTH-ERROR-HANDLING: detect 401 and guide re-enrollment
+      if (err instanceof ApiError && (err.status === 401 || err.message === "device_unauthorized")) {
+        Alert.alert("Session Expired", "Your device session has expired. Please re-enroll this device to continue.");
+        return;
+      }
       const msg =
         err instanceof ApiError
           ? err.message || "Failed to save payment settings"
@@ -139,6 +152,15 @@ export default function PaymentSetupScreen() {
             Add your UPI ID to accept digital payments from customers
           </Text>
         </View>
+
+        {/* PAYMENT-SETUP-OFFLINE-CHECK-MISSING: offline banner */}
+        {isOffline && (
+          <View style={styles.offlineBanner} testID="payment-offline-banner">
+            <Text style={styles.offlineBannerText}>
+              No internet connection. Connect to save payment settings.
+            </Text>
+          </View>
+        )}
 
         {/* Form */}
         <View style={styles.form}>
@@ -214,9 +236,9 @@ export default function PaymentSetupScreen() {
         {/* Buttons */}
         <View style={styles.actions}>
           <Pressable
-            style={[styles.saveButton, saving && styles.buttonDisabled]}
+            style={[styles.saveButton, (saving || isOffline) && styles.buttonDisabled]}
             onPress={handleSave}
-            disabled={saving}
+            disabled={saving || isOffline}
             testID="payment-save-button"
           >
             {saving ? (
@@ -332,5 +354,19 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontSize: 12,
     textAlign: "center",
+  },
+  offlineBanner: {
+    backgroundColor: colors.warning + "20",
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderRadius: theme.borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  offlineBannerText: {
+    ...typography.caption,
+    color: colors.warning,
+    textAlign: "center",
+    fontWeight: "600",
   },
 });

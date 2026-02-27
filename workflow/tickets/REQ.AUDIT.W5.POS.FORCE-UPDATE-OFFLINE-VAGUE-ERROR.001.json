@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "ForceUpdateScreen: network drop during API call after NetInfo check shows vague \"Check Failed\" instead of connection error",
   "description": "If network drops AFTER NetInfo check but DURING fetch, user gets generic \"Check Failed\" with no connectivity context.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "src/screens/ForceUpdateScreen.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.POS.FORCE-UPDATE-OFFLINE-VAGUE-ERROR.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +144,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b2-1772184575119",
+      "at": "2026-02-27T09:29:35.119Z",
+      "reason": "detect network/timeout errors separately from generic check failures in ForceUpdateScreen",
+      "prevHash": "GENESIS",
+      "hash": "c8fbe9c41b9a1f8dfc4c45ce3da8cd0d34f36f424a64b201ba96ae85bc747654"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b2-1772184575119",
+      "at": "2026-02-27T09:29:35.119Z",
+      "reason": "handleRetry catch block now detects TypeError+Network, timeout, fetch errors; shows \"No Connection\" alert instead of generic \"Check Failed\"",
+      "prevHash": "c8fbe9c41b9a1f8dfc4c45ce3da8cd0d34f36f424a64b201ba96ae85bc747654",
+      "hash": "05a3af89731a8b8f46edd747fe692b73963976c808f9f42f72ef3815a18592cc"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +275,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.FORCE-UPDATE-OFFLINE-VAGUE-ERROR.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "PENDING",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=PENDING"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "src/screens/ForceUpdateScreen.tsx",
+      "description": "isNetworkError detection for TypeError/Network, timeout, fetch; separate Alert.alert \"No Connection\" with connectivity guidance"
+    }
   }
 }

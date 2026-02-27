@@ -126,7 +126,16 @@ export default function ForceUpdateScreen() {
           return;
         }
       }
-      Alert.alert("Check Failed", "Unable to verify app version status. Please try again.");
+      // FORCE-UPDATE-OFFLINE-VAGUE-ERROR: detect network/timeout errors separately
+      const isNetworkError =
+        (error instanceof TypeError && error.message?.includes("Network")) ||
+        (error instanceof Error && error.message?.toLowerCase().includes("timeout")) ||
+        (error instanceof Error && error.message?.toLowerCase().includes("fetch"));
+      if (isNetworkError) {
+        Alert.alert("No Connection", "Unable to check — no internet connection. Please check your network and try again.");
+      } else {
+        Alert.alert("Check Failed", "Unable to verify app version status. Please try again.");
+      }
     } finally {
       setChecking(false);
     }

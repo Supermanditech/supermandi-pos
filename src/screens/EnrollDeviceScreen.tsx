@@ -67,8 +67,8 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
     hint: "Contact support to get a new activation code."
   },
   ENROLLMENT_CODE_USED: {
-    message: "This activation code has already been used.",
-    hint: "Contact support to get a new activation code."
+    message: "This activation code has already been used on another device.",
+    hint: "If you are replacing a lost or broken device, contact support for a device replacement code."
   },
   ENROLLMENT_CODE_REVOKED: {
     message: "This activation code has been revoked.",
@@ -207,11 +207,25 @@ export default function EnrollDeviceScreen() {
   }, [navigation]);
 
   // Deep link support
+  // DEEP-LINK-RE-ENROLLMENT-NO-CONFIRM: check if already enrolled before pre-filling code
   useEffect(() => {
-    const handleUrl = (url: string | null) => {
+    const handleUrl = async (url: string | null) => {
       if (!url) return;
       const code = parseActivationCode(url);
-      if (code) setCodeInput(code);
+      if (!code) return;
+      const session = await getDeviceSession();
+      if (session) {
+        Alert.alert(
+          "Replace Existing Enrollment?",
+          "This device is already enrolled to a store. Activating a new code will replace the current enrollment.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Replace", style: "destructive", onPress: () => setCodeInput(code) },
+          ]
+        );
+      } else {
+        setCodeInput(code);
+      }
     };
 
     Linking.getInitialURL().then(handleUrl).catch(() => undefined);

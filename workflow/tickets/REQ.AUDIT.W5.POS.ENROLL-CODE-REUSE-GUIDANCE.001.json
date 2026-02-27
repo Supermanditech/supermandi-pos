@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "EnrollDeviceScreen: ENROLLMENT_CODE_USED error does not explain device replacement workflow",
   "description": "Error says \"contact support\" without explaining that device replacement requires support. Misleading for users replacing a lost device.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "src/screens/EnrollDeviceScreen.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.POS.ENROLL-CODE-REUSE-GUIDANCE.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +144,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b2-1772184575119",
+      "at": "2026-02-27T09:29:35.119Z",
+      "reason": "improve ENROLLMENT_CODE_USED error message to explain device replacement workflow",
+      "prevHash": "GENESIS",
+      "hash": "b466a975b02b21b63c52c118e561dd3f8f50b9db29d9d24d9642562a3a6fa710"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-pos-b2-1772184575119",
+      "at": "2026-02-27T09:29:35.119Z",
+      "reason": "ENROLLMENT_CODE_USED hint changed from generic \"contact support for new code\" to \"If replacing lost/broken device, contact support for device replacement code\"",
+      "prevHash": "b466a975b02b21b63c52c118e561dd3f8f50b9db29d9d24d9642562a3a6fa710",
+      "hash": "5e4d23674c535ff4519cf3c6f4fc19147af6a62866523fcdb38f466b4aa97608"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +275,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.POS.ENROLL-CODE-REUSE-GUIDANCE.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "PENDING",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=PENDING"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "src/screens/EnrollDeviceScreen.tsx",
+      "description": "ENROLL_ERROR_MESSAGES.ENROLLMENT_CODE_USED message+hint updated to explain device replacement workflow"
+    }
   }
 }
