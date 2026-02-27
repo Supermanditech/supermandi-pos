@@ -284,7 +284,151 @@
 - **Files**: `backend/src/services/invoiceService.ts:507`
 - **Status**: DIAGNOSED
 
-### STG-030:
+### STG-030: SuperAdmin — Document preview returns 403 (admin can't review documents)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#documents`)
+- **Page**: Documents → Click "Review" on any document
+- **Symptom**: Document preview modal shows "Failed to load document (403)" — admin cannot see documents they're approving/rejecting.
+- **Root Cause**: `fetchDocumentBlob` calls `GET /api/v1/documents/:id` (non-admin path). Gateway's `adminAuthMiddleware` skips non-`/admin/` paths, so no `x-admin-token` is injected. Backend authorization check fails: `isValidAdminRequest(req)` = false, `actorType === 'ADMIN'` = false. Returns 403.
+- **Fix**: Either (a) route document blob fetch through `/api/v1/admin/documents/:id/blob`, or (b) make the gateway inject admin token for `/api/v1/documents/` paths too, or (c) add a dedicated admin document proxy endpoint.
+- **Files**: `supermandi-superadmin/src/api/documents.ts:198-213`, `backend/src/routes/v1/documents.ts:388-400`, `backend/services/api-gateway/src/middleware/adminAuth.ts:100,148`
+- **Status**: DIAGNOSED
+
+### STG-031: SuperAdmin — Document approve/reject loses admin identity (verified_by = NULL)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#documents`)
+- **Page**: Documents → Approve or Reject button
+- **Symptom**: Document is approved/rejected successfully but `verified_by` column is always NULL — no audit trail of WHO approved it.
+- **Root Cause**: `documents.ts:204,276` reads `(req as any).adminUserId || (req as any).userId` but middleware sets `req.adminId`. Neither `adminUserId` nor `userId` is populated → `undefined` → NULL.
+- **Fix**: Change to `(req as any).adminId` at lines 204 and 276.
+- **Files**: `backend/src/routes/v1/admin/documents.ts:204,276`
+- **Status**: DIAGNOSED
+
+### STG-032: SuperAdmin — Application detail always returns empty documents array
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#applications`)
+- **Page**: Applications → View application detail
+- **Symptom**: Application documents section shows empty even if documents were uploaded.
+- **Root Cause**: `applications.ts:183-189` queries `auth.documents` table which doesn't exist (correct table is `platform.documents`), and uses column `file_url` which should be `file_path`. Silently caught and returns empty array.
+- **Fix**: Change `auth.documents` to `platform.documents` and `file_url` to `file_path`.
+- **Files**: `backend/src/routes/v1/admin/applications.ts:183-189`
+- **Status**: DIAGNOSED
+
+### STG-033: SuperAdmin — Supplier approve/auto-approve/publish ALL blocked ('verified' vs 'ACTIVE')
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → Approve product, Toggle auto-approve, Batch approve, Publish
+- **Symptom**: Every product approval returns "supplier_not_verified". Auto-approve toggle returns error. Publish fails.
+- **Root Cause**: Migration 097 changed all `verification_status = 'verified'` to `'ACTIVE'`, but `suppliers.ts` still checks `!== 'verified'` at lines 514, 829, 1144, 1388. No supplier will ever have status `'verified'` post-migration.
+- **Fix**: Replace all `'verified'` checks with `'ACTIVE'` in `suppliers.ts` at lines 134, 514, 829, 1144, 1388.
+- **Files**: `backend/src/routes/v1/admin/suppliers.ts:134,514,829,1144,1388`
+- **Status**: DIAGNOSED
+
+### STG-034: SuperAdmin — Batch reject always fails (field name mismatch)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → Select products → "Reject Selected"
+- **Symptom**: Batch reject always returns "rejectionReason is required" even when reason is entered.
+- **Root Cause**: Frontend sends `{ reason }` (`api/suppliers.ts:431`) but backend destructures `{ rejectionReason }` (`suppliers.ts:1050-1053`). `rejectionReason` is always `undefined`.
+- **Fix**: Change frontend to send `rejectionReason` instead of `reason`, or change backend to read `reason`.
+- **Files**: `supermandi-superadmin/src/api/suppliers.ts:431`, `backend/src/routes/v1/admin/suppliers.ts:1050-1053`
+- **Status**: DIAGNOSED
+
+### STG-035: SuperAdmin — Batch approve progress shows "undefined approved, undefined failed"
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → Select products → "Approve Selected"
+- **Symptom**: After batch approve completes, progress message shows "Done: undefined approved, undefined failed".
+- **Root Cause**: Backend returns `{ success: true, data: { processed, failed, errors } }` (nested under `data`, no `succeeded` field). Frontend reads `result.succeeded` and `result.failed` at top level — both undefined.
+- **Fix**: Either unwrap `data` in frontend response parsing, or flatten backend response. Add `succeeded: processed - failed` to response.
+- **Files**: `supermandi-superadmin/src/api/suppliers.ts:406-411`, `supermandi-superadmin/src/tabs/SuppliersTab.tsx:192`, `backend/src/routes/v1/admin/suppliers.ts:1253-1260`
+- **Status**: DIAGNOSED
+
+### STG-036: SuperAdmin — Auto-approve toggle and Publish crash (approval_logs constraint violation)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → Toggle auto-approve ON/OFF, or Publish product
+- **Symptom**: Toggle crashes with PostgreSQL constraint violation. Publish crashes similarly.
+- **Root Cause**: Backend inserts `entity_type = 'supplier_auto_approve'` and `action = 'enable_auto_approve'` into `supplier.approval_logs` (line 528-531), but CHECK constraint only allows `entity_type IN ('supplier','product','bank_change')` and `action IN ('approve','reject','suspend','reactivate','edit','submit')`. Also `product_publish`/`publish` at line 1660.
+- **Fix**: Add `'supplier_auto_approve','product_publish'` to entity_type constraint and `'enable_auto_approve','disable_auto_approve','publish'` to action constraint via migration.
+- **Files**: `backend/src/routes/v1/admin/suppliers.ts:528-531,1660`, migration `048_supplier_verification_schema.sql`
+- **Status**: DIAGNOSED
+
+### STG-037: SuperAdmin — Self-registered suppliers invisible in pending queue
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → Pending tab
+- **Symptom**: Self-registered suppliers (from auth.applications) don't appear in the pending list.
+- **Root Cause**: Backend returns self-registered suppliers with status `'KYC_SUBMITTED'`/`'PAYMENTS_SUBMITTED'`, but frontend filters `s.status === "pending"` at `SuppliersTab.tsx:265,272`, which excludes them.
+- **Fix**: Update frontend filter to include `'KYC_SUBMITTED'` and `'PAYMENTS_SUBMITTED'` statuses, or map them to `'pending'` in the API response.
+- **Files**: `supermandi-superadmin/src/tabs/SuppliersTab.tsx:265,272`
+- **Status**: DIAGNOSED
+
+### STG-038: SuperAdmin — Verify/Reject self-registered supplier returns 404
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → Verify or Reject a self-registered supplier
+- **Symptom**: "Supplier request not found or already processed" — 404 error.
+- **Root Cause**: Verify endpoint at `suppliers.ts:219-224` only queries `supplier.supplier_requests`, but self-registered suppliers come from `auth.applications`. No lookup exists for application-based suppliers.
+- **Fix**: Add fallback to check `auth.applications` when `supplier_requests` returns no rows.
+- **Files**: `backend/src/routes/v1/admin/suppliers.ts:219-224`
+- **Status**: DIAGNOSED
+
+### STG-039: SuperAdmin — Supplier status history always empty
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → View supplier → Status History section
+- **Symptom**: Status history section always shows empty/no data.
+- **Root Cause**: Frontend reads `data.history` (`api/suppliers.ts:399`) but backend returns `{ status_history: [...] }` (`suppliers.ts:2099`). Key mismatch → always returns empty array.
+- **Fix**: Change frontend to read `data.status_history` or change backend to return `{ history: [...] }`.
+- **Files**: `supermandi-superadmin/src/api/suppliers.ts:399`, `backend/src/routes/v1/admin/suppliers.ts:2099`
+- **Status**: DIAGNOSED
+
+### STG-040: SuperAdmin — Pending products never show images (missing columns in query)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
+- **Page**: Suppliers → Pending Products list
+- **Symptom**: Product cards always show placeholder icon, never actual product images.
+- **Root Cause**: Backend pending products query (`suppliers.ts:724-748`) doesn't SELECT `sp.image_url` or `sp.thumbnail_url` columns (which exist per migration 138). Frontend renders `product.thumbnailUrl || product.imageUrl` — both always undefined.
+- **Fix**: Add `sp.image_url as "imageUrl", sp.thumbnail_url as "thumbnailUrl"` to the SELECT at line 724.
+- **Files**: `backend/src/routes/v1/admin/suppliers.ts:724-748`, `supermandi-superadmin/src/tabs/SuppliersTab.tsx:634-665`
+- **Status**: DIAGNOSED
+
+### STG-041: SuperAdmin — Create store/supplier user always fails 400 (missing actor_id)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#users`)
+- **Page**: Users → Create User → Type: store or supplier
+- **Symptom**: "actor_id_required_for_store_or_supplier" — 400 error on submit.
+- **Root Cause**: Create User form has no `actor_id` field. Backend requires `actor_id` for store/supplier types at `users.ts:206-208`. Only platform-type users can be created.
+- **Fix**: Add store/supplier selector (dropdown populated from store directory or supplier list) to the Create User form when type is store/supplier.
+- **Files**: `supermandi-superadmin/src/tabs/UsersTab.tsx:59-64`, `backend/src/routes/v1/admin/users.ts:206-208`
+- **Status**: DIAGNOSED
+
+### STG-042: SuperAdmin — Analytics Dues tab shows wrong amounts (field name mismatch)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#analytics`)
+- **Page**: Analytics → Dues Tracking
+- **Symptom**: Due amounts show as ₹0.00 for every row. Customer name column shows "-".
+- **Root Cause**: Backend returns `total_minor` but frontend reads `amount_minor` at `AnalyticsTab.tsx:586`. Backend doesn't SELECT `customer_name` despite column existing. Frontend `d.customer_name` always undefined.
+- **Fix**: (a) Add `customer_name` to backend SQL SELECT at `analyticsService.ts:1265`. (b) Either rename backend field to `amount_minor` or change frontend to read `total_minor`.
+- **Files**: `backend/src/services/analytics/analyticsService.ts:1263-1275,1304-1311`, `supermandi-superadmin/src/tabs/AnalyticsTab.tsx:584-586`
+- **Status**: DIAGNOSED
+
+### STG-043: SuperAdmin — Analytics Margin Analysis crashes 500 (non-existent table)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#analytics`)
+- **Page**: Analytics → Margin Analysis
+- **Symptom**: "Failed to load margin data" — 500 error on every load.
+- **Root Cause**: `analytics.ts:323,352` joins `catalog.store_taxonomies` which doesn't exist in any migration. Correct table is `catalog.fmcg_taxonomy`.
+- **Fix**: Change `catalog.store_taxonomies` to `catalog.fmcg_taxonomy` and verify column names match.
+- **Files**: `backend/src/routes/v1/admin/analytics.ts:323,352`
+- **Status**: DIAGNOSED
+
+### STG-044: SuperAdmin — Analytics error messages show "[object Object]"
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#analytics`)
+- **Page**: Analytics → Any failing endpoint
+- **Symptom**: Error banner shows "[object Object]" instead of readable message.
+- **Root Cause**: Backend returns `{ error: { code: "...", message: "..." } }` (object), but frontend `analytics.ts:28-31` does `String(data.error)` which yields "[object Object]". Should extract `.message` from the error object.
+- **Fix**: Change to `typeof data.error === 'string' ? data.error : data.error?.message || 'Unknown error'`.
+- **Files**: `supermandi-superadmin/src/api/analytics.ts:27-31`
+- **Status**: DIAGNOSED
+
+### STG-045: SuperAdmin — Settings double confirmation dialog when killing feature flag
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#settings`)
+- **Page**: Settings → Feature Flags → Click "KILL" on enabled flag
+- **Symptom**: User must click through TWO separate confirmation dialogs to kill one flag.
+- **Root Cause**: SettingsTab.tsx:147 shows its own ConfirmDialog, then the handler `confirmedToggleGlobalFlag` (App.tsx:2634) shows a second one. Enable only shows one (correct).
+- **Fix**: Remove the SettingsTab-level confirmation for disable/kill, keep only the App.tsx level one.
+- **Files**: `supermandi-superadmin/src/tabs/SettingsTab.tsx:147`, `supermandi-superadmin/src/App.tsx:2634`
+- **Status**: DIAGNOSED
+
+### STG-046:
 - **Portal**:
 - **Page**:
 - **Symptom**:
@@ -299,11 +443,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 24 |
+| DIAGNOSED | 40 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **29** |
+| **Total** | **45** |
 
 ---
 
