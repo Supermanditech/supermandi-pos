@@ -662,7 +662,187 @@
 - **Files**: `retailer-admin/src/pages/SettingsPage.tsx:266-271`, `backend/src/routes/v1/retailer-admin/auth.ts:1536-1546`
 - **Status**: DIAGNOSED
 
-### STG-072:
+### STG-072: Supplier — Registration document upload sends wrong field names (all uploads 400)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/onboard`)
+- **Page**: Registration → Step 4: KYC Document Upload
+- **Symptom**: Every document upload fails with 400 — "entity_type, entity_id, and document_type are required".
+- **Root Cause**: `api.ts:1364-1368` sends camelCase field names (`documentType`, `entityType`, `entityId`) but backend `documents.ts:161` destructures snake_case (`document_type`, `entity_type`, `entity_id`). Also `entityType: 'supplier_application'` is not a valid value — should be `'application'`.
+- **Fix**: Change to `form.append('document_type', ...)`, `form.append('entity_type', 'application')`, `form.append('entity_id', ...)`.
+- **Files**: `supplier-portal/src/lib/api.ts:1364-1368`, `backend/src/routes/v1/documents.ts:161,174`
+- **Status**: DIAGNOSED
+
+### STG-073: Supplier — Registration document type keys wrong (PAN vs pan_card)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/onboard`)
+- **Page**: Registration → Step 4: KYC Document Upload
+- **Symptom**: Even after fixing STG-072, document types will be rejected — "INVALID_DOC_TYPE".
+- **Root Cause**: `onboard/page.tsx:325-331` sends types `'PAN'`, `'GSTIN_CERTIFICATE'`, `'ADDRESS_PROOF'` (uppercase) but backend only accepts lowercase: `'pan_card'`, `'gstin_certificate'`, `'address_proof'`.
+- **Fix**: Change to `'pan_card'`, `'gstin_certificate'`, `'address_proof'`.
+- **Files**: `supplier-portal/src/app/(auth)/onboard/page.tsx:325-331`, `backend/src/routes/v1/documents.ts:82-96`
+- **Status**: DIAGNOSED
+
+### STG-074: Supplier — Register page missing required documents (submit-kyc fails)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/register`)
+- **Page**: Registration → Documents step → Submit Application
+- **Symptom**: Submit always fails — "MISSING_DOCUMENTS" for address_proof and cancelled_cheque.
+- **Root Cause**: Register page (`register/page.tsx:36-41`) only has upload fields for gstin_certificate, pan_card, business_license, owner_photo. Missing `address_proof` (required) and `cancelled_cheque` (required per migration 103).
+- **Fix**: Add address_proof and cancelled_cheque upload fields to the register page document step.
+- **Files**: `supplier-portal/src/app/register/page.tsx:36-41`, migration `103_reg_auth_document_storage.sql:108-116`
+- **Status**: DIAGNOSED
+
+### STG-075: Supplier — Suspended suppliers bypass OTP login check (case mismatch)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/login`)
+- **Page**: Login → OTP flow → Verify & Sign In
+- **Symptom**: Suspended suppliers can successfully log in via OTP (should be blocked).
+- **Root Cause**: `auth.ts:1826` checks `verification_status === 'suspended'` (lowercase) but migration 097 standardized to `'SUSPENDED'` (uppercase). Check never matches. Password login at line 611 correctly uses `'SUSPENDED'`.
+- **Fix**: Change `'suspended'` to `'SUSPENDED'` at line 1826.
+- **Files**: `backend/src/routes/v1/supplier/auth.ts:1826`
+- **Status**: DIAGNOSED
+
+### STG-076: Supplier — Password login never returns PASSWORD_NOT_SET for OTP-only accounts
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/login`)
+- **Page**: Login → Password mode → Sign In
+- **Symptom**: OTP-only suppliers see generic "Invalid email or password" instead of helpful "switch to OTP" guidance.
+- **Root Cause**: `auth.ts:582-587` returns `INVALID_CREDENTIALS` when `!supplier.password_hash`, but frontend (`login/page.tsx:272-273`) has a handler for `PASSWORD_NOT_SET` that never fires.
+- **Fix**: Return `PASSWORD_NOT_SET` error code when supplier exists but `password_hash` is null.
+- **Files**: `backend/src/routes/v1/supplier/auth.ts:582-587`, `supplier-portal/src/app/(auth)/login/page.tsx:272-273`
+- **Status**: DIAGNOSED
+
+### STG-077: Supplier — Password reset email says "24 hours" but token expires in 1 hour
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/forgot-password`)
+- **Page**: Forgot Password → Email channel
+- **Symptom**: User waits 2+ hours, clicks reset link, gets "expired token" despite email saying 24h.
+- **Root Cause**: Email template (`emailService.ts:503`) says "expires in 24 hours" but `auth.ts:873` sets `resetExpiry = Date.now() + 60*60*1000` (1 hour).
+- **Fix**: Either change email text to "1 hour" or extend token expiry to 24 hours.
+- **Files**: `backend/src/services/emailService.ts:503`, `backend/src/routes/v1/supplier/auth.ts:873`
+- **Status**: DIAGNOSED
+
+### STG-078: Supplier — Order status/shipment updates crash (non-existent orders.outbox table)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/orders`)
+- **Page**: Orders → Detail modal → Update status, Add shipment, Confirm delivery
+- **Symptom**: Updating order status shows error even though data is partially saved (inconsistent state).
+- **Root Cause**: `orders.ts:37` writes to `orders.outbox` but table doesn't exist — correct table is `orders.event_outbox` (migration 006). Error propagates because outbox INSERT is not in try/catch. Status UPDATE succeeds but response returns 500.
+- **Fix**: Change `orders.outbox` to `orders.event_outbox` at line 37.
+- **Files**: `backend/src/routes/v1/supplier/orders.ts:37`
+- **Status**: DIAGNOSED
+
+### STG-079: Supplier — "Partial_received" status button shown but always rejected by backend
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/orders`)
+- **Page**: Orders → Detail modal → Status dropdown on shipped orders
+- **Symptom**: Clicking "Partial_received" fails — "Status must be one of: submitted, confirmed, shipped, delivered, cancelled".
+- **Root Cause**: Frontend `orders/page.tsx:38-48` offers `partial_received` as valid transition from `shipped`, but backend `orders.ts:507` only accepts `['submitted','confirmed','shipped','delivered','cancelled']`.
+- **Fix**: Either add `'partial_received'` to backend validStatuses or remove from frontend statusFlow.
+- **Files**: `supplier-portal/src/app/(dashboard)/orders/page.tsx:38-48`, `backend/src/routes/v1/supplier/orders.ts:507`
+- **Status**: DIAGNOSED
+
+### STG-080: Supplier — Product image upload succeeds but URL never saved to database
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/products`)
+- **Page**: Products → Add/Edit product with image
+- **Symptom**: Image uploads successfully, preview shows, but after save + refresh the image is gone.
+- **Root Cause**: Frontend sends `imageUrl` in product data (`products/page.tsx:352-367`), but backend CREATE (`products.ts:288-299`) and UPDATE (`products.ts:433-444`) do NOT destructure or INSERT/UPDATE `image_url`. Column exists per migration 138.
+- **Fix**: Add `imageUrl` to backend destructure and include `image_url` in INSERT/UPDATE queries.
+- **Files**: `supplier-portal/src/app/(dashboard)/products/page.tsx:352-367`, `backend/src/routes/v1/supplier/products.ts:288-299,433-444`
+- **Status**: DIAGNOSED
+
+### STG-081: Supplier — Product description field silently dropped (no DB column)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/products`)
+- **Page**: Products → Add/Edit product → Description textarea
+- **Symptom**: User types description, saves, it disappears on reload.
+- **Root Cause**: Frontend has description textarea, backend destructures `description` but never uses it in INSERT or UPDATE. `catalog.supplier_products` table (migration 004) has no `description` column.
+- **Fix**: Either add `description TEXT` column via migration and include in queries, or remove the description field from the frontend form.
+- **Files**: `supplier-portal/src/app/(dashboard)/products/page.tsx:591-601`, `backend/src/routes/v1/supplier/products.ts:290,350-391`
+- **Status**: DIAGNOSED
+
+### STG-082: Supplier — Products search/filter only works within current page
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/products`)
+- **Page**: Products → Search bar + Status filter
+- **Symptom**: Searching for "Rice" only finds products on the current page. Products matching on other pages are invisible.
+- **Root Cause**: Frontend fetches paginated data without search/status params (`products/page.tsx:101-102`), then applies client-side filter (`lines 398-408`). Pagination shows total from unfiltered backend response.
+- **Fix**: Pass search and status filter as query params to backend API and filter server-side.
+- **Files**: `supplier-portal/src/app/(dashboard)/products/page.tsx:101-102,398-408`
+- **Status**: DIAGNOSED
+
+### STG-083: Supplier — Payout history always shows empty (apiFetch double-unwrap)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/earnings`)
+- **Page**: Earnings → Payout History table
+- **Symptom**: Table always shows "No payouts yet" even when payouts exist.
+- **Root Cause**: `apiFetch` (`api.ts:271`) does `data.data ?? data` which unwraps the envelope. Backend returns `{ data: [...payouts], pagination: {...} }`. After unwrap, frontend gets the array directly. `payoutsData?.data` on the array is `undefined` → always empty.
+- **Fix**: Change `getPayouts` to not double-unwrap, or access the response correctly.
+- **Files**: `supplier-portal/src/lib/api.ts:271,975-981`, `supplier-portal/src/app/(dashboard)/earnings/page.tsx:63-64`
+- **Status**: DIAGNOSED
+
+### STG-084: Supplier — Invoice list always shows empty (apiFetch double-unwrap)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/invoices`)
+- **Page**: Invoices list
+- **Symptom**: Table always shows "No invoices yet" even when invoices exist.
+- **Root Cause**: Same `apiFetch` double-unwrap as STG-083. `getSupplierInvoices` (`api.ts:1214-1221`) types return as `{ data: SupplierInvoice[], total }` but `apiFetch` already unwraps, so `invoicesData?.data` is `undefined`.
+- **Fix**: Remove the extra `.data` access in the consuming code or fix the `apiFetch` unwrap logic.
+- **Files**: `supplier-portal/src/lib/api.ts:1214-1221`, `supplier-portal/src/app/(dashboard)/invoices/page.tsx:35-37`
+- **Status**: DIAGNOSED
+
+### STG-085: Supplier — Invoice detail modal always blank (double-unwrap)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/invoices`)
+- **Page**: Invoices → Click "View" on any invoice
+- **Symptom**: Detail modal opens but shows nothing — content guard prevents rendering.
+- **Root Cause**: `getSupplierInvoiceDetail` (`api.ts:1223-1226`) does `return result.data` after `apiFetch` already unwrapped. `result` IS the invoice object, `.data` is undefined.
+- **Fix**: Change to `return apiFetch<SupplierInvoiceDetail>(...)` without the extra `.data` access.
+- **Files**: `supplier-portal/src/lib/api.ts:1223-1226`, `supplier-portal/src/app/(dashboard)/invoices/page.tsx:211`
+- **Status**: DIAGNOSED
+
+### STG-086: Supplier — Revenue and Available Balance always show ₹0 (wrong SQL tables)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/earnings`)
+- **Page**: Earnings → Summary cards (Total Revenue, Available Balance)
+- **Symptom**: Revenue and balance always ₹0.00 despite having delivered orders.
+- **Root Cause**: `payouts.ts:134-141` queries non-existent tables: `orders.orders` (should be `orders.purchase_orders`), `orders.order_items` (should be `orders.purchase_order_items`), `supplier.supplier_products` (should be `catalog.supplier_products`). Error silently caught, returns 0.
+- **Fix**: Change to correct table names and column references.
+- **Files**: `backend/src/routes/v1/supplier/payouts.ts:134-141`
+- **Status**: DIAGNOSED
+
+### STG-087: Supplier — KYC "Profile Verified" requirement always shows incomplete
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/kyc`)
+- **Page**: KYC → Payout Readiness card → Requirements checklist
+- **Symptom**: "Profile Verified" checkbox always shows incomplete (circle) even for active suppliers.
+- **Root Cause**: `kyc.ts:444` checks `verification_status === 'verified'` but migration 097 changed to `'ACTIVE'`. Value `'verified'` can never exist. Same pattern as STG-033.
+- **Fix**: Change to `verification_status === 'ACTIVE'`.
+- **Files**: `backend/src/routes/v1/supplier/kyc.ts:444`
+- **Status**: DIAGNOSED
+
+### STG-088: Supplier — Profile bankName silently dropped on save
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/profile`)
+- **Page**: Profile → Bank Details tab → Save Bank Details
+- **Symptom**: User fills "Bank Name", saves successfully, but value is empty on reload.
+- **Root Cause**: Frontend sends `bankName` in PATCH body, but `profile.ts:204-225` only handles `accountNumber`, `ifscCode`, `accountName` — ignores `bankName`. GET also doesn't SELECT `bank_name`. DB column exists (migration 060) but profile route never reads/writes it.
+- **Fix**: Add `bankName`/`bank_name` to both PATCH handler and GET SELECT query in profile.ts.
+- **Files**: `backend/src/routes/v1/supplier/profile.ts:204-225,29-53`
+- **Status**: DIAGNOSED
+
+### STG-089: Supplier — BNPL Orders pagination broken (no total in response)
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/bnpl-orders`)
+- **Page**: BNPL Orders → Pagination controls
+- **Symptom**: Only first 20 BNPL orders visible. Next button never enabled.
+- **Root Cause**: Backend response has no `total` field at root level (`bnplVisibility.ts:65-89`). Frontend falls back to `json.orders?.length` (max 20) → `totalPages = 1`.
+- **Fix**: Add `total: parseInt(summary.total)` to backend response, or frontend reads `json.summary.totalOrders`.
+- **Files**: `backend/src/routes/v1/supplier/bnplVisibility.ts:65-89`, `supplier-portal/src/app/(dashboard)/bnpl-orders/page.tsx:50`
+- **Status**: DIAGNOSED
+
+### STG-090: Supplier — CSV Upload "View Products" link goes to 404
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/upload`)
+- **Page**: CSV Upload → After successful upload → "View Products" button
+- **Symptom**: Clicking "View Products" navigates to `/products` (404) instead of `/supplier/products`.
+- **Root Cause**: `upload/page.tsx:296` uses `<a href="/products">` instead of `<Link href="/products">`. Next.js `basePath: '/supplier'` only auto-prepends for `<Link>`, not raw `<a>` tags.
+- **Fix**: Change to `<Link href="/products">` (from `next/link`) or hardcode `href="/supplier/products"`.
+- **Files**: `supplier-portal/src/app/(dashboard)/upload/page.tsx:296`
+- **Status**: DIAGNOSED
+
+### STG-091: Supplier — Password change doesn't invalidate existing sessions
+- **Portal**: Supplier (`staging.supermandi.tech/supplier/profile`)
+- **Page**: Profile → Change Password tab
+- **Symptom**: After changing password, old tokens remain valid — stolen sessions persist.
+- **Root Cause**: `auth.ts:817-824` updates `password_hash` but never updates `tokens_revoked_at` or blacklists current token. Compare to retailer (STG-071) which at least revokes tokens (but doesn't redirect).
+- **Fix**: Add `UPDATE supplier.suppliers SET tokens_revoked_at = NOW()` after password change, and blacklist current token.
+- **Files**: `backend/src/routes/v1/supplier/auth.ts:817-824`
+- **Status**: DIAGNOSED
+
+### STG-092:
 - **Portal**:
 - **Page**:
 - **Symptom**:
@@ -677,11 +857,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 66 |
+| DIAGNOSED | 86 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **71** |
+| **Total** | **91** |
 
 ---
 
