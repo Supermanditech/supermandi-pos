@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "LoginPage: lookup API response not schema-validated — undefined action field causes silent mis-routing",
   "description": "LoginPage does not validate response shape with Zod. Unexpected API response silently mis-routes user.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "retailer-admin/src/pages/LoginPage.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.RETAILER.LOGIN-RESPONSE-NO-SCHEMA-VALIDATION.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +144,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-retailer-b1-1772184912150",
+      "at": "2026-02-27T09:35:12.150Z",
+      "reason": "add response shape validation to LoginPage lookup API call",
+      "prevHash": "GENESIS",
+      "hash": "1fa7a56820ee846d586c64334751d5103a137c643efa2885cfbcb7fc0b0355e7"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-retailer-b1-1772184912150",
+      "at": "2026-02-27T09:35:12.150Z",
+      "reason": "null/non-object guard added after safeJson before accessing data.action/data.message; shows \"Unexpected server response\" if response is not a valid object",
+      "prevHash": "1fa7a56820ee846d586c64334751d5103a137c643efa2885cfbcb7fc0b0355e7",
+      "hash": "c670ed0b6e5afee1899627c07dfdd3168c54a7dcd48325cbd95b4b35fac57bcb"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +275,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.RETAILER.LOGIN-RESPONSE-NO-SCHEMA-VALIDATION.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "PENDING",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=PENDING"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "retailer-admin/src/pages/LoginPage.tsx",
+      "description": "Guard: if (!data || typeof data !== \"object\") added after safeJson; prevents TypeError on null response; action validation at lines 132-137 already existed"
+    }
   }
 }

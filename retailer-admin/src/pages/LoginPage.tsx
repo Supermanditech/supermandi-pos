@@ -124,6 +124,12 @@ export default function LoginPage() {
 
       const data = await safeJson(response) as LookupResponse;
 
+      // LOGIN-RESPONSE-NO-SCHEMA-VALIDATION: guard against null/non-object response
+      if (!data || typeof data !== 'object') {
+        setError('Unexpected server response. Please try again or contact support.');
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to check registration status');
       }

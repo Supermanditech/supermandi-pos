@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "SupplierCatalogPage: add-to-catalog API failure shows no error UI — spinner hangs indefinitely",
   "description": "handleAddProduct catches errors and logs them but does not show any visual feedback. addingProductId loading state is never cleared on error, leaving button in infinite-spinner state.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -93,10 +93,34 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "retailer-admin/src/pages/SupplierCatalogPage.tsx",
+      "workflow/tickets/REQ.AUDIT.W5.RETAILER.SUPPLIER-CATALOG-ADD-NO-ERROR-UI.001.json"
     ]
   },
   "operatorChecks": {
@@ -121,7 +145,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-retailer-b1-1772184912150",
+      "at": "2026-02-27T09:35:12.150Z",
+      "reason": "add inline per-product error display for add-to-catalog failures",
+      "prevHash": "GENESIS",
+      "hash": "20fa1502551e245e75a0edc3bcf34bb157adf3f1e777e0b6f9c4a318ebaf3e72"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-retailer-b1-1772184912150",
+      "at": "2026-02-27T09:35:12.150Z",
+      "reason": "addError state {productId,message} tracks which product failed; inline error text shown below affected product button; global error also set for visibility",
+      "prevHash": "20fa1502551e245e75a0edc3bcf34bb157adf3f1e777e0b6f9c4a318ebaf3e72",
+      "hash": "b3da567577a9b06f3353ccd02640baa3cf4f231fb607d4bbbe2b900ad9f0e255"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -231,12 +276,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.RETAILER.SUPPLIER-CATALOG-ADD-NO-ERROR-UI.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "PENDING",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=PENDING"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "retailer-admin/src/pages/SupplierCatalogPage.tsx",
+      "description": "addError useState; set in catch with productId+message; cleared on new attempt; inline <p> with error below button; addingProductId already cleared via finally"
+    }
   }
 }

@@ -165,8 +165,17 @@ export default function ImportPage() {
       setValidation(validateData.data);
       setStep('review');
     } catch (err) {
-      // GL-CRIT-0102: Preserve detailed error messages
-      setError(err instanceof Error ? err.message : 'Import failed. Please ensure your file is a valid CSV/Excel file.');
+      // IMPORT-TIMEOUT-NO-UI-FEEDBACK: detect timeout/network errors for specific messaging
+      const isTimeout = err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('timeout'));
+      const isNetwork = err instanceof TypeError && err.message.includes('fetch');
+      if (isTimeout) {
+        setError('Upload timed out. Your file may be too large or your connection too slow. Please try again.');
+      } else if (isNetwork) {
+        setError('Network error during upload. Please check your internet connection and try again.');
+      } else {
+        // GL-CRIT-0102: Preserve detailed error messages
+        setError(err instanceof Error ? err.message : 'Import failed. Please ensure your file is a valid CSV/Excel file.');
+      }
       setStep('upload');
     } finally {
       setIsProcessing(false);

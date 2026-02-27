@@ -50,6 +50,8 @@ export default function SupplierCatalogPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
+  // SUPPLIER-CATALOG-ADD-NO-ERROR-UI: track per-product add errors inline
+  const [addError, setAddError] = useState<{ productId: string; message: string } | null>(null);
 
   // Fetch supplier catalog
   const fetchCatalog = useCallback(async (query?: string, offset = 0) => {
@@ -106,6 +108,7 @@ export default function SupplierCatalogPage() {
   // Add product to store catalog
   const handleAddProduct = async (product: SupplierProduct) => {
     setAddingProductId(product.productId);
+    setAddError(null);
     setError('');
     setSuccess('');
     try {
@@ -133,7 +136,9 @@ export default function SupplierCatalogPage() {
         )
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add product');
+      const msg = err instanceof Error ? err.message : 'Failed to add product';
+      setAddError({ productId: product.productId, message: msg });
+      setError(msg);
     } finally {
       setAddingProductId(null);
     }
@@ -316,6 +321,10 @@ export default function SupplierCatalogPage() {
                   >
                     {addingProductId === product.productId ? 'Adding...' : '+ Add to My Catalog'}
                   </button>
+                )}
+                {/* SUPPLIER-CATALOG-ADD-NO-ERROR-UI: inline error per product */}
+                {addError && addError.productId === product.productId && (
+                  <p style={{ color: '#991b1b', fontSize: '0.75rem', marginTop: '0.5rem' }}>{addError.message}</p>
                 )}
               </div>
             ))}
