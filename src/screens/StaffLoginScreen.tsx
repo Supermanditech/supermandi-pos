@@ -108,14 +108,15 @@ export default function StaffLoginScreen({ storeName }: Props) {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Phone Number</Text>
+          {/* REQ.AUDIT.W5.POS.STAFF-PHONE-VALIDATION-INTL-FORMAT.001: accept +91 prefix */}
           <TextInput
             style={styles.input}
             value={phone}
             onChangeText={setPhone}
-            placeholder="10-digit phone number"
+            placeholder="10-digit phone (or +91...)"
             placeholderTextColor={theme.colors.textTertiary}
             keyboardType="phone-pad"
-            maxLength={10}
+            maxLength={13}
             autoFocus
             returnKeyType="next"
             onSubmitEditing={() => pinRef.current?.focus()}

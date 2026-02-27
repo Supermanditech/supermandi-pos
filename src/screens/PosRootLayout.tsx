@@ -466,7 +466,13 @@ export default function PosRootLayout() {
       setSelectedMode(lastMode === "PURCHASE" ? "PURCHASE" : "SELL");
       setLastModeLoaded(true);
     };
-    void loadLastMode();
+    // REQ.AUDIT.W5.POS.ASYNCSTORAGE-ERROR-UNHANDLED.001: handle getLastPosMode errors gracefully
+    loadLastMode().catch(() => {
+      if (!cancelled) {
+        setSelectedMode("SELL");
+        setLastModeLoaded(true);
+      }
+    });
     return () => {
       cancelled = true;
     };
@@ -913,6 +919,8 @@ export default function PosRootLayout() {
     hidActiveTimeoutRef.current = setTimeout(() => {
       setScannerOk(false);
       hidActiveTimeoutRef.current = null;
+      // REQ.AUDIT.W5.POS.HID-SCANNER-TIMEOUT-NO-NOTIFICATION.001
+      showToast("Scanner disconnected — tap camera icon to scan");
     }, HID_ACTIVE_WINDOW_MS);
   }, []);
 

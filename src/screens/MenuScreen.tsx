@@ -496,6 +496,8 @@ export default function MenuScreen() {
                 style={[styles.syncButton, syncing && styles.syncButtonDisabled]}
                 disabled={syncing}
                 hitSlop={8}
+                accessibilityLabel={syncing ? "Syncing data" : "Sync pending changes now"}
+                accessibilityRole="button"
               >
                 <MaterialCommunityIcons
                   name={syncing ? "loading" : "sync"}

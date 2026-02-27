@@ -183,6 +183,8 @@ export default function PaymentSetupScreen() {
               keyboardType="email-address"
               editable={!saving}
               testID="payment-upi-input"
+              accessibilityLabel="UPI ID"
+              accessibilityRole="text"
             />
             {errors.upiVpa ? (
               <Text style={styles.errorText}>{errors.upiVpa}</Text>
@@ -204,6 +206,8 @@ export default function PaymentSetupScreen() {
               keyboardType="number-pad"
               editable={!saving}
               testID="payment-bank-input"
+              accessibilityLabel="Bank account number"
+              accessibilityRole="text"
             />
             {errors.bankAccount ? (
               <Text style={styles.errorText}>{errors.bankAccount}</Text>
@@ -226,6 +230,8 @@ export default function PaymentSetupScreen() {
               autoCorrect={false}
               editable={!saving}
               testID="payment-ifsc-input"
+              accessibilityLabel="IFSC code"
+              accessibilityRole="text"
             />
             {errors.ifsc ? (
               <Text style={styles.errorText}>{errors.ifsc}</Text>

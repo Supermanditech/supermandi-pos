@@ -100,16 +100,17 @@ export default function SplashScreen() {
   }, [navigateAfterSession]);
 
   useEffect(() => {
-    // S1-6: Non-blocking infra boot with error logging (not silent swallow)
+    // S1-6: Non-blocking infra boot with error logging
+    // REQ.AUDIT.W5.POS.SPLASH-INFRA-INIT-FAILURE-MASKING.001: log init failures in all environments
     startCloudEventLogger();
     printerService.initialize().catch((err) => {
-      if (__DEV__) console.warn("[SplashScreen] Printer init failed:", err);
+      console.warn("[SplashScreen] Printer init failed:", err);
     });
     initOfflineDb().catch((err) => {
-      if (__DEV__) console.warn("[SplashScreen] OfflineDB init failed:", err);
+      console.warn("[SplashScreen] OfflineDB init failed:", err);
     });
     syncOutbox().catch((err) => {
-      if (__DEV__) console.warn("[SplashScreen] SyncOutbox failed:", err);
+      console.warn("[SplashScreen] SyncOutbox failed:", err);
     });
     startAutoSync();
 

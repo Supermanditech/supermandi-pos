@@ -17,6 +17,7 @@ import {
   TextInput,
   Pressable,
   Alert,
+  Keyboard,
   Linking,
   Platform,
   ScrollView,
@@ -234,8 +235,10 @@ export default function EnrollDeviceScreen() {
   }, []);
 
   const handleActivate = useCallback(async () => {
+    // REQ.AUDIT.W5.POS.KEYBOARD-NOT-DISMISSED-ON-ERROR.001: dismiss keyboard before showing alerts
     const activationCode = parseActivationCode(codeInput);
     if (!activationCode) {
+      Keyboard.dismiss();
       Alert.alert(
         "Missing Code",
         "Enter the activation code shared after retailer registration and superadmin account activation."
@@ -246,6 +249,7 @@ export default function EnrollDeviceScreen() {
     // #404: Validate label (required by backend)
     const trimmedLabel = labelInput.trim();
     if (!trimmedLabel) {
+      Keyboard.dismiss();
       Alert.alert("Device Name Required", "Enter a name for this POS device (e.g., Counter-1, Billing-Main).");
       return;
     }
@@ -254,6 +258,7 @@ export default function EnrollDeviceScreen() {
     try {
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
+        Keyboard.dismiss();
         Alert.alert(
           "No Internet",
           "Activation requires a network connection. Please connect to the internet and try again."
@@ -451,6 +456,7 @@ export default function EnrollDeviceScreen() {
           onChangeText={(v) => { setCodeInput(v); setEnrollError(null); }}
           testID="enroll-code-input"
           accessibilityLabel="Activation code"
+          accessibilityRole="text"
           returnKeyType="next"
           autoFocus
           editable={!loading}
@@ -470,6 +476,7 @@ export default function EnrollDeviceScreen() {
           onChangeText={setLabelInput}
           testID="enroll-label-input"
           accessibilityLabel="Device name for this POS"
+          accessibilityRole="text"
           returnKeyType="done"
           onSubmitEditing={handleActivate}
           editable={!loading}
