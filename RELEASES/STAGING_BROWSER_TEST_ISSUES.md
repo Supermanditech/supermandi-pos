@@ -428,7 +428,70 @@
 - **Files**: `supermandi-superadmin/src/tabs/SettingsTab.tsx:147`, `supermandi-superadmin/src/App.tsx:2634`
 - **Status**: DIAGNOSED
 
-### STG-046:
+### STG-046: SuperAdmin — Credit application approve/reject both crash (missing columns)
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#credit-providers`)
+- **Page**: Finance → Credit Applications → Approve or Reject
+- **Symptom**: Both approve and reject crash with PostgreSQL "column does not exist" error.
+- **Root Cause**: `credit.ts:111-115` (approve) and `credit.ts:182-186` (reject) SET `updated_at = NOW()` but `payments.credit_applications` has no `updated_at` column (migration 049). Reject also writes to `rejection_reason` column which doesn't exist. Migration 055 adds `pan_number`, `aadhaar_last4`, `approved_amount_minor` but NOT these columns.
+- **Fix**: Add migration with `ALTER TABLE payments.credit_applications ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN rejection_reason TEXT`.
+- **Files**: `backend/src/routes/v1/admin/credit.ts:111-115,182-186`, migration `049_payments_schema.sql`
+- **Status**: DIAGNOSED
+
+### STG-047: SuperAdmin — Credit applications status constraint blocks entire workflow
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#credit-providers`)
+- **Page**: Finance → Credit Applications list (empty) + POS credit flow
+- **Symptom**: Credit application list always empty. POS credit `kyc_verified` update crashes with CHECK constraint violation.
+- **Root Cause**: Backend filters by `status = 'kyc_verified'` (credit.ts:25) and checks for `'pending'` (line 102), but `chk_credit_app_status` constraint only allows `('submitted','processing','approved','disbursed','rejected')`. Neither `'kyc_verified'` nor `'pending'` are valid. POS route `credit.ts:544` tries `SET status = 'kyc_verified'` → constraint violation.
+- **Fix**: Add migration to expand constraint: `ALTER TABLE payments.credit_applications DROP CONSTRAINT chk_credit_app_status, ADD CONSTRAINT chk_credit_app_status CHECK (status IN ('submitted','processing','approved','disbursed','rejected','kyc_verified','pending'))`.
+- **Files**: `backend/src/routes/v1/admin/credit.ts:25,102`, `backend/src/routes/v1/pos/credit.ts:544`, migration `049_payments_schema.sql:256`
+- **Status**: DIAGNOSED
+
+### STG-048: SuperAdmin — Manual audit log entries silently lost (no POST endpoint)
+- **Portal**: SuperAdmin (all tabs that log admin actions)
+- **Page**: Cross-cutting — affects user status changes, document approvals, device updates
+- **Symptom**: Frontend `logAdminAction()` calls fire but are silently dropped — no error shown, no audit records created.
+- **Root Cause**: Frontend calls `POST /api/v1/admin/audit` (`api/audit.ts:107-108`) but backend `admin/audit.ts` only has GET handlers (line 52: GET `/audit`, line 154: GET `/audit/stats`). No POST handler exists. Error is caught and suppressed at `audit.ts:120-123`.
+- **Fix**: Add POST handler to `backend/src/routes/v1/admin/audit.ts` that accepts `{ action, resourceType, resourceId, details }` and inserts into `admin.audit_log`.
+- **Files**: `supermandi-superadmin/src/api/audit.ts:107-108`, `backend/src/routes/v1/admin/audit.ts`
+- **Status**: DIAGNOSED
+
+### STG-049: SuperAdmin — Enrollment expiry shows time only, no date
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#registrations`)
+- **Page**: Registrations → Send Enrollment → Success modal
+- **Symptom**: Enrollment expiry shows "3:00:00 PM" with no date — misleading when codes expire 24h+ later.
+- **Root Cause**: `ConfirmDialog.tsx:84` uses `toLocaleTimeString()` instead of `toLocaleString()`.
+- **Fix**: Change `toLocaleTimeString()` to `toLocaleString()`.
+- **Files**: `supermandi-superadmin/src/components/ConfirmDialog.tsx:84`
+- **Status**: DIAGNOSED
+
+### STG-050: SuperAdmin — AI Copilot "Explain last hour" queries last 30 days instead
+- **Portal**: SuperAdmin (AI Copilot sidebar panel)
+- **Page**: SM AI Assistant → Click "Explain last hour" → Ask AI
+- **Symptom**: AI response covers 30 days of data instead of the last hour, giving misleading analysis.
+- **Root Cause**: `askSuperMandiAI.ts:49-65` `extractRange()` only recognizes `"today"` and `/last\s+(\d+)\s+days/`. "Last hour" matches neither → falls through to 30-day default.
+- **Fix**: Add hour matching: `if (lower.includes("last hour")) { return { from: oneHourAgo, to: now } }` and `/last\s+(\d+)\s+hours?/` pattern.
+- **Files**: `backend/src/services/ai/askSuperMandiAI.ts:49-65`
+- **Status**: DIAGNOSED
+
+### STG-051: SuperAdmin — AI Copilot quick actions don't auto-submit (require 2 clicks)
+- **Portal**: SuperAdmin (AI Copilot sidebar panel)
+- **Page**: SM AI Assistant → Click any quick action button
+- **Symptom**: Clicking "Explain last hour" / "Payment issues?" / "Summarize today" only fills the text field — user must click "Ask AI" separately. Defeats the purpose of "quick" actions.
+- **Root Cause**: `AiPanel.tsx:59-67` buttons only call `setAiQuestion(text)` without triggering `askAi()`.
+- **Fix**: Have quick action buttons call `askAi(text)` directly in addition to setting the question text.
+- **Files**: `supermandi-superadmin/src/components/AiPanel.tsx:59-67`
+- **Status**: DIAGNOSED
+
+### STG-052: SuperAdmin — AI Copilot response shows raw markdown instead of formatted text
+- **Portal**: SuperAdmin (AI Copilot sidebar panel)
+- **Page**: SM AI Assistant → Ask any question → View response
+- **Symptom**: AI response shows literal `## Summary`, `**bold**`, `- bullet` markdown symbols instead of formatted headings, bold text, and lists.
+- **Root Cause**: `AiPanel.tsx:110` renders `{aiAnswer}` as plain text in a `<div>`. OpenAI GPT returns markdown-formatted responses.
+- **Fix**: Use `react-markdown` or `dangerouslySetInnerHTML` with a markdown-to-HTML converter to render formatted output.
+- **Files**: `supermandi-superadmin/src/components/AiPanel.tsx:110`
+- **Status**: DIAGNOSED
+
+### STG-053:
 - **Portal**:
 - **Page**:
 - **Symptom**:
@@ -443,11 +506,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 40 |
+| DIAGNOSED | 47 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **45** |
+| **Total** | **52** |
 
 ---
 
