@@ -1597,16 +1597,210 @@
 
 ---
 
+## Live Staging Audit (STG-175 → STG-185)
+
+> **Audit method**: Live GCP staging (`staging.supermandi.tech`) tested via curl/WebFetch as real user sessions.
+> **Date**: 2026-02-28
+> **Staging SHA**: `e56f0f4` (build: `2026-02-27T18:04:04+00:00`)
+> **Database**: Cloud SQL connected (confirmed via `/api/v1/platform/health`)
+
+### STG-175: Gateway — Missing `/api/v1/public/*` route proxy (all public endpoints 404)
+- **Portal**: Landing Page / All Portals
+- **Page**: Landing page WhatsApp CTA widget, any consumer of public config
+- **Symptom**: All `/api/v1/public/*` endpoints return 404 on staging:
+  - `GET /api/v1/public/whatsapp-cta-config` → 404
+  - `GET /api/v1/public/config` → 404
+  - `GET /api/v1/public/app-version` → 404
+- **Reproduction**: `curl -s https://staging.supermandi.tech/api/v1/public/whatsapp-cta-config` → `{"error":{"code":"NOT_FOUND","message":"Route GET /api/v1/public/whatsapp-cta-config not found"}}`
+- **Root Cause**: Backend has the route handler at `backend/src/routes/v1/publicConfig.ts` (line 16), registered under `/api/v1/public/` via `v1Router.use("/public", publicConfigRouter)` in `routes/v1/index.ts:118`. BUT the API gateway's service config in `backend/services/api-gateway/src/config.ts` has NO routing rule for `/api/v1/public/` prefix — so the gateway handles it as an unknown route and returns 404 instead of proxying to main-backend.
+- **Fix**: Add service entry to gateway config: `{ name: 'public-config', url: getMainBackendUrl(), pathPrefix: '/api/v1/public', stripPrefix: false }`
+- **Files**: `backend/services/api-gateway/src/config.ts` (missing entry), `backend/src/routes/v1/publicConfig.ts`, `backend/src/routes/v1/index.ts:118`, `supermandi-landing/index.html` (caller)
+- **Severity**: CRITICAL — Landing page WhatsApp CTA widget is permanently hidden on staging
+- **Status**: DIAGNOSED
+
+### STG-176: GCP Load Balancer — Returns HTML 411 for POST without Content-Length header
+- **Portal**: All (any portal making bodyless POST requests)
+- **Page**: Admin logout, token refresh, any fire-and-forget POST
+- **Symptom**: POST requests without a request body or `Content-Length` header receive raw HTML error instead of JSON:
+  ```
+  <html><title>411 Length Required</title>
+  <h1>Error: Length Required</h1>
+  POST requests require a Content-length header.
+  </html>
+  ```
+- **Reproduction**: `curl -s -X POST https://staging.supermandi.tech/api/v1/admin/auth/logout` → HTML 411
+  With body: `curl -s -X POST -H "Content-Type: application/json" -d '{}' https://staging.supermandi.tech/api/v1/admin/auth/logout` → JSON 401 (expected)
+- **Root Cause**: GCP HTTP(S) Load Balancer enforces `Content-Length` on POST requests. When frontend sends bodyless POST (e.g., logout with `credentials: 'include'` but no body), the LB rejects before reaching Cloud Run. Response is HTML, not JSON — any `response.json()` call in frontend will throw `SyntaxError: Unexpected token '<'`.
+- **Fix**: Either (a) always send `Content-Length: 0` or empty body `{}` in POST requests from frontend, or (b) add a middleware on Cloud Run to handle this.
+- **Files**: `supermandi-superadmin/src/api/authToken.ts` (logout/refresh calls), `retailer-admin/src/contexts/AuthContext.tsx` (logout call), `supplier-portal/src/lib/api.ts` (logout call)
+- **Severity**: HIGH — Logout may silently fail or crash JSON parsing on staging
+- **Status**: DIAGNOSED
+
+### STG-177: POS — Auth error response format inconsistent with all other services
+- **Portal**: POS App (against staging backend)
+- **Page**: Any POS screen making authenticated API call with invalid/expired device token
+- **Symptom**: POS device auth middleware returns `{"error":"device_unauthorized"}` (error is a plain string), while ALL other services return `{"error":{"code":"...","message":"..."}}` (error is an object with code+message).
+- **Reproduction**: `curl -s -H "x-device-token: invalid" https://staging.supermandi.tech/api/v1/pos/sales` → `{"error":"device_unauthorized"}`
+  Compare: `curl -s -H "Authorization: Bearer invalid" https://staging.supermandi.tech/api/v1/retailer-admin/stores` → `{"error":{"code":"INVALID_TOKEN","message":"Invalid token. Please login again."}}`
+- **Root Cause**: POS device auth middleware in `backend/src/middleware/posAuth.ts` uses `res.status(401).json({ error: 'device_unauthorized' })` directly, while gateway JWT middleware uses structured `{ error: { code, message } }` format.
+- **Fix**: Change POS auth middleware to return `{ error: { code: 'DEVICE_UNAUTHORIZED', message: 'Device not authorized. Please re-enroll.' } }` to match the standard format.
+- **Files**: `backend/src/middleware/posAuth.ts`
+- **Severity**: MEDIUM — POS frontend code that checks `error.code` will get `undefined` instead of a usable error code
+- **Status**: DIAGNOSED
+
+### STG-178: Document Upload — Returns HTTP 500 for client validation error (invalid file type)
+- **Portal**: Retailer / Supplier (registration document upload)
+- **Page**: Registration → Document Upload step
+- **Symptom**: Uploading an invalid file type (e.g., .txt, .doc) returns HTTP 500 instead of 400.
+- **Reproduction**: `curl -s -w "\nHTTP:%{http_code}" -X POST -H "X-Requested-With: XMLHttpRequest" -F "file=@/dev/null" -F "document_type=gstin_certificate" -F "entity_type=retailer_application" -F "entity_id=test" https://staging.supermandi.tech/api/v1/documents/upload` → `{"error":"Invalid file type: application/octet-stream. Allowed: JPEG, PNG, PDF"}` with HTTP 500
+- **Root Cause**: Document upload handler throws the validation error but the error is caught by the global error handler which defaults to 500 for unrecognized errors. The validation check should explicitly return 400.
+- **Fix**: Use `res.status(400).json({ error: { code: 'INVALID_FILE_TYPE', message: '...' } })` instead of throwing.
+- **Files**: `backend/src/routes/v1/documents.ts`
+- **Severity**: MEDIUM — Monitoring/alerting will treat file type validation as server errors; frontends may show "server error" instead of "wrong file type"
+- **Status**: DIAGNOSED
+
+### STG-179: Auth Rate Limit — 5/min shared across all auth routes locks out normal login flows
+- **Portal**: Retailer / Supplier
+- **Page**: Login, Registration, Forgot Password
+- **Symptom**: A normal OTP login flow makes 5 requests (lookup → send-otp-page → firebase-login → refresh → status check), exactly hitting the 5/min rate limit. Any additional request (e.g., failed OTP retry, forgot password) returns 429.
+- **Reproduction**: Run 5 rapid auth requests to supplier, then try forgot-password:
+  ```
+  curl -s ... /api/v1/supplier/auth/login (5 times)
+  curl -s ... /api/v1/supplier/auth/forgot-password → 429 "Too many authentication attempts"
+  ```
+  The rate limit is shared across ALL routes under `/api/v1/supplier/auth/*` and `/api/v1/retailer-admin/auth/*`.
+- **Root Cause**: Gateway `rateLimiter.ts` applies `authBruteForceRateLimitMax` (5/min) to entire `/api/v1/retailer-admin/auth` and `/api/v1/supplier/auth` prefixes. A normal login flow uses most of this budget. Legitimate users who mistype OTP once are locked out of ALL auth routes including password recovery.
+- **Fix**: Either (a) increase auth rate limit to 15/min (still prevents brute force but allows normal flow + 1 retry), or (b) apply separate limits per sub-route (login: 5/min, forgot-password: 3/min, register: 5/min separately), or (c) use a sliding window instead of fixed window.
+- **Files**: `backend/services/api-gateway/src/middleware/rateLimiter.ts`, `backend/services/api-gateway/src/config.ts`
+- **Severity**: HIGH — Real users will hit 429 during normal registration/login flows
+- **Status**: DIAGNOSED
+
+### STG-180: Landing Page — Missing `<title>` and `<meta>` tags in HTML `<head>`
+- **Portal**: Landing Page (`staging.supermandi.tech/`)
+- **Page**: Main landing page
+- **Symptom**: Page has no `<title>` tag, no `<meta name="description">`, no Open Graph tags in the `<head>` section. Browser tab shows URL instead of page title. Social media link previews show no description or image.
+- **Reproduction**: `curl -s https://staging.supermandi.tech/ | grep '<title>\|<meta name="description"'` → returns nothing (title is set via inline JS only, not in `<head>`)
+- **Root Cause**: `supermandi-landing/index.html` relies on inline JavaScript to render content but doesn't include static `<title>` or `<meta>` tags. The page content is all in `<body>` via HTML, but SEO-critical tags are missing from `<head>`.
+- **Fix**: Add `<title>SuperMandi — The Infrastructure Retail Runs On</title>` and `<meta name="description" content="...">` and Open Graph tags to `<head>`.
+- **Files**: `supermandi-landing/index.html`
+- **Severity**: LOW — SEO and social sharing impact only
+- **Status**: DIAGNOSED
+
+### STG-181: Landing Page — robots.txt and sitemap.xml both return nginx 404 HTML
+- **Portal**: Landing Page
+- **Page**: `/robots.txt`, `/sitemap.xml`
+- **Symptom**: Both SEO-critical files return nginx 404 HTML page instead of proper content or a JSON error.
+- **Reproduction**: `curl -s https://staging.supermandi.tech/robots.txt` → `<html><title>404 Not Found</title>...nginx/1.29.5</html>`
+- **Root Cause**: Landing page Docker container (nginx-based) doesn't include robots.txt or sitemap.xml. The nginx 404 reveals the server type (nginx/1.29.5) — minor information disclosure.
+- **Fix**: Add `robots.txt` (allow all, link sitemap) and `sitemap.xml` (list main pages) to landing page static assets.
+- **Files**: `supermandi-landing/` (add `robots.txt` and `sitemap.xml`)
+- **Severity**: LOW — SEO impact and minor server info disclosure
+- **Status**: DIAGNOSED
+
+### STG-182: Landing Page — `/s` bare route returns 404 instead of redirect
+- **Portal**: Landing Page / Retailer
+- **Page**: Store shortlink without code (`staging.supermandi.tech/s`)
+- **Symptom**: Visiting `/s` without a store code returns a generic 404. `/s/test-store` correctly routes to the retailer SPA.
+- **Reproduction**: `curl -s -o /dev/null -w "%{http_code}" https://staging.supermandi.tech/s` → 404
+- **Root Cause**: URL map routes `/s/*` to retailer-admin but `/s` (exact match) falls through to the landing page service, which has no handler for `/s` and returns 404.
+- **Fix**: Either (a) add `/s` exact match to URL map pointing to retailer-admin, or (b) add a redirect from `/s` to `/retailer/` in the landing page nginx config.
+- **Files**: GCP URL map configuration (load balancer path rules)
+- **Severity**: LOW — Edge case, unlikely user path
+- **Status**: DIAGNOSED
+
+### STG-183: API — Error response format inconsistent across gateway vs backend
+- **Portal**: All
+- **Page**: Any error response
+- **Symptom**: Error responses have 3 different shapes depending on which layer generates the error:
+  1. **Gateway 404**: `{"error":{"code":"NOT_FOUND","message":"..."},"requestId":"...","timestamp":"..."}`
+  2. **Gateway auth**: `{"error":{"code":"UNAUTHORIZED","message":"..."},"requestId":"..."}`
+  3. **Backend validation**: `{"error":{"code":"MISSING_FIELDS","message":"..."}}` (no requestId)
+  4. **Backend 404**: `{"error":{"code":"NOT_FOUND","message":"...","path":"...","method":"..."}}` (has path+method instead of requestId)
+  5. **POS auth**: `{"error":"device_unauthorized"}` (plain string, see STG-177)
+- **Reproduction**: Compare any gateway error (with `requestId`) vs backend error (without `requestId`) vs POS error (plain string).
+- **Root Cause**: Gateway error middleware adds `requestId` and `timestamp`. Backend error middleware adds `path` and `method`. POS auth middleware returns a raw string. No shared error format standard.
+- **Fix**: Standardize all error responses to `{ error: { code, message }, requestId }` format. Add requestId injection in backend middleware too.
+- **Files**: `backend/services/api-gateway/src/middleware/errorHandler.ts`, `backend/src/middleware/errorHandler.ts`, `backend/src/middleware/posAuth.ts`
+- **Severity**: MEDIUM — Frontend error handling must handle 5 different error shapes
+- **Status**: DIAGNOSED
+
+### STG-184: CSRF Middleware — Blocks multipart/form-data uploads without X-Requested-With header
+- **Portal**: Retailer / Supplier (registration)
+- **Page**: Registration → Document Upload
+- **Symptom**: File upload via `multipart/form-data` (standard HTML form encoding for files) is blocked by CSRF middleware with 403: `"Request blocked. Include Content-Type: application/json or X-Requested-With header."`
+- **Reproduction**: `curl -s -X POST -F "file=@test.jpg" https://staging.supermandi.tech/api/v1/documents/upload` → 403 CSRF
+  With header: `curl -s -X POST -H "X-Requested-With: XMLHttpRequest" -F "file=@test.jpg" ...` → passes CSRF
+- **Root Cause**: Gateway CSRF middleware requires either `Content-Type: application/json` or `X-Requested-With: XMLHttpRequest` header on all state-changing requests. File uploads use `multipart/form-data` content type, so they need the explicit `X-Requested-With` header.
+- **Fix**: The retailer and supplier frontends DO set `X-Requested-With: XMLHttpRequest` on upload calls (confirmed in code). This is a documentation/awareness issue — any new upload consumer must include this header. Consider also allowing `Content-Type: multipart/form-data` in the CSRF check.
+- **Files**: `backend/services/api-gateway/src/middleware/csrf.ts`, `retailer-admin/src/contexts/AuthContext.tsx` (upload call), `supplier-portal/src/lib/api.ts` (upload call)
+- **Severity**: LOW — Current frontends handle this correctly; affects only new consumers
+- **Status**: DIAGNOSED
+
+### STG-185: Admin Portal — CSP meta tag vs server header mismatch (server wins, more restrictive)
+- **Portal**: SuperAdmin
+- **Page**: All admin pages
+- **Symptom**: Admin portal HTML `<meta>` CSP allows `connect-src 'self' https://*.run.app https://*.googleapis.com`, but the nginx server header sends `connect-src 'self'` only. Per CSP spec, both policies are enforced independently — the server header blocks what the meta tag allows.
+- **Reproduction**: `curl -sI https://staging.supermandi.tech/admin/ | grep content-security-policy` → `connect-src 'self'` (server header)
+  `curl -s https://staging.supermandi.tech/admin/ | grep connect-src` → `connect-src 'self' https://*.run.app https://*.googleapis.com` (meta tag)
+- **Root Cause**: The superadmin Docker container's nginx config sends a CSP header that is more restrictive than the meta tag in `index.html`. Currently not causing issues because all API calls go through same-origin (`/api/v1/*`), but the `*.run.app` allowance in the meta tag is effectively dead.
+- **Fix**: Either (a) align server header with meta tag to include `https://*.run.app`, or (b) remove the dead `*.run.app` from the meta tag since it's never used.
+- **Files**: `supermandi-superadmin/index.html` (meta CSP), `supermandi-superadmin/Dockerfile` or `nginx.conf` (server CSP header)
+- **Severity**: LOW — No current impact; cosmetic inconsistency
+- **Status**: DIAGNOSED
+
+---
+
+## Staging Access Coverage Report
+
+### Tested (Unauthenticated — Full Coverage)
+| Area | Endpoints Tested | Result |
+|------|-----------------|--------|
+| Service health | 6 services + gateway health + platform health | All UP |
+| Landing page | Content, links, CSP, security headers, caching, meta tags | Functional |
+| Portal static assets | JS bundles, CSS, favicons, logos, manifest, SW | All 200 |
+| Auth endpoints (retailer) | login, register/create/lookup, forgot-password (4 sub-routes), firebase-login, firebase-otp-login, refresh | All responding correctly |
+| Auth endpoints (supplier) | login, register/create/lookup, forgot-password (3 sub-routes), firebase-login, reset-password, refresh | All responding correctly |
+| Auth endpoints (admin) | login (master token), status, send-email-otp, verify-email-otp, logout, refresh, check | All responding correctly |
+| POS endpoints | enroll, ui-status, products, customers, sales, inventory, reports, shifts, khata, daily-closing, overdue-payments, staff, reorder/policies | All responding (401 expected) |
+| Public endpoints | whatsapp-cta-config, config, app-version | All 404 (STG-175) |
+| Security | CORS (blocks external origins), CSRF (blocks missing headers), CSP (per-portal), HSTS, X-Frame-Options | Properly configured |
+| Edge cases | Invalid JSON (400), missing Content-Type (403 CSRF), path traversal (blocked), SQL injection (parameterized) | Handled safely |
+| Error format | 5 different shapes across gateway/backend/POS (STG-183) | Inconsistent |
+| Registration flow | Retailer + Supplier create → lookup → verify (without Firebase) | DB writes confirmed |
+| SEO | robots.txt, sitemap.xml, meta tags | Missing (STG-180, STG-181) |
+| Caching | API (no-cache), static assets (1yr immutable), HTML (no-cache) | Correct |
+
+### BLOCKED-ON-STAGING-ACCESS (Need Operator)
+| Area | Blocker | Screens Not Covered |
+|------|---------|---------------------|
+| SuperAdmin panel | Need admin email in `ADMIN_EMAIL_ALLOWLIST` + OTP from email | All admin interior: stores, suppliers, users, events, monitoring, quality, analytics, refunds, invoices, GST, AI, WhatsApp, settings |
+| Retailer dashboard | Need registered+approved retailer account + Firebase OTP | Dashboard, inventory, products, suppliers, orders, invoices, notifications, devices, settings, messages, analytics |
+| Supplier dashboard | Need registered+approved supplier account + Firebase OTP | Dashboard, products, orders, earnings, invoices, KYC, notifications, profile, analytics |
+| POS authenticated flows | Need enrolled device token from staging | Sell, checkout, payment, purchase, reorder, sales history, inventory, khata, customers, credit, BNPL, reports, chat, shifts, staff, settings |
+| Cross-portal flows | Need admin session to approve registrations | Registration → approval → login chain, status changes across portals |
+| Email delivery | Need access to admin email inbox | OTP delivery, password reset links, notification emails |
+| WhatsApp integration | Need WhatsApp Business API credentials | CTA widget behavior, message delivery |
+
+---
+
 ## Summary
 
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 169 |
+| DIAGNOSED | 180 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **174** |
+| **Total** | **185** |
+
+| Source | Range | Count |
+|--------|-------|-------|
+| Code-level audit: SuperAdmin | STG-001 → STG-052 | 52 |
+| Code-level audit: Retailer | STG-053 → STG-071 | 19 |
+| Code-level audit: Supplier | STG-072 → STG-091 | 20 |
+| Code-level audit: POS App | STG-092 → STG-174 | 83 |
+| **Live staging audit** | **STG-175 → STG-185** | **11** |
 
 ---
 
