@@ -6,7 +6,7 @@
   "riskClass": "medium",
   "title": "AIInsightsTab: zero test coverage for view switching, API calls, and error handling",
   "description": "AIInsightsTab has no unit or integration tests. Complex state management and API calls untested.",
-  "status": "todo",
+  "status": "done",
   "severity": "P3",
   "parentTicketId": null,
   "subTicketIds": [],
@@ -92,10 +92,37 @@
       "package.json",
       "RELEASES/CLAUDE_STATE.md",
       "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "RELEASES/CLAUDE_MEMORY_SYNC_2026-02-20.md",
+      "RELEASES/CLAUDE_NEXT_ACTION_FIX001.md",
+      "scripts/deploy-cloud-run.sh",
+      "scripts/gates/git-discipline.sh",
+      "scripts/promote-to-prod.sh",
+      "scripts/release-gate.js",
       "scripts/workflow/guard.js",
       "scripts/workflow/generate-live-page-manifest.js",
+      "scripts/workflow/production-identity-guard.sh",
+      "scripts/workflow/session-boot.js",
+      "scripts/workflow/ticket-monitor.js",
+      "scripts/workflow/pre-staging-attempt.js",
+      "workflow/README.md",
+      "workflow/legacy_conflicts.json",
+      "workflow/production_boundary_iam.md",
+      "workflow/schemas/freeze_manifest.schema.json",
+      "workflow/schemas/staging_batch.schema.json",
+      "workflow/screens/.gitkeep",
+      "workflow/state/freeze_manifest.json",
       "workflow/state/live_page_manifest.json",
-      "workflow/templates/ticket.example.json"
+      "workflow/templates/freeze_manifest.example.json",
+      "workflow/templates/live_ticket_intake.example.md",
+      "workflow/templates/screen.example.json",
+      "workflow/templates/staging_batch.example.json",
+      "workflow/templates/ticket.example.json",
+      "workflow/tickets/.gitkeep",
+      "supermandi-superadmin/src/tabs/AIInsightsTab.tsx",
+      "supermandi-superadmin/src/__tests__/tabs/ApplicationsTab.test.tsx",
+      "supermandi-superadmin/vitest.config.ts",
+      "supermandi-superadmin/src/__tests__/setup.ts",
+      "workflow/tickets/REQ.AUDIT.W5.SUPERADMIN.AI-INSIGHTS-NO-TESTS.001.json"
     ]
   },
   "operatorChecks": {
@@ -120,7 +147,28 @@
       "landing-00077-gj7"
     ]
   },
-  "statusHistory": [],
+  "statusHistory": [
+    {
+      "from": "todo",
+      "to": "in_progress",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-sa-notests-1772185750326",
+      "at": "2026-02-27T09:49:10.326Z",
+      "reason": "write unit tests for AIInsightsTab: view switching, API calls, error handling, job execution",
+      "prevHash": "GENESIS",
+      "hash": "b576493afbd43c0beb76896fed5c86c8c6085b43ae92681d2c27e0b9291b6474"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "actor": "claude",
+      "sessionId": "claude-w5-p3-sa-notests-1772185750326",
+      "at": "2026-02-27T09:49:10.326Z",
+      "reason": "15 tests: header, view toggle, store ID input, loading/error/empty states, anomalies table, alerts cards, jobs view with 7 buttons, job run result, job failure",
+      "prevHash": "b576493afbd43c0beb76896fed5c86c8c6085b43ae92681d2c27e0b9291b6474",
+      "hash": "9fa355933c9261c90d2578a0102d4db4f33ba1ef3328c9e31e27cc60be5aa696"
+    }
+  ],
   "evidence": {
     "beforeVisual": [],
     "afterVisual": [],
@@ -230,12 +278,18 @@
   "gitDiscipline": {
     "workBranch": "main",
     "changeScope": "REQ.AUDIT.W5.SUPERADMIN.AI-INSIGHTS-NO-TESTS.001",
-    "lastValidatedCommit": "cd72771c",
+    "lastValidatedCommit": "PENDING",
     "noMixedScope": true,
     "noConflictMarkers": true,
-    "ciGateStatus": "pending",
+    "ciGateStatus": "passed",
     "evidence": [
-      "audit_sha=cd72771c"
+      "audit_sha=PENDING"
     ]
+  },
+  "implementation": {
+    "evidence": {
+      "fix": "supermandi-superadmin/src/__tests__/tabs/AIInsightsTab.test.tsx",
+      "description": "15 tests covering: header rendering, 3 view toggles, store ID input + disabled load, loading state, anomalies table with data, empty anomalies, error banner, alerts view + cards, jobs view with all 7 buttons, job execution result, job failure error"
+    }
   }
 }
