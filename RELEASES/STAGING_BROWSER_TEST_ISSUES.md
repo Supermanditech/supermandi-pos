@@ -491,7 +491,178 @@
 - **Files**: `supermandi-superadmin/src/components/AiPanel.tsx:110`
 - **Status**: DIAGNOSED
 
-### STG-053:
+### STG-053: Retailer — Login token lacks actorId, gateway rejects ALL authenticated requests
+- **Portal**: Retailer (`staging.supermandi.tech/retailer/`)
+- **Page**: Post-login — every authenticated page
+- **Symptom**: User can log in and select a store, but every subsequent API call returns 401 — nothing loads (products, inventory, orders all fail).
+- **Root Cause**: OTP login (`auth.ts:555-561`) and password login (`auth.ts:887-892`) generate JWT access tokens without `actorId` field. Gateway `jwtAuth.ts:244` rejects tokens missing `actorId`. No `/auth/select-store` endpoint exists to issue a store-specific JWT after store selection.
+- **Fix**: Add `actorId: store.id` to JWT payload when store is known (single-store users), or add a `/auth/select-store` endpoint that issues a new JWT with `actorId` after store selection.
+- **Files**: `backend/src/routes/v1/retailer-admin/auth.ts:555-561,887-892`, `backend/services/api-gateway/src/middleware/jwtAuth.ts:244`
+- **Status**: DIAGNOSED
+
+### STG-054: Retailer — Token refresh fails after 24h (missing storeId in refresh token)
+- **Portal**: Retailer
+- **Page**: Any page after 24h session
+- **Symptom**: User gets silently logged out after access token expires (24h). Refresh fails, triggers logout.
+- **Root Cause**: OTP login (`auth.ts:570-574`) and password login (`auth.ts:900-904`) generate refresh tokens without `storeId`. Refresh endpoint (`auth.ts:1324-1329`) queries `WHERE u.id = $1 AND su.store_id = $2` with `decoded.storeId` = undefined → returns no rows → 401.
+- **Fix**: Include `storeId` in refresh token payload when store is selected, or modify refresh endpoint to handle missing `storeId` by looking up user's active store.
+- **Files**: `backend/src/routes/v1/retailer-admin/auth.ts:570-574,900-904,1324-1329`
+- **Status**: DIAGNOSED
+
+### STG-055: Retailer — Email password reset never sends the email
+- **Portal**: Retailer (`staging.supermandi.tech/retailer/forgot-password`)
+- **Page**: Forgot Password → Email reset flow
+- **Symptom**: User clicks "Send Reset Link", sees "Check Your Email", but no email arrives. Password reset via email is completely non-functional.
+- **Root Cause**: `auth.ts:1152-1166` generates JWT reset token but never calls `sendPasswordResetEmail()`. Token is only returned as `devToken` in non-production environments. The `emailService.sendPasswordResetEmail()` function exists but is never imported or called.
+- **Fix**: Import `sendPasswordResetEmail` from emailService and call it with the generated token and user email before sending the response.
+- **Files**: `backend/src/routes/v1/retailer-admin/auth.ts:1152-1166`, `backend/src/services/emailService.ts:456`
+- **Status**: DIAGNOSED
+
+### STG-056: Retailer — Registration /clear endpoint wrong phone normalization, never matches
+- **Portal**: Retailer (`staging.supermandi.tech/retailer/login`)
+- **Page**: Login → "Change Phone Number" button
+- **Symptom**: DRAFT applications are never cleared, potentially blocking re-registration with same GSTIN.
+- **Root Cause**: `registration.ts:989` normalizes phone with `.trim().replace(/\s+/g, '')` (only strips whitespace) instead of using `normalizePhoneNumber()` which adds `+91` prefix. DB stores E.164 format (`+919876543210`), query never matches.
+- **Fix**: Use `normalizePhoneNumber()` at line 989 instead of the manual trim/replace.
+- **Files**: `backend/src/routes/v1/retailer-admin/registration.ts:989-994`
+- **Status**: DIAGNOSED
+
+### STG-057: Retailer — Registration resume flow broken (application_id never returned)
+- **Portal**: Retailer (`staging.supermandi.tech/retailer/register`)
+- **Page**: Register → Resume from incomplete registration
+- **Symptom**: Users with incomplete registrations redirected from login always start fresh instead of resuming.
+- **Root Cause**: `RegisterPage.tsx:323-326` reads `lookup.application_id` from lookup API response, but backend (`registration.ts:237-242`) never includes `application_id` in response (per DR-009: no internal IDs for unauthenticated callers).
+- **Fix**: Either return `application_id` in the lookup response (after verifying caller is authenticated via OTP), or redesign resume flow to work without application_id.
+- **Files**: `retailer-admin/src/pages/RegisterPage.tsx:323-326`, `backend/src/routes/v1/retailer-admin/registration.ts:237-242`
+- **Status**: DIAGNOSED
+
+### STG-058: Retailer — Dashboard sales may exclude split payments (SPLIT status not in constraint)
+- **Portal**: Retailer (`staging.supermandi.tech/retailer/`)
+- **Page**: Dashboard → Daily Summary cards
+- **Symptom**: Sales with split payments may be excluded from daily totals, or split payment inserts may crash.
+- **Root Cause**: `inventory.ts:132,148,164,269,270,301` filters `status IN ('completed','PAID_CASH','PAID_UPI','DUE','SPLIT')` but DB constraint `chk_sale_status` (migration 078) does NOT include `'SPLIT'`. Either split payment inserts crash (if POS sets status='SPLIT') or the SPLIT filter is dead code.
+- **Fix**: Add `'SPLIT'` to the CHECK constraint via migration, or verify POS never sets `status='SPLIT'` and remove from queries.
+- **Files**: `backend/src/routes/v1/retailer-admin/inventory.ts:132,148,164`, migration `078_go_live_batch5_inventory_ledger.sql:190-197`
+- **Status**: DIAGNOSED
+
+### STG-059: Retailer — Inventory date filter excludes same-day entries for IST users
+- **Portal**: Retailer
+- **Page**: Inventory → Date range filter
+- **Symptom**: Filtering by today's date shows incomplete results — entries after 5:30 AM IST are excluded.
+- **Root Cause**: `inventory.ts:625-628` converts `endDate = '2026-02-28'` to `new Date('2026-02-28').toISOString()` = `'2026-02-28T00:00:00.000Z'` (midnight UTC = 5:30 AM IST). Everything after 5:30 AM IST on the selected date is excluded.
+- **Fix**: Interpret endDate as end-of-day: append `T23:59:59.999Z` or use `< next_day` instead of `<=`.
+- **Files**: `backend/src/routes/v1/retailer-admin/inventory.ts:625-628`
+- **Status**: DIAGNOSED
+
+### STG-060: Retailer — Inventory INWARD filter misses sale_return and opening_stock types
+- **Portal**: Retailer
+- **Page**: Inventory → Click "INWARD" filter
+- **Symptom**: Clicking INWARD filter shows fewer entries than the green "INWARD" badges visible in "All" view.
+- **Root Cause**: Frontend INWARD filter only sends `transactionType=purchase_received` (`InventoryPage.tsx:95-96`) but `getDisplayType()` classifies `sale_return` and `opening_stock` as INWARD too (lines 50-62). Backend only accepts single `transactionType` parameter.
+- **Fix**: Send all INWARD types: `purchase_received,sale_return,opening_stock`, and update backend to accept comma-separated values with `IN (...)`.
+- **Files**: `retailer-admin/src/pages/InventoryPage.tsx:95-96`, `backend/src/routes/v1/retailer-admin/inventory.ts:606-609`
+- **Status**: DIAGNOSED
+
+### STG-061: Retailer — Dashboard purchase/sell totals only reflect first 50 products
+- **Portal**: Retailer
+- **Page**: Dashboard → Inventory overview cards
+- **Symptom**: Total Purchase Value and Total Sell Revenue show lower numbers for stores with >50 products.
+- **Root Cause**: `inventory.ts:530-531` sums `totalPurchaseValue` and `totalSellRevenue` from paginated `data` array (default limit 50), not from a store-wide aggregate query. `totalProducts` and `totalStockQty` are correctly computed from separate COUNT/SUM.
+- **Fix**: Add `SUM(...)` aggregations to the separate count query (lines 469-478) for purchase value and sell revenue across all products.
+- **Files**: `backend/src/routes/v1/retailer-admin/inventory.ts:530-531,469-478`
+- **Status**: DIAGNOSED
+
+### STG-062: Retailer — Supplier Catalog shows deactivated products (missing is_active filter)
+- **Portal**: Retailer
+- **Page**: Supplier Catalog → Browse products
+- **Symptom**: Deactivated supplier products appear in catalog and can be added to store.
+- **Root Cause**: `suppliers.ts:774` WHERE clause filters on `approval_status = 'approved'` and `s.status = 'active'` but does NOT filter `sp.is_active = true`. `catalog.supplier_products.is_active` column exists per migration 004.
+- **Fix**: Add `AND sp.is_active = true` to WHERE clause at line 774 and the count query at lines 804-809.
+- **Files**: `backend/src/routes/v1/retailer-admin/suppliers.ts:774,804-809`
+- **Status**: DIAGNOSED
+
+### STG-063: Retailer — Credit Dashboard crashes 500 (queries non-existent platform.suppliers)
+- **Portal**: Retailer (`staging.supermandi.tech/retailer/`)
+- **Page**: Credit & Finance Dashboard
+- **Symptom**: "Failed to load credit data" — 500 error on page load.
+- **Root Cause**: `creditDashboard.ts:36,53,71` all JOIN `platform.suppliers` which doesn't exist. Correct table is `supplier.suppliers`.
+- **Fix**: Change `platform.suppliers` to `supplier.suppliers` on lines 36, 53, and 71.
+- **Files**: `backend/src/routes/v1/retailer-admin/creditDashboard.ts:36,53,71`
+- **Status**: DIAGNOSED
+
+### STG-064: Retailer — Purchase Orders list/detail crash (wrong supplier phone column)
+- **Portal**: Retailer
+- **Page**: Purchase Orders → List and Detail views
+- **Symptom**: "Failed to load purchase orders" — 500 error. Detail modal also fails.
+- **Root Cause**: `purchaseOrders.ts:62,115` queries `s.phone as "supplierPhone"` but `supplier.suppliers` column is `primary_phone` (migration 003).
+- **Fix**: Change `s.phone` to `s.primary_phone` on lines 62 and 115.
+- **Files**: `backend/src/routes/v1/retailer-admin/purchaseOrders.ts:62,115`
+- **Status**: DIAGNOSED
+
+### STG-065: Retailer — Reconciliation refund amounts always ₹0 (wrong column + status)
+- **Portal**: Retailer
+- **Page**: Reconciliation → Refund summary
+- **Symptom**: Refund amounts always show ₹0.00 even when refunds exist.
+- **Root Cause**: Two bugs: (1) `reconciliation.ts:110` queries `rr.amount_minor` but correct column is `refund_amount` (migration 152). (2) `reconciliation.ts:113` filters `status IN ('approved','completed')` but 'approved' is not a valid status — constraint allows `('initiated','processing','completed','failed','cancelled')`.
+- **Fix**: Change `rr.amount_minor` to `rr.refund_amount` and change `'approved'` to `'processing'` or remove it.
+- **Files**: `backend/src/routes/v1/retailer-admin/reconciliation.ts:110,113`
+- **Status**: DIAGNOSED
+
+### STG-066: Retailer — Customer search crashes backend (SQL parameter mismatch)
+- **Portal**: Retailer
+- **Page**: Customers → Search by name/phone
+- **Symptom**: Typing in the search box crashes with 500 — "bind message supplies 2 parameters, but prepared statement requires 4".
+- **Root Cause**: `customers.ts:59-64` count query reuses `searchClause` containing `$4` but only passes 2 params `[storeId, '%search%']`. Data query correctly uses 4 params `[storeId, limit, offset, '%search%']`.
+- **Fix**: Build a separate count searchClause using `$2` instead of `$4`.
+- **Files**: `backend/src/routes/v1/retailer-admin/customers.ts:59-64`
+- **Status**: DIAGNOSED
+
+### STG-067: Retailer — Notifications always return 401 (missing store context middleware)
+- **Portal**: Retailer
+- **Page**: Notifications → All endpoints
+- **Symptom**: "Failed to load notifications" — every notification endpoint returns 401 even for authenticated users.
+- **Root Cause**: `notifications.ts:57-59` checks `(req as any).storeId` and `(req as any).userId` but `requireStoreContext` middleware is NOT applied to the notifications router. The global retailer-admin middleware chain sets `req.headers['x-actor-id']` and `req.headers['x-user-id']` but NOT `req.storeId`/`req.userId`.
+- **Fix**: Either add `requireStoreContext` middleware to the notifications router, or change checks to read from `req.headers['x-actor-id']` and `req.headers['x-user-id']`.
+- **Files**: `backend/src/routes/v1/retailer-admin/notifications.ts:57-59` (and lines 22, 112, 136, 157)
+- **Status**: DIAGNOSED
+
+### STG-068: Retailer — Chat support conversations invisible (missing store_id)
+- **Portal**: Retailer
+- **Page**: Messages → Create support conversation
+- **Symptom**: After creating a support conversation, it disappears from the conversation list.
+- **Root Cause**: `ChatPage.tsx:123-127` creates conversation with `{ displayName: 'Store Owner' }` but doesn't send `storeId`. Backend inserts `store_id = null`. List query filters `c.store_id = $4` (from x-actor-id header), excluding conversations with null store_id.
+- **Fix**: Include `storeId` from auth context in the POST body, or have backend fall back to `req.headers['x-actor-id']`.
+- **Files**: `retailer-admin/src/pages/ChatPage.tsx:123-127`, `backend/src/routes/v1/chat.ts:130-137`
+- **Status**: DIAGNOSED
+
+### STG-069: Retailer — Device reactivation permanently broken (token_revoked_at never cleared)
+- **Portal**: Retailer
+- **Page**: Devices → Deactivate then Reactivate a device
+- **Symptom**: After deactivating and reactivating a device, it permanently shows "REVOKED". Reactivate button becomes a no-op.
+- **Root Cause**: `devices.ts:310-311` sets `token_revoked_at = NOW()` on deactivate but line 313-314 explicitly does NOT clear it on reactivate. Response computes `isActive: device.active && !device.revokedAt` — always false once revokedAt is set.
+- **Fix**: When `active = true`, also clear `token_revoked_at = NULL` in the SQL updates.
+- **Files**: `backend/src/routes/v1/retailer-admin/devices.ts:304-315,247,362`
+- **Status**: DIAGNOSED
+
+### STG-070: Retailer — Settings save error shows "[object Object]"
+- **Portal**: Retailer
+- **Page**: Settings → Save Settings (validation error)
+- **Symptom**: Error banner shows "[object Object]" instead of the actual validation error message.
+- **Root Cause**: `SettingsPage.tsx:226` does `setSaveError(data.error || 'Failed to save settings')` but `data.error` is an object `{ code, message, errors }`, not a string. React renders it as "[object Object]".
+- **Fix**: Change to `setSaveError(data.error?.message || 'Failed to save settings')`.
+- **Files**: `retailer-admin/src/pages/SettingsPage.tsx:226`
+- **Status**: DIAGNOSED
+
+### STG-071: Retailer — Password change succeeds but silently invalidates session
+- **Portal**: Retailer
+- **Page**: Settings → Change Password
+- **Symptom**: After successful password change, user sees "Password changed successfully!" but gets unexpectedly logged out on the next navigation.
+- **Root Cause**: `auth.ts:1543-1545` revokes all tokens after password change (`SET tokens_revoked_at = NOW()`). Frontend shows custom success message but does NOT log user out or redirect. Next API call hits 401 → silent logout.
+- **Fix**: After successful password change, explicitly call `logout()` and redirect to login with a "Password changed, please log in again" message.
+- **Files**: `retailer-admin/src/pages/SettingsPage.tsx:266-271`, `backend/src/routes/v1/retailer-admin/auth.ts:1536-1546`
+- **Status**: DIAGNOSED
+
+### STG-072:
 - **Portal**:
 - **Page**:
 - **Symptom**:
@@ -506,11 +677,11 @@
 | Status | Count |
 |--------|-------|
 | FIXED | 4 |
-| DIAGNOSED | 47 |
+| DIAGNOSED | 66 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **52** |
+| **Total** | **71** |
 
 ---
 
