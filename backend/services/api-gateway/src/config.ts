@@ -24,6 +24,8 @@ export interface GatewayConfig {
   authRateLimitMax: number;
   // LIVE.ADMIN.AUTH_RATE_LIMIT_TUNING.001: Separate admin login limit (defaults to authRateLimitMax)
   adminLoginRateLimitMax: number;
+  // STAGING-FIX-012: Separate admin panel limit (authenticated API calls, higher than brute-force limit)
+  adminPanelRateLimitMax: number;
   services: ServiceConfig[];
 }
 
@@ -70,6 +72,8 @@ export const config: GatewayConfig = {
   authRateLimitMax: getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 5), // 5 auth attempts per window
   // LIVE.ADMIN.AUTH_RATE_LIMIT_TUNING.001: Admin login rate limit (env-tunable, defaults to AUTH_RATE_LIMIT_MAX)
   adminLoginRateLimitMax: getEnvIntOrDefault('ADMIN_LOGIN_RATE_LIMIT_MAX', getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 5)),
+  // STAGING-FIX-012: Admin panel API rate limit (60/min default — authenticated calls, not brute-force)
+  adminPanelRateLimitMax: getEnvIntOrDefault('ADMIN_PANEL_RATE_LIMIT_MAX', 60),
 
   // Backend services
   services: [

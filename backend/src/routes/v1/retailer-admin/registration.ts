@@ -677,6 +677,16 @@ router.post("/verify-otp", registrationRateLimiter, async (req: Request, res: Re
       return;
     }
 
+    // STAGING-FIX-013: Clear stale firebase_uid from old DRAFT/OTP_VERIFIED applications
+    // before updating, to avoid unique constraint violation (ux_applications_firebase_uid_entity)
+    await pool.query(
+      `UPDATE auth.applications
+       SET firebase_uid = NULL, updated_at = NOW()
+       WHERE firebase_uid = $1 AND entity_type = 'retailer' AND id != $2::uuid
+         AND status IN ('DRAFT', 'OTP_VERIFIED')`,
+      [firebaseUid, applicationId]
+    );
+
     // Update application with Firebase UID
     await pool.query(
       `UPDATE auth.applications

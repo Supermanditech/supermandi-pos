@@ -29,8 +29,16 @@ export async function fetchHealthStatus(): Promise<HealthResponse> {
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/monitoring/health`, {
     headers: getAuthHeaders(),
   });
+  // STAGING-FIX-012: Throw on non-JSON errors (429, 401, etc.) so caller can show error message
+  if (!res.ok && res.status !== 503) {
+    throw new Error(`Health check failed (${res.status})`);
+  }
   // Health endpoint returns 503 for degraded — still valid JSON
   const json = await res.json();
+  // STAGING-FIX-012: Validate response shape to prevent React crash on unexpected JSON
+  if (!json.checks || typeof json.checks !== 'object') {
+    throw new Error(`Unexpected health response (status ${res.status})`);
+  }
   return json;
 }
 

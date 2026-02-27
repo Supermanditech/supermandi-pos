@@ -129,12 +129,14 @@ export const authRateLimiter = rateLimit({
 });
 
 /**
- * GO-LIVE-003: Strict rate limiter for admin token attempts
- * 5 requests per minute per IP to prevent brute force attacks on admin token
+ * GO-LIVE-003 + STAGING-FIX-012: Rate limiter for admin panel API calls
+ * STAGING-FIX-012: Increased from 5 to 60/min — the admin panel makes many API calls
+ * per tab switch. Only failed requests count (skipSuccessfulRequests), but in a fresh
+ * staging DB many endpoints fail due to missing tables, quickly hitting a low limit.
  */
 export const adminRateLimiter = rateLimit({
   windowMs: config.rateLimitWindowMs, // 1 minute
-  max: config.authRateLimitMax, // 5 attempts per minute (same as auth)
+  max: config.adminPanelRateLimitMax, // 60 failed attempts per minute (STAGING-FIX-012)
   standardHeaders: true,
   legacyHeaders: false,
   store: createStore('admin', config.rateLimitWindowMs),
@@ -142,7 +144,7 @@ export const adminRateLimiter = rateLimit({
   message: {
     error: {
       code: 'ADMIN_RATE_LIMIT_EXCEEDED',
-      message: 'Too many admin authentication attempts, please try again later',
+      message: 'Too many admin requests, please try again later',
     },
   },
 
@@ -150,7 +152,7 @@ export const adminRateLimiter = rateLimit({
     return req.ip || 'unknown';
   },
 
-  // Only count failed admin token attempts
+  // Only count failed admin requests
   skipSuccessfulRequests: true,
 });
 
