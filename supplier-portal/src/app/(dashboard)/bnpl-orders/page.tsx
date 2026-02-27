@@ -84,7 +84,8 @@ export default function BnplOrdersPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'BNPL Orders' }]} />
+      {/* REQ.AUDIT.W5.SUPPLIER.BREADCRUMB-WRONG-PROP.001: normalize href→path */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'BNPL Orders' }]} />
 
       <div className="mt-4 mb-6">
         <h1 className="text-xl font-bold text-slate-900">BNPL-Backed Orders</h1>

@@ -80,7 +80,8 @@ export default function NotificationsPage() {
 
   return (
     <div className="p-6">
-      <Breadcrumb items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Notifications' }]} />
+      {/* REQ.AUDIT.W5.SUPPLIER.BREADCRUMB-WRONG-PROP.001: normalize href→path */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Notifications' }]} />
 
       <div className="flex justify-between items-center mt-4 mb-6">
         <div>

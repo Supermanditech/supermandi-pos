@@ -170,12 +170,16 @@ function ResetPasswordInner() {
           <p className="text-slate-600 text-sm mb-6">
             Your password has been reset. You can now sign in with your new password.
           </p>
-          <Link
-            href="/login"
-            className="btn btn-primary w-full py-3 block text-center"
+          {/* REQ.AUDIT.W5.SUPPLIER.RESET-COUNTDOWN-INTERVAL-LEAK.001: clear interval before navigation */}
+          <button
+            onClick={() => {
+              if (countdownRef.current) clearInterval(countdownRef.current);
+              router.push('/login');
+            }}
+            className="btn btn-primary w-full py-3"
           >
             Sign In{countdown > 0 ? ` (${countdown}s)` : ''}
-          </Link>
+          </button>
           <p className="text-slate-400 text-xs mt-3">
             Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
           </p>
