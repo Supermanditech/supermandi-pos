@@ -229,7 +229,7 @@ export function RefundsTab() {
       {/* Reject modal */}
       {rejectId && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }} onClick={() => { setRejectId(null); setRejectReason(""); }}>
-          <div style={{ background: "#fff", borderRadius: "0.75rem", padding: "1.5rem", maxWidth: "400px", width: "90%" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ background: "var(--color-surface)", borderRadius: "0.75rem", padding: "1.5rem", maxWidth: "400px", width: "90%" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text-primary)", marginBottom: "0.75rem" }}>Reject Refund</h3>
             <textarea
               value={rejectReason}
