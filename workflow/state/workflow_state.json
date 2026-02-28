@@ -1,7 +1,18 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-26T13:30:00.000Z",
+  "updatedAt": "2026-02-28T12:00:00.000Z",
   "workflowMode": "LIVE_FIX",
+  "stagingBrowserTestWave": {
+    "status": "CLOSED_IN_GIT",
+    "baselineSha": "34a98968f6b8f5fd587594011a6fed884fec58a1",
+    "issueRange": "STG-001..STG-206",
+    "total": 206,
+    "fixed": 205,
+    "wontfix": 1,
+    "trackerFrozen": true,
+    "deployHold": true,
+    "nextRoundStartsAt": "STG-207"
+  },
   "machineEnforcement": {
     "enabled": true,
     "guardScript": "scripts/workflow/guard.js",
@@ -1761,7 +1772,7 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-26T10:42:46.740Z"
+    "updatedAt": "2026-02-28T12:00:00.000Z"
   },
-  "lastUpdated": "2026-02-26T09:59:39.332Z"
+  "lastUpdated": "2026-02-28T12:00:00.000Z"
 }

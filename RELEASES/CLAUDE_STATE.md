@@ -2054,6 +2054,217 @@ DAY 3+:     Normal monitoring cadence
 
 ---
 
+## 19.1 Staging Browser Test Wave — Freeze Record
+
+> **Status**: CLOSED_IN_GIT | **Baseline**: `main@34a98968` | **Date**: 2026-02-28
+
+### Wave Summary
+
+| Metric | Value |
+|--------|-------|
+| Range | STG-001 → STG-206 |
+| Total | 206 |
+| FIXED | 205 |
+| WONTFIX | 1 (STG-021) |
+| DIAGNOSED | 0 |
+| FOUND | 0 |
+
+### STG-021 WONTFIX Record
+
+**Issue**: Build stamps are correct.
+**Evidence**: All 4 services show `e56f0f4` (commit `e56f0f42` — 2 docs-only commits after deploy tag `e63dba14`). Services are aligned and running latest code.
+**Verdict**: Not a bug. Build stamps correctly reflect deployed code.
+
+### Tracker Freeze Rules
+
+1. `RELEASES/STAGING_BROWSER_TEST_ISSUES.md` is **frozen** for STG-001..206
+2. Next audit round appends new findings as STG-207+ (never rewrites old entries)
+3. Any regression against a prior STG fix → new STG ID (e.g., STG-207), not silent edit of the original
+4. Deploy hold remains active until operator triggers CI
+
+### Pending Migrations (4)
+
+| # | File | Risk |
+|---|------|------|
+| 168 | `fix_check_constraints.sql` | LOW — widens 4 CHECK constraints |
+| 169 | `add_pending_mrp.sql` | LOW — adds nullable BIGINT column |
+| 170 | `credit_app_columns_and_constraint.sql` | LOW — adds 2 nullable columns + widens constraint |
+| 171 | `fix_buy_payments_mode_constraint.sql` | LOW — adds CASH to mode constraint |
+
+All 4 are backward-compatible, idempotent, and require migration-first ordering (code already references the new values).
+
+### Operator Steps Before Next Phase
+
+1. Cloud SQL backup before migration run
+2. Verify 9 secrets in Secret Manager
+3. Trigger CI deploy pipeline
+4. Browser verification of all 6 staging services post-deploy
+5. Verify `smtp-password` secret for STG-004 email functionality
+
+---
+
+## 19.2 Final Audit Lockdown Protocol (Mandatory)
+
+> This section overrides any looser audit behavior for the final pre-deploy audit wave.
+
+### Purpose
+
+Claude must execute one final comprehensive audit from live GCP staging with full screen coverage and zero skipping. Claude must not jump between platforms, skip screens, sample pages, or move ahead before the current screen is fully audited.
+
+### Audit Mode
+
+- Mode: `FINAL_STAGING_AUDIT`
+- Evidence source priority:
+  1. Live GCP staging behavior
+  2. Real user interactions on staging
+  3. API/runtime evidence from staging
+  4. Code/db/log inspection only after live reproduction
+- Deploy hold remains ACTIVE during this audit
+
+### Fixed Platform Order (Mandatory)
+
+Claude must audit platforms in this exact order only:
+
+1. Retailer Web
+2. Supplier Web
+3. SuperAdmin Web
+4. POS App
+
+Claude cannot change this order unless explicitly instructed by operator.
+
+### Platform Entry Gate
+
+Before starting a platform, Claude must publish:
+
+- Platform name
+- Full screen list for that platform
+- Audit order for those screens
+- Expected authenticated and unauthenticated flows
+- Cross-surface dependencies relevant to that platform
+
+No audit work for that platform is valid until the full screen manifest is listed first.
+
+### Single-Screen Lock (Mandatory)
+
+Claude may have only ONE active screen at a time.
+
+For the active screen:
+- Status must be exactly one of: `pending`, `in_progress`, `completed`, `blocked`
+- Claude cannot move to the next screen until the current screen is `completed` or `blocked` with exact blocker, owner, and unblock plan
+
+Claude must not:
+- Partially audit a screen and move on
+- Leave "come back later" gaps
+- Skip modals, tabs, drawers, popups, empty states, or error states within that screen
+
+### Per-Screen Audit Checklist (Mandatory)
+
+Each screen must be audited against ALL of the following before it can be marked `completed`:
+
+**1. UI** — layout, visual consistency, typography/icons, spacing/alignment, responsive behavior, dark/light theme if applicable
+
+**2. UX** — clarity of actions, microcopy, success/failure feedback, empty state quality, loading state quality, disabled state logic, professional polish
+
+**3. Wiring** — button/action handlers, form submission behavior, modal open/close behavior, retry flows, refresh behavior, state reset behavior
+
+**4. Navigation** — direct route access, deep link behavior, back/forward behavior, sidebar/topnav routing, redirect correctness, logout/session-expiry redirects
+
+**5. API** — request shape, response shape, validation behavior, auth headers/tokens, pagination/search/filter correctness, error response handling, timeout/retry behavior
+
+**6. Backend behavior** — business logic correctness, role/permission enforcement, side effects, idempotency, concurrency/duplicate-submit handling, security boundaries
+
+**7. DB / Migration impact** — data persistence correctness, read/write integrity, enum/constraint correctness, nullability/default assumptions, schema mismatch symptoms, migration dependency if any
+
+**8. GCP staging parity** — issue reproduced on deployed staging, env/config dependence identified if applicable, runtime/parity issue captured if applicable
+
+### Real User Walkthrough Rule
+
+Within each screen, Claude must behave like a real user and walk all meaningful interactions: open, view, click, type, submit, retry, cancel, back out, refresh, trigger validation, use alternate branches, check unhappy paths.
+
+A screen is incomplete if only the "happy path" was tested.
+
+### Issue Capture Rule
+
+Any issue found must be appended into `RELEASES/STAGING_BROWSER_TEST_ISSUES.md`.
+
+Rules:
+- Preserve existing STG-001..206 as frozen historical record
+- All new issues must start at STG-207+
+- Regressions against previously fixed work must get NEW STG IDs
+- No silent rewriting of historical issues
+
+Each new issue must include: STG ID, platform, screen/page, exact reproduction steps on staging, expected vs actual, severity, root cause (if confirmed), fix direction, affected files if known, dependency/migration/infra note if applicable, status.
+
+### Screen Exit Gate (Mandatory)
+
+Claude may mark a screen `completed` only if:
+
+1. All checklist categories above were covered
+2. All meaningful interactions on that screen were exercised
+3. All issues found were added to `RELEASES/STAGING_BROWSER_TEST_ISSUES.md`
+4. Claude publishes a short screen completion record: screen name, result (`PASS WITH NO NEW ISSUES` or `NEW ISSUES ADDED`), new STG IDs added, blockers if any
+
+### Platform Exit Gate (Mandatory)
+
+Claude may move from one platform to the next only if:
+
+1. Every screen in the platform manifest is `completed` or `blocked`
+2. Zero screens remain unaccounted for
+3. Claude publishes a platform summary: platform name, total screens, completed count, blocked count, new STG IDs added, top P0/P1 findings, unresolved access blockers
+
+### Full Audit Completion Gate (Mandatory)
+
+The final audit wave is complete only if:
+
+1. Retailer Web fully covered
+2. Supplier Web fully covered
+3. SuperAdmin Web fully covered
+4. POS App fully covered
+5. All screens have terminal status (`completed` or `blocked`)
+6. All discovered issues are appended to `RELEASES/STAGING_BROWSER_TEST_ISSUES.md`
+7. Claude publishes: final screen coverage table, issue counts by platform, issue counts by severity, cross-surface blockers, explicit statement (`FINAL STAGING AUDIT COMPLETE` or `NOT COMPLETE` with remaining blocked screens)
+
+### No-Escape Rules
+
+Claude must not:
+- Leave a platform half-done
+- Jump to another platform early
+- Treat tracker count as audit completion evidence
+- Stop because "enough issues were found"
+- Stop because of time/score/percentage
+- Claim "production-grade" before full screen coverage is done
+
+### Cross-Surface Matrix Pass (After All 4 Platforms)
+
+Only after all four platforms are fully audited, Claude must run cross-surface matrix checks for:
+
+1. Retailer registration → SuperAdmin approval → retailer login
+2. Supplier registration → SuperAdmin approval → supplier login
+3. Retailer → POS enrollment and downstream usage
+4. Support/chat/admin visibility flows
+5. Password reset / password change / session invalidation flows
+6. Any platform pairings discovered during the audit
+
+Cross-surface findings must also be appended as new STG IDs.
+
+### Sub-Agent Restriction
+
+Claude may use sub-agents only if:
+
+1. Coordinator remains in full control of canonical audit state
+2. One sub-agent handles only one declared platform slice at a time
+3. Sub-agents cannot change audit order
+4. Sub-agents cannot skip screen listing / screen exit gates
+5. Coordinator merges all findings into the one canonical STG issue file
+
+If sub-agents increase context loss risk, Claude must not use them.
+
+### Final Objective
+
+This final audit is intended to exhaustively discover remaining production-grade gaps before any next deploy. Coverage completeness is mandatory. Sampling is forbidden.
+
+---
+
 **END OF CLAUDE STATE OPERATING SYSTEM**
 
 *This file is the single source of truth. All other rule files are historical reference only.*

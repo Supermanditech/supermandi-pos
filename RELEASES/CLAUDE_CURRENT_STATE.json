@@ -1,9 +1,50 @@
 {
-  "version": "61.0",
-  "lastUpdated": "2026-02-24T18:38:00.000Z",
-  "currentPhase": "DEEP_AUDIT_R6_COMPLETE: 116 net-new findings ticketized across 6 surfaces (BE:11, RET:24, SUP:30, SA:29, POS:10, CROSS:12). 594 total tickets. Deploy hold active. Awaiting operator instruction for implementation phase.",
+  "version": "62.0",
+  "lastUpdated": "2026-02-28T12:00:00.000Z",
+  "currentPhase": "FINAL_STAGING_AUDIT: §19.2 lockdown protocol active. STG-001..206 frozen. New findings start at STG-207+. Fixed platform order: Retailer → Supplier → SuperAdmin → POS. Single-screen lock enforced. Deploy hold active.",
   "currentTicket": null,
   "ticketQueue": [],
+  "stagingBrowserTestWave": {
+    "status": "CLOSED_IN_GIT",
+    "baselineSha": "34a98968f6b8f5fd587594011a6fed884fec58a1",
+    "baselineBranch": "main",
+    "issueRange": "STG-001..STG-206",
+    "summary": {
+      "total": 206,
+      "fixed": 205,
+      "wontfix": 1,
+      "diagnosed": 0,
+      "found": 0
+    },
+    "wontfixRegistry": {
+      "STG-021": {
+        "title": "Build stamps are correct",
+        "reason": "All 4 services show e56f0f4 (commit e56f0f42 — 2 docs-only commits after deploy tag e63dba14). Services are aligned and running latest code. Not a bug.",
+        "status": "WONTFIX"
+      }
+    },
+    "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
+    "trackerFrozen": true,
+    "deployHold": true,
+    "nextRoundRules": {
+      "auditFrom": "main@34a98968",
+      "newFindingsStartAt": "STG-207",
+      "regressionAgainstPriorFixes": "Append as new STG-207+ IDs, do NOT silently edit historical closures",
+      "doNotRewrite": "STG-001..STG-206 entries are frozen — only append, never edit"
+    },
+    "migrations": {
+      "pending": ["168_fix_check_constraints.sql", "169_add_pending_mrp.sql", "170_credit_app_columns_and_constraint.sql", "171_fix_buy_payments_mode_constraint.sql"],
+      "safetyVerdict": "All 4 backward-compatible, idempotent, migration-first required",
+      "lockRisk": "LOW (sub-second ACCESS EXCLUSIVE on small tables)"
+    },
+    "operatorStepsRemaining": [
+      "Cloud SQL backup before migration run",
+      "Verify 9 secrets in Secret Manager (database-url, postgres-password, jwt-secret, admin-token, smtp-password, WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET)",
+      "Trigger CI deploy pipeline",
+      "Browser verification of all 6 staging services post-deploy",
+      "STG-004 email: verify smtp-password secret is present in Secret Manager"
+    ]
+  },
   "ticketStatus": {
     "T-054": "DONE",
     "T-055": "DONE",
@@ -2269,6 +2310,7 @@
     "lastSuccessfulStagingDeployRef": "github://run/22305359033",
     "lastSuccessfulStagingDeployAt": "2026-02-23T12:18:18Z",
     "lastSuccessfulStagingCommitSha": "badc3fbe",
+    "stgWaveBaselineSha": "34a98968",
     "requiredPerTicket": [
       "operatorChecks.validatedDeploymentRef matches deploy ref",
       "timestamps.createdAt after successful deploy timestamp",
