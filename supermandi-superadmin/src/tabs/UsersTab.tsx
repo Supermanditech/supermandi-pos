@@ -35,14 +35,14 @@ export function UsersTab({
           <div className="cardTitle">Users Management</div>
           <div className="muted">Manage platform users and their access</div>
         </div>
-        <button onClick={() => setShowCreateUser(!showCreateUser)} style={{ background: showCreateUser ? "var(--color-text-secondary)" : "#3b82f6", color: "white" }}>
+        <button onClick={() => setShowCreateUser(!showCreateUser)} style={{ background: showCreateUser ? "var(--color-text-secondary)" : "var(--color-primary)", color: "white" }}>
           {showCreateUser ? "Cancel" : "+ Create User"}
         </button>
       </div>
 
       {showCreateUser && (
-        <div className="tableWrap" style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: 16 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+        <div className="tableWrap sa-border-b" style={{ paddingBottom: 16 }}>
+          <div className="sa-grid-auto">
             <div className="control">
               <label>Name *</label>
               <input value={createUserForm.name} onChange={(e) => setCreateUserForm((f) => ({ ...f, name: e.target.value }))} placeholder="Full name" />
@@ -65,34 +65,34 @@ export function UsersTab({
             </div>
           </div>
           {(createUserForm.actor_type === "store" || createUserForm.actor_type === "supplier") && (
-            <div className="control" style={{ marginTop: 8 }}>
+            <div className="control sa-mt-8">
               <label>{createUserForm.actor_type === "store" ? "Store" : "Supplier"} ID *</label>
               <input value={createUserForm.actor_id} onChange={(e) => setCreateUserForm((f) => ({ ...f, actor_id: e.target.value }))} placeholder={`Enter ${createUserForm.actor_type} UUID`} required />
             </div>
           )}
           {createUserForm.actor_type === "platform" && (
-            <div className="muted" style={{ marginTop: 8, color: "var(--color-warning)", background: "var(--color-warning-soft)", padding: 8, borderRadius: 4 }}>
+            <div className="sa-alert-warning sa-mt-8">
               Creating a Platform Admin grants full system access. Additional verification required.
             </div>
           )}
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={requestCreateUser} disabled={createUserLoading} style={{ background: "var(--color-success)", color: "white" }}>
+          <div className="sa-flex sa-gap-12 sa-mt-12">
+            <button onClick={requestCreateUser} disabled={createUserLoading} className="btnSuccess">
               {createUserLoading ? "Creating..." : "Create User"}
             </button>
             {createUserError && <span className="errorText">{createUserError}</span>}
-            {createUserSuccess && <span style={{ color: "var(--color-success)", fontWeight: 600 }}>{createUserSuccess}</span>}
+            {createUserSuccess && <span className="sa-text-success sa-fw-600">{createUserSuccess}</span>}
           </div>
-          <div className="muted" style={{ marginTop: 8 }}>* Name and Email are required.</div>
+          <div className="muted sa-mt-8">* Name and Email are required.</div>
         </div>
       )}
 
       <div className="tableWrap">
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-          <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search by name, email, or phone..." style={{ flex: 1, minWidth: 200 }} />
+        <div className="sa-flex sa-gap-8 sa-mb-12 sa-flex-wrap">
+          <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search by name, email, or phone..." className="sa-input" style={{ flex: 1, minWidth: 200 }} />
           <button onClick={refreshUsers} disabled={usersLoading}>{usersLoading ? "Loading..." : "Refresh"}</button>
         </div>
-        {userActionError && <div className="errorText" style={{ marginBottom: 8 }}>{userActionError}</div>}
-        {usersError && <div className="errorText" style={{ marginBottom: 8 }}>{usersError}</div>}
+        {userActionError && <div className="errorText sa-mb-8">{userActionError}</div>}
+        {usersError && <div className="errorText sa-mb-8">{usersError}</div>}
         {usersLoading ? (
           <TableSkeleton rows={5} columns={7} />
         ) : (
@@ -110,7 +110,7 @@ export function UsersTab({
                 <td><span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeError" : "badgeWarn"}`}>{user.status}</span></td>
                 <td>{new Date(user.created_at).toLocaleDateString()}</td>
                 <td>
-                  <select value={user.status} onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")} disabled={userStatusSaving[user.id]} style={{ minWidth: 100 }}>
+                  <select value={user.status} onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")} disabled={userStatusSaving[user.id]} className="sa-select" style={{ minWidth: 100 }}>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     <option value="suspended">Suspended</option>
@@ -119,7 +119,7 @@ export function UsersTab({
               </tr>
             ))}
             {userRecords.length === 0 && !usersLoading && (
-              <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--color-text-secondary)" }}>No users found</td></tr>
+              <tr><td colSpan={7} className="sa-text-center sa-text-muted">No users found</td></tr>
             )}
           </tbody>
         </table>

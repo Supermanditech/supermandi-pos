@@ -47,7 +47,7 @@ export function RegistrationsTab({
       </div>
 
       <div className="tableWrap">
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+        <div className="sa-flex sa-gap-8 sa-mb-12 sa-flex-wrap">
           <button onClick={() => refreshRegEvents()} disabled={regEventsLoading}>
             {regEventsLoading ? "Loading..." : "Refresh"}
           </button>
@@ -55,7 +55,7 @@ export function RegistrationsTab({
           <select
             value={regEventsSourceFilter}
             onChange={(e) => { setRegEventsSourceFilter(e.target.value); setRegEventsPage(() => 0); }}
-            style={{ padding: "6px 10px" }}
+            className="sa-select"
           >
             <option value="">All Sources</option>
             <option value="PORTAL">Portal</option>
@@ -67,7 +67,7 @@ export function RegistrationsTab({
           <select
             value={regEventsOutcomeFilter}
             onChange={(e) => { setRegEventsOutcomeFilter(e.target.value); setRegEventsPage(() => 0); }}
-            style={{ padding: "6px 10px" }}
+            className="sa-select"
           >
             <option value="">All Outcomes</option>
             <option value="SUCCESS">Success</option>
@@ -76,7 +76,7 @@ export function RegistrationsTab({
             <option value="ERROR">Error</option>
           </select>
 
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="sa-flex sa-gap-8" style={{ marginLeft: "auto" }}>
             <button
               disabled={regEventsPage === 0}
               onClick={() => setRegEventsPage(prev => Math.max(0, prev - 1))}
@@ -93,7 +93,7 @@ export function RegistrationsTab({
           </div>
         </div>
 
-        {regEventsError && <div className="errorText" style={{ marginBottom: 8 }}>{regEventsError}</div>}
+        {regEventsError && <div className="errorText sa-mb-8">{regEventsError}</div>}
 
         <table className="table">
           <thead>
@@ -112,61 +112,41 @@ export function RegistrationsTab({
           <tbody>
             {regEvents.map((evt) => (
               <tr key={evt.id}>
-                <td className="mono" style={{ fontSize: 11, whiteSpace: "nowrap" }}>
+                <td className="mono sa-text-xs sa-nowrap">
                   {new Date(evt.createdAt).toLocaleString()}
                 </td>
                 <td>
-                  <span style={{
-                    display: "inline-block",
-                    padding: "2px 8px",
-                    borderRadius: 4,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: evt.source === "PORTAL" ? "#eff6ff" : evt.source === "POS_MOBILE" ? "var(--color-success-soft)" : "#f5f3ff",
-                    color: evt.source === "PORTAL" ? "#1d4ed8" : evt.source === "POS_MOBILE" ? "var(--color-success)" : "#7c3aed",
-                  }}>
+                  <span className={evt.source === "PORTAL" ? "sa-badge-info" : evt.source === "POS_MOBILE" ? "sa-badge-ok" : "sa-badge-muted"}>
                     {evt.source}
                   </span>
                 </td>
                 <td>
-                  <span style={{
-                    display: "inline-block",
-                    padding: "2px 8px",
-                    borderRadius: 4,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: evt.outcome === "SUCCESS" ? "var(--color-success-soft)" : evt.outcome === "IDEMPOTENT" ? "#fef9c3" : evt.outcome === "ERROR" ? "var(--color-error-soft)" : "var(--color-error-soft)",
-                    color: evt.outcome === "SUCCESS" ? "#166534" : evt.outcome === "IDEMPOTENT" ? "#854d0e" : "#991b1b",
-                  }}>
+                  <span className={evt.outcome === "SUCCESS" ? "sa-badge-ok" : evt.outcome === "IDEMPOTENT" ? "sa-badge-warn" : "sa-badge-error"}>
                     {evt.outcome}
                   </span>
                 </td>
-                <td className="mono" style={{ fontSize: 12 }}>{evt.phone}</td>
+                <td className="mono sa-text-sm">{evt.phone}</td>
                 <td>{evt.businessName}</td>
                 <td>
                   {evt.storeName ? (
                     <span>
                       {evt.storeName}
-                      {evt.storeCode && <span className="muted" style={{ fontSize: 11, marginLeft: 4 }}>({evt.storeCode})</span>}
+                      {evt.storeCode && <span className="muted sa-text-xs" style={{ marginLeft: 4 }}>({evt.storeCode})</span>}
                     </span>
                   ) : (
                     <span className="muted">-</span>
                   )}
                 </td>
-                <td className="mono" style={{ fontSize: 11 }}>{evt.gstin || "-"}</td>
-                <td className="mono" style={{ fontSize: 11 }}>{evt.ipAddress || "-"}</td>
+                <td className="mono sa-text-xs">{evt.gstin || "-"}</td>
+                <td className="mono sa-text-xs">{evt.ipAddress || "-"}</td>
                 <td>
                   {evt.storeId && (evt.outcome === "SUCCESS" || evt.outcome === "IDEMPOTENT") ? (
                     <button
+                      className="sa-btn-xs sa-fw-600 sa-text-green"
                       style={{
-                        fontSize: 11,
-                        padding: "3px 10px",
-                        borderRadius: 4,
                         border: "1px solid #10b981",
                         background: sendingEnrollment === evt.storeId ? "#d1fae5" : "var(--color-success-soft)",
-                        color: "#059669",
                         cursor: sendingEnrollment === evt.storeId ? "wait" : "pointer",
-                        fontWeight: 600,
                       }}
                       disabled={!!sendingEnrollment}
                       onClick={async () => {
@@ -190,14 +170,14 @@ export function RegistrationsTab({
                       {sendingEnrollment === evt.storeId ? "Sending..." : "Send Code"}
                     </button>
                   ) : (
-                    <span className="muted" style={{ fontSize: 11 }}>-</span>
+                    <span className="muted sa-text-xs">-</span>
                   )}
                 </td>
               </tr>
             ))}
             {regEvents.length === 0 && !regEventsLoading && (
               <tr>
-                <td colSpan={9} style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 24 }}>
+                <td colSpan={9} className="sa-text-center sa-text-muted sa-p-24">
                   No registration events found
                 </td>
               </tr>
@@ -208,7 +188,7 @@ export function RegistrationsTab({
 
       {/* STBT-186.4: Enrollment error banner */}
       {enrollmentError && (
-        <div style={{ color: 'var(--color-error)', background: 'var(--color-error-soft)', padding: '8px 12px', borderRadius: 6, marginTop: 8, fontSize: 13 }}>
+        <div className="sa-alert-error sa-mt-8">
           {enrollmentError}
         </div>
       )}

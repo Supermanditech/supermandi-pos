@@ -141,27 +141,27 @@ export default function ChatPage() {
 
   return (
     <>
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Messages' }]} />
       </div>
       <header className="page-header">
         <h1 className="page-title">Messages</h1>
-        <button aria-label="Contact support via chat" className="btn btn-secondary" onClick={createSupport} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button aria-label="Contact support via chat" className="btn btn-secondary btn-icon" onClick={createSupport}>
           <Headphones size={16} /> Contact Support
         </button>
       </header>
 
-      <div className="page-content" style={{ display: 'flex', height: 'calc(100dvh - 180px)', minHeight: '300px', gap: 0 }}>
+      <div className="page-content chat-layout">
         {error && (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#fee2e2', color: '#991b1b', padding: '0.5rem 1rem', fontSize: '0.85rem', zIndex: 10 }}>
-            {error} <button aria-label="Dismiss chat error" onClick={() => setError(null)} style={{ marginLeft: 8, fontWeight: 600 }}>Dismiss</button>
+          <div className="chat-error-bar">
+            {error} <button aria-label="Dismiss chat error" onClick={() => setError(null)} className="chat-error-dismiss">Dismiss</button>
           </div>
         )}
 
         {/* Conversation List */}
-        <div className="card" style={{ width: 320, borderRadius: '0.375rem 0 0 0.375rem', overflow: 'auto', borderRight: '1px solid var(--border)' }}>
+        <div className="card chat-convo-list">
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+            <div className="text-center-muted">Loading...</div>
           ) : conversations.length === 0 ? (
             <EmptyState icon={<MessageSquare size={24} />} title="No conversations" description="Start a chat with a supplier or contact support." />
           ) : (
@@ -169,24 +169,17 @@ export default function ChatPage() {
               <div
                 key={conv.id}
                 onClick={() => selectConversation(conv.id)}
-                style={{
-                  padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)',
-                  background: selectedId === conv.id ? 'var(--bg-alt)' : 'transparent',
-                }}
+                className={`chat-convo-item${selectedId === conv.id ? ' chat-convo-item--active' : ''}`}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                <div className="chat-convo-header">
+                  <span className="chat-convo-name">
                     {conv.title || conv.otherParticipantName || 'Chat'}
                   </span>
                   {conv.unreadCount > 0 && (
-                    <span style={{
-                      minWidth: 18, height: 18, borderRadius: 9, background: 'var(--primary)',
-                      color: '#fff', fontSize: '0.65rem', fontWeight: 700, display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', padding: '0 4px',
-                    }}>{conv.unreadCount}</span>
+                    <span className="chat-unread-badge">{conv.unreadCount}</span>
                   )}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                <div className="chat-convo-preview">
                   {conv.lastMessagePreview || 'No messages'} · {formatTime(conv.lastMessageAt)}
                 </div>
               </div>
@@ -195,44 +188,39 @@ export default function ChatPage() {
         </div>
 
         {/* Message Thread */}
-        <div className="card" style={{ flex: 1, borderRadius: '0 0.375rem 0.375rem 0', display: 'flex', flexDirection: 'column' }}>
+        <div className="card chat-msg-panel">
           {!selectedId ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+            <div className="chat-no-selection">
               Select a conversation
             </div>
           ) : (
             <>
-              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>
+              <div className="chat-header">
                 {selected?.title || selected?.otherParticipantName || 'Chat'}
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+              <div className="chat-messages">
                 {messages.map(msg => {
                   const isOwn = msg.senderType === 'retailer';
                   const isSystem = msg.senderType === 'system';
 
                   if (isSystem) {
                     return (
-                      <div key={msg.id} style={{ textAlign: 'center', margin: '0.5rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      <div key={msg.id} className="chat-system-msg">
                         {msg.content}
                       </div>
                     );
                   }
 
                   return (
-                    <div key={msg.id} style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: '0.5rem' }}>
-                      <div style={{
-                        maxWidth: '70%', padding: '0.5rem 0.75rem', borderRadius: 12,
-                        background: isOwn ? 'var(--primary)' : '#fff',
-                        color: isOwn ? '#fff' : 'var(--text)',
-                        border: isOwn ? 'none' : '1px solid var(--border)',
-                      }}>
+                    <div key={msg.id} className={`chat-msg-row${isOwn ? ' chat-msg-row--own' : ''}`}>
+                      <div className={`chat-bubble${isOwn ? ' chat-bubble--own' : ' chat-bubble--other'}`}>
                         {msg.attachmentName && (
-                          <div style={{ fontSize: '0.75rem', marginBottom: 2 }}>
+                          <div className="chat-attachment-label">
                             {msg.messageType === 'image' ? '📷' : '📎'} {msg.attachmentName}
                           </div>
                         )}
-                        {msg.content && <div style={{ fontSize: '0.875rem' }}>{msg.content}</div>}
-                        <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: 2, textAlign: 'right' }}>
+                        {msg.content && <div className="chat-msg-content">{msg.content}</div>}
+                        <div className="chat-msg-time">
                           {formatTime(msg.createdAt)}
                         </div>
                       </div>
@@ -241,21 +229,19 @@ export default function ChatPage() {
                 })}
                 <div ref={messagesEndRef} />
               </div>
-              <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+              <div className="chat-input-bar">
                 <input
                   value={text}
                   onChange={e => setText(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                   placeholder="Type a message..."
-                  className="form-input"
-                  style={{ flex: 1 }}
+                  className="form-input flex-1"
                 />
                 <button
                   aria-label="Send chat message"
                   onClick={handleSend}
                   disabled={!text.trim() || sending}
-                  className="btn btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                  className="btn btn-primary btn-icon"
                 >
                   <Send size={16} /> Send
                 </button>

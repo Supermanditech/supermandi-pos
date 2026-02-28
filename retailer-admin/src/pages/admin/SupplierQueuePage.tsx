@@ -129,11 +129,11 @@ export default function SupplierQueuePage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Admin' }, { label: 'Supplier Queue' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex-between">
           <h1 className="page-title">Supplier Approval Queue</h1>
           <button
             className="btn btn-secondary"
@@ -148,40 +148,26 @@ export default function SupplierQueuePage() {
       <div className="page-content">
         {/* Success Message */}
         {success && (
-          <div style={{
-            background: '#dcfce7',
-            color: '#166534',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-success">
             {success}
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-error">
             {error}
           </div>
         )}
 
         {/* Queue Stats */}
-        <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
-          <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+        <div className="card card-mb-md">
+          <div className="sq-stats-row">
             <div>
-              <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+              <span className="sq-stats-value">
                 {pendingSuppliers.length}
               </span>
-              <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)' }}>
+              <span className="sq-stats-label">
                 Pending Approvals
               </span>
             </div>
@@ -189,13 +175,13 @@ export default function SupplierQueuePage() {
         </div>
 
         {/* Pending Suppliers Table */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card card-no-padding">
           {isLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-center-muted">
               Loading pending suppliers...
             </div>
           ) : pendingSuppliers.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-center-muted">
               No pending supplier approvals.
             </div>
           ) : (
@@ -213,14 +199,14 @@ export default function SupplierQueuePage() {
               <tbody>
                 {pendingSuppliers.map((supplier) => (
                   <tr key={supplier.id}>
-                    <td style={{ fontWeight: '500' }}>{supplier.businessName}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                      {supplier.gstin || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                    <td className="cell-bold">{supplier.businessName}</td>
+                    <td className="cell-mono cell-sm">
+                      {supplier.gstin || <span className="text-sm-muted">-</span>}
                     </td>
                     <td>
                       {supplier.phone && <div>{supplier.phone}</div>}
                       {supplier.email && (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        <div className="text-sm-muted">
                           {supplier.email}
                         </div>
                       )}
@@ -228,27 +214,20 @@ export default function SupplierQueuePage() {
                     <td>
                       <span className="badge badge-info">{supplier.productCount} products</span>
                     </td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <td className="text-sm-muted">
                       {formatDateTime(supplier.createdAt)}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <div className="flex-row--sm">
                         <button
-                          className="btn btn-primary"
-                          style={{ padding: '0.375rem 0.75rem', fontSize: '0.8rem' }}
+                          className="btn btn-primary btn-sm"
                           onClick={() => handleApprove(supplier.id)}
                           disabled={actionLoading}
                         >
                           Approve
                         </button>
                         <button
-                          className="btn"
-                          style={{
-                            padding: '0.375rem 0.75rem',
-                            fontSize: '0.8rem',
-                            background: '#fee2e2',
-                            color: '#991b1b',
-                          }}
+                          className="btn btn-danger-light btn-sm"
                           onClick={() => openRejectModal(supplier)}
                           disabled={actionLoading}
                         >
@@ -267,32 +246,20 @@ export default function SupplierQueuePage() {
       {/* Reject Modal */}
       {showRejectModal && selectedSupplier && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className="modal-overlay-custom"
           onClick={() => setShowRejectModal(false)}
           onKeyDown={(e) => { if (e.key === 'Escape') setShowRejectModal(false); }}
         >
           <div
-            className="card"
-            style={{ maxWidth: '450px', width: '90%', margin: '1rem' }}
+            className="card modal-card-custom"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="card-title">Reject Supplier</h3>
-            <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+            <p className="modal-confirm-text">
               Are you sure you want to reject <strong>{selectedSupplier.businessName}</strong>?
             </p>
 
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <div className="form-group form-group-mb">
               <label className="form-label">Reason (optional)</label>
               <textarea
                 className="form-input"
@@ -303,7 +270,7 @@ export default function SupplierQueuePage() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <div className="modal-footer-actions">
               <button
                 className="btn btn-secondary"
                 onClick={() => setShowRejectModal(false)}
@@ -312,8 +279,7 @@ export default function SupplierQueuePage() {
                 Cancel
               </button>
               <button
-                className="btn"
-                style={{ background: '#dc2626', color: 'white' }}
+                className="btn btn-danger"
                 onClick={handleReject}
                 disabled={actionLoading}
               >

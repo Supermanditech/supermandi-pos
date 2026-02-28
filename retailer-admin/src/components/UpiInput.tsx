@@ -63,14 +63,8 @@ export default function UpiInput({ value, onChange, disabled = false, required =
 
   return (
     <div>
-      <label style={{
-        display: 'block',
-        fontSize: '0.85rem',
-        fontWeight: '500',
-        color: '#475569',
-        marginBottom: '0.5rem',
-      }}>
-        UPI VPA (Virtual Payment Address) {required && <span style={{ color: '#ef4444' }}>*</span>}
+      <label className="upi-label">
+        UPI VPA (Virtual Payment Address) {required && <span className="upi-required">*</span>}
       </label>
       <input
         type="text"
@@ -82,26 +76,20 @@ export default function UpiInput({ value, onChange, disabled = false, required =
         placeholder="yourstore@upi"
         autoComplete="off"
         spellCheck={false}
+        className="upi-input"
         style={{
-          width: '100%',
-          padding: '0.75rem 1rem',
-          fontSize: '0.95rem',
           border: `1px solid ${error ? '#ef4444' : focused ? '#3b82f6' : '#e2e8f0'}`,
-          borderRadius: '10px',
-          outline: 'none',
-          boxSizing: 'border-box',
-          transition: 'border-color 0.2s',
           background: disabled ? '#f8fafc' : 'white',
           color: disabled ? '#94a3b8' : '#1e293b',
         }}
       />
       {error && (
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#ef4444' }}>
+        <p className="upi-error">
           {error}
         </p>
       )}
       {!error && (
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+        <p className="upi-hint">
           Enter your UPI VPA for receiving payments (e.g., store@ybl, 9876543210@paytm)
         </p>
       )}

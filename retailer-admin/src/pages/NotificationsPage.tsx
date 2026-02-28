@@ -86,21 +86,20 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+    <div className="notif-page">
+      <div className="notif-header">
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>Notifications</h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+          <h1 className="notif-title">Notifications</h1>
+          <p className="notif-subtitle">
             {total} total {unreadCount > 0 && `(${unreadCount} unread)`}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="notif-actions">
           {unreadCount > 0 && (
             <button
               aria-label="Mark all notifications as read"
               onClick={markAllAsRead}
-              className="btn btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem' }}
+              className="btn btn-secondary notif-action-btn"
             >
               <CheckCheck size={14} /> Mark all read
             </button>
@@ -110,8 +109,7 @@ export default function NotificationsPage() {
             aria-label="Refresh notifications list"
             onClick={fetchNotifications}
             disabled={loading}
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', opacity: loading ? 0.5 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+            className="btn btn-secondary notif-action-btn"
           >
             <RefreshCw size={14} /> {loading ? 'Loading...' : 'Refresh'}
           </button>
@@ -119,70 +117,62 @@ export default function NotificationsPage() {
       </div>
 
       {error && (
-        <div className="alert-error" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: '0.875rem' }}>{error}</p>
-          <button aria-label="Retry loading notifications" onClick={() => { setError(null); fetchNotifications(); }} style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+        <div className="alert-error notif-error-bar">
+          <p>{error}</p>
+          <button aria-label="Retry loading notifications" onClick={() => { setError(null); fetchNotifications(); }} className="notif-error-retry">Retry</button>
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading notifications...</div>
+        <div className="notif-loading">Loading notifications...</div>
       ) : notifications.length === 0 && !error ? (
-        <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <Bell size={48} style={{ color: 'var(--border)', margin: '0 auto 1rem' }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem' }}>No notifications yet</p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: '0.25rem', opacity: 0.7 }}>You'll see order updates, stock alerts, and payment reminders here.</p>
+        <div className="notif-empty">
+          <Bell size={48} className="notif-empty-icon" />
+          <p className="notif-empty-title">No notifications yet</p>
+          <p className="notif-empty-desc">You'll see order updates, stock alerts, and payment reminders here.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className="notif-list">
           {notifications.map((n) => (
             <div
               key={n.id}
               onClick={() => !n.isRead && markAsRead(n.id)}
-              style={{
-                display: 'flex', gap: '0.75rem', padding: '0.875rem 1rem',
-                background: n.isRead ? 'var(--surface)' : 'var(--success-soft)',
-                border: `1px solid ${n.isRead ? 'var(--border)' : 'var(--success-soft-border)'}`,
-                borderRadius: '0.5rem', cursor: n.isRead ? 'default' : 'pointer',
-                transition: 'background 0.15s',
-              }}
+              className={`notif-card${!n.isRead ? ' notif-card--unread' : ''}`}
             >
-              <div style={{ flexShrink: 0, marginTop: '0.125rem' }}>{getIcon(n.type)}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <h3 style={{ fontSize: '0.875rem', fontWeight: n.isRead ? 500 : 600, color: 'var(--text)' }}>{n.title}</h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0, marginLeft: '0.5rem' }}>
+              <div className="notif-card-icon">{getIcon(n.type)}</div>
+              <div className="notif-card-body">
+                <div className="notif-card-header">
+                  <h3 className={`notif-card-title${!n.isRead ? ' notif-card-title--unread' : ''}`}>{n.title}</h3>
+                  <span className="notif-card-time">
                     {new Date(n.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem', lineHeight: 1.4 }}>{n.body}</p>
+                <p className="notif-card-text">{n.body}</p>
               </div>
               {!n.isRead && (
-                <div style={{ flexShrink: 0, width: 8, height: 8, borderRadius: '50%', background: '#10b981', marginTop: '0.375rem' }} />
+                <div className="notif-unread-dot" />
               )}
             </div>
           ))}
 
           {total > limit && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+            <div className="notif-pagination">
               <button
                 aria-label="Previous page of notifications"
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - limit))}
-                className="btn btn-secondary"
-                style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', opacity: offset === 0 ? 0.5 : 1 }}
+                className="btn btn-secondary btn-sm"
               >
                 Previous
               </button>
-              <span style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              <span className="notif-page-info">
                 {offset + 1}–{Math.min(offset + limit, total)} of {total}
               </span>
               <button
                 aria-label="Next page of notifications"
                 disabled={offset + limit >= total}
                 onClick={() => setOffset((o) => o + limit)}
-                className="btn btn-secondary"
-                style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', opacity: offset + limit >= total ? 0.5 : 1 }}
+                className="btn btn-secondary btn-sm"
               >
                 Next
               </button>

@@ -2456,6 +2456,179 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+## UI/UX Polish Wave — Impacted-Screen Reiteration (2026-02-28)
+
+> **Context**: Post-Firebase UI polish wave converted 83 files across 4 portals:
+> inline `style={{}}` → CSS classes with `html.dark` support (web portals),
+> hardcoded hex colors → theme tokens (POS app).
+> Reiteration audit found 0 P1, 8 P2, 12 P3 issues. All P2 fixed inline.
+
+### STG-237: Retailer — `fontSize:` JS camelCase syntax in CSS class `.onb-step-subtitle`
+- **Platform**: Retailer Admin (Vite + React)
+- **Screen**: RetailerOnboardingPage — step subtitle
+- **Reproduction**: Open retailer onboarding → step subtitle renders at wrong size
+- **Root cause**: Inline-to-CSS conversion wrote `fontSize:` (JS) instead of `font-size:` (CSS)
+- **Severity**: P2 (rendering regression — subtitle font-size property silently ignored)
+- **Fix**: Changed `fontSize:` to `font-size:` in `retailer-admin/src/index.css:5675`
+- **Status**: FIXED
+
+### STG-238: Retailer — Missing `--bg-alt` CSS variable (ChatPage active conversation highlight)
+- **Platform**: Retailer Admin
+- **Screen**: ChatPage — conversation list
+- **Reproduction**: Open chat → select a conversation → no visual highlight on selected item
+- **Root cause**: `.chat-convo-item--active` references `var(--bg-alt)` which was never defined in `:root`
+- **Severity**: P2 (functional UX gap — no selected conversation feedback)
+- **Fix**: Added `--bg-alt: #f1f5f9` to `:root` and `--bg-alt: #1e293b` to `:root.dark`
+- **Status**: FIXED
+
+### STG-239: Retailer — Missing `--text-secondary` CSS variable (7 components)
+- **Platform**: Retailer Admin
+- **Screen**: SupplierCatalogPage, SuppliersPage (form tabs, type cell, locked text, tips, section title), ProductsPage (category button)
+- **Reproduction**: Text that should be secondary/muted color falls through to inherited primary text color
+- **Root cause**: 7 CSS classes reference `var(--text-secondary)` which was never defined
+- **Severity**: P2 (visual hierarchy lost — secondary text indistinguishable from primary)
+- **Fix**: Added `--text-secondary: #64748b` to `:root` and `--text-secondary: #94a3b8` to `:root.dark`
+- **Status**: FIXED
+
+### STG-240: Retailer — Onboarding stepper hardcoded inline colors don't adapt to dark mode
+- **Platform**: Retailer Admin
+- **Screen**: RetailerOnboardingPage — step progress indicator
+- **Reproduction**: Switch to dark mode → stepper circles, labels, and lines use light-mode colors
+- **Root cause**: Stepper used `#22c55e`, `#2563eb`, `#e2e8f0` inline instead of CSS vars
+- **Severity**: P2 (stepper invisible/wrong in dark mode)
+- **Fix**: Replaced with `var(--success)`, `var(--primary)`, `var(--border)`, `var(--text-muted)`
+- **Status**: FIXED
+
+### STG-241: SuperAdmin — `badgeGood`/`badgeBad` CSS classes undefined in DocumentsTab
+- **Platform**: SuperAdmin (Vite + React)
+- **Screen**: DocumentsTab — document status badges
+- **Reproduction**: View documents → "approved" and "rejected" badges unstyled (just base `.badge`)
+- **Root cause**: Used `badgeGood`/`badgeBad` class names that don't exist; correct names are `badgeOk`/`badgeError`
+- **Severity**: P2 (document status badges have no color distinction)
+- **Fix**: Changed `badgeGood` → `badgeOk` and `badgeBad` → `badgeError` in DocumentsTab.tsx
+- **Status**: FIXED
+
+### STG-242: SuperAdmin — `.banner` error class has no dark mode override (8 places)
+- **Platform**: SuperAdmin
+- **Screen**: App.tsx, EventsTab, StoresTab (3x), SuppliersTab (3x), AnalyticsTab
+- **Reproduction**: Dark mode → error banners show bright pink `#FEF2F2` background + dark red `#991B1B` text
+- **Root cause**: `.banner` and variants (`.banner-warning`, `.banner-success`) had no `html.dark` counterparts
+- **Severity**: P2 (jarring bright rectangles in dark mode)
+- **Fix**: Added `html.dark .banner`, `html.dark .banner.banner-warning`, `html.dark .banner.banner-success` rules to App.css
+- **Status**: FIXED
+
+### STG-243: SuperAdmin — Old unprefixed badge classes (24+ places) missing dark mode overrides
+- **Platform**: SuperAdmin
+- **Screen**: AiPanel, ApplicationsTab, DevicesTab, DocumentsTab, SettingsTab (8x), SuppliersTab (7x), UsersTab
+- **Reproduction**: Dark mode → `.badgeOk`, `.badgeWarn`, `.badgeError`, `.badgeInfo` show light-mode colors
+- **Root cause**: The `sa-badge-*` equivalents have dark mode rules, but the old unprefixed classes didn't
+- **Severity**: P2 (24+ badge instances wrong in dark mode)
+- **Fix**: Added `html.dark .badgeOk/Warn/Error/Info` rules to App.css
+- **Status**: FIXED
+
+### STG-244: Supplier — Missing `html.dark .text-yellow-600` override
+- **Platform**: Supplier Portal (Next.js + Tailwind)
+- **Screen**: Upload results, Dashboard, Earnings
+- **Reproduction**: Dark mode → "Skipped" count text-yellow-600 retains light-mode `#ca8a04`, poor contrast
+- **Root cause**: globals.css adds `text-yellow-700` dark override but not `text-yellow-600`
+- **Severity**: P2 (text contrast issue in dark mode)
+- **Fix**: Added `html.dark .text-yellow-600 { color: #fbbf24; }` to globals.css
+- **Status**: FIXED
+
+### STG-245: POS — SplitPaymentModal overlay uses hardcoded `rgba(0,0,0,0.5)`
+- **Platform**: POS App (React Native / Expo)
+- **Screen**: SplitPaymentModal — overlay backdrop
+- **Reproduction**: Inconsistent with other modals using `theme.colors.overlay`
+- **Severity**: P3 (cosmetic — modal overlay slightly different shade)
+- **Fix**: Replaced `"rgba(0,0,0,0.5)"` with `theme.colors.overlay`
+- **Status**: FIXED
+
+### STG-246: Retailer — Missing `.badge-secondary` CSS class (ImportPage, ProductsPage, ReorderPage)
+- **Platform**: Retailer Admin
+- **Screen**: Import CSV results, Products page, Reorder page
+- **Reproduction**: Badges using `badge-secondary` class appear unstyled (no background/color)
+- **Root cause**: Class referenced in JSX but never defined in index.css
+- **Severity**: P3 (cosmetic — badges lack color distinction)
+- **Status**: FOUND
+
+### STG-247: Retailer — UpiInput inline background/color hardcoded for dark mode
+- **Platform**: Retailer Admin
+- **Screen**: UpiInput component (used in SettingsPage, PaymentsPage)
+- **Reproduction**: Dark mode → non-disabled input shows white background on dark page (inline style overrides CSS)
+- **Root cause**: `style={{ background: disabled ? '#f8fafc' : 'white' }}` takes precedence over CSS dark rules
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+### STG-248: Retailer — Onboarding `.onb-step-desc`, `.onb-doc-desc`, `.onb-success-text` missing dark mode overrides
+- **Platform**: Retailer Admin
+- **Screen**: RetailerOnboardingPage — description text
+- **Reproduction**: Dark mode → gray text nearly invisible on dark background
+- **Root cause**: CSS classes use hardcoded light-mode gray colors with no `html.dark` counterpart
+- **Severity**: P3 (cosmetic — dark mode text contrast)
+- **Status**: FOUND
+
+### STG-249: Retailer — RetailerOnboardingPage DocumentUploadField inline colors don't adapt
+- **Platform**: Retailer Admin
+- **Screen**: RetailerOnboardingPage — document upload area
+- **Reproduction**: Dark mode → upload zone borders, text, success colors all light-mode
+- **Root cause**: Extensive inline styles with hardcoded hex colors in DocumentUploadField sub-component
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+### STG-250: Retailer — Dead CSS rules for `.prod-sm-badge`, `.dash-sm-badge`, `.prod-tips`
+- **Platform**: Retailer Admin
+- **Screen**: N/A (dead code)
+- **Reproduction**: N/A — CSS rules exist with dark mode overrides but no matching JSX usage
+- **Root cause**: Over-generation during inline-to-CSS conversion
+- **Severity**: P3 (dead code — no runtime impact)
+- **Status**: FOUND
+
+### STG-251: SuperAdmin — WhatsApp STATUS_COLORS.sent hardcoded light-mode blue
+- **Platform**: SuperAdmin
+- **Screen**: WhatsAppTab — "Sent" status badge and stat cards
+- **Reproduction**: Dark mode → `#dbeafe`/`#e0e7ff` backgrounds appear as bright blue rectangles
+- **Root cause**: `STATUS_COLORS.sent` and stat card backgrounds use hardcoded hex, not CSS vars
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+### STG-252: SuperAdmin — CreditProvidersTab "Repaid" stat card hardcoded light-mode blue
+- **Platform**: SuperAdmin
+- **Screen**: CreditProvidersTab — "Repaid" stat card
+- **Reproduction**: Dark mode → `#eff6ff` background appears as bright blue rectangle
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+### STG-253: SuperAdmin — StoresTab bulk feature flag toolbar hardcoded `#eff6ff`
+- **Platform**: SuperAdmin
+- **Screen**: StoresTab — bulk action toolbar when stores selected
+- **Reproduction**: Dark mode → light blue toolbar background appears jarring
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+### STG-254: SuperAdmin — RefundsTab Approve/Reject button text colors hardcoded
+- **Platform**: SuperAdmin
+- **Screen**: RefundsTab — initiated refund action buttons
+- **Reproduction**: Dark mode → `#166534` (dark green) and `#991b1b` (dark red) text barely visible
+- **Root cause**: Button backgrounds use CSS vars but text colors are hardcoded light-mode
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+### STG-255: SuperAdmin — AIInsightsTab active sub-tab button `#1e40af`
+- **Platform**: SuperAdmin
+- **Screen**: AIInsightsTab — sub-tab buttons and Load button
+- **Reproduction**: Dark mode → dark blue background may lack contrast as selected state
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+### STG-256: SuperAdmin — MonitoringTab `#7C3AED` purple label
+- **Platform**: SuperAdmin
+- **Screen**: MonitoringTab — "Cloud SQL" label
+- **Reproduction**: Dark mode → purple text may have low contrast
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: FOUND
+
+---
+
 ## Redeploy Checklist (run after all issues FIXED)
 
 - [ ] `pnpm -r typecheck` — 0 errors

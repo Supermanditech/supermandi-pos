@@ -294,11 +294,11 @@ export default function ProductQueuePage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Admin' }, { label: 'Product Queue' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex-between">
           <h1 className="page-title">Product Approval Queue</h1>
           <button
             className="btn btn-secondary"
@@ -313,44 +313,26 @@ export default function ProductQueuePage() {
       <div className="page-content">
         {/* Success Message */}
         {success && (
-          <div
-            style={{
-              background: '#dcfce7',
-              color: '#166534',
-              padding: '0.75rem 1rem',
-              borderRadius: '0.375rem',
-              marginBottom: '1rem',
-              fontSize: '0.875rem',
-            }}
-          >
+          <div className="alert-success">
             {success}
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div
-            style={{
-              background: '#fee2e2',
-              color: '#991b1b',
-              padding: '0.75rem 1rem',
-              borderRadius: '0.375rem',
-              marginBottom: '1rem',
-              fontSize: '0.875rem',
-            }}
-          >
+          <div className="alert-error">
             {error}
           </div>
         )}
 
         {/* Queue Stats */}
-        <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
-          <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+        <div className="card card-mb-md" style={{ padding: '1rem' }}>
+          <div className="sq-stats-row">
             <div>
-              <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+              <span className="sq-stats-value">
                 {pendingProducts.length}
               </span>
-              <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)' }}>
+              <span className="sq-stats-label">
                 Pending Products
               </span>
             </div>
@@ -358,13 +340,13 @@ export default function ProductQueuePage() {
         </div>
 
         {/* Pending Products Table */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card card-no-padding">
           {isLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-center-muted">
               Loading pending products...
             </div>
           ) : pendingProducts.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-center-muted">
               No pending product approvals.
             </div>
           ) : (
@@ -384,45 +366,37 @@ export default function ProductQueuePage() {
               <tbody>
                 {pendingProducts.map((product) => (
                   <tr key={product.id}>
-                    <td style={{ fontWeight: '500' }}>{product.productName}</td>
-                    <td style={{ fontSize: '0.85rem' }}>{product.supplierName}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    <td className="cell-bold">{product.productName}</td>
+                    <td className="cell-sm">{product.supplierName}</td>
+                    <td className="pq-sku-cell">
                       {product.skuCode || product.barcode || (
-                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                        <span className="text-sm-muted">-</span>
                       )}
                     </td>
                     <td>{formatPrice(product.purchasePrice)}</td>
                     <td>{formatPrice(product.mrp)}</td>
                     <td>{product.moq || 1}</td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <td className="text-sm-muted">
                       {formatDate(product.createdAt)}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <div className="flex-row--sm">
                         <button
-                          className="btn btn-secondary"
-                          style={{ padding: '0.375rem 0.75rem', fontSize: '0.8rem' }}
+                          className="btn btn-secondary btn-xs"
                           onClick={() => openEditModal(product)}
                           disabled={actionLoading}
                         >
                           Edit & Approve
                         </button>
                         <button
-                          className="btn btn-primary"
-                          style={{ padding: '0.375rem 0.75rem', fontSize: '0.8rem' }}
+                          className="btn btn-primary btn-xs"
                           onClick={() => handleQuickApprove(product.id)}
                           disabled={actionLoading}
                         >
                           Quick Approve
                         </button>
                         <button
-                          className="btn"
-                          style={{
-                            padding: '0.375rem 0.75rem',
-                            fontSize: '0.8rem',
-                            background: '#fee2e2',
-                            color: '#991b1b',
-                          }}
+                          className="btn btn-danger-light btn-xs"
                           onClick={() => openRejectModal(product)}
                           disabled={actionLoading}
                         >
@@ -441,37 +415,17 @@ export default function ProductQueuePage() {
       {/* Edit & Approve Modal */}
       {showEditModal && selectedProduct && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className="modal-overlay-custom"
           onClick={() => setShowEditModal(false)}
         >
           <div
-            className="card"
-            style={{ maxWidth: '600px', width: '95%', margin: '1rem', maxHeight: '90vh', overflow: 'auto' }}
+            className="card pq-edit-modal-card"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="card-title">Edit & Approve Product</h3>
 
             {/* Product Info */}
-            <div
-              style={{
-                background: '#f1f5f9',
-                padding: '0.75rem',
-                borderRadius: '0.375rem',
-                marginBottom: '1rem',
-                fontSize: '0.85rem',
-              }}
-            >
+            <div className="pq-product-info">
               <div>
                 <strong>Supplier:</strong> {selectedProduct.supplierName}
               </div>
@@ -486,7 +440,7 @@ export default function ProductQueuePage() {
             </div>
 
             {/* Edit Form */}
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <div className="form-group form-group-mb">
               <label className="form-label">Product Name (editable)</label>
               <input
                 type="text"
@@ -497,7 +451,7 @@ export default function ProductQueuePage() {
               />
             </div>
 
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <div className="form-group form-group-mb">
               <label className="form-label">Category (optional override)</label>
               <input
                 type="text"
@@ -510,22 +464,15 @@ export default function ProductQueuePage() {
             </div>
 
             {/* Margin Section */}
-            <div
-              style={{
-                background: '#eff6ff',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: 'var(--primary)' }}>
+            <div className="pq-margin-section">
+              <h4 className="pq-margin-title">
                 SuperMandi Margin
               </h4>
 
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+              <div className="form-group form-group-mb">
                 <label className="form-label">Margin Type</label>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <div className="pq-margin-type-row">
+                  <label className="pq-margin-type-label">
                     <input
                       type="radio"
                       name="marginType"
@@ -535,7 +482,7 @@ export default function ProductQueuePage() {
                     />
                     Percentage
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <label className="pq-margin-type-label">
                     <input
                       type="radio"
                       name="marginType"
@@ -580,37 +527,22 @@ export default function ProductQueuePage() {
               )}
 
               {/* Price Preview */}
-              <div
-                style={{
-                  marginTop: '0.75rem',
-                  padding: '0.5rem',
-                  background: 'white',
-                  borderRadius: '0.25rem',
-                  fontSize: '0.85rem',
-                }}
-              >
+              <div className="pq-price-preview">
                 <strong>Retailer Price Preview:</strong>{' '}
-                <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
+                <span className="pq-price-highlight">
                   {formatPrice(calculateRetailerPrice())}
                 </span>
               </div>
             </div>
 
             {/* BNPL Section */}
-            <div
-              style={{
-                background: '#f0fdf4',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: '#166534' }}>
+            <div className="pq-bnpl-section">
+              <h4 className="pq-bnpl-title">
                 BNPL Settings
               </h4>
 
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="form-group form-group-mb">
+                <label className="pq-bnpl-checkbox">
                   <input
                     type="checkbox"
                     name="bnplEligible"
@@ -640,7 +572,7 @@ export default function ProductQueuePage() {
             </div>
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <div className="modal-footer-actions">
               <button
                 className="btn btn-secondary"
                 onClick={() => setShowEditModal(false)}
@@ -663,31 +595,19 @@ export default function ProductQueuePage() {
       {/* Reject Modal */}
       {showRejectModal && selectedProduct && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className="modal-overlay-custom"
           onClick={() => setShowRejectModal(false)}
         >
           <div
-            className="card"
-            style={{ maxWidth: '450px', width: '90%', margin: '1rem' }}
+            className="card modal-card-custom"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="card-title">Reject Product</h3>
-            <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+            <p className="modal-confirm-text">
               Are you sure you want to reject <strong>{selectedProduct.productName}</strong>?
             </p>
 
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <div className="form-group form-group-mb">
               <label className="form-label">Reason (optional)</label>
               <textarea
                 className="form-input"
@@ -698,7 +618,7 @@ export default function ProductQueuePage() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <div className="modal-footer-actions">
               <button
                 className="btn btn-secondary"
                 onClick={() => setShowRejectModal(false)}
@@ -707,8 +627,7 @@ export default function ProductQueuePage() {
                 Cancel
               </button>
               <button
-                className="btn"
-                style={{ background: '#dc2626', color: 'white' }}
+                className="btn btn-danger"
                 onClick={handleReject}
                 disabled={actionLoading}
               >

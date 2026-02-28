@@ -195,10 +195,10 @@ export function StoresTab({
         </div>
 
         {createStoreError && (
-          <div className="banner" style={{ marginTop: 12 }}>{createStoreError}</div>
+          <div className="banner sa-mt-12">{createStoreError}</div>
         )}
         {createStoreSuccess && (
-          <div className="muted" style={{ marginTop: 12 }}>{createStoreSuccess}</div>
+          <div className="muted sa-mt-12">{createStoreSuccess}</div>
         )}
       </div>
 
@@ -240,8 +240,8 @@ export function StoresTab({
           </div>
         </div>
 
-        {storeError && <div className="banner" style={{ marginTop: 12 }}>{storeError}</div>}
-        {storeSuccess && <div className="muted" style={{ marginTop: 12 }}>{storeSuccess}</div>}
+        {storeError && <div className="banner sa-mt-12">{storeError}</div>}
+        {storeSuccess && <div className="muted sa-mt-12">{storeSuccess}</div>}
 
         {storeRecord && (
           <div className="tableWrap" style={{ paddingTop: 6 }}>
@@ -282,18 +282,18 @@ export function StoresTab({
       {storeNameError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
       {/* #186.12: Loading indicator when refreshing with existing data */}
       {storeDirectoryLoading && storeDirectory.length > 0 && (
-        <div className="muted" style={{ margin: "0 16px 8px", fontSize: 12 }}>Refreshing stores...</div>
+        <div className="muted sa-text-sm" style={{ margin: "0 16px 8px" }}>Refreshing stores...</div>
       )}
 
       {/* SA-P1-007: Bulk feature flag toolbar */}
       {selectedStoreIds.size > 0 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 16px", background: "#eff6ff", borderRadius: 6, margin: "0 16px 8px" }}>
-          <span style={{ fontSize: 13, fontWeight: 500 }}>{selectedStoreIds.size} store(s) selected</span>
-          <select value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} style={{ fontSize: 13, padding: "4px 8px" }}>
+        <div className="sa-flex sa-gap-8 sa-py-8 sa-px-12 sa-radius-6" style={{ background: "#eff6ff", margin: "0 16px 8px" }}>
+          <span className="sa-text-md sa-fw-500">{selectedStoreIds.size} store(s) selected</span>
+          <select value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} className="sa-select sa-input--sm">
             <option value="">Select flag...</option>
             {featureFlags.map((f) => <option key={f.flag_key} value={f.flag_key}>{f.flag_key}</option>)}
           </select>
-          <select value={bulkFlagAction} onChange={(e) => setBulkFlagAction(e.target.value as "enable" | "disable")} style={{ fontSize: 13, padding: "4px 8px" }}>
+          <select value={bulkFlagAction} onChange={(e) => setBulkFlagAction(e.target.value as "enable" | "disable")} className="sa-select sa-input--sm">
             <option value="enable">Enable</option>
             <option value="disable">Disable</option>
           </select>
@@ -301,7 +301,7 @@ export function StoresTab({
             {bulkFlagLoading ? "Applying..." : "Apply"}
           </button>
           <button className="btnGhost" onClick={() => setSelectedStoreIds(new Set())}>Clear</button>
-          {bulkFlagResult && <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{bulkFlagResult}</span>}
+          {bulkFlagResult && <span className="sa-text-sm sa-text-muted">{bulkFlagResult}</span>}
         </div>
       )}
 
@@ -398,39 +398,27 @@ export function StoresTab({
                       </td>
                       {/* SA-P0-001: Show raw status with color coding */}
                       <td>
-                        <span className="mono" style={{
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          ...(s.status === "SUSPENDED"
-                            ? { background: "var(--color-error-soft)", color: "#991b1b" }
-                            : s.status === "ACTIVE"
-                            ? { background: "var(--color-success-soft)", color: "#166534" }
-                            : { background: "var(--color-surface-alt)", color: "var(--color-text-primary)" }),
-                        }}>
+                        <span className={`mono ${s.status === "SUSPENDED" ? "sa-badge-error" : s.status === "ACTIVE" ? "sa-badge-ok" : "sa-badge-muted"}`}>
                           {s.status ?? (s.active ? "ACTIVE" : "INACTIVE")}
                         </span>
                       </td>
-                      <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      <td className="sa-flex sa-gap-4 sa-flex-wrap">
                         <button onClick={() => handleStoreNameSave(s.id)} disabled={storeNameSaving[s.id]}>
                           {storeNameSaving[s.id] ? "Saving..." : "Save"}
                         </button>
                         {/* SA-ENROLL-UX G3: Generate QR button per store */}
                         <button
-                          className="btnGhost"
+                          className="sa-btn-ghost-sm"
                           onClick={() => handleCreateEnrollmentForStore(s.id)}
                           disabled={enrollmentForStoreLoading === s.id}
                           title="Generate enrollment QR code for this store"
-                          style={{ fontSize: 12, padding: "4px 8px" }}
                         >
                           {enrollmentForStoreLoading === s.id ? "..." : "QR"}
                         </button>
                         {/* SA-P0-001: Suspend/Reactivate buttons */}
                         {s.status === "ACTIVE" && (
                           <button
-                            className="btnDanger"
-                            style={{ fontSize: 12, padding: "4px 8px" }}
+                            className="sa-btn-danger-sm"
                             onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "suspend")}
                           >
                             Suspend
@@ -438,7 +426,7 @@ export function StoresTab({
                         )}
                         {s.status === "SUSPENDED" && (
                           <button
-                            style={{ fontSize: 12, padding: "4px 8px", background: "var(--color-success)", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
+                            className="sa-btn-success-sm"
                             onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "reactivate")}
                           >
                             Reactivate
@@ -448,10 +436,10 @@ export function StoresTab({
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={6} style={{ background: "var(--color-surface-alt)", padding: "12px" }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", maxWidth: "600px" }}>
+                        <td colSpan={6} className="sa-bg-surface-alt sa-p-12">
+                          <div className="sa-grid-2 sa-gap-8" style={{ maxWidth: "600px" }}>
                             <div>
-                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Contact Name</label>
+                              <label className="sa-form-label">Contact Name</label>
                               <input
                                 className="tableInput"
                                 value={contactDraft.contactName}
@@ -460,8 +448,8 @@ export function StoresTab({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Phone</label>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <label className="sa-form-label">Phone</label>
+                              <div className="sa-flex sa-gap-4">
                                 <input
                                   className="tableInput"
                                   value={contactDraft.contactPhone}
@@ -472,7 +460,8 @@ export function StoresTab({
                                 {contactDraft.contactPhone && (
                                   <button
                                     onClick={() => window.open(`https://wa.me/${contactDraft.contactPhone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi, this is SuperMandi admin regarding your store ${s.name ?? s.storeName ?? s.id}.`)}`, '_blank', 'noopener,noreferrer')}
-                                    style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
+                                    className="sa-btn-text sa-flex"
+                                    style={{ padding: 2 }}
                                     title="Message on WhatsApp"
                                     aria-label="Message on WhatsApp"
                                   >
@@ -482,7 +471,7 @@ export function StoresTab({
                               </div>
                             </div>
                             <div>
-                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Email</label>
+                              <label className="sa-form-label">Email</label>
                               <input
                                 className="tableInput"
                                 value={contactDraft.contactEmail}
@@ -491,7 +480,7 @@ export function StoresTab({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Address</label>
+                              <label className="sa-form-label">Address</label>
                               <input
                                 className="tableInput"
                                 value={contactDraft.address}
@@ -501,13 +490,13 @@ export function StoresTab({
                             </div>
                           </div>
                           {/* SA-P1-006: Payment method checkboxes */}
-                          <div style={{ marginTop: "12px" }}>
-                            <label style={{ fontSize: "12px", color: "var(--color-text-secondary)", display: "block", marginBottom: "6px" }}>Payment Methods</label>
-                            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                          <div className="sa-mt-12">
+                            <label className="sa-form-label sa-mb-6">Payment Methods</label>
+                            <div className="sa-flex sa-gap-12 sa-flex-wrap">
                               {(["CASH", "UPI", "DUE"] as const).map((method) => {
                                 const draft = getStorePaymentDraft(s);
                                 return (
-                                  <label key={method} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                                  <label key={method} className="sa-flex sa-gap-6" style={{ cursor: "pointer" }}>
                                     <input
                                       type="checkbox"
                                       checked={draft.includes(method)}
@@ -520,14 +509,14 @@ export function StoresTab({
                             </div>
                           </div>
                           {/* SA-P1-007: Per-store feature flag overrides */}
-                          <div style={{ marginTop: "12px" }}>
-                            <label style={{ fontSize: "12px", color: "var(--color-text-secondary)", display: "block", marginBottom: "6px" }}>Feature Flags</label>
+                          <div className="sa-mt-12">
+                            <label className="sa-form-label sa-mb-6">Feature Flags</label>
                             {storeFFLoading[s.id] ? (
-                              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Loading...</span>
+                              <span className="sa-text-sm sa-text-muted">Loading...</span>
                             ) : storeFeatureFlags[s.id] ? (
-                              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                              <div className="sa-flex sa-gap-12 sa-flex-wrap">
                                 {storeFeatureFlags[s.id].map((f) => (
-                                  <label key={f.flag_key} style={{ display: "flex", alignItems: "center", gap: "4px", cursor: f.global_enabled ? "pointer" : "default", fontSize: 13, opacity: f.global_enabled ? 1 : 0.5 }}>
+                                  <label key={f.flag_key} className="sa-flex sa-gap-4 sa-text-md" style={{ cursor: f.global_enabled ? "pointer" : "default", opacity: f.global_enabled ? 1 : 0.5 }}>
                                     <input
                                       type="checkbox"
                                       checked={f.effective}
@@ -535,31 +524,27 @@ export function StoresTab({
                                       onChange={() => handleStoreFFToggle(s.id, f)}
                                     />
                                     <span>{f.flag_key}</span>
-                                    {f.store_override !== null && <span style={{ fontSize: 10, color: "var(--color-warning)" }}>(override)</span>}
-                                    {!f.global_enabled && <span style={{ fontSize: 10, color: "var(--color-error)" }}>(killed)</span>}
+                                    {f.store_override !== null && <span className="sa-text-xs sa-text-warning">(override)</span>}
+                                    {!f.global_enabled && <span className="sa-text-xs sa-text-danger">(killed)</span>}
                                   </label>
                                 ))}
                               </div>
                             ) : null}
                           </div>
                           {/* SA-ENROLL-UX G5: Per-store enrollment codes */}
-                          <div style={{ marginTop: "12px" }}>
-                            <label style={{ fontSize: "12px", color: "var(--color-text-secondary)", display: "block", marginBottom: "6px" }}>Enrollment Codes</label>
+                          <div className="sa-mt-12">
+                            <label className="sa-form-label sa-mb-6">Enrollment Codes</label>
                             {storeEnrollmentsLoading[s.id] ? (
-                              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Loading...</span>
+                              <span className="sa-text-sm sa-text-muted">Loading...</span>
                             ) : storeEnrollments[s.id] && storeEnrollments[s.id].length > 0 ? (
-                              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                              <div className="sa-flex sa-gap-8 sa-flex-wrap">
                                 {storeEnrollments[s.id].map((e) => {
-                                  const badgeStyle: React.CSSProperties = {
-                                    display: "inline-flex", alignItems: "center", gap: 6,
-                                    padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                                    ...(e.status === "ACTIVE" ? { background: "var(--color-success-soft)", color: "#166534" }
-                                      : e.status === "REVOKED" ? { background: "var(--color-error-soft)", color: "#991b1b" }
-                                      : e.status === "USED" ? { background: "#dbeafe", color: "#1e40af" }
-                                      : { background: "var(--color-warning-soft)", color: "#92400e" }),
-                                  };
+                                  const badgeClass = e.status === "ACTIVE" ? "sa-badge-ok"
+                                    : e.status === "REVOKED" ? "sa-badge-error"
+                                    : e.status === "USED" ? "sa-badge-info"
+                                    : "sa-badge-warn";
                                   return (
-                                    <span key={e.id} style={badgeStyle}>
+                                    <span key={e.id} className={`${badgeClass} sa-gap-6`} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 500 }}>
                                       <span className="mono">{e.code}</span>
                                       <span>{e.status}</span>
                                       <span style={{ fontSize: 10, opacity: 0.7 }}>
@@ -570,7 +555,7 @@ export function StoresTab({
                                           <button
                                             onClick={() => handleRevokeEnrollment(e.code)}
                                             disabled={revokeLoading}
-                                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-error)", fontSize: 11, textDecoration: "underline", padding: 0 }}
+                                            className="sa-btn-text sa-text-danger" style={{ textDecoration: "underline", fontSize: 11 }}
                                           >
                                             revoke
                                           </button>
@@ -578,7 +563,7 @@ export function StoresTab({
                                             <button
                                               onClick={() => handleResendCode(e.code)}
                                               disabled={resendLoading}
-                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#2563eb", fontSize: 11, textDecoration: "underline", padding: 0 }}
+                                              className="sa-btn-text" style={{ textDecoration: "underline", fontSize: 11 }}
                                             >
                                               resend
                                             </button>
@@ -590,7 +575,7 @@ export function StoresTab({
                                 })}
                               </div>
                             ) : (
-                              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>No enrollment codes yet</span>
+                              <span className="sa-text-sm sa-text-muted">No enrollment codes yet</span>
                             )}
                           </div>
                         </td>
@@ -611,6 +596,7 @@ export function StoresTab({
 
       {barcodeSheetError && <div className="banner" style={{ margin: "0 16px 12px" }}>{barcodeSheetError}</div>}
       {barcodeSheetSuccess && <div className="muted" style={{ margin: "0 16px 12px" }}>{barcodeSheetSuccess}</div>}
+
 
       <div className="tableWrap" style={{ paddingTop: 0 }}>
         <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>

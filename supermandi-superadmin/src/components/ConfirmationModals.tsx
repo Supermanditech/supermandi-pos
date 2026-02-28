@@ -109,17 +109,17 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
             <div className="modalHeader"><h3>Confirm Platform Admin Creation</h3></div>
             <div className="modalBody">
               <p>You are about to create a <strong>Platform Admin</strong> user:</p>
-              <ul style={{ margin: "12px 0", paddingLeft: 20 }}>
+              <ul className="sa-modal-list">
                 <li><strong>Name:</strong> {props.pendingAdminUser.name}</li>
                 {props.pendingAdminUser.email && <li><strong>Email:</strong> {props.pendingAdminUser.email}</li>}
                 {props.pendingAdminUser.phone && <li><strong>Phone:</strong> {props.pendingAdminUser.phone}</li>}
               </ul>
-              <p className="muted" style={{ color: "#b45309" }}>Platform admins have full system access. This action is logged for audit compliance.</p>
-              <div className="control" style={{ marginTop: 12 }}>
+              <p className="muted sa-text-amber">Platform admins have full system access. This action is logged for audit compliance.</p>
+              <div className="control sa-mt-12">
                 <label>Reason for creating this admin user *</label>
-                <textarea value={props.adminVerificationReason} onChange={(e) => props.setAdminVerificationReason(e.target.value)} placeholder="Enter reason (minimum 10 characters)..." rows={3} style={{ width: "100%", resize: "vertical" }} />
+                <textarea value={props.adminVerificationReason} onChange={(e) => props.setAdminVerificationReason(e.target.value)} placeholder="Enter reason (minimum 10 characters)..." rows={3} className="sa-w-full" />
               </div>
-              {props.createUserError && <p className="errorText" style={{ marginTop: 8 }}>{props.createUserError}</p>}
+              {props.createUserError && <p className="errorText sa-mt-8">{props.createUserError}</p>}
             </div>
             <div className="modalFooter">
               <button className="btnGhost" onClick={() => { props.setPendingAdminUser(null); props.setCreateUserError(""); }}>Cancel</button>
@@ -142,10 +142,10 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
               {props.pendingSupplierSuspend.action === "suspend" ? (
                 <>
                   <p>Are you sure you want to suspend <strong>{props.pendingSupplierSuspend.businessName}</strong>?</p>
-                  <p className="muted" style={{ color: "#b45309" }}>This will block supplier login, revoke active sessions, and hide them from retailer/POS lists.</p>
-                  <div className="control" style={{ marginTop: 12 }}>
+                  <p className="muted sa-text-amber">This will block supplier login, revoke active sessions, and hide them from retailer/POS lists.</p>
+                  <div className="control sa-mt-12">
                     <label>Reason for suspension (required)</label>
-                    <textarea value={props.suspendReason} onChange={(e) => props.setSuspendReason(e.target.value)} placeholder="Enter reason (minimum 10 characters)..." rows={3} style={{ width: "100%", resize: "vertical" }} />
+                    <textarea value={props.suspendReason} onChange={(e) => props.setSuspendReason(e.target.value)} placeholder="Enter reason (minimum 10 characters)..." rows={3} className="sa-w-full" />
                   </div>
                 </>
               ) : (
@@ -154,7 +154,7 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
                   <p className="muted">This will restore supplier login access and visibility in retailer/POS lists.</p>
                 </>
               )}
-              {props.supplierActionError && <p className="errorText" style={{ marginTop: 8 }}>{props.supplierActionError}</p>}
+              {props.supplierActionError && <p className="errorText sa-mt-8">{props.supplierActionError}</p>}
             </div>
             <div className="modalFooter">
               <button className="btnGhost" onClick={() => props.setPendingSupplierSuspend(null)} disabled={props.supplierSuspendLoading}>Cancel</button>
@@ -163,7 +163,7 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
                   {props.supplierSuspendLoading ? "Suspending..." : "Suspend Supplier"}
                 </button>
               ) : (
-                <button style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }} onClick={props.executeSupplierStatusChange} disabled={props.supplierSuspendLoading}>
+                <button className="sa-btn-reactivate" onClick={props.executeSupplierStatusChange} disabled={props.supplierSuspendLoading}>
                   {props.supplierSuspendLoading ? "Reactivating..." : "Reactivate Supplier"}
                 </button>
               )}
@@ -183,10 +183,10 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
               {props.pendingStoreSuspend.action === "suspend" ? (
                 <>
                   <p>Are you sure you want to suspend <strong>{props.pendingStoreSuspend.storeName}</strong>?</p>
-                  <p className="muted" style={{ color: "#b45309" }}>This will immediately block all POS transactions for this store. The store's devices will show a "Suspended" screen.</p>
-                  <div className="control" style={{ marginTop: 12 }}>
+                  <p className="muted sa-text-amber">This will immediately block all POS transactions for this store. The store's devices will show a "Suspended" screen.</p>
+                  <div className="control sa-mt-12">
                     <label>Reason for suspension (required)</label>
-                    <textarea value={props.storeSuspendReason} onChange={(e) => props.setStoreSuspendReason(e.target.value)} placeholder="Enter reason (minimum 10 characters)..." rows={3} style={{ width: "100%", resize: "vertical" }} />
+                    <textarea value={props.storeSuspendReason} onChange={(e) => props.setStoreSuspendReason(e.target.value)} placeholder="Enter reason (minimum 10 characters)..." rows={3} className="sa-w-full" />
                   </div>
                 </>
               ) : (
@@ -195,7 +195,7 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
                   <p className="muted">This will restore POS transactions and normal operations for this store.</p>
                 </>
               )}
-              {props.storeSuspendError && <p className="errorText" style={{ marginTop: 8 }}>{props.storeSuspendError}</p>}
+              {props.storeSuspendError && <p className="errorText sa-mt-8">{props.storeSuspendError}</p>}
             </div>
             <div className="modalFooter">
               <button className="btnGhost" onClick={() => props.setPendingStoreSuspend(null)} disabled={props.storeSuspendLoading}>Cancel</button>
@@ -204,7 +204,7 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
                   {props.storeSuspendLoading ? "Suspending..." : "Suspend Store"}
                 </button>
               ) : (
-                <button style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }} onClick={props.executeStoreStatusChange} disabled={props.storeSuspendLoading}>
+                <button className="sa-btn-reactivate" onClick={props.executeStoreStatusChange} disabled={props.storeSuspendLoading}>
                   {props.storeSuspendLoading ? "Reactivating..." : "Reactivate Store"}
                 </button>
               )}

@@ -105,22 +105,22 @@ export default function CustomersPage() {
     return (
       <div>
         <Breadcrumb items={[{ label: 'Customers', onClick: () => setSelectedCustomer(null) }, { label: selectedCustomer.name }]} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <button onClick={() => setSelectedCustomer(null)} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div className="cust-detail-header">
+          <button onClick={() => setSelectedCustomer(null)} className="btn btn-secondary btn-icon">
             <ChevronLeft size={16} /> Back
           </button>
-          <h2 style={{ margin: 0 }}>{selectedCustomer.name}</h2>
+          <h2 className="page-title--compact">{selectedCustomer.name}</h2>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Phone</div>
-            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="cust-detail-grid">
+          <div className="card cust-detail-card">
+            <div className="cust-detail-label">Phone</div>
+            <div className="cust-detail-value--flex">
               {selectedCustomer.phone}
               {selectedCustomer.phone && (
                 <button
                   onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/91${selectedCustomer.phone.replace(/[^0-9]/g, '').replace(/^91/, '')}?text=${encodeURIComponent(`Hi ${selectedCustomer.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
+                  className="cust-wa-btn"
                   title="Message on WhatsApp"
                   aria-label="Message on WhatsApp"
                 >
@@ -129,40 +129,40 @@ export default function CustomersPage() {
               )}
             </div>
           </div>
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Total Purchases</div>
-            <div style={{ fontWeight: 600 }}>{formatCurrency(selectedCustomer.totalPurchasesMinor || 0)}</div>
+          <div className="card cust-detail-card">
+            <div className="cust-detail-label">Total Purchases</div>
+            <div className="cust-detail-value">{formatCurrency(selectedCustomer.totalPurchasesMinor || 0)}</div>
           </div>
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Visits</div>
-            <div style={{ fontWeight: 600 }}>{selectedCustomer.visitCount || 0}</div>
+          <div className="card cust-detail-card">
+            <div className="cust-detail-label">Visits</div>
+            <div className="cust-detail-value">{selectedCustomer.visitCount || 0}</div>
           </div>
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Last Visit</div>
-            <div style={{ fontWeight: 600 }}>{selectedCustomer.lastVisitAt ? formatDateTime(selectedCustomer.lastVisitAt) : 'Never'}</div>
+          <div className="card cust-detail-card">
+            <div className="cust-detail-label">Last Visit</div>
+            <div className="cust-detail-value">{selectedCustomer.lastVisitAt ? formatDateTime(selectedCustomer.lastVisitAt) : 'Never'}</div>
           </div>
           {selectedCustomer.email && (
-            <div className="card" style={{ padding: 16 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Email</div>
-              <div style={{ fontWeight: 600 }}>{selectedCustomer.email}</div>
+            <div className="card cust-detail-card">
+              <div className="cust-detail-label">Email</div>
+              <div className="cust-detail-value">{selectedCustomer.email}</div>
             </div>
           )}
           {selectedCustomer.address && (
-            <div className="card" style={{ padding: 16 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Address</div>
-              <div style={{ fontWeight: 600 }}>{selectedCustomer.address}</div>
+            <div className="card cust-detail-card">
+              <div className="cust-detail-label">Address</div>
+              <div className="cust-detail-value">{selectedCustomer.address}</div>
             </div>
           )}
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Credit Limit</div>
-            <div style={{ fontWeight: 600 }}>{formatCurrency(selectedCustomer.creditLimitMinor || 0)}</div>
+          <div className="card cust-detail-card">
+            <div className="cust-detail-label">Credit Limit</div>
+            <div className="cust-detail-value">{formatCurrency(selectedCustomer.creditLimitMinor || 0)}</div>
           </div>
         </div>
 
         <h3>Recent Purchases</h3>
         {detailError && <div className="error-banner">{detailError}</div>}
         {detailLoading ? (
-          <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>Loading purchases...</div>
+          <div className="reorder-loading">Loading purchases...</div>
         ) : purchases.length === 0 ? (
           <EmptyState icon={<Users size={32} />} title="No purchases yet" description="This customer has no recorded purchases." />
         ) : (
@@ -199,26 +199,26 @@ export default function CustomersPage() {
   return (
     <div>
       <Breadcrumb items={[{ label: 'Customers' }]} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ margin: 0 }}>Customers ({total})</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+      <div className="cust-list-header">
+        <h2 className="page-title--compact">Customers ({total})</h2>
+        <div className="flex-row btn-icon">
+          <div className="cust-search-wrap">
+            <Search size={14} className="cust-search-icon" />
             <input
               type="text"
               placeholder="Search name or phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ paddingLeft: 28, width: 220 }}
+              className="cust-search-input"
             />
           </div>
-          <button onClick={() => fetchCustomers(search || undefined)} disabled={loading} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button onClick={() => fetchCustomers(search || undefined)} disabled={loading} className="btn btn-secondary btn-icon">
             <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
           </button>
         </div>
       </div>
 
-      {error && <div className="error-banner" style={{ marginBottom: 12 }}>{error}</div>}
+      {error && <div className="error-banner reorder-error-mb">{error}</div>}
 
       {!loading && customers.length === 0 ? (
         <EmptyState
@@ -242,13 +242,13 @@ export default function CustomersPage() {
             <tbody>
               {customers.map((c) => (
                 <tr key={c.id} onClick={() => fetchDetail(c)} style={{ cursor: 'pointer' }}>
-                  <td style={{ fontWeight: 500 }}>{c.name}</td>
-                  <td style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <td className="cell-bold">{c.name}</td>
+                  <td className="cust-phone-cell">
                     {c.phone}
                     {c.phone && (
                       <button
                         onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/91${c.phone.replace(/[^0-9]/g, '').replace(/^91/, '')}?text=${encodeURIComponent(`Hi ${c.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
+                        className="cust-wa-btn"
                         title="Message on WhatsApp"
                         aria-label="Message on WhatsApp"
                       >
@@ -267,7 +267,7 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {loading && <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>Loading...</div>}
+      {loading && <div className="reorder-loading">Loading...</div>}
     </div>
   );
 }

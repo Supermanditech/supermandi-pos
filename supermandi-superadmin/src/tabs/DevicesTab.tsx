@@ -82,7 +82,7 @@ export function DevicesTab({
             <select
               value={enrollStoreId}
               onChange={(e) => setEnrollStoreId(e.target.value)}
-              style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid var(--color-border)", fontSize: 13, minWidth: 260 }}
+              className="sa-select sa-radius-4" style={{ minWidth: 260 }}
             >
               <option value="">-- Select a store --</option>
               {storeDirectory.map((s) => (
@@ -100,19 +100,19 @@ export function DevicesTab({
           </div>
         </div>
 
-        {enrollError && <div className="banner" style={{ marginTop: 12 }}>{enrollError}</div>}
+        {enrollError && <div className="banner sa-mt-12">{enrollError}</div>}
 
         {enrollment && (
-          <div className="qrCard" style={{ marginTop: 16 }}>
+          <div className="qrCard sa-mt-16">
             <div className="badgeRow">
               <span className="badge badgeInfo">Code: {enrollment.code}</span>
               <span className="badge">Expires in: {enrollment.expiresAt ? <EnrollmentCountdown expiresAt={enrollment.expiresAt} /> : "unknown"}</span>
             </div>
-            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
+            <div className="sa-flex sa-gap-20 sa-flex-wrap">
               <QRCodeSVG value={enrollment.qrPayload} size={160} />
-              <div style={{ display: "grid", gap: 8 }}>
+              <div className="sa-gap-8" style={{ display: "grid" }}>
                 <div className="mono qrPayload">{enrollment.qrPayload}</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="sa-flex sa-gap-8 sa-flex-wrap">
                   <button
                     className="tab"
                     onClick={() => {
@@ -144,11 +144,10 @@ export function DevicesTab({
                   </button>
                   {/* SA-ENROLL-UX G2: Revoke enrollment code */}
                   <button
-                    className="btnGhost"
+                    className="btnGhost sa-text-danger"
                     onClick={() => handleRevokeEnrollment(enrollment.code)}
                     disabled={revokeLoading}
                     title="Revoke this enrollment code so it can no longer be used"
-                    style={{ color: "var(--color-error)" }}
                   >
                     {revokeLoading ? "Revoking..." : "Revoke Code"}
                   </button>
@@ -164,8 +163,8 @@ export function DevicesTab({
         <div className="muted">Live heartbeat + sync status</div>
       </div>
 
-      {deviceActionError && <div className="banner" style={{ marginBottom: 12 }}>{deviceActionError}</div>}
-      {devicesError && <div className="banner" style={{ marginBottom: 12 }}>{devicesError}</div>}
+      {deviceActionError && <div className="banner sa-mb-12">{deviceActionError}</div>}
+      {devicesError && <div className="banner sa-mb-12">{devicesError}</div>}
 
       {filteredDeviceRecords.length === 0 ? (
         <div className="empty">No devices synced yet.</div>
@@ -309,8 +308,8 @@ export function DevicesTab({
               );
             })}
           </div>
-          <div className="tableWrap" style={{ paddingTop: 8 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="tableWrap sa-py-8">
+            <div className="sa-flex sa-gap-8 sa-flex-wrap">
               <button className="tab" disabled={devicePage === 0 || devicesLoading} onClick={() => { const p = devicePage - 1; setDevicePage(p); refreshDevices(p); }}>
                 {devicesLoading ? "Loading…" : "Prev"}
               </button>
@@ -326,7 +325,7 @@ export function DevicesTab({
       )}
 
       {/* ISSUE-MICRO-061: Visual separator between device registry and events-derived summary */}
-      <hr style={{ margin: "16px 0", borderColor: "var(--color-border)" }} />
+      <hr className="sa-border-b" style={{ margin: "16px 0" }} />
       <div className="cardHeader" style={{ paddingTop: 0 }}>
         <div className="cardTitle">Device Activity (from events)</div>
         <div className="muted">Unique devices in last {limit} events: {devices.length} — derived from event log, independent of device registry above</div>

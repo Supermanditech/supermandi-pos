@@ -7,15 +7,7 @@ export function BuildStamp() {
   const buildTime = import.meta.env.VITE_BUILD_TIME || 'local';
 
   return (
-    <div
-      style={{
-        fontSize: '11px',
-        color: 'inherit',
-        fontFamily: 'monospace',
-        textAlign: 'center',
-        padding: '4px 0',
-      }}
-    >
+    <div className="sa-build-stamp">
       Build: {buildSha} · Deployed: {buildTime}
     </div>
   );

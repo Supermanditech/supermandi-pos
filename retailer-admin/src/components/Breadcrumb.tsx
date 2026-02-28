@@ -12,16 +12,16 @@ interface BreadcrumbProps {
 
 export default function Breadcrumb({ items }: BreadcrumbProps) {
   return (
-    <nav style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B', marginBottom: 16 }}>
+    <nav className="breadcrumb-nav">
       {items.map((item, i) => (
-        <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {i > 0 && <span style={{ color: '#CBD5E1' }}>&rsaquo;</span>}
+        <span key={i} className="breadcrumb-item">
+          {i > 0 && <span className="breadcrumb-separator">&rsaquo;</span>}
           {item.path ? (
-            <Link to={item.path} style={{ color: '#64748B', textDecoration: 'none' }}>{item.label}</Link>
+            <Link to={item.path} className="breadcrumb-link">{item.label}</Link>
           ) : item.onClick ? (
-            <a onClick={item.onClick} style={{ color: '#64748B', textDecoration: 'none', cursor: 'pointer' }}>{item.label}</a>
+            <a onClick={item.onClick} className="breadcrumb-link" role="button" tabIndex={0}>{item.label}</a>
           ) : (
-            <span style={{ color: '#0F172A', fontWeight: 500 }}>{item.label}</span>
+            <span className="breadcrumb-current">{item.label}</span>
           )}
         </span>
       ))}

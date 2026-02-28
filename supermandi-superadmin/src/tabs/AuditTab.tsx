@@ -67,7 +67,7 @@ export function AuditTab({
       </div>
 
       <div className="tableWrap">
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+        <div className="sa-flex sa-gap-8 sa-mb-12 sa-flex-wrap">
           <button onClick={() => refreshAuditLogs()} disabled={auditLogsLoading}>
             {auditLogsLoading ? "Loading..." : "Refresh"}
           </button>
@@ -78,7 +78,7 @@ export function AuditTab({
               setAuditLogsFilter(prev => ({ ...prev, action: e.target.value || undefined }));
               setAuditLogsPage(() => 0);
             }}
-            style={{ padding: "6px 10px" }}
+            className="sa-select"
           >
             <option value="">All Actions</option>
             <option value="create">Create</option>
@@ -95,7 +95,7 @@ export function AuditTab({
               setAuditLogsFilter(prev => ({ ...prev, resource_type: e.target.value || undefined }));
               setAuditLogsPage(() => 0);
             }}
-            style={{ padding: "6px 10px" }}
+            className="sa-select"
           >
             <option value="">All Resources</option>
             <option value="store">Store</option>
@@ -113,7 +113,7 @@ export function AuditTab({
               setAuditLogsFilter(prev => ({ ...prev, from_date: e.target.value || undefined }));
               setAuditLogsPage(() => 0);
             }}
-            style={{ padding: "5px 8px" }}
+            className="sa-input"
             title="From date"
           />
           <span className="muted">to</span>
@@ -124,7 +124,7 @@ export function AuditTab({
               setAuditLogsFilter(prev => ({ ...prev, to_date: e.target.value || undefined }));
               setAuditLogsPage(() => 0);
             }}
-            style={{ padding: "5px 8px" }}
+            className="sa-input"
             title="To date"
           />
 
@@ -133,12 +133,12 @@ export function AuditTab({
             onClick={() => exportAuditCsv(auditLogs)}
             disabled={auditLogs.length === 0}
             title="Export current page as CSV"
-            style={{ padding: "6px 12px" }}
+            className="sa-btn-sm"
           >
             Export CSV
           </button>
 
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="sa-flex sa-gap-8" style={{ marginLeft: "auto" }}>
             <button
               disabled={auditLogsPage === 0}
               onClick={() => setAuditLogsPage(prev => Math.max(0, prev - 1))}
@@ -155,7 +155,7 @@ export function AuditTab({
           </div>
         </div>
 
-        {auditLogsError && <div className="errorText" style={{ marginBottom: 8 }}>{auditLogsError}</div>}
+        {auditLogsError && <div className="errorText sa-mb-8">{auditLogsError}</div>}
 
         <table className="table">
           <thead>
@@ -172,46 +172,36 @@ export function AuditTab({
           <tbody>
             {auditLogs.map((log) => (
               <tr key={log.id}>
-                <td className="mono" style={{ fontSize: 12 }}>
+                <td className="mono sa-text-sm">
                   {formatDateTime(log.created_at)}
                 </td>
                 <td>
-                  <span style={{
-                    padding: "2px 6px",
-                    borderRadius: 4,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: log.action === "delete" ? "#ffebee" :
-                               log.action === "create" ? "#e8f5e9" :
-                               log.action === "approve" ? "#e3f2fd" :
-                               log.action === "reject" ? "#fff3e0" : "var(--color-surface-alt)",
-                    color: log.action === "delete" ? "#c62828" :
-                           log.action === "create" ? "#2e7d32" :
-                           log.action === "approve" ? "#1565c0" :
-                           log.action === "reject" ? "#e65100" : "var(--color-text-secondary)"
-                  }}>
+                  <span className={
+                    log.action === "delete" ? "sa-badge-error" :
+                    log.action === "create" ? "sa-badge-ok" :
+                    log.action === "approve" ? "sa-badge-info" :
+                    log.action === "reject" ? "sa-badge-warn" : "sa-badge-muted"
+                  }>
                     {log.action.toUpperCase()}
                   </span>
                 </td>
                 <td>{log.resource_type}</td>
-                <td className="mono" style={{ fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td className="mono sa-text-xs" style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {log.resource_id || "-"}
                 </td>
-                <td className="mono" style={{ fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td className="mono sa-text-xs" style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {log.actor_user_id || log.actor_ip || "system"}
                 </td>
                 <td>
                   {log.response_status ? (
-                    <span style={{
-                      color: log.response_status >= 400 ? "#c62828" : "#2e7d32"
-                    }}>
+                    <span className={log.response_status >= 400 ? "sa-text-error" : "sa-text-success"}>
                       {log.response_status}
                     </span>
                   ) : "-"}
                 </td>
                 <td>
                   {log.error_message && (
-                    <span style={{ color: "#c62828", fontSize: 12 }}>{log.error_message}</span>
+                    <span className="sa-text-error sa-text-sm">{log.error_message}</span>
                   )}
                   {log.request_body && !log.error_message && (
                     <PayloadDetails payload={log.request_body} />
@@ -221,7 +211,7 @@ export function AuditTab({
             ))}
             {auditLogs.length === 0 && !auditLogsLoading && (
               <tr>
-                <td colSpan={7} style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 24 }}>
+                <td colSpan={7} className="sa-text-center sa-text-muted sa-p-24">
                   No audit logs found
                 </td>
               </tr>

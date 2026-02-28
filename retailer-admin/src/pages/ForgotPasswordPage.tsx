@@ -23,9 +23,9 @@ function PasswordChecklist({ password }: { password: string }) {
     { label: 'One digit', pass: /\d/.test(password) },
   ];
   return (
-    <ul style={{ listStyle: 'none', padding: 0, margin: '0.25rem 0 0', fontSize: '0.75rem' }}>
+    <ul className="forgot-pw-checklist">
       {checks.map((c) => (
-        <li key={c.label} style={{ color: c.pass ? '#16a34a' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.25rem', lineHeight: '1.5' }}>
+        <li key={c.label} className={`forgot-pw-check ${c.pass ? 'forgot-pw-check--pass' : 'forgot-pw-check--fail'}`}>
           <span>{c.pass ? '\u2713' : '\u2022'}</span> {c.label}
         </li>
       ))}
@@ -365,7 +365,7 @@ export default function ForgotPasswordPage() {
               <>
                 <h2 className="login-card-title">Reset Password</h2>
                 <p className="login-card-subtitle">Choose how you want to reset your password</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="forgot-channel-options">
                   <button
                     onClick={() => selectChannel('otp')}
                     className={channel === 'otp' ? 'login-btn-primary login-btn-channel-active' : 'login-btn-secondary'}
@@ -380,7 +380,7 @@ export default function ForgotPasswordPage() {
                   </button>
                 </div>
                 <div className="login-divider">
-                  <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
+                  <p className="login-secondary-text">
                     Remember your password?{' '}
                     <Link to="/retailer/login" className="login-text-link">Sign In</Link>
                   </p>
@@ -417,7 +417,7 @@ export default function ForgotPasswordPage() {
                   >
                     {isLoading ? 'Sending OTP...' : 'Send OTP'}
                   </button>
-                  <div style={{ textAlign: 'center' }}>
+                  <div className="forgot-center-section">
                     <button type="button" onClick={() => setStep('choose')} className="login-text-link">
                       Use a different method
                     </button>
@@ -450,7 +450,7 @@ export default function ForgotPasswordPage() {
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
                     {isLoading ? 'Sending...' : 'Send Reset Link'}
                   </button>
-                  <div style={{ textAlign: 'center' }}>
+                  <div className="forgot-center-section">
                     <button type="button" onClick={() => setStep('choose')} className="login-text-link">
                       Use a different method
                     </button>
@@ -462,12 +462,12 @@ export default function ForgotPasswordPage() {
             {/* Email Channel: Check Email */}
             {step === 'emailSent' && (
               <>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ width: '4rem', height: '4rem', background: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#2563eb' }}>
+                <div className="forgot-center-section">
+                  <div className="forgot-icon-circle forgot-icon-circle--email">
                     &#9993;
                   </div>
                   <h2 className="login-card-title">Check Your Email</h2>
-                  <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
+                  <p className="login-card-subtitle forgot-subtitle-spaced">
                     {/* REQ.AUTH.PASSWORD_FLOW_PARITY: Anti-enumeration language (parity with supplier) */}
                     If an account exists with <strong>{email}</strong>, we&apos;ve sent a password reset link.
                     Please check your inbox and spam folder.
@@ -478,7 +478,7 @@ export default function ForgotPasswordPage() {
                   >
                     I Have a Reset Token
                   </button>
-                  <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+                  <div className="forgot-action-link">
                     <button type="button" onClick={() => { setStep('emailEntry'); setError(''); }} className="login-text-link">
                       Try a different email
                     </button>
@@ -500,21 +500,21 @@ export default function ForgotPasswordPage() {
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="emailreset-token">Reset Token</label>
-                    <input id="emailreset-token" name="token" type="text" className="login-form-input" style={{ fontFamily: 'monospace', fontSize: '0.875rem' }} placeholder="Paste the token from your email" value={resetToken} onChange={(e) => setResetToken(e.target.value)} disabled={isLoading} />
+                    <input id="emailreset-token" name="token" type="text" className="login-form-input forgot-token-input" placeholder="Paste the token from your email" value={resetToken} onChange={(e) => setResetToken(e.target.value)} disabled={isLoading} />
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="emailreset-new-password">New Password</label>
-                    <div style={{ position: 'relative' }}>
-                      <input id="emailreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
-                      <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
+                    <div className="login-password-wrapper">
+                      <input id="emailreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input login-form-input--password" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} />
+                      <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} className="login-password-toggle">{showNewPassword ? 'Hide' : 'Show'}</button>
                     </div>
                     <PasswordChecklist password={newPassword} />
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="emailreset-confirm-password">Confirm Password</label>
-                    <div style={{ position: 'relative' }}>
-                      <input id="emailreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
-                      <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
+                    <div className="login-password-wrapper">
+                      <input id="emailreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input login-form-input--password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                      <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="login-password-toggle">{showConfirmPassword ? 'Hide' : 'Show'}</button>
                     </div>
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
@@ -559,7 +559,7 @@ export default function ForgotPasswordPage() {
                   <button type="submit" className="login-btn-primary" disabled={isLoading || otp.length !== 6}>
                     {isLoading ? 'Verifying...' : 'Verify OTP'}
                   </button>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="login-otp-actions">
                     <button type="button" onClick={() => { setStep('phone'); setOtp(''); setError(''); recaptchaInitialized.current = false; }} className="login-text-link" disabled={isLoading}>
                       Change Phone
                     </button>
@@ -567,9 +567,8 @@ export default function ForgotPasswordPage() {
                       id="resend-otp-button"
                       type="button"
                       onClick={handleResendOtp}
-                      className="login-text-link"
+                      className={`login-text-link${resendCooldown > 0 ? ' forgot-resend--cooldown' : ''}`}
                       disabled={isLoading || resendCooldown > 0}
-                      style={resendCooldown > 0 ? { color: '#9ca3af', cursor: 'not-allowed' } : {}}
                     >
                       {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
                     </button>
@@ -587,17 +586,17 @@ export default function ForgotPasswordPage() {
                 <form onSubmit={handleOtpResetPassword}>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="otpreset-new-password">New Password</label>
-                    <div style={{ position: 'relative' }}>
-                      <input id="otpreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
-                      <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showNewPassword ? 'Hide' : 'Show'}</button>
+                    <div className="login-password-wrapper">
+                      <input id="otpreset-new-password" name="newPassword" type={showNewPassword ? 'text' : 'password'} className="login-form-input login-form-input--password" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isLoading} autoFocus />
+                      <button type="button" aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} onClick={() => setShowNewPassword(!showNewPassword)} className="login-password-toggle">{showNewPassword ? 'Hide' : 'Show'}</button>
                     </div>
                     <PasswordChecklist password={newPassword} />
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="otpreset-confirm-password">Confirm Password</label>
-                    <div style={{ position: 'relative' }}>
-                      <input id="otpreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input" style={{ paddingRight: '3rem' }} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
-                      <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
+                    <div className="login-password-wrapper">
+                      <input id="otpreset-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} className="login-form-input login-form-input--password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+                      <button type="button" aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="login-password-toggle">{showConfirmPassword ? 'Hide' : 'Show'}</button>
                     </div>
                   </div>
                   <button type="submit" className="login-btn-primary" disabled={isLoading}>
@@ -609,15 +608,15 @@ export default function ForgotPasswordPage() {
 
             {/* Success */}
             {step === 'success' && (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ width: '4rem', height: '4rem', background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#22c55e' }}>
+              <div className="forgot-center-section">
+                <div className="forgot-icon-circle forgot-icon-circle--success">
                   &#10003;
                 </div>
                 <h2 className="login-card-title">Password Reset Successful</h2>
-                <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
+                <p className="login-card-subtitle forgot-subtitle-spaced">
                   Your password has been reset. You can now sign in with your new password.
                 </p>
-                <Link to="/retailer/login" className="login-btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                <Link to="/retailer/login" className="login-btn-primary forgot-signin-link">
                   Sign In
                 </Link>
               </div>
@@ -626,7 +625,7 @@ export default function ForgotPasswordPage() {
             {/* Back to login */}
             {step !== 'success' && step !== 'choose' && step !== 'emailSent' && (
               <div className="login-divider">
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
+                <p className="login-secondary-text">
                   Remember your password?{' '}
                   <Link to="/retailer/login" className="login-text-link">Sign In</Link>
                 </p>
@@ -637,10 +636,10 @@ export default function ForgotPasswordPage() {
       </main>
 
       <footer className="login-footer">
-        <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="login-footer-inner login-footer-layout">
           <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Link to="/retailer/help" style={{ color: 'inherit', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+          <div className="login-footer-links">
+            <Link to="/retailer/help" className="login-footer-link">Help</Link>
             <BuildStamp />
           </div>
         </div>

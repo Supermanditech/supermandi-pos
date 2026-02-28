@@ -312,7 +312,7 @@ export default function ImportPage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Import' }]} />
       </div>
       <header className="page-header">
@@ -321,19 +321,14 @@ export default function ImportPage() {
 
       <div className="page-content">
         {/* Progress Steps */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+        <div className="imp-steps">
           {(['upload', 'validate', 'review', 'commit', 'done'] as ImportStep[]).map((s, i) => (
             <div
               key={s}
+              className="imp-step"
               style={{
-                flex: 1,
-                padding: '0.75rem',
                 background: step === s ? 'var(--primary)' : i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? '#22c55e' : 'var(--border)',
                 color: step === s || i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? 'white' : 'var(--text-muted)',
-                borderRadius: '0.25rem',
-                textAlign: 'center',
-                fontSize: '0.875rem',
-                textTransform: 'capitalize',
               }}
             >
               {s}
@@ -343,11 +338,7 @@ export default function ImportPage() {
 
         {/* Error Message */}
         {error && (
-          <div style={{
-            background: '#fee2e2', color: '#991b1b',
-            padding: '0.75rem 1rem', borderRadius: '0.375rem',
-            marginBottom: '1rem', fontSize: '0.875rem'
-          }}>
+          <div className="alert-error-inline">
             {error}
           </div>
         )}
@@ -358,7 +349,7 @@ export default function ImportPage() {
             <h3 className="card-title">Upload CSV File</h3>
 
             {/* RCAT-CSV-001: Download Template Button */}
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div className="imp-template-mb">
               <button className="btn btn-secondary" onClick={handleDownloadTemplate}>
                 Download CSV Template
               </button>
@@ -368,25 +359,17 @@ export default function ImportPage() {
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
-              style={{
-                border: `2px dashed ${isDragging ? 'var(--primary)' : 'var(--border)'}`,
-                borderRadius: '0.5rem',
-                padding: '3rem',
-                textAlign: 'center',
-                background: isDragging ? '#eff6ff' : 'var(--background)',
-                marginBottom: '1.5rem',
-              }}
+              className={`imp-dropzone${isDragging ? ' imp-dropzone--active' : ''}`}
             >
               {file ? (
                 <div>
-                  <p style={{ fontSize: '1.125rem', fontWeight: '500' }}>📄 {file.name}</p>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                  <p className="imp-file-name">📄 {file.name}</p>
+                  <p className="text-sm-muted">
                     {(file.size / 1024).toFixed(1)} KB
                   </p>
                   <button
                     aria-label="Remove selected CSV file"
-                    className="btn btn-secondary"
-                    style={{ marginTop: '1rem' }}
+                    className="btn btn-secondary imp-remove-btn-mt"
                     onClick={() => setFile(null)}
                   >
                     Remove
@@ -394,16 +377,16 @@ export default function ImportPage() {
                 </div>
               ) : (
                 <>
-                  <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📥</p>
-                  <p style={{ marginBottom: '1rem' }}>Drag & drop your CSV file here</p>
-                  <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                  <p className="imp-drop-icon">📥</p>
+                  <p className="imp-drop-text">Drag & drop your CSV file here</p>
+                  <label className="btn btn-secondary">
                     Browse Files
                     <input
                       aria-label="Select CSV file for import"
                       type="file"
                       accept=".csv"
                       onChange={handleFileSelect}
-                      style={{ display: 'none' }}
+                      className="imp-file-hidden"
                     />
                   </label>
                 </>
@@ -417,9 +400,9 @@ export default function ImportPage() {
             )}
 
             {/* CSV Format Info */}
-            <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--background)', borderRadius: '0.5rem' }}>
-              <h4 style={{ marginBottom: '0.75rem' }}>Expected CSV Format:</h4>
-              <code style={{ fontSize: '0.75rem', display: 'block', overflow: 'auto' }}>
+            <div className="imp-format-info">
+              <h4 className="imp-format-title">Expected CSV Format:</h4>
+              <code className="imp-format-code">
                 name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode
                 <br />
                 Parle-G 100g,8901030865432,Parle,PCS,10.00,8.50,10.00,100,PACKAGED
@@ -432,10 +415,10 @@ export default function ImportPage() {
 
         {/* Step: Validate */}
         {step === 'validate' && (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+          <div className="card imp-center-card">
+            <div className="imp-step-icon">⏳</div>
             <h3>Validating CSV...</h3>
-            <p style={{ color: 'var(--text-muted)' }}>Checking rows, formats, and data integrity</p>
+            <p className="text-muted">Checking rows, formats, and data integrity</p>
           </div>
         )}
 
@@ -444,14 +427,14 @@ export default function ImportPage() {
           <div className="card">
             <h3 className="card-title">Review Import</h3>
 
-            <div className="grid grid-3" style={{ marginBottom: '1.5rem' }}>
+            <div className="grid grid-3 grid-mb-lg">
               <div className="stat-card">
                 <div className="stat-label">Total Rows</div>
                 <div className="stat-value">{validation.totalRows}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">Valid Rows</div>
-                <div className="stat-value" style={{ color: 'var(--success)' }}>{validation.validCount}</div>
+                <div className="stat-value stat-value--success">{validation.validCount}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">Errors</div>
@@ -463,19 +446,19 @@ export default function ImportPage() {
 
             {/* Validation Errors */}
             {validation.errors.length > 0 && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ marginBottom: '0.75rem' }}>Validation Errors:</h4>
-                <div style={{ background: '#fee2e2', padding: '1rem', borderRadius: '0.5rem', fontSize: '0.875rem', maxHeight: '200px', overflow: 'auto' }}>
+              <div className="imp-errors-section">
+                <h4 className="imp-errors-title">Validation Errors:</h4>
+                <div className="imp-errors-box">
                   {validation.errors.slice(0, 20).map((err, i) => (
-                    <p key={i} style={{ margin: '0.25rem 0' }}>Row {err.row}: {err.error}</p>
+                    <p key={i} className="imp-errors-row">Row {err.row}: {err.error}</p>
                   ))}
                   {validation.errors.length > 20 && (
-                    <p style={{ fontStyle: 'italic' }}>...and {validation.errors.length - 20} more</p>
+                    <p className="imp-errors-more">...and {validation.errors.length - 20} more</p>
                   )}
                 </div>
                 {/* RET-POS-SYNC-002: Download error report */}
                 {jobId && (
-                  <button className="btn btn-secondary" onClick={handleDownloadErrors} style={{ marginTop: '0.75rem' }}>
+                  <button className="btn btn-secondary imp-download-btn-mt" onClick={handleDownloadErrors}>
                     Download Error Report (CSV)
                   </button>
                 )}
@@ -484,8 +467,8 @@ export default function ImportPage() {
 
             {/* Preview Table */}
             {validation.previewRows.length > 0 && (
-              <div style={{ marginBottom: '1.5rem', maxHeight: '300px', overflow: 'auto', border: '1px solid var(--border)', borderRadius: '0.375rem' }}>
-                <table className="table" style={{ fontSize: '0.75rem' }}>
+              <div className="imp-preview-container">
+                <table className="table imp-preview-table">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -502,7 +485,7 @@ export default function ImportPage() {
                       <tr key={row.row} style={{ background: row.valid ? undefined : '#fef2f2' }}>
                         <td>{row.row}</td>
                         <td>{row.name}</td>
-                        <td style={{ fontFamily: 'monospace' }}>{row.barcode || <em style={{ color: 'var(--text-muted)' }}>auto</em>}</td>
+                        <td className="cell-mono">{row.barcode || <em className="text-muted">auto</em>}</td>
                         <td>{row.brand || '-'}</td>
                         <td>₹{(row.sellPrice / 100).toFixed(2)}</td>
                         <td><span className={`badge ${row.mode === 'PACKAGED' ? 'badge-info' : 'badge-secondary'}`}>{row.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}</span></td>
@@ -514,7 +497,7 @@ export default function ImportPage() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="imp-actions">
               <button
                 className="btn btn-primary"
                 onClick={handleCommit}
@@ -531,30 +514,30 @@ export default function ImportPage() {
 
         {/* Step: Commit */}
         {step === 'commit' && (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📥</div>
+          <div className="card imp-center-card">
+            <div className="imp-step-icon">📥</div>
             <h3>Importing Products...</h3>
             {commitProgress && commitProgress.total > 0 ? (
               <>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                <p className="text-muted" style={{ marginBottom: '1rem' }}>
                   Creating products... {commitProgress.created}/{commitProgress.total}
                 </p>
-                <div style={{ background: 'var(--border)', borderRadius: '0.5rem', height: '0.75rem', overflow: 'hidden', maxWidth: '400px', margin: '0 auto' }}>
-                  <div style={{ background: 'var(--primary)', height: '100%', width: `${Math.round((commitProgress.created / commitProgress.total) * 100)}%`, transition: 'width 0.3s' }} />
+                <div className="imp-progress-track">
+                  <div className="imp-progress-fill" style={{ width: `${Math.round((commitProgress.created / commitProgress.total) * 100)}%` }} />
                 </div>
               </>
             ) : (
-              <p style={{ color: 'var(--text-muted)' }}>Creating products and updating inventory</p>
+              <p className="text-muted">Creating products and updating inventory</p>
             )}
           </div>
         )}
 
         {/* Step: Done */}
         {step === 'done' && commitResult && (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
-            <h3 style={{ color: 'var(--success)', marginBottom: '0.5rem' }}>Import Complete!</h3>
-            <p style={{ marginBottom: '1.5rem' }}>
+          <div className="card imp-center-card">
+            <div className="imp-step-icon">✅</div>
+            <h3 className="imp-success-title">Import Complete!</h3>
+            <p className="imp-result-text">
               <strong>{commitResult.created}</strong> products imported successfully.
               {commitResult.updated > 0 && (
                 <><br /><strong>{commitResult.updated}</strong> existing products updated.</>
@@ -564,17 +547,17 @@ export default function ImportPage() {
               )}
             </p>
             {commitResult.warnings.length > 0 && (
-              <div style={{ textAlign: 'left', background: '#fef3c7', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
-                {commitResult.warnings.map((w, i) => <p key={i} style={{ margin: '0.25rem 0' }}>{w}</p>)}
+              <div className="imp-warnings">
+                {commitResult.warnings.map((w, i) => <p key={i}>{w}</p>)}
                 {/* RET-POS-SYNC-002: Download error report */}
                 {jobId && (
-                  <button className="btn btn-secondary" onClick={handleDownloadErrors} style={{ marginTop: '0.75rem' }}>
+                  <button className="btn btn-secondary imp-download-btn-mt" onClick={handleDownloadErrors}>
                     Download Error Report (CSV)
                   </button>
                 )}
               </div>
             )}
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+            <div className="imp-actions-center">
               <a href="products" className="btn btn-primary">View Products</a>
               <button className="btn btn-secondary" onClick={reset}>
                 Import More

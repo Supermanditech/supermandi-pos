@@ -101,38 +101,35 @@ export function AIInsightsTab() {
   };
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>AI Intelligence</h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+    <div className="sa-p-24">
+      <div className="sa-flex-between sa-mb-16">
+        <h2 className="sa-text-lg sa-fw-600" style={{ margin: 0 }}>AI Intelligence</h2>
+        <div className="sa-flex sa-gap-8">
           {(['anomalies', 'alerts', 'jobs'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{
-              padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid var(--color-border)',
+            <button key={v} onClick={() => setView(v)} className="sa-btn-sm sa-radius-6 sa-border" style={{
               background: view === v ? '#1e40af' : 'var(--color-surface)',
               color: view === v ? '#fff' : 'var(--color-text-secondary)',
-              cursor: 'pointer', fontSize: '0.8rem',
             }}>{v.charAt(0).toUpperCase() + v.slice(1)}</button>
           ))}
         </div>
       </div>
 
       {error && (
-        <div style={{ background: 'var(--color-error-soft)', color: '#991b1b', padding: '0.75rem', borderRadius: 6, marginBottom: '1rem', fontSize: '0.85rem' }}>
+        <div className="sa-alert-error sa-mb-16">
           {error}
         </div>
       )}
 
       {view !== 'jobs' && (
-        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div className="sa-flex sa-gap-8 sa-mb-16">
           <input
             value={storeId}
             onChange={e => setStoreId(e.target.value)}
             placeholder="Enter Store ID..."
-            style={{ padding: '0.5rem', borderRadius: 6, border: '1px solid var(--color-border)', fontSize: '0.85rem', width: 300 }}
+            className="sa-input sa-radius-6" style={{ width: 300 }}
           />
-          <button onClick={fetchData} disabled={!storeId} style={{
-            padding: '0.5rem 1rem', borderRadius: 6, border: 'none',
-            background: storeId ? '#1e40af' : 'var(--color-text-secondary)', color: '#fff', cursor: 'pointer', fontSize: '0.85rem',
+          <button onClick={fetchData} disabled={!storeId} className="sa-btn-sm sa-radius-6" style={{
+            background: storeId ? '#1e40af' : 'var(--color-text-secondary)', color: '#fff',
           }}>Load</button>
         </div>
       )}
@@ -140,43 +137,43 @@ export function AIInsightsTab() {
       {view === 'anomalies' && (
         <div>
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading...</div>
+            <div className="sa-p-20 sa-text-center sa-text-muted">Loading...</div>
           ) : anomalies.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            <div className="sa-p-20 sa-text-center sa-text-muted">
               {storeId ? 'No anomalies detected' : 'Enter a Store ID to view anomalies'}
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <table className="table">
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Type</th>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Severity</th>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Description</th>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Detected</th>
-                  <th style={{ textAlign: 'center', padding: '0.5rem' }}>Reviewed</th>
+                <tr>
+                  <th className="sa-th">Type</th>
+                  <th className="sa-th">Severity</th>
+                  <th className="sa-th">Description</th>
+                  <th className="sa-th">Detected</th>
+                  <th className="sa-th sa-text-center">Reviewed</th>
                 </tr>
               </thead>
               <tbody>
                 {anomalies.map(a => (
-                  <tr key={a.id} style={{ borderBottom: '1px solid var(--color-surface-alt)' }}>
-                    <td style={{ padding: '0.5rem' }}>
-                      <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: 'var(--color-surface-alt)' }}>
+                  <tr key={a.id}>
+                    <td className="sa-td">
+                      <span className="sa-badge-muted">
                         {a.anomalyType.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td style={{ padding: '0.5rem' }}>
-                      <span style={{ color: severityColor(a.severity), fontWeight: 600, fontSize: '0.8rem' }}>
+                    <td className="sa-td">
+                      <span className="sa-fw-600 sa-text-sm" style={{ color: severityColor(a.severity) }}>
                         {a.severity}
                       </span>
                     </td>
-                    <td style={{ padding: '0.5rem', maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td className="sa-td sa-nowrap" style={{ maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {a.description}
                     </td>
-                    <td style={{ padding: '0.5rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                    <td className="sa-td sa-text-sm sa-text-muted">
                       {new Date(a.detectedAt).toLocaleString('en-IN')}
                     </td>
-                    <td style={{ textAlign: 'center', padding: '0.5rem' }}>
-                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: a.isReviewed ? 'var(--color-success)' : 'var(--color-warning)' }} />
+                    <td className="sa-td sa-text-center">
+                      <span className={a.isReviewed ? 'sa-dot sa-dot--success' : 'sa-dot sa-dot--warning'} />
                     </td>
                   </tr>
                 ))}
@@ -189,25 +186,24 @@ export function AIInsightsTab() {
       {view === 'alerts' && (
         <div>
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading...</div>
+            <div className="sa-p-20 sa-text-center sa-text-muted">Loading...</div>
           ) : alerts.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            <div className="sa-p-20 sa-text-center sa-text-muted">
               {storeId ? 'No alerts' : 'Enter a Store ID to view alerts'}
             </div>
           ) : (
             alerts.map(a => (
-              <div key={a.id} style={{
-                padding: '0.75rem', marginBottom: '0.5rem', borderRadius: 6,
+              <div key={a.id} className="sa-p-12 sa-mb-8 sa-radius-6" style={{
                 border: `1px solid ${a.isRead ? 'var(--color-border)' : severityColor(a.severity)}`,
                 borderLeftWidth: 3,
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>{a.title}</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>
+                <div className="sa-flex-between">
+                  <span className="sa-fw-500 sa-text-md">{a.title}</span>
+                  <span className="sa-text-xs sa-text-muted">
                     {new Date(a.createdAt).toLocaleString('en-IN')}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: 2 }}>{a.message}</div>
+                <div className="sa-text-sm sa-text-muted sa-mt-4">{a.message}</div>
               </div>
             ))
           )}
@@ -216,10 +212,10 @@ export function AIInsightsTab() {
 
       {view === 'jobs' && (
         <div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+          <p className="sa-text-md sa-text-muted sa-mb-16">
             Manually trigger AI computation jobs. In production, these run on Cloud Scheduler.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="sa-flex-col sa-gap-8">
             {[
               { endpoint: 'admin/jobs/ai-alerts', name: 'Run Alert Analysis' },
               { endpoint: 'admin/jobs/ai-forecasts', name: 'Run Demand Forecasting' },
@@ -229,16 +225,13 @@ export function AIInsightsTab() {
               { endpoint: 'admin/jobs/ai-anomaly-detection', name: 'Run Anomaly Detection' },
               { endpoint: 'admin/jobs/ai-recommendations', name: 'Run Recommendations' },
             ].map(job => (
-              <button key={job.endpoint} onClick={() => runJob(job.endpoint, job.name)} style={{
-                padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid var(--color-border)',
-                background: 'var(--color-surface)', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'left',
-              }}>
+              <button key={job.endpoint} onClick={() => runJob(job.endpoint, job.name)} className="sa-btn-ghost-sm sa-radius-6 sa-text-left">
                 {job.name}
               </button>
             ))}
           </div>
           {jobResult && (
-            <pre style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--color-surface-alt)', borderRadius: 6, fontSize: '0.8rem', overflow: 'auto' }}>
+            <pre className="sa-mt-16 sa-p-12 sa-bg-surface-alt sa-radius-6 sa-text-sm sa-overflow-auto">
               {jobResult}
             </pre>
           )}

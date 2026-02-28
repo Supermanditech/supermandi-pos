@@ -23,9 +23,9 @@ class ModalErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: "2rem", textAlign: "center" }}>
-          <p style={{ color: "#991b1b", marginBottom: 12 }}>Error loading data</p>
-          <button onClick={this.props.onClose} style={{ padding: "6px 16px", cursor: "pointer" }}>Close</button>
+        <div className="sa-p-24 sa-text-center">
+          <p className="sa-text-error sa-mb-12">Error loading data</p>
+          <button className="sa-btn-ghost-sm" onClick={this.props.onClose}>Close</button>
         </div>
       );
     }
@@ -287,12 +287,13 @@ export function SuppliersTab({
                   <div>
                     <strong>GSTIN:</strong> <span className="mono">{request.requestedGstin || "-"}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div className="sa-flex sa-gap-4">
                     <strong>Phone:</strong> <span className="mono">{request.requestedPhone || "-"}</span>
                     {request.requestedPhone && (
                       <button
                         onClick={() => window.open(`https://wa.me/${request.requestedPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${request.requestedName || 'there'}, this is SuperMandi admin.`)}`, '_blank', 'noopener,noreferrer')}
-                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
+                        className="sa-btn-text sa-flex"
+                        style={{ padding: 2 }}
                         title="Message on WhatsApp"
                         aria-label="Message on WhatsApp"
                       >
@@ -308,8 +309,8 @@ export function SuppliersTab({
                   </div>
                 </div>
 
-                <div style={{ marginTop: 12 }}>
-                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Link to Verified Supplier:</label>
+                <div className="sa-mt-12">
+                  <label className="sa-form-label">Link to Verified Supplier:</label>
                   <select
                     className="selectSmall"
                     style={{ width: "100%", marginBottom: 8 }}
@@ -325,8 +326,8 @@ export function SuppliersTab({
                   </select>
                 </div>
 
-                <div style={{ marginTop: 8 }}>
-                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Reject Reason (optional):</label>
+                <div className="sa-mt-8">
+                  <label className="sa-form-label">Reject Reason (optional):</label>
                   <input
                     className="tableInput"
                     style={{ width: "100%", marginBottom: 8 }}
@@ -370,7 +371,8 @@ export function SuppliersTab({
 
       {/* SA-P1-008: Pending Bank Verifications */}
       {bankChanges.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
+        <div className="sa-mb-16">
+
           <div className="cardHeader">
             <div>
               <div className="cardTitle">
@@ -381,47 +383,46 @@ export function SuppliersTab({
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "0 16px 16px" }}>
+          <div className="sa-flex-col sa-gap-12" style={{ padding: "0 16px 16px" }}>
             {bankChanges.map((bc) => (
-              <div key={bc.id} className="card" style={{ padding: "12px 16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div key={bc.id} className="card sa-p-16">
+                <div className="sa-flex-between" style={{ alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{bc.businessName}</div>
-                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>GSTIN: {bc.gstin}</div>
-                    {bc.phone && <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Phone: {bc.phone}</div>}
+                    <div className="sa-fw-600 sa-text-base">{bc.businessName}</div>
+                    <div className="sa-text-sm sa-text-muted sa-mt-4">GSTIN: {bc.gstin}</div>
+                    {bc.phone && <div className="sa-text-sm sa-text-muted">Phone: {bc.phone}</div>}
                   </div>
-                  <div style={{ textAlign: "right", fontSize: 11, color: "var(--color-text-secondary)" }}>
+                  <div className="sa-text-right sa-text-xs sa-text-muted">
                     Changed: {new Date(bc.updatedAt).toLocaleDateString()}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 24, marginTop: 8, fontSize: 13 }}>
-                  <div><span style={{ color: "var(--color-text-secondary)" }}>Account:</span> {bc.bankAccountMasked || "N/A"}</div>
-                  <div><span style={{ color: "var(--color-text-secondary)" }}>IFSC:</span> {bc.bankIfsc || "N/A"}</div>
-                  <div><span style={{ color: "var(--color-text-secondary)" }}>Holder:</span> {bc.bankAccountName || "N/A"}</div>
+                <div className="sa-flex sa-gap-24 sa-mt-8 sa-text-md">
+                  <div><span className="sa-text-muted">Account:</span> {bc.bankAccountMasked || "N/A"}</div>
+                  <div><span className="sa-text-muted">IFSC:</span> {bc.bankIfsc || "N/A"}</div>
+                  <div><span className="sa-text-muted">Holder:</span> {bc.bankAccountName || "N/A"}</div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
+                <div className="sa-flex sa-gap-8 sa-mt-12">
                   <button
-                    className="btnPrimary"
+                    className="sa-btn-success-sm"
                     onClick={() => confirmedBankApprove(bc.id)}
                     disabled={bankVerifyLoading[bc.id]}
-                    style={{ fontSize: 12, padding: "4px 12px" }}
                   >
                     {bankVerifyLoading[bc.id] ? "..." : "Approve Bank Details"}
                   </button>
                   <input
                     type="text"
+                    className="sa-input sa-input--sm"
                     placeholder="Rejection reason (min 10 chars)"
                     value={bankRejectReason[bc.id] || ""}
                     onChange={(e) => setBankRejectReason((prev) => ({ ...prev, [bc.id]: e.target.value }))}
-                    style={{ flex: 1, fontSize: 12, padding: "4px 8px", border: "1px solid var(--color-border)", borderRadius: 4 }}
+                    style={{ flex: 1 }}
                   />
                   <button
-                    className="btnGhost"
+                    className="sa-btn-danger-sm"
                     onClick={() => handleBankVerify(bc.id, "reject")}
                     disabled={bankVerifyLoading[bc.id]}
-                    style={{ color: "var(--color-error)", fontSize: 12, padding: "4px 12px" }}
                   >
                     {bankVerifyLoading[bc.id] ? "..." : "Reject"}
                   </button>
@@ -486,12 +487,13 @@ export function SuppliersTab({
                   </td>
                   <td className="mono">{s.gstin}</td>
                   <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div className="sa-flex sa-gap-4">
                       <span className="mono">{s.primaryPhone || "-"}</span>
                       {s.primaryPhone && (
                         <button
                           onClick={() => window.open(`https://wa.me/${s.primaryPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${s.businessName}, this is SuperMandi admin.`)}`, '_blank', 'noopener,noreferrer')}
-                          style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
+                          className="sa-btn-text sa-flex"
+                          style={{ padding: 2 }}
                           title="Message on WhatsApp"
                           aria-label="Message on WhatsApp"
                         >
@@ -512,11 +514,7 @@ export function SuppliersTab({
                     <button
                       onClick={() => handleToggleAutoApprove(s.id, !!s.autoApproveProducts)}
                       disabled={autoApproveLoading[s.id]}
-                      style={{
-                        padding: "4px 10px", fontSize: 12, border: "1px solid var(--color-border)", borderRadius: 4, cursor: "pointer",
-                        background: s.autoApproveProducts ? "var(--color-success)" : "var(--color-surface-alt)",
-                        color: s.autoApproveProducts ? "#fff" : "var(--color-text-primary)",
-                      }}
+                      className={s.autoApproveProducts ? "sa-btn-success-sm" : "sa-btn-ghost-sm"}
                     >
                       {autoApproveLoading[s.id] ? "..." : s.autoApproveProducts ? "ON" : "OFF"}
                     </button>
@@ -524,15 +522,14 @@ export function SuppliersTab({
                   <td>
                     {s.verificationStatus === "SUSPENDED" ? (
                       <button
-                        style={{ background: "var(--color-success)", color: "white", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+                        className="sa-btn-success-sm"
                         onClick={() => requestSupplierStatusChange(s.id, s.businessName, "reactivate")}
                       >
                         Reactivate
                       </button>
                     ) : (
                       <button
-                        className="btnDanger"
-                        style={{ padding: "4px 10px", fontSize: 12 }}
+                        className="sa-btn-danger-sm"
                         onClick={() => requestSupplierStatusChange(s.id, s.businessName, "suspend")}
                       >
                         Suspend
@@ -565,8 +562,8 @@ export function SuppliersTab({
 
       {/* T-188: Batch action buttons — shown when products exist */}
       {pendingProducts.length > 0 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 16px 12px", flexWrap: "wrap" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+        <div className="sa-flex sa-gap-8 sa-flex-wrap" style={{ padding: "0 16px 12px" }}>
+          <label className="sa-flex sa-gap-6 sa-text-md" style={{ cursor: "pointer" }}>
             <input
               type="checkbox"
               checked={selectedProductIds.size === pendingProducts.length && pendingProducts.length > 0}
@@ -578,33 +575,25 @@ export function SuppliersTab({
           {selectedProductIds.size > 0 && (
             <>
               <button
+                className="sa-btn-success-sm sa-fw-600"
                 onClick={handleBatchApprove}
                 disabled={batchActionLoading}
-                style={{
-                  background: "var(--color-success)", color: "white", border: "none", borderRadius: 4,
-                  padding: "6px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600,
-                }}
+                style={{ padding: "6px 14px" }}
               >
                 {batchActionLoading ? "Processing..." : `Approve Selected (${selectedProductIds.size})`}
               </button>
               <button
+                className="sa-btn-danger-sm sa-fw-600"
                 onClick={() => setBatchRejectModalOpen(true)}
                 disabled={batchActionLoading}
-                style={{
-                  background: "var(--color-error)", color: "white", border: "none", borderRadius: 4,
-                  padding: "6px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600,
-                }}
+                style={{ padding: "6px 14px" }}
               >
                 {batchActionLoading ? "Processing..." : `Reject Selected (${selectedProductIds.size})`}
               </button>
             </>
           )}
           {batchProgress && (
-            <span style={{
-              fontSize: 12,
-              color: batchProgress.startsWith("Error") ? "var(--color-error)" : batchProgress.startsWith("Done") ? "var(--color-success)" : "var(--color-text-secondary)",
-              fontWeight: 500,
-            }}>
+            <span className={`sa-text-sm sa-fw-500 ${batchProgress.startsWith("Error") ? "sa-text-error" : batchProgress.startsWith("Done") ? "sa-text-success" : "sa-text-muted"}`}>
               {batchProgress}
             </span>
           )}
@@ -624,7 +613,7 @@ export function SuppliersTab({
               }}>
                 <div className="deviceHeader">
                   {/* T-188: Checkbox + T-162: Product image thumbnail (48x48) */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                  <div className="sa-flex sa-gap-10" style={{ flex: 1, minWidth: 0 }}>
                     <input
                       type="checkbox"
                       checked={selectedProductIds.has(product.id)}
@@ -646,19 +635,8 @@ export function SuppliersTab({
                       />
                     ) : (
                       <div
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 6,
-                          background: "var(--color-surface-alt)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--color-text-secondary)",
-                          fontSize: 20,
-                          flexShrink: 0,
-                          border: "1px solid var(--color-border)",
-                        }}
+                        className="sa-flex-center sa-bg-surface-alt sa-text-muted sa-border sa-radius-6"
+                        style={{ width: 48, height: 48, fontSize: 20, flexShrink: 0 }}
                         title="No product image"
                       >
                         &#128230;
@@ -694,8 +672,8 @@ export function SuppliersTab({
                   </div>
                 </div>
 
-                <div style={{ marginTop: 8 }}>
-                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Reject Reason (min 10 chars):</label>
+                <div className="sa-mt-8">
+                  <label className="sa-form-label">Reject Reason (min 10 chars):</label>
                   <input
                     className="tableInput"
                     style={{ width: "100%", marginBottom: 8 }}
@@ -744,7 +722,7 @@ export function SuppliersTab({
                   </button>
                 </div>
                 {publishResult[product.id] && (
-                  <div style={{ marginTop: 4, fontSize: 11, color: publishResult[product.id].startsWith("Error") ? "var(--color-error)" : "var(--color-success)" }}>
+                  <div className={`sa-mt-4 sa-text-xs ${publishResult[product.id].startsWith("Error") ? "sa-text-error" : "sa-text-success"}`}>
                     {publishResult[product.id]}
                   </div>
                 )}
@@ -763,7 +741,7 @@ export function SuppliersTab({
               <button className="btnGhost" onClick={() => setBatchRejectModalOpen(false)} aria-label="Close">&times;</button>
             </div>
             <div className="modalBody">
-              <p style={{ marginBottom: 12, fontSize: 14, color: "var(--color-text-secondary)" }}>
+              <p className="sa-mb-12 sa-text-base sa-text-muted">
                 Provide a reason for rejecting the selected products. This will be sent to the supplier.
               </p>
               <div className="control">
@@ -773,11 +751,11 @@ export function SuppliersTab({
                   onChange={(e) => setBatchRejectReason(e.target.value)}
                   placeholder="Enter reason for rejection..."
                   rows={3}
-                  style={{ width: "100%", padding: "8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: 14, resize: "vertical" }}
+                  className="sa-textarea"
                 />
               </div>
               {batchRejectReason.length > 0 && batchRejectReason.length < 10 && (
-                <div style={{ fontSize: 12, color: "var(--color-error)", marginTop: 4 }}>
+                <div className="sa-text-sm sa-text-error sa-mt-4">
                   Reason must be at least 10 characters ({batchRejectReason.length}/10)
                 </div>
               )}
@@ -814,48 +792,31 @@ export function SuppliersTab({
             <ModalErrorBoundary onClose={handleCloseEditProduct} resetKey={editingProduct.id}>
             <div className="modalBody">
               {/* T-162: Larger product image preview (200x200) in detail modal */}
-              <div style={{ marginBottom: 16, textAlign: "center" }}>
+              <div className="sa-mb-16 sa-text-center">
                 {editingProduct.imageUrl || editingProduct.thumbnailUrl ? (
                   <img
                     src={editingProduct.imageUrl || editingProduct.thumbnailUrl || ""}
                     alt={editingProduct.productName}
-                    style={{
-                      width: 200,
-                      height: 200,
-                      objectFit: "cover",
-                      borderRadius: 6,
-                      border: "1px solid var(--color-border)",
-                      display: "inline-block",
-                    }}
+                    className="sa-border sa-radius-6"
+                    style={{ width: 200, height: 200, objectFit: "cover", display: "inline-block" }}
                   />
                 ) : (
                   <div
-                    style={{
-                      width: 200,
-                      height: 200,
-                      borderRadius: 6,
-                      background: "var(--color-surface-alt)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexDirection: "column",
-                      color: "var(--color-text-secondary)",
-                      border: "1px solid var(--color-border)",
-                      gap: 8,
-                    }}
+                    className="sa-bg-surface-alt sa-text-muted sa-border sa-radius-6 sa-flex-col sa-gap-8"
+                    style={{ width: 200, height: 200, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                   >
                     <span style={{ fontSize: 40 }}>&#128230;</span>
-                    <span style={{ fontSize: 12 }}>No image</span>
+                    <span className="sa-text-sm">No image</span>
                   </div>
                 )}
               </div>
-              <div style={{ marginBottom: 12 }}>
+              <div className="sa-mb-12">
                 <strong>Original Name:</strong> {editingProduct.productName}
               </div>
-              <div style={{ marginBottom: 12 }}>
+              <div className="sa-mb-12">
                 <strong>Purchase Price:</strong> INR {(editingProduct.purchasePrice / 100).toFixed(2)}
               </div>
-              <div style={{ marginBottom: 12 }}>
+              <div className="sa-mb-12">
                 <strong>MRP:</strong> INR {(editingProduct.mrp / 100).toFixed(2)}
               </div>
 

@@ -117,7 +117,7 @@ export function CreditProvidersTab() {
     });
   };
 
-  if (loading) return <div style={{ padding: '2rem', color: 'var(--color-text-secondary)' }}>Loading finance dashboard...</div>;
+  if (loading) return <div className="sa-p-24 sa-text-muted">Loading finance dashboard...</div>;
 
   // Aggregate totals
   const totalDisbursed = stats.reduce((s, r) => s + Math.round(Number(r.total_disbursed_minor) || 0), 0);
@@ -127,59 +127,52 @@ export function CreditProvidersTab() {
   const totalOverdue = stats.reduce((s, r) => s + Math.round(Number(r.overdue) || 0), 0);
 
   return (
-    <div style={{ padding: '1.5rem' }}>
+    <div className="sa-p-24">
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
-      <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>Finance & Credit Providers</h2>
+      <h2 className="sa-text-xl sa-fw-600 sa-mb-20">Finance & Credit Providers</h2>
 
       {error && (
-        <div style={{ background: 'var(--color-error-soft)', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-          {error} <button onClick={fetchAll} style={{ marginLeft: '0.5rem', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}>Retry</button>
+        <div className="sa-alert-error sa-mb-16">
+          {error} <button onClick={fetchAll} className="sa-btn-text" style={{ marginLeft: '0.5rem', textDecoration: 'underline' }}>Retry</button>
         </div>
       )}
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-        <div style={{ background: 'var(--color-success-soft)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-success)' }}>
-          <div style={{ fontSize: '0.75rem', color: '#166534' }}>Total Disbursed</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{fmt(totalDisbursed)}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }} className="sa-mb-20">
+        <div className="sa-stat-card sa-bg-success-soft" style={{ borderColor: 'var(--color-success)' }}>
+          <div className="sa-stat-label sa-text-success">Total Disbursed</div>
+          <div className="sa-stat-value--sm sa-fw-700">{fmt(totalDisbursed)}</div>
         </div>
-        <div style={{ background: 'var(--color-error-soft)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-error)' }}>
-          <div style={{ fontSize: '0.75rem', color: '#991b1b' }}>Outstanding</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-error)' }}>{fmt(totalOutstanding)}</div>
+        <div className="sa-stat-card sa-bg-error-soft" style={{ borderColor: 'var(--color-error)' }}>
+          <div className="sa-stat-label sa-text-error">Outstanding</div>
+          <div className="sa-stat-value--sm sa-fw-700 sa-text-danger">{fmt(totalOutstanding)}</div>
         </div>
-        <div style={{ background: '#eff6ff', padding: '1rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-          <div style={{ fontSize: '0.75rem', color: '#1e40af' }}>Repaid</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{fmt(totalRepaid)}</div>
+        <div className="sa-stat-card" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+          <div className="sa-stat-label sa-text-info">Repaid</div>
+          <div className="sa-stat-value--sm sa-fw-700">{fmt(totalRepaid)}</div>
         </div>
-        <div style={{ background: 'var(--color-surface-alt)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Active Loans</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{totalActive}</div>
+        <div className="sa-stat-card sa-bg-surface-alt">
+          <div className="sa-stat-label">Active Loans</div>
+          <div className="sa-stat-value--sm sa-fw-700">{totalActive}</div>
         </div>
-        <div style={{ background: totalOverdue > 0 ? 'var(--color-error-soft)' : 'var(--color-surface-alt)', padding: '1rem', borderRadius: '8px', border: `1px solid ${totalOverdue > 0 ? 'var(--color-error)' : 'var(--color-border)'}` }}>
-          <div style={{ fontSize: '0.75rem', color: totalOverdue > 0 ? '#991b1b' : 'var(--color-text-secondary)' }}>Overdue</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 700, color: totalOverdue > 0 ? 'var(--color-error)' : undefined }}>{totalOverdue}</div>
+        <div className={`sa-stat-card ${totalOverdue > 0 ? 'sa-bg-error-soft' : 'sa-bg-surface-alt'}`} style={{ borderColor: totalOverdue > 0 ? 'var(--color-error)' : undefined }}>
+          <div className={`sa-stat-label ${totalOverdue > 0 ? 'sa-text-error' : ''}`}>Overdue</div>
+          <div className={`sa-stat-value--sm sa-fw-700 ${totalOverdue > 0 ? 'sa-text-danger' : ''}`}>{totalOverdue}</div>
         </div>
       </div>
 
       {/* Provider Health */}
-      <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', fontWeight: 600 }}>Provider Health</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
+      <h3 className="sa-text-lg sa-fw-600 sa-mb-12">Provider Health</h3>
+      <div className="sa-grid-auto sa-mb-20">
         {health.map(h => (
-          <div key={h.providerId} style={{
-            padding: '0.75rem',
-            borderRadius: '8px',
-            border: `1px solid ${h.status === 'healthy' ? 'var(--color-success)' : h.status === 'degraded' ? 'var(--color-warning)' : 'var(--color-error)'}`,
-            background: h.status === 'healthy' ? 'var(--color-success-soft)' : h.status === 'degraded' ? 'var(--color-warning-soft)' : 'var(--color-error-soft)',
+          <div key={h.providerId} className={`sa-p-12 sa-radius-8 sa-border ${h.status === 'healthy' ? 'sa-bg-success-soft' : h.status === 'degraded' ? 'sa-bg-warning-soft' : 'sa-bg-error-soft'}`} style={{
+            borderColor: h.status === 'healthy' ? 'var(--color-success)' : h.status === 'degraded' ? 'var(--color-warning)' : 'var(--color-error)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>{h.providerId}</span>
-              <span style={{
-                fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '10px',
-                background: h.status === 'healthy' ? 'var(--color-success-soft)' : h.status === 'degraded' ? 'var(--color-warning-soft)' : 'var(--color-error-soft)',
-                color: h.status === 'healthy' ? '#166534' : h.status === 'degraded' ? '#9a3412' : '#991b1b',
-              }}>{h.status}</span>
+            <div className="sa-flex-between">
+              <span className="sa-fw-500 sa-text-md">{h.providerId}</span>
+              <span className={h.status === 'healthy' ? 'sa-badge-ok' : h.status === 'degraded' ? 'sa-badge-warn' : 'sa-badge-error'}>{h.status}</span>
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
+            <div className="sa-text-sm sa-text-muted sa-mt-4">
               Latency: {h.latencyMs}ms
               {h.approvalRate != null && ` | Approval: ${h.approvalRate}%`}
             </div>
@@ -188,50 +181,46 @@ export function CreditProvidersTab() {
       </div>
 
       {/* Provider Configuration */}
-      <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', fontWeight: 600 }}>Providers ({providers.length})</h3>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+      <h3 className="sa-text-lg sa-fw-600 sa-mb-12">Providers ({providers.length})</h3>
+      <table className="table">
         <thead>
-          <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Provider</th>
-            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Mode</th>
-            <th style={{ textAlign: 'center', padding: '0.5rem' }}>Priority</th>
-            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Min</th>
-            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Max</th>
-            <th style={{ textAlign: 'center', padding: '0.5rem' }}>Active</th>
-            <th style={{ textAlign: 'center', padding: '0.5rem' }}>Action</th>
+          <tr>
+            <th className="sa-th">Provider</th>
+            <th className="sa-th">Mode</th>
+            <th className="sa-th" style={{ textAlign: 'center' }}>Priority</th>
+            <th className="sa-th sa-th--right">Min</th>
+            <th className="sa-th sa-th--right">Max</th>
+            <th className="sa-th" style={{ textAlign: 'center' }}>Active</th>
+            <th className="sa-th" style={{ textAlign: 'center' }}>Action</th>
           </tr>
         </thead>
         <tbody>
           {providers.map(p => {
             return (
-              <tr key={p.provider_id} style={{ borderBottom: '1px solid var(--color-surface-alt)' }}>
-                <td style={{ padding: '0.5rem' }}>
-                  <div style={{ fontWeight: 500 }}>{p.provider_name}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>{p.provider_id}</div>
+              <tr key={p.provider_id}>
+                <td className="sa-td">
+                  <div className="sa-fw-500">{p.provider_name}</div>
+                  <div className="sa-text-xs sa-text-muted">{p.provider_id}</div>
                 </td>
-                <td style={{ padding: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'var(--color-surface-alt)' }}>{p.mode}</span>
+                <td className="sa-td">
+                  <span className="sa-badge-muted">{p.mode}</span>
                 </td>
-                <td style={{ textAlign: 'center', padding: '0.5rem' }}>{p.priority}</td>
-                <td style={{ textAlign: 'right', padding: '0.5rem', fontFamily: 'monospace' }}>{fmt(p.min_amount_minor)}</td>
-                <td style={{ textAlign: 'right', padding: '0.5rem', fontFamily: 'monospace' }}>{fmt(p.max_amount_minor)}</td>
-                <td style={{ textAlign: 'center', padding: '0.5rem' }}>
-                  <span style={{
-                    display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-                    background: togglingId === p.provider_id ? '#facc15' : p.is_active ? 'var(--color-success)' : 'var(--color-text-secondary)',
+                <td className="sa-td" style={{ textAlign: 'center' }}>{p.priority}</td>
+                <td className="sa-td sa-td--right sa-td--mono">{fmt(p.min_amount_minor)}</td>
+                <td className="sa-td sa-td--right sa-td--mono">{fmt(p.max_amount_minor)}</td>
+                <td className="sa-td" style={{ textAlign: 'center' }}>
+                  <span className={`sa-dot ${togglingId === p.provider_id ? 'sa-dot--warning' : p.is_active ? 'sa-dot--success' : 'sa-dot--muted'}`} style={{
                     animation: togglingId === p.provider_id ? 'pulse 1s ease-in-out infinite' : undefined,
                   }} />
                 </td>
-                <td style={{ textAlign: 'center', padding: '0.5rem' }}>
+                <td className="sa-td" style={{ textAlign: 'center' }}>
                   <button
                     onClick={() => toggleProvider(p.provider_id, p.is_active)}
                     disabled={togglingId === p.provider_id}
+                    className="sa-btn-ghost-sm"
                     style={{
-                      fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px',
-                      border: '1px solid var(--color-border)',
-                      background: togglingId === p.provider_id ? 'var(--color-surface-alt)' : 'var(--color-surface)',
-                      cursor: togglingId === p.provider_id ? 'wait' : 'pointer',
                       opacity: togglingId === p.provider_id ? 0.6 : 1,
+                      cursor: togglingId === p.provider_id ? 'wait' : 'pointer',
                     }}
                   >
                     {togglingId === p.provider_id ? 'Updating...' : p.is_active ? 'Disable' : 'Enable'}
@@ -246,31 +235,31 @@ export function CreditProvidersTab() {
       {/* Per-Provider Stats */}
       {stats.length > 0 && (
         <>
-          <h3 style={{ margin: '1.5rem 0 0.75rem', fontSize: '1rem', fontWeight: 600 }}>Per-Provider Stats</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <h3 className="sa-text-lg sa-fw-600 sa-mt-20 sa-mb-12">Per-Provider Stats</h3>
+          <table className="table">
             <thead>
-              <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                <th style={{ textAlign: 'left', padding: '0.5rem' }}>Provider</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Total</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Active</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Overdue</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Paid</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Disbursed</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Outstanding</th>
-                <th style={{ textAlign: 'right', padding: '0.5rem' }}>Repaid</th>
+              <tr>
+                <th className="sa-th">Provider</th>
+                <th className="sa-th sa-th--right">Total</th>
+                <th className="sa-th sa-th--right">Active</th>
+                <th className="sa-th sa-th--right">Overdue</th>
+                <th className="sa-th sa-th--right">Paid</th>
+                <th className="sa-th sa-th--right">Disbursed</th>
+                <th className="sa-th sa-th--right">Outstanding</th>
+                <th className="sa-th sa-th--right">Repaid</th>
               </tr>
             </thead>
             <tbody>
               {stats.map(s => (
-                <tr key={s.provider_id} style={{ borderBottom: '1px solid var(--color-surface-alt)' }}>
-                  <td style={{ padding: '0.5rem', fontWeight: 500 }}>{s.provider_id}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem' }}>{s.total_drawdowns}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem' }}>{s.active}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem', color: parseInt(s.overdue) > 0 ? 'var(--color-error)' : undefined }}>{s.overdue}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem' }}>{s.paid}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem', fontFamily: 'monospace' }}>{fmt(s.total_disbursed_minor)}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem', fontFamily: 'monospace', color: parseInt(s.outstanding_minor) > 0 ? 'var(--color-error)' : undefined }}>{fmt(s.outstanding_minor)}</td>
-                  <td style={{ textAlign: 'right', padding: '0.5rem', fontFamily: 'monospace' }}>{fmt(s.total_repaid_minor)}</td>
+                <tr key={s.provider_id}>
+                  <td className="sa-td sa-td--bold">{s.provider_id}</td>
+                  <td className="sa-td sa-td--right">{s.total_drawdowns}</td>
+                  <td className="sa-td sa-td--right">{s.active}</td>
+                  <td className="sa-td sa-td--right" style={{ color: parseInt(s.overdue) > 0 ? 'var(--color-error)' : undefined }}>{s.overdue}</td>
+                  <td className="sa-td sa-td--right">{s.paid}</td>
+                  <td className="sa-td sa-td--right sa-td--mono">{fmt(s.total_disbursed_minor)}</td>
+                  <td className="sa-td sa-td--right sa-td--mono" style={{ color: parseInt(s.outstanding_minor) > 0 ? 'var(--color-error)' : undefined }}>{fmt(s.outstanding_minor)}</td>
+                  <td className="sa-td sa-td--right sa-td--mono">{fmt(s.total_repaid_minor)}</td>
                 </tr>
               ))}
             </tbody>

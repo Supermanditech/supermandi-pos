@@ -761,11 +761,11 @@ export default function ProductsPage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Products' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex-between">
           <h1 className="page-title">Products</h1>
           <button
             className="btn btn-primary"
@@ -791,94 +791,60 @@ export default function ProductsPage() {
       <div className="page-content">
         {/* Success Message */}
         {success && (
-          <div style={{
-            background: '#dcfce7',
-            color: '#166534',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-inline-success">
             {success}
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-inline-error">
             {error}
           </div>
         )}
 
         {/* Add/Edit Product Form */}
         {showForm && (
-          <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
-            <h3 className="card-title" style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+          <div className="card prod-form-card">
+            <h3 className="card-title prod-form-title">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
             <form onSubmit={handleSubmit}>
               {/* Success: Show created product info with SKU PDF download */}
               {createdProduct && (
-                <div style={{
-                  background: '#dcfce7',
-                  border: '2px solid #22c55e',
-                  borderRadius: '0.5rem',
-                  padding: '1rem',
-                  marginBottom: '1.5rem',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>✅</span>
-                    <strong style={{ color: '#166534' }}>Product Synced to POS!</strong>
+                <div className="prod-created-box">
+                  <div className="prod-created-header">
+                    <span className="prod-created-icon">✅</span>
+                    <strong className="prod-created-title">Product Synced to POS!</strong>
                   </div>
 
                   {createdProduct.storeProduct.mode === 'LOOSE_BULK' && createdProduct.generatedBarcode && (
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <p style={{ margin: '0 0 0.5rem 0', color: '#166534' }}>
+                    <div className="prod-barcode-block">
+                      <p className="prod-barcode-text">
                         <strong>Generated Barcode:</strong>
-                        <code style={{
-                          marginLeft: '0.5rem',
-                          padding: '0.25rem 0.5rem',
-                          background: 'white',
-                          borderRadius: '0.25rem',
-                          fontFamily: 'monospace',
-                          fontSize: '1rem',
-                        }}>
+                        <code className="prod-barcode-code">
                           {createdProduct.generatedBarcode}
                         </code>
                       </p>
-                      <p style={{ margin: '0', fontSize: '0.875rem', color: '#166534' }}>
+                      <p className="prod-barcode-hint">
                         Scan this barcode in POS SELL to add this product.
                       </p>
                     </div>
                   )}
 
                   {createdProduct.storeProduct.mode === 'PACKAGED' && createdProduct.barcode && (
-                    <p style={{ margin: '0 0 0.75rem 0', color: '#166534' }}>
+                    <p className="prod-barcode-text">
                       <strong>Barcode:</strong>
-                      <code style={{
-                        marginLeft: '0.5rem',
-                        padding: '0.25rem 0.5rem',
-                        background: 'white',
-                        borderRadius: '0.25rem',
-                        fontFamily: 'monospace',
-                      }}>
+                      <code className="prod-barcode-code">
                         {createdProduct.barcode}
                       </code>
                     </p>
                   )}
 
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="prod-created-actions">
                     <a
                       href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${createdProduct.productId}/sku.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn btn-primary"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                      className="btn btn-primary prod-sku-link"
                     >
                       📄 Download SKU Labels (PDF)
                     </a>
@@ -907,25 +873,17 @@ export default function ProductsPage() {
               )}
 
               {/* ═══ STEP 1: Product Type ═══ */}
-              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-                <label className="form-label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>1</span>
+              <div className="prod-form-section">
+                <label className="form-label prod-step-label">
+                  <span className="prod-step-badge">1</span>
                   Product Mode *
                 </label>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div className="prod-mode-options">
                   <label
+                    className="prod-mode-label"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 0.75rem',
                       border: `2px solid ${formData.mode === 'PACKAGED' ? 'var(--primary)' : 'var(--border)'}`,
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
                       background: formData.mode === 'PACKAGED' ? 'var(--primary-light)' : 'white',
-                      transition: 'all 0.2s',
-                      flex: '1',
-                      maxWidth: '220px',
                     }}
                     onClick={() => handleModeChange('PACKAGED')}
                   >
@@ -939,23 +897,15 @@ export default function ProductsPage() {
                     <span>
                       <strong>Packaged (FMCG)</strong>
                       <br />
-                      <small style={{ color: 'var(--text-muted)' }}>Has manufacturer barcode</small>
+                      <small className="sup-small-hint">Has manufacturer barcode</small>
                     </span>
                   </label>
 
                   <label
+                    className="prod-mode-label"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 0.75rem',
                       border: `2px solid ${formData.mode === 'LOOSE_BULK' ? 'var(--primary)' : 'var(--border)'}`,
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
                       background: formData.mode === 'LOOSE_BULK' ? 'var(--primary-light)' : 'white',
-                      transition: 'all 0.2s',
-                      flex: '1',
-                      maxWidth: '220px',
                     }}
                     onClick={() => handleModeChange('LOOSE_BULK')}
                   >
@@ -969,25 +919,25 @@ export default function ProductsPage() {
                     <span>
                       <strong>Loose / Bulk</strong>
                       <br />
-                      <small style={{ color: 'var(--text-muted)' }}>Barcode auto-generated</small>
+                      <small className="sup-small-hint">Barcode auto-generated</small>
                     </span>
                   </label>
                 </div>
                 {formData.mode === 'LOOSE_BULK' && (
-                  <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                  <p className="prod-mode-hint">
                     💡 A store-scoped barcode will be generated. Download the SKU PDF to print labels.
                   </p>
                 )}
               </div>
 
               {/* ═══ STEP 2: Product Identity ═══ */}
-              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>2</span>
+              <div className="prod-form-section">
+                <h4 className="prod-section-title">
+                  <span className="prod-step-badge">2</span>
                   Product Identity
                 </h4>
                 {/* Row 1: Name (wide) + Brand (narrow) */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                <div className="prod-grid-2-1">
                   <div className="form-group">
                     <label className="form-label">Product Name *</label>
                     <input
@@ -1041,7 +991,7 @@ export default function ProductsPage() {
                         <option key={cat.id} value={cat.id}>{cat.labelEn}</option>
                       ))}
                     </select>
-                    <small style={{ color: 'var(--text-muted)' }}>Leave as "Auto-detect" to assign category automatically, or select manually to override.</small>
+                    <small className="sup-small-hint">Leave as "Auto-detect" to assign category automatically, or select manually to override.</small>
                   </div>
 
                   {formData.mode === 'PACKAGED' && (
@@ -1050,22 +1000,21 @@ export default function ProductsPage() {
                       <input
                         type="text"
                         name="barcode"
-                        className="form-input"
+                        className="form-input prod-barcode-input"
                         placeholder="8901030865432"
                         value={formData.barcode}
                         onChange={handleInputChange}
-                        style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}
                       />
-                      <small style={{ color: 'var(--text-muted)' }}>Optional - leave blank if no barcode</small>
+                      <small className="sup-small-hint">Optional - leave blank if no barcode</small>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* ═══ STEP 3: Measurement & Packaging ═══ */}
-              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>3</span>
+              <div className="prod-form-section">
+                <h4 className="prod-section-title">
+                  <span className="prod-step-badge">3</span>
                   Measurement & Packaging
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: formData.mode === 'PACKAGED' ? '1fr 1fr 1fr' : formData.mode === 'LOOSE_BULK' ? '1fr 1fr 1fr' : '1fr', gap: '0.75rem', alignItems: 'start' }}>
@@ -1101,7 +1050,7 @@ export default function ProductsPage() {
                           value={formData.packSize}
                           onChange={handleInputChange}
                         />
-                        <small style={{ color: 'var(--text-muted)' }}>Quantity in pack (e.g., 500 for 500g)</small>
+                        <small className="sup-small-hint">Quantity in pack (e.g., 500 for 500g)</small>
                       </div>
 
                       {/* Pack Unit - RCAT-PROD-002: Custom editable option */}
@@ -1138,7 +1087,7 @@ export default function ProductsPage() {
                             onChange={(e) => setFormData(prev => ({ ...prev, packUnit: e.target.value }))}
                           />
                         )}
-                        <small style={{ color: 'var(--text-muted)' }}>Unit for pack size</small>
+                        <small className="sup-small-hint">Unit for pack size</small>
                       </div>
                     </>
                   )}
@@ -1158,7 +1107,7 @@ export default function ProductsPage() {
                           <option value="WEIGHT">Weight (KG/GM)</option>
                           <option value="COUNT">Count (pieces)</option>
                         </select>
-                        <small style={{ color: 'var(--text-muted)' }}>How product is measured at sale</small>
+                        <small className="sup-small-hint">How product is measured at sale</small>
                       </div>
 
                       <div className="form-group">
@@ -1182,7 +1131,7 @@ export default function ProductsPage() {
                             </>
                           )}
                         </select>
-                        <small style={{ color: 'var(--text-muted)' }}>Unit for price rate</small>
+                        <small className="sup-small-hint">Unit for price rate</small>
                       </div>
                     </>
                   )}
@@ -1190,12 +1139,12 @@ export default function ProductsPage() {
               </div>
 
               {/* ═══ STEP 4: Pricing ═══ */}
-              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>4</span>
+              <div className="prod-form-section">
+                <h4 className="prod-section-title">
+                  <span className="prod-step-badge">4</span>
                   Pricing
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                <div className="prod-grid-3">
                   <div className="form-group">
                     <label className="form-label">Purchase (₹) *</label>
                     <input
@@ -1209,7 +1158,7 @@ export default function ProductsPage() {
                       onChange={handleInputChange}
                       required
                     />
-                    <small style={{ color: 'var(--text-muted)' }}>Required for ledger tracking</small>
+                    <small className="sup-small-hint">Required for ledger tracking</small>
                   </div>
 
                   <div className="form-group">
@@ -1244,28 +1193,27 @@ export default function ProductsPage() {
               </div>
 
               {/* ═══ STEP 5: Stock & Supplier ═══ */}
-              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>5</span>
+              <div className="prod-form-section">
+                <h4 className="prod-section-title">
+                  <span className="prod-step-badge">5</span>
                   Stock & Supplier
                 </h4>
                 {/* Row 1: Two small qty fields */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                <div className="prod-grid-2">
                   <div className="form-group">
                     <label className="form-label">Opening Stock</label>
                     <input
                       type="number"
                       name="openingStockQty"
-                      className="form-input"
+                      className={`form-input${editingProduct ? ' prod-disabled-stock' : ''}`}
                       placeholder="0"
                       min="0"
                       value={formData.openingStockQty}
                       onChange={handleInputChange}
                       // GL-CRIT-0040: Disable in edit mode to prevent inventory ledger bypass
                       disabled={!!editingProduct}
-                      style={editingProduct ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : undefined}
                     />
-                    <small style={{ color: 'var(--text-muted)' }}>
+                    <small className="sup-small-hint">
                       {editingProduct
                         ? 'Cannot modify opening stock for existing products (use inventory adjustments)'
                         : 'Creates ledger entry if > 0'}
@@ -1283,7 +1231,7 @@ export default function ProductsPage() {
                       value={formData.lowStockAlertQty}
                       onChange={handleInputChange}
                     />
-                    <small style={{ color: 'var(--text-muted)' }}>Alert when stock falls below this</small>
+                    <small className="sup-small-hint">Alert when stock falls below this</small>
                   </div>
                 </div>
 
@@ -1292,14 +1240,7 @@ export default function ProductsPage() {
                 <div className="form-group">
                   <label className="form-label">
                     Supplier (optional)
-                    <span style={{
-                      marginLeft: '8px',
-                      fontSize: '0.7rem',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: '#dcfce7',
-                      color: '#166534'
-                    }}>
+                    <span className="prod-supplier-badge">
                       Verified only
                     </span>
                   </label>
@@ -1345,20 +1286,20 @@ export default function ProductsPage() {
                     </span>
                   )}
                   {!formData.supplierId && suppliers.filter(s => s.isSupermandi).length > 0 && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <small className="sup-small-hint">
                       Link to a verified supplier for purchase tracking on POS
-                    </span>
+                    </small>
                   )}
                 </div>
               </div>
 
               {/* ═══ STEP 6: Tax & Compliance (Optional) ═══ */}
-              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>6</span>
+              <div className="prod-form-section">
+                <h4 className="prod-section-title">
+                  <span className="prod-step-badge">6</span>
                   Tax & Compliance
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="prod-grid-2">
                   <div className="form-group">
                     <label className="form-label">GST %</label>
                     <select
@@ -1381,50 +1322,48 @@ export default function ProductsPage() {
                     <input
                       type="text"
                       name="hsn"
-                      className="form-input"
+                      className="form-input prod-barcode-input"
                       placeholder="e.g., 1006"
                       value={formData.hsn}
                       onChange={handleInputChange}
-                      style={{ fontFamily: 'monospace' }}
                     />
-                    <small style={{ color: 'var(--text-muted)' }}>For GST compliance</small>
+                    <small className="sup-small-hint">For GST compliance</small>
                   </div>
                 </div>
               </div>
 
               {/* ═══ Notes (Optional) ═══ */}
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+              <div className="form-group prod-form-mb">
                 <label className="form-label">Internal Notes</label>
                 <textarea
                   name="notes"
-                  className="form-input"
+                  className="form-input prod-textarea"
                   placeholder="Any internal notes about this product..."
                   rows={2}
                   value={formData.notes}
                   onChange={handleInputChange}
-                  style={{ resize: 'vertical' }}
                 />
-                <small style={{ color: 'var(--text-muted)' }}>For store use only, not shown on POS</small>
+                <small className="sup-small-hint">For store use only, not shown on POS</small>
               </div>
 
               {/* GL-WF-029: BNPL Eligibility Toggle */}
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <div className="form-group prod-form-mb">
+                <label className="prod-checkbox-label">
                   <input
                     type="checkbox"
                     name="bnplEligible"
                     checked={formData.bnplEligible}
                     onChange={(e) => setFormData({ ...formData, bnplEligible: e.target.checked })}
-                    style={{ width: '1rem', height: '1rem' }}
+                    className="prod-checkbox"
                   />
-                  <span className="form-label" style={{ margin: 0, fontWeight: 500 }}>BNPL Eligible</span>
+                  <span className="form-label prod-form-label-inline">BNPL Eligible</span>
                 </label>
-                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                <small className="sup-small-hint" style={{ display: 'block', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
                   Allow customers to purchase this product using Buy Now, Pay Later
                 </small>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem' }}>
+              <div className="prod-created-actions" style={{ paddingTop: '0.75rem' }}>
                 <button
                   type="submit"
                   className="btn btn-primary"
@@ -1447,9 +1386,9 @@ export default function ProductsPage() {
 
         {/* Bulk Upload Section */}
         {showBulkUpload && (
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div className="card prod-bulk-card">
             <h3 className="card-title">Bulk Product Upload</h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+            <p className="text-sm-muted" style={{ marginBottom: '1rem' }}>
               Paste product data (one per line). Format: <code>Name, Barcode, Brand, SellPrice, PurchasePrice, MRP, Unit, Stock</code>
               <br /><small>Leave barcode empty for loose/bulk products (barcode will be auto-generated).</small>
             </p>
@@ -1464,7 +1403,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                 onChange={(e) => setBulkData(e.target.value)}
               />
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <div className="prod-bulk-actions" style={{ marginBottom: '1rem' }}>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -1492,7 +1431,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
 
             {/* Preview Table */}
             {bulkPreview.length > 0 && (
-              <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid var(--border)', borderRadius: '0.375rem' }}>
+              <div className="prod-bulk-preview">
                 <table className="table" style={{ fontSize: '0.75rem' }}>
                   <thead>
                     <tr>
@@ -1508,7 +1447,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                     {bulkPreview.map((p, i) => (
                       <tr key={i}>
                         <td>{p.name}</td>
-                        <td style={{ fontFamily: 'monospace' }}>{p.barcode || <em style={{ color: 'var(--text-muted)' }}>auto</em>}</td>
+                        <td className="prod-table-barcode">{p.barcode || <em className="sup-small-hint">auto</em>}</td>
                         <td>{p.brand || '-'}</td>
                         <td>{formatCurrency(p.sellPrice || 0)}</td>
                         <td>{formatCurrency(p.purchasePrice || 0)}</td>
@@ -1523,26 +1462,24 @@ Loose Rice,, , 45, 40, , KG, 25`}
         )}
 
         {/* FE-RETAILER-CAT-001: Category Filter from POS Taxonomy */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+        <div className="prod-search-wrap">
+          <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>
             Filter by Category
           </label>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="prod-cat-bar">
             <button
-              className={`btn ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+              className={`prod-cat-btn${selectedCategory === 'all' ? ' prod-cat-btn--active' : ''}`}
               onClick={() => handleCategorySelect('all')}
             >
               All ({products.length})
             </button>
             {categoriesLoading ? (
-              <span style={{ padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading categories...</span>
+              <span className="sup-small-hint" style={{ padding: '0.5rem' }}>Loading categories...</span>
             ) : (
               categories.map((cat) => (
                 <button
                   key={cat.id}
-                  className={`btn ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                  className={`prod-cat-btn${selectedCategory === cat.id ? ' prod-cat-btn--active' : ''}`}
                   onClick={() => handleCategorySelect(cat.id)}
                   title={cat.labelHi || cat.labelEn}
                 >
@@ -1554,7 +1491,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
         </div>
 
         {/* Search */}
-        <div style={{ marginBottom: '1rem' }}>
+        <div className="prod-search-wrap">
           <input
             type="text"
             className="form-input"
@@ -1568,18 +1505,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
         {/* Delete Confirmation Modal */}
         {deleteConfirm && (
           <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-            }}
+            className="modal-overlay-custom"
             onClick={() => setDeleteConfirm(null)}
           >
             <div
@@ -1588,10 +1514,10 @@ Loose Rice,, , 45, 40, , KG, 25`}
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="card-title">Delete Product?</h3>
-              <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+              <p className="text-sm-muted" style={{ marginBottom: '1rem' }}>
                 Are you sure you want to delete this product? This will remove it from your inventory.
               </p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <div className="prod-created-actions" style={{ justifyContent: 'flex-end' }}>
                 <button
                   className="btn btn-secondary"
                   onClick={() => setDeleteConfirm(null)}
@@ -1613,14 +1539,14 @@ Loose Rice,, , 45, 40, , KG, 25`}
         {/* Products Table */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {isLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-sm-muted" style={{ padding: '2rem', textAlign: 'center' }}>
               Loading products...
             </div>
           ) : filteredProducts.length === 0 ? (
             <div>
               {/* ISSUE-MICRO-048: Distinguish error state from empty state */}
               {error
-                ? <div style={{ padding: '2rem', textAlign: 'center', color: '#dc2626' }}>Could not load products. Please try again.</div>
+                ? <div className="prod-stock-low" style={{ padding: '2rem', textAlign: 'center' }}>Could not load products. Please try again.</div>
                 : <EmptyState
                     icon={<Package size={24} />}
                     title={searchTerm ? 'No products match your search' : 'No products yet'}
@@ -1651,11 +1577,11 @@ Loose Rice,, , 45, 40, , KG, 25`}
               <tbody>
                 {filteredProducts.map((product) => (
                   <tr key={product.id}>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    <td className="prod-table-barcode">
                       {product.barcode || product.generatedBarcode || '-'}
                     </td>
                     <td style={{ fontWeight: '500' }}>{product.name}</td>
-                    <td style={{ fontSize: '0.875rem' }}>{product.brand || <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                    <td className="text-sm-muted">{product.brand || <span className="sup-small-hint">-</span>}</td>
                     <td>
                       <span className={`badge ${product.mode === 'PACKAGED' ? 'badge-info' : 'badge-secondary'}`}>
                         {product.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}
@@ -1676,11 +1602,11 @@ Loose Rice,, , 45, 40, , KG, 25`}
                         )}
                       </span>
                     </td>
-                    <td style={{ fontSize: '0.875rem' }}>
-                      {product.supplierName || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                    <td className="text-sm-muted">
+                      {product.supplierName || <span className="sup-small-hint">-</span>}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <div className="prod-table-actions">
                         <a
                           href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${product.id}/sku.pdf`}
                           target="_blank"
@@ -1724,11 +1650,11 @@ Loose Rice,, , 45, 40, , KG, 25`}
         </div>
 
         {/* Bulk Import Options */}
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+        <div className="prod-form-section" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          <p className="sup-small-hint" style={{ marginBottom: '0.75rem' }}>
             Have many products to add?
           </p>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="prod-created-actions" style={{ justifyContent: 'center' }}>
             <button
               className="btn btn-primary"
               onClick={() => { setShowBulkUpload(!showBulkUpload); setShowForm(false); }}

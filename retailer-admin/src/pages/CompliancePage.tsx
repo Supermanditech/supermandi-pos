@@ -162,11 +162,11 @@ export default function CompliancePage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Compliance' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex-between">
           <h1 className="page-title">Compliance Documents</h1>
           {uploadEnabled && (
             <button className="btn btn-primary" onClick={() => setShowUpload(!showUpload)}>
@@ -179,66 +179,45 @@ export default function CompliancePage() {
       <div className="page-content">
         {/* Success/Error Messages */}
         {success && (
-          <div style={{
-            background: '#dcfce7',
-            color: '#166534',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-success">
             {success}
           </div>
         )}
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-error">
             {error}
           </div>
         )}
 
         {/* Status Summary */}
-        <div className="grid grid-3" style={{ marginBottom: '1.5rem' }}>
+        <div className="grid grid-3 grid-mb-lg">
           <div className="stat-card">
             <div className="stat-label">✓ Verified</div>
-            <div className="stat-value" style={{ color: 'var(--success)' }}>{statusCounts.verified}</div>
+            <div className="stat-value stat-value--success">{statusCounts.verified}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">⏳ Pending</div>
-            <div className="stat-value" style={{ color: 'var(--warning)' }}>{statusCounts.pending}</div>
+            <div className="stat-value stat-value--warning">{statusCounts.pending}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">✗ Rejected</div>
-            <div className="stat-value" style={{ color: 'var(--danger)' }}>{statusCounts.rejected}</div>
+            <div className="stat-value stat-value--danger">{statusCounts.rejected}</div>
           </div>
         </div>
 
         {/* Status Message from backend */}
         {statusMessage && !uploadEnabled && (
-          <div style={{
-            background: '#fef3c7',
-            color: '#92400e',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-warning">
             {statusMessage}
           </div>
         )}
 
         {/* Upload Form */}
         {showUpload && uploadEnabled && (
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div className="card card-mb-lg">
             <h3 className="card-title">Upload New Document</h3>
             <form onSubmit={handleUpload}>
-              <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
+              <div className="grid grid-2 grid-mb">
                 <div className="form-group">
                   <label className="form-label">Document Type *</label>
                   <select
@@ -267,11 +246,11 @@ export default function CompliancePage() {
                 </div>
               </div>
               {selectedFile && (
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                <p className="file-info-text">
                   Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                 </p>
               )}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="flex-row">
                 <button type="submit" className="btn btn-primary" disabled={isUploading}>
                   {isUploading ? 'Uploading...' : 'Upload'}
                 </button>
@@ -289,13 +268,13 @@ export default function CompliancePage() {
         )}
 
         {/* Documents List */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card card-no-padding">
           {isLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-center-muted">
               Loading documents...
             </div>
           ) : documents.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-center-muted">
               No documents uploaded yet. Click "Upload Document" to add your compliance documents.
             </div>
           ) : (
@@ -312,24 +291,23 @@ export default function CompliancePage() {
               <tbody>
                 {documents.map((doc) => (
                   <tr key={doc.id}>
-                    <td style={{ fontWeight: '500' }}>{doc.type}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{doc.fileName}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                    <td className="cell-bold">{doc.type}</td>
+                    <td className="cell-mono cell-sm">{doc.fileName}</td>
+                    <td className="text-sm-muted">
                       {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}
                     </td>
                     <td>
                       {getStatusBadge(doc.status)}
                       {doc.rejectionReason && (
-                        <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>
+                        <p className="rejection-text">
                           {doc.rejectionReason}
                         </p>
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="flex-row">
                         <button
-                          className="btn btn-secondary"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          className="btn btn-secondary btn-xs"
                           onClick={() => handleDownload(doc)}
                         >
                           Download
@@ -337,8 +315,7 @@ export default function CompliancePage() {
                         {doc.status === 'rejected' && (
                           <button
                             aria-label="Re-upload compliance document"
-                            className="btn btn-primary"
-                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            className="btn btn-primary btn-xs"
                             onClick={() => {
                               setSelectedType(doc.type);
                               setShowUpload(true);
@@ -357,9 +334,9 @@ export default function CompliancePage() {
         </div>
 
         {/* Required Documents */}
-        <div style={{ marginTop: '1.5rem' }}>
-          <h4 style={{ marginBottom: '0.75rem' }}>Required Documents:</h4>
-          <ul style={{ paddingLeft: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+        <div className="docs-section">
+          <h4>Required Documents:</h4>
+          <ul className="docs-list">
             <li>GSTIN Certificate (if registered)</li>
             <li>FSSAI License (for food products)</li>
             <li>Shop & Establishment License</li>

@@ -98,7 +98,7 @@ export default function CreditDashboardPage() {
 
   return (
     <>
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Credit & Finance' }]} />
       </div>
       <header className="page-header">
@@ -107,14 +107,14 @@ export default function CreditDashboardPage() {
 
       <div className="page-content">
         {error && (
-          <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem 1rem', borderRadius: '0.375rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+          <div className="alert-error-inline">
             {error}
-            <button aria-label="Retry loading credit dashboard" onClick={fetchDashboard} className="btn btn-secondary" style={{ marginLeft: '1rem', fontSize: '0.8rem' }}>Retry</button>
+            <button aria-label="Retry loading credit dashboard" onClick={fetchDashboard} className="btn btn-secondary">Retry</button>
           </div>
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading credit dashboard...</div>
+          <div className="loading-center">Loading credit dashboard...</div>
         ) : !balance ? (
           <EmptyState
             icon={<IndianRupee size={24} />}
@@ -124,14 +124,14 @@ export default function CreditDashboardPage() {
         ) : (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
+            <div className="grid grid-4 grid-mb-lg">
               <div className="stat-card">
                 <div className="stat-label">Credit Limit</div>
                 <div className="stat-value">{fmt(balance.totalCreditLimitMinor)}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">Available</div>
-                <div className="stat-value" style={{ color: 'var(--success)' }}>{fmt(balance.availableMinor)}</div>
+                <div className="stat-value stat-value--success">{fmt(balance.availableMinor)}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">Outstanding</div>
@@ -144,12 +144,12 @@ export default function CreditDashboardPage() {
             </div>
 
             {/* Utilization Bar */}
-            <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+            <div className="card card-mb-lg" style={{ padding: '1rem' }}>
+              <div className="credit-util-header">
                 <span>Used: {fmt(balance.usedMinor)}</span>
                 <span>Limit: {fmt(balance.totalCreditLimitMinor)}</span>
               </div>
-              <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+              <div className="credit-util-track">
                 <div style={{
                   width: `${Math.min(utilization, 100)}%`,
                   height: '100%',
@@ -159,7 +159,7 @@ export default function CreditDashboardPage() {
                 }} />
               </div>
               {balance.overdueDrawdowns > 0 && (
-                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#dc2626', fontSize: '0.8rem' }}>
+                <div className="credit-overdue-warn">
                   <AlertTriangle size={14} /> {balance.overdueDrawdowns} overdue payment(s)
                 </div>
               )}
@@ -167,13 +167,13 @@ export default function CreditDashboardPage() {
 
             {/* RET-C3-008: Show per-provider breakdown for 1+ providers */}
             {balance.perProvider && balance.perProvider.length > 0 && (
-              <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>By Provider</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div className="card card-mb-lg" style={{ padding: '1rem' }}>
+                <h3 className="credit-provider-title">By Provider</h3>
+                <div className="credit-provider-grid">
                   {balance.perProvider.map(p => (
-                    <div key={p.providerId} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{p.providerId}</div>
-                      <div style={{ fontWeight: 600, fontSize: '1rem' }}>{fmt(p.availableMinor)} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>available</span></div>
+                    <div key={p.providerId} className="credit-provider-card">
+                      <div className="credit-provider-label">{p.providerId}</div>
+                      <div className="credit-provider-value">{fmt(p.availableMinor)} <span className="credit-provider-avail">available</span></div>
                     </div>
                   ))}
                 </div>
@@ -181,9 +181,9 @@ export default function CreditDashboardPage() {
             )}
 
             {/* RET-C3-007: Always show EMI section with empty state */}
-            <div className="card" style={{ marginBottom: '1.5rem' }}>
-              <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                <h3 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className="card card-mb-lg">
+              <div className="card-section-header">
+                <h3 className="card-section-title">
                   <Clock size={16} /> Upcoming Payments (30 days)
                 </h3>
               </div>
@@ -194,31 +194,31 @@ export default function CreditDashboardPage() {
                       <th>Due Date</th>
                       <th>Provider</th>
                       <th>Supplier</th>
-                      <th style={{ textAlign: 'right' }}>Amount</th>
+                      <th className="cell-right">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {emis.map((emi, i) => (
                       <tr key={i}>
-                        <td style={{ fontWeight: 500 }}>{fmtDate(emi.dueDate)}</td>
+                        <td className="cell-bold">{fmtDate(emi.dueDate)}</td>
                         <td>{emi.providerName}</td>
                         <td>{emi.supplierName}</td>
-                        <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmt(emi.totalMinor)}</td>
+                        <td className="cell-mono-right">{fmt(emi.totalMinor)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                <div className="credit-emi-empty">
                   No upcoming EMI payments in the next 30 days.
                 </div>
               )}
             </div>
 
             {/* Active Drawdowns */}
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                <h3 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className="card card-no-padding">
+              <div className="card-section-header">
+                <h3 className="card-section-title">
                   <TrendingUp size={16} /> Active Credit ({drawdowns.length})
                 </h3>
               </div>
@@ -227,8 +227,8 @@ export default function CreditDashboardPage() {
                   <tr>
                     <th>Provider</th>
                     <th>Supplier</th>
-                    <th style={{ textAlign: 'right' }}>Amount</th>
-                    <th style={{ textAlign: 'right' }}>Outstanding</th>
+                    <th className="cell-right">Amount</th>
+                    <th className="cell-right">Outstanding</th>
                     <th>Due Date</th>
                     <th>Status</th>
                   </tr>
@@ -251,11 +251,11 @@ export default function CreditDashboardPage() {
                         <tr key={dd.id}>
                           <td>{dd.providerName}</td>
                           <td>{dd.supplierName}</td>
-                          <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmt(dd.principalMinor)}</td>
-                          <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: dd.outstandingMinor > 0 ? '#dc2626' : undefined }}>{fmt(dd.outstandingMinor)}</td>
+                          <td className="cell-mono-right">{fmt(dd.principalMinor)}</td>
+                          <td className="cell-mono-right-bold" style={{ color: dd.outstandingMinor > 0 ? 'var(--danger)' : undefined }}>{fmt(dd.outstandingMinor)}</td>
                           <td>{fmtDate(dd.dueDate)}</td>
                           <td>
-                            <span style={{ padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 500, background: badge.bg, color: badge.color }}>
+                            <span className="credit-status-badge" style={{ background: badge.bg, color: badge.color }}>
                               {badge.label}
                             </span>
                           </td>

@@ -98,21 +98,21 @@ export function RefundsTab() {
   };
 
   return (
-    <div style={{ padding: "1.5rem" }}>
+    <div className="sa-p-24">
       {/* R7.SA.007: Confirmation dialog for refund approval */}
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={actionLoading !== null} />}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+      <div className="sa-flex-between sa-mb-20">
         <div>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-text-primary)" }}>Refund Management</h2>
-          <p style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
+          <h2 className="sa-text-xl sa-fw-700">Refund Management</h2>
+          <p className="sa-text-md sa-text-muted sa-mt-4">
             {total} total refund requests{statusFilter ? ` (${statusFilter})` : ""}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div className="sa-flex sa-gap-8">
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value as RefundStatus | ""); setOffset(0); }}
-            style={{ padding: "0.375rem 0.75rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", fontSize: "0.8125rem" }}
+            className="sa-select"
           >
             <option value="">All Statuses</option>
             <option value="initiated">Initiated</option>
@@ -121,78 +121,78 @@ export function RefundsTab() {
             <option value="failed">Failed</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button onClick={refresh} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: "pointer" }}>
+          <button onClick={refresh} className="sa-btn-ghost-sm">
             Refresh
           </button>
         </div>
       </div>
 
-      {error && <div style={{ padding: "0.75rem", background: "var(--color-error-soft)", border: "1px solid var(--color-error)", borderRadius: "0.5rem", color: "#991b1b", marginBottom: "1rem", fontSize: "0.8125rem" }}>{error}</div>}
+      {error && <div className="sa-alert-error sa-mb-16">{error}</div>}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>Loading refunds...</div>
+        <div className="sa-text-center sa-p-24 sa-text-muted">Loading refunds...</div>
       ) : refunds.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>No refund requests found</div>
+        <div className="sa-text-center sa-p-24 sa-text-muted">No refund requests found</div>
       ) : (
         <>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+          <table className="table">
             <thead>
-              <tr style={{ background: "var(--color-surface-alt)", borderBottom: "2px solid var(--color-border)" }}>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Store</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Order</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "var(--color-text-secondary)" }}>Amount</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Reason</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)" }}>Status</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Date</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)" }}>Actions</th>
+              <tr>
+                <th className="sa-th">Store</th>
+                <th className="sa-th">Order</th>
+                <th className="sa-th sa-th--right">Amount</th>
+                <th className="sa-th">Reason</th>
+                <th className="sa-th" style={{ textAlign: "center" }}>Status</th>
+                <th className="sa-th">Date</th>
+                <th className="sa-th" style={{ textAlign: "center" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {refunds.map((r) => {
                 const style = STATUS_STYLES[r.status] || STATUS_STYLES.initiated;
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid var(--color-surface-alt)" }}>
-                    <td style={{ padding: "0.625rem 0.75rem" }}>
-                      <div style={{ fontWeight: 500, color: "var(--color-text-primary)" }}>{r.storeName || r.storeId.slice(0, 8)}</div>
+                  <tr key={r.id}>
+                    <td className="sa-td">
+                      <div className="sa-fw-500">{r.storeName || r.storeId.slice(0, 8)}</div>
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", fontFamily: "monospace", fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
+                    <td className="sa-td sa-td--mono sa-text-muted">
                       {r.orderId.slice(0, 8)}...
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "var(--color-text-primary)" }}>
+                    <td className="sa-td sa-td--right sa-fw-600">
                       {formatCurrency(r.refundAmount)}
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", color: "var(--color-text-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td className="sa-td sa-text-muted sa-nowrap" style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {r.reason}
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
-                      <span style={{ padding: "0.125rem 0.5rem", borderRadius: "9999px", fontSize: "0.6875rem", fontWeight: 600, background: style.bg, color: style.color }}>
+                    <td className="sa-td" style={{ textAlign: "center" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: "9999px", fontSize: 11, fontWeight: 600, background: style.bg, color: style.color }}>
                         {style.label}
                       </span>
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
+                    <td className="sa-td sa-text-sm sa-text-muted">
                       {formatDate(r.createdAt)}
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
+                    <td className="sa-td" style={{ textAlign: "center" }}>
                       {r.status === "initiated" && (
-                        <div style={{ display: "flex", gap: "0.25rem", justifyContent: "center" }}>
+                        <div className="sa-flex sa-gap-4" style={{ justifyContent: "center" }}>
                           <button
                             onClick={() => handleApprove(r.id, r.refundAmount)}
                             disabled={actionLoading === r.id}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "var(--color-success-soft)", color: "#166534", border: "1px solid var(--color-success)", borderRadius: "0.25rem", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            className="sa-btn-xs" style={{ background: "var(--color-success-soft)", color: "#166534", border: "1px solid var(--color-success)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => setRejectId(r.id)}
                             disabled={actionLoading === r.id}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "var(--color-error-soft)", color: "#991b1b", border: "1px solid var(--color-error)", borderRadius: "0.25rem", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            className="sa-btn-xs" style={{ background: "var(--color-error-soft)", color: "#991b1b", border: "1px solid var(--color-error)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
                           >
                             Reject
                           </button>
                         </div>
                       )}
                       {r.status === "failed" && r.failureReason && (
-                        <span style={{ fontSize: "0.6875rem", color: "#991b1b" }} title={r.failureReason}>Failed</span>
+                        <span className="sa-text-xs sa-text-error" title={r.failureReason}>Failed</span>
                       )}
                     </td>
                   </tr>
@@ -203,21 +203,23 @@ export function RefundsTab() {
 
           {/* Pagination */}
           {total > limit && (
-            <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginTop: "1rem" }}>
+            <div className="sa-pagination" style={{ justifyContent: "center" }}>
               <button
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - limit))}
-                style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: offset === 0 ? "not-allowed" : "pointer", opacity: offset === 0 ? 0.5 : 1 }}
+                className="sa-btn-ghost-sm"
+                style={{ opacity: offset === 0 ? 0.5 : 1, cursor: offset === 0 ? "not-allowed" : "pointer" }}
               >
                 Previous
               </button>
-              <span style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", color: "var(--color-text-secondary)" }}>
+              <span className="sa-page-info">
                 {offset + 1}–{Math.min(offset + limit, total)} of {total}
               </span>
               <button
                 disabled={offset + limit >= total}
                 onClick={() => setOffset((o) => o + limit)}
-                style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: offset + limit >= total ? "not-allowed" : "pointer", opacity: offset + limit >= total ? 0.5 : 1 }}
+                className="sa-btn-ghost-sm"
+                style={{ opacity: offset + limit >= total ? 0.5 : 1, cursor: offset + limit >= total ? "not-allowed" : "pointer" }}
               >
                 Next
               </button>
@@ -228,23 +230,25 @@ export function RefundsTab() {
 
       {/* Reject modal */}
       {rejectId && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }} onClick={() => { setRejectId(null); setRejectReason(""); }}>
-          <div style={{ background: "var(--color-surface)", borderRadius: "0.75rem", padding: "1.5rem", maxWidth: "400px", width: "90%" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text-primary)", marginBottom: "0.75rem" }}>Reject Refund</h3>
+        <div className="sa-modal-overlay" onClick={() => { setRejectId(null); setRejectReason(""); }}>
+          <div className="sa-modal-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="sa-modal-title">Reject Refund</h3>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Reason for rejection..."
-              style={{ width: "100%", minHeight: "80px", padding: "0.5rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", fontSize: "0.8125rem", resize: "vertical", boxSizing: "border-box" }}
+              className="sa-textarea"
+              style={{ minHeight: "80px" }}
             />
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.75rem" }}>
-              <button onClick={() => { setRejectId(null); setRejectReason(""); }} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: "pointer" }}>
+            <div className="sa-modal-actions">
+              <button onClick={() => { setRejectId(null); setRejectReason(""); }} className="sa-btn-ghost-sm">
                 Cancel
               </button>
               <button
                 onClick={handleReject}
                 disabled={!rejectReason.trim() || actionLoading === rejectId}
-                style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "#991b1b", color: "#fff", border: "none", borderRadius: "0.375rem", cursor: !rejectReason.trim() ? "not-allowed" : "pointer", opacity: !rejectReason.trim() ? 0.5 : 1 }}
+                className="sa-btn-danger-sm"
+                style={{ opacity: !rejectReason.trim() ? 0.5 : 1, cursor: !rejectReason.trim() ? "not-allowed" : "pointer" }}
               >
                 Reject Refund
               </button>

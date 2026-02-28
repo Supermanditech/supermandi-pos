@@ -100,20 +100,12 @@ export function QualityDashboardTab() {
     else if (tool.baselines) metric = `${tool.baselines} baselines`;
 
     return (
-      <div
-        key={name}
-        style={{
-          border: "1px solid var(--color-border)",
-          borderRadius: 8,
-          padding: 16,
-          background: "var(--color-surface)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span style={{ fontSize: 24 }}>{icon}</span>
+      <div key={name} className="sa-stat-card">
+        <div className="sa-flex sa-gap-8 sa-mb-8">
+          <span className="sa-text-3xl">{icon}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{name}</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{metric}</div>
+            <div className="sa-fw-600 sa-text-base">{name}</div>
+            <div className="sa-text-sm sa-text-muted">{metric}</div>
           </div>
         </div>
         <div
@@ -145,7 +137,7 @@ export function QualityDashboardTab() {
 
   if (loading && !overview) {
     return (
-      <div style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)" }}>
+      <div className="sa-p-24 sa-text-center sa-text-muted">
         Loading quality dashboard...
       </div>
     );
@@ -153,16 +145,8 @@ export function QualityDashboardTab() {
 
   if (error && !overview) {
     return (
-      <div style={{ padding: 24 }}>
-        <div
-          style={{
-            padding: 12,
-            background: "var(--color-error-soft)",
-            color: "var(--color-error)",
-            borderRadius: 6,
-            fontSize: 14,
-          }}
-        >
+      <div className="sa-p-24">
+        <div className="sa-alert-error">
           {error}
         </div>
       </div>
@@ -174,34 +158,18 @@ export function QualityDashboardTab() {
   const systemColor = statusColor(overview.database.status);
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="sa-p-24">
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={resettingMetrics} />}
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-        }}
-      >
+      <div className="sa-flex-between sa-mb-20">
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Quality Dashboard</h2>
-          <p style={{ margin: "4px 0 0", color: "var(--color-text-secondary)", fontSize: 14 }}>
+          <h2 className="sa-text-2xl sa-fw-600" style={{ margin: 0 }}>Quality Dashboard</h2>
+          <p className="sa-text-muted sa-text-base sa-mt-4" style={{ margin: 0 }}>
             9 testing tools + GCP native monitoring + live system metrics
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <label
-            style={{
-              fontSize: 13,
-              color: "var(--color-text-secondary)",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              cursor: "pointer",
-            }}
-          >
+        <div className="sa-flex sa-gap-8">
+          <label className="sa-flex sa-gap-4 sa-text-md sa-text-muted" style={{ cursor: "pointer" }}>
             <input
               type="checkbox"
               checked={autoRefresh}
@@ -210,17 +178,10 @@ export function QualityDashboardTab() {
             Auto-refresh (60s)
           </label>
           <button
+            className="sa-btn-ghost-sm"
             onClick={handleResetMetrics}
             disabled={resettingMetrics}
-            style={{
-              padding: "6px 12px",
-              fontSize: 13,
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: 6,
-              cursor: resettingMetrics ? "not-allowed" : "pointer",
-              opacity: resettingMetrics ? 0.6 : 1,
-            }}
+            style={{ opacity: resettingMetrics ? 0.6 : 1 }}
           >
             {resettingMetrics ? "Resetting..." : "Reset Metrics"}
           </button>
@@ -228,13 +189,8 @@ export function QualityDashboardTab() {
             onClick={loadData}
             disabled={loading}
             style={{
-              padding: "6px 12px",
-              fontSize: 13,
-              background: "#2563EB",
-              color: "#FFF",
-              border: "none",
-              borderRadius: 6,
-              cursor: loading ? "not-allowed" : "pointer",
+              padding: "6px 12px", fontSize: 13, background: "#2563EB", color: "#FFF",
+              border: "none", borderRadius: 6,
               opacity: loading ? 0.6 : 1,
             }}
           >
@@ -245,48 +201,37 @@ export function QualityDashboardTab() {
 
       {/* System Health Banner */}
       <div
-        style={{
-          background: systemColor.bg,
-          border: `1px solid ${systemColor.dot}`,
-          borderRadius: 8,
-          padding: 16,
-          marginBottom: 24,
-        }}
+        className="sa-radius-8 sa-p-16 sa-mb-20"
+        style={{ background: systemColor.bg, border: `1px solid ${systemColor.dot}` }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            gap: 16,
-          }}
-        >
+        <div className="sa-grid-auto sa-gap-16">
           <div>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Uptime</div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>
+            <div className="sa-stat-label">Uptime</div>
+            <div className="sa-text-lg sa-fw-600">
               {formatUptime(overview.system.uptime)}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Memory</div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{overview.system.memoryMB} MB</div>
+            <div className="sa-stat-label">Memory</div>
+            <div className="sa-text-lg sa-fw-600">{overview.system.memoryMB} MB</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Error Rate</div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{overview.system.errorRate}</div>
+            <div className="sa-stat-label">Error Rate</div>
+            <div className="sa-text-lg sa-fw-600">{overview.system.errorRate}</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>P95 Latency</div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{overview.system.p95LatencyMs}ms</div>
+            <div className="sa-stat-label">P95 Latency</div>
+            <div className="sa-text-lg sa-fw-600">{overview.system.p95LatencyMs}ms</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Total Requests</div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>
+            <div className="sa-stat-label">Total Requests</div>
+            <div className="sa-text-lg sa-fw-600">
               {overview.system.totalRequests.toLocaleString()}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Avg Latency</div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>
+            <div className="sa-stat-label">Avg Latency</div>
+            <div className="sa-text-lg sa-fw-600">
               {overview.system.avgLatencyMs}ms
             </div>
           </div>
@@ -294,15 +239,9 @@ export function QualityDashboardTab() {
       </div>
 
       {/* Testing Tools Grid (3x3) */}
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Testing Tools</h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 12,
-          }}
-        >
+      <div className="sa-mb-20">
+        <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Testing Tools</h3>
+        <div className="sa-grid-auto">
           {renderToolCard("Vitest", "⚡", overview.tools.vitest)}
           {renderToolCard("Jest", "🃏", overview.tools.jest)}
           {renderToolCard("Playwright E2E", "🎭", overview.tools.playwright)}
@@ -316,63 +255,48 @@ export function QualityDashboardTab() {
       </div>
 
       {/* GCP Native Tools */}
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>GCP Native Tools</h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 12,
-          }}
-        >
-          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+      <div className="sa-mb-20">
+        <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>GCP Native Tools</h3>
+        <div className="sa-grid-auto">
+          <div className="sa-stat-card sa-p-12">
+            <div className="sa-fw-600 sa-text-base sa-mb-4">
               Cloud Monitoring
             </div>
-            <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+            <div className="sa-text-md sa-text-muted">
               {overview.gcp.alertPolicies} alert policies
             </div>
           </div>
-          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Uptime Checks</div>
-            <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          <div className="sa-stat-card sa-p-12">
+            <div className="sa-fw-600 sa-text-base sa-mb-4">Uptime Checks</div>
+            <div className="sa-text-md sa-text-muted">
               {overview.gcp.uptimeChecks} services
             </div>
           </div>
-          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+          <div className="sa-stat-card sa-p-12">
+            <div className="sa-fw-600 sa-text-base sa-mb-4">
               Error Reporting
             </div>
             <div
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: statusColor(overview.gcp.errorReporting).text,
-              }}
+              className="sa-text-xs sa-fw-500"
+              style={{ color: statusColor(overview.gcp.errorReporting).text }}
             >
               {overview.gcp.errorReporting}
             </div>
           </div>
-          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Cloud Trace</div>
+          <div className="sa-stat-card sa-p-12">
+            <div className="sa-fw-600 sa-text-base sa-mb-4">Cloud Trace</div>
             <div
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: statusColor(overview.gcp.cloudTrace).text,
-              }}
+              className="sa-text-xs sa-fw-500"
+              style={{ color: statusColor(overview.gcp.cloudTrace).text }}
             >
               {overview.gcp.cloudTrace}
             </div>
           </div>
-          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Cloud Profiler</div>
+          <div className="sa-stat-card sa-p-12">
+            <div className="sa-fw-600 sa-text-base sa-mb-4">Cloud Profiler</div>
             <div
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: statusColor(overview.gcp.cloudProfiler).text,
-              }}
+              className="sa-text-xs sa-fw-500"
+              style={{ color: statusColor(overview.gcp.cloudProfiler).text }}
             >
               {overview.gcp.cloudProfiler}
             </div>
@@ -382,30 +306,20 @@ export function QualityDashboardTab() {
 
       {/* Test Results Table */}
       {testResults && (
-        <div style={{ marginBottom: 24 }}>
-          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Test Results</h3>
-          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8 }}>
+        <div className="sa-mb-20">
+          <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Test Results</h3>
+          <div className="sa-text-sm sa-text-muted sa-mb-8">
             Last run: {testResults.lastRun}
           </div>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: 13,
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
-          >
+          <table className="table sa-border sa-radius-8 sa-overflow-hidden">
             <thead>
-              <tr style={{ background: "var(--color-surface-alt)", borderBottom: "1px solid var(--color-border)" }}>
-                <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Suite</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Passed</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Failed</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Skipped</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Duration</th>
-                <th style={{ padding: 10, textAlign: "center", fontWeight: 600 }}>Status</th>
+              <tr>
+                <th className="sa-th">Suite</th>
+                <th className="sa-th sa-th--right">Passed</th>
+                <th className="sa-th sa-th--right">Failed</th>
+                <th className="sa-th sa-th--right">Skipped</th>
+                <th className="sa-th sa-th--right">Duration</th>
+                <th className="sa-th" style={{ textAlign: "center" }}>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -413,41 +327,31 @@ export function QualityDashboardTab() {
                 const status = result.failed > 0 ? "failed" : "passed";
                 const statusCol = statusColor(status);
                 return (
-                  <tr key={suite} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                    <td style={{ padding: 10 }}>{suite}</td>
-                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-success)" }}>
+                  <tr key={suite}>
+                    <td className="sa-td">{suite}</td>
+                    <td className="sa-td sa-td--right sa-text-success">
                       {result.passed}
                     </td>
-                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-error)" }}>
+                    <td className="sa-td sa-td--right sa-text-error">
                       {result.failed}
                     </td>
-                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-text-secondary)" }}>
+                    <td className="sa-td sa-td--right sa-text-muted">
                       {result.skipped}
                     </td>
-                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-text-secondary)" }}>
+                    <td className="sa-td sa-td--right sa-text-muted">
                       {result.duration}
                     </td>
-                    <td style={{ padding: 10, textAlign: "center" }}>
+                    <td className="sa-td" style={{ textAlign: "center" }}>
                       <span
                         style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          background: statusCol.bg,
-                          color: statusCol.text,
-                          fontSize: 11,
-                          fontWeight: 500,
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          padding: "2px 8px", borderRadius: 4,
+                          background: statusCol.bg, color: statusCol.text,
+                          fontSize: 11, fontWeight: 500,
                         }}
                       >
                         <span
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: "50%",
-                            background: statusCol.dot,
-                          }}
+                          style={{ width: 6, height: 6, borderRadius: "50%", background: statusCol.dot }}
                         />
                         {status}
                       </span>
@@ -462,36 +366,26 @@ export function QualityDashboardTab() {
 
       {/* Code Coverage Table */}
       {testResults && (
-        <div style={{ marginBottom: 24 }}>
-          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Code Coverage</h3>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: 13,
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
-          >
+        <div className="sa-mb-20">
+          <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Code Coverage</h3>
+          <table className="table sa-border sa-radius-8 sa-overflow-hidden">
             <thead>
-              <tr style={{ background: "var(--color-surface-alt)", borderBottom: "1px solid var(--color-border)" }}>
-                <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Project</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Statements</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Branches</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Functions</th>
-                <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Lines</th>
+              <tr>
+                <th className="sa-th">Project</th>
+                <th className="sa-th sa-th--right">Statements</th>
+                <th className="sa-th sa-th--right">Branches</th>
+                <th className="sa-th sa-th--right">Functions</th>
+                <th className="sa-th sa-th--right">Lines</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(testResults.coverage).map(([project, cov]) => (
-                <tr key={project} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                  <td style={{ padding: 10 }}>{project}</td>
-                  <td style={{ padding: 10, textAlign: "right" }}>{cov.statements}%</td>
-                  <td style={{ padding: 10, textAlign: "right" }}>{cov.branches}%</td>
-                  <td style={{ padding: 10, textAlign: "right" }}>{cov.functions}%</td>
-                  <td style={{ padding: 10, textAlign: "right" }}>{cov.lines}%</td>
+                <tr key={project}>
+                  <td className="sa-td">{project}</td>
+                  <td className="sa-td sa-td--right">{cov.statements}%</td>
+                  <td className="sa-td sa-td--right">{cov.branches}%</td>
+                  <td className="sa-td sa-td--right">{cov.functions}%</td>
+                  <td className="sa-td sa-td--right">{cov.lines}%</td>
                 </tr>
               ))}
             </tbody>
@@ -500,40 +394,21 @@ export function QualityDashboardTab() {
       )}
 
       {/* CI Gate Summary */}
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>CI Gate Summary</h3>
-        <div
-          style={{
-            border: "1px solid var(--color-border)",
-            borderRadius: 8,
-            padding: 16,
-            background: "var(--color-surface)",
-          }}
-        >
-          <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
+      <div className="sa-mb-20">
+        <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>CI Gate Summary</h3>
+        <div className="sa-stat-card">
+          <div className="sa-mb-12 sa-text-base sa-fw-600">
             Total Gates: {overview.gates.total}
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-              gap: 8,
-            }}
-          >
+          <div className="sa-grid-auto sa-gap-8">
             {Object.entries(overview.gates.categories).map(([category, count]) => (
               <div
                 key={category}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "6px 8px",
-                  background: "var(--color-surface-alt)",
-                  borderRadius: 4,
-                  fontSize: 12,
-                }}
+                className="sa-flex-between sa-bg-surface-alt sa-radius-4 sa-text-sm"
+                style={{ padding: "6px 8px" }}
               >
-                <span style={{ color: "var(--color-text-secondary)" }}>{category}</span>
-                <span style={{ fontWeight: 600 }}>{count}</span>
+                <span className="sa-text-muted">{category}</span>
+                <span className="sa-fw-600">{count}</span>
               </div>
             ))}
           </div>
@@ -541,59 +416,39 @@ export function QualityDashboardTab() {
       </div>
 
       {/* Top Endpoints */}
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Top Endpoints</h3>
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontSize: 13,
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: 8,
-            overflow: "hidden",
-          }}
-        >
+      <div className="sa-mb-20">
+        <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Top Endpoints</h3>
+        <table className="table sa-border sa-radius-8 sa-overflow-hidden">
           <thead>
-            <tr style={{ background: "var(--color-surface-alt)", borderBottom: "1px solid var(--color-border)" }}>
-              <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Method</th>
-              <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Path</th>
-              <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Count</th>
-              <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>P95 (ms)</th>
-              <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Error Rate</th>
-              <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Last Seen</th>
+            <tr>
+              <th className="sa-th">Method</th>
+              <th className="sa-th">Path</th>
+              <th className="sa-th sa-th--right">Count</th>
+              <th className="sa-th sa-th--right">P95 (ms)</th>
+              <th className="sa-th sa-th--right">Error Rate</th>
+              <th className="sa-th">Last Seen</th>
             </tr>
           </thead>
           <tbody>
             {overview.topEndpoints.map((ep, i) => {
               const errorRate = ep.count > 0 ? ((ep.errorCount / ep.count) * 100).toFixed(1) : "0.0";
               return (
-                <tr key={i} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                  <td
-                    style={{
-                      padding: 10,
-                      fontFamily: "monospace",
-                      fontSize: 11,
-                      fontWeight: 600,
-                    }}
-                  >
+                <tr key={i}>
+                  <td className="sa-td sa-td--mono sa-td--bold">
                     {ep.method}
                   </td>
-                  <td style={{ padding: 10, fontFamily: "monospace", fontSize: 11 }}>
+                  <td className="sa-td sa-td--mono">
                     {ep.path}
                   </td>
-                  <td style={{ padding: 10, textAlign: "right" }}>{ep.count.toLocaleString()}</td>
-                  <td style={{ padding: 10, textAlign: "right" }}>{ep.p95Ms}</td>
+                  <td className="sa-td sa-td--right">{ep.count.toLocaleString()}</td>
+                  <td className="sa-td sa-td--right">{ep.p95Ms}</td>
                   <td
-                    style={{
-                      padding: 10,
-                      textAlign: "right",
-                      color: parseFloat(errorRate) > 5 ? "var(--color-error)" : "var(--color-text-secondary)",
-                    }}
+                    className="sa-td sa-td--right"
+                    style={{ color: parseFloat(errorRate) > 5 ? "var(--color-error)" : "var(--color-text-secondary)" }}
                   >
                     {errorRate}%
                   </td>
-                  <td style={{ padding: 10, color: "var(--color-text-secondary)", fontSize: 11 }}>
+                  <td className="sa-td sa-text-muted sa-text-xs">
                     {new Date(ep.lastSeen).toLocaleString()}
                   </td>
                 </tr>
@@ -605,81 +460,52 @@ export function QualityDashboardTab() {
 
       {/* Database Health */}
       <div>
-        <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Database Health</h3>
-        <div
-          style={{
-            border: "1px solid var(--color-border)",
-            borderRadius: 8,
-            padding: 16,
-            background: "var(--color-surface)",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 12,
-              marginBottom: 16,
-            }}
-          >
+        <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Database Health</h3>
+        <div className="sa-stat-card">
+          <div className="sa-grid-auto sa-gap-12 sa-mb-16">
             <div>
-              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Status</div>
+              <div className="sa-stat-label">Status</div>
               <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: statusColor(overview.database.status).text,
-                }}
+                className="sa-text-base sa-fw-600"
+                style={{ color: statusColor(overview.database.status).text }}
               >
                 {overview.database.status}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Latency</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>{overview.database.latencyMs}ms</div>
+              <div className="sa-stat-label">Latency</div>
+              <div className="sa-text-base sa-fw-600">{overview.database.latencyMs}ms</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Connections</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>
+              <div className="sa-stat-label">Connections</div>
+              <div className="sa-text-base sa-fw-600">
                 {overview.database.activeConnections}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Migrations</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>{overview.database.migrations}</div>
+              <div className="sa-stat-label">Migrations</div>
+              <div className="sa-text-base sa-fw-600">{overview.database.migrations}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Latest</div>
-              <div style={{ fontSize: 11, fontWeight: 600, fontFamily: "monospace" }}>
+              <div className="sa-stat-label">Latest</div>
+              <div className="sa-text-xs sa-fw-600 mono">
                 {overview.database.latestMigration}
               </div>
             </div>
           </div>
-          <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "var(--color-text-secondary)" }}>
+          <div className="sa-border-t" style={{ paddingTop: 12 }}>
+            <div className="sa-text-sm sa-fw-600 sa-mb-8 sa-text-muted">
               Table Row Counts
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                gap: 6,
-              }}
-            >
+            <div className="sa-grid-auto sa-gap-6">
               {Object.entries(overview.database.tableStats).map(([table, count]) => (
                 <div
                   key={table}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    padding: "4px 8px",
-                    background: "var(--color-surface-alt)",
-                    borderRadius: 4,
-                    fontSize: 11,
-                  }}
+                  className="sa-flex-between sa-bg-surface-alt sa-radius-4 sa-text-xs"
+                  style={{ padding: "4px 8px" }}
                 >
-                  <span style={{ color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{table}</span>
-                  <span style={{ fontWeight: 600 }}>{count.toLocaleString()}</span>
+                  <span className="sa-text-muted mono">{table}</span>
+                  <span className="sa-fw-600">{count.toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -688,46 +514,27 @@ export function QualityDashboardTab() {
       </div>
 
       {/* Services */}
-      <div style={{ marginTop: 24 }}>
-        <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Services</h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 12,
-          }}
-        >
+      <div className="sa-mt-20">
+        <h3 className="sa-text-lg sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Services</h3>
+        <div className="sa-grid-auto">
           {overview.services.map((svc) => {
             const color = statusColor(svc.status);
             return (
-              <div
-                key={svc.name}
-                style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}
-              >
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{svc.name}</div>
-                <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 6 }}>
+              <div key={svc.name} className="sa-stat-card sa-p-12">
+                <div className="sa-fw-600 sa-text-base sa-mb-4">{svc.name}</div>
+                <div className="sa-text-xs sa-text-muted sa-mb-6">
                   Port {svc.port} • {svc.framework}
                 </div>
                 <span
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "2px 8px",
-                    borderRadius: 4,
-                    background: color.bg,
-                    color: color.text,
-                    fontSize: 11,
-                    fontWeight: 500,
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "2px 8px", borderRadius: 4,
+                    background: color.bg, color: color.text,
+                    fontSize: 11, fontWeight: 500,
                   }}
                 >
                   <span
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: color.dot,
-                    }}
+                    style={{ width: 6, height: 6, borderRadius: "50%", background: color.dot }}
                   />
                   {svc.status}
                 </span>

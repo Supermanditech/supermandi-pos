@@ -44,7 +44,7 @@ export function ApplicationsTab({
           <div className="cardTitle">Registration Applications</div>
           <div className="muted">Review and approve/reject retailer and supplier registration applications</div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="sa-flex sa-gap-8">
           <select
             className="selectSmall"
             value={appEntityFilter}
@@ -60,7 +60,7 @@ export function ApplicationsTab({
         </div>
       </div>
 
-      {applicationsError && <div className="banner" style={{ margin: "0 16px 12px" }}>{applicationsError}</div>}
+      {applicationsError && <div className="banner sa-mb-12" style={{ margin: "0 16px" }}>{applicationsError}</div>}
 
       {applications.length === 0 ? (
         <div className="empty">
@@ -72,7 +72,7 @@ export function ApplicationsTab({
             {applications.map((app) => (
               <div className="deviceCard" key={app.id}>
                 <div className="deviceHeader">
-                  <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
+                  <div className="deviceLabelInput sa-fw-600">
                     {app.businessName || "Unknown Business"}
                   </div>
                   <div className="badgeRow">
@@ -119,17 +119,17 @@ export function ApplicationsTab({
                     </div>
                   )}
                   {app.rejectionReason && (
-                    <div style={{ gridColumn: "1 / -1", color: "var(--color-error)" }}>
+                    <div className="sa-text-danger" style={{ gridColumn: "1 / -1" }}>
                       <strong>Previous Rejection:</strong> <span>{app.rejectionReason}</span>
                     </div>
                   )}
                 </div>
 
-                <div style={{ marginTop: 8 }}>
-                  <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Rejection Reason (required for reject, min 5 chars):</label>
+                <div className="sa-mt-8">
+                  <label className="sa-form-label">Rejection Reason (required for reject, min 5 chars):</label>
                   <textarea
-                    className="tableInput"
-                    style={{ width: "100%", marginBottom: 8, minHeight: 48, resize: "vertical" }}
+                    className="sa-textarea sa-mb-8"
+                    style={{ minHeight: 48 }}
                     placeholder="Describe what the applicant needs to fix (min 5 characters)..."
                     value={appRejectReason[app.id] || ""}
                     onChange={(e) => setAppRejectReason((prev) => ({ ...prev, [app.id]: e.target.value }))}
@@ -137,25 +137,24 @@ export function ApplicationsTab({
                 </div>
 
                 {/* T-012: Conditional actions based on application status */}
-                <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
+                <div className="deviceActions">
                   {app.status === 'NEEDS_FIX' ? (
                     <>
-                      <span style={{ fontSize: 12, color: "var(--color-warning)", fontStyle: "italic", alignSelf: "center" }}>
+                      <span className="sa-text-sm sa-text-warning" style={{ fontStyle: "italic", alignSelf: "center" }}>
                         Awaiting applicant resubmission
                       </span>
                       <button
                         onClick={() => handleApproveApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ background: "var(--color-success)", color: "white" }}
+                        className="btnSuccess"
                         title={`Approve resubmitted ${app.entityType === 'retailer' ? 'store' : 'supplier'} application`}
                       >
                         {appActionLoading[app.id] ? "Approving..." : "Approve"}
                       </button>
                       <button
-                        className="btnGhost"
+                        className="btnGhost sa-text-danger"
                         onClick={() => handleRejectApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ color: "var(--color-error)" }}
                         title="Update rejection reason and send back"
                       >
                         {appActionLoading[app.id] ? "Updating..." : "Update Rejection"}
@@ -166,16 +165,15 @@ export function ApplicationsTab({
                       <button
                         onClick={() => handleApproveApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ background: "var(--color-success)", color: "white" }}
+                        className="btnSuccess"
                         title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
                       >
                         {appActionLoading[app.id] ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
                       </button>
                       <button
-                        className="btnGhost"
+                        className="btnGhost sa-text-danger"
                         onClick={() => handleRejectApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ color: "var(--color-error)" }}
                       >
                         {appActionLoading[app.id] ? "Rejecting..." : "Reject"}
                       </button>
@@ -188,11 +186,11 @@ export function ApplicationsTab({
         </div>
       )}
 
-      <div style={{ padding: "12px 16px", fontSize: 12, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="sa-flex sa-gap-12 sa-text-sm sa-text-muted sa-px-12 sa-py-8">
         <span>Showing {applications.length} of {applicationsTotal} pending applications</span>
         {/* APPLICATIONS-UNBOUNDED-LOADMORE: cap at 500 to prevent memory bloat */}
         {applications.length >= 500 ? (
-          <span style={{ color: "var(--color-warning)", fontStyle: "italic" }}>
+          <span className="sa-text-warning" style={{ fontStyle: "italic" }}>
             Max reached — use search to narrow results.
           </span>
         ) : (
@@ -200,7 +198,7 @@ export function ApplicationsTab({
             <button
               onClick={onLoadMore}
               disabled={applicationsLoading}
-              style={{ fontSize: 12, padding: "4px 12px", cursor: "pointer" }}
+              className="sa-btn-sm"
             >
               {applicationsLoading ? "Loading..." : "Load More"}
             </button>

@@ -57,85 +57,30 @@ export default function DeviceRequiredBanner({ onStatusLoaded }: DeviceRequiredB
   if (dismissed) return null;
 
   return (
-    <div style={{
-      padding: '1rem 1.5rem',
-      background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-      borderBottom: '1px solid #f59e0b',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '1rem',
-      flexWrap: 'wrap',
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-      }}>
-        <span style={{ fontSize: '1.5rem' }}>&#9888;</span>
+    <div className="device-banner">
+      <div className="device-banner-content">
+        <span className="device-banner-icon">&#9888;</span>
         <div>
-          <div style={{
-            fontWeight: '600',
-            color: '#92400e',
-            fontSize: '0.95rem',
-          }}>
+          <div className="device-banner-title">
             Activate Your POS
           </div>
-          <div style={{
-            color: '#a16207',
-            fontSize: '0.85rem',
-            marginTop: '0.25rem',
-          }}>
+          <div className="device-banner-desc">
             Download the SuperMandi POS app and enter your phone number to activate and start billing.
           </div>
         </div>
       </div>
 
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-      }}>
+      <div className="device-banner-actions">
         <Link
           to={`/s/${storeCode}/devices`}
-          style={{
-            padding: '0.5rem 1rem',
-            background: '#f59e0b',
-            color: 'white',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontWeight: '500',
-            fontSize: '0.9rem',
-            boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
-            transition: 'all 0.2s',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = '#d97706';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = '#f59e0b';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
+          className="device-banner-btn"
         >
           Activate Device
         </Link>
 
         <button
           onClick={() => setDismissed(true)}
-          style={{
-            padding: '0.5rem',
-            background: 'transparent',
-            border: 'none',
-            color: '#92400e',
-            cursor: 'pointer',
-            fontSize: '1.2rem',
-            lineHeight: 1,
-            opacity: 0.6,
-            transition: 'opacity 0.2s',
-          }}
-          onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+          className="device-banner-dismiss"
           title="Dismiss (will show again on page reload)"
         >
           &#10005;

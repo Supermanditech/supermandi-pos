@@ -385,14 +385,6 @@ export default function LoginPage() {
 
   return (
     <div className="login-page-container">
-      {/* AUDIT-RET-004: Fade-in + spin animations to prevent white flash on mount */}
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
-        .login-page-fade { animation: fadeIn 0.3s ease-out; }
-        .login-skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200px 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
-      `}</style>
       {/* T-095: Unified login header */}
       <header className="login-header">
         <div className="login-header-inner">
@@ -433,7 +425,7 @@ export default function LoginPage() {
             {!isFirebaseReady() && step === 'phone' && authMode === 'otp' && (
               <div className="login-alert-warning">
                 <strong>Phone Verification Unavailable</strong>
-                <p style={{ marginTop: '0.25rem', marginBottom: 0 }}>
+                <p className="login-alert-body">
                   Login requires phone verification which is currently unavailable.
                 </p>
               </div>
@@ -467,7 +459,7 @@ export default function LoginPage() {
                   disabled={isLoading || !isFirebaseReady()}
                 >
                   {isLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <span className="login-btn-spinner">
                       <span className="login-spinner" />
                       Sending OTP...
                     </span>
@@ -475,20 +467,20 @@ export default function LoginPage() {
                 </button>
 
                 {/* T-003: Toggle to password login */}
-                <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                <div className="login-toggle-container">
                   <button type="button" onClick={() => { setAuthMode('password'); setError(''); }} className="login-text-link">
                     Sign in with email & password instead
                   </button>
                 </div>
 
                 <div className="login-divider">
-                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
+                  <p className="login-secondary-text">
                     Don't have an account?{' '}
                     <Link to="/retailer/register" className="login-text-link">
                       Register
                     </Link>
                   </p>
-                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0 0', textAlign: 'center' }}>
+                  <p className="login-secondary-text">
                     <Link to="/retailer/forgot-password" className="login-text-link">
                       Forgot Password?
                     </Link>
@@ -515,29 +507,28 @@ export default function LoginPage() {
                     autoFocus
                   />
                   {emailTouched && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && (
-                    <p style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.25rem' }}>Please enter a valid email address</p>
+                    <p className="login-field-error">Please enter a valid email address</p>
                   )}
                 </div>
                 <div className="login-form-group">
                   <label className="login-form-label" htmlFor="login-password">Password</label>
-                  <div style={{ position: 'relative' }}>
+                  <div className="login-password-wrapper">
                     <input
                       id="login-password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
-                      className="login-form-input"
+                      className="login-form-input login-form-input--password"
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={isLoading}
-                      style={{ paddingRight: '3rem' }}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      className="login-password-toggle"
                       aria-pressed={showPassword}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8125rem', padding: 0 }}
                     >
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
@@ -550,7 +541,7 @@ export default function LoginPage() {
                   disabled={isLoading}
                 >
                   {isLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <span className="login-btn-spinner">
                       <span className="login-spinner" />
                       Signing in...
                     </span>
@@ -558,20 +549,20 @@ export default function LoginPage() {
                 </button>
 
                 {/* Toggle back to OTP */}
-                <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                <div className="login-toggle-container">
                   <button type="button" onClick={() => { setAuthMode('otp'); setError(''); setEmail(''); setPassword(''); }} className="login-text-link">
                     Sign in with OTP instead
                   </button>
                 </div>
 
                 <div className="login-divider">
-                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
+                  <p className="login-secondary-text">
                     Don't have an account?{' '}
                     <Link to="/retailer/register" className="login-text-link">
                       Register
                     </Link>
                   </p>
-                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0 0', textAlign: 'center' }}>
+                  <p className="login-secondary-text">
                     <Link to="/retailer/forgot-password" className="login-text-link">
                       Forgot Password?
                     </Link>
@@ -619,14 +610,14 @@ export default function LoginPage() {
                   disabled={isLoading || otp.length !== 6}
                 >
                   {isLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <span className="login-btn-spinner">
                       <span className="login-spinner" />
                       Verifying...
                     </span>
                   ) : 'Verify & Sign In'}
                 </button>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="login-otp-actions">
                   <button
                     type="button"
                     onClick={handleChangePhone}
@@ -653,12 +644,12 @@ export default function LoginPage() {
             {step === 'stores' && (
               <div>
                 {stores.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                  <div className="login-state-section">
                     <div className="login-warning-icon">!</div>
-                    <h3 style={{ color: '#d97706', marginBottom: '0.5rem' }}>No Store Assigned</h3>
-                    <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                    <h3 className="login-state-heading login-state-heading--warning">No Store Assigned</h3>
+                    <p className="login-state-description">
                       Your account is not associated with any store. Please contact support at{' '}
-                      <a href="mailto:hello@supermandi.tech" style={{ color: '#2563eb' }}>hello@supermandi.tech</a>.
+                      <a href="mailto:hello@supermandi.tech" className="login-email-link">hello@supermandi.tech</a>.
                     </p>
                     <button
                       onClick={() => {
@@ -673,7 +664,7 @@ export default function LoginPage() {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div className="login-store-list">
                     {stores.map((store) => (
                       <button
                         key={store.id}
@@ -691,21 +682,20 @@ export default function LoginPage() {
 
             {/* AUTH-UX-LOGIN-001: Account Not Found State - Professional messaging */}
             {step === 'not_onboarded' && (
-              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+              <div className="login-state-section">
                 <div className="login-warning-icon">!</div>
-                <h3 style={{ color: '#475569', marginBottom: '0.5rem', fontWeight: 600 }}>Account not found</h3>
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                <h3 className="login-state-heading">Account not found</h3>
+                <p className="login-state-description">
                   This phone number is not associated with an active account. Please complete registration to continue.
                 </p>
                 <Link
                   to="/retailer/register"
                   state={{ phone }}
-                  className="login-btn-primary"
-                  style={{ display: 'block', textDecoration: 'none', textAlign: 'center', lineHeight: '46px' }}
+                  className="login-btn-primary login-link-as-btn"
                 >
                   Register
                 </Link>
-                <div style={{ marginTop: '1rem' }}>
+                <div className="login-action-spacer">
                   <button
                     onClick={() => {
                       setStep('phone');
@@ -722,19 +712,18 @@ export default function LoginPage() {
 
             {/* Incomplete Registration -- Resume flow */}
             {step === 'incomplete' && (
-              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                <div className="login-alert-warning" style={{ textAlign: 'left' }}>
+              <div className="login-state-section">
+                <div className="login-alert-warning login-alert-warning--left">
                   Your registration is incomplete. Please resume to complete your application.
                 </div>
                 <Link
                   to="/retailer/register"
                   state={{ phone, resume: true }}
-                  className="login-btn-primary"
-                  style={{ display: 'block', textDecoration: 'none', textAlign: 'center', lineHeight: '46px' }}
+                  className="login-btn-primary login-link-as-btn"
                 >
                   Resume Registration
                 </Link>
-                <div style={{ marginTop: '1rem' }}>
+                <div className="login-action-spacer">
                   <button
                     onClick={() => {
                       setStep('phone');
@@ -754,10 +743,10 @@ export default function LoginPage() {
 
       {/* T-097: Unified footer */}
       <footer className="login-footer">
-        <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="login-footer-inner login-footer-layout">
           <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Link to="/retailer/help" style={{ color: 'inherit', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+          <div className="login-footer-links">
+            <Link to="/retailer/help" className="login-footer-link">Help</Link>
             <BuildStamp />
           </div>
         </div>

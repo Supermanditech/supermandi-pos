@@ -105,35 +105,33 @@ export function MonitoringTab() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="sa-p-24">
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={cleaningUp} />}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="sa-flex-between sa-mb-20">
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>System Monitoring</h2>
-          <p style={{ margin: "4px 0 0", color: "var(--color-text-secondary)", fontSize: 14 }}>
+          <h2 className="sa-text-2xl sa-fw-600" style={{ margin: 0 }}>System Monitoring</h2>
+          <p className="sa-text-muted sa-text-base sa-mt-4" style={{ margin: 0 }}>
             T-223: Cloud Run services health, GCP alert policies, infrastructure status
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+        <div className="sa-flex sa-gap-8">
+          <label className="sa-flex sa-gap-4 sa-text-md sa-text-muted" style={{ cursor: "pointer" }}>
             <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
             Auto-refresh (30s)
           </label>
           <button
+            className="sa-btn-ghost-sm"
             onClick={loadHealth}
             disabled={loading}
-            style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: "pointer", fontSize: 13 }}
+            style={{ padding: "8px 16px" }}
           >
             {loading ? "Checking..." : "Refresh"}
           </button>
           <button
+            className="sa-btn-danger-sm sa-fw-500"
             onClick={handleCleanup}
             disabled={cleaningUp}
-            style={{
-              padding: "8px 16px", borderRadius: 6, border: "none",
-              background: cleaningUp ? "var(--color-text-secondary)" : "var(--color-error)", color: "#FFF",
-              cursor: cleaningUp ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 500,
-            }}
+            style={{ padding: "8px 16px", background: cleaningUp ? "var(--color-text-secondary)" : undefined }}
           >
             {cleaningUp ? "Cleaning..." : "Cleanup Stale Tokens"}
           </button>
@@ -141,71 +139,70 @@ export function MonitoringTab() {
       </div>
 
       {cleanupResult && (
-        <div style={{ padding: 12, marginBottom: 16, borderRadius: 8, backgroundColor: "var(--color-success-soft)", border: "1px solid var(--color-success)", fontSize: 13 }}>
+        <div className="sa-alert-success sa-mb-16">
           Token cleanup complete: <strong>{cleanupResult.deactivated}</strong> deactivated (90+ days), <strong>{cleanupResult.deleted}</strong> deleted (180+ days)
         </div>
       )}
 
       {error && (
-        <div style={{ padding: 12, marginBottom: 16, borderRadius: 8, backgroundColor: "var(--color-error-soft)", color: "#991B1B", fontSize: 13 }}>
+        <div className="sa-alert-error sa-mb-16">
           {error}
         </div>
       )}
 
       {/* Overall status banner */}
       {health && (
-        <div style={{
-          padding: 16, marginBottom: 20, borderRadius: 8,
-          backgroundColor: overallColor.bg, border: `1px solid ${overallColor.bg}`,
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div
+          className="sa-flex-between sa-p-16 sa-mb-20 sa-radius-8"
+          style={{ backgroundColor: overallColor.bg, border: `1px solid ${overallColor.bg}` }}
+        >
+          <div className="sa-flex sa-gap-12">
             <div style={{ width: 16, height: 16, borderRadius: "50%", backgroundColor: overallColor.dot }} />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: overallColor.text, textTransform: "uppercase" }}>
+              <div className="sa-text-xl sa-fw-700 sa-text-upper" style={{ color: overallColor.text }}>
                 {health.status}
               </div>
-              <div style={{ fontSize: 12, color: overallColor.text, opacity: 0.8 }}>
+              <div className="sa-text-sm" style={{ color: overallColor.text, opacity: 0.8 }}>
                 Last checked: {new Date(health.timestamp).toLocaleString("en-IN")}
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 24 }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: overallColor.text }}>{formatUptime(health.uptime)}</div>
-              <div style={{ fontSize: 11, color: overallColor.text, opacity: 0.7 }}>UPTIME</div>
+          <div className="sa-flex sa-gap-24">
+            <div className="sa-text-center">
+              <div className="sa-text-2xl sa-fw-700" style={{ color: overallColor.text }}>{formatUptime(health.uptime)}</div>
+              <div className="sa-text-xs" style={{ color: overallColor.text, opacity: 0.7 }}>UPTIME</div>
             </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: overallColor.text }}>{health.version?.slice(0, 7) || "—"}</div>
-              <div style={{ fontSize: 11, color: overallColor.text, opacity: 0.7 }}>VERSION</div>
+            <div className="sa-text-center">
+              <div className="sa-text-2xl sa-fw-700" style={{ color: overallColor.text }}>{health.version?.slice(0, 7) || "—"}</div>
+              <div className="sa-text-xs" style={{ color: overallColor.text, opacity: 0.7 }}>VERSION</div>
             </div>
           </div>
         </div>
       )}
 
       {/* Health checks grid */}
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "var(--color-text-primary)" }}>Service Health Checks</h3>
+      <h3 className="sa-section-title sa-mb-12">Service Health Checks</h3>
       {loading && !health ? (
-        <div style={{ textAlign: "center", padding: 40, color: "var(--color-text-secondary)" }}>Loading health status...</div>
+        <div className="sa-text-center sa-text-muted" style={{ padding: 40 }}>Loading health status...</div>
       ) : health ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div className="sa-grid-3 sa-mb-20">
           {Object.entries(health.checks).map(([name, check]) => {
             const c = statusColor(check.status);
             return (
-              <div key={name} style={{ padding: 16, borderRadius: 8, border: "1px solid var(--color-border)", backgroundColor: "var(--color-surface)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, textTransform: "capitalize" }}>{name}</div>
+              <div key={name} className="sa-stat-card">
+                <div className="sa-flex-between sa-mb-8">
+                  <div className="sa-text-base sa-fw-600" style={{ textTransform: "capitalize" }}>{name}</div>
                   <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 500, backgroundColor: c.bg, color: c.text }}>
                     {check.status}
                   </span>
                 </div>
                 {check.latencyMs !== undefined && (
-                  <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+                  <div className="sa-text-md sa-text-muted">
                     Latency: <strong>{check.latencyMs}ms</strong>
                   </div>
                 )}
                 {check.details && (
-                  <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>{check.details}</div>
+                  <div className="sa-text-sm sa-text-muted sa-mt-4">{check.details}</div>
                 )}
               </div>
             );
@@ -214,26 +211,26 @@ export function MonitoringTab() {
       ) : null}
 
       {/* Cloud Run services table */}
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "var(--color-text-primary)" }}>Cloud Run Services</h3>
-      <div style={{ overflowX: "auto", marginBottom: 24 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <h3 className="sa-section-title sa-mb-12">Cloud Run Services</h3>
+      <div className="sa-scroll-x sa-mb-20">
+        <table className="table">
           <thead>
-            <tr style={{ borderBottom: "2px solid var(--color-border)", textAlign: "left" }}>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Service</th>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Port</th>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Framework</th>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Region</th>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>URL</th>
+            <tr>
+              <th className="sa-th">Service</th>
+              <th className="sa-th">Port</th>
+              <th className="sa-th">Framework</th>
+              <th className="sa-th">Region</th>
+              <th className="sa-th">URL</th>
             </tr>
           </thead>
           <tbody>
             {services.map((svc) => (
-              <tr key={svc.name} style={{ borderBottom: "1px solid var(--color-surface-alt)" }}>
-                <td style={{ padding: "8px 12px", fontWeight: 500 }}>{svc.name}</td>
-                <td style={{ padding: "8px 12px", fontFamily: "monospace" }}>{svc.port}</td>
-                <td style={{ padding: "8px 12px" }}>{svc.type}</td>
-                <td style={{ padding: "8px 12px" }}>asia-south1</td>
-                <td style={{ padding: "8px 12px", fontFamily: "monospace", fontSize: 12 }}>
+              <tr key={svc.name}>
+                <td className="sa-td sa-td--bold">{svc.name}</td>
+                <td className="sa-td sa-td--mono">{svc.port}</td>
+                <td className="sa-td">{svc.type}</td>
+                <td className="sa-td">asia-south1</td>
+                <td className="sa-td sa-td--mono">
                   {svc.name}.run.app
                 </td>
               </tr>
@@ -243,25 +240,25 @@ export function MonitoringTab() {
       </div>
 
       {/* Alert policies reference */}
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "var(--color-text-primary)" }}>GCP Alert Policies (10 active)</h3>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <h3 className="sa-section-title sa-mb-12">GCP Alert Policies (10 active)</h3>
+      <div className="sa-scroll-x">
+        <table className="table">
           <thead>
-            <tr style={{ borderBottom: "2px solid var(--color-border)", textAlign: "left" }}>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Alert Policy</th>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Trigger Condition</th>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Service Scope</th>
-              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Status</th>
+            <tr>
+              <th className="sa-th">Alert Policy</th>
+              <th className="sa-th">Trigger Condition</th>
+              <th className="sa-th">Service Scope</th>
+              <th className="sa-th">Status</th>
             </tr>
           </thead>
           <tbody>
             {alertPolicies.map((policy) => (
-              <tr key={policy.name} style={{ borderBottom: "1px solid var(--color-surface-alt)" }}>
-                <td style={{ padding: "8px 12px", fontWeight: 500 }}>{policy.name}</td>
-                <td style={{ padding: "8px 12px", fontFamily: "monospace", color: "var(--color-error)" }}>{policy.condition}</td>
-                <td style={{ padding: "8px 12px" }}>{policy.service}</td>
-                <td style={{ padding: "8px 12px" }}>
-                  <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 500, backgroundColor: "var(--color-success-soft)", color: "#166534" }}>
+              <tr key={policy.name}>
+                <td className="sa-td sa-td--bold">{policy.name}</td>
+                <td className="sa-td sa-td--mono sa-text-danger">{policy.condition}</td>
+                <td className="sa-td">{policy.service}</td>
+                <td className="sa-td">
+                  <span className="sa-badge-ok">
                     Active
                   </span>
                 </td>
@@ -272,28 +269,28 @@ export function MonitoringTab() {
       </div>
 
       {/* Infrastructure info */}
-      <div style={{ marginTop: 24, padding: 16, borderRadius: 8, backgroundColor: "var(--color-surface-alt)", border: "1px solid var(--color-border)" }}>
-        <h3 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Infrastructure Overview</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, fontSize: 13 }}>
+      <div className="sa-mt-20 sa-p-16 sa-radius-8 sa-bg-surface-alt sa-border">
+        <h3 className="sa-section-title sa-mb-8" style={{ margin: 0 }}>Infrastructure Overview</h3>
+        <div className="sa-grid-4 sa-text-md">
           <div>
-            <strong style={{ color: "#1E40AF" }}>Load Balancer</strong>
-            <div style={{ color: "var(--color-text-secondary)" }}>supermandi-staging-lb</div>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Global HTTPS + SSL cert</div>
+            <strong className="sa-text-info">Load Balancer</strong>
+            <div className="sa-text-muted">supermandi-staging-lb</div>
+            <div className="sa-text-sm sa-text-muted">Global HTTPS + SSL cert</div>
           </div>
           <div>
             <strong style={{ color: "#7C3AED" }}>Cloud SQL</strong>
-            <div style={{ color: "var(--color-text-secondary)" }}>PostgreSQL 15</div>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>db-f1-micro, asia-south1</div>
+            <div className="sa-text-muted">PostgreSQL 15</div>
+            <div className="sa-text-sm sa-text-muted">db-f1-micro, asia-south1</div>
           </div>
           <div>
-            <strong style={{ color: "var(--color-error)" }}>Redis</strong>
-            <div style={{ color: "var(--color-text-secondary)" }}>Memorystore M1</div>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>1GB, asia-south1</div>
+            <strong className="sa-text-danger">Redis</strong>
+            <div className="sa-text-muted">Memorystore M1</div>
+            <div className="sa-text-sm sa-text-muted">1GB, asia-south1</div>
           </div>
           <div>
-            <strong style={{ color: "#166534" }}>Domain</strong>
-            <div style={{ color: "var(--color-text-secondary)" }}>{typeof window !== 'undefined' ? window.location.hostname : 'supermandi.tech'}</div>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Cloudflare DNS</div>
+            <strong className="sa-text-success">Domain</strong>
+            <div className="sa-text-muted">{typeof window !== 'undefined' ? window.location.hostname : 'supermandi.tech'}</div>
+            <div className="sa-text-sm sa-text-muted">Cloudflare DNS</div>
           </div>
         </div>
       </div>

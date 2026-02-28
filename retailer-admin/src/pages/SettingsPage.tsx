@@ -289,146 +289,65 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100%',
-        background: 'var(--background)',
-        padding: '2rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Loading settings...</div>
+      <div className="set-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="text-muted">Loading settings...</div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100%',
-      background: 'var(--background)',
-      padding: '2rem',
-    }}>
+    <div className="set-container">
       {/* T-112: Breadcrumb navigation */}
       <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Settings' }]} />
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{
-          margin: '0 0 0.5rem',
-          fontSize: '1.75rem',
-          fontWeight: '700',
-          color: 'var(--text)',
-        }}>
-          Store Settings
-        </h1>
-        <p style={{
-          margin: 0,
-          fontSize: '0.95rem',
-          color: 'var(--text-muted)',
-        }}>
-          Configure your store's payment, tax, and display preferences
-        </p>
+      <div className="set-header">
+        <h1 className="set-title">Store Settings</h1>
+        <p className="set-subtitle">Configure your store's payment, tax, and display preferences</p>
       </div>
 
       {/* Load Error Banner */}
       {loadError && (
-        <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '1rem', color: '#991b1b', fontSize: '0.9rem' }}>
-          {loadError}
-        </div>
+        <div className="set-alert-load">{loadError}</div>
       )}
 
       {/* Success/Error Messages */}
       {saveSuccess && (
-        <div style={{
-          padding: '1rem 1.25rem',
-          background: '#dcfce7',
-          borderRadius: '10px',
-          border: '1px solid #22c55e',
-          color: '#166534',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          fontSize: '0.95rem',
-        }}>
-          <span style={{ fontSize: '1.25rem' }}>✅</span>
+        <div className="set-alert-success">
+          <span className="set-alert-icon">✅</span>
           Settings saved successfully!
         </div>
       )}
 
       {saveError && (
-        <div style={{
-          padding: '1rem 1.25rem',
-          background: '#fee2e2',
-          borderRadius: '10px',
-          border: '1px solid #ef4444',
-          color: '#dc2626',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          fontSize: '0.95rem',
-        }}>
-          <span style={{ fontSize: '1.25rem' }}>❌</span>
+        <div className="set-alert-error">
+          <span className="set-alert-icon">❌</span>
           {saveError}
         </div>
       )}
 
       {/* Settings Form */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="set-form">
         {/* Payment Settings */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>💳</span>
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon">💳</span>
             Payment Settings
           </h2>
 
-          <div style={{ display: 'grid', gap: '1rem' }}>
+          <div className="set-grid">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                UPI VPA (Virtual Payment Address)
-              </label>
+              <label className="set-label">UPI VPA (Virtual Payment Address)</label>
               <input
                 type="text"
-                className="form-input"
+                className={`form-input set-input${errors.upiVpa ? ' set-input--error' : ''}`}
                 value={settings.upiVpa}
                 onChange={(e) => handleChange('upiVpa', e.target.value)}
                 placeholder="yourstore@upi"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderColor: errors.upiVpa ? '#ef4444' : undefined,
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.currentTarget.style.borderColor = errors.upiVpa ? '#ef4444' : ''}
               />
               {errors.upiVpa && (
-                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#ef4444' }}>
-                  {errors.upiVpa}
-                </p>
+                <p className="set-error-text">{errors.upiVpa}</p>
               )}
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <p className="set-hint-text">
                 This will be used for UPI payments in the POS app
               </p>
             </div>
@@ -436,303 +355,130 @@ export default function SettingsPage() {
         </section>
 
         {/* Tax Settings */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>📊</span>
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon">📊</span>
             Tax Settings
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+          <div className="set-grid-2">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                GST Rate (%)
-              </label>
+              <label className="set-label">GST Rate (%)</label>
               <input
                 type="number"
-                className="form-input"
+                className={`form-input set-input${errors.taxRate ? ' set-input--error' : ''}`}
                 value={settings.taxRate}
                 onChange={(e) => handleChange('taxRate', parseFloat(e.target.value) || 0)}
                 min="0"
                 max="28"
                 step="0.5"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderColor: errors.taxRate ? '#ef4444' : undefined,
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
               {errors.taxRate && (
-                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#ef4444' }}>
-                  {errors.taxRate}
-                </p>
+                <p className="set-error-text">{errors.taxRate}</p>
               )}
             </div>
 
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                GST Number (GSTIN)
-              </label>
+              <label className="set-label">GST Number (GSTIN)</label>
               <input
                 type="text"
-                className="form-input"
+                className={`form-input set-input set-input--upper${errors.gstNumber ? ' set-input--error' : ''}`}
                 value={settings.gstNumber}
                 onChange={(e) => handleChange('gstNumber', e.target.value.toUpperCase())}
                 placeholder="22AAAAA0000A1Z5"
                 maxLength={15}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderColor: errors.gstNumber ? '#ef4444' : undefined,
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  textTransform: 'uppercase',
-                }}
               />
               {errors.gstNumber && (
-                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#ef4444' }}>
-                  {errors.gstNumber}
-                </p>
+                <p className="set-error-text">{errors.gstNumber}</p>
               )}
             </div>
           </div>
         </section>
 
         {/* Store Information */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>🏪</span>
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon">🏪</span>
             Store Information
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+          <div className="set-grid-2">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Store Name
-              </label>
+              <label className="set-label">Store Name</label>
               <input
                 type="text"
-                className="form-input"
+                className="form-input set-input"
                 value={settings.storeName}
                 onChange={(e) => handleChange('storeName', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
 
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Phone Number
-              </label>
+              <label className="set-label">Phone Number</label>
               <input
                 type="tel"
-                className="form-input"
+                className={`form-input set-input${errors.phone ? ' set-input--error' : ''}`}
                 value={settings.phone}
                 onChange={(e) => handleChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                 placeholder="9876543210"
                 maxLength={10}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderColor: errors.phone ? '#ef4444' : undefined,
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
               {errors.phone && (
-                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#ef4444' }}>
-                  {errors.phone}
-                </p>
+                <p className="set-error-text">{errors.phone}</p>
               )}
             </div>
 
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Address
-              </label>
+            <div className="set-full-col">
+              <label className="set-label">Address</label>
               <textarea
-                className="form-input"
+                className="form-input set-input set-textarea"
                 value={settings.address}
                 onChange={(e) => handleChange('address', e.target.value)}
                 rows={2}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  resize: 'vertical',
-                }}
               />
             </div>
           </div>
         </section>
 
         {/* Operating Hours & Receipt */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>⚙️</span>
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon">⚙️</span>
             Preferences
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div className="set-grid-pref">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Opening Time
-              </label>
+              <label className="set-label">Opening Time</label>
               <input
                 type="time"
-                className="form-input"
+                className="form-input set-input"
                 value={settings.operatingHours.open}
                 onChange={(e) => handleOperatingHoursChange('open', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
 
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Closing Time
-              </label>
+              <label className="set-label">Closing Time</label>
               <input
                 type="time"
-                className="form-input"
+                className="form-input set-input"
                 value={settings.operatingHours.close}
                 onChange={(e) => handleOperatingHoursChange('close', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
 
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Receipt Footer Message
-              </label>
+            <div className="set-full-col">
+              <label className="set-label">Receipt Footer Message</label>
               <textarea
-                className="form-input"
+                className="form-input set-input set-textarea"
                 value={settings.receiptFooter}
                 onChange={(e) => handleChange('receiptFooter', e.target.value)}
                 rows={2}
                 maxLength={200}
                 placeholder="Thank you for shopping with us!"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  resize: 'vertical',
-                }}
               />
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <p className="set-hint-text">
                 This message will appear at the bottom of printed receipts ({settings.receiptFooter?.length || 0}/200 characters)
               </p>
             </div>
@@ -740,107 +486,54 @@ export default function SettingsPage() {
         </section>
 
         {/* T-156: Receipt Customization */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>🧾</span>
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon">🧾</span>
             Receipt Customization
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+          <div className="set-grid-2">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Receipt GSTIN
-              </label>
+              <label className="set-label">Receipt GSTIN</label>
               <input
                 type="text"
-                className="form-input"
+                className="form-input set-input set-input--upper"
                 value={settings.receiptGstin}
                 onChange={(e) => handleChange('receiptGstin', e.target.value.toUpperCase())}
                 placeholder="22AAAAA0000A1Z5"
                 maxLength={15}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  textTransform: 'uppercase',
-                }}
               />
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <p className="set-hint-text">
                 GSTIN printed on customer receipts. Leave blank to hide.
               </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '1.5rem' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-              }}>
+            <div className="set-checkbox-row">
+              <label className="set-checkbox-label">
                 <input
                   type="checkbox"
                   checked={settings.showTaxBreakdown}
                   onChange={(e) => handleChange('showTaxBreakdown', e.target.checked)}
-                  style={{ width: '18px', height: '18px', accentColor: '#3b82f6', cursor: 'pointer' }}
+                  className="set-checkbox"
                 />
                 Show Tax Breakdown on Receipt
               </label>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <p className="set-hint-text" style={{ margin: 0 }}>
                 Print CGST/SGST split on each receipt
               </p>
             </div>
 
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Custom Receipt Footer
-              </label>
+            <div className="set-full-col">
+              <label className="set-label">Custom Receipt Footer</label>
               <textarea
-                className="form-input"
+                className="form-input set-input set-textarea"
                 value={settings.receiptCustomFooter}
                 onChange={(e) => handleChange('receiptCustomFooter', e.target.value)}
                 rows={3}
                 maxLength={300}
                 placeholder="e.g. Exchange within 7 days with receipt. No refunds on perishables."
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  resize: 'vertical',
-                }}
               />
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <p className="set-hint-text">
                 Additional text printed below the standard footer ({settings.receiptCustomFooter?.length || 0}/300 characters)
               </p>
             </div>
@@ -848,144 +541,56 @@ export default function SettingsPage() {
         </section>
 
         {/* T-004: Change Password */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>🔒</span>
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon">🔒</span>
             Change Password
           </h2>
 
           {passwordSuccess && (
-            <div style={{
-              padding: '0.75rem 1rem',
-              background: '#dcfce7',
-              borderRadius: '8px',
-              border: '1px solid #22c55e',
-              color: '#166534',
-              marginBottom: '1rem',
-              fontSize: '0.875rem',
-            }}>
-              Password changed successfully!
-            </div>
+            <div className="set-pw-success">Password changed successfully!</div>
           )}
 
           {passwordError && (
-            <div style={{
-              padding: '0.75rem 1rem',
-              background: '#fee2e2',
-              borderRadius: '8px',
-              border: '1px solid #ef4444',
-              color: '#dc2626',
-              marginBottom: '1rem',
-              fontSize: '0.875rem',
-            }}>
-              {passwordError}
-            </div>
+            <div className="set-pw-error">{passwordError}</div>
           )}
 
-          <div style={{ display: 'grid', gap: '1rem', maxWidth: '400px' }}>
+          <div className="set-password-grid">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Current Password
-              </label>
+              <label className="set-label">Current Password</label>
               <input
                 type="password"
-                className="form-input"
+                className="form-input set-input"
                 value={currentPassword}
                 onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(null); }}
                 placeholder="Enter current password"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                New Password
-              </label>
+              <label className="set-label">New Password</label>
               <input
                 type="password"
-                className="form-input"
+                className="form-input set-input"
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null); }}
                 placeholder="Min 8 chars, 1 upper, 1 lower, 1 number"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
-                Confirm New Password
-              </label>
+              <label className="set-label">Confirm New Password</label>
               <input
                 type="password"
-                className="form-input"
+                className="form-input set-input"
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null); }}
                 placeholder="Re-enter new password"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
             <div>
               <button
                 onClick={handleChangePassword}
                 disabled={passwordSaving}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: passwordSaving ? 'var(--text-muted)' : 'var(--text)',
-                  color: 'var(--surface)',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  cursor: passwordSaving ? 'not-allowed' : 'pointer',
-                }}
+                className="set-password-btn"
               >
                 {passwordSaving ? 'Changing...' : 'Change Password'}
               </button>
@@ -994,34 +599,11 @@ export default function SettingsPage() {
         </section>
 
         {/* Save Button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
+        <div className="set-save-wrap">
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{
-              padding: '0.875rem 2rem',
-              background: saving ? 'var(--text-muted)' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              boxShadow: saving ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.35)',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              if (!saving) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!saving) {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.35)';
-              }
-            }}
+            className="set-save-btn"
           >
             {saving ? 'Saving...' : 'Save Settings'}
           </button>

@@ -29,6 +29,7 @@ import {
 } from "../../services/api/scanApi";
 // T-127: Modal back handler for Android hardware back button
 import { useModalBackHandler } from "../../hooks/useModalBackHandler";
+import { colors } from "../../theme/colors";
 
 export type AddStoreProductRequest = {
   barcode: string;
@@ -283,7 +284,7 @@ export function AddStoreProductModal({
                 value={name}
                 onChangeText={setName}
                 placeholder={hasPrefill ? request.prefill?.name : "Enter product name"}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textTertiary}
                 autoCapitalize="words"
                 editable={!busy}
               />
@@ -301,7 +302,7 @@ export function AddStoreProductModal({
                   value={sellPrice}
                   onChangeText={handleSellPriceChange}
                   placeholder="0.00"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="decimal-pad"
                   editable={!busy}
                   autoFocus
@@ -324,7 +325,7 @@ export function AddStoreProductModal({
                       value={purchasePrice}
                       onChangeText={handlePurchasePriceChange}
                       placeholder="0.00"
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.textTertiary}
                       keyboardType="decimal-pad"
                       editable={!busy}
                     />
@@ -341,7 +342,7 @@ export function AddStoreProductModal({
                       value={mrp}
                       onChangeText={handleMrpChange}
                       placeholder="0.00"
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.textTertiary}
                       keyboardType="decimal-pad"
                       editable={!busy}
                     />
@@ -356,7 +357,7 @@ export function AddStoreProductModal({
                     value={variant}
                     onChangeText={setVariant}
                     placeholder="e.g., Red, Large, 500ml"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textTertiary}
                     autoCapitalize="words"
                     editable={!busy}
                   />
@@ -370,7 +371,7 @@ export function AddStoreProductModal({
                     value={packSize}
                     onChangeText={setPackSize}
                     placeholder="e.g., 500g, 1L, 12 pcs"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textTertiary}
                     editable={!busy}
                   />
                 </View>
@@ -383,7 +384,7 @@ export function AddStoreProductModal({
                     value={description}
                     onChangeText={setDescription}
                     placeholder="Product description"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textTertiary}
                     multiline
                     numberOfLines={2}
                     editable={!busy}
@@ -433,8 +434,8 @@ export function AddStoreProductModal({
                     value={stockUnknown}
                     onValueChange={handleStockUnknownToggle}
                     disabled={busy}
-                    trackColor={{ false: "#ddd", true: "#4CAF50" }}
-                    thumbColor={stockUnknown ? "#fff" : "#fff"}
+                    trackColor={{ false: colors.borderDark, true: colors.success }}
+                    thumbColor={colors.surface}
                   />
                 </View>
               </View>
@@ -444,7 +445,7 @@ export function AddStoreProductModal({
                   value={initialStock}
                   onChangeText={handleStockChange}
                   placeholder="Enter quantity"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="number-pad"
                   editable={!busy}
                 />
@@ -470,7 +471,7 @@ export function AddStoreProductModal({
               disabled={busy}
             >
               {busy ? (
-                <ActivityIndicator size="small" color="#1976D2" />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
                 <Text style={styles.secondaryButtonText}>Save Only</Text>
               )}
@@ -482,7 +483,7 @@ export function AddStoreProductModal({
               disabled={busy}
             >
               {busy ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
                 <Text style={styles.primaryButtonText}>Save & Add to Cart</Text>
               )}
@@ -501,10 +502,10 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)"
+    backgroundColor: colors.overlay
   },
   sheet: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: "90%",
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: "#ddd",
+    backgroundColor: colors.borderDark,
     borderRadius: 2,
     alignSelf: "center",
     marginTop: 12,
@@ -523,27 +524,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee"
+    borderBottomColor: colors.border
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1a1a1a"
+    color: colors.textPrimary
   },
   barcode: {
     fontSize: 14,
-    color: "#666",
+    color: colors.textTertiary,
     marginTop: 4,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace"
   },
   prefillHint: {
     fontSize: 12,
-    color: "#4CAF50",
+    color: colors.success,
     marginTop: 4
   },
   notFoundHint: {
     fontSize: 12,
-    color: "#FF9800",
+    color: colors.warning,
     marginTop: 4
   },
   tabContainer: {
@@ -557,19 +558,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.backgroundSecondary,
     alignItems: "center"
   },
   tabActive: {
-    backgroundColor: "#1976D2"
+    backgroundColor: colors.primary
   },
   tabText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#666"
+    color: colors.textTertiary
   },
   tabTextActive: {
-    color: "#fff"
+    color: colors.textInverse
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -581,25 +582,25 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: colors.textPrimary,
     marginBottom: 8
   },
   required: {
-    color: "#F44336"
+    color: colors.error
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.borderDark,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: "#1a1a1a",
-    backgroundColor: "#fff"
+    color: colors.textPrimary,
+    backgroundColor: colors.surface
   },
   inputDisabled: {
-    backgroundColor: "#f5f5f5",
-    color: "#999"
+    backgroundColor: colors.backgroundSecondary,
+    color: colors.textTertiary
   },
   textArea: {
     minHeight: 60,
@@ -612,7 +613,7 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#666",
+    color: colors.textTertiary,
     marginRight: 8
   },
   priceInput: {
@@ -625,21 +626,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: colors.backgroundTertiary,
     marginRight: 8
   },
   unitChipSelected: {
-    backgroundColor: "#1976D2"
+    backgroundColor: colors.primary
   },
   chipDisabled: {
     opacity: 0.5
   },
   unitChipText: {
     fontSize: 14,
-    color: "#666"
+    color: colors.textTertiary
   },
   unitChipTextSelected: {
-    color: "#fff",
+    color: colors.textInverse,
     fontWeight: "600"
   },
   stockHeader: {
@@ -654,17 +655,17 @@ const styles = StyleSheet.create({
   },
   unknownLabel: {
     fontSize: 12,
-    color: "#666",
+    color: colors.textTertiary,
     marginRight: 8
   },
   unknownStockNote: {
     fontSize: 12,
-    color: "#FF9800",
+    color: colors.warning,
     fontStyle: "italic",
     marginTop: 4
   },
   error: {
-    color: "#F44336",
+    color: colors.error,
     fontSize: 14,
     textAlign: "center",
     paddingHorizontal: 20,
@@ -684,23 +685,23 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   primaryButton: {
-    backgroundColor: "#1976D2"
+    backgroundColor: colors.primary
   },
   secondaryButton: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#1976D2"
+    borderColor: colors.primary
   },
   buttonDisabled: {
     opacity: 0.6
   },
   primaryButtonText: {
-    color: "#fff",
+    color: colors.textInverse,
     fontSize: 16,
     fontWeight: "600"
   },
   secondaryButtonText: {
-    color: "#1976D2",
+    color: colors.primary,
     fontSize: 16,
     fontWeight: "600"
   }

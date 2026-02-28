@@ -168,15 +168,15 @@ export default function InvoicesPage() {
   const currentPage = Math.floor(offset / limit) + 1;
 
   return (
-    <div style={{ padding: "1.5rem" }}>
+    <div className="inv-container">
       {/* T-112: Breadcrumb navigation */}
       <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Invoices' }]} />
-      <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1rem" }}>Invoices</h2>
+      <h2 className="inv-title">Invoices</h2>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+      <div className="po-filter-bar">
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setOffset(0); }}
-          style={{ padding: "0.4rem 0.6rem", borderRadius: 4, border: `1px solid var(--border)`, fontSize: "0.85rem" }}>
+          className="form-input po-filter-select">
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="issued">Issued</option>
@@ -184,14 +184,14 @@ export default function InvoicesPage() {
           <option value="overdue">Overdue</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>{total} invoice{total !== 1 ? "s" : ""}</span>
+        <span className="text-sm-muted">{total} invoice{total !== 1 ? "s" : ""}</span>
       </div>
 
       {/* Error */}
-      {error && <div style={{ color: "#dc2626", marginBottom: "1rem", padding: "0.5rem", background: "#fef2f2", borderRadius: 4 }}>{error}</div>}
+      {error && <div className="alert-error-inline">{error}</div>}
 
       {/* Loading */}
-      {loading && <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>Loading invoices...</div>}
+      {loading && <div className="text-center-muted">Loading invoices...</div>}
 
       {/* Table */}
       {!loading && invoices.length === 0 && (
@@ -203,43 +203,41 @@ export default function InvoicesPage() {
       )}
 
       {!loading && invoices.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+        <div className="table-container">
+          <table className="inv-table">
             <thead>
-              <tr style={{ borderBottom: `2px solid var(--border)`, textAlign: "left" }}>
-                <th style={{ padding: "0.5rem" }}>Invoice #</th>
-                <th style={{ padding: "0.5rem" }}>Date</th>
-                <th style={{ padding: "0.5rem" }}>Seller</th>
-                <th style={{ padding: "0.5rem" }}>Type</th>
-                <th style={{ padding: "0.5rem", textAlign: "right" }}>Total</th>
-                <th style={{ padding: "0.5rem", textAlign: "right" }}>Balance</th>
-                <th style={{ padding: "0.5rem" }}>Status</th>
-                <th style={{ padding: "0.5rem" }}>Actions</th>
+              <tr>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Seller</th>
+                <th>Type</th>
+                <th className="cell-right">Total</th>
+                <th className="cell-right">Balance</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {invoices.map(inv => (
-                <tr key={inv.id} style={{ borderBottom: `1px solid var(--border)` }}>
-                  <td style={{ padding: "0.5rem", fontFamily: "monospace", fontSize: "0.8rem" }}>{inv.invoiceNumber}</td>
-                  <td style={{ padding: "0.5rem" }}>{fmtDate(inv.invoiceDate)}</td>
-                  <td style={{ padding: "0.5rem" }}>{inv.sellerName}</td>
-                  <td style={{ padding: "0.5rem", textTransform: "capitalize" }}>{inv.invoiceType.replace("_", " ")}</td>
-                  <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: 600 }}>{fmt(inv.totalAmountMinor)}</td>
-                  <td style={{ padding: "0.5rem", textAlign: "right", color: inv.balanceDueMinor > 0 ? "#dc2626" : "#16a34a" }}>
+                <tr key={inv.id}>
+                  <td className="inv-table-mono">{inv.invoiceNumber}</td>
+                  <td>{fmtDate(inv.invoiceDate)}</td>
+                  <td>{inv.sellerName}</td>
+                  <td className="inv-table-cap">{inv.invoiceType.replace("_", " ")}</td>
+                  <td className="cell-mono-right-bold">{fmt(inv.totalAmountMinor)}</td>
+                  <td className="cell-right" style={{ color: inv.balanceDueMinor > 0 ? 'var(--danger)' : 'var(--success)' }}>
                     {fmt(inv.balanceDueMinor)}
                   </td>
-                  <td style={{ padding: "0.5rem" }}>
-                    <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: "0.75rem", fontWeight: 600, color: "#fff", background: statusColors[inv.status] || "#6b7280" }}>
+                  <td>
+                    <span className="badge" style={{ color: "#fff", background: statusColors[inv.status] || "#6b7280" }}>
                       {inv.status.toUpperCase()}
                     </span>
                   </td>
-                  <td style={{ padding: "0.5rem", display: "flex", gap: "0.5rem" }}>
-                    <button onClick={() => openDetail(inv.id)}
-                      style={{ padding: "2px 8px", fontSize: "0.75rem", border: `1px solid var(--border)`, borderRadius: 4, background: "var(--surface)", cursor: "pointer" }}>
+                  <td className="inv-table-actions">
+                    <button onClick={() => openDetail(inv.id)} className="btn btn-secondary btn-xs">
                       View
                     </button>
-                    <button onClick={() => downloadPdf(inv.id, inv.invoiceNumber)}
-                      style={{ padding: "2px 8px", fontSize: "0.75rem", border: `1px solid var(--border)`, borderRadius: 4, background: "var(--surface)", cursor: "pointer" }}>
+                    <button onClick={() => downloadPdf(inv.id, inv.invoiceNumber)} className="btn btn-secondary btn-xs">
                       PDF
                     </button>
                   </td>
@@ -252,14 +250,14 @@ export default function InvoicesPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginTop: "1rem", alignItems: "center" }}>
+        <div className="po-pagination">
           <button aria-label="Previous page of invoices" disabled={currentPage <= 1} onClick={() => setOffset(offset - limit)}
-            style={{ padding: "4px 12px", border: `1px solid var(--border)`, borderRadius: 4, cursor: currentPage <= 1 ? "default" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1 }}>
+            className="btn btn-secondary">
             Prev
           </button>
-          <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Page {currentPage} of {totalPages}</span>
+          <span className="text-sm-muted">Page {currentPage} of {totalPages}</span>
           <button aria-label="Next page of invoices" disabled={currentPage >= totalPages} onClick={() => setOffset(offset + limit)}
-            style={{ padding: "4px 12px", border: `1px solid var(--border)`, borderRadius: 4, cursor: currentPage >= totalPages ? "default" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1 }}>
+            className="btn btn-secondary">
             Next
           </button>
         </div>
@@ -267,29 +265,29 @@ export default function InvoicesPage() {
 
       {/* Detail Modal */}
       {(detail || detailLoading || detailError) && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: "5vh", zIndex: 1000 }}
+        <div className="modal-overlay-custom"
           onClick={() => { setDetail(null); setDetailError(null); }}
           onKeyDown={e => { if (e.key === 'Escape') { setDetail(null); setDetailError(null); } }}
           tabIndex={-1} ref={(el) => { if (el) el.focus(); }}>
-          <div className="card" style={{ borderRadius: 8, width: "90%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "1.5rem" }}
+          <div className="card inv-modal-card"
             onClick={e => e.stopPropagation()}>
-            {detailLoading && <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>}
+            {detailLoading && <div className="po-modal-loading">Loading...</div>}
             {detailError && !detailLoading && (
-              <div style={{ padding: "2rem", textAlign: "center" }}>
-                <p style={{ color: "#dc2626", fontWeight: 600 }}>Failed to load invoice</p>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "0.5rem" }}>{detailError}</p>
-                <button onClick={() => setDetailError(null)} style={{ marginTop: "1rem", padding: "0.5rem 1rem", border: `1px solid var(--border)`, borderRadius: 6, cursor: "pointer" }}>Close</button>
+              <div className="po-modal-loading">
+                <p className="po-modal-error">Failed to load invoice</p>
+                <p className="po-modal-hint">{detailError}</p>
+                <button onClick={() => setDetailError(null)} className="btn btn-secondary" style={{ marginTop: "1rem" }}>Close</button>
               </div>
             )}
             {detail && (
               <>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>{detail.invoiceNumber}</h3>
+                <div className="inv-modal-header">
+                  <h3 className="inv-modal-title">{detail.invoiceNumber}</h3>
                   <button aria-label="Close invoice detail" onClick={() => setDetail(null)}
-                    style={{ background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer" }}>X</button>
+                    className="inv-modal-close">X</button>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.85rem", marginBottom: "1rem" }}>
+                <div className="inv-detail-grid">
                   <div><strong>Date:</strong> {fmtDate(detail.invoiceDate)}</div>
                   <div><strong>Due:</strong> {detail.dueDate ? fmtDate(detail.dueDate) : "-"}</div>
                   <div><strong>Status:</strong> {detail.status.toUpperCase()}</div>
@@ -299,60 +297,60 @@ export default function InvoicesPage() {
                 </div>
 
                 {/* Items */}
-                <h4 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.5rem" }}>Items</h4>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", marginBottom: "1rem" }}>
+                <h4 className="po-items-title">Items</h4>
+                <table className="po-items-table" style={{ marginBottom: "1rem" }}>
                   <thead>
-                    <tr style={{ borderBottom: `1px solid var(--border)` }}>
-                      <th style={{ padding: "4px", textAlign: "left" }}>Product</th>
-                      <th style={{ padding: "4px", textAlign: "right" }}>Qty</th>
-                      <th style={{ padding: "4px", textAlign: "right" }}>Rate</th>
-                      <th style={{ padding: "4px", textAlign: "right" }}>GST%</th>
-                      <th style={{ padding: "4px", textAlign: "right" }}>Total</th>
+                    <tr>
+                      <th>Product</th>
+                      <th className="cell-right">Qty</th>
+                      <th className="cell-right">Rate</th>
+                      <th className="cell-right">GST%</th>
+                      <th className="cell-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {detail.items.map(item => (
-                      <tr key={item.id} style={{ borderBottom: `1px solid var(--border)` }}>
-                        <td style={{ padding: "4px" }}>{item.productName}</td>
-                        <td style={{ padding: "4px", textAlign: "right" }}>{item.quantity} {item.unit}</td>
-                        <td style={{ padding: "4px", textAlign: "right" }}>{fmt(item.unitPriceMinor)}</td>
-                        <td style={{ padding: "4px", textAlign: "right" }}>{item.gstRate}%</td>
-                        <td style={{ padding: "4px", textAlign: "right" }}>{fmt(item.totalMinor)}</td>
+                      <tr key={item.id}>
+                        <td>{item.productName}</td>
+                        <td className="cell-right">{item.quantity} {item.unit}</td>
+                        <td className="cell-right">{fmt(item.unitPriceMinor)}</td>
+                        <td className="cell-right">{item.gstRate}%</td>
+                        <td className="cell-right cell-bold">{fmt(item.totalMinor)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
                 {/* Totals */}
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <div style={{ width: 250, fontSize: "0.85rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                <div className="inv-totals-wrap">
+                  <div className="inv-totals">
+                    <div className="inv-totals-row">
                       <span>Subtotal:</span><span>{fmt(detail.subtotalMinor)}</span>
                     </div>
                     {detail.cgstMinor > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                      <div className="inv-totals-row">
                         <span>CGST:</span><span>{fmt(detail.cgstMinor)}</span>
                       </div>
                     )}
                     {detail.sgstMinor > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                      <div className="inv-totals-row">
                         <span>SGST:</span><span>{fmt(detail.sgstMinor)}</span>
                       </div>
                     )}
                     {detail.igstMinor > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                      <div className="inv-totals-row">
                         <span>IGST:</span><span>{fmt(detail.igstMinor)}</span>
                       </div>
                     )}
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderTop: `1px solid var(--border)`, fontWeight: 700 }}>
+                    <div className="inv-totals-total">
                       <span>Total:</span><span>{fmt(detail.totalAmountMinor)}</span>
                     </div>
                     {detail.amountPaidMinor > 0 && (
                       <>
-                        <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                        <div className="inv-totals-row">
                           <span>Paid:</span><span>{fmt(detail.amountPaidMinor)}</span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 600, color: detail.balanceDueMinor > 0 ? "#dc2626" : "#16a34a" }}>
+                        <div className="inv-totals-row" style={{ fontWeight: 600, color: detail.balanceDueMinor > 0 ? 'var(--danger)' : 'var(--success)' }}>
                           <span>Balance:</span><span>{fmt(detail.balanceDueMinor)}</span>
                         </div>
                       </>
@@ -362,10 +360,10 @@ export default function InvoicesPage() {
 
                 {/* Payments */}
                 {detail.payments && detail.payments.length > 0 && (
-                  <div style={{ marginTop: "1rem" }}>
-                    <h4 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.5rem" }}>Payment History</h4>
+                  <div className="inv-payments">
+                    <h4 className="po-items-title">Payment History</h4>
                     {detail.payments.map(p => (
-                      <div key={p.id} style={{ fontSize: "0.8rem", padding: "2px 0", color: "var(--text-muted)" }}>
+                      <div key={p.id} className="inv-payment-row">
                         {fmtDate(p.paymentDate)} — {fmt(p.amountMinor)} via {p.paymentMode}
                         {p.paymentReference ? ` (Ref: ${p.paymentReference})` : ""}
                       </div>
@@ -374,9 +372,9 @@ export default function InvoicesPage() {
                 )}
 
                 {/* Download + WhatsApp Share */}
-                <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
+                <div className="imp-actions" style={{ marginTop: "1rem" }}>
                   <button onClick={() => downloadPdf(detail.id, detail.invoiceNumber)}
-                    style={{ padding: "6px 16px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: "0.85rem" }}>
+                    className="btn btn-primary">
                     Download PDF
                   </button>
                   {/* WA-002: sellerPhone now included in API response for direct WhatsApp linking */}
@@ -389,11 +387,7 @@ export default function InvoicesPage() {
                       if (phone.length < 10) return;
                       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
                     }}
-                    style={{
-                      padding: "6px 16px", background: "#f0fdf4", color: "#15803d",
-                      border: "1px solid #bbf7d0", borderRadius: 4, cursor: "pointer",
-                      fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "6px",
-                    }}
+                    className="po-wa-btn"
                     title="Share invoice details via WhatsApp"
                   >
                     <WhatsAppIcon size={16} />

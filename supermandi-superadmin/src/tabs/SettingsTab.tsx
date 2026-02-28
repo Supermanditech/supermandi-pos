@@ -90,47 +90,47 @@ export function SettingsTab({
       </div>
 
       <div className="tableWrap">
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+        <div className="sa-flex sa-gap-8 sa-mb-12">
           <button onClick={refreshSettings} disabled={settingsLoading}>{settingsLoading ? "Loading..." : "Refresh"}</button>
         </div>
-        {settingsError && <div className="errorText" style={{ marginBottom: 8 }}>{settingsError} <button onClick={refreshSettings} style={{ marginLeft: 8, padding: "2px 8px", fontSize: 12, cursor: "pointer" }}>Retry</button></div>}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
-          <div style={{ background: "var(--color-surface-alt)", borderRadius: 8, padding: 16 }}>
-            <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>System Information</h4>
+        {settingsError && <div className="errorText sa-mb-8">{settingsError} <button onClick={refreshSettings} className="sa-btn-ghost-sm" style={{ marginLeft: 8 }}>Retry</button></div>}
+        <div className="sa-grid-auto" style={{ gap: 16 }}>
+          <div className="sa-stat-card sa-bg-surface-alt">
+            <h4 className="sa-section-title">System Information</h4>
             {systemSettings ? (
-              <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>Version:</span><span className="mono">{systemSettings.version}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>Environment:</span><span className={`badge ${systemSettings.environment === "production" ? "badgeOk" : "badgeWarn"}`}>{systemSettings.environment}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>Database:</span><span className={`badge ${systemSettings.database.connected ? "badgeOk" : "badgeError"}`}>{systemSettings.database.connected ? "Connected" : "Disconnected"}</span></div>
+              <div className="sa-flex-col sa-gap-8 sa-text-md">
+                <div className="sa-flex-between"><span className="sa-text-muted">Version:</span><span className="mono">{systemSettings.version}</span></div>
+                <div className="sa-flex-between"><span className="sa-text-muted">Environment:</span><span className={`badge ${systemSettings.environment === "production" ? "badgeOk" : "badgeWarn"}`}>{systemSettings.environment}</span></div>
+                <div className="sa-flex-between"><span className="sa-text-muted">Database:</span><span className={`badge ${systemSettings.database.connected ? "badgeOk" : "badgeError"}`}>{systemSettings.database.connected ? "Connected" : "Disconnected"}</span></div>
               </div>
-            ) : (<div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>Loading...</div>)}
+            ) : (<div className="sa-text-muted sa-text-md">Loading...</div>)}
           </div>
-          <div style={{ background: "var(--color-surface-alt)", borderRadius: 8, padding: 16 }}>
-            <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>Features</h4>
+          <div className="sa-stat-card sa-bg-surface-alt">
+            <h4 className="sa-section-title">Features</h4>
             {systemSettings ? (
-              <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>AI Assistant:</span><span className={`badge ${systemSettings.features.aiEnabled ? "badgeOk" : "badgeWarn"}`}>{systemSettings.features.aiEnabled ? "Enabled" : "Disabled"}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>Analytics:</span><span className={`badge ${systemSettings.features.analyticsEnabled ? "badgeOk" : "badgeWarn"}`}>{systemSettings.features.analyticsEnabled ? "Enabled" : "Disabled"}</span></div>
+              <div className="sa-flex-col sa-gap-8 sa-text-md">
+                <div className="sa-flex-between"><span className="sa-text-muted">AI Assistant:</span><span className={`badge ${systemSettings.features.aiEnabled ? "badgeOk" : "badgeWarn"}`}>{systemSettings.features.aiEnabled ? "Enabled" : "Disabled"}</span></div>
+                <div className="sa-flex-between"><span className="sa-text-muted">Analytics:</span><span className={`badge ${systemSettings.features.analyticsEnabled ? "badgeOk" : "badgeWarn"}`}>{systemSettings.features.analyticsEnabled ? "Enabled" : "Disabled"}</span></div>
               </div>
-            ) : (<div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>Loading...</div>)}
+            ) : (<div className="sa-text-muted sa-text-md">Loading...</div>)}
           </div>
-          <div style={{ background: "var(--color-surface-alt)", borderRadius: 8, padding: 16 }}>
-            <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>Platform Statistics</h4>
+          <div className="sa-stat-card sa-bg-surface-alt">
+            <h4 className="sa-section-title">Platform Statistics</h4>
             {systemStats ? (
-              <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>Total Stores:</span><span style={{ fontWeight: 600 }}>{systemStats.totalStores.toLocaleString()}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>Total Devices:</span><span style={{ fontWeight: 600 }}>{systemStats.totalDevices.toLocaleString()}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--color-text-secondary)" }}>Total Users:</span><span style={{ fontWeight: 600 }}>{systemStats.totalUsers.toLocaleString()}</span></div>
+              <div className="sa-flex-col sa-gap-8 sa-text-md">
+                <div className="sa-flex-between"><span className="sa-text-muted">Total Stores:</span><span className="sa-fw-600">{systemStats.totalStores.toLocaleString()}</span></div>
+                <div className="sa-flex-between"><span className="sa-text-muted">Total Devices:</span><span className="sa-fw-600">{systemStats.totalDevices.toLocaleString()}</span></div>
+                <div className="sa-flex-between"><span className="sa-text-muted">Total Users:</span><span className="sa-fw-600">{systemStats.totalUsers.toLocaleString()}</span></div>
               </div>
-            ) : (<div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>Loading...</div>)}
+            ) : (<div className="sa-text-muted sa-text-md">Loading...</div>)}
           </div>
         </div>
 
-        <div style={{ marginTop: 24 }}>
-          <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>Feature Kill Switch</h3>
-          <div className="muted" style={{ marginBottom: 12 }}>Disable features globally. POS respects changes on next ui-status fetch.</div>
-          <button onClick={refreshFeatureFlags} disabled={featureFlagsLoading} style={{ marginBottom: 12 }}>{featureFlagsLoading ? "Loading..." : "Refresh Flags"}</button>
-          {featureFlagsError && <div className="banner" style={{ marginBottom: 8 }}>{featureFlagsError}</div>}
+        <div className="sa-mt-20">
+          <h3 className="sa-text-lg sa-fw-700 sa-mb-12">Feature Kill Switch</h3>
+          <div className="muted sa-mb-12">Disable features globally. POS respects changes on next ui-status fetch.</div>
+          <button onClick={refreshFeatureFlags} disabled={featureFlagsLoading} className="sa-mb-12">{featureFlagsLoading ? "Loading..." : "Refresh Flags"}</button>
+          {featureFlagsError && <div className="banner sa-mb-8">{featureFlagsError}</div>}
           <div className="tableWrap">
             <table className="table">
               <thead>
@@ -140,19 +140,19 @@ export function SettingsTab({
                 {featureFlags.map((flag) => (
                   <tr key={flag.flag_key}>
                     <td><span className="mono">{flag.flag_key}</span></td>
-                    <td style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{flag.description || "\u2014"}</td>
+                    <td className="sa-text-sm sa-text-muted">{flag.description || "\u2014"}</td>
                     <td><span className={`badge ${flag.enabled ? "badgeOk" : "badgeError"}`}>{flag.enabled ? "ENABLED" : "DISABLED"}</span></td>
-                    <td>{flag.flag_key === "minAppVersion" ? (<span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Auto (from build)</span>) : (<span style={{ color: "var(--color-text-secondary)", fontSize: 11 }}>{"\u2014"}</span>)}</td>
+                    <td>{flag.flag_key === "minAppVersion" ? (<span className="sa-text-sm sa-text-muted">Auto (from build)</span>) : (<span className="sa-text-xs sa-text-muted">{"\u2014"}</span>)}</td>
                     <td>
-                      <button onClick={() => { handleToggleGlobalFlag(flag.flag_key, !flag.enabled); }} disabled={featureFlagSaving[flag.flag_key]} style={{ background: flag.enabled ? "var(--color-error)" : "var(--color-success)", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer", fontSize: 12 }}>
+                      <button onClick={() => { handleToggleGlobalFlag(flag.flag_key, !flag.enabled); }} disabled={featureFlagSaving[flag.flag_key]} className={flag.enabled ? "sa-btn-danger-sm" : "sa-btn-success-sm"} style={{ padding: "4px 12px" }}>
                         {featureFlagSaving[flag.flag_key] ? "Saving..." : flag.enabled ? "KILL" : "Enable"}
                       </button>
                     </td>
-                    <td style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{flag.updated_at ? formatDateTime(flag.updated_at) : "\u2014"}</td>
+                    <td className="sa-text-xs sa-text-muted">{flag.updated_at ? formatDateTime(flag.updated_at) : "\u2014"}</td>
                   </tr>
                 ))}
                 {featureFlags.length === 0 && !featureFlagsLoading && (
-                  <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--color-text-secondary)" }}>No feature flags found. Migration may be pending.</td></tr>
+                  <tr><td colSpan={6} className="sa-text-center sa-text-muted">No feature flags found. Migration may be pending.</td></tr>
                 )}
               </tbody>
             </table>
@@ -160,14 +160,14 @@ export function SettingsTab({
         </div>
 
         {/* T-234: Per-Store Feature Flag Overrides */}
-        <div style={{ marginTop: 24 }}>
-          <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>Per-Store Feature Overrides</h3>
-          <div className="muted" style={{ marginBottom: 12 }}>Override global flags for a specific store. Overrides take precedence over the global setting.</div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+        <div className="sa-mt-20">
+          <h3 className="sa-text-lg sa-fw-700 sa-mb-12">Per-Store Feature Overrides</h3>
+          <div className="muted sa-mb-12">Override global flags for a specific store. Overrides take precedence over the global setting.</div>
+          <div className="sa-flex sa-gap-8 sa-mb-12">
             <select
               value={selectedStoreId}
               onChange={(e) => handleStoreSelect(e.target.value)}
-              style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid var(--color-border)", fontSize: 13, minWidth: 260 }}
+              className="sa-select" style={{ minWidth: 260 }}
             >
               <option value="">-- Select a store --</option>
               {storeDirectory.map((s) => (
@@ -175,12 +175,12 @@ export function SettingsTab({
               ))}
             </select>
             {selectedStoreId && (
-              <button onClick={() => loadStoreFlags(selectedStoreId)} disabled={storeFlagsLoading} style={{ fontSize: 12 }}>
+              <button onClick={() => loadStoreFlags(selectedStoreId)} disabled={storeFlagsLoading} className="sa-btn-ghost-sm">
                 {storeFlagsLoading ? "Loading..." : "Refresh"}
               </button>
             )}
           </div>
-          {storeFlagsError && <div className="banner" style={{ marginBottom: 8 }}>{storeFlagsError}</div>}
+          {storeFlagsError && <div className="banner sa-mb-8">{storeFlagsError}</div>}
           {selectedStoreId && storeFlags.length > 0 && (
             <div className="tableWrap">
               <table className="table">
@@ -194,31 +194,31 @@ export function SettingsTab({
                       <td><span className={`badge ${flag.global_enabled ? "badgeOk" : "badgeError"}`}>{flag.global_enabled ? "ON" : "OFF"}</span></td>
                       <td>
                         {flag.store_override === null
-                          ? <span style={{ color: "var(--color-text-secondary)", fontSize: 11 }}>No override</span>
+                          ? <span className="sa-text-xs sa-text-muted">No override</span>
                           : <span className={`badge ${flag.store_override ? "badgeOk" : "badgeError"}`}>{flag.store_override ? "ON" : "OFF"}</span>
                         }
                       </td>
                       <td><span className={`badge ${flag.effective ? "badgeOk" : "badgeError"}`}>{flag.effective ? "ENABLED" : "DISABLED"}</span></td>
-                      <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      <td className="sa-flex sa-gap-4 sa-flex-wrap">
                         {flag.store_override !== true && (
                           <button
                             onClick={() => handleSetOverride(flag.flag_key, true)}
                             disabled={storeFlagSaving[flag.flag_key]}
-                            style={{ background: "var(--color-success)", color: "#fff", border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}
+                            className="sa-btn-success-sm sa-btn-xs"
                           >Enable</button>
                         )}
                         {flag.store_override !== false && (
                           <button
                             onClick={() => handleSetOverride(flag.flag_key, false)}
                             disabled={storeFlagSaving[flag.flag_key]}
-                            style={{ background: "var(--color-error)", color: "#fff", border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}
+                            className="sa-btn-danger-sm sa-btn-xs"
                           >Disable</button>
                         )}
                         {flag.store_override !== null && (
                           <button
                             onClick={() => handleRemoveOverride(flag.flag_key)}
                             disabled={storeFlagSaving[flag.flag_key]}
-                            style={{ background: "var(--color-text-secondary)", color: "#fff", border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}
+                            className="sa-btn-xs" style={{ background: "var(--color-text-secondary)", color: "#fff", border: "none" }}
                           >Revert</button>
                         )}
                       </td>
@@ -229,7 +229,7 @@ export function SettingsTab({
             </div>
           )}
           {selectedStoreId && storeFlags.length === 0 && !storeFlagsLoading && (
-            <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>No flags found for this store.</div>
+            <div className="sa-text-muted sa-text-md">No flags found for this store.</div>
           )}
         </div>
       </div>

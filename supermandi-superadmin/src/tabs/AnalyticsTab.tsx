@@ -104,44 +104,44 @@ export function AnalyticsTab({
           ))}
         </div>
 
-        {analyticsError && <div className="banner" style={{ marginTop: 12 }}>{analyticsError}</div>}
+        {analyticsError && <div className="banner sa-mt-12">{analyticsError}</div>}
 
         {/* UNMAPPED.041: Loading skeleton when data is null and loading */}
         {analyticsLoading && (
-          <div style={{ marginTop: 12, padding: 24, textAlign: "center" }}>
-            <div style={{ display: "inline-block", width: 24, height: 24, border: "3px solid var(--color-border)", borderTopColor: "#6366f1", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            <div className="muted" style={{ marginTop: 8 }}>Loading analytics...</div>
+          <div className="sa-mt-12 sa-p-24 sa-text-center">
+            <div className="sa-spinner" />
+            <div className="muted sa-mt-8">Loading analytics...</div>
           </div>
         )}
 
         {/* UNMAPPED.041: Empty state when data is null and not loading */}
         {!analyticsLoading && !analyticsError && analyticsTab === "overview" && !overviewData && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No overview data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No overview data available. Click Refresh to load.</div>
         )}
         {!analyticsLoading && !analyticsError && analyticsTab === "devices" && !analyticsDevices && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No device data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No device data available. Click Refresh to load.</div>
         )}
         {!analyticsLoading && !analyticsError && analyticsTab === "products" && !analyticsProducts && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No product data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No product data available. Click Refresh to load.</div>
         )}
         {!analyticsLoading && !analyticsError && analyticsTab === "payments" && !overviewData && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No payment data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No payment data available. Click Refresh to load.</div>
         )}
         {!analyticsLoading && !analyticsError && analyticsTab === "purchases" && !analyticsPurchases && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No purchase data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No purchase data available. Click Refresh to load.</div>
         )}
         {!analyticsLoading && !analyticsError && analyticsTab === "consumer" && !analyticsConsumerSales && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No consumer sales data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No consumer sales data available. Click Refresh to load.</div>
         )}
         {!analyticsLoading && !analyticsError && analyticsTab === "activity" && !analyticsActivity && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No activity data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No activity data available. Click Refresh to load.</div>
         )}
         {!analyticsLoading && !analyticsError && analyticsTab === "dues" && !analyticsDues && (
-          <div className="empty" style={{ marginTop: 12, padding: 24 }}>No dues data available. Click Refresh to load.</div>
+          <div className="empty sa-mt-12 sa-p-24">No dues data available. Click Refresh to load.</div>
         )}
 
         {analyticsTab === "overview" && overviewData && (
-          <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+          <div className="sa-mt-12" style={{ display: "grid", gap: 12 }}>
             <div className="analyticsGrid">
               <div className="analyticsCard">
                 <div className="analyticsLabel">Sales Total (POS)</div>
@@ -209,7 +209,7 @@ export function AnalyticsTab({
         )}
 
         {analyticsTab === "payments" && overviewData && (
-          <div style={{ marginTop: 12 }}>
+          <div className="sa-mt-12">
             <div className="analyticsGrid">
               <div className="analyticsCard">
                 <div className="analyticsLabel">Payment Split (Cash / UPI / Due)</div>
@@ -249,7 +249,7 @@ export function AnalyticsTab({
         )}
 
         {analyticsTab === "devices" && analyticsDevices && (
-          <div style={{ marginTop: 12 }}>
+          <div className="sa-mt-12">
             <div className="tableWrap" style={{ paddingTop: 0 }}>
               <table className="table">
                 <thead>
@@ -289,7 +289,7 @@ export function AnalyticsTab({
         )}
 
         {analyticsTab === "products" && analyticsProducts && (
-          <div style={{ marginTop: 12 }}>
+          <div className="sa-mt-12">
             <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
               <div className="control">
                 <label>Group By</label>
@@ -357,7 +357,7 @@ export function AnalyticsTab({
         )}
 
         {analyticsTab === "purchases" && analyticsPurchases && (
-          <div style={{ marginTop: 12 }}>
+          <div className="sa-mt-12">
             <div className="analyticsGrid">
               <div className="analyticsCard">
                 <div className="analyticsLabel">Purchases Total</div>
@@ -437,7 +437,7 @@ export function AnalyticsTab({
                         t.suppliers.map((s, idx) => (
                           <tr key={`${t.type}-${s.name}-${idx}`}>
                             {idx === 0 ? (
-                              <td rowSpan={t.suppliers.length} style={{ verticalAlign: "top", fontWeight: 600 }}>
+                              <td rowSpan={t.suppliers.length} className="sa-fw-600" style={{ verticalAlign: "top" }}>
                                 {t.type === "verified" ? "Verified" : t.type === "walk_in" ? "Walk-in" : "Unknown"}
                               </td>
                             ) : null}
@@ -457,7 +457,7 @@ export function AnalyticsTab({
         )}
 
         {analyticsTab === "consumer" && analyticsConsumerSales && (
-          <div style={{ marginTop: 12 }}>
+          <div className="sa-mt-12">
             <div className="analyticsGrid">
               <div className="analyticsCard">
                 <div className="analyticsLabel">Consumer Sales Total</div>
@@ -496,7 +496,7 @@ export function AnalyticsTab({
 
         {/* P2-SADM-001: Activity Logs */}
         {analyticsTab === "activity" && analyticsActivity && (
-          <div style={{ marginTop: 12 }}>
+          <div className="sa-mt-12">
             <div className="cardHeader" style={{ paddingTop: 0 }}>
               <div className="cardTitle">Activity Logs</div>
               <div className="muted">
@@ -538,7 +538,7 @@ export function AnalyticsTab({
 
         {/* P2-SADM-002: Dues Tracking */}
         {analyticsTab === "dues" && analyticsDues && (
-          <div style={{ marginTop: 12 }}>
+          <div className="sa-mt-12">
             <div className="analyticsGrid">
               <div className="analyticsCard">
                 <div className="analyticsLabel">Outstanding Total</div>

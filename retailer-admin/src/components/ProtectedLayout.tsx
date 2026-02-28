@@ -139,29 +139,13 @@ export default function ProtectedLayout() {
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 45,
-          }}
+          className="layout-backdrop"
         />
       )}
 
       {/* T-089: Sidebar — refactored to CSS classes */}
       <aside
-        className="sidebar-dark"
-        style={{
-          display: isMobile && !sidebarOpen ? 'none' : 'flex',
-          // T-088: Mobile fixed overlay positioning
-          ...(isMobile && sidebarOpen ? {
-            position: 'fixed' as const,
-            top: 0,
-            bottom: 0,
-            left: 0,
-            zIndex: 50,
-          } : {}),
-        }}
+        className={`sidebar-dark${isMobile && !sidebarOpen ? ' sidebar-closed' : ''}${isMobile && sidebarOpen ? ' sidebar-mobile-open' : ''}`}
       >
         {/* Brand Header */}
         <div className="sidebar-brand">
@@ -177,17 +161,9 @@ export default function ProtectedLayout() {
               <button
                 onClick={() => setSidebarOpen(false)}
                 aria-label="Close menu"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                className="sidebar-mobile-close"
               >
-                <X style={{ width: 22, height: 22, color: '#94a3b8' }} />
+                <X className="sidebar-icon-close" />
               </button>
             )}
           </div>
@@ -261,7 +237,7 @@ export default function ProtectedLayout() {
                   aria-label="Open menu"
                   className="portal-topbar-menu-btn"
                 >
-                  <Menu style={{ width: 20, height: 20 }} />
+                  <Menu className="layout-icon-menu" />
                 </button>
               )}
               <img className="brand-mark brand-mark-light" src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
@@ -276,25 +252,11 @@ export default function ProtectedLayout() {
 
         {/* AUDIT-RET-014: Gate debug banner behind DEV — exposes API URLs in production */}
         {import.meta.env.DEV && (
-          <div style={{
-            position: 'fixed',
-            top: '0.5rem',
-            right: '0.5rem',
-            background: 'rgba(15, 23, 42, 0.95)',
-            color: '#94a3b8',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '8px',
-            fontSize: '0.65rem',
-            fontFamily: 'monospace',
-            zIndex: 9999,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            border: '1px solid #334155',
-            maxWidth: '300px',
-          }}>
-            <div style={{ color: '#22c55e', fontWeight: '600', marginBottom: '0.25rem' }}>RouterDebug</div>
-            <div><span style={{ color: '#64748b' }}>path:</span> <span style={{ color: '#38bdf8' }}>{location.pathname}</span></div>
-            <div><span style={{ color: '#64748b' }}>store:</span> <span style={{ color: '#a78bfa' }}>{storeCode}</span></div>
-            <div><span style={{ color: '#64748b' }}>api:</span> <span style={{ color: '#fbbf24', wordBreak: 'break-all' }}>{getApiBaseUrl()}</span></div>
+          <div className="layout-debug-banner">
+            <div className="layout-debug-title">RouterDebug</div>
+            <div><span className="layout-debug-label">path:</span> <span className="layout-debug-value--path">{location.pathname}</span></div>
+            <div><span className="layout-debug-label">store:</span> <span className="layout-debug-value--store">{storeCode}</span></div>
+            <div><span className="layout-debug-label">api:</span> <span className="layout-debug-value--api">{getApiBaseUrl()}</span></div>
           </div>
         )}
 
@@ -303,13 +265,13 @@ export default function ProtectedLayout() {
 
         {/* REG-AUTH-301: LIMITED MODE Banner - shows when user status is not ACTIVE */}
         {isLimitedMode && applicationStatus && (
-          <div style={{ padding: '0 2rem', paddingTop: '1rem' }}>
+          <div className="layout-limited-banner-wrap">
             <LimitedModeBanner status={applicationStatus} storeName={store?.name} />
           </div>
         )}
 
         {/* Main Content — GAP-4: page-animate gives every page a subtle fade-in */}
-        <main id="main-content" className="page-animate" style={{ flex: 1, overflow: 'auto' }}>
+        <main id="main-content" className="page-animate layout-main-content">
           <Outlet />
         </main>
 
@@ -332,7 +294,7 @@ export default function ProtectedLayout() {
           </button>
         }
       >
-        <div style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center' }}>&#9200;</div>
+        <div className="layout-session-icon">&#9200;</div>
         <p className="modal-body">
           Your session will expire in less than 5 minutes due to inactivity. Click below to stay logged in.
         </p>

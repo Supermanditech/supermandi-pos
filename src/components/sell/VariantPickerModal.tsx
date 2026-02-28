@@ -27,6 +27,7 @@ import {
 } from "../../services/api/productsApi";
 // T-127: Modal back handler for Android hardware back button
 import { useModalBackHandler } from "../../hooks/useModalBackHandler";
+import { colors } from "../../theme/colors";
 
 export type VariantPickerRequest = {
   barcode: string;
@@ -141,7 +142,7 @@ export function VariantPickerModal({
           {/* Content */}
           {isLoading ? (
             <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#2563eb" />
+              <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>Loading variants...</Text>
             </View>
           ) : error ? (
@@ -184,11 +185,11 @@ export function VariantPickerModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: colors.overlay,
     justifyContent: "flex-end",
   },
   container: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: "70%",
@@ -199,16 +200,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 14,
-    color: "#6b7280",
+    color: colors.textTertiary,
     marginTop: 2,
   },
   closeBtn: {
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
   },
   closeBtnText: {
     fontSize: 24,
-    color: "#6b7280",
+    color: colors.textTertiary,
   },
   centered: {
     padding: 40,
@@ -224,22 +225,22 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: "#6b7280",
+    color: colors.textTertiary,
     fontSize: 14,
   },
   errorText: {
-    color: "#dc2626",
+    color: colors.error,
     fontSize: 14,
     marginBottom: 12,
   },
   retryBtn: {
     paddingHorizontal: 20,
     paddingVertical: 8,
-    backgroundColor: "#2563eb",
+    backgroundColor: colors.primary,
     borderRadius: 6,
   },
   retryBtnText: {
-    color: "#fff",
+    color: colors.textInverse,
     fontWeight: "600",
   },
   list: {
@@ -248,11 +249,11 @@ const styles = StyleSheet.create({
   variantCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9fafb",
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 10,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: colors.border,
   },
   variantInfo: {
     flex: 1,
@@ -260,11 +261,11 @@ const styles = StyleSheet.create({
   variantLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#111827",
+    color: colors.textPrimary,
   },
   variantDetail: {
     fontSize: 13,
-    color: "#6b7280",
+    color: colors.textTertiary,
     marginTop: 2,
   },
   variantPrice: {
@@ -273,20 +274,20 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#059669",
+    color: colors.success,
   },
   parentBtn: {
     marginHorizontal: 16,
     marginTop: 8,
     paddingVertical: 12,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 8,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: colors.borderDark,
   },
   parentBtnText: {
-    color: "#374151",
+    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: "500",
   },

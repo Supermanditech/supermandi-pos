@@ -63,46 +63,44 @@ export default function AnalyticsPage() {
     <div>
       <Breadcrumb items={[{ label: 'Dashboard', path: `/s/${storeCode}` }, { label: 'Sales Analytics' }]} />
 
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>Sales Analytics</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="anly-header">
+        <h1 className="anly-title">Sales Analytics</h1>
+        <div className="anly-date-range">
           <input
             type="date"
             value={from}
             onChange={e => setFrom(e.target.value)}
-            className="form-input"
-            style={{ paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
+            className="form-input anly-date-input"
           />
-          <span style={{ color: 'var(--text-muted)' }}>to</span>
+          <span className="text-muted">to</span>
           <input
             type="date"
             value={to}
             onChange={e => setTo(e.target.value)}
-            className="form-input"
-            style={{ paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
+            className="form-input anly-date-input"
           />
         </div>
       </div>
 
       {/* RET-C4-010: Warn if date range is invalid */}
       {from && to && from > to && (
-        <div className="alert-warning" style={{ marginBottom: '1rem' }}>
+        <div className="alert-warning grid-mb">
           Start date is after end date. Please adjust the date range.
         </div>
       )}
 
       {/* Error state */}
       {error && (
-        <div className="alert-error" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="alert-error-inline">
           <p>{error}</p>
-          <button aria-label="Retry loading analytics data" onClick={loadData} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#b91c1c', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+          <button aria-label="Retry loading analytics data" onClick={loadData} className="anly-retry-btn">Retry</button>
         </div>
       )}
 
       {/* Loading state */}
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBlock: '4rem' }}>
-          <div style={{ borderRadius: '9999px', height: '2.5rem', width: '2.5rem', borderBottom: '2px solid var(--primary)', animation: 'spin 1s linear infinite' }} />
+        <div className="anly-loading">
+          <div className="anly-spinner" />
         </div>
       )}
 
@@ -110,43 +108,44 @@ export default function AnalyticsPage() {
       {!loading && data && (
         <>
           {/* Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="card" style={{ padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Total Sales</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{formatCurrency(data.totals.totalSales)}</p>
+          <div className="grid grid-4 grid-mb-lg">
+            <div className="stat-card">
+              <div className="stat-label">Total Sales</div>
+              <div className="stat-value">{formatCurrency(data.totals.totalSales)}</div>
             </div>
-            <div className="card" style={{ padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Total Bills</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{data.totals.totalBills}</p>
+            <div className="stat-card">
+              <div className="stat-label">Total Bills</div>
+              <div className="stat-value">{data.totals.totalBills}</div>
             </div>
-            <div className="card" style={{ padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Avg Bill Value</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{formatCurrency(data.totals.averageBillValue)}</p>
+            <div className="stat-card">
+              <div className="stat-label">Avg Bill Value</div>
+              <div className="stat-value">{formatCurrency(data.totals.averageBillValue)}</div>
             </div>
-            <div className="card" style={{ padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Days in Range</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{data.daily.length}</p>
+            <div className="stat-card">
+              <div className="stat-label">Days in Range</div>
+              <div className="stat-value">{data.daily.length}</div>
             </div>
           </div>
 
           {/* Daily Sales Chart (simple bar chart using divs) */}
-          <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Daily Sales Trend</h2>
+          <div className="card anly-card-mb">
+            <h2 className="anly-section-title">Daily Sales Trend</h2>
             {data.daily.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingBlock: '2rem' }}>No sales data for this period</p>
+              <p className="text-center-muted">No sales data for this period</p>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.25rem', height: '12rem' }}>
+              <div className="anly-chart-container">
                 {data.daily.map(d => {
                   const pct = maxDailySales > 0 ? (d.totalSales / maxDailySales) * 100 : 0;
                   const dateLabel = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                   return (
-                    <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', position: 'relative' }}>
+                    <div key={d.date} className="anly-chart-col">
                       <div
-                        style={{ width: '100%', background: '#3b82f6', borderRadius: '0.125rem 0.125rem 0 0', minHeight: '2px', transition: 'all 0.15s ease', height: `${Math.max(pct, 1)}%` }}
+                        className="anly-chart-bar"
+                        style={{ height: `${Math.max(pct, 1)}%` }}
                         title={`${dateLabel}: ${formatCurrency(d.totalSales)} (${d.bills} bills)`}
                       />
                       {data.daily.length <= 14 && (
-                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>{dateLabel}</span>
+                        <span className="anly-chart-label">{dateLabel}</span>
                       )}
                     </div>
                   );
@@ -156,41 +155,41 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Payment Breakdown + Top Products */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="grid grid-2 grid-mb-lg">
             {/* Payment Breakdown */}
-            <div className="card" style={{ padding: '1rem' }}>
-              <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Payment Breakdown</h2>
+            <div className="card anly-card">
+              <h2 className="anly-section-title">Payment Breakdown</h2>
               {paymentTotal === 0 ? (
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingBlock: '1rem' }}>No payment data</p>
+                <p className="text-center-muted">No payment data</p>
               ) : (
                 <>
                   {/* Stacked bar */}
-                  <div style={{ display: 'flex', height: '1.5rem', borderRadius: '9999px', overflow: 'hidden', marginBottom: '1rem' }}>
-                    {cashPct > 0 && <div style={{ background: '#22c55e', width: `${cashPct}%` }} />}
-                    {upiPct > 0 && <div style={{ background: '#3b82f6', width: `${upiPct}%` }} />}
-                    {creditPct > 0 && <div style={{ background: '#eab308', width: `${creditPct}%` }} />}
+                  <div className="anly-pay-bar">
+                    {cashPct > 0 && <div className="anly-pay-dot--cash" style={{ width: `${cashPct}%` }} />}
+                    {upiPct > 0 && <div className="anly-pay-dot--upi" style={{ width: `${upiPct}%` }} />}
+                    {creditPct > 0 && <div className="anly-pay-dot--credit" style={{ width: `${creditPct}%` }} />}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: 'var(--text)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '9999px', background: '#22c55e', display: 'inline-block' }} />
+                  <div className="anly-pay-list">
+                    <div className="anly-pay-row">
+                      <span className="anly-pay-label">
+                        <span className="anly-pay-dot anly-pay-dot--cash" />
                         Cash
                       </span>
-                      <span style={{ fontWeight: 500 }}>{formatCurrency(data.paymentBreakdown.cash)} ({cashPct}%)</span>
+                      <span className="anly-pay-amount">{formatCurrency(data.paymentBreakdown.cash)} ({cashPct}%)</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '9999px', background: '#3b82f6', display: 'inline-block' }} />
+                    <div className="anly-pay-row">
+                      <span className="anly-pay-label">
+                        <span className="anly-pay-dot anly-pay-dot--upi" />
                         UPI
                       </span>
-                      <span style={{ fontWeight: 500 }}>{formatCurrency(data.paymentBreakdown.upi)} ({upiPct}%)</span>
+                      <span className="anly-pay-amount">{formatCurrency(data.paymentBreakdown.upi)} ({upiPct}%)</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '9999px', background: '#eab308', display: 'inline-block' }} />
+                    <div className="anly-pay-row">
+                      <span className="anly-pay-label">
+                        <span className="anly-pay-dot anly-pay-dot--credit" />
                         Credit/Due
                       </span>
-                      <span style={{ fontWeight: 500 }}>{formatCurrency(data.paymentBreakdown.credit)} ({creditPct}%)</span>
+                      <span className="anly-pay-amount">{formatCurrency(data.paymentBreakdown.credit)} ({creditPct}%)</span>
                     </div>
                   </div>
                 </>
@@ -198,21 +197,21 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Top Products */}
-            <div className="card" style={{ padding: '1rem' }}>
-              <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Top Selling Products</h2>
+            <div className="card anly-card">
+              <h2 className="anly-section-title">Top Selling Products</h2>
               {data.topProducts.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingBlock: '1rem' }}>No product data</p>
+                <p className="text-center-muted">No product data</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="anly-top-list">
                   {data.topProducts.slice(0, 10).map((p, i) => (
-                    <div key={p.productId || i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBlock: '0.25rem', borderBottom: i < Math.min(data.topProducts.length, 10) - 1 ? '1px solid var(--border)' : 'none' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '1.25rem' }}>#{i + 1}</span>
-                        <span style={{ fontSize: '0.875rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{p.productName}</span>
+                    <div key={p.productId || i} className="anly-top-row" style={{ borderBottom: i < Math.min(data.topProducts.length, 10) - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <div className="anly-top-left">
+                        <span className="anly-top-rank">#{i + 1}</span>
+                        <span className="anly-top-name">{p.productName}</span>
                       </div>
-                      <div style={{ textAlign: 'right', color: 'var(--text)' }}>
-                        <p style={{ fontSize: '0.875rem', fontWeight: 500 }}>{formatCurrency(p.totalAmount)}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.qtySold} sold</p>
+                      <div className="anly-top-right">
+                        <p className="anly-top-amount">{formatCurrency(p.totalAmount)}</p>
+                        <p className="anly-top-qty">{p.qtySold} sold</p>
                       </div>
                     </div>
                   ))}
@@ -223,31 +222,32 @@ export default function AnalyticsPage() {
 
           {/* PRA-007: Category Breakdown */}
           {categoryData && categoryData.salesByGroup.length > 0 && (
-            <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Sales by Category</h2>
+            <div className="card anly-card-mb">
+              <h2 className="anly-section-title">Sales by Category</h2>
               {categoryData.missingFields.includes('variants.category') && (
-                <p style={{ fontSize: '0.75rem', color: '#d97706', marginBottom: '0.75rem' }}>
+                <p className="anly-cat-warning">
                   Category data is incomplete — some products may appear as &quot;Uncategorized&quot;.
                 </p>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="anly-cat-list">
                 {categoryData.salesByGroup.map((cat, i) => {
                   const maxTotal = categoryData.salesByGroup[0]?.total_minor || 1;
                   const pct = Math.round((cat.total_minor / maxTotal) * 100);
                   return (
-                    <div key={cat.group || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', width: '8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }} title={cat.group}>
+                    <div key={cat.group || i} className="anly-cat-row">
+                      <span className="anly-cat-label" title={cat.group}>
                         {cat.group}
                       </span>
-                      <div style={{ flex: 1, background: 'var(--border)', borderRadius: '9999px', height: '1.25rem', overflow: 'hidden' }}>
+                      <div className="anly-cat-track">
                         <div
-                          style={{ background: '#6366f1', height: '100%', borderRadius: '9999px', transition: 'all 0.15s ease', width: `${Math.max(pct, 2)}%` }}
+                          className="anly-cat-fill"
+                          style={{ width: `${Math.max(pct, 2)}%` }}
                         />
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)', width: '6rem', textAlign: 'right', flexShrink: 0 }}>
+                      <span className="anly-cat-amount">
                         {formatCurrency(cat.total_minor)}
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '4rem', textAlign: 'right', flexShrink: 0 }}>
+                      <span className="anly-cat-qty">
                         {cat.quantity} sold
                       </span>
                     </div>
@@ -261,9 +261,9 @@ export default function AnalyticsPage() {
 
       {/* Empty state */}
       {!loading && !error && data && data.totals.totalBills === 0 && (
-        <div style={{ textAlign: 'center', paddingBlock: '3rem', color: 'var(--text-muted)' }}>
-          <p style={{ fontSize: '1.125rem', fontWeight: 500 }}>No sales in this period</p>
-          <p style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>Try selecting a different date range.</p>
+        <div className="anly-empty">
+          <p className="anly-empty-title">No sales in this period</p>
+          <p className="anly-empty-hint">Try selecting a different date range.</p>
         </div>
       )}
     </div>

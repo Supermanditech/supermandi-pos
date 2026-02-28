@@ -173,73 +173,42 @@ export default function PaymentsPage() {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100%',
-        background: 'var(--background)',
-        padding: '2rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Loading payment settings...</div>
+      <div className="pay-container pay-loading">
+        <div className="pay-loading-text">Loading payment settings...</div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100%',
-      background: 'var(--background)',
-      padding: '2rem',
-    }}>
+    <div className="pay-container">
       {/* T-112: Breadcrumb navigation */}
       <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Settings', path: `/s/${storeCode}/settings` }, { label: 'Payments' }]} />
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{
-          margin: '0 0 0.5rem',
-          fontSize: '1.75rem',
-          fontWeight: '700',
-          color: 'var(--text)',
-        }}>
+      <div className="pay-header">
+        <h1 className="pay-title">
           Payment Settings
         </h1>
-        <p style={{
-          margin: 0,
-          fontSize: '0.95rem',
-          color: 'var(--text-muted)',
-        }}>
+        <p className="pay-subtitle">
           Configure your payment methods to receive payments from customers
         </p>
       </div>
 
       {/* RET-C3-013: Load Error Banner with retry button */}
       {loadError && (
-        <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '1rem', color: '#991b1b', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="pay-load-error">
           <span>{loadError}</span>
-          <button aria-label="Retry loading payment settings" onClick={fetchSettings} className="btn btn-secondary" style={{ fontSize: '0.8rem', marginLeft: '1rem' }}>Retry</button>
+          <button aria-label="Retry loading payment settings" onClick={fetchSettings} className="btn btn-secondary btn-sm">Retry</button>
         </div>
       )}
 
       {/* Success Message */}
       {saveSuccess && (
-        <div style={{
-          padding: '1rem 1.25rem',
-          background: '#dcfce7',
-          borderRadius: '10px',
-          border: '1px solid #22c55e',
-          color: '#166534',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          fontSize: '0.95rem',
-        }}>
-          <span style={{ fontSize: '1.25rem' }}>&#10003;</span>
+        <div className="pay-alert-success">
+          <span className="pay-alert-icon">&#10003;</span>
           <div>
-            <div style={{ fontWeight: '600' }}>Payment settings saved successfully!</div>
+            <div className="pay-alert-bold">Payment settings saved successfully!</div>
             {statusTransitioned && (
-              <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+              <div className="pay-alert-sub">
                 Your store status has been updated to PAYMENTS_SUBMITTED.
               </div>
             )}
@@ -249,51 +218,28 @@ export default function PaymentsPage() {
 
       {/* Error Message */}
       {saveError && (
-        <div style={{
-          padding: '1rem 1.25rem',
-          background: '#fee2e2',
-          borderRadius: '10px',
-          border: '1px solid #ef4444',
-          color: '#dc2626',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          fontSize: '0.95rem',
-        }}>
-          <span style={{ fontSize: '1.25rem' }}>&#10007;</span>
+        <div className="pay-alert-error">
+          <span className="pay-alert-icon">&#10007;</span>
           {saveError}
         </div>
       )}
 
       {/* Payment Form */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="pay-form">
         {/* UPI Settings */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>&#128179;</span>
+        <section className="card pay-section">
+          <h2 className="pay-section-title">
+            <span className="pay-section-icon">&#128179;</span>
             UPI Payment
           </h2>
 
           {/* REQ.AUDIT.W5.RETAILER.PAYMENTS-PAGE-NO-EMPTY-STATE.001: guidance when UPI not set */}
           {!settings.upiVpa && (
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '0 0 0.75rem' }}>
+            <p className="pay-section-hint">
               Enter your UPI address to start receiving digital payments from customers.
             </p>
           )}
-          <div style={{ maxWidth: '400px' }}>
+          <div className="pay-input-wrap">
             <UpiInput
               value={settings.upiVpa}
               onChange={handleUpiChange}
@@ -303,41 +249,19 @@ export default function PaymentsPage() {
         </section>
 
         {/* Bank Account Settings (Optional) */}
-        <section className="card" style={{
-          borderRadius: '16px',
-          padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        }}>
-          <h2 style={{
-            margin: '0 0 1.25rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>&#127974;</span>
+        <section className="card pay-section">
+          <h2 className="pay-section-title">
+            <span className="pay-section-icon">&#127974;</span>
             Bank Account (Optional)
           </h2>
 
-          <p style={{
-            margin: '0 0 1rem',
-            fontSize: '0.85rem',
-            color: 'var(--text-muted)',
-          }}>
+          <p className="pay-bank-desc">
             Provide bank account details for NEFT/IMPS settlements (optional)
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+          <div className="pay-bank-grid">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
+              <label className="pay-bank-label">
                 Bank Account Number
               </label>
               <input
@@ -345,28 +269,12 @@ export default function PaymentsPage() {
                 value={settings.bankAccount}
                 onChange={handleBankAccountChange}
                 placeholder="Enter account number"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                className="pay-bank-input"
               />
             </div>
 
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-              }}>
+              <label className="pay-bank-label">
                 IFSC Code
               </label>
               <input
@@ -375,56 +283,22 @@ export default function PaymentsPage() {
                 onChange={handleIfscChange}
                 placeholder="e.g., SBIN0001234"
                 maxLength={11}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: '10px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  textTransform: 'uppercase',
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                className="pay-bank-input pay-bank-input--upper"
               />
             </div>
           </div>
 
-          <p style={{ margin: '1rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <p className="pay-bank-hint">
             Bank details are used for NEFT/IMPS settlement processing.
           </p>
         </section>
 
         {/* Save Button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
+        <div className="pay-save-area">
           <button
             onClick={handleSave}
             disabled={saving || !settings.upiVpa}
-            style={{
-              padding: '0.875rem 2rem',
-              background: saving || !settings.upiVpa ? '#94a3b8' : 'var(--primary)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: saving || !settings.upiVpa ? 'not-allowed' : 'pointer',
-              boxShadow: saving || !settings.upiVpa ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.35)',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              if (!saving && settings.upiVpa) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!saving && settings.upiVpa) {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.35)';
-              }
-            }}
+            className="pay-save-btn"
           >
             {saving ? 'Saving...' : 'Save Payment Settings'}
           </button>

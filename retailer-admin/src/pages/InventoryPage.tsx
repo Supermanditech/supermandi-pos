@@ -185,24 +185,23 @@ export default function InventoryPage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Inventory' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h1 className="page-title" style={{ margin: 0 }}>Inventory Ledger</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="flex-between-wrap">
+          <h1 className="page-title page-title--compact">Inventory Ledger</h1>
+          <div className="flex-row btn-icon">
             {/* T-183: Last updated indicator */}
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <span className="text-xs-muted">
               Updated {secondsSinceRefresh < 5 ? 'just now' : `${secondsSinceRefresh}s ago`}
             </span>
             {/* T-183: Manual refresh button */}
             <button
               aria-label="Refresh inventory data"
-              className="btn btn-secondary"
+              className="btn btn-secondary btn-icon btn-sm"
               onClick={() => fetchLedger()}
               disabled={loading}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.75rem' }}
             >
               <RefreshCw style={{ width: 14, height: 14, transition: 'transform 0.3s', transform: loading ? 'rotate(180deg)' : 'none' }} />
               Refresh
@@ -213,7 +212,7 @@ export default function InventoryPage() {
 
       <div className="page-content">
         {/* Summary Stats */}
-        <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
+        <div className="grid grid-4 grid-mb-lg">
           <div className="stat-card">
             <div className="stat-label">📦 Total SKUs</div>
             <div className="stat-value">{loading ? '...' : totalSKUs}</div>
@@ -233,7 +232,7 @@ export default function InventoryPage() {
         </div>
 
         {/* Filter Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div className="flex-row grid-mb">
           {(['all', 'INWARD', 'OUTWARD', 'ADJUSTMENT'] as const).map((f) => (
             <button
               key={f}
@@ -246,45 +245,34 @@ export default function InventoryPage() {
         </div>
 
         {/* RET-AUD-034: Date Range Filter */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>From:</label>
+        <div className="flex-between-wrap grid-mb">
+          <div className="flex-row btn-icon">
+            <label className="form-label-inline">From:</label>
             <input
               type="date"
               value={startDate}
               max={endDate || undefined}
               onChange={(e) => setStartDate(e.target.value)}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid var(--border)',
-                fontSize: '0.875rem',
-              }}
+              className="form-input-date"
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>To:</label>
+          <div className="flex-row btn-icon">
+            <label className="form-label-inline">To:</label>
             <input
               type="date"
               value={endDate}
               min={startDate || undefined}
               onChange={(e) => setEndDate(e.target.value)}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid var(--border)',
-                fontSize: '0.875rem',
-              }}
+              className="form-input-date"
             />
           </div>
           {(startDate || endDate) && (
             <button
-              className="btn btn-secondary"
+              className="btn btn-secondary btn-text-sm"
               onClick={() => {
                 setStartDate('');
                 setEndDate('');
               }}
-              style={{ fontSize: '0.875rem' }}
             >
               Clear Dates
             </button>
@@ -292,8 +280,7 @@ export default function InventoryPage() {
         </div>
 
         {/* Ledger Table — T-183: refreshFlash adds subtle highlight animation on auto-refresh */}
-        <div className="card" style={{
-          padding: 0, overflow: 'hidden',
+        <div className="card card-no-padding" style={{
           transition: 'box-shadow 0.3s ease',
           boxShadow: refreshFlash ? '0 0 0 2px var(--primary)' : undefined,
         }}>
@@ -311,27 +298,19 @@ export default function InventoryPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={6} className="td-center-muted">
                     Loading ledger entries...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
-                    <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>
+                  <td colSpan={6} className="td-center">
+                    <div className="text-danger-mb">{error}</div>
                     {/* GO-LIVE-021 + RET-C2-006: Retry button with loading state */}
                     <button
                       onClick={() => fetchLedger()}
                       disabled={loading}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: loading ? '#94a3b8' : 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        fontSize: '0.875rem',
-                      }}
+                      className="btn btn-primary"
                     >
                       {loading ? 'Retrying...' : 'Retry'}
                     </button>
@@ -365,7 +344,7 @@ export default function InventoryPage() {
                   const displayType = getDisplayType(entry.transactionType);
                   return (
                     <tr key={entry.id}>
-                      <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                      <td className="text-sm-muted">
                         {formatDateTime(entry.createdAt)}
                       </td>
                       <td>{entry.productName || entry.productId}</td>
@@ -384,10 +363,10 @@ export default function InventoryPage() {
                       }}>
                         {Number(entry.deltaQty) > 0 ? '+' : ''}{Number(entry.deltaQty) || 0}
                       </td>
-                      <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                      <td className="text-sm-muted">
                         {entry.transactionType}{entry.referenceId ? ` #${entry.referenceId.slice(0, 8)}` : ''}
                       </td>
-                      <td style={{ fontWeight: '500' }}>{Number(entry.stockAfter) || 0}</td>
+                      <td className="cell-bold">{Number(entry.stockAfter) || 0}</td>
                     </tr>
                   );
                 })
@@ -397,8 +376,8 @@ export default function InventoryPage() {
         </div>
 
         {/* Info Box */}
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#eff6ff', borderRadius: '0.5rem' }}>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+        <div className="info-box">
+          <p className="info-box-text">
             💡 <strong>Note:</strong> Inventory changes are tracked through the ledger.
             Direct stock edits create ADJUSTMENT entries for audit trail.
           </p>

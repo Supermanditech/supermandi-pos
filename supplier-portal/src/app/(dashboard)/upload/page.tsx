@@ -215,20 +215,8 @@ export default function UploadPage() {
                   <span>Uploading &amp; processing...</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-primary-500 h-2 rounded-full"
-                    style={{
-                      width: '40%',
-                      animation: 'indeterminate 1.5s ease-in-out infinite',
-                    }}
-                  />
+                  <div className="bg-primary-500 h-2 rounded-full progress-indeterminate" />
                 </div>
-                <style>{`
-                  @keyframes indeterminate {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(350%); }
-                  }
-                `}</style>
               </div>
             )}
             <button

@@ -81,63 +81,36 @@ export default function LimitedModeBanner({ status, storeName: _storeName, onDis
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.DRAFT;
 
   return (
-    <div style={{
-      background: config.bgColor,
-      border: `1px solid ${config.borderColor}`,
-      borderRadius: '0.5rem',
-      padding: '1rem',
-      marginBottom: '1rem',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1 }}>
+    <div className="limited-banner" style={{ background: config.bgColor, border: `1px solid ${config.borderColor}` }}>
+      <div className="limited-banner-row">
+        <div className="limited-banner-body">
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              padding: '0.25rem 0.5rem',
-              background: config.borderColor,
-              color: config.color,
-              borderRadius: '0.25rem',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-            }}>
+          <div className="limited-banner-header">
+            <span className="limited-banner-badge" style={{ background: config.borderColor, color: config.color }}>
               ⚠ LIMITED MODE
             </span>
-            <span style={{
-              padding: '0.25rem 0.5rem',
-              background: 'white',
-              color: config.color,
-              borderRadius: '0.25rem',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-            }}>
+            <span className="limited-banner-status" style={{ color: config.color }}>
               Status: {config.label}
             </span>
           </div>
 
           {/* Message */}
-          <p style={{
-            margin: '0 0 0.75rem',
-            color: config.color,
-            fontSize: '0.875rem',
-          }}>
+          <p className="limited-banner-message" style={{ color: config.color }}>
             {config.message}
           </p>
 
           {/* Restrictions info */}
-          <details style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 500, marginBottom: '0.5rem' }}>
+          <details className="limited-banner-details">
+            <summary>
               View restrictions
             </summary>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
+            <div className="limited-banner-grid">
               {/* Blocked actions */}
               <div>
-                <p style={{ fontWeight: 500, color: '#991b1b', margin: '0 0 0.25rem' }}>
+                <p className="limited-banner-label--blocked">
                   ❌ Blocked Actions:
                 </p>
-                <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#6b7280' }}>
+                <ul className="limited-banner-list">
                   {BLOCKED_ACTIONS.map(action => (
                     <li key={action}>{action}</li>
                   ))}
@@ -145,10 +118,10 @@ export default function LimitedModeBanner({ status, storeName: _storeName, onDis
               </div>
               {/* Allowed actions */}
               <div>
-                <p style={{ fontWeight: 500, color: '#059669', margin: '0 0 0.25rem' }}>
+                <p className="limited-banner-label--allowed">
                   ✓ Allowed Actions:
                 </p>
-                <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#6b7280' }}>
+                <ul className="limited-banner-list">
                   {ALLOWED_ACTIONS.map(action => (
                     <li key={action}>{action}</li>
                   ))}
@@ -162,15 +135,7 @@ export default function LimitedModeBanner({ status, storeName: _storeName, onDis
         {onDismiss && (
           <button
             onClick={onDismiss}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#6b7280',
-              cursor: 'pointer',
-              padding: '0.25rem',
-              fontSize: '1rem',
-              lineHeight: 1,
-            }}
+            className="limited-banner-dismiss"
             aria-label="Dismiss"
           >
             ×
@@ -190,19 +155,7 @@ export function LimitedModeIndicator({ status }: { status: string }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.DRAFT;
 
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.25rem',
-      padding: '0.25rem 0.5rem',
-      background: config.bgColor,
-      color: config.color,
-      border: `1px solid ${config.borderColor}`,
-      borderRadius: '0.25rem',
-      fontSize: '0.625rem',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-    }}>
+    <span className="limited-indicator" style={{ background: config.bgColor, color: config.color, border: `1px solid ${config.borderColor}` }}>
       ⚠ {config.label}
     </span>
   );

@@ -38,21 +38,21 @@ export function EventsTab({
 
       {/* R7.SA.005: Error state display */}
       {error && (
-        <div className="banner" role="alert" style={{ margin: "0 0 12px" }}>
+        <div className="banner sa-mb-12" role="alert">
           {error}
         </div>
       )}
 
       {/* R7.SA.004: Loading state indicator */}
       {loading && (
-        <div className="muted" style={{ padding: "8px 0", textAlign: "center" }}>
+        <div className="muted sa-py-8 sa-text-center">
           Loading events…
         </div>
       )}
 
       {groupBy !== "none" && (
         <div className="tableWrap">
-          <div className="muted" style={{ marginBottom: 8 }}>
+          <div className="muted sa-mb-8">
             Grouped by <span className="mono">{groupBy}</span> (showing {grouped.length} groups)
           </div>
           <table className="table">
@@ -75,12 +75,12 @@ export function EventsTab({
               ))}
             </tbody>
           </table>
-          {grouped.length > 50 && <div className="muted" style={{ marginTop: 8 }}>Showing first 50 groups.</div>}
+          {grouped.length > 50 && <div className="muted sa-mt-8">Showing first 50 groups.</div>}
         </div>
       )}
 
       <div className="tableWrap" style={{ paddingTop: 0 }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="sa-flex sa-gap-8 sa-flex-wrap">
           <button className="tab" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
             Prev
           </button>

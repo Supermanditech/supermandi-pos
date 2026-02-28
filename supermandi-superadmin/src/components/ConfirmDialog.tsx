@@ -16,25 +16,18 @@ interface ConfirmDialogProps extends ConfirmDialogConfig {
 }
 
 export function ConfirmDialog({ title, message, detail, confirmLabel, variant, onConfirm, onCancel, loading }: ConfirmDialogProps) {
-  const btnStyle = variant === 'warning'
-    ? { background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer', fontWeight: 600 } as const
-    : variant === 'info'
-    ? { background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer', fontWeight: 600 } as const
-    : undefined;
-
   return (
     <div className="modalOverlay" onClick={() => { if (!loading) onCancel(); }}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modalHeader"><h3>{title}</h3></div>
         <div className="modalBody">
           <p>{message}</p>
-          {detail && <p className="muted" style={{ marginTop: 8 }}>{detail}</p>}
+          {detail && <p className="muted sa-mt-8">{detail}</p>}
         </div>
         <div className="modalFooter">
           <button className="btnGhost" onClick={onCancel} disabled={loading}>Cancel</button>
           <button
-            className={variant === 'danger' ? 'btnDanger' : undefined}
-            style={btnStyle}
+            className={variant === 'danger' ? 'btnDanger' : variant === 'warning' ? 'sa-btn-warning' : 'sa-btn-info-action'}
             onClick={onConfirm}
             disabled={loading}
           >
@@ -69,18 +62,18 @@ export function EnrollmentResultModal({ result, onClose }: EnrollmentResultModal
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modalHeader"><h3>Enrollment Code Sent</h3></div>
         <div className="modalBody">
-          <div style={{ textAlign: 'center', margin: '16px 0' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 4, padding: '12px 24px', background: '#f0fdf4', borderRadius: 8, border: '2px dashed #22c55e', display: 'inline-block' }}>
+          <div className="sa-enrollment-code-wrap">
+            <div className="sa-enrollment-code">
               {result.enrollmentCode}
             </div>
             <button
               onClick={copyCode}
-              style={{ display: 'block', margin: '8px auto 0', fontSize: 12, padding: '4px 12px', background: '#e0f2fe', border: '1px solid #0ea5e9', borderRadius: 4, cursor: 'pointer', color: '#0369a1' }}
+              className="sa-copy-btn"
             >
               Copy to Clipboard
             </button>
           </div>
-          <div style={{ fontSize: 13, color: '#666' }}>
+          <div className="sa-enrollment-meta">
             <div>Expires: {new Date(result.expiresAt).toLocaleString()}</div>
             <div>SMS: {result.smsSent ? 'Sent' : 'Skipped'}</div>
             <div>Email: {result.emailSent ? 'Sent' : 'Skipped'}</div>

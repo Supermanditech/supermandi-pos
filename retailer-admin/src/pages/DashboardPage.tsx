@@ -271,123 +271,49 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div style={{
-      minHeight: '100%',
-      background: 'var(--background)',
-      padding: '2rem',
-    }}>
+    <div className="dash-container">
       {/* T-112: Breadcrumb navigation */}
       <Breadcrumb items={[{ label: 'Home' }]} />
       {/* AUDIT-RET-008: Shimmer animation for loading skeletons */}
       <style>{`@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }`}</style>
       {/* Welcome Hero Section */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 40%, #0891b2 100%)',
-        borderRadius: '20px',
-        padding: '2.5rem',
-        color: 'white',
-        marginBottom: '2rem',
-        boxShadow: '0 8px 32px rgba(59, 130, 246, 0.25)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
+      <div className="dash-hero">
         {/* Decorative circles */}
-        <div style={{
-          position: 'absolute',
-          top: '-50px',
-          right: '-50px',
-          width: '200px',
-          height: '200px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '50%',
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-30px',
-          right: '100px',
-          width: '100px',
-          height: '100px',
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '50%',
-        }} />
+        <div className="dash-hero-circle1" />
+        <div className="dash-hero-circle2" />
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
+        <div className="dash-hero-inner">
           {/* Greeting & Store Info */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <p style={{
-              margin: '0 0 0.25rem',
-              fontSize: '0.9rem',
-              opacity: 0.9,
-              fontWeight: '500',
-            }}>
+          <div className="dash-greeting-wrap">
+            <p className="dash-greeting">
               {getGreeting()}
             </p>
-            <h1 style={{
-              margin: '0 0 0.5rem',
-              fontSize: '2rem',
-              fontWeight: '800',
-              letterSpacing: '-0.5px',
-            }}>
+            <h1 className="dash-store-name">
               {store?.name || 'Welcome to SuperMandi'}
             </h1>
-            <span style={{
-              display: 'inline-block',
-              padding: '0.35rem 0.85rem',
-              background: 'rgba(255,255,255,0.2)',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: '500',
-              backdropFilter: 'blur(10px)',
-            }}>
+            <span className="dash-store-badge">
               Store ID: {store?.code || storeCode}
             </span>
           </div>
 
           {/* RCAT-SEARCH-001: Search Bar with Results Dropdown */}
-          <div ref={searchRef} style={{ maxWidth: '560px', position: 'relative' }}>
-            <div style={{
-              background: 'var(--surface)',
-              borderRadius: '14px',
-              padding: '4px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-            }}>
+          <div ref={searchRef} className="dash-search-wrap">
+            <div className="dash-search-box">
               <input
                 type="text"
                 placeholder="Search product / supplier / barcode..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => { if (searchResults) setShowSearchResults(true); }}
-                style={{
-                  width: '100%',
-                  padding: '1rem 1.25rem',
-                  fontSize: '1rem',
-                  border: 'none',
-                  borderRadius: '10px',
-                  background: 'transparent',
-                  color: 'var(--text)',
-                  outline: 'none',
-                }}
+                className="dash-search-input"
               />
             </div>
 
             {/* Search Results Dropdown */}
             {showSearchResults && (searchLoading || searchResults) && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                marginTop: '0.5rem',
-                background: 'var(--surface)',
-                borderRadius: '12px',
-                boxShadow: '0 12px 48px rgba(0,0,0,0.2)',
-                maxHeight: '400px',
-                overflow: 'auto',
-                zIndex: 200,
-                border: '1px solid var(--border)',
-              }}>
+              <div className="dash-results-dropdown">
                 {searchLoading && (
-                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                  <div className="dash-results-loading">
                     Searching...
                   </div>
                 )}
@@ -397,29 +323,27 @@ export default function DashboardPage() {
                     {/* Products Section */}
                     {searchResults.products.length > 0 && (
                       <div>
-                        <div style={{ padding: '0.5rem 1rem', background: 'var(--background)', fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div className="dash-results-section-label">
                           Products ({searchResults.products.length})
                         </div>
                         {searchResults.products.map((p) => (
                           <div
                             key={p.id}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(p.name)}`); }}
-                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                            onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
+                            className="dash-result-row"
                           >
                             <div>
-                              <div style={{ fontWeight: '500', color: 'var(--text)', fontSize: '0.9rem' }}>{p.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              <div className="dash-result-name">{p.name}</div>
+                              <div className="dash-result-meta">
                                 {p.brand && <span>{p.brand} | </span>}
-                                <span style={{ fontFamily: 'monospace' }}>{p.barcode || 'No barcode'}</span>
+                                <span className="dash-result-mono">{p.barcode || 'No barcode'}</span>
                               </div>
                             </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '0.85rem' }}>
+                            <div className="dash-result-right">
+                              <div className="dash-result-price">
                                 {formatCurrency(p.sellPrice)}
                               </div>
-                              <div style={{ fontSize: '0.7rem', color: p.stock > 0 ? '#059669' : '#dc2626' }}>
+                              <div className={p.stock > 0 ? 'dash-result-stock-ok' : 'dash-result-stock-low'}>
                                 Stock: {p.stock}
                               </div>
                             </div>
@@ -431,29 +355,23 @@ export default function DashboardPage() {
                     {/* Suppliers Section */}
                     {searchResults.suppliers.length > 0 && (
                       <div>
-                        <div style={{ padding: '0.5rem 1rem', background: 'var(--background)', fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div className="dash-results-section-label">
                           Suppliers ({searchResults.suppliers.length})
                         </div>
                         {searchResults.suppliers.map((s) => (
                           <div
                             key={s.id}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/suppliers`); }}
-                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                            onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
+                            className="dash-result-row"
                           >
                             <div>
-                              <div style={{ fontWeight: '500', color: 'var(--text)', fontSize: '0.9rem' }}>{s.businessName}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              <div className="dash-result-name">{s.businessName}</div>
+                              <div className="dash-result-meta">
                                 {s.phone && <span>{s.phone} | </span>}
-                                {s.gstin && <span style={{ fontFamily: 'monospace' }}>{s.gstin}</span>}
+                                {s.gstin && <span className="dash-result-mono">{s.gstin}</span>}
                               </div>
                             </div>
-                            <span style={{
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '4px',
-                              fontSize: '0.65rem',
-                              fontWeight: '600',
+                            <span className="dash-result-badge" style={{
                               background: s.isSupermandi ? '#dbeafe' : s.verificationStatus === 'verified' ? '#dcfce7' : 'var(--background)',
                               color: s.isSupermandi ? '#1d4ed8' : s.verificationStatus === 'verified' ? '#166534' : '#64748b',
                             }}>
@@ -467,26 +385,20 @@ export default function DashboardPage() {
                     {/* Barcode Matches Section */}
                     {searchResults.barcodes.length > 0 && (
                       <div>
-                        <div style={{ padding: '0.5rem 1rem', background: 'var(--background)', fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div className="dash-results-section-label">
                           Barcode Matches ({searchResults.barcodes.length})
                         </div>
                         {searchResults.barcodes.map((b) => (
                           <div
                             key={b.storeProductId}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(b.barcode)}`); }}
-                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                            onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
+                            className="dash-result-row"
                           >
                             <div>
-                              <div style={{ fontWeight: '500', color: 'var(--text)', fontSize: '0.9rem' }}>{b.productName}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{b.barcode}</div>
+                              <div className="dash-result-name">{b.productName}</div>
+                              <div className="dash-result-meta dash-result-mono">{b.barcode}</div>
                             </div>
-                            <span style={{
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '4px',
-                              fontSize: '0.65rem',
-                              fontWeight: '600',
+                            <span className="dash-result-badge" style={{
                               background: b.mode === 'PACKAGED' ? '#dbeafe' : '#fef3c7',
                               color: b.mode === 'PACKAGED' ? '#1d4ed8' : '#92400e',
                             }}>
@@ -499,7 +411,7 @@ export default function DashboardPage() {
 
                     {/* No Results */}
                     {searchResults.products.length === 0 && searchResults.suppliers.length === 0 && searchResults.barcodes.length === 0 && (
-                      <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                      <div className="dash-no-results">
                         No results found for "{searchQuery}"
                       </div>
                     )}
@@ -512,243 +424,131 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary Metrics Section */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '1rem',
-        marginBottom: '2rem',
-      }}>
+      <div className="dash-metrics-grid">
         {/* Total Products */}
-        <div style={{
-          background: 'var(--surface)',
-          borderRadius: '14px',
-          padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid var(--border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <span style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #dbeafe, #e0f2fe)',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.3rem',
-            }}>📦</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Products</span>
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-icon dash-metric-icon--products">📦</span>
+            <span className="dash-metric-label">Total Products</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text)' }}>
-            {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : inventoryTotals.totalProducts}
+          <div className="dash-metric-value">
+            {inventoryLoading ? <span className="dash-shimmer dash-shimmer--sm" /> : inventoryTotals.totalProducts}
           </div>
         </div>
 
         {/* Total Stock Qty */}
-        <div style={{
-          background: 'var(--surface)',
-          borderRadius: '14px',
-          padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid var(--border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <span style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #dcfce7, #d1fae5)',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.3rem',
-            }}>📋</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Stock Qty</span>
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-icon dash-metric-icon--stock">📋</span>
+            <span className="dash-metric-label">Total Stock Qty</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text)' }}>
-            {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : inventoryTotals.totalStockQty.toLocaleString('en-IN')}
+          <div className="dash-metric-value">
+            {inventoryLoading ? <span className="dash-shimmer dash-shimmer--sm" /> : inventoryTotals.totalStockQty.toLocaleString('en-IN')}
           </div>
         </div>
 
         {/* Total Purchase Value */}
-        <div style={{
-          background: 'var(--surface)',
-          borderRadius: '14px',
-          padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid var(--border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <span style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #fef3c7, #fef9c3)',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.3rem',
-            }}>💰</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Purchase Value</span>
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-icon dash-metric-icon--purchase">💰</span>
+            <span className="dash-metric-label">Total Purchase Value</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text)' }}>
-            {inventoryLoading ? <span style={{ display: 'inline-block', width: '80px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : formatCurrencyWhole(inventoryTotals.totalPurchaseValue)}
+          <div className="dash-metric-value">
+            {inventoryLoading ? <span className="dash-shimmer dash-shimmer--md" /> : formatCurrencyWhole(inventoryTotals.totalPurchaseValue)}
           </div>
         </div>
 
         {/* Total Sell Revenue */}
-        <div style={{
-          background: 'var(--surface)',
-          borderRadius: '14px',
-          padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid var(--border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <span style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.3rem',
-            }}>📈</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Sell Revenue</span>
+        <div className="dash-metric-card">
+          <div className="dash-metric-header">
+            <span className="dash-metric-icon dash-metric-icon--revenue">📈</span>
+            <span className="dash-metric-label">Total Sell Revenue</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#059669' }}>
-            {inventoryLoading ? <span style={{ display: 'inline-block', width: '80px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : formatCurrencyWhole(inventoryTotals.totalSellRevenue)}
+          <div className="dash-metric-value dash-metric-value--green">
+            {inventoryLoading ? <span className="dash-shimmer dash-shimmer--md" /> : formatCurrencyWhole(inventoryTotals.totalSellRevenue)}
           </div>
         </div>
       </div>
 
       {/* GL-RJ-009: Daily Sales Summary Section */}
-      <div style={{
-        background: 'var(--surface)',
-        borderRadius: '14px',
-        padding: '1.5rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        border: '1px solid var(--border)',
-        marginBottom: '2rem',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>📊</span>
+      <div className="dash-daily-card">
+        <div className="dash-daily-header">
+          <h2 className="dash-daily-title">
+            <span className="dash-daily-icon">📊</span>
             Today's Sales Summary
           </h2>
           {dailySummary && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <span className="dash-daily-date">
               {formatDateShort(dailySummary.date)}
             </span>
           )}
         </div>
 
         {dailySummaryLoading ? (
-          <div style={{ padding: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
+          <div className="dash-daily-shimmer-grid">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} style={{ borderRadius: '10px', padding: '1rem', background: 'var(--background)' }}>
-                <div style={{ width: '60%', height: '1.5rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px', margin: '0 auto 0.5rem' }} />
-                <div style={{ width: '40%', height: '0.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', margin: '0 auto' }} />
+              <div key={i} className="dash-daily-shimmer-item">
+                <div className="dash-daily-shimmer-val dash-shimmer" />
+                <div className="dash-daily-shimmer-label dash-shimmer" />
               </div>
             ))}
           </div>
         ) : dailySummaryError ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#dc2626' }}>
+          <div className="dash-daily-error">
             {dailySummaryError}
           </div>
         ) : dailySummary ? (
           <>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '1rem',
-              marginBottom: '1rem',
-            }}>
+            <div className="dash-daily-grid">
               {/* Total Sales */}
-              <div style={{
-                background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-                borderRadius: '10px',
-                padding: '1rem',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#059669' }}>
+              <div className="dash-daily-stat dash-daily-stat--sales">
+                <div className="dash-daily-val dash-daily-val--green">
                   {formatCurrency(dailySummary.totalSales)}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Total Sales</div>
+                <div className="dash-daily-label">Total Sales</div>
               </div>
 
               {/* Total Bills */}
-              <div style={{
-                background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
-                borderRadius: '10px',
-                padding: '1rem',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#2563eb' }}>
+              <div className="dash-daily-stat dash-daily-stat--bills">
+                <div className="dash-daily-val dash-daily-val--blue">
                   {dailySummary.totalBills}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Bills</div>
+                <div className="dash-daily-label">Bills</div>
               </div>
 
               {/* Average Bill */}
-              <div style={{
-                background: 'linear-gradient(135deg, #fef3c7, #fef9c3)',
-                borderRadius: '10px',
-                padding: '1rem',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#d97706' }}>
+              <div className="dash-daily-stat dash-daily-stat--avg">
+                <div className="dash-daily-val dash-daily-val--amber">
                   {formatCurrency(dailySummary.averageBillValue)}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Avg Bill</div>
+                <div className="dash-daily-label">Avg Bill</div>
               </div>
 
               {/* Items Sold */}
-              <div style={{
-                background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)',
-                borderRadius: '10px',
-                padding: '1rem',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#db2777' }}>
+              <div className="dash-daily-stat dash-daily-stat--items">
+                <div className="dash-daily-val dash-daily-val--pink">
                   {dailySummary.itemsSold}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Items Sold</div>
+                <div className="dash-daily-label">Items Sold</div>
               </div>
             </div>
 
             {/* Payment Breakdown */}
             {(dailySummary.paymentBreakdown.cash > 0 || dailySummary.paymentBreakdown.upi > 0) && (
-              <div style={{
-                borderTop: '1px solid var(--border)',
-                paddingTop: '1rem',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                fontSize: '0.85rem',
-              }}>
-                <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Payment Modes:</span>
+              <div className="dash-pay-break">
+                <span className="dash-pay-label">Payment Modes:</span>
                 {dailySummary.paymentBreakdown.cash > 0 && (
-                  <span style={{ color: '#059669' }}>
+                  <span className="dash-pay-cash">
                     💵 Cash: {formatCurrency(dailySummary.paymentBreakdown.cash)}
                   </span>
                 )}
                 {dailySummary.paymentBreakdown.upi > 0 && (
-                  <span style={{ color: '#2563eb' }}>
+                  <span className="dash-pay-upi">
                     📱 UPI: {formatCurrency(dailySummary.paymentBreakdown.upi)}
                   </span>
                 )}
                 {dailySummary.paymentBreakdown.card > 0 && (
-                  <span style={{ color: '#7c3aed' }}>
+                  <span className="dash-pay-card">
                     💳 Card: {formatCurrency(dailySummary.paymentBreakdown.card)}
                   </span>
                 )}
@@ -756,96 +556,39 @@ export default function DashboardPage() {
             )}
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+          <div className="dash-daily-empty">
             No sales data for today
           </div>
         )}
       </div>
 
       {/* Quick Actions Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{
-          margin: '0 0 1rem',
-          fontSize: '0.85rem',
-          fontWeight: '600',
-          color: 'var(--text-muted)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-        }}>
+      <div className="dash-section-mb">
+        <h2 className="dash-section-title">
           Quick Actions
         </h2>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div className="dash-actions-row">
           {/* Add Products Card */}
           <div ref={menuRef} style={{ position: 'relative' }}>
             <button
               onClick={() => setShowAddProductMenu(!showAddProductMenu)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '1.25rem 1.75rem',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '14px',
-                fontWeight: '600',
-                fontSize: '1rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(16, 185, 129, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.35)';
-              }}
+              className="dash-action-btn dash-action-btn--add"
             >
-              <span style={{ fontSize: '1.3rem' }}>📦</span>
+              <span className="dash-action-icon">📦</span>
               Add Products (Without Supplier)
-              <span style={{ marginLeft: '0.25rem', opacity: 0.8 }}>▼</span>
+              <span className="dash-action-arrow">▼</span>
             </button>
 
             {showAddProductMenu && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                marginTop: '0.5rem',
-                background: 'var(--surface)',
-                borderRadius: '14px',
-                boxShadow: '0 12px 48px rgba(0,0,0,0.15)',
-                minWidth: '200px',
-                zIndex: 100,
-                overflow: 'hidden',
-                border: '1px solid var(--border)',
-              }}>
+              <div className="dash-dropdown-menu">
                 <button
                   onClick={() => {
                     setShowAddProductMenu(false);
                     navigate(`/s/${storeCode}/import`);
                   }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    width: '100%',
-                    padding: '1rem 1.25rem',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: '1px solid var(--border)',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    fontSize: '0.95rem',
-                    color: 'var(--text)',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                  className="dash-dropdown-item"
                 >
-                  <span style={{ fontSize: '1.2rem' }}>📄</span>
+                  <span className="dash-dropdown-icon">📄</span>
                   CSV Upload
                 </button>
                 <button
@@ -853,24 +596,9 @@ export default function DashboardPage() {
                     setShowAddProductMenu(false);
                     navigate(`/s/${storeCode}/products?action=create`);
                   }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    width: '100%',
-                    padding: '1rem 1.25rem',
-                    background: 'none',
-                    border: 'none',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    fontSize: '0.95rem',
-                    color: 'var(--text)',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                  className="dash-dropdown-item"
                 >
-                  <span style={{ fontSize: '1.2rem' }}>✏️</span>
+                  <span className="dash-dropdown-icon">✏️</span>
                   Web Form
                 </button>
               </div>
@@ -880,58 +608,15 @@ export default function DashboardPage() {
           {/* Add Supplier Card */}
           <button
             onClick={() => navigate(`/s/${storeCode}/suppliers?action=create`)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '1.25rem 1.75rem',
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '14px',
-              fontWeight: '600',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(139, 92, 246, 0.35)',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.4)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.35)';
-            }}
+            className="dash-action-btn dash-action-btn--supplier"
           >
-            <span style={{ fontSize: '1.3rem' }}>🏪</span>
+            <span className="dash-action-icon">🏪</span>
             Add Supplier (Market Supplier)
           </button>
 
           {/* GL-WF-031: Export Button with CSV download handler */}
           <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '1.25rem 1.5rem',
-              background: 'var(--surface)',
-              color: 'var(--text-muted)',
-              border: '2px solid var(--border)',
-              borderRadius: '14px',
-              fontWeight: '500',
-              fontSize: '0.95rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.background = 'var(--background)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.background = 'var(--surface)';
-            }}
+            className="dash-action-btn dash-action-btn--export"
             onClick={() => {
               // GL-WF-031: Export inventory to CSV
               if (!inventory || inventory.length === 0) {
@@ -958,7 +643,7 @@ export default function DashboardPage() {
               URL.revokeObjectURL(url);
             }}
           >
-            <span style={{ fontSize: '1.1rem' }}>📊</span>
+            <span className="dash-action-icon">📊</span>
             Export
           </button>
         </div>
@@ -966,30 +651,11 @@ export default function DashboardPage() {
 
       {/* RET-AUD-040: Category toggle error banner */}
       {catToggleError && (
-        <div style={{
-          padding: '0.75rem 1rem',
-          marginBottom: '1rem',
-          background: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          color: '#dc2626',
-          fontSize: '0.875rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
+        <div className="dash-cat-error-banner">
           <span>{catToggleError}</span>
           <button
             onClick={() => setCatToggleError(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#dc2626',
-              cursor: 'pointer',
-              fontSize: '1.25rem',
-              lineHeight: 1,
-              padding: '0 0.25rem',
-            }}
+            className="dash-cat-dismiss"
             aria-label="Dismiss error"
           >
             ×
@@ -998,54 +664,40 @@ export default function DashboardPage() {
       )}
 
       {/* FE-RETAILER-CAT-001: Categories Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}>
+      <div className="dash-section-mb">
+        <div className="dash-cat-header">
+          <h2 className="dash-section-title" style={{ margin: 0 }}>
             Product Categories
           </h2>
           {/* RCAT-CAT-002: Toggle to show/hide hidden categories */}
           {categories.some(c => c.isHidden) && (
             <button
               onClick={() => setShowHiddenCategories(!showHiddenCategories)}
-              style={{
-                background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem',
-                cursor: 'pointer', textDecoration: 'underline',
-              }}
+              className="dash-cat-toggle"
             >
               {showHiddenCategories ? 'Hide hidden' : `Show hidden (${categories.filter(c => c.isHidden).length})`}
             </button>
           )}
         </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-          gap: '1rem',
-        }}>
+        <div className="dash-cat-grid">
           {categoriesLoading ? (
             <>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ background: 'var(--surface)', borderRadius: '12px', padding: '1.25rem', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <span style={{ width: '36px', height: '36px', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '8px', display: 'inline-block' }} />
-                    <span style={{ width: '60%', height: '0.95rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', display: 'inline-block' }} />
+                <div key={i} className="dash-cat-shimmer-card">
+                  <div className="dash-cat-shimmer-row">
+                    <span className="dash-shimmer" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
+                    <span className="dash-shimmer" style={{ width: '60%', height: '0.95rem', borderRadius: '4px' }} />
                   </div>
-                  <span style={{ width: '40%', height: '0.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', display: 'inline-block' }} />
+                  <span className="dash-shimmer" style={{ width: '40%', height: '0.75rem', borderRadius: '4px', display: 'inline-block' }} />
                 </div>
               ))}
             </>
           ) : categoriesError ? (
-            <div style={{ gridColumn: '1 / -1', padding: '1rem', background: 'var(--error-bg, #fef2f2)', border: '1px solid var(--error-border, #fecaca)', borderRadius: '0.5rem', color: '#991b1b', fontSize: '0.875rem' }}>
+            <div className="dash-cat-error-banner" style={{ gridColumn: '1 / -1' }}>
               {categoriesError}
             </div>
           ) : categories.length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="dash-cat-empty">
               No categories yet. Add products to see category breakdown.
             </div>
           ) : (
@@ -1054,31 +706,10 @@ export default function DashboardPage() {
               .map((category) => (
               <div
                 key={category.id}
-                style={{
-                  background: category.isHidden ? 'var(--background)' : 'var(--surface)',
-                  borderRadius: '12px',
-                  padding: '1.25rem',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  border: '1px solid var(--border)',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                  opacity: category.isHidden ? 0.6 : 1,
-                  position: 'relative' as const,
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
-                }}
+                className={`dash-cat-card${category.isHidden ? ' dash-cat-card--hidden' : ''}`}
               >
                 {/* RCAT-CAT-002: Edit/Delete action buttons */}
-                <div style={{
-                  position: 'absolute', top: '6px', right: '6px',
-                  display: 'flex', gap: '2px',
-                }}>
+                <div className="dash-cat-actions">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1087,13 +718,7 @@ export default function DashboardPage() {
                       setCatEditNameHi(category.labelHi || '');
                     }}
                     title="Rename category"
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: '0.7rem', padding: '2px 4px', borderRadius: '4px',
-                      color: 'var(--text-muted)',
-                    }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = 'var(--background)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
+                    className="dash-cat-action-btn"
                   >
                     Edit
                   </button>
@@ -1103,13 +728,7 @@ export default function DashboardPage() {
                       handleCategoryToggleHidden(category);
                     }}
                     title={category.isHidden ? 'Show category' : 'Hide category'}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: '0.7rem', padding: '2px 4px', borderRadius: '4px',
-                      color: category.isHidden ? '#166534' : '#dc2626',
-                    }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = 'var(--background)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
+                    className={`dash-cat-action-btn ${category.isHidden ? 'dash-cat-action-btn--show' : 'dash-cat-action-btn--hide'}`}
                   >
                     {category.isHidden ? 'Show' : 'Hide'}
                   </button>
@@ -1117,42 +736,26 @@ export default function DashboardPage() {
                 <div
                   onClick={() => navigate(`/s/${storeCode}/products?category=${category.id}`)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <span style={{
-                      width: '36px',
-                      height: '36px',
-                      background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.2rem',
-                    }}>
+                  <div className="dash-cat-row">
+                    <span className="dash-cat-icon">
                       {getCategoryIcon(category.iconKey)}
                     </span>
                     <div>
-                      <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '0.95rem' }}>
+                      <div className="dash-cat-name">
                         {category.labelEn}
                       </div>
                       {category.labelHi && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        <div className="dash-cat-name-hi">
                           {category.labelHi}
                         </div>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{
-                      padding: '0.25rem 0.5rem',
-                      background: category.productCount > 0 ? '#dcfce7' : 'var(--background)',
-                      color: category.productCount > 0 ? '#166534' : '#64748b',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                    }}>
+                  <div className="dash-cat-footer">
+                    <span className={`dash-cat-count ${category.productCount > 0 ? 'dash-cat-count--active' : 'dash-cat-count--empty'}`}>
                       {Number(category.productCount) || 0} products
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <span className="dash-cat-value">
                       {Number(category.stockValue || 0) > 0
                         ? formatCurrency(Number(category.stockValue))
                         : '—'}
@@ -1167,74 +770,50 @@ export default function DashboardPage() {
 
       {/* RCAT-CAT-002: Category Rename Modal */}
       {editingCategory && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-        }} onClick={() => { if (!catEditSaving) { setEditingCategory(null); setCatEditError(null); } }}>
-          <div style={{
-            background: 'var(--surface)', borderRadius: '12px', padding: '1.5rem',
-            width: '100%', maxWidth: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-          }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--text)' }}>
+        <div className="dash-modal-overlay" onClick={() => { if (!catEditSaving) { setEditingCategory(null); setCatEditError(null); } }}>
+          <div className="dash-modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dash-modal-title">
               Rename Category (Store Override)
             </h3>
-            <div style={{ marginBottom: '0.75rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+            <div className="dash-modal-field">
+              <label className="dash-modal-label">
                 English Name
               </label>
               <input
                 type="text"
                 value={catEditNameEn}
                 onChange={(e) => setCatEditNameEn(e.target.value)}
-                style={{
-                  width: '100%', padding: '8px 12px', border: '1px solid var(--border)',
-                  borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box',
-                }}
+                className="dash-modal-input"
               />
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+            <div className="dash-modal-field" style={{ marginBottom: '1rem' }}>
+              <label className="dash-modal-label">
                 Hindi Name
               </label>
               <input
                 type="text"
                 value={catEditNameHi}
                 onChange={(e) => setCatEditNameHi(e.target.value)}
-                style={{
-                  width: '100%', padding: '8px 12px', border: '1px solid var(--border)',
-                  borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box',
-                }}
+                className="dash-modal-input"
               />
             </div>
             {/* GL-CRIT-0039: Display error message */}
             {catEditError && (
-              <div style={{
-                padding: '8px 12px', marginBottom: '0.75rem',
-                background: '#fef2f2', border: '1px solid #fecaca',
-                borderRadius: '6px', color: '#dc2626', fontSize: '0.85rem',
-              }}>
+              <div className="dash-modal-error">
                 {catEditError}
               </div>
             )}
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <div className="dash-modal-actions">
               <button
                 onClick={() => { setEditingCategory(null); setCatEditError(null); }}
-                style={{
-                  padding: '8px 16px', border: '1px solid var(--border)', background: 'var(--surface)',
-                  borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem',
-                }}
+                className="dash-modal-cancel"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCategoryRename}
                 disabled={catEditSaving || (!catEditNameEn.trim() && !catEditNameHi.trim())}
-                style={{
-                  padding: '8px 16px', border: 'none',
-                  background: catEditSaving ? '#94a3b8' : '#2563eb', color: 'white',
-                  borderRadius: '6px', cursor: catEditSaving ? 'not-allowed' : 'pointer',
-                  fontSize: '0.85rem',
-                }}
+                className={`dash-modal-save ${catEditSaving ? 'dash-modal-save--disabled' : 'dash-modal-save--active'}`}
               >
                 {catEditSaving ? 'Saving...' : 'Save'}
               </button>
@@ -1245,90 +824,29 @@ export default function DashboardPage() {
 
       {/* Inventory Section */}
       <div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1rem',
-        }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}>
+        <div className="dash-inv-header">
+          <h2 className="dash-section-title" style={{ margin: 0 }}>
             Inventory Overview
           </h2>
-          <span style={{
-            padding: '0.35rem 0.85rem',
-            background: '#e0f2fe',
-            color: '#0369a1',
-            borderRadius: '20px',
-            fontSize: '0.75rem',
-            fontWeight: '600',
-          }}>
-            {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '0.75rem', background: 'linear-gradient(90deg, #e0f2fe 25%, #bae6fd 50%, #e0f2fe 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '10px' }} /> : `${inventoryTotals.totalProducts} products`}
+          <span className="dash-inv-count-badge">
+            {inventoryLoading ? <span className="dash-shimmer dash-shimmer--label" /> : `${inventoryTotals.totalProducts} products`}
           </span>
         </div>
 
-        <div style={{
-          background: 'var(--surface)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)',
-          border: '1px solid var(--border)',
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'var(--background)' }}>
-                <th style={{
-                  padding: '1rem 1.5rem',
-                  textAlign: 'left',
-                  fontWeight: '600',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '1px solid var(--border)',
-                }}>
+        <div className="dash-inv-table-wrap">
+          <table className="dash-inv-table">
+            <thead className="dash-inv-thead">
+              <tr>
+                <th className="dash-inv-th dash-inv-th--left">
                   Product Name
                 </th>
-                <th style={{
-                  padding: '1rem 1.5rem',
-                  textAlign: 'right',
-                  fontWeight: '600',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '1px solid var(--border)',
-                }}>
+                <th className="dash-inv-th dash-inv-th--right">
                   Total Stock Qty
                 </th>
-                <th style={{
-                  padding: '1rem 1.5rem',
-                  textAlign: 'right',
-                  fontWeight: '600',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '1px solid var(--border)',
-                }}>
+                <th className="dash-inv-th dash-inv-th--right">
                   Total Purchase Value
                 </th>
-                <th style={{
-                  padding: '1rem 1.5rem',
-                  textAlign: 'right',
-                  fontWeight: '600',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '1px solid var(--border)',
-                }}>
+                <th className="dash-inv-th dash-inv-th--right">
                   Total Sell Revenue
                 </th>
               </tr>
@@ -1337,10 +855,10 @@ export default function DashboardPage() {
               {inventoryLoading ? (
                 <>
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <tr key={i} className="dash-inv-row">
                       {Array.from({ length: 4 }).map((_, j) => (
-                        <td key={j} style={{ padding: '1rem 1.5rem' }}>
-                          <span style={{ display: 'inline-block', width: j === 0 ? '70%' : '50%', height: '1rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px' }} />
+                        <td key={j} className="dash-inv-td">
+                          <span className="dash-shimmer" style={{ width: j === 0 ? '70%' : '50%', height: '1rem', borderRadius: '4px' }} />
                         </td>
                       ))}
                     </tr>
@@ -1348,44 +866,21 @@ export default function DashboardPage() {
                 </>
               ) : inventoryError ? (
                 <tr>
-                  <td colSpan={4} style={{ padding: '3rem 2rem', textAlign: 'center', color: '#ef4444' }}>
+                  <td colSpan={4} className="dash-inv-error">
                     {inventoryError}
                   </td>
                 </tr>
               ) : inventory.length === 0 ? (
                 <tr>
                   <td colSpan={4} style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                    <div style={{
-                      maxWidth: '320px',
-                      margin: '0 auto',
-                    }}>
-                      <div style={{
-                        width: '80px',
-                        height: '80px',
-                        margin: '0 auto 1.25rem',
-                        background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
-                        borderRadius: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '2.5rem',
-                      }}>
+                    <div className="dash-inv-empty-wrap">
+                      <div className="dash-inv-empty-icon">
                         📦
                       </div>
-                      <h3 style={{
-                        margin: '0 0 0.5rem',
-                        color: 'var(--text)',
-                        fontWeight: '600',
-                        fontSize: '1.1rem',
-                      }}>
+                      <h3 className="dash-inv-empty-title">
                         Your inventory is empty
                       </h3>
-                      <p style={{
-                        margin: 0,
-                        color: 'var(--text-muted)',
-                        fontSize: '0.9rem',
-                        lineHeight: '1.6',
-                      }}>
+                      <p className="dash-inv-empty-text">
                         Get started by adding your first products using CSV upload or the web form above.
                       </p>
                     </div>
@@ -1393,35 +888,17 @@ export default function DashboardPage() {
                 </tr>
               ) : (
                 inventory.slice(invPage * INV_PAGE_SIZE, (invPage + 1) * INV_PAGE_SIZE).map((item) => (
-                  <tr key={item.productId} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{
-                      padding: '1rem 1.5rem',
-                      color: 'var(--text)',
-                      fontWeight: '500',
-                    }}>
+                  <tr key={item.productId} className="dash-inv-row">
+                    <td className="dash-inv-td dash-inv-td--name">
                       {item.productName || item.productId}
                     </td>
-                    <td style={{
-                      padding: '1rem 1.5rem',
-                      textAlign: 'right',
-                      color: 'var(--text-muted)',
-                      fontWeight: '600',
-                    }}>
+                    <td className="dash-inv-td dash-inv-td--qty">
                       {Number(item.totalStockQty) || 0}
                     </td>
-                    <td style={{
-                      padding: '1rem 1.5rem',
-                      textAlign: 'right',
-                      color: 'var(--text-muted)',
-                    }}>
+                    <td className="dash-inv-td dash-inv-td--purchase">
                       {formatCurrency(Number(item.totalPurchaseValue || 0))}
                     </td>
-                    <td style={{
-                      padding: '1rem 1.5rem',
-                      textAlign: 'right',
-                      color: '#059669',
-                      fontWeight: '600',
-                    }}>
+                    <td className="dash-inv-td dash-inv-td--revenue">
                       {formatCurrency(Number(item.totalSellRevenue || 0))}
                     </td>
                   </tr>
@@ -1431,13 +908,13 @@ export default function DashboardPage() {
           </table>
           {/* AUDIT-RET-011: Pagination controls */}
           {inventory.length > INV_PAGE_SIZE && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.5rem', borderTop: '1px solid var(--border)', background: 'var(--background)' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            <div className="dash-inv-pagination">
+              <span className="dash-inv-page-info">
                 Showing {invPage * INV_PAGE_SIZE + 1}–{Math.min((invPage + 1) * INV_PAGE_SIZE, inventory.length)} of {inventory.length}
               </span>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => setInvPage(p => Math.max(0, p - 1))} disabled={invPage === 0} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: invPage === 0 ? 'var(--background)' : 'var(--surface)', color: invPage === 0 ? 'var(--text-muted)' : 'var(--text)', cursor: invPage === 0 ? 'default' : 'pointer', fontSize: '0.85rem' }}>Previous</button>
-                <button onClick={() => setInvPage(p => Math.min(Math.ceil(inventory.length / INV_PAGE_SIZE) - 1, p + 1))} disabled={(invPage + 1) * INV_PAGE_SIZE >= inventory.length} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'var(--background)' : 'var(--surface)', color: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'var(--text-muted)' : 'var(--text)', cursor: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'default' : 'pointer', fontSize: '0.85rem' }}>Next</button>
+              <div className="dash-inv-page-btns">
+                <button onClick={() => setInvPage(p => Math.max(0, p - 1))} disabled={invPage === 0} className="dash-inv-page-btn">Previous</button>
+                <button onClick={() => setInvPage(p => Math.min(Math.ceil(inventory.length / INV_PAGE_SIZE) - 1, p + 1))} disabled={(invPage + 1) * INV_PAGE_SIZE >= inventory.length} className="dash-inv-page-btn">Next</button>
               </div>
             </div>
           )}

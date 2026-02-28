@@ -584,7 +584,7 @@ export function SplitPaymentModal({
           disabled={!isValid || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={theme.colors.textInverse} size="small" />
           ) : (
             <Text style={styles.proceedBtnText}>Proceed</Text>
           )}
@@ -612,7 +612,7 @@ export function SplitPaymentModal({
       {splitQrSecondsLeft !== null && splitQrSecondsLeft > 0 && (
         <Text style={{
           fontSize: 13,
-          color: splitQrSecondsLeft <= 60 ? "#DC2626" : "#64748B",
+          color: splitQrSecondsLeft <= 60 ? theme.colors.error : theme.colors.textTertiary,
           fontWeight: splitQrSecondsLeft <= 60 ? "700" : "500",
           marginBottom: 8,
           textAlign: "center",
@@ -674,7 +674,7 @@ export function SplitPaymentModal({
           disabled={verifyingUpi}
         >
           {verifyingUpi ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={theme.colors.textInverse} size="small" />
           ) : (
             <Text style={styles.proceedBtnText}>Verify & Proceed</Text>
           )}
@@ -716,7 +716,7 @@ export function SplitPaymentModal({
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={theme.colors.textInverse} size="small" />
           ) : (
             <Text style={styles.proceedBtnText}>Cash Received</Text>
           )}
@@ -796,7 +796,7 @@ export function SplitPaymentModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: theme.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
   proceedBtnText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#fff",
+    color: theme.colors.textInverse,
   },
   btnDisabled: {
     backgroundColor: theme.colors.textTertiary,
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
     marginBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     alignSelf: "center",
   },
@@ -1058,7 +1058,7 @@ const styles = StyleSheet.create({
   cashPrompt: {
     alignItems: "center",
     padding: 24,
-    backgroundColor: theme.colors.successSoft || "#e6f7ed",
+    backgroundColor: theme.colors.successSoft,
     borderRadius: 16,
     marginBottom: 24,
   },

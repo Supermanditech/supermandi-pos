@@ -31,17 +31,11 @@ export default function AllPagesPage() {
 
       <div className="page-content">
         {/* Info Banner */}
-        <div style={{
-          background: '#fef3c7',
-          border: '1px solid #fcd34d',
-          borderRadius: '0.5rem',
-          padding: '1rem',
-          marginBottom: '1.5rem'
-        }}>
-          <p style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+        <div className="qa-info-banner">
+          <p className="qa-info-title">
             🧪 QA Test Hub - Development Only
           </p>
-          <p style={{ fontSize: '0.875rem', color: '#92400e' }}>
+          <p className="qa-info-desc">
             This page lists all routes in the retailer admin portal for quick testing.
             Each card links directly to the page with the current store context.
           </p>
@@ -57,7 +51,7 @@ export default function AllPagesPage() {
             >
               <span className="page-link-title">{page.name}</span>
               <span className="page-link-path">/s/{storeCode}/{page.path || '(index)'}</span>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+              <span className="page-link-desc">
                 {page.description}
               </span>
             </Link>
@@ -65,7 +59,7 @@ export default function AllPagesPage() {
         </div>
 
         {/* Route Reference */}
-        <div className="card" style={{ marginTop: '2rem' }}>
+        <div className="card card-mt-lg">
           <h3 className="card-title">Route Reference</h3>
           <table className="table">
             <thead>
@@ -78,13 +72,13 @@ export default function AllPagesPage() {
             <tbody>
               {pages.map((page) => (
                 <tr key={page.path}>
-                  <td style={{ fontFamily: 'monospace' }}>/s/:storeCode/{page.path || '(index)'}</td>
+                  <td className="cell-mono">/s/:storeCode/{page.path || '(index)'}</td>
                   <td>{(page as any).isPublic ? 'No' : 'Yes'}</td>
                   <td><span className="badge badge-success">Implemented</span></td>
                 </tr>
               ))}
               <tr>
-                <td style={{ fontFamily: 'monospace' }}>/s/:storeCode/_pages</td>
+                <td className="cell-mono">/s/:storeCode/_pages</td>
                 <td>Yes</td>
                 <td><span className="badge badge-success">You are here</span></td>
               </tr>
@@ -93,7 +87,7 @@ export default function AllPagesPage() {
         </div>
 
         {/* API Endpoints Reference */}
-        <div className="card" style={{ marginTop: '1.5rem' }}>
+        <div className="card card-mt-md">
           <h3 className="card-title">API Endpoints</h3>
           <table className="table">
             <thead>
@@ -105,32 +99,32 @@ export default function AllPagesPage() {
             </thead>
             <tbody>
               <tr>
-                <td style={{ fontFamily: 'monospace' }}>/api/v1/retailer-admin/auth/firebase-login</td>
+                <td className="cell-mono">/api/v1/retailer-admin/auth/firebase-login</td>
                 <td><span className="badge badge-success">POST</span></td>
                 <td>Firebase token exchange</td>
               </tr>
               <tr>
-                <td style={{ fontFamily: 'monospace' }}>/api/v1/retailer-admin/store</td>
+                <td className="cell-mono">/api/v1/retailer-admin/store</td>
                 <td><span className="badge badge-warning">GET</span></td>
                 <td>Get store info</td>
               </tr>
               <tr>
-                <td style={{ fontFamily: 'monospace' }}>/api/v1/retailer-admin/products</td>
+                <td className="cell-mono">/api/v1/retailer-admin/products</td>
                 <td><span className="badge badge-warning">GET/POST</span></td>
                 <td>Products CRUD</td>
               </tr>
               <tr>
-                <td style={{ fontFamily: 'monospace' }}>/api/v1/retailer-admin/inventory</td>
+                <td className="cell-mono">/api/v1/retailer-admin/inventory</td>
                 <td><span className="badge badge-warning">GET</span></td>
                 <td>Inventory ledger</td>
               </tr>
               <tr>
-                <td style={{ fontFamily: 'monospace' }}>/api/v1/retailer-admin/suppliers</td>
+                <td className="cell-mono">/api/v1/retailer-admin/suppliers</td>
                 <td><span className="badge badge-warning">GET/POST</span></td>
                 <td>Suppliers CRUD</td>
               </tr>
               <tr>
-                <td style={{ fontFamily: 'monospace' }}>/api/v1/retailer-admin/compliance</td>
+                <td className="cell-mono">/api/v1/retailer-admin/compliance</td>
                 <td><span className="badge badge-warning">GET/POST</span></td>
                 <td>Compliance docs</td>
               </tr>

@@ -223,50 +223,41 @@ export default function VariantManager({ storeProductId, productName, onClose }:
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        background: 'white', borderRadius: '0.75rem', padding: '1.5rem',
-        width: '90%', maxWidth: '700px', maxHeight: '85vh', overflowY: 'auto',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-      }}>
+    <div className="vm-overlay">
+      <div className="vm-card">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div className="vm-header">
           <div>
-            <h3 style={{ margin: 0 }}>Retail Variants</h3>
-            <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            <h3 className="vm-title">Retail Variants</h3>
+            <p className="vm-subtitle">
               {productName}
             </p>
           </div>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#666',
-          }}>
+          <button onClick={onClose} className="vm-close-btn">
             &times;
           </button>
         </div>
 
         {/* Messages */}
         {error && (
-          <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>
+          <div className="alert alert-error vm-alert-mb">{error}</div>
         )}
         {success && (
-          <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{success}</div>
+          <div className="alert alert-success vm-alert-mb">{success}</div>
         )}
 
         {/* Variant List */}
         {isLoading ? (
-          <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Loading variants...</p>
+          <p className="vm-loading">Loading variants...</p>
         ) : variants.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+          <div className="vm-empty">
             <p>No variants defined yet.</p>
-            <p style={{ fontSize: '0.875rem' }}>
+            <p className="vm-empty-hint">
               Add selling units like "1 kg", "500 gm", etc. with individual prices.
             </p>
           </div>
         ) : (
-          <table className="table" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+          <table className="table vm-table">
             <thead>
               <tr>
                 <th>Label</th>
@@ -287,7 +278,7 @@ export default function VariantManager({ storeProductId, productName, onClose }:
                           type="text"
                           value={editForm.label}
                           onChange={(e) => setEditForm(p => ({ ...p, label: e.target.value }))}
-                          style={{ width: '80px', padding: '0.25rem' }}
+                          className="vm-input-sm"
                         />
                       </td>
                       <td>
@@ -295,7 +286,7 @@ export default function VariantManager({ storeProductId, productName, onClose }:
                           type="number"
                           value={editForm.qty}
                           onChange={(e) => setEditForm(p => ({ ...p, qty: e.target.value }))}
-                          style={{ width: '60px', padding: '0.25rem' }}
+                          className="vm-input-num"
                           step="0.01"
                           min="0.01"
                         />
@@ -304,7 +295,7 @@ export default function VariantManager({ storeProductId, productName, onClose }:
                         <select
                           value={editForm.baseUnit}
                           onChange={(e) => setEditForm(p => ({ ...p, baseUnit: e.target.value }))}
-                          style={{ padding: '0.25rem' }}
+                          className="vm-select-sm"
                         >
                           {VALID_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                         </select>
@@ -314,26 +305,24 @@ export default function VariantManager({ storeProductId, productName, onClose }:
                           type="number"
                           value={editForm.sellPriceMinor}
                           onChange={(e) => setEditForm(p => ({ ...p, sellPriceMinor: e.target.value }))}
-                          style={{ width: '70px', padding: '0.25rem' }}
+                          className="vm-input-price"
                           step="0.01"
                           min="0"
                           placeholder="Rs"
                         />
                       </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{v.barcode}</td>
+                      <td className="vm-cell-mono">{v.barcode}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <div className="vm-actions-row">
                           <button
-                            className="btn btn-primary"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                            className="btn btn-primary vm-btn-xs"
                             onClick={() => handleUpdate(v.id)}
                             disabled={isSubmitting}
                           >
                             Save
                           </button>
                           <button
-                            className="btn btn-secondary"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                            className="btn btn-secondary vm-btn-xs"
                             onClick={() => setEditingId(null)}
                           >
                             Cancel
@@ -343,23 +332,21 @@ export default function VariantManager({ storeProductId, productName, onClose }:
                     </>
                   ) : (
                     <>
-                      <td style={{ fontWeight: 500 }}>{v.variantLabel}</td>
+                      <td className="vm-cell-bold">{v.variantLabel}</td>
                       <td>{v.variantQty}</td>
                       <td>{v.baseUnit}</td>
                       <td>{formatCurrency(v.sellPriceMinor)}</td>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{v.barcode}</td>
+                      <td className="vm-cell-mono">{v.barcode}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <div className="vm-actions-row">
                           <button
-                            className="btn btn-secondary"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                            className="btn btn-secondary vm-btn-xs"
                             onClick={() => startEdit(v)}
                           >
                             Edit
                           </button>
                           <button
-                            className="btn"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: '#fee2e2', color: '#991b1b' }}
+                            className="btn vm-btn-remove"
                             onClick={() => handleDelete(v.id)}
                           >
                             Remove
@@ -376,82 +363,73 @@ export default function VariantManager({ storeProductId, productName, onClose }:
 
         {/* Add Variant Form */}
         {showAddForm ? (
-          <div style={{
-            padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem',
-            border: '1px solid var(--border)', marginBottom: '1rem',
-          }}>
-            <h4 style={{ margin: '0 0 0.75rem' }}>Add Variant</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', alignItems: 'end' }}>
+          <div className="vm-add-form">
+            <h4 className="vm-add-title">Add Variant</h4>
+            <div className="vm-add-grid">
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>
+                <label className="vm-form-label">
                   Label *
                 </label>
                 <input
                   type="text"
-                  className="form-control"
+                  className="form-control vm-form-input"
                   placeholder="e.g. 1 kg"
                   value={formData.label}
                   onChange={(e) => setFormData(p => ({ ...p, label: e.target.value }))}
-                  style={{ padding: '0.4rem' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>
+                <label className="vm-form-label">
                   Quantity *
                 </label>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control vm-form-input"
                   placeholder="e.g. 1"
                   value={formData.qty}
                   onChange={(e) => setFormData(p => ({ ...p, qty: e.target.value }))}
                   step="0.01"
                   min="0.01"
-                  style={{ padding: '0.4rem' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>
+                <label className="vm-form-label">
                   Unit *
                 </label>
                 <select
-                  className="form-control"
+                  className="form-control vm-form-input"
                   value={formData.baseUnit}
                   onChange={(e) => setFormData(p => ({ ...p, baseUnit: e.target.value }))}
-                  style={{ padding: '0.4rem' }}
                 >
                   {VALID_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>
+                <label className="vm-form-label">
                   Sell Price (Rs) *
                 </label>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control vm-form-input"
                   placeholder="e.g. 50"
                   value={formData.sellPriceMinor}
                   onChange={(e) => setFormData(p => ({ ...p, sellPriceMinor: e.target.value }))}
                   step="0.01"
                   min="0"
-                  style={{ padding: '0.4rem' }}
                 />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+            <div className="vm-form-actions">
               <button
-                className="btn btn-primary"
+                className="btn btn-primary vm-btn-md"
                 onClick={handleAdd}
                 disabled={isSubmitting}
-                style={{ fontSize: '0.875rem' }}
               >
                 {isSubmitting ? 'Adding...' : 'Add Variant'}
               </button>
               <button
-                className="btn btn-secondary"
+                className="btn btn-secondary vm-btn-md"
                 onClick={() => { setShowAddForm(false); setFormData(initialVariantForm); }}
-                style={{ fontSize: '0.875rem' }}
               >
                 Cancel
               </button>
@@ -459,16 +437,15 @@ export default function VariantManager({ storeProductId, productName, onClose }:
           </div>
         ) : (
           <button
-            className="btn btn-primary"
+            className="btn btn-primary vm-btn-full"
             onClick={() => setShowAddForm(true)}
-            style={{ width: '100%', marginBottom: '1rem' }}
           >
             + Add Variant
           </button>
         )}
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+        <div className="vm-footer">
           <button className="btn btn-secondary" onClick={onClose}>
             Close
           </button>

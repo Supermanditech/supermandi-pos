@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Animated, StyleSheet, Text } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
+import { colors } from "../../theme/colors";
 
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
@@ -38,13 +39,13 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#F59E0B",
+    backgroundColor: colors.warning,
     paddingVertical: 8,
     paddingHorizontal: 16,
     zIndex: 1000,
   },
   text: {
-    color: "#0F172A",
+    color: colors.ink,
     fontSize: 13,
     fontWeight: "600",
     textAlign: "center",

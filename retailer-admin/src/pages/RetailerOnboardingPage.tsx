@@ -63,256 +63,6 @@ interface ApplicationResponse {
   action?: 'CREATED' | 'RESUMED';
 }
 
-// UI-SPEC: Stripe-level infrastructure design system
-const styles = {
-  // Layout - solid neutral background per spec
-  pageContainer: {
-    minHeight: '100vh',
-    background: '#F7F9FC',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  header: {
-    background: 'white',
-    borderBottom: '1px solid #e2e8f0',
-    position: 'sticky' as const,
-    top: 0,
-    zIndex: 10,
-    height: '64px',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  headerInner: {
-    maxWidth: '1152px',
-    width: '100%',
-    margin: '0 auto',
-    padding: '0 1.5rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  logoText: {
-    fontSize: '1.5rem',
-    fontWeight: 700,
-    color: '#ffffff',
-    background: '#2563eb',
-    borderRadius: '999px',
-    padding: '0.25rem 0.75rem',
-    lineHeight: 1,
-  },
-  logoSeparator: {
-    color: '#94a3b8',
-  },
-  logoSubtext: {
-    color: '#475569',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-  },
-  headerLink: {
-    fontSize: '0.875rem',
-    color: '#2563eb',
-    textDecoration: 'none',
-    fontWeight: 500,
-  },
-  main: {
-    maxWidth: '1024px',
-    margin: '0 auto',
-    padding: '2rem 1rem',
-    flex: 1,
-    width: '100%',
-  },
-  footer: {
-    borderTop: '1px solid #e2e8f0',
-    background: 'white',
-    marginTop: 'auto',
-  },
-  footerInner: {
-    maxWidth: '1152px',
-    margin: '0 auto',
-    padding: '1rem 1.5rem',
-    textAlign: 'center' as const,
-    fontSize: '0.8125rem',
-    color: '#64748b',
-  },
-  // Cards - white with subtle shadow per spec
-  card: {
-    background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0',
-    padding: '1.5rem 2rem',
-    marginBottom: '1.5rem',
-  },
-  cardCentered: {
-    background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0',
-    padding: '2rem',
-    maxWidth: '512px',
-    margin: '0 auto 1.5rem',
-  },
-  cardSection: {
-    background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0',
-    padding: '1.5rem 2rem',
-    marginBottom: '1.5rem',
-  },
-  sectionTitle: {
-    fontSize: '1.125rem',
-    fontWeight: 600,
-    color: '#0F172A',
-    marginBottom: '1.5rem',
-    paddingBottom: '0.75rem',
-    borderBottom: '1px solid #e2e8f0',
-  },
-  // Typography per spec scale
-  pageTitle: {
-    fontSize: '1.75rem',
-    fontWeight: 600,
-    color: '#0F172A',
-    textAlign: 'center' as const,
-    marginBottom: '0.5rem',
-  },
-  pageSubtitle: {
-    color: '#64748b',
-    textAlign: 'center' as const,
-    marginBottom: '2rem',
-  },
-  // Form - 40-44px height per spec
-  label: {
-    display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    color: '#0F172A',
-    marginBottom: '0.5rem',
-  },
-  input: {
-    width: '100%',
-    height: '42px',
-    padding: '0 1rem',
-    fontSize: '0.9375rem',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    outline: 'none',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-    boxSizing: 'border-box' as const,
-  },
-  inputDisabled: {
-    background: '#f8fafc',
-    cursor: 'not-allowed',
-  },
-  select: {
-    width: '100%',
-    height: '42px',
-    padding: '0 1rem',
-    fontSize: '0.9375rem',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    outline: 'none',
-    background: 'white',
-    cursor: 'pointer',
-    boxSizing: 'border-box' as const,
-  },
-  inputHint: {
-    fontSize: '0.8125rem',
-    color: '#64748b',
-    marginTop: '0.25rem',
-  },
-  // Buttons - 44-48px height per spec
-  btnPrimary: {
-    width: '100%',
-    height: '46px',
-    padding: '0 1.5rem',
-    fontSize: '0.9375rem',
-    fontWeight: 500,
-    color: 'white',
-    background: '#2563eb',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-    transition: 'background 0.15s',
-  },
-  btnPrimaryDisabled: {
-    background: '#93c5fd',
-    cursor: 'not-allowed',
-  },
-  btnSecondary: {
-    height: '46px',
-    padding: '0 1rem',
-    fontSize: '0.875rem',
-    color: '#64748b',
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  // Alerts - soft background per spec
-  alertError: {
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    color: '#991b1b',
-    padding: '1rem 1.5rem',
-    borderRadius: '6px',
-    marginBottom: '1.5rem',
-    fontSize: '0.875rem',
-  },
-  alertSuccess: {
-    background: '#f0fdf4',
-    border: '1px solid #bbf7d0',
-    color: '#15803d',
-    padding: '1rem 1.5rem',
-    borderRadius: '6px',
-    marginBottom: '1.5rem',
-    fontSize: '0.875rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  alertInfo: {
-    background: '#eff6ff',
-    border: '1px solid #bfdbfe',
-    color: '#1e40af',
-    padding: '1rem 1.5rem',
-    borderRadius: '6px',
-    marginBottom: '1.5rem',
-    fontSize: '0.875rem',
-  },
-  // Grid
-  grid2: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '1.5rem',
-  },
-  gridFull: {
-    gridColumn: '1 / -1',
-  },
-  // Checkbox
-  checkbox: {
-    width: '1.25rem',
-    height: '1.25rem',
-    marginTop: '0.125rem',
-    cursor: 'pointer',
-  },
-  checkboxLabel: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '1rem',
-    cursor: 'pointer',
-  },
-};
-
 export default function RetailerOnboardingPage() {
   const navigate = useNavigate();
 
@@ -721,28 +471,28 @@ export default function RetailerOnboardingPage() {
   const stepLabels = ['Verify Phone', 'Store Details', 'KYC Documents'];
 
   return (
-    <div style={styles.pageContainer}>
+    <div className="onb-page">
       {/* Header Bar */}
-      <header style={styles.header}>
-        <div style={styles.headerInner}>
-          <div style={styles.logo}>
-            <span style={styles.logoText}>SuperMandi</span>
-            <span style={styles.logoSeparator}>|</span>
-            <span style={styles.logoSubtext}>Retailer Portal</span>
+      <header className="onb-header">
+        <div className="onb-header-inner">
+          <div className="onb-logo">
+            <span className="onb-logo-text">SuperMandi</span>
+            <span className="onb-logo-sep">|</span>
+            <span className="onb-logo-sub">Retailer Portal</span>
           </div>
 {/* REG-RET-001: "Already registered? Sign In" link removed per requirement */}
         </div>
       </header>
 
       {/* Main Content */}
-      <main style={styles.main}>
+      <main className="onb-main">
         {/* Page Title */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={styles.pageTitle}>
+        <div className="onb-page-title-wrap">
+          <h2 className="onb-page-title">
             {step === 'success' ? 'Application Submitted' : 'Register as Retailer'}
           </h2>
           {step !== 'success' && (
-            <p style={styles.pageSubtitle}>
+            <p className="onb-page-subtitle">
               Complete the registration form to join SuperMandi as a retail partner
             </p>
           )}
@@ -750,28 +500,19 @@ export default function RetailerOnboardingPage() {
 
         {/* Full-Width Stepper */}
         {step !== 'success' && (
-          <div style={styles.card}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="onb-card">
+            <div className="onb-stepper">
               {stepLabels.map((label, index) => {
                 const stepNum = index + 1;
                 const isActive = getStepNumber() === stepNum;
                 const isCompleted = getStepNumber() > stepNum;
 
                 return (
-                  <div key={label} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <div style={{
-                        width: '2.125rem',
-                        height: '2.125rem',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        background: isCompleted ? '#22c55e' : isActive ? '#2563eb' : '#e2e8f0',
-                        color: isCompleted || isActive ? 'white' : '#64748b',
-                        transition: 'background 0.2s',
+                  <div key={label} className="onb-step-item">
+                    <div className="onb-step-inner">
+                      <div className="onb-step-circle" style={{
+                        background: isCompleted ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--border)',
+                        color: isCompleted || isActive ? 'white' : 'var(--text-muted)',
                       }}>
                         {isCompleted ? (
                           <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -781,23 +522,15 @@ export default function RetailerOnboardingPage() {
                           stepNum
                         )}
                       </div>
-                      <span style={{
-                        marginLeft: '0.75rem',
-                        fontSize: '0.875rem',
-                        fontWeight: 500,
-                        color: isActive ? '#2563eb' : isCompleted ? '#22c55e' : '#64748b',
+                      <span className="onb-step-label" style={{
+                        color: isActive ? 'var(--primary)' : isCompleted ? 'var(--success)' : 'var(--text-muted)',
                       }}>
                         {label}
                       </span>
                     </div>
                     {index < stepLabels.length - 1 && (
-                      <div style={{
-                        flex: 1,
-                        height: '4px',
-                        margin: '0 1rem',
-                        borderRadius: '2px',
-                        background: isCompleted ? '#22c55e' : '#e2e8f0',
-                        transition: 'background 0.2s',
+                      <div className="onb-step-line" style={{
+                        background: isCompleted ? 'var(--success)' : 'var(--border)',
                       }} />
                     )}
                   </div>
@@ -809,7 +542,7 @@ export default function RetailerOnboardingPage() {
 
         {/* Firebase warning */}
         {!isFirebaseReady() && step === 'phone' && (
-          <div style={styles.alertError}>
+          <div className="onb-alert-error">
             <strong>Phone Verification Unavailable</strong>
             <p style={{ marginTop: '0.5rem', marginBottom: 0 }}>
               Registration requires phone verification which is currently unavailable.
@@ -820,28 +553,28 @@ export default function RetailerOnboardingPage() {
 
         {/* Error display */}
         {error && (
-          <div style={styles.alertError}>{error}</div>
+          <div className="onb-alert-error">{error}</div>
         )}
 
         {/* Step 1: Phone Number */}
         {step === 'phone' && (
-          <div style={styles.cardCentered}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' }}>
+          <div className="onb-card-centered">
+            <h3 className="onb-step-subtitle">
               Verify Your Phone Number
             </h3>
-            <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            <p className="onb-step-desc">
               We'll send a one-time password (OTP) to verify your phone number
             </p>
 
             <form onSubmit={handleSendOtp}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label htmlFor="phone" style={styles.label}>Phone Number *</label>
+              <div className="onb-field-wrap">
+                <label htmlFor="phone" className="onb-label">Phone Number *</label>
                 <input
                   type="tel"
                   id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  style={{ ...styles.input, fontSize: '1.125rem' }}
+                  className="onb-input onb-input--lg"
                   placeholder="+91 9876543210"
                   disabled={isLoading}
                   autoFocus
@@ -851,22 +584,12 @@ export default function RetailerOnboardingPage() {
               <button
                 id="send-otp-button"
                 type="submit"
-                style={{
-                  ...styles.btnPrimary,
-                  ...(isLoading || !isFirebaseReady() ? styles.btnPrimaryDisabled : {}),
-                }}
+                className="onb-btn-primary"
                 disabled={isLoading || !isFirebaseReady()}
               >
                 {isLoading ? (
                   <>
-                    <span style={{
-                      width: '1.25rem',
-                      height: '1.25rem',
-                      border: '2px solid white',
-                      borderTopColor: 'transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                    }} />
+                    <span className="onb-spinner" />
                     Sending OTP...
                   </>
                 ) : (
@@ -879,28 +602,22 @@ export default function RetailerOnboardingPage() {
 
         {/* Step 1b: OTP Verification */}
         {step === 'otp' && (
-          <div style={styles.cardCentered}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' }}>
+          <div className="onb-card-centered">
+            <h3 className="onb-step-subtitle">
               Enter Verification Code
             </h3>
-            <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            <p className="onb-step-desc">
               Enter the 6-digit code sent to <strong>{phone}</strong>
             </p>
 
             <form onSubmit={handleVerifyOtp}>
-              <div style={{ marginBottom: '1.5rem' }}>
+              <div className="onb-field-wrap">
                 <input
                   type="text"
                   id="otp"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  style={{
-                    ...styles.input,
-                    textAlign: 'center',
-                    fontSize: '1.5rem',
-                    letterSpacing: '0.5em',
-                    fontFamily: 'monospace',
-                  }}
+                  className="onb-input onb-input--otp"
                   placeholder="------"
                   maxLength={6}
                   disabled={isLoading}
@@ -910,22 +627,12 @@ export default function RetailerOnboardingPage() {
 
               <button
                 type="submit"
-                style={{
-                  ...styles.btnPrimary,
-                  ...(isLoading || otp.length !== 6 ? styles.btnPrimaryDisabled : {}),
-                }}
+                className="onb-btn-primary"
                 disabled={isLoading || otp.length !== 6}
               >
                 {isLoading ? (
                   <>
-                    <span style={{
-                      width: '1.25rem',
-                      height: '1.25rem',
-                      border: '2px solid white',
-                      borderTopColor: 'transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                    }} />
+                    <span className="onb-spinner" />
                     Verifying...
                   </>
                 ) : (
@@ -933,10 +640,10 @@ export default function RetailerOnboardingPage() {
                 )}
               </button>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+              <div className="onb-resend-row">
                 <button
                   type="button"
-                  style={styles.btnSecondary}
+                  className="onb-btn-secondary"
                   onClick={() => {
                     setStep('phone');
                     setOtp('');
@@ -951,8 +658,8 @@ export default function RetailerOnboardingPage() {
                 <button
                   id="resend-otp-button"
                   type="button"
+                  className="onb-btn-secondary"
                   style={{
-                    ...styles.btnSecondary,
                     color: resendCooldown > 0 ? '#94a3b8' : '#2563eb',
                     fontWeight: 500,
                     cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
@@ -971,7 +678,7 @@ export default function RetailerOnboardingPage() {
         {step === 'details' && (
           <form onSubmit={handleSubmitDetails}>
             {/* Phone verified banner */}
-            <div style={styles.alertSuccess}>
+            <div className="onb-alert-success">
               <svg width="20" height="20" fill="none" stroke="#22c55e" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -979,75 +686,75 @@ export default function RetailerOnboardingPage() {
             </div>
 
             {/* Store Identity Section */}
-            <div style={styles.cardSection}>
-              <h3 style={styles.sectionTitle}>Store Identity</h3>
-              <div style={styles.grid2}>
-                <div style={styles.gridFull}>
-                  <label htmlFor="storeName" style={styles.label}>Store / Shop Name *</label>
+            <div className="onb-card-section">
+              <h3 className="onb-section-title">Store Identity</h3>
+              <div className="onb-grid-2">
+                <div className="onb-grid-full">
+                  <label htmlFor="storeName" className="onb-label">Store / Shop Name *</label>
                   <input
                     type="text"
                     id="storeName"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    style={styles.input}
+                    className="onb-input"
                     placeholder="Your Store Name"
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="gstin" style={styles.label}>GSTIN (Optional)</label>
+                  <label htmlFor="gstin" className="onb-label">GSTIN (Optional)</label>
                   <input
                     type="text"
                     id="gstin"
                     value={gstin}
                     onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                    style={{ ...styles.input, fontFamily: 'monospace' }}
+                    className="onb-input onb-input--mono"
                     placeholder="22AAAAA0000A1Z5"
                     maxLength={15}
                     disabled={isLoading}
                   />
-                  <p style={styles.inputHint}>15-character GST Identification Number</p>
+                  <p className="onb-hint">15-character GST Identification Number</p>
                 </div>
               </div>
             </div>
 
             {/* Contact Person Section */}
-            <div style={styles.cardSection}>
-              <h3 style={styles.sectionTitle}>Contact Person</h3>
-              <div style={styles.grid2}>
+            <div className="onb-card-section">
+              <h3 className="onb-section-title">Contact Person</h3>
+              <div className="onb-grid-2">
                 <div>
-                  <label htmlFor="ownerName" style={styles.label}>Owner / Manager Name *</label>
+                  <label htmlFor="ownerName" className="onb-label">Owner / Manager Name *</label>
                   <input
                     type="text"
                     id="ownerName"
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
-                    style={styles.input}
+                    className="onb-input"
                     placeholder="Full name"
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="email" style={styles.label}>Email (Optional)</label>
+                  <label htmlFor="email" className="onb-label">Email (Optional)</label>
                   <input
                     type="email"
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    style={styles.input}
+                    className="onb-input"
                     placeholder="store@example.com"
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label style={styles.label}>Phone (Verified)</label>
+                  <label className="onb-label">Phone (Verified)</label>
                   <input
                     type="text"
                     value={phone}
-                    style={{ ...styles.input, ...styles.inputDisabled }}
+                    className="onb-input onb-input--disabled"
                     disabled
                   />
                 </div>
@@ -1055,55 +762,55 @@ export default function RetailerOnboardingPage() {
             </div>
 
             {/* Address Section */}
-            <div style={styles.cardSection}>
-              <h3 style={styles.sectionTitle}>Store Address</h3>
-              <div style={styles.grid2}>
-                <div style={styles.gridFull}>
-                  <label htmlFor="addressLine1" style={styles.label}>Address Line 1 *</label>
+            <div className="onb-card-section">
+              <h3 className="onb-section-title">Store Address</h3>
+              <div className="onb-grid-2">
+                <div className="onb-grid-full">
+                  <label htmlFor="addressLine1" className="onb-label">Address Line 1 *</label>
                   <input
                     type="text"
                     id="addressLine1"
                     value={addressLine1}
                     onChange={(e) => setAddressLine1(e.target.value)}
-                    style={styles.input}
+                    className="onb-input"
                     placeholder="Shop/Building name, Street"
                     disabled={isLoading}
                   />
                 </div>
 
-                <div style={styles.gridFull}>
-                  <label htmlFor="addressLine2" style={styles.label}>Address Line 2 (Optional)</label>
+                <div className="onb-grid-full">
+                  <label htmlFor="addressLine2" className="onb-label">Address Line 2 (Optional)</label>
                   <input
                     type="text"
                     id="addressLine2"
                     value={addressLine2}
                     onChange={(e) => setAddressLine2(e.target.value)}
-                    style={styles.input}
+                    className="onb-input"
                     placeholder="Area, Landmark"
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="city" style={styles.label}>City *</label>
+                  <label htmlFor="city" className="onb-label">City *</label>
                   <input
                     type="text"
                     id="city"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    style={styles.input}
+                    className="onb-input"
                     placeholder="City"
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="state" style={styles.label}>State *</label>
+                  <label htmlFor="state" className="onb-label">State *</label>
                   <select
                     id="state"
                     value={state}
                     onChange={(e) => setState(e.target.value)}
-                    style={styles.select}
+                    className="onb-select"
                     disabled={isLoading}
                   >
                     <option value="">Select state</option>
@@ -1114,13 +821,13 @@ export default function RetailerOnboardingPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="pincode" style={styles.label}>Pincode *</label>
+                  <label htmlFor="pincode" className="onb-label">Pincode *</label>
                   <input
                     type="text"
                     id="pincode"
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    style={{ ...styles.input, fontFamily: 'monospace' }}
+                    className="onb-input onb-input--mono"
                     placeholder="400001"
                     maxLength={6}
                     disabled={isLoading}
@@ -1130,16 +837,16 @@ export default function RetailerOnboardingPage() {
             </div>
 
             {/* Agreement Section */}
-            <div style={styles.cardSection}>
-              <label style={styles.checkboxLabel}>
+            <div className="onb-card-section">
+              <label className="onb-checkbox-label">
                 <input
                   type="checkbox"
                   checked={agreement}
                   onChange={(e) => setAgreement(e.target.checked)}
-                  style={styles.checkbox}
+                  className="onb-checkbox"
                   disabled={isLoading}
                 />
-                <span style={{ color: '#334155' }}>
+                <span className="onb-checkbox-text">
                   I confirm that all the details provided are correct and accurate. I agree to the Terms of Service and Privacy Policy. *
                 </span>
               </label>
@@ -1147,23 +854,12 @@ export default function RetailerOnboardingPage() {
 
             <button
               type="submit"
-              style={{
-                ...styles.btnPrimary,
-                padding: '1rem 1.5rem',
-                ...(isLoading || !agreement ? styles.btnPrimaryDisabled : {}),
-              }}
+              className="onb-btn-primary onb-btn-primary--lg"
               disabled={isLoading || !agreement}
             >
               {isLoading ? (
                 <>
-                  <span style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    border: '2px solid white',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                  }} />
+                  <span className="onb-spinner" />
                   Saving Details...
                 </>
               ) : (
@@ -1177,7 +873,7 @@ export default function RetailerOnboardingPage() {
         {step === 'documents' && (
           <form onSubmit={handleSubmitDocuments}>
             {/* Instructions */}
-            <div style={styles.alertInfo}>
+            <div className="onb-alert-info">
               <h4 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Document Upload Guidelines</h4>
               <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
                 <li>Supported formats: JPEG, PNG, PDF</li>
@@ -1187,11 +883,11 @@ export default function RetailerOnboardingPage() {
             </div>
 
             {/* PAN Card */}
-            <div style={styles.cardSection}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' }}>
+            <div className="onb-card-section">
+              <h3 className="onb-doc-title">
                 PAN Card *
               </h3>
-              <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+              <p className="onb-doc-desc">
                 Upload a clear copy of your PAN card
               </p>
               <DocumentUploadField
@@ -1205,11 +901,11 @@ export default function RetailerOnboardingPage() {
 
             {/* GSTIN Certificate (only if GSTIN provided) */}
             {gstin.trim() && (
-              <div style={styles.cardSection}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' }}>
+              <div className="onb-card-section">
+                <h3 className="onb-doc-title">
                   GSTIN Certificate *
                 </h3>
-                <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                <p className="onb-doc-desc">
                   Upload your GST registration certificate
                 </p>
                 <DocumentUploadField
@@ -1223,11 +919,11 @@ export default function RetailerOnboardingPage() {
             )}
 
             {/* Address Proof */}
-            <div style={styles.cardSection}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' }}>
+            <div className="onb-card-section">
+              <h3 className="onb-doc-title">
                 Address Proof *
               </h3>
-              <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+              <p className="onb-doc-desc">
                 Upload utility bill, rent agreement, or shop license as address proof
               </p>
               <DocumentUploadField
@@ -1241,23 +937,12 @@ export default function RetailerOnboardingPage() {
 
             <button
               type="submit"
-              style={{
-                ...styles.btnPrimary,
-                padding: '1rem 1.5rem',
-                ...(isLoading ? styles.btnPrimaryDisabled : {}),
-              }}
+              className="onb-btn-primary onb-btn-primary--lg"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <span style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    border: '2px solid white',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                  }} />
+                  <span className="onb-spinner" />
                   Submitting Application...
                 </>
               ) : (
@@ -1269,34 +954,25 @@ export default function RetailerOnboardingPage() {
 
         {/* Step 4: Success */}
         {step === 'success' && (
-          <div style={{ ...styles.cardCentered, maxWidth: '560px', textAlign: 'center', padding: '3rem 2rem' }}>
-            <div style={{
-              width: '5rem',
-              height: '5rem',
-              background: '#fef3c7',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-            }}>
+          <div className="onb-card-centered onb-success-card">
+            <div className="onb-success-icon">
               <svg width="40" height="40" fill="none" stroke="#d97706" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#d97706', marginBottom: '0.75rem' }}>
+            <h3 className="onb-success-title">
               Pending Verification
             </h3>
-            <p style={{ color: '#475569', marginBottom: '1.5rem', fontSize: '1.125rem' }}>
+            <p className="onb-success-text">
               Your retailer application has been submitted for review.
               You will receive a notification once your account is approved.
             </p>
-            <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '2rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.25rem' }}>Application ID</p>
-              <p style={{ fontFamily: 'monospace', color: '#0F172A' }}>{applicationId}</p>
+            <div className="onb-success-app-id">
+              <p className="onb-success-app-label">Application ID</p>
+              <p className="onb-success-app-value">{applicationId}</p>
             </div>
             <button
-              style={styles.btnPrimary}
+              className="onb-btn-primary"
               onClick={() => navigate('/retailer/login')}
             >
               Go to Login
@@ -1306,19 +982,12 @@ export default function RetailerOnboardingPage() {
       </main>
 
       {/* Footer */}
-      <footer style={styles.footer}>
-        <div style={styles.footerInner}>
+      <footer className="onb-footer">
+        <div className="onb-footer-inner">
           &copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd. All rights reserved.
           <BuildStamp />
         </div>
       </footer>
-
-      {/* CSS for spinner animation */}
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

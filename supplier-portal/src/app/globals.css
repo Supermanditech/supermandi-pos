@@ -105,6 +105,30 @@ html.dark .bg-amber-50 { background-color: #451a03; }
 html.dark .bg-green-50 { background-color: #052e16; }
 html.dark .bg-red-50 { background-color: #450a0a; }
 
+/* Dark mode status badges & semantic colors */
+html.dark .bg-yellow-100 { background-color: #422006; }
+html.dark .bg-yellow-50 { background-color: #1a1400; }
+html.dark .text-yellow-600 { color: #fbbf24; }
+html.dark .text-yellow-700 { color: #fbbf24; }
+html.dark .bg-orange-100 { background-color: #431407; }
+html.dark .text-orange-700 { color: #fb923c; }
+html.dark .bg-green-100 { background-color: #052e16; }
+html.dark .text-green-700 { color: #4ade80; }
+html.dark .text-green-600 { color: #22c55e; }
+html.dark .bg-red-100 { background-color: #450a0a; }
+html.dark .text-red-700 { color: #f87171; }
+html.dark .text-red-600 { color: #f87171; }
+html.dark .text-red-800 { color: #fca5a5; }
+html.dark .bg-purple-100 { background-color: #2e1065; }
+html.dark .text-purple-700 { color: #c084fc; }
+html.dark .bg-amber-100 { background-color: #451a03; }
+html.dark .text-amber-600 { color: #fbbf24; }
+html.dark .text-amber-700 { color: #fbbf24; }
+html.dark .text-amber-800 { color: #fcd34d; }
+html.dark .border-red-200 { border-color: #7f1d1d; }
+html.dark .border-green-200 { border-color: #14532d; }
+html.dark .border-slate-100 { border-color: #1e293b; }
+
 /* Dark mode form inputs */
 html.dark input, html.dark select, html.dark textarea {
   background-color: #0f172a;
@@ -166,4 +190,14 @@ html.dark input, html.dark select, html.dark textarea {
   html.dark .label {
     @apply text-slate-200;
   }
+}
+
+/* Upload indeterminate progress bar */
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+.progress-indeterminate {
+  width: 40%;
+  animation: indeterminate 1.5s ease-in-out infinite;
 }

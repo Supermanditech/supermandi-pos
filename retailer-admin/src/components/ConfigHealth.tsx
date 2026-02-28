@@ -74,35 +74,15 @@ export function ConfigHealth() {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '8px 16px',
-        backgroundColor: config.isValid ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)',
-        color: 'white',
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        zIndex: 9999,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}
+      className="config-health"
+      style={{ backgroundColor: config.isValid ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)' }}
     >
       <div>
         <strong>Config:</strong> API: {config.apiBaseUrl} | Firebase: {config.firebaseConfigured ? 'OK' : 'NOT CONFIGURED'} | SHA: {config.gitSha}
       </div>
       <button
         onClick={() => setVisible(false)}
-        style={{
-          background: 'transparent',
-          border: '1px solid white',
-          color: 'white',
-          padding: '2px 8px',
-          cursor: 'pointer',
-          borderRadius: '4px',
-        }}
+        className="config-health-dismiss"
       >
         Dismiss
       </button>

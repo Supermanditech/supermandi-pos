@@ -159,14 +159,14 @@ export default function SupplierCatalogPage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Supplier Catalog' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex-between">
           <div>
             <h1 className="page-title">Supplier Catalog</h1>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            <p className="scat-subtitle">
               Browse approved products from verified SuperMandi suppliers
             </p>
           </div>
@@ -176,136 +176,101 @@ export default function SupplierCatalogPage() {
       <div className="page-content">
         {/* Success/Error Messages */}
         {success && (
-          <div style={{
-            background: '#dcfce7',
-            color: '#166534',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-success">
             {success}
           </div>
         )}
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-error">
             {error}
           </div>
         )}
 
         {/* Search */}
-        <div style={{ marginBottom: '1rem', maxWidth: '400px' }}>
+        <div className="search-wrap">
           <input
             type="text"
             className="form-input"
             placeholder="Search by product name or barcode..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%' }}
           />
         </div>
 
         {/* Results Count */}
-        <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+        <div className="results-count">
           {pagination.total} products available
         </div>
 
         {/* Products Grid */}
         {isLoading ? (
-          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div className="card text-center-muted">
             Loading supplier catalog...
           </div>
         ) : products.length === 0 ? (
-          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div className="card text-center-muted">
             {searchTerm
               ? 'No products match your search.'
               : 'No approved supplier products available yet.'}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+          <div className="scat-grid">
             {products.map((product) => (
               <div
                 key={product.productId}
-                className="card"
-                style={{
-                  padding: '1rem',
-                  opacity: product.inStoreCatalog ? 0.7 : 1,
-                }}
+                className={`card scat-card${product.inStoreCatalog ? ' scat-card--dimmed' : ''}`}
               >
                 {/* Product Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600' }}>
+                <div className="scat-product-header">
+                  <div className="flex-1">
+                    <h3 className="scat-product-name">
                       {product.displayName}
                     </h3>
                     {product.barcode && (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                      <span className="scat-barcode">
                         {product.barcode}
                       </span>
                     )}
                   </div>
                   {product.bnplEligible && (
-                    <span style={{
-                      background: '#dbeafe',
-                      color: '#1e40af',
-                      padding: '0.125rem 0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.7rem',
-                      fontWeight: '500',
-                    }}>
+                    <span className="scat-bnpl-badge">
                       BNPL {product.bnplMaxDays}d
                     </span>
                   )}
                 </div>
 
                 {/* Supplier Info */}
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                <div className="scat-supplier-info">
                   <strong>Supplier:</strong> {product.supplierName}
                   {product.supplierCity && ` (${product.supplierCity})`}
                 </div>
 
                 {/* Category */}
                 {product.category && (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                  <div className="scat-category">
                     Category: {product.category}
                   </div>
                 )}
 
                 {/* Pricing */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: '0.5rem',
-                  marginBottom: '1rem',
-                  padding: '0.75rem',
-                  background: '#f8fafc',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.8rem',
-                }}>
+                <div className="scat-pricing">
                   <div>
-                    <div style={{ color: 'var(--text-muted)' }}>Cost</div>
-                    <div style={{ fontWeight: '600' }}>{formatPrice(product.supplierPriceMinor)}</div>
+                    <div className="scat-price-label">Cost</div>
+                    <div className="scat-price-value">{formatPrice(product.supplierPriceMinor)}</div>
                   </div>
                   <div>
-                    <div style={{ color: 'var(--text-muted)' }}>Your Price</div>
-                    <div style={{ fontWeight: '600', color: '#059669' }}>{formatPrice(product.retailerPriceMinor)}</div>
+                    <div className="scat-price-label">Your Price</div>
+                    <div className="scat-price-value--green">{formatPrice(product.retailerPriceMinor)}</div>
                   </div>
                   <div>
-                    <div style={{ color: 'var(--text-muted)' }}>MRP</div>
-                    <div style={{ fontWeight: '600' }}>{formatPrice(product.mrpMinor)}</div>
+                    <div className="scat-price-label">MRP</div>
+                    <div className="scat-price-value">{formatPrice(product.mrpMinor)}</div>
                   </div>
                 </div>
 
                 {/* Margin */}
                 {product.marginMinor > 0 && (
-                  <div style={{ fontSize: '0.75rem', color: '#059669', marginBottom: '0.75rem' }}>
+                  <div className="scat-margin">
                     Margin: {formatPrice(product.marginMinor)} per unit
                   </div>
                 )}
@@ -313,25 +278,23 @@ export default function SupplierCatalogPage() {
                 {/* Action Button */}
                 {product.inStoreCatalog ? (
                   <button
-                    className="btn btn-secondary"
+                    className="btn btn-secondary btn-full btn-disabled-dim"
                     disabled
-                    style={{ width: '100%', opacity: 0.6 }}
                   >
                     Already in Catalog
                   </button>
                 ) : (
                   <button
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-full"
                     onClick={() => handleAddProduct(product)}
                     disabled={addingProductId === product.productId}
-                    style={{ width: '100%' }}
                   >
                     {addingProductId === product.productId ? 'Adding...' : '+ Add to My Catalog'}
                   </button>
                 )}
                 {/* SUPPLIER-CATALOG-ADD-NO-ERROR-UI: inline error per product */}
                 {addError && addError.productId === product.productId && (
-                  <p style={{ color: '#991b1b', fontSize: '0.75rem', marginTop: '0.5rem' }}>{addError.message}</p>
+                  <p className="inline-error">{addError.message}</p>
                 )}
               </div>
             ))}
@@ -340,7 +303,7 @@ export default function SupplierCatalogPage() {
 
         {/* Pagination */}
         {pagination.hasMore && (
-          <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          <div className="load-more-center">
             <button
               className="btn btn-secondary"
               onClick={() => fetchCatalog(searchTerm || undefined, pagination.offset + pagination.limit)}
@@ -352,9 +315,9 @@ export default function SupplierCatalogPage() {
         )}
 
         {/* Info Box */}
-        <div style={{ marginTop: '2rem', padding: '1rem', background: '#f0f9ff', borderRadius: '0.5rem', fontSize: '0.8rem', color: '#0369a1' }}>
+        <div className="scat-info-box">
           <strong>About Supplier Catalog:</strong>
-          <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+          <ul className="scat-info-list">
             <li>Products shown are approved by SuperMandi and available for ordering</li>
             <li>Pricing includes SuperMandi margin - your cost is shown as "Cost"</li>
             <li>BNPL eligible products can be ordered with deferred payment</li>

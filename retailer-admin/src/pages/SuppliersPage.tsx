@@ -554,7 +554,7 @@ export default function SuppliersPage() {
 
   // Form section tabs
   const FormSectionTabs = () => (
-    <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+    <div className="sup-form-tabs">
       {[
         { key: 'identity', label: 'A. Identity', icon: '🏢' },
         { key: 'contact', label: 'B. Contact', icon: '📞' },
@@ -565,16 +565,7 @@ export default function SuppliersPage() {
           key={key}
           type="button"
           onClick={() => setActiveSection(key as FormSection)}
-          style={{
-            padding: '0.5rem 1rem',
-            border: 'none',
-            background: activeSection === key ? 'var(--primary)' : 'transparent',
-            color: activeSection === key ? 'white' : 'var(--text-secondary)',
-            borderRadius: '0.375rem',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: activeSection === key ? '500' : '400',
-          }}
+          className={`sup-form-tab${activeSection === key ? ' sup-form-tab--active' : ''}`}
         >
           {icon} {label}
         </button>
@@ -584,7 +575,7 @@ export default function SuppliersPage() {
 
   // Section A: Identity & Compliance
   const IdentitySection = () => (
-    <div style={{ display: 'grid', gap: '1rem' }}>
+    <div className="sup-section-grid">
       <div className="form-group">
         <label className="form-label">Supplier Type</label>
         <select
@@ -600,7 +591,7 @@ export default function SuppliersPage() {
         </select>
       </div>
 
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+      <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">Business Name (Legal) *</label>
           <input
@@ -626,7 +617,7 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      <div className="grid grid-3" style={{ gap: '1rem' }}>
+      <div className="grid grid-3 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">GSTIN</label>
           <input
@@ -640,7 +631,7 @@ export default function SuppliersPage() {
             disabled={!!editingSupplier}
           />
           {editingSupplier && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <span className="sup-gstin-hint">
               GSTIN cannot be modified
             </span>
           )}
@@ -675,8 +666,8 @@ export default function SuppliersPage() {
 
   // Section B: Contact & Address
   const ContactSection = () => (
-    <div style={{ display: 'grid', gap: '1rem' }}>
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+    <div className="sup-section-grid">
+      <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">Primary Phone *</label>
           <input
@@ -688,7 +679,7 @@ export default function SuppliersPage() {
             onChange={handleInputChange}
             required
           />
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.8rem' }}>
+          <label className="sup-wa-label">
             <input
               type="checkbox"
               name="whatsappEnabled"
@@ -723,7 +714,7 @@ export default function SuppliersPage() {
         />
       </div>
 
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+      <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">Address Line 1</label>
           <input
@@ -748,7 +739,7 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      <div className="grid grid-4" style={{ gap: '1rem' }}>
+      <div className="grid grid-4 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">Area</label>
           <input
@@ -796,7 +787,7 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+      <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">Service Area</label>
           <input
@@ -825,8 +816,8 @@ export default function SuppliersPage() {
 
   // Section C: Commercial Terms
   const TermsSection = () => (
-    <div style={{ display: 'grid', gap: '1rem' }}>
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+    <div className="sup-section-grid">
+      <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">Payment Terms</label>
           <select
@@ -855,7 +846,7 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+      <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
           <label className="form-label">Min Order Value (₹)</label>
           {/* GL-CRIT-0105: Added step and explicit min/max to prevent invalid values */}
@@ -870,7 +861,7 @@ export default function SuppliersPage() {
             max={1000000}
             step={1}
           />
-          <small style={{ color: 'var(--text-muted)' }}>Minimum order amount in rupees (0 = no minimum)</small>
+          <small className="sup-small-hint">Minimum order amount in rupees (0 = no minimum)</small>
         </div>
         <div className="form-group">
           <label className="form-label">Delivery Charges (₹)</label>
@@ -886,7 +877,7 @@ export default function SuppliersPage() {
             max={10000}
             step={1}
           />
-          <small style={{ color: 'var(--text-muted)' }}>Flat rate in rupees (0 = free delivery)</small>
+          <small className="sup-small-hint">Flat rate in rupees (0 = free delivery)</small>
         </div>
       </div>
 
@@ -902,9 +893,9 @@ export default function SuppliersPage() {
         />
       </div>
 
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+      <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <label className="sup-checkbox-label">
             <input
               type="checkbox"
               name="returnsAllowed"
@@ -917,17 +908,16 @@ export default function SuppliersPage() {
             <input
               type="number"
               name="returnsWindow"
-              className="form-input"
+              className="form-input sup-returns-input"
               placeholder="Return window (days)"
               value={formData.returnsWindow}
               onChange={handleInputChange}
               min={1}
-              style={{ marginTop: '0.5rem' }}
             />
           )}
         </div>
         <div className="form-group">
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <label className="sup-checkbox-label">
             <input
               type="checkbox"
               name="taxInvoiceProvided"
@@ -958,22 +948,15 @@ export default function SuppliersPage() {
 
   // Section D: Operational Metadata
   const MetadataSection = () => (
-    <div style={{ display: 'grid', gap: '1rem' }}>
+    <div className="sup-section-grid">
       <div className="form-group">
         <label className="form-label">Categories Supplied</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <div className="sup-cat-chips">
           {SUPPLIER_CATEGORIES.map(category => (
             <label
               key={category}
+              className="sup-cat-chip"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.25rem 0.75rem',
-                border: '1px solid var(--border)',
-                borderRadius: '9999px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
                 background: formData.categoriesSupplied.includes(category) ? 'var(--primary)' : 'white',
                 color: formData.categoriesSupplied.includes(category) ? 'white' : 'var(--text-primary)',
               }}
@@ -982,7 +965,6 @@ export default function SuppliersPage() {
                 type="checkbox"
                 checked={formData.categoriesSupplied.includes(category)}
                 onChange={() => handleCategoryToggle(category)}
-                style={{ display: 'none' }}
               />
               {category}
             </label>
@@ -1034,11 +1016,11 @@ export default function SuppliersPage() {
   return (
     <>
       {/* T-112: Breadcrumb navigation */}
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Suppliers' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex-between">
           <h1 className="page-title">Suppliers</h1>
           <button
             className="btn btn-primary"
@@ -1063,37 +1045,23 @@ export default function SuppliersPage() {
       <div className="page-content">
         {/* Success Message */}
         {success && (
-          <div style={{
-            background: '#dcfce7',
-            color: '#166534',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-inline-success">
             {success}
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-inline-error">
             {error}
           </div>
         )}
 
         {/* Add/Edit Supplier Form - Full Version */}
         {showForm && (
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div className="card sup-form-card-wrap">
             <h3 className="card-title">{editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+            <p className="sup-form-hint">
               Complete the supplier profile. Required fields are marked with *.
             </p>
 
@@ -1105,7 +1073,7 @@ export default function SuppliersPage() {
               {activeSection === 'terms' && <TermsSection />}
               {activeSection === 'metadata' && <MetadataSection />}
 
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+              <div className="sup-form-actions">
                 <button
                   type="submit"
                   className="btn btn-primary"
@@ -1124,7 +1092,7 @@ export default function SuppliersPage() {
                 {activeSection !== 'metadata' && (
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary sup-next-btn"
                     onClick={() => {
                       const sections: FormSection[] = ['identity', 'contact', 'terms', 'metadata'];
                       const currentIndex = sections.indexOf(activeSection);
@@ -1132,7 +1100,6 @@ export default function SuppliersPage() {
                         setActiveSection(sections[currentIndex + 1]);
                       }
                     }}
-                    style={{ marginLeft: 'auto' }}
                   >
                     Next Section →
                   </button>
@@ -1143,7 +1110,7 @@ export default function SuppliersPage() {
         )}
 
         {/* Search with server-side filtering indicator */}
-        <div style={{ marginBottom: '1rem', position: 'relative', maxWidth: '400px' }}>
+        <div className="sup-search-wrap">
           <input
             type="text"
             className="form-input"
@@ -1153,16 +1120,7 @@ export default function SuppliersPage() {
             style={{ width: '100%', paddingRight: isSearching ? '90px' : undefined }}
           />
           {isSearching && (
-            <span
-              style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: '0.8rem',
-                color: 'var(--text-muted)',
-              }}
-            >
+            <span className="sup-search-indicator">
               Searching...
             </span>
           )}
@@ -1171,30 +1129,18 @@ export default function SuppliersPage() {
         {/* Delete Confirmation Modal */}
         {deleteConfirm && (
           <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-            }}
+            className="modal-overlay-custom"
             onClick={() => setDeleteConfirm(null)}
           >
             <div
-              className="card"
-              style={{ maxWidth: '400px', margin: '1rem' }}
+              className="card sup-modal-card"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="card-title">Remove Supplier?</h3>
-              <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+              <p className="sup-modal-body">
                 Are you sure you want to remove this supplier from your store? This action can be undone by adding the supplier again.
               </p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <div className="sup-modal-actions">
                 <button
                   className="btn btn-secondary"
                   onClick={() => setDeleteConfirm(null)}
@@ -1202,8 +1148,7 @@ export default function SuppliersPage() {
                   Cancel
                 </button>
                 <button
-                  className="btn"
-                  style={{ background: '#dc2626', color: 'white' }}
+                  className="btn sup-delete-btn"
                   onClick={() => handleDelete(deleteConfirm)}
                 >
                   Remove Supplier
@@ -1216,27 +1161,15 @@ export default function SuppliersPage() {
         {/* RCAT-SUP-UX-001: Locked Supplier Modal */}
         {lockedSupplierModal && (
           <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-            }}
+            className="modal-overlay-custom"
             onClick={() => setLockedSupplierModal(null)}
           >
             <div
-              className="card"
-              style={{ maxWidth: '450px', margin: '1rem' }}
+              className="card sup-modal-card--lg"
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>
+              <div className="sup-locked-header">
+                <span className="sup-locked-icon">
                   {lockedSupplierModal.status === 'verified' ? '🔒' : '⏳'}
                 </span>
                 <h3 className="card-title" style={{ margin: 0 }}>
@@ -1244,23 +1177,20 @@ export default function SuppliersPage() {
                 </h3>
               </div>
 
-              <div style={{
+              <div className="sup-locked-info" style={{
                 background: lockedSupplierModal.status === 'verified' ? '#dcfce7' : '#fef3c7',
-                padding: '0.75rem 1rem',
-                borderRadius: '0.375rem',
-                marginBottom: '1rem',
               }}>
-                <strong style={{ display: 'block', marginBottom: '0.25rem' }}>
+                <strong className="sup-locked-name">
                   {lockedSupplierModal.supplier.name}
                 </strong>
                 {lockedSupplierModal.supplier.tradeName && lockedSupplierModal.supplier.tradeName !== lockedSupplierModal.supplier.name && (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <span className="text-sm-muted">
                     {lockedSupplierModal.supplier.tradeName}
                   </span>
                 )}
               </div>
 
-              <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              <p className="sup-locked-text">
                 {lockedSupplierModal.status === 'verified' ? (
                   <>
                     This supplier is part of the <strong>SuperMandi verified directory</strong>.
@@ -1276,9 +1206,9 @@ export default function SuppliersPage() {
                 )}
               </p>
 
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+              <div className="sup-locked-list">
                 <strong>What you can do:</strong>
-                <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+                <ul>
                   <li>Create a new local supplier with different details</li>
                   {lockedSupplierModal.status === 'verified' && (
                     <li>Contact SuperMandi support to request changes</li>
@@ -1286,7 +1216,7 @@ export default function SuppliersPage() {
                 </ul>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+              <div className="sup-locked-footer">
                 <button
                   className="btn btn-secondary"
                   onClick={() => setLockedSupplierModal(null)}
@@ -1312,7 +1242,7 @@ export default function SuppliersPage() {
 
         {/* Sectioned Suppliers View */}
         {isLoading ? (
-          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div className="card sup-loading-card">
             Loading suppliers...
           </div>
         ) : suppliers.length === 0 && !searchTerm ? (
@@ -1329,7 +1259,7 @@ export default function SuppliersPage() {
             />
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="sup-sections">
             {SECTION_CONFIGS.map((config) => {
               const sectionSuppliers = groupedSuppliers[config.key];
               const isCollapsed = collapsedSections[config.key];
@@ -1338,63 +1268,40 @@ export default function SuppliersPage() {
               return (
                 <div
                   key={config.key}
-                  style={{
-                    border: `1px solid ${config.borderColor}`,
-                    borderRadius: '0.5rem',
-                    overflow: 'hidden',
-                  }}
+                  className="sup-section-wrap"
+                  style={{ borderColor: config.borderColor }}
                 >
                   {/* Section Header - Collapsible */}
                   <button
                     onClick={() => toggleSection(config.key)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.75rem 1rem',
-                      background: config.bgColor,
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
+                    className="sup-section-header"
+                    style={{ background: config.bgColor }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '1.1rem' }}>{config.icon}</span>
-                      <span style={{ fontWeight: '600', color: config.textColor }}>
+                    <div className="sup-section-header-left">
+                      <span className="sup-section-icon">{config.icon}</span>
+                      <span className="sup-section-title-text" style={{ color: config.textColor }}>
                         {config.title}
                       </span>
                       <span
-                        style={{
-                          background: config.textColor,
-                          color: 'white',
-                          padding: '0.125rem 0.5rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                        }}
+                        className="sup-section-count"
+                        style={{ background: config.textColor }}
                       >
                         {count}
                       </span>
-                      <span style={{ fontSize: '0.8rem', color: config.textColor, opacity: 0.8, marginLeft: '0.5rem' }}>
+                      <span className="sup-section-desc" style={{ color: config.textColor }}>
                         {config.description}
                       </span>
                     </div>
-                    <span style={{ color: config.textColor, fontSize: '0.875rem' }}>
+                    <span className="sup-section-arrow" style={{ color: config.textColor }}>
                       {isCollapsed ? '▶' : '▼'}
                     </span>
                   </button>
 
                   {/* Section Content */}
                   {!isCollapsed && (
-                    <div style={{ background: 'white' }}>
+                    <div className="sup-section-bg-white">
                       {count === 0 ? (
-                        <div style={{
-                          padding: '1.5rem',
-                          textAlign: 'center',
-                          color: 'var(--text-muted)',
-                          fontSize: '0.875rem',
-                        }}>
+                        <div className="sup-section-empty">
                           {searchTerm
                             ? `No ${config.title.toLowerCase()} suppliers match your search.`
                             : config.key === 'verified'
@@ -1404,52 +1311,44 @@ export default function SuppliersPage() {
                                 : 'No local suppliers added yet. Click "+ Add Supplier" to create one.'}
                         </div>
                       ) : (
-                        <table className="table" style={{ margin: 0 }}>
+                        <table className="table sup-table-m0">
                           <thead>
                             <tr>
                               <th>Supplier Name</th>
                               <th>Type</th>
                               <th>Phone</th>
                               <th>GSTIN</th>
-                              <th style={{ width: '120px' }}>Actions</th>
+                              <th className="sup-table-w120">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
                             {sectionSuppliers.map((supplier) => (
                               <tr key={supplier.id}>
-                                <td style={{ fontWeight: '500' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <td className="sup-table-name">
+                                  <div className="sup-name-row">
                                     {supplier.name}
                                     {supplier.isSupermandi && (
-                                      <span
-                                        style={{
-                                          fontSize: '0.65rem',
-                                          color: '#6366f1',
-                                          background: '#eef2ff',
-                                          padding: '0.125rem 0.375rem',
-                                          borderRadius: '4px',
-                                        }}
-                                      >
+                                      <span className="sup-sm-badge">
                                         SuperMandi
                                       </span>
                                     )}
                                   </div>
                                   {supplier.tradeName && supplier.tradeName !== supplier.name && (
-                                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    <span className="sup-trade-sub">
                                       {supplier.tradeName}
                                     </span>
                                   )}
                                 </td>
-                                <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                  {supplier.supplierType || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                <td className="sup-type-cell">
+                                  {supplier.supplierType || <span className="text-sm-muted">-</span>}
                                 </td>
-                                <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                                    {supplier.phone || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                <td className="sup-phone-cell">
+                                  <span className="sup-phone-row">
+                                    {supplier.phone || <span className="text-sm-muted">-</span>}
                                     {supplier.phone && (
                                       <button
                                         onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${supplier.phone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${supplier.name}, this is regarding our order.`)}`, '_blank', 'noopener,noreferrer'); }}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                        className="sup-wa-icon-btn"
                                         title="Message on WhatsApp"
                                         aria-label="Message on WhatsApp"
                                       >
@@ -1458,27 +1357,20 @@ export default function SuppliersPage() {
                                     )}
                                   </span>
                                 </td>
-                                <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                                  {supplier.gstin || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                <td className="sup-gstin-cell">
+                                  {supplier.gstin || <span className="text-sm-muted">-</span>}
                                 </td>
                                 <td>
                                   {config.isEditable ? (
-                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                    <div className="sup-action-btns">
                                       <button
-                                        className="btn btn-secondary"
-                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                                        className="btn btn-secondary sup-edit-btn"
                                         onClick={() => openEditForm(supplier)}
                                       >
                                         Edit
                                       </button>
                                       <button
-                                        className="btn"
-                                        style={{
-                                          padding: '0.25rem 0.5rem',
-                                          fontSize: '0.75rem',
-                                          background: '#fee2e2',
-                                          color: '#991b1b',
-                                        }}
+                                        className="btn sup-remove-btn"
                                         onClick={() => setDeleteConfirm(supplier.id)}
                                       >
                                         Remove
@@ -1487,14 +1379,7 @@ export default function SuppliersPage() {
                                   ) : (
                                     /* RCAT-SUP-UX-001: View button for locked suppliers */
                                     <button
-                                      className="btn btn-secondary"
-                                      style={{
-                                        padding: '0.25rem 0.5rem',
-                                        fontSize: '0.75rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.25rem',
-                                      }}
+                                      className="btn btn-secondary sup-view-btn"
                                       onClick={() => setLockedSupplierModal({
                                         supplier,
                                         status: config.key as 'verified' | 'pending',
@@ -1518,9 +1403,9 @@ export default function SuppliersPage() {
         )}
 
         {/* Quick Tips */}
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          <strong style={{ color: 'var(--text-secondary)' }}>Quick Tips:</strong>
-          <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+        <div className="sup-tips">
+          <strong>Quick Tips:</strong>
+          <ul>
             <li><strong>Verified</strong> suppliers are from the SuperMandi network and cannot be edited.</li>
             <li><strong>Pending</strong> suppliers are awaiting SuperAdmin approval.</li>
             <li><strong>Local</strong> suppliers are your store-only contacts and can be freely edited or removed.</li>

@@ -252,30 +252,23 @@ export function WhatsAppTab() {
   const currentPage = Math.floor(offset / limit) + 1;
 
   return (
-    <div style={{ padding: "0.5rem 0" }}>
+    <div className="sa-py-8">
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={ctaSaving || broadcasting} />}
 
       {/* REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Landing Page CTA Config */}
-      <div style={{
-        padding: "1rem", background: "var(--color-surface)", border: "1px solid var(--color-border)",
-        borderRadius: 8, marginBottom: "1rem",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ctaEditing ? "0.75rem" : 0 }}>
-          <h3 style={{ fontSize: "0.9rem", fontWeight: 600, margin: 0 }}>
+      <div className="sa-section">
+        <div className="sa-flex-between" style={{ marginBottom: ctaEditing ? "0.75rem" : 0 }}>
+          <h3 className="sa-text-base sa-fw-600" style={{ margin: 0 }}>
             Landing Page WhatsApp CTA Config
           </h3>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div className="sa-flex sa-gap-8">
             {ctaConfig && !ctaEditing && (
-              <span style={{
-                fontSize: "0.75rem", padding: "2px 8px", borderRadius: 10,
-                background: ctaConfig.enabled ? "var(--color-success-soft)" : "var(--color-surface-alt)",
-                color: ctaConfig.enabled ? "var(--color-success)" : "var(--color-text-secondary)",
-                fontWeight: 600,
-              }}>
+              <span className={ctaConfig.enabled ? "sa-badge-ok" : "sa-badge-muted"}>
                 {ctaConfig.enabled ? "Enabled" : "Disabled"}
               </span>
             )}
             <button
+              className="sa-btn-ghost-sm"
               onClick={() => {
                 if (ctaEditing) {
                   // cancel — reset draft to saved config
@@ -292,41 +285,37 @@ export function WhatsAppTab() {
                 }
                 setCtaEditing(e => !e);
               }}
-              style={{
-                padding: "4px 12px", border: "1px solid var(--color-border)", borderRadius: 4,
-                background: ctaEditing ? "var(--color-surface-alt)" : "var(--color-surface)", cursor: "pointer", fontSize: "0.8rem",
-              }}
             >
               {ctaEditing ? "Cancel" : "Edit"}
             </button>
           </div>
         </div>
 
-        {ctaLoading && <div style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Loading config...</div>}
+        {ctaLoading && <div className="sa-text-sm sa-text-muted">Loading config...</div>}
         {ctaError && !ctaLoading && (
-          <div style={{ fontSize: "0.8rem", color: "var(--color-error)", marginTop: "0.5rem" }}>
-            {ctaError} <button onClick={loadCtaConfig} style={{ marginLeft: 8, textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "var(--color-error)", fontSize: "0.8rem" }}>Retry</button>
+          <div className="sa-text-sm sa-text-danger sa-mt-8">
+            {ctaError} <button onClick={loadCtaConfig} className="sa-btn-text" style={{ marginLeft: 8, textDecoration: "underline", color: "var(--color-error)" }}>Retry</button>
           </div>
         )}
 
         {!ctaLoading && !ctaError && ctaConfig && !ctaEditing && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem 1.5rem", marginTop: "0.5rem", fontSize: "0.8rem" }}>
+          <div className="sa-grid-2 sa-mt-8 sa-text-sm" style={{ gap: "0.5rem 1.5rem" }}>
             <div>
-              <span style={{ color: "var(--color-text-secondary)" }}>Superadmin number: </span>
-              <strong style={{ fontFamily: "monospace" }}>{ctaConfig.superadminNumber}</strong>
+              <span className="sa-text-muted">Superadmin number: </span>
+              <strong className="mono">{ctaConfig.superadminNumber}</strong>
             </div>
             <div>
-              <span style={{ color: "var(--color-text-secondary)" }}>Company number: </span>
-              <strong style={{ fontFamily: "monospace" }}>{ctaConfig.companyNumber}</strong>
+              <span className="sa-text-muted">Company number: </span>
+              <strong className="mono">{ctaConfig.companyNumber}</strong>
             </div>
-            <div style={{ gridColumn: "1 / -1", color: "var(--color-text-secondary)", fontSize: "0.75rem" }}>
+            <div className="sa-text-muted sa-text-sm" style={{ gridColumn: "1 / -1" }}>
               Superadmin msg: <em>{ctaConfig.superadminMessage}</em>
             </div>
-            <div style={{ gridColumn: "1 / -1", color: "var(--color-text-secondary)", fontSize: "0.75rem" }}>
+            <div className="sa-text-muted sa-text-sm" style={{ gridColumn: "1 / -1" }}>
               Company msg: <em>{ctaConfig.companyMessage}</em>
             </div>
             {ctaConfig.updatedAt && (
-              <div style={{ gridColumn: "1 / -1", color: "var(--color-text-secondary)", fontSize: "0.72rem", marginTop: "0.25rem" }}>
+              <div className="sa-text-muted sa-text-xs sa-mt-4" style={{ gridColumn: "1 / -1" }}>
                 Last updated {formatDateTime(ctaConfig.updatedAt)}{ctaConfig.updatedBy ? ` by ${ctaConfig.updatedBy}` : ""}
               </div>
             )}
@@ -335,8 +324,8 @@ export function WhatsAppTab() {
 
         {!ctaLoading && ctaEditing && (
           <div style={{ display: "grid", gap: "0.6rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <label style={{ fontSize: "0.8rem", color: "var(--color-text-primary)", fontWeight: 600 }}>
+            <div className="sa-flex sa-gap-8">
+              <label className="sa-text-sm sa-fw-600">
                 <input
                   type="checkbox"
                   checked={ctaDraft.enabled}
@@ -345,72 +334,65 @@ export function WhatsAppTab() {
                 />
                 Widget Enabled
               </label>
-              <span style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)" }}>(uncheck to hide the floating button from the landing page)</span>
+              <span className="sa-text-xs sa-text-muted">(uncheck to hide the floating button from the landing page)</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem 1rem" }}>
+            <div className="sa-grid-2" style={{ gap: "0.5rem 1rem" }}>
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>
-                  Superadmin Number <span style={{ color: "var(--color-text-secondary)" }}>(E.164 digits, e.g. 919251893684)</span>
+                <label className="sa-form-label">
+                  Superadmin Number <span className="sa-text-muted">(E.164 digits, e.g. 919251893684)</span>
                 </label>
                 <input
                   type="tel"
+                  className="sa-input mono sa-w-full"
                   value={ctaDraft.superadminNumber}
                   onChange={e => setCtaDraft(d => ({ ...d, superadminNumber: e.target.value }))}
                   placeholder="919251893684"
-                  style={{ padding: "5px 8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem", width: "100%", fontFamily: "monospace" }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>
-                  Company Number <span style={{ color: "var(--color-text-secondary)" }}>(E.164 digits)</span>
+                <label className="sa-form-label">
+                  Company Number <span className="sa-text-muted">(E.164 digits)</span>
                 </label>
                 <input
                   type="tel"
+                  className="sa-input mono sa-w-full"
                   value={ctaDraft.companyNumber}
                   onChange={e => setCtaDraft(d => ({ ...d, companyNumber: e.target.value }))}
                   placeholder="919251893684"
-                  style={{ padding: "5px 8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem", width: "100%", fontFamily: "monospace" }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>Superadmin WhatsApp Pre-fill Message</label>
+                <label className="sa-form-label">Superadmin WhatsApp Pre-fill Message</label>
                 <input
                   type="text"
+                  className="sa-input sa-w-full"
                   value={ctaDraft.superadminMessage}
                   onChange={e => setCtaDraft(d => ({ ...d, superadminMessage: e.target.value }))}
                   maxLength={1000}
-                  style={{ padding: "5px 8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.82rem", width: "100%" }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>Company WhatsApp Pre-fill Message</label>
+                <label className="sa-form-label">Company WhatsApp Pre-fill Message</label>
                 <input
                   type="text"
+                  className="sa-input sa-w-full"
                   value={ctaDraft.companyMessage}
                   onChange={e => setCtaDraft(d => ({ ...d, companyMessage: e.target.value }))}
                   maxLength={1000}
-                  style={{ padding: "5px 8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.82rem", width: "100%" }}
                 />
               </div>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <div className="sa-flex sa-gap-8">
               <button
+                className="sa-btn-success-sm sa-fw-600"
                 onClick={handleSaveCtaConfig}
                 disabled={ctaSaving}
-                style={{
-                  padding: "6px 18px", background: "var(--color-success)", color: "#fff", border: "none",
-                  borderRadius: 4, cursor: ctaSaving ? "default" : "pointer", fontSize: "0.85rem",
-                  fontWeight: 600, opacity: ctaSaving ? 0.6 : 1,
-                }}
+                style={{ padding: "6px 18px", opacity: ctaSaving ? 0.6 : 1 }}
               >
                 {ctaSaving ? "Saving..." : "Save & Apply Live"}
               </button>
               {ctaSaveResult && (
-                <span style={{
-                  fontSize: "0.8rem", padding: "4px 8px", borderRadius: 4,
-                  background: ctaSaveResult.startsWith("Error") ? "var(--color-error-soft)" : "var(--color-success-soft)",
-                  color: ctaSaveResult.startsWith("Error") ? "var(--color-error)" : "var(--color-success)",
-                }}>
+                <span className={ctaSaveResult.startsWith("Error") ? "sa-badge-error" : "sa-badge-ok"}>
                   {ctaSaveResult}
                 </span>
               )}
@@ -420,20 +402,23 @@ export function WhatsAppTab() {
       </div>
 
       {/* Status Banner */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem",
-        padding: "0.75rem 1rem", background: configured ? "var(--color-success-soft)" : "var(--color-warning-soft)",
-        borderRadius: 8, border: `1px solid ${configured ? "var(--color-success-soft)" : "var(--color-warning-soft)"}`,
-      }}>
-        <span style={{ fontSize: "1.25rem" }}>{configured ? "\u2705" : "\u26A0\uFE0F"}</span>
-        <span style={{ fontWeight: 600, color: configured ? "var(--color-success)" : "var(--color-warning)" }}>
+      <div
+        className="sa-flex sa-gap-12 sa-mb-16 sa-radius-8"
+        style={{
+          padding: "0.75rem 1rem",
+          background: configured ? "var(--color-success-soft)" : "var(--color-warning-soft)",
+          border: `1px solid ${configured ? "var(--color-success-soft)" : "var(--color-warning-soft)"}`,
+        }}
+      >
+        <span className="sa-text-xl">{configured ? "\u2705" : "\u26A0\uFE0F"}</span>
+        <span className="sa-fw-600" style={{ color: configured ? "var(--color-success)" : "var(--color-warning)" }}>
           {configured === null ? "Checking..." : configured ? "WhatsApp Cloud API Connected" : "WhatsApp Not Configured"}
         </span>
       </div>
 
       {/* Stats Cards */}
       {stats && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
+        <div className="sa-grid-auto sa-gap-12 sa-mb-20">
           {[
             { label: "Total", value: stats.totalMessages, bg: "var(--color-surface-alt)" },
             { label: "Sent", value: stats.sent, bg: "#dbeafe" },
@@ -443,133 +428,120 @@ export function WhatsAppTab() {
             { label: "Last 24h", value: stats.last24h, bg: "var(--color-warning-soft)" },
             { label: "Last 7d", value: stats.last7d, bg: "#e0e7ff" },
           ].map(card => (
-            <div key={card.label} style={{
-              padding: "0.75rem", background: card.bg, borderRadius: 8,
-              textAlign: "center",
-            }}>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{card.value}</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{card.label}</div>
+            <div key={card.label} className="sa-radius-8 sa-text-center sa-p-12" style={{ background: card.bg }}>
+              <div className="sa-text-xl sa-fw-700">{card.value}</div>
+              <div className="sa-text-sm sa-text-muted">{card.label}</div>
             </div>
           ))}
         </div>
       )}
 
       {/* Send Message Form */}
-      <div style={{
-        padding: "1rem", background: "var(--color-surface)", border: "1px solid var(--color-border)",
-        borderRadius: 8, marginBottom: "1rem",
-      }}>
-        <h3 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.75rem" }}>Send Message</h3>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+      <div className="sa-section">
+        <h3 className="sa-text-base sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Send Message</h3>
+        <div className="sa-flex sa-gap-8" style={{ flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
-            <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>Recipient Phone</label>
+            <label className="sa-form-label">Recipient Phone</label>
             <input
               type="tel"
+              className="sa-input"
               value={sendPhone}
               onChange={e => setSendPhone(e.target.value)}
               placeholder="+91 98765 43210"
-              style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem", width: 180 }}
+              style={{ width: 180 }}
             />
           </div>
           <div>
-            <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>Type</label>
-            <select value={sendType} onChange={e => setSendType(e.target.value as "retailer" | "supplier")}
-              style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem" }}>
+            <label className="sa-form-label">Type</label>
+            <select className="sa-select" value={sendType} onChange={e => setSendType(e.target.value as "retailer" | "supplier")}>
               <option value="retailer">Retailer</option>
               <option value="supplier">Supplier</option>
             </select>
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>Message</label>
+            <label className="sa-form-label">Message</label>
             <input
               type="text"
+              className="sa-input sa-w-full"
               value={sendMessage}
               onChange={e => setSendMessage(e.target.value)}
               placeholder="Type your message..."
               maxLength={4096}
-              style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem", width: "100%" }}
             />
           </div>
           <button
             onClick={handleSend}
             disabled={sending || !sendPhone.trim() || !sendMessage.trim()}
+            className="sa-fw-600"
             style={{
               padding: "6px 16px", background: "#25D366", color: "#fff", border: "none",
-              borderRadius: 4, cursor: sending ? "default" : "pointer", fontSize: "0.85rem",
-              fontWeight: 600, opacity: sending ? 0.6 : 1,
+              borderRadius: 4, fontSize: "0.85rem",
+              opacity: sending ? 0.6 : 1,
             }}
           >
             {sending ? "Sending..." : "Send"}
           </button>
           <button
+            className="sa-btn-ghost-sm"
             onClick={() => setShowBroadcast(!showBroadcast)}
-            style={{
-              padding: "6px 12px", background: "var(--color-surface-alt)", border: "1px solid var(--color-border)",
-              borderRadius: 4, cursor: "pointer", fontSize: "0.85rem",
-            }}
           >
             {showBroadcast ? "Hide Broadcast" : "Broadcast"}
           </button>
         </div>
         {sendResult && (
-          <div style={{
-            marginTop: "0.5rem", fontSize: "0.8rem", padding: "4px 8px", borderRadius: 4,
-            background: sendResult.startsWith("Failed") ? "var(--color-error-soft)" : "var(--color-success-soft)",
-            color: sendResult.startsWith("Failed") ? "var(--color-error)" : "var(--color-success)",
-          }}>{sendResult}</div>
+          <div className={`sa-mt-8 ${sendResult.startsWith("Failed") ? "sa-badge-error" : "sa-badge-ok"}`}>
+            {sendResult}
+          </div>
         )}
       </div>
 
       {/* Broadcast Form (expandable) */}
       {showBroadcast && (
-        <div style={{
-          padding: "1rem", background: "var(--color-warning-soft)", border: "1px solid var(--color-warning-soft)",
-          borderRadius: 8, marginBottom: "1rem",
-        }}>
-          <h3 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.75rem" }}>Broadcast Message (max 50 recipients)</h3>
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div className="sa-alert-warning sa-mb-16">
+          <h3 className="sa-text-base sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Broadcast Message (max 50 recipients)</h3>
+          <div className="sa-flex sa-gap-12" style={{ flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>Phone Numbers (comma or newline separated)</label>
+              <label className="sa-form-label">Phone Numbers (comma or newline separated)</label>
               <textarea
+                className="sa-textarea"
                 value={broadcastPhones}
                 onChange={e => setBroadcastPhones(e.target.value)}
                 placeholder={"9876543210\n9123456789"}
                 rows={3}
-                style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem", width: "100%", resize: "vertical" }}
               />
             </div>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <label style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "block", marginBottom: 2 }}>Message</label>
+              <label className="sa-form-label">Message</label>
               <textarea
+                className="sa-textarea"
                 value={broadcastMessage}
                 onChange={e => setBroadcastMessage(e.target.value)}
                 placeholder="Type broadcast message..."
                 rows={3}
                 maxLength={4096}
-                style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem", width: "100%", resize: "vertical" }}
               />
             </div>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", alignItems: "center" }}>
-            <select value={broadcastType} onChange={e => setBroadcastType(e.target.value as "retailer" | "supplier")}
-              style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.85rem" }}>
+          <div className="sa-flex sa-gap-8 sa-mt-8">
+            <select className="sa-select" value={broadcastType} onChange={e => setBroadcastType(e.target.value as "retailer" | "supplier")}>
               <option value="retailer">Retailer</option>
               <option value="supplier">Supplier</option>
             </select>
             <button
               onClick={handleBroadcast}
               disabled={broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()}
+              className="sa-fw-600"
               style={{
                 padding: "6px 16px", background: "var(--color-warning)", color: "#fff", border: "none",
-                borderRadius: 4, cursor: (broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()) ? "default" : "pointer", fontSize: "0.85rem",
-                fontWeight: 600, opacity: (broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()) ? 0.6 : 1,
+                borderRadius: 4, fontSize: "0.85rem",
+                opacity: (broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()) ? 0.6 : 1,
               }}
             >
               {broadcasting ? "Sending..." : "Send Broadcast"}
             </button>
           </div>
           {broadcastResult && (
-            <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", padding: "4px 8px", borderRadius: 4, background: "var(--color-warning-soft)" }}>
+            <div className="sa-badge-warn sa-mt-8">
               {broadcastResult}
             </div>
           )}
@@ -577,75 +549,69 @@ export function WhatsAppTab() {
       )}
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-        <select value={filterSender} onChange={e => { setFilterSender(e.target.value); setOffset(0); }}
-          style={{ padding: "4px 8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.8rem" }}>
+      <div className="sa-flex sa-gap-8 sa-mb-12" style={{ flexWrap: "wrap" }}>
+        <select className="sa-select sa-input--sm" value={filterSender} onChange={e => { setFilterSender(e.target.value); setOffset(0); }}>
           <option value="">All Senders</option>
           <option value="pos">POS</option>
           <option value="superadmin">SuperAdmin</option>
         </select>
-        <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}
-          style={{ padding: "4px 8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.8rem" }}>
+        <select className="sa-select sa-input--sm" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}>
           <option value="">All Statuses</option>
           <option value="sent">Sent</option>
           <option value="delivered">Delivered</option>
           <option value="read">Read</option>
           <option value="failed">Failed</option>
         </select>
-        <select value={filterContext} onChange={e => { setFilterContext(e.target.value); setOffset(0); }}
-          style={{ padding: "4px 8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: "0.8rem" }}>
+        <select className="sa-select sa-input--sm" value={filterContext} onChange={e => { setFilterContext(e.target.value); setOffset(0); }}>
           <option value="">All Types</option>
           <option value="bill_receipt">Bill Receipt</option>
           <option value="order_update">Order Update</option>
           <option value="broadcast">Broadcast</option>
           <option value="support">Support</option>
         </select>
-        <span style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>{total} message{total !== 1 ? "s" : ""}</span>
-        <button onClick={loadData} style={{
-          padding: "4px 10px", border: "1px solid var(--color-border)", borderRadius: 4,
-          background: "var(--color-surface)", cursor: "pointer", fontSize: "0.8rem",
-        }}>Refresh</button>
+        <span className="sa-text-sm sa-text-muted">{total} message{total !== 1 ? "s" : ""}</span>
+        <button className="sa-btn-ghost-sm" onClick={loadData}>Refresh</button>
       </div>
 
       {/* Error */}
       {error && (
-        <div style={{ padding: "0.5rem", background: "var(--color-error-soft)", color: "var(--color-error)", borderRadius: 4, marginBottom: "0.75rem", fontSize: "0.85rem" }}>
-          {error} <button onClick={loadData} style={{ marginLeft: 8, textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "var(--color-error)" }}>Retry</button>
+        <div className="sa-alert-error sa-mb-12">
+          {error} <button onClick={loadData} className="sa-btn-text" style={{ marginLeft: 8, textDecoration: "underline", color: "var(--color-error)" }}>Retry</button>
         </div>
       )}
 
       {/* Message Log Table */}
-      <div style={{ overflow: "auto", background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 8 }}>
+      <div className="sa-overflow-auto sa-bg-surface sa-border sa-radius-8">
         {loading ? (
-          <div style={{ padding: "2rem", textAlign: "center", color: "var(--color-text-secondary)" }}>Loading messages...</div>
+          <div className="sa-p-24 sa-text-center sa-text-muted">Loading messages...</div>
         ) : logs.length === 0 ? (
-          <div style={{ padding: "2rem", textAlign: "center", color: "var(--color-text-secondary)" }}>No messages found</div>
+          <div className="sa-p-24 sa-text-center sa-text-muted">No messages found</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+          <table className="table">
             <thead>
-              <tr style={{ borderBottom: "2px solid var(--color-border)", background: "var(--color-surface-alt)" }}>
-                <th style={{ padding: "8px", textAlign: "left" }}>Time</th>
-                <th style={{ padding: "8px", textAlign: "left" }}>From</th>
-                <th style={{ padding: "8px", textAlign: "left" }}>To</th>
-                <th style={{ padding: "8px", textAlign: "left" }}>Phone</th>
-                <th style={{ padding: "8px", textAlign: "left" }}>Preview</th>
-                <th style={{ padding: "8px", textAlign: "center" }}>Status</th>
-                <th style={{ padding: "8px", textAlign: "left" }}>Context</th>
+              <tr>
+                <th className="sa-th">Time</th>
+                <th className="sa-th">From</th>
+                <th className="sa-th">To</th>
+                <th className="sa-th">Phone</th>
+                <th className="sa-th">Preview</th>
+                <th className="sa-th" style={{ textAlign: "center" }}>Status</th>
+                <th className="sa-th">Context</th>
               </tr>
             </thead>
             <tbody>
               {logs.map(log => {
                 const sc = STATUS_COLORS[log.deliveryStatus] || STATUS_COLORS.queued;
                 return (
-                  <tr key={log.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                    <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{formatDateTime(log.createdAt)}</td>
-                    <td style={{ padding: "6px 8px", textTransform: "capitalize" }}>{log.senderType}</td>
-                    <td style={{ padding: "6px 8px", textTransform: "capitalize" }}>{log.recipientType}</td>
-                    <td style={{ padding: "6px 8px", fontFamily: "monospace", fontSize: "0.75rem" }}>{log.recipientPhone}</td>
-                    <td style={{ padding: "6px 8px", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.contentPreview || ""}>
+                  <tr key={log.id}>
+                    <td className="sa-td sa-td--nowrap">{formatDateTime(log.createdAt)}</td>
+                    <td className="sa-td" style={{ textTransform: "capitalize" }}>{log.senderType}</td>
+                    <td className="sa-td" style={{ textTransform: "capitalize" }}>{log.recipientType}</td>
+                    <td className="sa-td sa-td--mono">{log.recipientPhone}</td>
+                    <td className="sa-td" style={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.contentPreview || ""}>
                       {log.contentPreview || "—"}
                     </td>
-                    <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                    <td className="sa-td" style={{ textAlign: "center" }}>
                       <span style={{
                         padding: "2px 8px", borderRadius: 10, fontSize: "0.7rem", fontWeight: 600,
                         background: sc.bg, color: sc.color,
@@ -653,7 +619,7 @@ export function WhatsAppTab() {
                         {log.deliveryStatus}{log.deliveryStatus === "failed" && log.deliveryErrorCode ? ` (${log.deliveryErrorCode})` : ""}
                       </span>
                     </td>
-                    <td style={{ padding: "6px 8px", fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{log.contextType || "—"}</td>
+                    <td className="sa-td sa-text-sm sa-text-muted">{log.contextType || "—"}</td>
                   </tr>
                 );
               })}
@@ -664,14 +630,14 @@ export function WhatsAppTab() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginTop: "0.75rem", alignItems: "center" }}>
-          <button disabled={currentPage <= 1} onClick={() => setOffset(offset - limit)}
-            style={{ padding: "4px 12px", border: "1px solid var(--color-border)", borderRadius: 4, cursor: currentPage <= 1 ? "default" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1 }}>
+        <div className="sa-pagination" style={{ justifyContent: "center" }}>
+          <button className="sa-btn-ghost-sm" disabled={currentPage <= 1} onClick={() => setOffset(offset - limit)}
+            style={{ opacity: currentPage <= 1 ? 0.5 : 1 }}>
             Prev
           </button>
-          <span style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Page {currentPage} of {totalPages}</span>
-          <button disabled={currentPage >= totalPages} onClick={() => setOffset(offset + limit)}
-            style={{ padding: "4px 12px", border: "1px solid var(--color-border)", borderRadius: 4, cursor: currentPage >= totalPages ? "default" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1 }}>
+          <span className="sa-page-info">Page {currentPage} of {totalPages}</span>
+          <button className="sa-btn-ghost-sm" disabled={currentPage >= totalPages} onClick={() => setOffset(offset + limit)}
+            style={{ opacity: currentPage >= totalPages ? 0.5 : 1 }}>
             Next
           </button>
         </div>

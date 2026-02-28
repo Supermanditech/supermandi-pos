@@ -384,8 +384,8 @@ export function PaymentOptionsSheet({
                 onPress={() => handleSelectPayment("BANK_TRANSFER")}
                 disabled={processing}
               >
-                <View style={[styles.optionIcon, { backgroundColor: "#EFF6FF" }]}>
-                  <MaterialCommunityIcons name="bank-transfer" size={24} color="#2563EB" />
+                <View style={[styles.optionIcon, { backgroundColor: theme.colors.primarySoft }]}>
+                  <MaterialCommunityIcons name="bank-transfer" size={24} color={theme.colors.primary} />
                 </View>
                 <View style={styles.optionContent}>
                   <Text style={styles.optionTitle}>
@@ -396,7 +396,7 @@ export function PaymentOptionsSheet({
                   </Text>
                 </View>
                 {processing && selectedMode === "BANK_TRANSFER" ? (
-                  <ActivityIndicator size="small" color="#2563EB" />
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
                 ) : (
                   <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />
                 )}

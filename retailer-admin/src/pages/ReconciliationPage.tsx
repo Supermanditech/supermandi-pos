@@ -124,31 +124,29 @@ export default function ReconciliationPage() {
 
   return (
     <>
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Reconciliation' }]} />
       </div>
       <header className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div className="flex-between-wrap">
           <h1 className="page-title">Payment Reconciliation</h1>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="flex-row">
             <button
               aria-label="Refresh reconciliation data"
-              className="btn btn-secondary"
+              className="btn btn-secondary btn-icon"
               onClick={fetchReconciliation}
               disabled={loading}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              <RefreshCw style={{ width: 14, height: 14 }} />
+              <RefreshCw size={14} />
               Refresh
             </button>
             <button
               aria-label="Export reconciliation as CSV"
-              className="btn btn-primary"
+              className="btn btn-primary btn-icon"
               onClick={handleExportCsv}
               disabled={rows.length === 0}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              <Download style={{ width: 14, height: 14 }} />
+              <Download size={14} />
               Export CSV
             </button>
           </div>
@@ -157,38 +155,28 @@ export default function ReconciliationPage() {
 
       <div className="page-content">
         {/* Date Range Picker */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>From:</label>
+        <div className="recon-date-range">
+          <div className="flex-row btn-icon">
+            <label className="form-label-inline">From:</label>
             <input
               type="date"
               value={fromDate}
               max={toDate || undefined}
               onChange={(e) => setFromDate(e.target.value)}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid var(--border)',
-                fontSize: '0.875rem',
-              }}
+              className="form-input-date"
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>To:</label>
+          <div className="flex-row btn-icon">
+            <label className="form-label-inline">To:</label>
             <input
               type="date"
               value={toDate}
               min={fromDate || undefined}
               onChange={(e) => setToDate(e.target.value)}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid var(--border)',
-                fontSize: '0.875rem',
-              }}
+              className="form-input-date"
             />
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="flex-row">
             <button className="btn btn-secondary" onClick={() => { setFromDate(daysAgo(7)); setToDate(daysAgo(0)); }}>
               Last 7 Days
             </button>
@@ -200,10 +188,10 @@ export default function ReconciliationPage() {
 
         {/* Summary Cards */}
         {summary && !loading && (
-          <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
+          <div className="grid grid-4 grid-mb-lg">
             <div className="stat-card">
               <div className="stat-label">Total Revenue</div>
-              <div className="stat-value" style={{ color: 'var(--success)' }}>{fmt(summary.totalRevenueMinor)}</div>
+              <div className="stat-value stat-value--success">{fmt(summary.totalRevenueMinor)}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">UPI Total</div>
@@ -222,34 +210,31 @@ export default function ReconciliationPage() {
 
         {/* Error */}
         {error && (
-          <div style={{
-            background: '#fee2e2', color: '#991b1b', padding: '0.75rem 1rem',
-            borderRadius: '0.375rem', marginBottom: '1rem', fontSize: '0.875rem'
-          }}>
+          <div className="alert-error-inline">
             {error}
-            <button onClick={fetchReconciliation} className="btn btn-secondary" style={{ marginLeft: '1rem', fontSize: '0.8rem' }}>
+            <button onClick={fetchReconciliation} className="btn btn-secondary">
               Retry
             </button>
           </div>
         )}
 
         {/* Reconciliation Table */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card card-no-padding">
           <table className="table">
             <thead>
               <tr>
                 <th>Date</th>
-                <th style={{ textAlign: 'right' }}>UPI ({'\u20B9'})</th>
-                <th style={{ textAlign: 'right' }}>Cash ({'\u20B9'})</th>
-                <th style={{ textAlign: 'right' }}>Due ({'\u20B9'})</th>
-                <th style={{ textAlign: 'right' }}>Refunds ({'\u20B9'})</th>
-                <th style={{ textAlign: 'right' }}>Net Total ({'\u20B9'})</th>
+                <th className="cell-right">UPI ({'\u20B9'})</th>
+                <th className="cell-right">Cash ({'\u20B9'})</th>
+                <th className="cell-right">Due ({'\u20B9'})</th>
+                <th className="cell-right">Refunds ({'\u20B9'})</th>
+                <th className="cell-right">Net Total ({'\u20B9'})</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={6} className="td-center-muted">
                     Loading reconciliation data...
                   </td>
                 </tr>
@@ -266,12 +251,12 @@ export default function ReconciliationPage() {
               ) : (
                 rows.map((row) => (
                   <tr key={row.date}>
-                    <td style={{ fontWeight: 500 }}>{fmtDateDDMMYYYY(row.date)}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmt(row.upiMinor)}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmt(row.cashMinor)}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'monospace', color: row.dueMinor > 0 ? 'var(--danger)' : undefined }}>{fmt(row.dueMinor)}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'monospace', color: row.refundsMinor > 0 ? 'var(--danger)' : undefined }}>{fmt(row.refundsMinor)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>{fmt(row.netTotalMinor)}</td>
+                    <td className="cell-bold">{fmtDateDDMMYYYY(row.date)}</td>
+                    <td className="cell-mono-right">{fmt(row.upiMinor)}</td>
+                    <td className="cell-mono-right">{fmt(row.cashMinor)}</td>
+                    <td className="cell-mono-right" style={{ color: row.dueMinor > 0 ? 'var(--danger)' : undefined }}>{fmt(row.dueMinor)}</td>
+                    <td className="cell-mono-right" style={{ color: row.refundsMinor > 0 ? 'var(--danger)' : undefined }}>{fmt(row.refundsMinor)}</td>
+                    <td className="cell-mono-right-bold">{fmt(row.netTotalMinor)}</td>
                   </tr>
                 ))
               )}
@@ -280,8 +265,8 @@ export default function ReconciliationPage() {
         </div>
 
         {/* Info Box */}
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#eff6ff', borderRadius: '0.5rem' }}>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+        <div className="info-box">
+          <p className="info-box-text">
             <strong>Note:</strong> Each row shows one day's aggregate across all payment methods.
             "Due" includes BNPL and credit sales. Export CSV for offline reconciliation with your bank statement.
           </p>

@@ -78,23 +78,23 @@ export function DocumentsTab({
       </div>
 
       <div className="tableWrap">
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+        <div className="sa-flex sa-gap-8 sa-mb-12 sa-flex-wrap">
           <button onClick={() => refreshDocuments()} disabled={documentsLoading}>
             {documentsLoading ? "Loading..." : "Refresh"}
           </button>
-          <select value={documentsEntityFilter} onChange={(e) => { setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier"); setDocumentsPage(() => 0); }} style={{ padding: "6px 10px" }}>
+          <select value={documentsEntityFilter} onChange={(e) => { setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier"); setDocumentsPage(() => 0); }} className="sa-select">
             <option value="">All Entities</option>
             <option value="store">Stores</option>
             <option value="supplier">Suppliers</option>
           </select>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="sa-flex sa-gap-8" style={{ marginLeft: "auto" }}>
             <button disabled={documentsPage === 0} onClick={() => setDocumentsPage(prev => Math.max(0, prev - 1))} aria-label="Previous page">← Prev</button>
             <span className="muted">Page {documentsPage + 1} of {Math.max(1, Math.ceil(pendingDocsTotal / 50))}</span>
             <button disabled={(documentsPage + 1) * 50 >= pendingDocsTotal} onClick={() => setDocumentsPage(prev => prev + 1)} aria-label="Next page">Next →</button>
           </div>
         </div>
 
-        {documentsError && <div className="errorText" style={{ marginBottom: 8 }}>{documentsError}</div>}
+        {documentsError && <div className="errorText sa-mb-8">{documentsError}</div>}
 
         {documentsLoading ? (
           <TableSkeleton rows={5} columns={6} />
@@ -109,21 +109,21 @@ export function DocumentsTab({
               {pendingDocuments.map((doc) => (
                 <tr key={doc.id}>
                   <td>
-                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)", textTransform: "uppercase" }}>{doc.entity_type}</div>
-                    <div className="mono" style={{ fontSize: 11 }}>{doc.entity_name || doc.entity_id.slice(0, 8)}</div>
-                    {doc.owner_name && <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{doc.owner_name}</div>}
+                    <div className="sa-text-sm sa-text-muted sa-text-upper">{doc.entity_type}</div>
+                    <div className="mono sa-text-xs">{doc.entity_name || doc.entity_id.slice(0, 8)}</div>
+                    {doc.owner_name && <div className="sa-text-xs sa-text-muted">{doc.owner_name}</div>}
                   </td>
                   <td>{doc.document_type}</td>
                   <td>
                     <div>{doc.file_name}</div>
-                    <div className="muted" style={{ fontSize: 11 }}>{(doc.file_size / 1024).toFixed(1)} KB • {doc.content_type}</div>
+                    <div className="muted sa-text-xs">{(doc.file_size / 1024).toFixed(1)} KB • {doc.content_type}</div>
                   </td>
-                  <td className="mono" style={{ fontSize: 11 }}>{formatDateTime(doc.uploaded_at)}</td>
+                  <td className="mono sa-text-xs">{formatDateTime(doc.uploaded_at)}</td>
                   <td>
-                    <span className={`badge ${doc.status === "pending" ? "badgeWarn" : doc.status === "approved" ? "badgeGood" : "badgeBad"}`}>{doc.status}</span>
+                    <span className={`badge ${doc.status === "pending" ? "badgeWarn" : doc.status === "approved" ? "badgeOk" : "badgeError"}`}>{doc.status}</span>
                   </td>
                   <td>
-                    <button onClick={() => handleOpenDocument(doc)} style={{ padding: "4px 8px", fontSize: 12 }}>Review</button>
+                    <button onClick={() => handleOpenDocument(doc)} className="sa-btn-ghost-sm">Review</button>
                   </td>
                 </tr>
               ))}
@@ -134,39 +134,39 @@ export function DocumentsTab({
 
       {/* T-119: Document review modal with dirty guard on close */}
       {selectedDocument && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={handleCloseDocument}>
-          <div style={{ backgroundColor: "var(--color-surface)", borderRadius: 8, padding: 24, maxWidth: "90vw", maxHeight: "90vh", overflow: "auto", minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div className="sa-modal-overlay" onClick={handleCloseDocument}>
+          <div className="sa-modal-lg" style={{ minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div className="sa-flex-between sa-mb-16">
               <h3 style={{ margin: 0 }}>Review Document</h3>
-              <button onClick={handleCloseDocument} style={{ padding: "4px 8px" }} aria-label="Close document review">✕</button>
+              <button onClick={handleCloseDocument} className="sa-btn-xs" aria-label="Close document review">✕</button>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ marginBottom: 8 }}><strong>Entity:</strong> {selectedDocument.entity_type} - {selectedDocument.entity_name || selectedDocument.entity_id}</div>
-              <div style={{ marginBottom: 8 }}><strong>Document Type:</strong> {selectedDocument.document_type}</div>
-              <div style={{ marginBottom: 8 }}><strong>File:</strong> {selectedDocument.file_name} ({(selectedDocument.file_size / 1024).toFixed(1)} KB)</div>
-              <div style={{ marginBottom: 8 }}><strong>Uploaded:</strong> {formatDateTime(selectedDocument.uploaded_at)}</div>
+            <div className="sa-mb-16">
+              <div className="sa-mb-8"><strong>Entity:</strong> {selectedDocument.entity_type} - {selectedDocument.entity_name || selectedDocument.entity_id}</div>
+              <div className="sa-mb-8"><strong>Document Type:</strong> {selectedDocument.document_type}</div>
+              <div className="sa-mb-8"><strong>File:</strong> {selectedDocument.file_name} ({(selectedDocument.file_size / 1024).toFixed(1)} KB)</div>
+              <div className="sa-mb-8"><strong>Uploaded:</strong> {formatDateTime(selectedDocument.uploaded_at)}</div>
             </div>
             {/* T-014: Document preview via authenticated blob URL */}
-            <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "var(--color-surface-alt)", padding: 16, borderRadius: 4, minHeight: 120 }}>
+            <div className="sa-mb-16 sa-text-center sa-bg-surface-alt sa-p-16 sa-radius-4" style={{ minHeight: 120 }}>
               {blobLoading ? (
-                <div style={{ color: "var(--color-text-secondary)", padding: 40 }}>Loading document preview...</div>
+                <div className="sa-text-muted sa-p-20">Loading document preview...</div>
               ) : blobError ? (
-                <div style={{ color: "var(--color-error)", padding: 40 }}>{blobError}</div>
+                <div className="sa-text-danger sa-p-20">{blobError}</div>
               ) : blobUrl && selectedDocument.content_type.startsWith("image/") ? (
                 <img src={blobUrl} alt={selectedDocument.file_name} style={{ maxWidth: "100%", maxHeight: 400 }} />
               ) : blobUrl && selectedDocument.content_type === "application/pdf" ? (
                 <iframe src={blobUrl} title={selectedDocument.file_name} style={{ width: "100%", height: 400, border: "none" }} />
               ) : blobUrl ? (
-                <div><a href={blobUrl} download={selectedDocument.file_name} style={{ color: "#7c3aed" }}>Download {selectedDocument.file_name}</a></div>
+                <div><a href={blobUrl} download={selectedDocument.file_name} className="sa-text-brand">Download {selectedDocument.file_name}</a></div>
               ) : null}
             </div>
-            <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-              <button onClick={() => handleApproveDocument(selectedDocument.id)} disabled={documentActionLoading === selectedDocument.id} style={{ padding: "10px 20px", backgroundColor: "var(--color-success)", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading ? "wait" : "pointer" }}>
+            <div className="sa-flex-col sa-gap-8">
+              <button onClick={() => handleApproveDocument(selectedDocument.id)} disabled={documentActionLoading === selectedDocument.id} className="btnSuccess sa-radius-4" style={{ padding: "10px 20px", cursor: documentActionLoading ? "wait" : "pointer" }}>
                 {documentActionLoading === selectedDocument.id ? "Processing..." : "✓ Approve Document"}
               </button>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => { setDocRejectReason(e.target.value); onModalDirty(true); }} style={{ flex: 1, padding: "8px 12px" }} />
-                <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10} style={{ padding: "10px 20px", backgroundColor: "var(--color-error)", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading || docRejectReason.trim().length < 10 ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 ? 0.5 : 1 }}>
+              <div className="sa-flex sa-gap-8">
+                <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => { setDocRejectReason(e.target.value); onModalDirty(true); }} className="sa-input" style={{ flex: 1 }} />
+                <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10} className="btnDanger sa-radius-4" style={{ padding: "10px 20px", cursor: documentActionLoading || docRejectReason.trim().length < 10 ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 ? 0.5 : 1 }}>
                   ✕ Reject
                 </button>
               </div>

@@ -18,13 +18,7 @@ export function BuildStamp() {
   return (
     <div
       suppressHydrationWarning
-      style={{
-        fontSize: '11px',
-        color: 'inherit',
-        fontFamily: 'monospace',
-        textAlign: 'center',
-        padding: '4px 0',
-      }}
+      className="text-[11px] text-inherit font-mono text-center py-1"
     >
       {mounted ? `Build: ${buildSha} · Deployed: ${buildTime}` : 'Build: ... · Deployed: ...'}
     </div>

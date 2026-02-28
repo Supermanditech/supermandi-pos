@@ -2687,16 +2687,15 @@ export default function App() {
         </div>
 
         <div className="health">
-          <div className="muted" style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
-            <span style={{ color: "#059669" }}>Authenticated</span>
+          <div className="muted sa-header-auth">
+            <span className="sa-text-authenticated">Authenticated</span>
             <button
-              className="tab"
+              className="tab sa-btn-logout"
               onClick={async () => {
                 // GO-LIVE-001 & GO-LIVE-002: Logout - revoke session and show login
                 await logout();
                 setIsAuthenticated(false);
               }}
-              style={{ background: "#fee2e2", color: "#dc2626" }}
             >
               Logout
             </button>
@@ -2742,54 +2741,54 @@ export default function App() {
             </div>
             <div className="sidebarBrandHealth">
               <span className={health.ok ? "dot dotOk" : "dot dotBad"} />
-              <span style={{ fontSize: 11 }}>{health.ok ? "Online" : "Offline"}</span>
+              <span className="sa-text-xs">{health.ok ? "Online" : "Offline"}</span>
             </div>
           </div>
           {/* Operations */}
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Operations</div>
             <button aria-current={tab === "events" ? "page" : undefined} className={`sidebarItem ${tab === "events" ? "sidebarItemActive" : ""}`} onClick={() => setTab("events")}>
-              <span className="sidebarItemLabel"><Activity size={18} style={{ opacity: tab === "events" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Events</span>
+              <span className="sidebarItemLabel"><Activity size={18} className={`sa-nav-icon ${tab === "events" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Events</span>
             </button>
             <button aria-current={tab === "stores" ? "page" : undefined} className={`sidebarItem ${tab === "stores" ? "sidebarItemActive" : ""}`} onClick={() => setTab("stores")}>
-              <span className="sidebarItemLabel"><Store size={18} style={{ opacity: tab === "stores" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Stores</span>
+              <span className="sidebarItemLabel"><Store size={18} className={`sa-nav-icon ${tab === "stores" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Stores</span>
             </button>
             <button aria-current={tab === "devices" ? "page" : undefined} className={`sidebarItem ${tab === "devices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("devices")}>
-              <span className="sidebarItemLabel"><Smartphone size={18} style={{ opacity: tab === "devices" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Devices</span>
+              <span className="sidebarItemLabel"><Smartphone size={18} className={`sa-nav-icon ${tab === "devices" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Devices</span>
             </button>
             <button aria-current={tab === "staff" ? "page" : undefined} className={`sidebarItem ${tab === "staff" ? "sidebarItemActive" : ""}`} onClick={() => setTab("staff")}>
-              <span className="sidebarItemLabel"><Users size={18} style={{ opacity: tab === "staff" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Staff</span>
+              <span className="sidebarItemLabel"><Users size={18} className={`sa-nav-icon ${tab === "staff" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Staff</span>
             </button>
             <button aria-current={tab === "grn-alerts" ? "page" : undefined} className={`sidebarItem ${tab === "grn-alerts" ? "sidebarItemActive" : ""}`} onClick={() => setTab("grn-alerts")}>
-              <span className="sidebarItemLabel"><AlertTriangle size={18} style={{ opacity: tab === "grn-alerts" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />GRN Alerts</span>
+              <span className="sidebarItemLabel"><AlertTriangle size={18} className={`sa-nav-icon ${tab === "grn-alerts" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />GRN Alerts</span>
               {grnAlertsOpenCount > 0 && <span className="sidebarBadge">{grnAlertsOpenCount}</span>}
             </button>
             <button aria-current={tab === "invoices" ? "page" : undefined} className={`sidebarItem ${tab === "invoices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("invoices")}>
-              <span className="sidebarItemLabel"><Receipt size={18} style={{ opacity: tab === "invoices" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Invoices</span>
+              <span className="sidebarItemLabel"><Receipt size={18} className={`sa-nav-icon ${tab === "invoices" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Invoices</span>
             </button>
             <button aria-current={tab === "gst-compliance" ? "page" : undefined} className={`sidebarItem ${tab === "gst-compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("gst-compliance")}>
-              <span className="sidebarItemLabel"><IndianRupee size={18} style={{ opacity: tab === "gst-compliance" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />GST Compliance</span>
+              <span className="sidebarItemLabel"><IndianRupee size={18} className={`sa-nav-icon ${tab === "gst-compliance" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />GST Compliance</span>
             </button>
             <button aria-current={tab === "refunds" ? "page" : undefined} className={`sidebarItem ${tab === "refunds" ? "sidebarItemActive" : ""}`} onClick={() => setTab("refunds")}>
-              <span className="sidebarItemLabel"><ArrowLeftRight size={18} style={{ opacity: tab === "refunds" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Refunds</span>
+              <span className="sidebarItemLabel"><ArrowLeftRight size={18} className={`sa-nav-icon ${tab === "refunds" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Refunds</span>
             </button>
             <button aria-current={tab === "monitoring" ? "page" : undefined} className={`sidebarItem ${tab === "monitoring" ? "sidebarItemActive" : ""}`} onClick={() => setTab("monitoring")}>
-              <span className="sidebarItemLabel"><HeartPulse size={18} style={{ opacity: tab === "monitoring" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Monitoring</span>
+              <span className="sidebarItemLabel"><HeartPulse size={18} className={`sa-nav-icon ${tab === "monitoring" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Monitoring</span>
             </button>
             <button aria-current={tab === "quality" ? "page" : undefined} className={`sidebarItem ${tab === "quality" ? "sidebarItemActive" : ""}`} onClick={() => setTab("quality")}>
-              <span className="sidebarItemLabel"><FlaskConical size={18} style={{ opacity: tab === "quality" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Quality</span>
+              <span className="sidebarItemLabel"><FlaskConical size={18} className={`sa-nav-icon ${tab === "quality" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Quality</span>
             </button>
             <button aria-current={tab === "credit-providers" ? "page" : undefined} className={`sidebarItem ${tab === "credit-providers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("credit-providers")}>
-              <span className="sidebarItemLabel"><CreditCard size={18} style={{ opacity: tab === "credit-providers" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Finance</span>
+              <span className="sidebarItemLabel"><CreditCard size={18} className={`sa-nav-icon ${tab === "credit-providers" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Finance</span>
             </button>
             <button aria-current={tab === "support" ? "page" : undefined} className={`sidebarItem ${tab === "support" ? "sidebarItemActive" : ""}`} onClick={() => setTab("support")}>
-              <span className="sidebarItemLabel"><MessageSquare size={18} style={{ opacity: tab === "support" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Support</span>
+              <span className="sidebarItemLabel"><MessageSquare size={18} className={`sa-nav-icon ${tab === "support" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Support</span>
             </button>
             <button aria-current={tab === "ai-insights" ? "page" : undefined} className={`sidebarItem ${tab === "ai-insights" ? "sidebarItemActive" : ""}`} onClick={() => setTab("ai-insights")}>
-              <span className="sidebarItemLabel"><Brain size={18} style={{ opacity: tab === "ai-insights" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />AI Intelligence</span>
+              <span className="sidebarItemLabel"><Brain size={18} className={`sa-nav-icon ${tab === "ai-insights" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />AI Intelligence</span>
             </button>
             <button aria-current={tab === "whatsapp" ? "page" : undefined} className={`sidebarItem ${tab === "whatsapp" ? "sidebarItemActive" : ""}`} onClick={() => setTab("whatsapp")}>
-              <span className="sidebarItemLabel"><MessageCircle size={18} style={{ opacity: tab === "whatsapp" ? 1 : 0.6, marginRight: 10, flexShrink: 0, color: tab === "whatsapp" ? "#25D366" : undefined }} />WhatsApp</span>
+              <span className="sidebarItemLabel"><MessageCircle size={18} className={`sa-nav-icon ${tab === "whatsapp" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} style={{ color: tab === "whatsapp" ? "#25D366" : undefined }} />WhatsApp</span>
             </button>
           </div>
 
@@ -2797,17 +2796,17 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Onboarding</div>
             <button aria-current={tab === "applications" ? "page" : undefined} className={`sidebarItem ${tab === "applications" ? "sidebarItemActive" : ""}`} onClick={() => setTab("applications")}>
-              <span className="sidebarItemLabel"><FileCheck size={18} style={{ opacity: tab === "applications" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Applications</span>
+              <span className="sidebarItemLabel"><FileCheck size={18} className={`sa-nav-icon ${tab === "applications" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Applications</span>
               {applicationsTotal > 0 && <span className="sidebarBadge">{applicationsTotal}</span>}
             </button>
             <button aria-current={tab === "registrations" ? "page" : undefined} className={`sidebarItem ${tab === "registrations" ? "sidebarItemActive" : ""}`} onClick={() => setTab("registrations")}>
-              <span className="sidebarItemLabel"><UserPlus size={18} style={{ opacity: tab === "registrations" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Registrations</span>
+              <span className="sidebarItemLabel"><UserPlus size={18} className={`sa-nav-icon ${tab === "registrations" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Registrations</span>
               {tab !== "registrations" && regEventsTotal > regEventsLastSeenTotal && (
                 <span className="sidebarBadge sidebarBadgeError">{regEventsTotal - regEventsLastSeenTotal}</span>
               )}
             </button>
             <button aria-current={tab === "documents" ? "page" : undefined} className={`sidebarItem ${tab === "documents" ? "sidebarItemActive" : ""}`} onClick={() => setTab("documents")}>
-              <span className="sidebarItemLabel"><FileText size={18} style={{ opacity: tab === "documents" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Documents</span>
+              <span className="sidebarItemLabel"><FileText size={18} className={`sa-nav-icon ${tab === "documents" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Documents</span>
               {pendingDocuments.length > 0 && <span className="sidebarBadge">{pendingDocsTotal}</span>}
             </button>
           </div>
@@ -2816,13 +2815,13 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Commerce</div>
             <button aria-current={tab === "suppliers" ? "page" : undefined} className={`sidebarItem ${tab === "suppliers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("suppliers")}>
-              <span className="sidebarItemLabel"><Truck size={18} style={{ opacity: tab === "suppliers" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Suppliers</span>
+              <span className="sidebarItemLabel"><Truck size={18} className={`sa-nav-icon ${tab === "suppliers" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Suppliers</span>
               {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length) > 0 && (
                 <span className="sidebarBadge">{pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length}</span>
               )}
             </button>
             <button aria-current={tab === "payments" ? "page" : undefined} className={`sidebarItem ${tab === "payments" ? "sidebarItemActive" : ""}`} onClick={() => setTab("payments")}>
-              <span className="sidebarItemLabel"><CreditCard size={18} style={{ opacity: tab === "payments" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Payments</span>
+              <span className="sidebarItemLabel"><CreditCard size={18} className={`sa-nav-icon ${tab === "payments" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Payments</span>
             </button>
           </div>
 
@@ -2830,10 +2829,10 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Monitoring</div>
             <button aria-current={tab === "analytics" ? "page" : undefined} className={`sidebarItem ${tab === "analytics" ? "sidebarItemActive" : ""}`} onClick={() => setTab("analytics")}>
-              <span className="sidebarItemLabel"><BarChart3 size={18} style={{ opacity: tab === "analytics" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Analytics</span>
+              <span className="sidebarItemLabel"><BarChart3 size={18} className={`sa-nav-icon ${tab === "analytics" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Analytics</span>
             </button>
             <button aria-current={tab === "audit" ? "page" : undefined} className={`sidebarItem ${tab === "audit" ? "sidebarItemActive" : ""}`} onClick={() => setTab("audit")}>
-              <span className="sidebarItemLabel"><Shield size={18} style={{ opacity: tab === "audit" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Audit Logs</span>
+              <span className="sidebarItemLabel"><Shield size={18} className={`sa-nav-icon ${tab === "audit" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Audit Logs</span>
             </button>
           </div>
 
@@ -2841,10 +2840,10 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Platform</div>
             <button aria-current={tab === "users" ? "page" : undefined} className={`sidebarItem ${tab === "users" ? "sidebarItemActive" : ""}`} onClick={() => setTab("users")}>
-              <span className="sidebarItemLabel"><UserCog size={18} style={{ opacity: tab === "users" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Users</span>
+              <span className="sidebarItemLabel"><UserCog size={18} className={`sa-nav-icon ${tab === "users" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Users</span>
             </button>
             <button aria-current={tab === "settings" ? "page" : undefined} className={`sidebarItem ${tab === "settings" ? "sidebarItemActive" : ""}`} onClick={() => setTab("settings")}>
-              <span className="sidebarItemLabel"><Settings2 size={18} style={{ opacity: tab === "settings" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Settings</span>
+              <span className="sidebarItemLabel"><Settings2 size={18} className={`sa-nav-icon ${tab === "settings" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Settings</span>
             </button>
             <button
               className={`sidebarItem ${aiPanelOpen ? "sidebarItemActive" : ""}`}
@@ -2862,7 +2861,7 @@ export default function App() {
         </aside>
 
         {/* Mobile fallback: flat tabs */}
-        <nav className="tabs" aria-label="Main navigation" role="tablist" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
+        <nav className="tabs sa-tabs-scroll" aria-label="Main navigation" role="tablist">
           <button role="tab" aria-selected={tab === "events"} className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>Events</button>
           <button role="tab" aria-selected={tab === "stores"} className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>Stores</button>
           <button role="tab" aria-selected={tab === "devices"} className={tab === "devices" ? "tab tabActive" : "tab"} onClick={() => setTab("devices")}>Devices</button>
@@ -2890,28 +2889,15 @@ export default function App() {
 
         <div id="main-content" className="mainContent" role="main">
       {/* T-114: Breadcrumb navigation + T-118: Copy deep link */}
-      <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B', padding: '12px 16px 0' }}>
-        <span style={{ color: '#64748B' }}>SuperAdmin</span>
-        <span style={{ color: '#CBD5E1' }}>&rsaquo;</span>
-        <span style={{ color: '#0F172A', fontWeight: 500 }}>{TAB_LABELS[tab]}</span>
+      <nav aria-label="Breadcrumb" className="sa-breadcrumb">
+        <span className="sa-text-muted">SuperAdmin</span>
+        <span className="sa-breadcrumb-sep">&rsaquo;</span>
+        <span className="sa-breadcrumb-current">{TAB_LABELS[tab]}</span>
         <button
           onClick={copyDeepLink}
           title="Copy link to this view"
           aria-label="Copy deep link"
-          style={{
-            marginLeft: 'auto',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '4px 10px',
-            fontSize: 12,
-            color: linkCopied ? '#16A34A' : '#64748B',
-            background: linkCopied ? '#F0FDF4' : '#F1F5F9',
-            border: `1px solid ${linkCopied ? '#BBF7D0' : '#E2E8F0'}`,
-            borderRadius: 6,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
+          className={`sa-copy-link ${linkCopied ? "sa-copy-link--copied" : ""}`}
         >
           {linkCopied ? <Check size={14} /> : <Link2 size={14} />}
           {linkCopied ? 'Copied!' : 'Copy link'}
@@ -3172,64 +3158,64 @@ export default function App() {
           {/* #331: Approval success modal — retailer shows activation code, supplier shows email confirmation */}
           {/* REQ.SUPERADMIN.APPROVAL_MATRIX: both entity types get post-approval confirmation dialog */}
           {approvalResult && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }} onClick={() => setApprovalResult(null)} onKeyDown={(e) => { if (e.key === 'Escape') setApprovalResult(null); }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 32, maxWidth: 420, width: "90%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>&#10003;</div>
+            <div className="sa-approval-overlay" onClick={() => setApprovalResult(null)} onKeyDown={(e) => { if (e.key === 'Escape') setApprovalResult(null); }}>
+              <div className="sa-approval-card" onClick={(e) => e.stopPropagation()}>
+                <div className="sa-approval-check">&#10003;</div>
                 {approvalResult.entityType === 'supplier' ? (
                   <>
-                    <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Supplier Approved!</h2>
+                    <h2 className="sa-approval-title">Supplier Approved!</h2>
                     {/* REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: branch on actual delivery signal */}
                     {approvalResult.emailDelivered === false ? (
-                      <p style={{ color: "#b45309", margin: "0 0 16px", fontSize: 14 }}>
+                      <p className="sa-approval-warn">
                         The supplier has been approved but the notification email could not be sent. Please contact them directly.
                       </p>
                     ) : approvalResult.emailDelivered === true ? (
                       <>
-                        <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                        <p className="sa-approval-body">
                           An approval email has been sent to the supplier. They can now log in to the Supplier Portal.
                         </p>
                         {approvalResult.codeSentTo && (
-                          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
+                          <p className="sa-approval-hint">
                             Email sent to: <strong>{approvalResult.codeSentTo}</strong>
                           </p>
                         )}
                       </>
                     ) : (
-                      <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                      <p className="sa-approval-body">
                         The supplier has been approved. They can now log in to the Supplier Portal.
                       </p>
                     )}
                   </>
                 ) : (
                   <>
-                    <h2 style={{ margin: "0 0 8px", color: "#16a34a" }}>Store Approved!</h2>
-                    <p style={{ color: "#6b7280", margin: "0 0 16px", fontSize: 14 }}>
+                    <h2 className="sa-approval-title">Store Approved!</h2>
+                    <p className="sa-approval-body">
                       Welcome message sent to the retailer. The POS app will auto-fetch this code when the retailer enters their phone number.
                     </p>
-                    <div style={{ background: "#f0fdf4", border: "2px dashed #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, color: "#166534", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Activation Code</div>
-                      <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 700, letterSpacing: 4, color: "#15803d" }}>{approvalResult.activationCode}</div>
+                    <div className="sa-activation-code-box">
+                      <div className="sa-activation-label">Activation Code</div>
+                      <div className="sa-activation-code">{approvalResult.activationCode}</div>
                     </div>
                     {approvalResult.codeSentTo && (
-                      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
+                      <p className="sa-approval-hint">
                         Sent to: <strong>{approvalResult.codeSentTo}</strong>
                         {approvalResult.codeSentVia.length > 0 && ` via ${approvalResult.codeSentVia.join(", ")}`}
                       </p>
                     )}
                   </>
                 )}
-                <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
+                <div className="sa-approval-actions">
                   {approvalResult.entityType !== 'supplier' && approvalResult.activationCode && (
                     <button
                       onClick={() => { navigator.clipboard.writeText(approvalResult.activationCode!).catch(() => { /* clipboard unavailable in insecure context */ }); }}
-                      style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}
+                      className="sa-btn-copy-code"
                     >
                       Copy Code
                     </button>
                   )}
                   <button
                     onClick={() => setApprovalResult(null)}
-                    style={{ padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
+                    className="sa-btn-done"
                   >
                     Done
                   </button>
@@ -3492,7 +3478,7 @@ export default function App() {
       />
 
       {/* T-097: Unified footer — standard text + BuildStamp */}
-      <footer style={{ background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', padding: '12px 24px', fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <footer className="sa-app-footer">
         <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
         <BuildStamp />
       </footer>

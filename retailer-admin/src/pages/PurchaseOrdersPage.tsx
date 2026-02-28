@@ -143,7 +143,7 @@ export default function PurchaseOrdersPage() {
 
   return (
     <>
-      <div style={{ padding: '0 1rem' }}>
+      <div className="breadcrumb-wrap">
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Purchase Orders' }]} />
       </div>
       <header className="page-header">
@@ -152,12 +152,11 @@ export default function PurchaseOrdersPage() {
 
       <div className="page-content">
         {/* Filters */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="po-filter-bar">
           <select
-            className="form-input"
+            className="form-input po-filter-select"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }}
-            style={{ maxWidth: '200px' }}
           >
             <option value="">All Statuses</option>
             <option value="draft">Draft</option>
@@ -170,34 +169,30 @@ export default function PurchaseOrdersPage() {
           </select>
           <input
             type="text"
-            className="form-input"
+            className="form-input po-search-input"
             placeholder="Search by supplier name..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setOffset(0); }}
-            style={{ maxWidth: '300px' }}
           />
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+          <span className="text-sm-muted">
             {total} order{total !== 1 ? 's' : ''}
           </span>
         </div>
 
         {/* Error */}
         {error && (
-          <div style={{
-            background: '#fee2e2', color: '#991b1b', padding: '0.75rem 1rem',
-            borderRadius: '0.375rem', marginBottom: '1rem', fontSize: '0.875rem',
-          }}>
+          <div className="alert-error-inline">
             {error}
-            <button onClick={fetchOrders} className="btn btn-secondary" style={{ marginLeft: '1rem', fontSize: '0.8rem' }}>
+            <button onClick={fetchOrders} className="btn btn-secondary po-retry-btn">
               Retry
             </button>
           </div>
         )}
 
         {/* Table */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card card-no-padding">
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div className="text-center-muted">
               Loading purchase orders...
             </div>
           ) : orders.length === 0 ? (
@@ -216,9 +211,9 @@ export default function PurchaseOrdersPage() {
                   <th>Supplier</th>
                   <th>Order Date</th>
                   <th>Expected Delivery</th>
-                  <th style={{ textAlign: 'right' }}>Total ({'\u20B9'})</th>
+                  <th className="cell-right">Total ({'\u20B9'})</th>
                   <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Items</th>
+                  <th className="cell-right">Items</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -227,24 +222,20 @@ export default function PurchaseOrdersPage() {
                   const sc = STATUS_COLORS[po.status] || STATUS_COLORS.pending;
                   return (
                     <tr key={po.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(po.id)}>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 500 }}>{po.poNumber}</td>
+                      <td className="po-number-cell">{po.poNumber}</td>
                       <td>{po.supplierName}</td>
-                      <td style={{ fontSize: '0.875rem' }}>{fmtDate(po.orderDate)}</td>
-                      <td style={{ fontSize: '0.875rem' }}>{po.expectedDeliveryDate ? fmtDate(po.expectedDeliveryDate) : '-'}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>{fmt(po.totalMinor)}</td>
+                      <td className="cell-sm">{fmtDate(po.orderDate)}</td>
+                      <td className="cell-sm">{po.expectedDeliveryDate ? fmtDate(po.expectedDeliveryDate) : '-'}</td>
+                      <td className="cell-mono-right-bold">{fmt(po.totalMinor)}</td>
                       <td>
-                        <span style={{
-                          padding: '2px 8px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
-                          background: sc.bg, color: sc.color,
-                        }}>
+                        <span className="badge" style={{ background: sc.bg, color: sc.color }}>
                           {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>{po.itemsCount}</td>
+                      <td className="cell-right">{po.itemsCount}</td>
                       <td>
                         <button
-                          className="btn btn-secondary"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          className="btn btn-secondary btn-xs"
                           onClick={(e) => { e.stopPropagation(); openDetail(po.id); }}
                         >
                           View
@@ -260,23 +251,21 @@ export default function PurchaseOrdersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1rem', alignItems: 'center' }}>
+          <div className="po-pagination">
             <button
               className="btn btn-secondary"
               disabled={currentPage <= 1}
               onClick={() => setOffset(offset - limit)}
-              style={{ opacity: currentPage <= 1 ? 0.5 : 1 }}
             >
               Prev
             </button>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <span className="text-sm-muted">
               Page {currentPage} of {totalPages}
             </span>
             <button
               className="btn btn-secondary"
               disabled={currentPage >= totalPages}
               onClick={() => setOffset(offset + limit)}
-              style={{ opacity: currentPage >= totalPages ? 0.5 : 1 }}
             >
               Next
             </button>
@@ -295,16 +284,16 @@ export default function PurchaseOrdersPage() {
           </button>
         }
       >
-        {detailLoading && <div style={{ padding: '2rem', textAlign: 'center' }}>Loading purchase order details...</div>}
+        {detailLoading && <div className="po-modal-loading">Loading purchase order details...</div>}
         {!detailLoading && detailError && (
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <p style={{ color: '#991b1b', fontWeight: 500 }}>{detailError}</p>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: '0.25rem' }}>Please try again.</p>
+          <div className="po-modal-loading">
+            <p className="po-modal-error">{detailError}</p>
+            <p className="po-modal-hint">Please try again.</p>
           </div>
         )}
         {selectedPO && (
-          <div style={{ fontSize: '0.875rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+          <div className="po-detail-content">
+            <div className="po-detail-grid">
               <div><strong>Supplier:</strong> {selectedPO.supplierName}</div>
               <div><strong>Status:</strong> {selectedPO.status.charAt(0).toUpperCase() + selectedPO.status.slice(1)}</div>
               <div><strong>Order Date:</strong> {fmtDate(selectedPO.orderDate)}</div>
@@ -314,14 +303,14 @@ export default function PurchaseOrdersPage() {
             </div>
 
             {selectedPO.notes && (
-              <div style={{ marginBottom: '1rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '4px' }}>
+              <div className="po-detail-notes">
                 <strong>Notes:</strong> {selectedPO.notes}
               </div>
             )}
 
             {/* WA-002: WhatsApp Follow-up Button — uses supplierPhone from API when available */}
             {selectedPO.supplierPhone && (
-            <div style={{ marginBottom: '1rem' }}>
+            <div className="imp-template-mb">
               <button
                 onClick={() => {
                   const expected = selectedPO.expectedDeliveryDate ? new Date(selectedPO.expectedDeliveryDate).toLocaleDateString('en-IN') : 'N/A';
@@ -331,11 +320,7 @@ export default function PurchaseOrdersPage() {
                   if (phone.length < 10) return;
                   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
                 }}
-                style={{
-                  padding: '6px 16px', background: '#f0fdf4', color: '#15803d',
-                  border: '1px solid #bbf7d0', borderRadius: 4, cursor: 'pointer',
-                  fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px',
-                }}
+                className="po-wa-btn"
                 title="Follow up with supplier via WhatsApp"
                 aria-label="Message on WhatsApp"
               >
@@ -348,26 +333,26 @@ export default function PurchaseOrdersPage() {
             {/* Line Items */}
             {selectedPO.items && selectedPO.items.length > 0 && (
               <>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }}>Line Items</h4>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <h4 className="po-items-title">Line Items</h4>
+                <table className="po-items-table">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <th style={{ padding: '4px', textAlign: 'left' }}>Product</th>
-                      <th style={{ padding: '4px', textAlign: 'right' }}>Qty</th>
-                      <th style={{ padding: '4px', textAlign: 'right' }}>Rate</th>
-                      <th style={{ padding: '4px', textAlign: 'right' }}>Total</th>
+                    <tr>
+                      <th>Product</th>
+                      <th className="cell-right">Qty</th>
+                      <th className="cell-right">Rate</th>
+                      <th className="cell-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedPO.items.map((item) => (
-                      <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '4px' }}>
+                      <tr key={item.id}>
+                        <td>
                           {item.productName}
-                          {item.barcode && <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>({item.barcode})</span>}
+                          {item.barcode && <span className="po-barcode-text">({item.barcode})</span>}
                         </td>
-                        <td style={{ padding: '4px', textAlign: 'right' }}>{item.quantity} {item.unit}</td>
-                        <td style={{ padding: '4px', textAlign: 'right' }}>{fmt(item.unitPriceMinor)}</td>
-                        <td style={{ padding: '4px', textAlign: 'right', fontWeight: 600 }}>{fmt(item.totalMinor)}</td>
+                        <td className="cell-right">{item.quantity} {item.unit}</td>
+                        <td className="cell-right">{fmt(item.unitPriceMinor)}</td>
+                        <td className="cell-right cell-bold">{fmt(item.totalMinor)}</td>
                       </tr>
                     ))}
                   </tbody>

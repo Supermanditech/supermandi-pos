@@ -77,7 +77,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--color-bg)' }}>
+    <div className="sa-login-wrapper">
       {/* T-095: Unified login header — shortmark + brand text + portal name */}
       <header className="auth-header">
         <div className="auth-header-inner">
@@ -94,8 +94,8 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
       <div className="loginContainer" style={{ flex: 1 }}>
       <div className="loginCard">
         <div className="loginHeader">
-          <div style={{ fontSize: 20, fontWeight: 600 }}>SuperAdmin Login</div>
-          <div className="muted" style={{ marginTop: 4 }}>
+          <div className="sa-login-title">SuperAdmin Login</div>
+          <div className="muted sa-mt-4">
             Secure email OTP authentication
           </div>
         </div>
@@ -134,7 +134,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
 
         {step === "otp" && (
           <form onSubmit={handleVerifyOtp}>
-            <div className="loginInfo" style={{ marginBottom: 16, background: "var(--color-primary-soft)", color: "var(--color-primary-dark)", borderRadius: 8, padding: 12 }}>
+            <div className="loginInfo sa-otp-banner">
               OTP sent to <strong>{email}</strong>
             </div>
 
@@ -164,7 +164,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
               {loading ? "Verifying..." : "Verify OTP"}
             </button>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12 }}>
+            <div className="sa-login-actions">
               <button
                 type="button"
                 className="loginLink"
@@ -187,7 +187,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
       </div>
     </div>
     {/* T-097: Unified footer — standard text + BuildStamp */}
-    <footer style={{ background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', padding: '12px 24px', fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <footer className="sa-app-footer">
       <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
       <BuildStamp />
     </footer>

@@ -222,11 +222,7 @@ export default function DeviceActivationPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100%',
-      background: 'var(--background)',
-      padding: '2rem',
-    }}>
+    <div className="pay-container">
       {/* UIUX-RET-002: Styled confirmation modal for device toggle */}
       <Modal
         isOpen={!!toggleConfirm}
@@ -241,7 +237,7 @@ export default function DeviceActivationPage() {
           </>
         }
       >
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+        <p className="modal-confirm-text">
           {toggleConfirm?.currentlyActive
             ? 'Are you sure you want to deactivate this device? The device will need to be re-enrolled to use the POS again.'
             : 'Are you sure you want to reactivate this device?'}
@@ -251,113 +247,51 @@ export default function DeviceActivationPage() {
       {/* T-112: Breadcrumb navigation */}
       <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Devices' }]} />
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{
-          margin: '0 0 0.5rem',
-          fontSize: '1.75rem',
-          fontWeight: '700',
-          color: 'var(--text)',
-        }}>
+      <div className="pay-header">
+        <h1 className="pay-title">
           Device Activation
         </h1>
-        <p style={{
-          margin: 0,
-          fontSize: '0.95rem',
-          color: 'var(--text-muted)',
-        }}>
+        <p className="pay-subtitle">
           Activate POS devices to connect them to your store: {store?.name}
         </p>
       </div>
 
       {/* Success Message */}
       {success && (
-        <div style={{
-          padding: '1rem 1.25rem',
-          background: '#dcfce7',
-          borderRadius: '10px',
-          border: '1px solid #22c55e',
-          color: '#166534',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          fontSize: '0.95rem',
-        }}>
-          <span style={{ fontSize: '1.25rem' }}>&#10003;</span>
+        <div className="pay-alert-success">
+          <span className="pay-alert-icon">&#10003;</span>
           {success}
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div style={{
-          padding: '1rem 1.25rem',
-          background: '#fee2e2',
-          borderRadius: '10px',
-          border: '1px solid #ef4444',
-          color: '#dc2626',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          fontSize: '0.95rem',
-        }}>
-          <span style={{ fontSize: '1.25rem' }}>&#10007;</span>
+        <div className="pay-alert-error">
+          <span className="pay-alert-icon">&#10007;</span>
           {error}
         </div>
       )}
 
       {/* Activation Form */}
-      <section className="card" style={{
-        borderRadius: '16px',
-        padding: '1.5rem',
-        marginBottom: '1.5rem',
-      }}>
-        <h2 style={{
-          margin: '0 0 1.25rem',
-          fontSize: '1rem',
-          fontWeight: '600',
-          color: 'var(--text)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}>
-          <span style={{ fontSize: '1.2rem' }}>&#128241;</span>
+      <section className="card dact-section dact-section--mb">
+        <h2 className="pay-section-title">
+          <span className="pay-section-icon">&#128241;</span>
           Activate New Device
         </h2>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '0.85rem',
-            fontWeight: '500',
-            color: 'var(--text-muted)',
-            marginBottom: '0.5rem',
-          }}>
+          <label className="pay-bank-label">
             Activation Code
           </label>
           <input
-            className="form-input"
+            className={`form-input dact-code-input${error ? ' dact-code-input--error' : ''}`}
             type="text"
             value={activationCode}
             onChange={handleCodeChange}
             placeholder="SM-XXXX-XX"
             maxLength={12}
-            style={{
-              maxWidth: '250px',
-              fontSize: '1.25rem',
-              fontFamily: 'monospace',
-              fontWeight: '600',
-              letterSpacing: '0.1em',
-              borderColor: error ? '#ef4444' : undefined,
-              borderRadius: '10px',
-              textAlign: 'center',
-              textTransform: 'uppercase',
-            }}
-            onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-            onBlur={(e) => e.currentTarget.style.borderColor = error ? '#ef4444' : ''}
           />
-          <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          <p className="dact-hint">
             Enter the 6-character code displayed on your POS device
           </p>
         </div>
@@ -365,38 +299,17 @@ export default function DeviceActivationPage() {
         <button
           onClick={handleActivate}
           disabled={activating || !isValidCode(activationCode)}
-          style={{
-            padding: '0.875rem 2rem',
-            background: activating || !isValidCode(activationCode)
-              ? '#94a3b8'
-              : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '10px',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: activating || !isValidCode(activationCode) ? 'not-allowed' : 'pointer',
-            boxShadow: activating || !isValidCode(activationCode)
-              ? 'none'
-              : '0 4px 14px rgba(34, 197, 94, 0.35)',
-            transition: 'all 0.2s',
-          }}
+          className="dact-activate-btn"
         >
           {activating ? 'Activating...' : 'Activate Device'}
         </button>
 
         {/* Instructions */}
-        <div style={{
-          marginTop: '1.5rem',
-          padding: '1rem',
-          background: 'var(--background)',
-          borderRadius: '8px',
-          border: '1px solid var(--border)',
-        }}>
-          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+        <div className="dact-instructions">
+          <h4 className="dact-instructions-title">
             How to get an activation code:
           </h4>
-          <ol style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+          <ol className="dact-instructions-list">
             <li>Open the SuperMandi POS app on your device</li>
             <li>Tap "Connect Store" or go to Settings &gt; Device</li>
             <li>An activation code (SM-XXXX-XX) will be displayed</li>
@@ -406,138 +319,72 @@ export default function DeviceActivationPage() {
       </section>
 
       {/* Connected Devices List */}
-      <section className="card" style={{
-        borderRadius: '16px',
-        padding: '1.5rem',
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1rem',
-        }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>&#128279;</span>
+      <section className="card dact-section">
+        <div className="flex-between grid-mb">
+          <h2 className="pay-section-title">
+            <span className="pay-section-icon">&#128279;</span>
             Connected Devices
           </h2>
           <button
             onClick={loadDevices}
             disabled={loadingDevices}
-            style={{
-              padding: '0.5rem 1rem',
-              background: 'transparent',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              fontSize: '0.8rem',
-              color: 'var(--text-muted)',
-              cursor: loadingDevices ? 'not-allowed' : 'pointer',
-            }}
+            className="btn btn-secondary btn-sm"
           >
             {loadingDevices ? 'Loading...' : 'Refresh'}
           </button>
         </div>
 
         {loadingDevices && devices.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div className="text-center-muted">
             Loading devices...
           </div>
         ) : devices.length === 0 ? (
-          <div style={{
-            padding: '2rem',
-            textAlign: 'center',
-            color: 'var(--text-muted)',
-            background: 'var(--background)',
-            borderRadius: '8px',
-          }}>
-            <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>&#128241;</span>
+          <div className="dact-devices-empty">
+            <span className="dact-devices-empty-icon">&#128241;</span>
             No devices connected yet.<br />
             Use the activation code above to connect your first device.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="dact-device-list">
             {devices.map((device) => (
               <div
                 key={device.id}
-                style={{
-                  padding: '1rem',
-                  background: 'var(--background)',
-                  borderRadius: '10px',
-                  border: `1px solid ${device.isActive ? 'var(--border)' : '#fca5a5'}`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
+                className="dact-device-card"
+                style={{ border: `1px solid ${device.isActive ? 'var(--border)' : '#fca5a5'}` }}
               >
                 <div>
-                  <div style={{
-                    fontSize: '0.95rem',
-                    fontWeight: '500',
-                    color: 'var(--text)',
-                    marginBottom: '0.25rem',
-                  }}>
+                  <div className="dact-device-name">
                     {device.label || 'POS Device'}
                     {device.isActive ? (
-                      <span style={{
-                        marginLeft: '0.5rem',
-                        padding: '0.125rem 0.5rem',
-                        background: '#dcfce7',
-                        color: '#166534',
-                        borderRadius: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: '600',
-                      }}>ACTIVE</span>
+                      <span className="dact-badge-active">ACTIVE</span>
                     ) : (
-                      <span style={{
-                        marginLeft: '0.5rem',
-                        padding: '0.125rem 0.5rem',
-                        background: '#fee2e2',
-                        color: '#dc2626',
-                        borderRadius: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: '600',
-                      }}>REVOKED</span>
+                      <span className="dact-badge-revoked">REVOKED</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <div className="dact-device-meta">
                     {device.manufacturer && device.model
                       ? `${device.manufacturer} ${device.model}`
                       : device.deviceType}
                     {device.appVersion && ` | v${device.appVersion}`}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  <div className="dact-device-timestamp">
                     Added: {new Date(device.createdAt).toLocaleDateString()}
                     {device.lastSeen && ` | Last seen: ${new Date(device.lastSeen).toLocaleString()}`}
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                  <div style={{
-                    fontSize: '0.7rem',
-                    color: 'var(--text-muted)',
-                    fontFamily: 'monospace',
-                  }}>
+                <div className="dact-device-actions">
+                  <div className="dact-device-id">
                     {device.id.substring(0, 8)}...
                   </div>
                   {/* RET-AUD-027: Deactivate/Reactivate button */}
                   <button
                     onClick={() => handleToggleDevice(device.id, device.isActive)}
                     disabled={deactivatingDeviceId === device.id}
+                    className={device.isActive ? 'btn btn-danger-light btn-xs' : 'btn btn-xs'}
                     style={{
-                      padding: '0.375rem 0.75rem',
-                      background: device.isActive ? '#fee2e2' : '#dcfce7',
-                      color: device.isActive ? '#dc2626' : '#166534',
-                      border: `1px solid ${device.isActive ? '#fca5a5' : '#86efac'}`,
-                      borderRadius: '6px',
-                      fontSize: '0.7rem',
-                      fontWeight: '500',
-                      cursor: deactivatingDeviceId === device.id ? 'not-allowed' : 'pointer',
+                      background: device.isActive ? undefined : '#dcfce7',
+                      color: device.isActive ? undefined : '#166534',
+                      border: device.isActive ? undefined : '1px solid #86efac',
                       opacity: deactivatingDeviceId === device.id ? 0.6 : 1,
                     }}
                   >

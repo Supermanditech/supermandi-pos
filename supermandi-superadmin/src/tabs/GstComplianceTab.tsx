@@ -70,39 +70,39 @@ export function GstComplianceTab() {
   };
 
   return (
-    <div style={{ padding: "1.5rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+    <div className="sa-p-24">
+      <div className="sa-flex-between sa-mb-20">
         <div>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-text-primary)" }}>GST Compliance Dashboard</h2>
-          <p style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>Monthly GST summary, filing status, and GSTR-1 export</p>
+          <h2 className="sa-text-xl sa-fw-700">GST Compliance Dashboard</h2>
+          <p className="sa-text-md sa-text-muted sa-mt-4" style={{ margin: 0 }}>Monthly GST summary, filing status, and GSTR-1 export</p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div className="sa-flex sa-gap-8">
           <input
             type="month"
+            className="sa-input"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            style={{ padding: "0.375rem 0.75rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", fontSize: "0.8125rem" }}
           />
-          <button onClick={loadOverview} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: "pointer" }}>
+          <button className="sa-btn-ghost-sm" onClick={loadOverview}>
             Refresh
           </button>
         </div>
       </div>
 
-      {error && <div style={{ padding: "0.75rem", background: "var(--color-error-soft)", border: "1px solid var(--color-error-soft)", borderRadius: "0.5rem", color: "var(--color-error)", marginBottom: "1rem", fontSize: "0.8125rem" }}>{error}</div>}
+      {error && <div className="sa-alert-error sa-mb-16">{error}</div>}
 
       {/* Totals summary */}
       {overview && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div className="sa-grid-4 sa-mb-20">
           {[
             { label: "Total Sales", value: formatCurrency(overview.totals.totalSales), color: "#3b82f6" },
             { label: "Total GST Collected", value: formatCurrency(overview.totals.totalTax), color: "#10b981" },
             { label: "Total Invoices", value: String(overview.totals.totalInvoices), color: "#8b5cf6" },
             { label: "Filing Deadline", value: overview.filingDeadline, color: "#f59e0b" },
           ].map((card, i) => (
-            <div key={i} style={{ padding: "1rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "0.75rem", borderLeft: `3px solid ${card.color}` }}>
-              <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{card.label}</div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-text-primary)", marginTop: "0.25rem" }}>{card.value}</div>
+            <div key={i} className="sa-accent-card" style={{ borderLeftColor: card.color }}>
+              <div className="sa-stat-label">{card.label}</div>
+              <div className="sa-stat-value sa-mt-4">{card.value}</div>
             </div>
           ))}
         </div>
@@ -110,11 +110,11 @@ export function GstComplianceTab() {
 
       {/* UNMAPPED.043: Loading skeleton for initial overview fetch */}
       {loading && !overview && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div className="sa-grid-4 sa-mb-20">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} style={{ padding: "1rem", background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", borderRadius: "0.75rem" }}>
-              <div style={{ height: 12, width: "60%", background: "var(--color-border)", borderRadius: 4, marginBottom: 8 }} />
-              <div style={{ height: 20, width: "80%", background: "var(--color-border)", borderRadius: 4 }} />
+            <div key={i} className="sa-stat-card sa-bg-surface-alt">
+              <div className="skeleton sa-mb-8" style={{ height: 12, width: "60%" }} />
+              <div className="skeleton" style={{ height: 20, width: "80%" }} />
             </div>
           ))}
         </div>
@@ -122,53 +122,55 @@ export function GstComplianceTab() {
 
       {/* Stores table */}
       {loading ? (
-        <div style={{ padding: "1.5rem" }}>
+        <div className="sa-p-24 skeletonTable">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} style={{ display: "flex", gap: "1rem", padding: "0.75rem 0", borderBottom: "1px solid var(--color-border)" }}>
-              <div style={{ height: 14, width: "25%", background: "var(--color-border)", borderRadius: 4 }} />
-              <div style={{ height: 14, width: "20%", background: "var(--color-border)", borderRadius: 4 }} />
-              <div style={{ height: 14, width: "15%", background: "var(--color-border)", borderRadius: 4 }} />
-              <div style={{ height: 14, width: "15%", background: "var(--color-border)", borderRadius: 4 }} />
-              <div style={{ height: 14, width: "10%", background: "var(--color-border)", borderRadius: 4 }} />
+            <div key={i} className="skeletonRow">
+              <div className="skeleton skeletonCell" style={{ width: "25%" }} />
+              <div className="skeleton skeletonCell" style={{ width: "20%" }} />
+              <div className="skeleton skeletonCell" style={{ width: "15%" }} />
+              <div className="skeleton skeletonCell" style={{ width: "15%" }} />
+              <div className="skeleton skeletonCell" style={{ width: "10%" }} />
             </div>
           ))}
         </div>
       ) : overview && overview.stores.length > 0 ? (
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+        <table className="table">
           <thead>
-            <tr style={{ background: "var(--color-surface-alt)", borderBottom: "2px solid var(--color-border)" }}>
-              <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Store</th>
-              <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>GSTIN</th>
-              <th style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "var(--color-text-secondary)" }}>Sales</th>
-              <th style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "var(--color-text-secondary)" }}>Tax</th>
-              <th style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "var(--color-text-secondary)" }}>Invoices</th>
-              <th style={{ padding: "0.625rem 0.75rem", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)" }}>Actions</th>
+            <tr>
+              <th className="sa-th">Store</th>
+              <th className="sa-th">GSTIN</th>
+              <th className="sa-th sa-th--right">Sales</th>
+              <th className="sa-th sa-th--right">Tax</th>
+              <th className="sa-th sa-th--right">Invoices</th>
+              <th className="sa-th" style={{ textAlign: "center" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {overview.stores.map((s) => (
-              <tr key={s.storeId} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                <td style={{ padding: "0.625rem 0.75rem" }}>
-                  <div style={{ fontWeight: 500, color: "var(--color-text-primary)" }}>{s.storeName}</div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{s.storeCode}</div>
+              <tr key={s.storeId}>
+                <td className="sa-td">
+                  <div className="sa-fw-500">{s.storeName}</div>
+                  <div className="sa-text-sm sa-text-muted">{s.storeCode}</div>
                 </td>
-                <td style={{ padding: "0.625rem 0.75rem", color: s.gstin ? "var(--color-text-secondary)" : "var(--color-border)", fontFamily: "monospace", fontSize: "0.75rem" }}>
+                <td className="sa-td sa-td--mono" style={{ color: s.gstin ? "var(--color-text-secondary)" : "var(--color-border)" }}>
                   {s.gstin || "Not registered"}
                 </td>
-                <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", color: "var(--color-text-primary)" }}>{formatCurrency(s.totalSales)}</td>
-                <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", color: "var(--color-text-primary)" }}>{formatCurrency(s.totalTax)}</td>
-                <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", color: "var(--color-text-secondary)" }}>{s.invoiceCount}</td>
-                <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
+                <td className="sa-td sa-td--right">{formatCurrency(s.totalSales)}</td>
+                <td className="sa-td sa-td--right">{formatCurrency(s.totalTax)}</td>
+                <td className="sa-td sa-td--right sa-text-muted">{s.invoiceCount}</td>
+                <td className="sa-td" style={{ textAlign: "center" }}>
                   <button
+                    className="sa-btn-xs sa-badge-info"
                     onClick={() => loadStoreDetail(s.storeId)}
-                    style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: "0.25rem", cursor: "pointer", marginRight: "0.25rem" }}
+                    style={{ marginRight: "0.25rem", cursor: "pointer" }}
                   >
                     Detail
                   </button>
                   <button
+                    className="sa-btn-xs sa-badge-ok"
                     onClick={() => handleExport(s.storeId)}
                     disabled={exporting}
-                    style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "var(--color-success-soft)", color: "var(--color-success)", border: "1px solid var(--color-success-soft)", borderRadius: "0.25rem", cursor: exporting ? "not-allowed" : "pointer" }}
+                    style={{ cursor: exporting ? "not-allowed" : "pointer" }}
                   >
                     GSTR-1
                   </button>
@@ -178,22 +180,22 @@ export function GstComplianceTab() {
           </tbody>
         </table>
       ) : (
-        <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>No GST data for {month}</div>
+        <div className="sa-text-center sa-text-muted" style={{ padding: "3rem" }}>No GST data for {month}</div>
       )}
 
       {/* Store detail modal */}
       {selectedStore && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }} onClick={() => { setSelectedStore(null); setStoreSummary(null); }}>
-          <div style={{ background: "var(--color-surface)", borderRadius: "0.75rem", padding: "1.5rem", maxWidth: "700px", width: "90%", maxHeight: "80vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "var(--color-text-primary)" }}>GST Detail — {month}</h3>
-              <button onClick={() => { setSelectedStore(null); setStoreSummary(null); }} style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "var(--color-text-secondary)" }}>&times;</button>
+        <div className="sa-modal-overlay" onClick={() => { setSelectedStore(null); setStoreSummary(null); }}>
+          <div className="sa-modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="sa-flex-between sa-mb-16">
+              <h3 className="sa-modal-title" style={{ margin: 0 }}>GST Detail — {month}</h3>
+              <button onClick={() => { setSelectedStore(null); setStoreSummary(null); }} className="sa-btn-text" style={{ fontSize: "1.25rem" }}>&times;</button>
             </div>
             {detailLoading ? (
-              <div style={{ textAlign: "center", padding: "2rem", color: "var(--color-text-secondary)" }}>Loading...</div>
+              <div className="sa-p-24 sa-text-center sa-text-muted">Loading...</div>
             ) : storeSummary ? (
               <div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                <div className="sa-grid-3 sa-mb-20">
                   {[
                     { label: "CGST", value: formatCurrency(storeSummary.cgstCollected) },
                     { label: "SGST", value: formatCurrency(storeSummary.sgstCollected) },
@@ -202,34 +204,34 @@ export function GstComplianceTab() {
                     { label: "Input SGST", value: formatCurrency(storeSummary.inputSgst) },
                     { label: "Net Payable", value: formatCurrency(storeSummary.netPayable) },
                   ].map((item, i) => (
-                    <div key={i} style={{ padding: "0.75rem", background: "var(--color-surface-alt)", borderRadius: "0.5rem", border: "1px solid var(--color-border)" }}>
-                      <div style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", textTransform: "uppercase" }}>{item.label}</div>
-                      <div style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text-primary)", marginTop: "0.125rem" }}>{item.value}</div>
+                    <div key={i} className="sa-stat-card sa-bg-surface-alt sa-p-12">
+                      <div className="sa-stat-label">{item.label}</div>
+                      <div className="sa-fw-600 sa-mt-4">{item.value}</div>
                     </div>
                   ))}
                 </div>
 
                 {storeSummary.stateBreakdown && storeSummary.stateBreakdown.length > 0 && (
                   <>
-                    <h4 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: "0.5rem" }}>State-wise Breakdown</h4>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem", marginBottom: "1rem" }}>
+                    <h4 className="sa-section-subtitle sa-fw-600 sa-mb-8">State-wise Breakdown</h4>
+                    <table className="table sa-mb-16">
                       <thead>
-                        <tr style={{ background: "var(--color-surface-alt)" }}>
-                          <th style={{ padding: "0.375rem", textAlign: "left" }}>State</th>
-                          <th style={{ padding: "0.375rem", textAlign: "right" }}>Taxable</th>
-                          <th style={{ padding: "0.375rem", textAlign: "right" }}>CGST</th>
-                          <th style={{ padding: "0.375rem", textAlign: "right" }}>SGST</th>
-                          <th style={{ padding: "0.375rem", textAlign: "right" }}>IGST</th>
+                        <tr>
+                          <th className="sa-th">State</th>
+                          <th className="sa-th sa-th--right">Taxable</th>
+                          <th className="sa-th sa-th--right">CGST</th>
+                          <th className="sa-th sa-th--right">SGST</th>
+                          <th className="sa-th sa-th--right">IGST</th>
                         </tr>
                       </thead>
                       <tbody>
                         {storeSummary.stateBreakdown.map((row, i) => (
-                          <tr key={i} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                            <td style={{ padding: "0.375rem" }}>{row.state}</td>
-                            <td style={{ padding: "0.375rem", textAlign: "right" }}>{formatCurrency(row.taxableValue)}</td>
-                            <td style={{ padding: "0.375rem", textAlign: "right" }}>{formatCurrency(row.cgst)}</td>
-                            <td style={{ padding: "0.375rem", textAlign: "right" }}>{formatCurrency(row.sgst)}</td>
-                            <td style={{ padding: "0.375rem", textAlign: "right" }}>{formatCurrency(row.igst)}</td>
+                          <tr key={i}>
+                            <td className="sa-td">{row.state}</td>
+                            <td className="sa-td sa-td--right">{formatCurrency(row.taxableValue)}</td>
+                            <td className="sa-td sa-td--right">{formatCurrency(row.cgst)}</td>
+                            <td className="sa-td sa-td--right">{formatCurrency(row.sgst)}</td>
+                            <td className="sa-td sa-td--right">{formatCurrency(row.igst)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -239,23 +241,23 @@ export function GstComplianceTab() {
 
                 {storeSummary.supplierBreakdown && storeSummary.supplierBreakdown.length > 0 && (
                   <>
-                    <h4 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: "0.5rem" }}>Supplier Breakdown</h4>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+                    <h4 className="sa-section-subtitle sa-fw-600 sa-mb-8">Supplier Breakdown</h4>
+                    <table className="table">
                       <thead>
-                        <tr style={{ background: "var(--color-surface-alt)" }}>
-                          <th style={{ padding: "0.375rem", textAlign: "left" }}>Supplier</th>
-                          <th style={{ padding: "0.375rem", textAlign: "left" }}>GSTIN</th>
-                          <th style={{ padding: "0.375rem", textAlign: "right" }}>Taxable</th>
-                          <th style={{ padding: "0.375rem", textAlign: "right" }}>Tax</th>
+                        <tr>
+                          <th className="sa-th">Supplier</th>
+                          <th className="sa-th">GSTIN</th>
+                          <th className="sa-th sa-th--right">Taxable</th>
+                          <th className="sa-th sa-th--right">Tax</th>
                         </tr>
                       </thead>
                       <tbody>
                         {storeSummary.supplierBreakdown.map((row, i) => (
-                          <tr key={i} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                            <td style={{ padding: "0.375rem" }}>{row.supplierName}</td>
-                            <td style={{ padding: "0.375rem", fontFamily: "monospace", fontSize: "0.6875rem" }}>{row.gstin}</td>
-                            <td style={{ padding: "0.375rem", textAlign: "right" }}>{formatCurrency(row.taxableValue)}</td>
-                            <td style={{ padding: "0.375rem", textAlign: "right" }}>{formatCurrency(row.totalTax)}</td>
+                          <tr key={i}>
+                            <td className="sa-td">{row.supplierName}</td>
+                            <td className="sa-td sa-td--mono">{row.gstin}</td>
+                            <td className="sa-td sa-td--right">{formatCurrency(row.taxableValue)}</td>
+                            <td className="sa-td sa-td--right">{formatCurrency(row.totalTax)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -264,7 +266,7 @@ export function GstComplianceTab() {
                 )}
               </div>
             ) : (
-              <div style={{ textAlign: "center", padding: "2rem", color: "var(--color-text-secondary)" }}>No data available</div>
+              <div className="sa-p-24 sa-text-center sa-text-muted">No data available</div>
             )}
           </div>
         </div>

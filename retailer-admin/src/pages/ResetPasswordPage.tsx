@@ -121,32 +121,34 @@ export default function ResetPasswordPage() {
         <div className="login-card-container">
           <div className="login-card-box">
             {step === 'missing-params' ? (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ width: '4rem', height: '4rem', background: '#fef2f2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#ef4444' }}>
+              <div className="forgot-center-section">
+                <div className="forgot-icon-circle forgot-icon-circle--error">
                   !
                 </div>
                 <h2 className="login-card-title">Invalid Reset Link</h2>
-                <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
+                <p className="login-card-subtitle forgot-subtitle-spaced">
                   This page requires a valid password reset link from your email. Please request a new reset link.
                 </p>
-                <Link to="/retailer/forgot-password" className="login-btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                <Link to="/retailer/forgot-password" className="login-btn-primary forgot-signin-link">
                   Request Password Reset
                 </Link>
-                <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', marginTop: '1rem' }}>
-                  Remember your password?{' '}
-                  <Link to="/retailer/login" className="login-text-link">Sign In</Link>
-                </p>
+                <div className="forgot-action-link">
+                  <p className="login-secondary-text">
+                    Remember your password?{' '}
+                    <Link to="/retailer/login" className="login-text-link">Sign In</Link>
+                  </p>
+                </div>
               </div>
             ) : step === 'success' ? (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ width: '4rem', height: '4rem', background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.5rem', color: '#22c55e' }}>
+              <div className="forgot-center-section">
+                <div className="forgot-icon-circle forgot-icon-circle--success">
                   &#10003;
                 </div>
                 <h2 className="login-card-title">Password Reset Successful</h2>
-                <p className="login-card-subtitle" style={{ marginBottom: '1.5rem' }}>
+                <p className="login-card-subtitle forgot-subtitle-spaced">
                   Your password has been reset. You can now sign in with your new password.
                 </p>
-                <Link to="/retailer/login" className="login-btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                <Link to="/retailer/login" className="login-btn-primary forgot-signin-link">
                   Sign In
                 </Link>
               </div>
@@ -178,8 +180,7 @@ export default function ResetPasswordPage() {
                       id="reset-token"
                       name="token"
                       type="text"
-                      className="login-form-input"
-                      style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}
+                      className="login-form-input forgot-token-input"
                       placeholder="Paste the token from your email"
                       value={token}
                       onChange={(e) => setToken(e.target.value)}
@@ -189,12 +190,12 @@ export default function ResetPasswordPage() {
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="reset-new-password">New Password</label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="login-password-wrapper">
                       <input
                         id="reset-new-password"
                         name="newPassword"
                         type={showNewPassword ? 'text' : 'password'}
-                        className="login-form-input"
+                        className="login-form-input login-form-input--password"
                         placeholder="Enter new password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
@@ -204,22 +205,22 @@ export default function ResetPasswordPage() {
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8125rem', padding: 0 }}
+                        className="login-password-toggle"
                         tabIndex={-1}
                       >
                         {showNewPassword ? 'Hide' : 'Show'}
                       </button>
                     </div>
-                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+                    <p className="forgot-pw-hint">Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
                   </div>
                   <div className="login-form-group">
                     <label className="login-form-label" htmlFor="reset-confirm-password">Confirm Password</label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="login-password-wrapper">
                       <input
                         id="reset-confirm-password"
                         name="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
-                        className="login-form-input"
+                        className="login-form-input login-form-input--password"
                         placeholder="Confirm new password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -228,7 +229,7 @@ export default function ResetPasswordPage() {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8125rem', padding: 0 }}
+                        className="login-password-toggle"
                         tabIndex={-1}
                       >
                         {showConfirmPassword ? 'Hide' : 'Show'}
@@ -241,11 +242,11 @@ export default function ResetPasswordPage() {
                 </form>
 
                 <div className="login-divider">
-                  <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', margin: '0 0 0.5rem' }}>
+                  <p className="login-secondary-text">
                     Need a new token?{' '}
                     <Link to="/retailer/forgot-password" className="login-text-link">Request Reset</Link>
                   </p>
-                  <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
+                  <p className="login-secondary-text">
                     Remember your password?{' '}
                     <Link to="/retailer/login" className="login-text-link">Sign In</Link>
                   </p>
@@ -257,10 +258,10 @@ export default function ResetPasswordPage() {
       </main>
 
       <footer className="login-footer">
-        <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="login-footer-inner login-footer-layout">
           <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Link to="/retailer/help" style={{ color: 'inherit', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+          <div className="login-footer-links">
+            <Link to="/retailer/help" className="login-footer-link">Help</Link>
             <BuildStamp />
           </div>
         </div>
