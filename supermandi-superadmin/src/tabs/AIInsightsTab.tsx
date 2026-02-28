@@ -94,8 +94,8 @@ export function AIInsightsTab() {
 
   const severityColor = (s: string) => {
     switch (s) {
-      case 'critical': return '#DC2626';
-      case 'warning': return '#F59E0B';
+      case 'critical': return 'var(--color-error)';
+      case 'warning': return 'var(--color-warning)';
       default: return '#0EA5E9';
     }
   };
@@ -107,9 +107,9 @@ export function AIInsightsTab() {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {(['anomalies', 'alerts', 'jobs'] as const).map(v => (
             <button key={v} onClick={() => setView(v)} style={{
-              padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid #e2e8f0',
-              background: view === v ? '#1e40af' : '#fff',
-              color: view === v ? '#fff' : '#475569',
+              padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid var(--color-border)',
+              background: view === v ? '#1e40af' : 'var(--color-surface)',
+              color: view === v ? '#fff' : 'var(--color-text-secondary)',
               cursor: 'pointer', fontSize: '0.8rem',
             }}>{v.charAt(0).toUpperCase() + v.slice(1)}</button>
           ))}
@@ -117,7 +117,7 @@ export function AIInsightsTab() {
       </div>
 
       {error && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: 6, marginBottom: '1rem', fontSize: '0.85rem' }}>
+        <div style={{ background: 'var(--color-error-soft)', color: '#991b1b', padding: '0.75rem', borderRadius: 6, marginBottom: '1rem', fontSize: '0.85rem' }}>
           {error}
         </div>
       )}
@@ -128,11 +128,11 @@ export function AIInsightsTab() {
             value={storeId}
             onChange={e => setStoreId(e.target.value)}
             placeholder="Enter Store ID..."
-            style={{ padding: '0.5rem', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.85rem', width: 300 }}
+            style={{ padding: '0.5rem', borderRadius: 6, border: '1px solid var(--color-border)', fontSize: '0.85rem', width: 300 }}
           />
           <button onClick={fetchData} disabled={!storeId} style={{
             padding: '0.5rem 1rem', borderRadius: 6, border: 'none',
-            background: storeId ? '#1e40af' : '#94a3b8', color: '#fff', cursor: 'pointer', fontSize: '0.85rem',
+            background: storeId ? '#1e40af' : 'var(--color-text-secondary)', color: '#fff', cursor: 'pointer', fontSize: '0.85rem',
           }}>Load</button>
         </div>
       )}
@@ -140,15 +140,15 @@ export function AIInsightsTab() {
       {view === 'anomalies' && (
         <div>
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading...</div>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading...</div>
           ) : anomalies.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
               {storeId ? 'No anomalies detected' : 'Enter a Store ID to view anomalies'}
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
                   <th style={{ textAlign: 'left', padding: '0.5rem' }}>Type</th>
                   <th style={{ textAlign: 'left', padding: '0.5rem' }}>Severity</th>
                   <th style={{ textAlign: 'left', padding: '0.5rem' }}>Description</th>
@@ -158,9 +158,9 @@ export function AIInsightsTab() {
               </thead>
               <tbody>
                 {anomalies.map(a => (
-                  <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <tr key={a.id} style={{ borderBottom: '1px solid var(--color-surface-alt)' }}>
                     <td style={{ padding: '0.5rem' }}>
-                      <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: '#f1f5f9' }}>
+                      <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: 'var(--color-surface-alt)' }}>
                         {a.anomalyType.replace(/_/g, ' ')}
                       </span>
                     </td>
@@ -172,11 +172,11 @@ export function AIInsightsTab() {
                     <td style={{ padding: '0.5rem', maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {a.description}
                     </td>
-                    <td style={{ padding: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+                    <td style={{ padding: '0.5rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
                       {new Date(a.detectedAt).toLocaleString('en-IN')}
                     </td>
                     <td style={{ textAlign: 'center', padding: '0.5rem' }}>
-                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: a.isReviewed ? '#22c55e' : '#f59e0b' }} />
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: a.isReviewed ? 'var(--color-success)' : 'var(--color-warning)' }} />
                     </td>
                   </tr>
                 ))}
@@ -189,25 +189,25 @@ export function AIInsightsTab() {
       {view === 'alerts' && (
         <div>
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading...</div>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading...</div>
           ) : alerts.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
               {storeId ? 'No alerts' : 'Enter a Store ID to view alerts'}
             </div>
           ) : (
             alerts.map(a => (
               <div key={a.id} style={{
                 padding: '0.75rem', marginBottom: '0.5rem', borderRadius: 6,
-                border: `1px solid ${a.isRead ? '#e2e8f0' : severityColor(a.severity)}`,
+                border: `1px solid ${a.isRead ? 'var(--color-border)' : severityColor(a.severity)}`,
                 borderLeftWidth: 3,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>{a.title}</span>
-                  <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>
                     {new Date(a.createdAt).toLocaleString('en-IN')}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: 2 }}>{a.message}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: 2 }}>{a.message}</div>
               </div>
             ))
           )}
@@ -216,7 +216,7 @@ export function AIInsightsTab() {
 
       {view === 'jobs' && (
         <div>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
             Manually trigger AI computation jobs. In production, these run on Cloud Scheduler.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -230,15 +230,15 @@ export function AIInsightsTab() {
               { endpoint: 'admin/jobs/ai-recommendations', name: 'Run Recommendations' },
             ].map(job => (
               <button key={job.endpoint} onClick={() => runJob(job.endpoint, job.name)} style={{
-                padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #e2e8f0',
-                background: '#fff', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'left',
+                padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid var(--color-border)',
+                background: 'var(--color-surface)', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'left',
               }}>
                 {job.name}
               </button>
             ))}
           </div>
           {jobResult && (
-            <pre style={{ marginTop: '1rem', padding: '0.75rem', background: '#f1f5f9', borderRadius: 6, fontSize: '0.8rem', overflow: 'auto' }}>
+            <pre style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--color-surface-alt)', borderRadius: 6, fontSize: '0.8rem', overflow: 'auto' }}>
               {jobResult}
             </pre>
           )}
