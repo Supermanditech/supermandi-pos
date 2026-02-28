@@ -900,8 +900,8 @@ export default function RegisterPage() {
                     style={{ marginTop: '0.25rem', width: '20px', height: '20px', accentColor: '#2563eb' }} />
                   <span>
                     I confirm that all the details provided are correct and accurate. I agree to the{' '}
-                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Privacy Policy</a>. <span style={styles.requiredStar}>*</span>
+                    <a href="https://supermandi.tech/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Terms of Service</a> and{' '}
+                    <a href="https://supermandi.tech/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Privacy Policy</a>. <span style={styles.requiredStar}>*</span>
                   </span>
                 </label>
                 {fieldErrors.agreement && <div style={styles.fieldError}>{fieldErrors.agreement}</div>}
@@ -911,7 +911,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   style={{ ...styles.btnSecondary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600 }}
-                  onClick={() => { setStep('otp'); setError(''); setFieldErrors({}); }}
+                  onClick={() => { setStep('phone'); setError(''); setFieldErrors({}); }}
                   disabled={isLoading}
                 >
                   Back

@@ -1,6 +1,7 @@
 /**
  * Phase 8: Retailer Admin Notifications Page
  * In-app notification center showing push notification history
+ * STG-219: Replaced hardcoded hex colors with CSS variables for dark mode
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -74,11 +75,11 @@ export default function NotificationsPage() {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'order_status': return <Truck size={18} className="text-blue-500" />;
-      case 'stock_alert': return <Package size={18} className="text-orange-500" />;
-      case 'grn_mismatch': case 'grn_excess': return <AlertTriangle size={18} className="text-red-500" />;
-      case 'payment_reminder': return <CreditCard size={18} className="text-purple-500" />;
-      default: return <Bell size={18} className="text-gray-500" />;
+      case 'order_status': return <Truck size={18} style={{ color: '#3b82f6' }} />;
+      case 'stock_alert': return <Package size={18} style={{ color: '#f97316' }} />;
+      case 'grn_mismatch': case 'grn_excess': return <AlertTriangle size={18} style={{ color: '#ef4444' }} />;
+      case 'payment_reminder': return <CreditCard size={18} style={{ color: '#8b5cf6' }} />;
+      default: return <Bell size={18} style={{ color: 'var(--text-muted)' }} />;
     }
   };
 
@@ -88,8 +89,8 @@ export default function NotificationsPage() {
     <div style={{ padding: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1f2937' }}>Notifications</h1>
-          <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>Notifications</h1>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
             {total} total {unreadCount > 0 && `(${unreadCount} unread)`}
           </p>
         </div>
@@ -98,7 +99,8 @@ export default function NotificationsPage() {
             <button
               aria-label="Mark all notifications as read"
               onClick={markAllAsRead}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '0.375rem', cursor: 'pointer' }}
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem' }}
             >
               <CheckCheck size={14} /> Mark all read
             </button>
@@ -108,7 +110,8 @@ export default function NotificationsPage() {
             aria-label="Refresh notifications list"
             onClick={fetchNotifications}
             disabled={loading}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', background: loading ? '#e5e7eb' : '#f9fafb', color: loading ? '#9ca3af' : '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: loading ? 'not-allowed' : 'pointer' }}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', opacity: loading ? 0.5 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             <RefreshCw size={14} /> {loading ? 'Loading...' : 'Refresh'}
           </button>
@@ -116,19 +119,19 @@ export default function NotificationsPage() {
       </div>
 
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ color: '#991b1b', fontSize: '0.875rem' }}>{error}</p>
+        <div className="alert-error" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '0.875rem' }}>{error}</p>
           <button aria-label="Retry loading notifications" onClick={() => { setError(null); fetchNotifications(); }} style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>Loading notifications...</div>
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading notifications...</div>
       ) : notifications.length === 0 && !error ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <Bell size={48} style={{ color: '#d1d5db', margin: '0 auto 1rem' }} />
-          <p style={{ color: '#6b7280', fontSize: '0.9375rem' }}>No notifications yet</p>
-          <p style={{ color: '#9ca3af', fontSize: '0.8125rem', marginTop: '0.25rem' }}>You'll see order updates, stock alerts, and payment reminders here.</p>
+          <Bell size={48} style={{ color: 'var(--border)', margin: '0 auto 1rem' }} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem' }}>No notifications yet</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: '0.25rem', opacity: 0.7 }}>You'll see order updates, stock alerts, and payment reminders here.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -138,8 +141,8 @@ export default function NotificationsPage() {
               onClick={() => !n.isRead && markAsRead(n.id)}
               style={{
                 display: 'flex', gap: '0.75rem', padding: '0.875rem 1rem',
-                background: n.isRead ? '#fff' : '#f0fdf4',
-                border: `1px solid ${n.isRead ? '#e5e7eb' : '#bbf7d0'}`,
+                background: n.isRead ? 'var(--surface)' : '#f0fdf4',
+                border: `1px solid ${n.isRead ? 'var(--border)' : '#bbf7d0'}`,
                 borderRadius: '0.5rem', cursor: n.isRead ? 'default' : 'pointer',
                 transition: 'background 0.15s',
               }}
@@ -147,12 +150,12 @@ export default function NotificationsPage() {
               <div style={{ flexShrink: 0, marginTop: '0.125rem' }}>{getIcon(n.type)}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <h3 style={{ fontSize: '0.875rem', fontWeight: n.isRead ? 500 : 600, color: '#1f2937' }}>{n.title}</h3>
-                  <span style={{ fontSize: '0.75rem', color: '#9ca3af', flexShrink: 0, marginLeft: '0.5rem' }}>
+                  <h3 style={{ fontSize: '0.875rem', fontWeight: n.isRead ? 500 : 600, color: 'var(--text)' }}>{n.title}</h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0, marginLeft: '0.5rem' }}>
                     {new Date(n.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <p style={{ fontSize: '0.8125rem', color: '#4b5563', marginTop: '0.25rem', lineHeight: 1.4 }}>{n.body}</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem', lineHeight: 1.4 }}>{n.body}</p>
               </div>
               {!n.isRead && (
                 <div style={{ flexShrink: 0, width: 8, height: 8, borderRadius: '50%', background: '#10b981', marginTop: '0.375rem' }} />
@@ -166,18 +169,20 @@ export default function NotificationsPage() {
                 aria-label="Previous page of notifications"
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - limit))}
-                style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: offset === 0 ? 'not-allowed' : 'pointer', opacity: offset === 0 ? 0.5 : 1 }}
+                className="btn btn-secondary"
+                style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', opacity: offset === 0 ? 0.5 : 1 }}
               >
                 Previous
               </button>
-              <span style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', color: '#6b7280' }}>
+              <span style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                 {offset + 1}–{Math.min(offset + limit, total)} of {total}
               </span>
               <button
                 aria-label="Next page of notifications"
                 disabled={offset + limit >= total}
                 onClick={() => setOffset((o) => o + limit)}
-                style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: offset + limit >= total ? 'not-allowed' : 'pointer', opacity: offset + limit >= total ? 0.5 : 1 }}
+                className="btn btn-secondary"
+                style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', opacity: offset + limit >= total ? 0.5 : 1 }}
               >
                 Next
               </button>

@@ -1,5 +1,6 @@
 // T-212: Sales Analytics Dashboard for Retailer Admin
 // PRA-007: Added category breakdown via shared analyticsService
+// STG-218: Replaced hardcoded hex colors with CSS variables for dark mode
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
@@ -63,35 +64,37 @@ export default function AnalyticsPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: `/s/${storeCode}` }, { label: 'Sales Analytics' }]} />
 
       <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>Sales Analytics</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>Sales Analytics</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input
             type="date"
             value={from}
             onChange={e => setFrom(e.target.value)}
-            style={{ border: '1px solid #cbd5e1', borderRadius: '0.5rem', paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
+            className="form-input"
+            style={{ paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
           />
-          <span style={{ color: '#94a3b8' }}>to</span>
+          <span style={{ color: 'var(--text-muted)' }}>to</span>
           <input
             type="date"
             value={to}
             onChange={e => setTo(e.target.value)}
-            style={{ border: '1px solid #cbd5e1', borderRadius: '0.5rem', paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
+            className="form-input"
+            style={{ paddingInline: '0.75rem', paddingBlock: '0.5rem', fontSize: '0.875rem' }}
           />
         </div>
       </div>
 
       {/* RET-C4-010: Warn if date range is invalid */}
       {from && to && from > to && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '1rem', color: '#92400e', fontSize: '0.875rem' }}>
+        <div className="alert-warning" style={{ marginBottom: '1rem' }}>
           Start date is after end date. Please adjust the date range.
         </div>
       )}
 
       {/* Error state */}
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p style={{ color: '#991b1b' }}>{error}</p>
+        <div className="alert-error" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p>{error}</p>
           <button aria-label="Retry loading analytics data" onClick={loadData} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#b91c1c', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
         </div>
       )}
@@ -99,7 +102,7 @@ export default function AnalyticsPage() {
       {/* Loading state */}
       {loading && (
         <div style={{ display: 'flex', justifyContent: 'center', paddingBlock: '4rem' }}>
-          <div style={{ borderRadius: '9999px', height: '2.5rem', width: '2.5rem', borderBottom: '2px solid #2563eb', animation: 'spin 1s linear infinite' }} />
+          <div style={{ borderRadius: '9999px', height: '2.5rem', width: '2.5rem', borderBottom: '2px solid var(--primary)', animation: 'spin 1s linear infinite' }} />
         </div>
       )}
 
@@ -108,29 +111,29 @@ export default function AnalyticsPage() {
         <>
           {/* Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Sales</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{formatCurrency(data.totals.totalSales)}</p>
+            <div className="card" style={{ padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Total Sales</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{formatCurrency(data.totals.totalSales)}</p>
             </div>
-            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Bills</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{data.totals.totalBills}</p>
+            <div className="card" style={{ padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Total Bills</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{data.totals.totalBills}</p>
             </div>
-            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Avg Bill Value</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{formatCurrency(data.totals.averageBillValue)}</p>
+            <div className="card" style={{ padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Avg Bill Value</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{formatCurrency(data.totals.averageBillValue)}</p>
             </div>
-            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Days in Range</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>{data.daily.length}</p>
+            <div className="card" style={{ padding: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Days in Range</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.25rem' }}>{data.daily.length}</p>
             </div>
           </div>
 
           {/* Daily Sales Chart (simple bar chart using divs) */}
-          <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Daily Sales Trend</h2>
+          <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Daily Sales Trend</h2>
             {data.daily.length === 0 ? (
-              <p style={{ color: '#94a3b8', textAlign: 'center', paddingBlock: '2rem' }}>No sales data for this period</p>
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingBlock: '2rem' }}>No sales data for this period</p>
             ) : (
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.25rem', height: '12rem' }}>
                 {data.daily.map(d => {
@@ -143,7 +146,7 @@ export default function AnalyticsPage() {
                         title={`${dateLabel}: ${formatCurrency(d.totalSales)} (${d.bills} bills)`}
                       />
                       {data.daily.length <= 14 && (
-                        <span style={{ fontSize: '10px', color: '#94a3b8', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>{dateLabel}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>{dateLabel}</span>
                       )}
                     </div>
                   );
@@ -155,10 +158,10 @@ export default function AnalyticsPage() {
           {/* Payment Breakdown + Top Products */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
             {/* Payment Breakdown */}
-            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
-              <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Payment Breakdown</h2>
+            <div className="card" style={{ padding: '1rem' }}>
+              <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Payment Breakdown</h2>
               {paymentTotal === 0 ? (
-                <p style={{ color: '#94a3b8', textAlign: 'center', paddingBlock: '1rem' }}>No payment data</p>
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingBlock: '1rem' }}>No payment data</p>
               ) : (
                 <>
                   {/* Stacked bar */}
@@ -167,7 +170,7 @@ export default function AnalyticsPage() {
                     {upiPct > 0 && <div style={{ background: '#3b82f6', width: `${upiPct}%` }} />}
                     {creditPct > 0 && <div style={{ background: '#eab308', width: `${creditPct}%` }} />}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: 'var(--text)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '9999px', background: '#22c55e', display: 'inline-block' }} />
@@ -195,21 +198,21 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Top Products */}
-            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem' }}>
-              <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Top Selling Products</h2>
+            <div className="card" style={{ padding: '1rem' }}>
+              <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Top Selling Products</h2>
               {data.topProducts.length === 0 ? (
-                <p style={{ color: '#94a3b8', textAlign: 'center', paddingBlock: '1rem' }}>No product data</p>
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingBlock: '1rem' }}>No product data</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {data.topProducts.slice(0, 10).map((p, i) => (
-                    <div key={p.productId || i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBlock: '0.25rem', borderBottom: i < Math.min(data.topProducts.length, 10) - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                    <div key={p.productId || i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBlock: '0.25rem', borderBottom: i < Math.min(data.topProducts.length, 10) - 1 ? '1px solid var(--border)' : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', width: '1.25rem' }}>#{i + 1}</span>
-                        <span style={{ fontSize: '0.875rem', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{p.productName}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '1.25rem' }}>#{i + 1}</span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{p.productName}</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
+                      <div style={{ textAlign: 'right', color: 'var(--text)' }}>
                         <p style={{ fontSize: '0.875rem', fontWeight: 500 }}>{formatCurrency(p.totalAmount)}</p>
-                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{p.qtySold} sold</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.qtySold} sold</p>
                       </div>
                     </div>
                   ))}
@@ -220,8 +223,8 @@ export default function AnalyticsPage() {
 
           {/* PRA-007: Category Breakdown */}
           {categoryData && categoryData.salesByGroup.length > 0 && (
-            <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontWeight: 600, color: '#334155', marginBottom: '1rem' }}>Sales by Category</h2>
+            <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '1rem' }}>Sales by Category</h2>
               {categoryData.missingFields.includes('variants.category') && (
                 <p style={{ fontSize: '0.75rem', color: '#d97706', marginBottom: '0.75rem' }}>
                   Category data is incomplete — some products may appear as &quot;Uncategorized&quot;.
@@ -233,18 +236,18 @@ export default function AnalyticsPage() {
                   const pct = Math.round((cat.total_minor / maxTotal) * 100);
                   return (
                     <div key={cat.group || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: '#475569', width: '8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }} title={cat.group}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', width: '8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }} title={cat.group}>
                         {cat.group}
                       </span>
-                      <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '9999px', height: '1.25rem', overflow: 'hidden' }}>
+                      <div style={{ flex: 1, background: 'var(--border)', borderRadius: '9999px', height: '1.25rem', overflow: 'hidden' }}>
                         <div
                           style={{ background: '#6366f1', height: '100%', borderRadius: '9999px', transition: 'all 0.15s ease', width: `${Math.max(pct, 2)}%` }}
                         />
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#334155', width: '6rem', textAlign: 'right', flexShrink: 0 }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)', width: '6rem', textAlign: 'right', flexShrink: 0 }}>
                         {formatCurrency(cat.total_minor)}
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', width: '4rem', textAlign: 'right', flexShrink: 0 }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '4rem', textAlign: 'right', flexShrink: 0 }}>
                         {cat.quantity} sold
                       </span>
                     </div>
@@ -258,7 +261,7 @@ export default function AnalyticsPage() {
 
       {/* Empty state */}
       {!loading && !error && data && data.totals.totalBills === 0 && (
-        <div style={{ textAlign: 'center', paddingBlock: '3rem', color: '#64748b' }}>
+        <div style={{ textAlign: 'center', paddingBlock: '3rem', color: 'var(--text-muted)' }}>
           <p style={{ fontSize: '1.125rem', fontWeight: 500 }}>No sales in this period</p>
           <p style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>Try selecting a different date range.</p>
         </div>

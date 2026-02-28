@@ -40,6 +40,8 @@ export default function DashboardPage() {
   // FE-RETAILER-CAT-001: Categories from POS taxonomy
   const [categories, setCategories] = useState<FmcgCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  // STG-212: Track category fetch errors (was silently showing empty state)
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   // GL-RJ-009: Daily summary for dashboard
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
@@ -129,39 +131,47 @@ export default function DashboardPage() {
     }
   };
 
+  // STG-213: Cancelled flag prevents setState on unmounted component
   useEffect(() => {
     if (!accessToken) return;
+    let cancelled = false;
 
     const loadInventory = async () => {
       setInventoryLoading(true);
       setInventoryError(null);
       try {
         const result = await fetchInventory(accessToken);
+        if (cancelled) return;
         setInventory(result.data || []);
         // RCAT-METRICS-001: Use server-provided totals (NaN-safe)
         if (result.totals) {
           setInventoryTotals(result.totals);
         }
       } catch (err) {
+        if (cancelled) return;
         logger.error('Failed to load inventory:', err);
         setInventoryError('Failed to load inventory');
         setInventory([]);
       } finally {
-        setInventoryLoading(false);
+        if (!cancelled) setInventoryLoading(false);
       }
     };
 
     const loadCategories = async () => {
       setCategoriesLoading(true);
+      setCategoriesError(null);
       try {
         const result = await fetchCategories(accessToken);
+        if (cancelled) return;
         // Filter out the "All" category (sortOrder 0) for display
         setCategories((result.data || []).filter(c => c.sortOrder > 0));
       } catch (err) {
+        if (cancelled) return;
         logger.error('Failed to load categories:', err);
+        setCategoriesError('Failed to load categories');
         setCategories([]);
       } finally {
-        setCategoriesLoading(false);
+        if (!cancelled) setCategoriesLoading(false);
       }
     };
 
@@ -171,19 +181,23 @@ export default function DashboardPage() {
       setDailySummaryError(null);
       try {
         const result = await fetchDailySummary(accessToken);
+        if (cancelled) return;
         setDailySummary(result.data || null);
       } catch (err) {
+        if (cancelled) return;
         logger.error('Failed to load daily summary:', err);
         setDailySummaryError('Failed to load daily summary');
         setDailySummary(null);
       } finally {
-        setDailySummaryLoading(false);
+        if (!cancelled) setDailySummaryLoading(false);
       }
     };
 
     loadInventory();
     loadCategories();
     loadDailySummary();
+
+    return () => { cancelled = true; };
   }, [accessToken]);
 
   useEffect(() => {
@@ -1025,6 +1039,10 @@ export default function DashboardPage() {
                 </div>
               ))}
             </>
+          ) : categoriesError ? (
+            <div style={{ gridColumn: '1 / -1', padding: '1rem', background: 'var(--error-bg, #fef2f2)', border: '1px solid var(--error-border, #fecaca)', borderRadius: '0.5rem', color: '#991b1b', fontSize: '0.875rem' }}>
+              {categoriesError}
+            </div>
           ) : categories.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: '#64748b' }}>
               No categories yet. Add products to see category breakdown.

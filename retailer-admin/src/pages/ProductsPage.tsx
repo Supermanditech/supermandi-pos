@@ -734,7 +734,13 @@ export default function ProductsPage() {
       }
 
       const created = data.data?.created || 0;
-      setSuccess(`Successfully imported ${created} products!`);
+      // STG-214: Report partial failures from bulk paste
+      const errors = data.data?.errors || data.data?.categorizedWarnings || [];
+      if (errors.length > 0) {
+        setSuccess(`Imported ${created} products. ${errors.length} row(s) failed — check the data and retry those rows.`);
+      } else {
+        setSuccess(`Successfully imported ${created} products!`);
+      }
       setBulkData('');
       setBulkPreview([]);
       setShowBulkUpload(false);

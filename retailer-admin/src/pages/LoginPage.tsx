@@ -41,7 +41,14 @@ interface LookupResponse {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, store } = useAuth();
+
+  // STG-207: Redirect authenticated users away from login page
+  useEffect(() => {
+    if (isAuthenticated && store) {
+      navigate(`/s/${store.code}`, { replace: true });
+    }
+  }, [isAuthenticated, store, navigate]);
 
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');

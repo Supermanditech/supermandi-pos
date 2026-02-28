@@ -1124,7 +1124,8 @@ retailerAdminCsvImportRouter.get("/products/import/errors", async (req: Request,
 // RCAT-BULK-002: Parse pasted lines and return preview
 // =============================================================================
 
-retailerAdminCsvImportRouter.post("/products/bulk-paste/preview", async (req: Request, res: Response) => {
+// STG-215: Apply same rate limiter as CSV upload
+retailerAdminCsvImportRouter.post("/products/bulk-paste/preview", csvUploadRateLimiter, async (req: Request, res: Response) => {
   const storeId = getStoreId(req);
   if (!storeId) {
     return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
@@ -1204,7 +1205,8 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/preview", async (req: Re
 // RCAT-BULK-002: Commit pasted products
 // =============================================================================
 
-retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Request, res: Response) => {
+// STG-215: Apply same rate limiter as CSV upload
+retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", csvUploadRateLimiter, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
 
