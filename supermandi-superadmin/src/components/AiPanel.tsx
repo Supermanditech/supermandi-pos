@@ -56,13 +56,13 @@ export function AiPanel({
           </div>
 
           <div className="aiQuickActions">
-            <button className="aiQuickBtn" onClick={() => { setAiQuestion("Explain the last hour of POS activity. Focus on issues and anomalies."); resetAiIdleTimer(); }}>
+            <button className="aiQuickBtn" onClick={async () => { const q = "Explain the last hour of POS activity. Focus on issues and anomalies."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
               📊 Explain last hour
             </button>
-            <button className="aiQuickBtn" onClick={() => { setAiQuestion("Why did payments fail? List likely causes from events and next steps."); resetAiIdleTimer(); }}>
+            <button className="aiQuickBtn" onClick={async () => { const q = "Why did payments fail? List likely causes from events and next steps."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
               💳 Payment issues?
             </button>
-            <button className="aiQuickBtn" onClick={() => { setAiQuestion("Summarize today: devices active, stores active, and any printer/network problems."); resetAiIdleTimer(); }}>
+            <button className="aiQuickBtn" onClick={async () => { const q = "Summarize today: devices active, stores active, and any printer/network problems."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
               📋 Summarize today
             </button>
           </div>
@@ -107,7 +107,7 @@ export function AiPanel({
 
           {aiAnswer && (
             <div className="aiResponse">
-              <div className="aiResponseContent">{aiAnswer}</div>
+              <div className="aiResponseContent" style={{ whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: aiAnswer.replace(/^### (.+)$/gm, '<h4 style="margin:8px 0 4px;font-size:14px">$1</h4>').replace(/^## (.+)$/gm, '<h3 style="margin:10px 0 4px;font-size:15px">$1</h3>').replace(/^# (.+)$/gm, '<h2 style="margin:12px 0 6px;font-size:16px">$1</h2>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/^- (.+)$/gm, '<li style="margin-left:16px">$1</li>').replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:16px">$1. $2</li>') }} />
             </div>
           )}
         </div>

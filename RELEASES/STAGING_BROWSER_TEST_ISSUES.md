@@ -144,7 +144,7 @@
 - **Root Cause**: Firebase `signInWithPhoneNumber` fails. Likely causes: (1) `staging.supermandi.tech` not added to Firebase Console → Authentication → Settings → Authorized Domains, (2) `NEXT_PUBLIC_FIREBASE_*` env vars not set in supplier-portal Cloud Run build, (3) reCAPTCHA verifier failing on staging domain. Error is the generic fallback at `firebase.ts:172`.
 - **Fix**: (infra) Add `staging.supermandi.tech` to Firebase authorized domains. Verify `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID` are set in the supplier-portal service env vars.
 - **Files**: `supplier-portal/src/lib/firebase.ts:14-21,143-185` (code is correct, issue is config)
-- **Status**: DIAGNOSED
+- **Status**: INFRA-ONLY (requires Firebase Console domain config)
 
 ### STG-014: Supplier Portal — BNPL Orders page "Failed to load BNPL orders" (wrong column names)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/bnpl-orders/`)
@@ -228,7 +228,8 @@
 - **Root Cause**: `deviceEnrollments.ts:346` queries `s.phone` (old column from migration 001, usually NULL) instead of `s.contact_phone` (column from migration 038, populated by admin panel). Same issue with `s.email` vs `s.contact_email`. The admin panel saves contact info into `contact_phone`/`contact_email`, but the resend endpoint reads from the legacy `phone`/`email` columns.
 - **Fix**: Change line 346 from `s.phone as store_phone, s.email as store_email` to `COALESCE(s.contact_phone, s.phone) as store_phone, COALESCE(s.contact_email, s.email) as store_email` — falls back to legacy columns if contact columns are empty.
 - **Files**: `backend/src/routes/v1/admin/deviceEnrollments.ts:346`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-024: SuperAdmin — Quality tab crashes with "Something went wrong" then logs out
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#quality`)
@@ -363,7 +364,8 @@
 - **Root Cause**: Verify endpoint at `suppliers.ts:219-224` only queries `supplier.supplier_requests`, but self-registered suppliers come from `auth.applications`. No lookup exists for application-based suppliers.
 - **Fix**: Add fallback to check `auth.applications` when `supplier_requests` returns no rows.
 - **Files**: `backend/src/routes/v1/admin/suppliers.ts:219-224`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-039: SuperAdmin — Supplier status history always empty
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -372,7 +374,8 @@
 - **Root Cause**: Frontend reads `data.history` (`api/suppliers.ts:399`) but backend returns `{ status_history: [...] }` (`suppliers.ts:2099`). Key mismatch → always returns empty array.
 - **Fix**: Change frontend to read `data.status_history` or change backend to return `{ history: [...] }`.
 - **Files**: `supermandi-superadmin/src/api/suppliers.ts:399`, `backend/src/routes/v1/admin/suppliers.ts:2099`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-040: SuperAdmin — Pending products never show images (missing columns in query)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -381,7 +384,8 @@
 - **Root Cause**: Backend pending products query (`suppliers.ts:724-748`) doesn't SELECT `sp.image_url` or `sp.thumbnail_url` columns (which exist per migration 138). Frontend renders `product.thumbnailUrl || product.imageUrl` — both always undefined.
 - **Fix**: Add `sp.image_url as "imageUrl", sp.thumbnail_url as "thumbnailUrl"` to the SELECT at line 724.
 - **Files**: `backend/src/routes/v1/admin/suppliers.ts:724-748`, `supermandi-superadmin/src/tabs/SuppliersTab.tsx:634-665`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-041: SuperAdmin — Create store/supplier user always fails 400 (missing actor_id)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#users`)
@@ -390,7 +394,8 @@
 - **Root Cause**: Create User form has no `actor_id` field. Backend requires `actor_id` for store/supplier types at `users.ts:206-208`. Only platform-type users can be created.
 - **Fix**: Add store/supplier selector (dropdown populated from store directory or supplier list) to the Create User form when type is store/supplier.
 - **Files**: `supermandi-superadmin/src/tabs/UsersTab.tsx:59-64`, `backend/src/routes/v1/admin/users.ts:206-208`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-042: SuperAdmin — Analytics Dues tab shows wrong amounts (field name mismatch)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#analytics`)
@@ -399,7 +404,8 @@
 - **Root Cause**: Backend returns `total_minor` but frontend reads `amount_minor` at `AnalyticsTab.tsx:586`. Backend doesn't SELECT `customer_name` despite column existing. Frontend `d.customer_name` always undefined.
 - **Fix**: (a) Add `customer_name` to backend SQL SELECT at `analyticsService.ts:1265`. (b) Either rename backend field to `amount_minor` or change frontend to read `total_minor`.
 - **Files**: `backend/src/services/analytics/analyticsService.ts:1263-1275,1304-1311`, `supermandi-superadmin/src/tabs/AnalyticsTab.tsx:584-586`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-043: SuperAdmin — Analytics Margin Analysis crashes 500 (non-existent table)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#analytics`)
@@ -408,7 +414,8 @@
 - **Root Cause**: `analytics.ts:323,352` joins `catalog.store_taxonomies` which doesn't exist in any migration. Correct table is `catalog.fmcg_taxonomy`.
 - **Fix**: Change `catalog.store_taxonomies` to `catalog.fmcg_taxonomy` and verify column names match.
 - **Files**: `backend/src/routes/v1/admin/analytics.ts:323,352`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-044: SuperAdmin — Analytics error messages show "[object Object]"
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#analytics`)
@@ -417,7 +424,8 @@
 - **Root Cause**: Backend returns `{ error: { code: "...", message: "..." } }` (object), but frontend `analytics.ts:28-31` does `String(data.error)` which yields "[object Object]". Should extract `.message` from the error object.
 - **Fix**: Change to `typeof data.error === 'string' ? data.error : data.error?.message || 'Unknown error'`.
 - **Files**: `supermandi-superadmin/src/api/analytics.ts:27-31`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-045: SuperAdmin — Settings double confirmation dialog when killing feature flag
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#settings`)
@@ -426,7 +434,8 @@
 - **Root Cause**: SettingsTab.tsx:147 shows its own ConfirmDialog, then the handler `confirmedToggleGlobalFlag` (App.tsx:2634) shows a second one. Enable only shows one (correct).
 - **Fix**: Remove the SettingsTab-level confirmation for disable/kill, keep only the App.tsx level one.
 - **Files**: `supermandi-superadmin/src/tabs/SettingsTab.tsx:147`, `supermandi-superadmin/src/App.tsx:2634`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-046: SuperAdmin — Credit application approve/reject both crash (missing columns)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#credit-providers`)
@@ -435,7 +444,8 @@
 - **Root Cause**: `credit.ts:111-115` (approve) and `credit.ts:182-186` (reject) SET `updated_at = NOW()` but `payments.credit_applications` has no `updated_at` column (migration 049). Reject also writes to `rejection_reason` column which doesn't exist. Migration 055 adds `pan_number`, `aadhaar_last4`, `approved_amount_minor` but NOT these columns.
 - **Fix**: Add migration with `ALTER TABLE payments.credit_applications ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN rejection_reason TEXT`.
 - **Files**: `backend/src/routes/v1/admin/credit.ts:111-115,182-186`, migration `049_payments_schema.sql`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-047: SuperAdmin — Credit applications status constraint blocks entire workflow
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#credit-providers`)
@@ -444,7 +454,8 @@
 - **Root Cause**: Backend filters by `status = 'kyc_verified'` (credit.ts:25) and checks for `'pending'` (line 102), but `chk_credit_app_status` constraint only allows `('submitted','processing','approved','disbursed','rejected')`. Neither `'kyc_verified'` nor `'pending'` are valid. POS route `credit.ts:544` tries `SET status = 'kyc_verified'` → constraint violation.
 - **Fix**: Add migration to expand constraint: `ALTER TABLE payments.credit_applications DROP CONSTRAINT chk_credit_app_status, ADD CONSTRAINT chk_credit_app_status CHECK (status IN ('submitted','processing','approved','disbursed','rejected','kyc_verified','pending'))`.
 - **Files**: `backend/src/routes/v1/admin/credit.ts:25,102`, `backend/src/routes/v1/pos/credit.ts:544`, migration `049_payments_schema.sql:256`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-048: SuperAdmin — Manual audit log entries silently lost (no POST endpoint)
 - **Portal**: SuperAdmin (all tabs that log admin actions)
@@ -453,7 +464,8 @@
 - **Root Cause**: Frontend calls `POST /api/v1/admin/audit` (`api/audit.ts:107-108`) but backend `admin/audit.ts` only has GET handlers (line 52: GET `/audit`, line 154: GET `/audit/stats`). No POST handler exists. Error is caught and suppressed at `audit.ts:120-123`.
 - **Fix**: Add POST handler to `backend/src/routes/v1/admin/audit.ts` that accepts `{ action, resourceType, resourceId, details }` and inserts into `admin.audit_log`.
 - **Files**: `supermandi-superadmin/src/api/audit.ts:107-108`, `backend/src/routes/v1/admin/audit.ts`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-049: SuperAdmin — Enrollment expiry shows time only, no date
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#registrations`)
@@ -462,7 +474,8 @@
 - **Root Cause**: `ConfirmDialog.tsx:84` uses `toLocaleTimeString()` instead of `toLocaleString()`.
 - **Fix**: Change `toLocaleTimeString()` to `toLocaleString()`.
 - **Files**: `supermandi-superadmin/src/components/ConfirmDialog.tsx:84`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-050: SuperAdmin — AI Copilot "Explain last hour" queries last 30 days instead
 - **Portal**: SuperAdmin (AI Copilot sidebar panel)
@@ -471,7 +484,8 @@
 - **Root Cause**: `askSuperMandiAI.ts:49-65` `extractRange()` only recognizes `"today"` and `/last\s+(\d+)\s+days/`. "Last hour" matches neither → falls through to 30-day default.
 - **Fix**: Add hour matching: `if (lower.includes("last hour")) { return { from: oneHourAgo, to: now } }` and `/last\s+(\d+)\s+hours?/` pattern.
 - **Files**: `backend/src/services/ai/askSuperMandiAI.ts:49-65`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-051: SuperAdmin — AI Copilot quick actions don't auto-submit (require 2 clicks)
 - **Portal**: SuperAdmin (AI Copilot sidebar panel)
@@ -480,7 +494,8 @@
 - **Root Cause**: `AiPanel.tsx:59-67` buttons only call `setAiQuestion(text)` without triggering `askAi()`.
 - **Fix**: Have quick action buttons call `askAi(text)` directly in addition to setting the question text.
 - **Files**: `supermandi-superadmin/src/components/AiPanel.tsx:59-67`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-052: SuperAdmin — AI Copilot response shows raw markdown instead of formatted text
 - **Portal**: SuperAdmin (AI Copilot sidebar panel)
@@ -489,7 +504,8 @@
 - **Root Cause**: `AiPanel.tsx:110` renders `{aiAnswer}` as plain text in a `<div>`. OpenAI GPT returns markdown-formatted responses.
 - **Fix**: Use `react-markdown` or `dangerouslySetInnerHTML` with a markdown-to-HTML converter to render formatted output.
 - **Files**: `supermandi-superadmin/src/components/AiPanel.tsx:110`
-- **Status**: DIAGNOSED
+- **Status**: FIXED
+- **Fix Commit**: (pending commit)
 
 ### STG-053: Retailer — Login token lacks actorId, gateway rejects ALL authenticated requests
 - **Portal**: Retailer (`staging.supermandi.tech/retailer/`)
@@ -1706,7 +1722,7 @@
 - **Fix**: Either (a) add `/s` exact match to URL map pointing to retailer-admin, or (b) add a redirect from `/s` to `/retailer/` in the landing page nginx config.
 - **Files**: GCP URL map configuration (load balancer path rules)
 - **Severity**: LOW — Edge case, unlikely user path
-- **Status**: DIAGNOSED
+- **Status**: INFRA-ONLY (requires GCP URL map update)
 
 ### STG-183: API — Error response format inconsistent across gateway vs backend
 - **Portal**: All
@@ -1787,8 +1803,9 @@
 
 | Status | Count |
 |--------|-------|
-| FIXED | 166 |
-| DIAGNOSED | 18 |
+| FIXED | 182 |
+| DIAGNOSED | 0 |
+| INFRA-ONLY | 2 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |

@@ -54,6 +54,23 @@ function extractRange(question: string): { from?: string; to?: string } {
     start.setHours(0, 0, 0, 0);
     return { from: start.toISOString(), to: now.toISOString() };
   }
+  // STG-050: Support "last hour", "last N hours", "last N minutes"
+  if (lower.includes("last hour")) {
+    const start = new Date(now.getTime() - 60 * 60 * 1000);
+    return { from: start.toISOString(), to: now.toISOString() };
+  }
+  const lastHours = lower.match(/last\s+(\d+)\s+hours?/);
+  if (lastHours) {
+    const hours = Math.min(72, Math.max(1, Number(lastHours[1])));
+    const start = new Date(now.getTime() - hours * 60 * 60 * 1000);
+    return { from: start.toISOString(), to: now.toISOString() };
+  }
+  const lastMinutes = lower.match(/last\s+(\d+)\s+minutes?/);
+  if (lastMinutes) {
+    const mins = Math.min(1440, Math.max(1, Number(lastMinutes[1])));
+    const start = new Date(now.getTime() - mins * 60 * 1000);
+    return { from: start.toISOString(), to: now.toISOString() };
+  }
   const lastDays = lower.match(/last\s+(\d+)\s+days/);
   if (lastDays) {
     const days = Math.min(90, Math.max(1, Number(lastDays[1])));

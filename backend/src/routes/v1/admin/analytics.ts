@@ -307,7 +307,7 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
         SELECT
           p.name as "productName",
           p.brand,
-          COALESCE(t.name, 'Uncategorized') as "category",
+          COALESCE(t.label_en, 'Uncategorized') as "category",
           sp.sell_price as "sellPriceMinor",
           sp.purchase_price as "purchasePriceMinor",
           sp.mrp as "mrpMinor",
@@ -320,7 +320,7 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
           sp.store_id as "storeId"
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
-        LEFT JOIN catalog.store_taxonomies t ON t.id = sp.taxonomy_id
+        LEFT JOIN catalog.fmcg_taxonomy t ON t.id = sp.taxonomy_id
         WHERE sp.is_active = true`;
 
       if (storeId) {
@@ -335,7 +335,7 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
       // Category-level margin aggregation
       query = `
         SELECT
-          COALESCE(t.name, 'Uncategorized') as "category",
+          COALESCE(t.label_en, 'Uncategorized') as "category",
           COUNT(*) as "productCount",
           ROUND(AVG(
             CASE WHEN sp.purchase_price > 0
@@ -349,7 +349,7 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
           SUM(COALESCE(sp.current_stock, 0)) as "totalStock"
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
-        LEFT JOIN catalog.store_taxonomies t ON t.id = sp.taxonomy_id
+        LEFT JOIN catalog.fmcg_taxonomy t ON t.id = sp.taxonomy_id
         WHERE sp.is_active = true`;
 
       if (storeId) {
@@ -358,7 +358,7 @@ adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
         paramIdx++;
       }
 
-      query += ` GROUP BY t.name ORDER BY "avgMarginPercent" DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+      query += ` GROUP BY t.label_en ORDER BY "avgMarginPercent" DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
       params.push(limit, offset);
     }
 

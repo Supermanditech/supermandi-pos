@@ -81,7 +81,7 @@ export function EnrollmentResultModal({ result, onClose }: EnrollmentResultModal
             </button>
           </div>
           <div style={{ fontSize: 13, color: '#666' }}>
-            <div>Expires: {new Date(result.expiresAt).toLocaleTimeString()}</div>
+            <div>Expires: {new Date(result.expiresAt).toLocaleString()}</div>
             <div>SMS: {result.smsSent ? 'Sent' : 'Skipped'}</div>
             <div>Email: {result.emailSent ? 'Sent' : 'Skipped'}</div>
           </div>

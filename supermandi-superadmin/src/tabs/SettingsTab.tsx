@@ -144,7 +144,7 @@ export function SettingsTab({
                     <td><span className={`badge ${flag.enabled ? "badgeOk" : "badgeError"}`}>{flag.enabled ? "ENABLED" : "DISABLED"}</span></td>
                     <td>{flag.flag_key === "minAppVersion" ? (<span style={{ fontSize: 12, color: "#666" }}>Auto (from build)</span>) : (<span style={{ color: "#999", fontSize: 11 }}>{"\u2014"}</span>)}</td>
                     <td>
-                      <button onClick={() => { if (flag.enabled) { setConfirmDialog({ title: "Kill Feature Flag", message: `Kill feature "${flag.flag_key}"? This will affect all stores.`, onConfirm: () => { setConfirmDialog(null); handleToggleGlobalFlag(flag.flag_key, false); }, confirmLabel: "Kill", variant: "danger" }); } else { handleToggleGlobalFlag(flag.flag_key, true); } }} disabled={featureFlagSaving[flag.flag_key]} style={{ background: flag.enabled ? "#ef4444" : "#22c55e", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer", fontSize: 12 }}>
+                      <button onClick={() => { handleToggleGlobalFlag(flag.flag_key, !flag.enabled); }} disabled={featureFlagSaving[flag.flag_key]} style={{ background: flag.enabled ? "#ef4444" : "#22c55e", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer", fontSize: 12 }}>
                         {featureFlagSaving[flag.flag_key] ? "Saving..." : flag.enabled ? "KILL" : "Enable"}
                       </button>
                     </td>

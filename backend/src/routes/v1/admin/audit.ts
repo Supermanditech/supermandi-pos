@@ -48,6 +48,34 @@ export interface AuditLogRecord {
   created_at: string;
 }
 
+// STG-048: POST /api/v1/admin/audit - Create manual audit log entry
+adminAuditRouter.post("/audit", async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { action, resourceType, resourceId, details } = req.body;
+
+  if (!action || !resourceType) {
+    return res.status(400).json({ error: "action and resourceType are required" });
+  }
+
+  try {
+    const adminId = (req as any).adminUserId || null;
+    const actorIp = req.ip || req.headers["x-forwarded-for"] || null;
+
+    await pool.query(
+      `INSERT INTO admin.audit_log (actor_user_id, actor_ip, action, resource_type, resource_id, request_body, response_status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 200, NOW())`,
+      [adminId, actorIp, action, resourceType, resourceId || null, details ? JSON.stringify(details) : null]
+    );
+
+    return res.json({ success: true });
+  } catch (error: unknown) {
+    log.error("[admin/audit] Failed to create audit log:", error);
+    return res.status(500).json({ error: "create_audit_failed" });
+  }
+});
+
 // GET /api/v1/admin/audit - Fetch audit logs
 adminAuditRouter.get("/audit", async (req, res) => {
   const pool = getPool();

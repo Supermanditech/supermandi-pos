@@ -10,7 +10,7 @@ interface UsersTabProps {
   userStatusSaving: Record<string, boolean>;
   userActionError: string;
   showCreateUser: boolean;
-  createUserForm: { name: string; email: string; phone: string; actor_type: string };
+  createUserForm: { name: string; email: string; phone: string; actor_type: string; actor_id: string };
   createUserLoading: boolean;
   createUserError: string;
   createUserSuccess: string;
@@ -64,6 +64,12 @@ export function UsersTab({
               </select>
             </div>
           </div>
+          {(createUserForm.actor_type === "store" || createUserForm.actor_type === "supplier") && (
+            <div className="control" style={{ marginTop: 8 }}>
+              <label>{createUserForm.actor_type === "store" ? "Store" : "Supplier"} ID *</label>
+              <input value={createUserForm.actor_id} onChange={(e) => setCreateUserForm((f) => ({ ...f, actor_id: e.target.value }))} placeholder={`Enter ${createUserForm.actor_type} UUID`} required />
+            </div>
+          )}
           {createUserForm.actor_type === "platform" && (
             <div className="muted" style={{ marginTop: 8, color: "#b45309", background: "#fef3c7", padding: 8, borderRadius: 4 }}>
               Creating a Platform Admin grants full system access. Additional verification required.

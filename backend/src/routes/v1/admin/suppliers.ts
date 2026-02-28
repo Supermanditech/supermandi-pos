@@ -215,7 +215,7 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
   try {
     await client.query("BEGIN");
 
-    // Get the supplier request
+    // Get the supplier request — check supplier_requests first, fall back to auth.applications
     const reqResult = await client.query(
       `SELECT sr.*, st.name as store_name, st.status as store_status
        FROM supplier.supplier_requests sr
@@ -224,12 +224,25 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
       [supplierId]
     );
 
+    // STG-038: Fall back to auth.applications for self-registered suppliers
+    let request: any;
     if (reqResult.rowCount === 0) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Supplier request not found or already processed" });
+      const appResult = await client.query(
+        `SELECT a.id, a.business_name, a.phone, a.email, a.status,
+                a.entity_type, a.created_at,
+                NULL as store_id, NULL as store_name, NULL as store_status
+         FROM auth.applications a
+         WHERE a.id = $1::uuid AND a.status = 'pending' AND a.entity_type = 'supplier'`,
+        [supplierId]
+      );
+      if (appResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Supplier request not found or already processed" });
+      }
+      request = appResult.rows[0];
+    } else {
+      request = reqResult.rows[0];
     }
-
-    const request = reqResult.rows[0];
 
     // GO-LIVE-130: Validate that the requesting store exists and is active
     if (request.store_id && request.store_status === 'deleted') {
@@ -734,6 +747,8 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermissi
         sp.moq,
         sp.supermandi_margin_minor as "marginMinor",
         sp.margin_percent as "marginPercent",
+        sp.image_url as "imageUrl",
+        sp.thumbnail_url as "thumbnailUrl",
         sp.edited_name as "editedName",
         sp.edited_category as "editedCategory",
         sp.created_at as "createdAt",

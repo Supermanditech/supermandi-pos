@@ -343,7 +343,7 @@ adminDeviceEnrollmentRouter.post("/device-enrollments/:code/resend", requireAdmi
           WHEN COALESCE(e.uses_count, 0) >= COALESCE(e.max_uses, 1) THEN 'USED'
           ELSE 'ACTIVE'
         END as status,
-        s.name as store_name, s.code as store_code, s.phone as store_phone, s.email as store_email,
+        s.name as store_name, s.code as store_code, COALESCE(s.contact_phone, s.phone) as store_phone, COALESCE(s.contact_email, s.email) as store_email,
         s.contact_name as contact_name
       FROM pos_device_enrollments e
       LEFT JOIN platform.stores s ON e.store_id = s.id

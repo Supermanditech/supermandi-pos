@@ -25,9 +25,8 @@ async function getJson<T>(path: string): Promise<T> {
     }
     const fallback = `Request failed (${res.status})`;
     // GL-CRIT-0055: Sanitize error messages
-    const rawError = data && typeof data === "object" && "error" in data
-      ? String((data as any).error)
-      : null;
+    const errorVal = data && typeof data === "object" && "error" in data ? (data as any).error : null;
+    const rawError = typeof errorVal === 'string' ? errorVal : errorVal?.message || null;
     throw new Error(sanitizeErrorMessage(rawError, fallback));
   }
   return data as T;

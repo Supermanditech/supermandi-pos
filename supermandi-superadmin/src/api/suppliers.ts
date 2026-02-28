@@ -396,7 +396,7 @@ export async function fetchSupplierStatusHistory(
   }
 
   const data = await res.json();
-  return Array.isArray(data?.history) ? data.history : [];
+  return Array.isArray(data?.status_history) ? data.status_history : Array.isArray(data?.history) ? data.history : [];
 }
 
 // =============================================================================

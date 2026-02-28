@@ -16,7 +16,7 @@ function createProps(overrides: Partial<Parameters<typeof UsersTab>[0]> = {}) {
     userStatusSaving: {},
     userActionError: '',
     showCreateUser: false,
-    createUserForm: { name: '', email: '', phone: '', actor_type: 'store' },
+    createUserForm: { name: '', email: '', phone: '', actor_type: 'store', actor_id: '' },
     createUserLoading: false,
     createUserError: '',
     createUserSuccess: '',
@@ -74,7 +74,7 @@ describe('UsersTab', () => {
   });
 
   it('shows platform admin warning when actor_type is platform', () => {
-    render(<UsersTab {...createProps({ showCreateUser: true, createUserForm: { name: '', email: '', phone: '', actor_type: 'platform' } })} />);
+    render(<UsersTab {...createProps({ showCreateUser: true, createUserForm: { name: '', email: '', phone: '', actor_type: 'platform', actor_id: '' } })} />);
     expect(screen.getByText(/Platform Admin grants full system access/)).toBeTruthy();
   });
 

@@ -566,8 +566,8 @@ export default function App() {
 
   // SA-1.3-004: User creation state
   const [showCreateUser, setShowCreateUser] = useState<boolean>(false);
-  const [createUserForm, setCreateUserForm] = useState<{ name: string; email: string; phone: string; actor_type: string }>({
-    name: "", email: "", phone: "", actor_type: "store"
+  const [createUserForm, setCreateUserForm] = useState<{ name: string; email: string; phone: string; actor_type: string; actor_id: string }>({
+    name: "", email: "", phone: "", actor_type: "store", actor_id: ""
   });
   const [createUserLoading, setCreateUserLoading] = useState<boolean>(false);
   const [createUserError, setCreateUserError] = useState<string>("");
@@ -965,7 +965,7 @@ export default function App() {
     setCreateUserError("");
     setCreateUserSuccess("");
 
-    const { name, email, phone, actor_type } = createUserForm;
+    const { name, email, phone, actor_type, actor_id } = createUserForm;
     if (!name.trim()) {
       setCreateUserError("Name is required");
       return;
@@ -978,6 +978,11 @@ export default function App() {
     // USERS-PHONE-VALIDATION-MISSING: validate Indian mobile number format when provided
     if (phone.trim() && !/^(\+91|0)?[6-9]\d{9}$/.test(phone.trim())) {
       setCreateUserError("Phone must be a valid Indian mobile number (+91XXXXXXXXXX or 10-digit)");
+      return;
+    }
+    // STG-041: actor_id is required for store/supplier user types
+    if ((actor_type === "store" || actor_type === "supplier") && !actor_id.trim()) {
+      setCreateUserError(`${actor_type === "store" ? "Store" : "Supplier"} ID is required for ${actor_type} users`);
       return;
     }
 
@@ -998,7 +1003,8 @@ export default function App() {
       name: name.trim(),
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
-      actor_type: actor_type || "store"
+      actor_type: actor_type || "store",
+      actor_id: actor_id.trim() || undefined
     });
   }
 
@@ -1009,7 +1015,7 @@ export default function App() {
       const newUser = await createUser(input);
       setUserRecords((prev) => [newUser, ...prev]);
       setCreateUserSuccess(`User "${newUser.name}" created successfully!`);
-      setCreateUserForm({ name: "", email: "", phone: "", actor_type: "store" });
+      setCreateUserForm({ name: "", email: "", phone: "", actor_type: "store", actor_id: "" });
       setAdminVerificationReason("");
       // GL-CRIT-0049: Log successful user creation
       logAdminAction('user_create', 'user', newUser.id, {

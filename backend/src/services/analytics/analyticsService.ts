@@ -135,7 +135,8 @@ export type PaymentsAnalyticsResult = {
 export type DueRow = {
   sale_id: string;
   bill_ref: string;
-  total_minor: number;
+  amount_minor: number;
+  customer_name: string | null;
   created_at: string;
   age_days: number;
 };
@@ -1262,7 +1263,7 @@ export async function fetchDuesAnalytics(params: {
 
   const duesRes = await pool.query(
     `
-    SELECT id, bill_ref, total_minor, created_at
+    SELECT id, bill_ref, total_minor, customer_name, created_at
     FROM sales
     WHERE status = 'DUE'
       AND created_at >= $1
@@ -1304,7 +1305,8 @@ export async function fetchDuesAnalytics(params: {
     return {
       sale_id: row.id,
       bill_ref: row.bill_ref,
-      total_minor: amount,
+      amount_minor: amount,
+      customer_name: row.customer_name || null,
       created_at: createdAt.toISOString(),
       age_days: ageDays
     };
