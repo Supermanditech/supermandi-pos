@@ -44,6 +44,8 @@
   /* Semantic */
   --secondary: #64748b;
   --success: #22c55e;
+  --success-soft: #f0fdf4;
+  --success-soft-border: #bbf7d0;
   --warning: #f59e0b;
   --danger: #ef4444;
   /* Surfaces */
@@ -73,6 +75,8 @@
   --border: #334155;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
+  --success-soft: #052e16;
+  --success-soft-border: #166534;
   --brand-pill-bg: #ffffff;
   --brand-pill-text: #0b1220;
 }

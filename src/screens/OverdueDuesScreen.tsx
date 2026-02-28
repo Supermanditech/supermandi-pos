@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme, colors, useThemeColors } from "../theme";
+import { theme, useThemeColors, type ColorPalette } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDate } from "../i18n/formatters";
 import { apiClient } from "../services/api/apiClient";
@@ -54,8 +54,8 @@ interface OverdueDuesResponse {
 // =============================================================================
 
 /** Get severity color based on days overdue */
-function getSeverityColor(daysOverdue: number): string {
-  if (daysOverdue > 30) return theme.colors.error;
+function getSeverityColor(daysOverdue: number, colors: ColorPalette): string {
+  if (daysOverdue > 30) return colors.error;
   if (daysOverdue > 7) return colors.warning; // orange
   return colors.warning; // yellow
 }
@@ -381,7 +381,7 @@ export default function OverdueDuesScreen({
     ({ item }: { item: OverdueDue }) => {
       // STG-139: daysOverdue can be null if no due_date set
       const daysOverdue = item.daysOverdue ?? 0;
-      const severityColor = getSeverityColor(daysOverdue);
+      const severityColor = getSeverityColor(daysOverdue, colors);
       const severityLabel = getSeverityLabel(daysOverdue);
       const reminderSent = reminderSentMap[item.id];
 

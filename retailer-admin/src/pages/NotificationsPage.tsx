@@ -141,8 +141,8 @@ export default function NotificationsPage() {
               onClick={() => !n.isRead && markAsRead(n.id)}
               style={{
                 display: 'flex', gap: '0.75rem', padding: '0.875rem 1rem',
-                background: n.isRead ? 'var(--surface)' : '#f0fdf4',
-                border: `1px solid ${n.isRead ? 'var(--border)' : '#bbf7d0'}`,
+                background: n.isRead ? 'var(--surface)' : 'var(--success-soft)',
+                border: `1px solid ${n.isRead ? 'var(--border)' : 'var(--success-soft-border)'}`,
                 borderRadius: '0.5rem', cursor: n.isRead ? 'default' : 'pointer',
                 transition: 'background 0.15s',
               }}

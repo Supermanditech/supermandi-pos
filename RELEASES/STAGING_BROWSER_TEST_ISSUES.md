@@ -2411,6 +2411,51 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+## Reiteration Pass (STG-207..233) — 3 new issues found
+
+> **Audit date**: 2026-02-28
+> **Scope**: Only screens, flows, shared components, and auth/theme/navigation paths touched by STG-207..233
+> **Platforms**: Retailer (11 files), Supplier (5 files), SuperAdmin (13 files sampled), POS (15 files sampled + tsc), Cross-surface (15 checks)
+> **Result**: 3 regressions found, all FIXED immediately
+
+### STG-234: SuperAdmin MonitoringTab — CSS var + hex opacity suffix produces invalid CSS
+- **Platform**: SuperAdmin (Vite + React)
+- **Screen**: MonitoringTab — Overall status banner
+- **Reproduction**: Open Monitoring tab → status banner border is invisible
+- **Expected**: Status banner has a subtle colored border matching the status color
+- **Actual**: Template literal `` `1px solid ${overallColor.dot}33` `` produces `1px solid var(--color-success)33` which is invalid CSS — browsers silently discard it
+- **Severity**: P3 (cosmetic — border missing, not blocking)
+- **Root cause**: STG-227 migrated `statusColor().dot` from raw hex `#22c55e` to CSS var `var(--color-success)`. Appending `33` opacity suffix only works with raw hex, not CSS var() expressions.
+- **Fix**: Use the soft background color (`overallColor.bg`) for the border instead of dot+opacity — visually equivalent and CSS-var-safe
+- **Files**: `supermandi-superadmin/src/tabs/MonitoringTab.tsx`
+- **Status**: FIXED
+
+### STG-235: Retailer NotificationsPage — unread notification dark mode colors hardcoded
+- **Platform**: Retailer Admin (Vite + React)
+- **Screen**: NotificationsPage — unread notification row
+- **Reproduction**: Switch to dark mode → unread notifications show bright `#f0fdf4` green background
+- **Expected**: Unread notification background adapts to dark mode
+- **Actual**: Read state correctly uses `var(--surface)` / `var(--border)`, but unread state uses hardcoded `#f0fdf4` / `#bbf7d0` which appear jarring in dark mode
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Root cause**: STG-219 dark mode migration missed the unread notification highlight colors
+- **Fix**: Added `--success-soft` and `--success-soft-border` CSS vars to `:root` and `:root.dark`; replaced hardcoded colors with vars
+- **Files**: `retailer-admin/src/index.css`, `retailer-admin/src/pages/NotificationsPage.tsx`
+- **Status**: FIXED
+
+### STG-236: POS OverdueDuesScreen — getSeverityColor helper uses static theme colors
+- **Platform**: POS App (React Native / Expo)
+- **Screen**: OverdueDuesScreen — overdue item severity color coding
+- **Reproduction**: Switch to dark mode → severity colors still use light mode palette
+- **Expected**: Severity indicator colors respond to dark/light theme
+- **Actual**: `getSeverityColor()` helper defined outside component uses `theme.colors.error` (static) and static `colors.warning` import, not the dynamic `useThemeColors()` result
+- **Severity**: P3 (cosmetic — colors close enough in light mode, wrong in dark mode)
+- **Root cause**: STG-231 migration agent missed this non-hook helper function that references colors outside the component scope
+- **Fix**: Added `colors: ColorPalette` parameter to `getSeverityColor()`, pass dynamic `colors` from inside component, removed unused static `colors` import
+- **Files**: `src/screens/OverdueDuesScreen.tsx`
+- **Status**: FIXED
+
+---
+
 ## Redeploy Checklist (run after all issues FIXED)
 
 - [ ] `pnpm -r typecheck` — 0 errors

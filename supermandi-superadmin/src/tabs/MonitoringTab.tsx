@@ -156,7 +156,7 @@ export function MonitoringTab() {
       {health && (
         <div style={{
           padding: 16, marginBottom: 20, borderRadius: 8,
-          backgroundColor: overallColor.bg, border: `1px solid ${overallColor.dot}33`,
+          backgroundColor: overallColor.bg, border: `1px solid ${overallColor.bg}`,
           display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
