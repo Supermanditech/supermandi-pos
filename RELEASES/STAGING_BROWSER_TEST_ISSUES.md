@@ -1799,17 +1799,123 @@
 
 ---
 
+## Reiteration Pass: Regression Issues (STG-186 → STG-195)
+
+Found during the post-implementation reiteration audit of the 185-ticket wave.
+
+### STG-186: POS — Reports/DailyClosing payment breakdown always zero (status vs payment_mode)
+- **Portal**: POS
+- **Page**: Daily Report + Daily Closing
+- **Symptom**: Payment split breakdown (cash/UPI/DUE) always shows 0 for all categories despite having sales.
+- **Root Cause**: SQL used `CASE WHEN payment_mode = 'CASH'` but `sales.payment_mode` is only set for SPLIT payments. Non-split sales use `status` column (`PAID_CASH`, `PAID_UPI`, `DUE`). Both `reports.ts` and `dailyClosing.ts` had this bug, making daily closing reconciliation (`expectedCashMinor`) always wrong.
+- **Fix**: Changed `payment_mode = 'CASH'` to `status = 'PAID_CASH'`, `payment_mode = 'UPI'` to `status = 'PAID_UPI'`, `payment_mode = 'DUE'` to `status = 'DUE'` in both files.
+- **Files**: `backend/src/routes/v1/pos/reports.ts:34-36`, `backend/src/routes/v1/pos/dailyClosing.ts:29-31`
+- **Severity**: CRITICAL — Daily closing reconciliation completely broken
+- **Status**: FIXED
+
+### STG-187: POS — BNPL cash repayment crashes (buy_payments mode constraint missing 'CASH')
+- **Portal**: POS
+- **Page**: BNPL repayment
+- **Symptom**: Cash repayment of BNPL drawdown crashes with CHECK constraint violation.
+- **Root Cause**: `chk_buy_payments_mode` (migration 049) allows only `('UPI', 'BANK', 'BNPL', 'CREDIT')` but `bnpl.ts:340` inserts `mode = 'CASH'`.
+- **Fix**: New migration `171_fix_buy_payments_mode_constraint.sql` adds `'CASH'` to the constraint.
+- **Files**: `backend/migrations/171_fix_buy_payments_mode_constraint.sql`, `backend/src/routes/v1/pos/bnpl.ts:340`
+- **Severity**: HIGH — Blocks all BNPL cash repayments
+- **Status**: FIXED
+
+### STG-188: SuperAdmin — AI Copilot XSS via unsanitized dangerouslySetInnerHTML
+- **Portal**: SuperAdmin
+- **Page**: AI Copilot panel
+- **Symptom**: AI-generated responses rendered via `dangerouslySetInnerHTML` without sanitization. Prompt injection could execute arbitrary JS.
+- **Root Cause**: STG-052 fix added markdown-to-HTML regex rendering but used `$1` capture groups on raw, unescaped AI output. Heading text like `### <script>alert(1)</script>` would execute.
+- **Fix**: Added HTML entity escaping (`&`, `<`, `>`, `"`) before the markdown regex chain, neutralizing any embedded HTML.
+- **Files**: `supermandi-superadmin/src/components/AiPanel.tsx:110`
+- **Severity**: HIGH — XSS vector (admin-only, but still a security hole)
+- **Status**: FIXED
+
+### STG-189: Retailer — Login falls back to unscoped token on select-store failure (store isolation)
+- **Portal**: Retailer Admin
+- **Page**: Login → store selection
+- **Symptom**: If `select-store` API fails (non-OK or network error), user is logged in with the original unscoped JWT that may lack `actorId`/`storeId`. Subsequent API calls could bypass store isolation.
+- **Root Cause**: LoginPage.tsx fallback logic called `login()` with original token on both error and catch paths instead of showing an error and blocking access.
+- **Fix**: Changed both fallback paths to `setError()` + `return` instead of `login()`. User must retry or re-authenticate.
+- **Files**: `retailer-admin/src/pages/LoginPage.tsx:261-267`
+- **Severity**: HIGH — Store isolation violation for multi-store users
+- **Status**: FIXED
+
+### STG-190: SuperAdmin — Supplier approve/reject use inconsistent status checks
+- **Portal**: SuperAdmin
+- **Page**: Supplier management (approve/reject endpoints)
+- **Symptom**: Approve endpoint accepts only `KYC_SUBMITTED` status, reject endpoint accepts only `pending`. A supplier with status `KYC_SUBMITTED` can be approved but not rejected. A supplier with status `pending` can be rejected but not approved.
+- **Root Cause**: The two parallel endpoints used different status constants. The verify fallback also used `a.status = 'pending'` while the listing used `IN ('KYC_SUBMITTED', 'PAYMENTS_SUBMITTED')`.
+- **Fix**: (a) Reject now accepts `['pending', 'KYC_SUBMITTED', 'PAYMENTS_SUBMITTED']`. (b) Verify fallback query now uses `IN ('pending', 'KYC_SUBMITTED', 'PAYMENTS_SUBMITTED')`.
+- **Files**: `backend/src/routes/v1/admin/suppliers.ts:677,235`
+- **Severity**: HIGH — Suppliers stuck in unprocessable state
+- **Status**: FIXED
+
+### STG-191: POS — Split payment confirm-cash query missing store_id filter
+- **Portal**: POS
+- **Page**: Split payment cash confirmation
+- **Symptom**: The pending payment count query lacks `store_id` filter — counts across all stores. Violates store isolation invariant.
+- **Root Cause**: `SELECT COUNT(*) FROM sell_payments WHERE sale_id = $1 AND status != 'completed'` missing `AND store_id = $2`.
+- **Fix**: Added `AND store_id = $2` and passed `storeId` as second parameter.
+- **Files**: `backend/src/routes/v1/pos/payments.ts:823-825`
+- **Severity**: MEDIUM — Store isolation invariant violation (low practical risk due to UUID uniqueness)
+- **Status**: FIXED
+
+### STG-192: SuperAdmin — UsersTab prop type missing actor_id field
+- **Portal**: SuperAdmin
+- **Page**: Users tab → Create User form
+- **Symptom**: TypeScript type for `setCreateUserForm` callback didn't include `actor_id` field, causing type contract mismatch between App.tsx and UsersTab.tsx.
+- **Root Cause**: STG-041 added `actor_id` to App.tsx state but the UsersTab prop interface wasn't updated to match.
+- **Fix**: Added `actor_id: string` to the `setCreateUserForm` callback type in UsersTabProps.
+- **Files**: `supermandi-superadmin/src/tabs/UsersTab.tsx:19`
+- **Severity**: MEDIUM — Type safety gap
+- **Status**: FIXED
+
+### STG-193: POS — PaymentScreen allowedMethods missing from useEffect deps
+- **Portal**: POS
+- **Page**: Payment screen
+- **Symptom**: Network-recovery and UPI-guard `useEffect` hooks capture `allowedMethods` in closure but don't list it in dependency arrays, causing stale fallback behavior.
+- **Root Cause**: Two `useEffect` hooks (lines 252, 312) use `allowedMethods` for payment mode fallback but omit it from deps.
+- **Fix**: Added `allowedMethods` to both dependency arrays.
+- **Files**: `src/screens/PaymentScreen.tsx:252,312`
+- **Severity**: MEDIUM — Stale closure on network recovery
+- **Status**: FIXED
+
+### STG-194: POS — checkoutService console.log in production without __DEV__ guard
+- **Portal**: POS
+- **Page**: Every checkout
+- **Symptom**: `console.log` runs on every successful sale in production, leaking sale IDs and payment status to device logs.
+- **Root Cause**: Missing `__DEV__` guard on diagnostic log at line 83.
+- **Fix**: Wrapped with `if (__DEV__)`.
+- **Files**: `src/services/checkoutService.ts:83`
+- **Severity**: LOW
+- **Status**: FIXED
+
+### STG-195: Backend — Document upload admin token uses timing-unsafe comparison
+- **Portal**: All (document upload endpoint)
+- **Page**: `/api/v1/documents/upload`
+- **Symptom**: Admin token check uses `===` string comparison instead of `crypto.timingSafeEqual()`, vulnerable to timing side-channel attacks.
+- **Root Cause**: Upload auth path at line 200 uses inline `adminToken === ADMIN_TOKEN_CACHED` while the download path correctly uses `isValidAdminRequest()` (timing-safe).
+- **Fix**: Replaced inline `===` check with `isValidAdminRequest(req)` call.
+- **Files**: `backend/src/routes/v1/documents.ts:200`
+- **Severity**: LOW — Timing side-channel (requires network analysis)
+- **Status**: FIXED
+
+---
+
 ## Summary
 
 | Status | Count |
 |--------|-------|
-| FIXED | 184 |
+| FIXED | 194 |
 | DIAGNOSED | 0 |
 | INFRA-ONLY | 0 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **185** |
+| **Total** | **195** |
 
 | Source | Range | Count |
 |--------|-------|-------|
@@ -1818,6 +1924,7 @@
 | Code-level audit: Supplier | STG-072 → STG-091 | 20 |
 | Code-level audit: POS App | STG-092 → STG-174 | 83 |
 | **Live staging audit** | **STG-175 → STG-185** | **11** |
+| **Reiteration regression audit** | **STG-186 → STG-195** | **10** |
 
 ---
 

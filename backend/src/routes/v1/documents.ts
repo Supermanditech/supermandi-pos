@@ -197,7 +197,7 @@ router.post("/upload", (req: Request, res: Response, next: NextFunction) => {
     const deviceToken = req.headers['x-device-token'] as string | undefined;
     const hasValidAuth =
       (authHeader && authHeader.startsWith('Bearer ') && authHeader.length > 7) ||
-      (adminToken && ADMIN_TOKEN_CACHED && adminToken === ADMIN_TOKEN_CACHED) ||
+      isValidAdminRequest(req) ||
       (deviceToken && deviceToken.length > 0);
     if (!hasValidAuth && entity_type !== 'application') {
       res.status(401).json({

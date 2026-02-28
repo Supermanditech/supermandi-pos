@@ -80,7 +80,7 @@ export async function completeCheckout(
   const inventoryDeducted = true; // Backend handles via applyBulkDeductions
 
   // Step 3: Return result
-  console.log(`[Checkout] Completed sale ${saleId}, payment: ${paymentStatus}, inventory: ${inventoryDeducted}`);
+  if (__DEV__) console.log(`[Checkout] Completed sale ${saleId}, payment: ${paymentStatus}, inventory: ${inventoryDeducted}`);
 
   return {
     success: true,

@@ -16,7 +16,7 @@ interface UsersTabProps {
   createUserSuccess: string;
   setUserSearch: (v: string) => void;
   setShowCreateUser: (v: boolean) => void;
-  setCreateUserForm: (fn: (f: { name: string; email: string; phone: string; actor_type: string }) => { name: string; email: string; phone: string; actor_type: string }) => void;
+  setCreateUserForm: (fn: (f: { name: string; email: string; phone: string; actor_type: string; actor_id: string }) => { name: string; email: string; phone: string; actor_type: string; actor_id: string }) => void;
   refreshUsers: () => void;
   requestUserStatusChange: (userId: string, newStatus: "active" | "inactive" | "suspended") => void;
   requestCreateUser: () => void;

@@ -31,9 +31,9 @@ posReportsRouter.get(
           COUNT(*)::text as total_bills,
           COALESCE(AVG(s.total_minor), 0)::text as average_bill_minor,
           COALESCE((SELECT SUM(si.quantity) FROM sale_items si WHERE si.sale_id = ANY(ARRAY_AGG(s.id))), 0)::text as total_items_sold,
-          COALESCE(SUM(CASE WHEN s.payment_mode = 'CASH' THEN s.total_minor ELSE 0 END), 0)::text as cash_minor,
-          COALESCE(SUM(CASE WHEN s.payment_mode = 'UPI' THEN s.total_minor ELSE 0 END), 0)::text as upi_minor,
-          COALESCE(SUM(CASE WHEN s.payment_mode = 'DUE' THEN s.total_minor ELSE 0 END), 0)::text as due_minor
+          COALESCE(SUM(CASE WHEN s.status = 'PAID_CASH' THEN s.total_minor ELSE 0 END), 0)::text as cash_minor,
+          COALESCE(SUM(CASE WHEN s.status = 'PAID_UPI' THEN s.total_minor ELSE 0 END), 0)::text as upi_minor,
+          COALESCE(SUM(CASE WHEN s.status = 'DUE' THEN s.total_minor ELSE 0 END), 0)::text as due_minor
         FROM sales s
         WHERE s.store_id = $1
           AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2

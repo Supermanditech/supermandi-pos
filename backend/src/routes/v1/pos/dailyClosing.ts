@@ -26,9 +26,9 @@ async function computeDailySummary(pool: any, storeId: string, date: string) {
     `SELECT
       COALESCE(SUM(total_minor), 0)::bigint AS total_sales_minor,
       COUNT(*)::int AS sales_count,
-      COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::bigint AS cash_minor,
-      COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_minor ELSE 0 END), 0)::bigint AS upi_minor,
-      COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint AS due_minor
+      COALESCE(SUM(CASE WHEN status = 'PAID_CASH' THEN total_minor ELSE 0 END), 0)::bigint AS cash_minor,
+      COALESCE(SUM(CASE WHEN status = 'PAID_UPI' THEN total_minor ELSE 0 END), 0)::bigint AS upi_minor,
+      COALESCE(SUM(CASE WHEN status = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint AS due_minor
     FROM public.sales
     WHERE store_id = $1
       AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2

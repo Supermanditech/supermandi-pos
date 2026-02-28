@@ -259,12 +259,12 @@ export default function LoginPage() {
         const result = await safeJson<any>(response);
         login(result.token, result.refreshToken || authData.refreshToken, authData.user, store);
       } else {
-        // Fallback: use the original token (may still work for single-store users)
-        login(authData.token, authData.refreshToken, authData.user, store);
+        setError('Failed to select store. Please try again.');
+        return;
       }
     } catch {
-      // Fallback on network error
-      login(authData.token, authData.refreshToken, authData.user, store);
+      setError('Network error selecting store. Please try again.');
+      return;
     }
     navigate(`/s/${store.code}`, { replace: true });
   };

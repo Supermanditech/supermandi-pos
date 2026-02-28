@@ -821,8 +821,8 @@ posPaymentsRouter.post(
       // Check if all payments for this sale are completed
       const pendingPayments = await client.query(
         `SELECT COUNT(*) as pending FROM payments.sell_payments
-         WHERE sale_id = $1 AND status != 'completed' AND is_split = true`,
-        [payment.sale_id]
+         WHERE sale_id = $1 AND store_id = $2 AND status != 'completed' AND is_split = true`,
+        [payment.sale_id, storeId]
       );
 
       const pendingCount = parseInt(pendingPayments.rows[0]?.pending || '0', 10);

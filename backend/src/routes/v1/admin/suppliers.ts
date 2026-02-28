@@ -232,7 +232,7 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
                 a.entity_type, a.created_at,
                 NULL as store_id, NULL as store_name, NULL as store_status
          FROM auth.applications a
-         WHERE a.id = $1::uuid AND a.status = 'pending' AND a.entity_type = 'supplier'`,
+         WHERE a.id = $1::uuid AND a.status IN ('pending', 'KYC_SUBMITTED', 'PAYMENTS_SUBMITTED') AND a.entity_type = 'supplier'`,
         [supplierId]
       );
       if (appResult.rowCount === 0) {
@@ -674,7 +674,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, re
       return res.status(404).json({ error: "Supplier not found" });
     }
 
-    if (checkResult.rows[0].verification_status !== 'pending') {
+    if (!['pending', 'KYC_SUBMITTED', 'PAYMENTS_SUBMITTED'].includes(checkResult.rows[0].verification_status)) {
       await client.query("ROLLBACK");
       return res.status(400).json({ error: "Supplier is not pending verification" });
     }

@@ -249,7 +249,7 @@ const PaymentScreen = () => {
     });
 
     return () => unsubscribe();
-  }, [selectedMode, isOnline, paymentId, saleId]);
+  }, [selectedMode, isOnline, paymentId, saleId, allowedMethods]);
 
   useEffect(() => {
     let cancelled = false;
@@ -309,7 +309,7 @@ const PaymentScreen = () => {
       setUpiIntent(null);
       setPaymentId(null);
     }
-  }, [selectedMode, storeActive, upiVpa]);
+  }, [selectedMode, storeActive, upiVpa, allowedMethods]);
 
   useEffect(() => {
     if (saleId || saleItems.length === 0 || loadingSale) return;
