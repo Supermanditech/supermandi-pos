@@ -92,8 +92,9 @@ export default function InventoryPage() {
     try {
       // Map display filter to API transaction types
       let url = '/api/v1/retailer-admin/inventory/ledger?limit=100';
+      // STG-060: INWARD includes purchase_received, sale_return, and opening_stock
       if (filter === 'INWARD') {
-        url += '&transactionType=purchase_received';
+        url += '&transactionType=purchase_received,sale_return,opening_stock';
       } else if (filter === 'OUTWARD') {
         url += '&transactionType=sale';
       } else if (filter === 'ADJUSTMENT') {

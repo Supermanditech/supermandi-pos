@@ -36,7 +36,8 @@ interface ValidationErrors {
 
 export default function SettingsPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
-  const { store, accessToken } = useAuth();
+  // STG-071: Destructure logout for password change session invalidation
+  const { store, accessToken, logout } = useAuth();
 
   // Form state
   const [settings, setSettings] = useState<StoreSettings>({
@@ -223,7 +224,8 @@ export default function SettingsPage() {
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         const data = await safeJson(response);
-        setSaveError(data.error || 'Failed to save settings');
+        // STG-070: Extract message from error object instead of rendering [object Object]
+        setSaveError(typeof data.error === 'string' ? data.error : (data.error?.message || 'Failed to save settings'));
       }
     } catch (err: any) {
       logger.error('Failed to save settings:', err);
@@ -264,11 +266,15 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
+        // STG-071: Password change invalidates all sessions server-side.
+        // Show success message briefly, then log out and redirect to login.
         setPasswordSuccess(true);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        setTimeout(() => setPasswordSuccess(false), 3000);
+        setTimeout(() => {
+          logout();
+        }, 2000);
       } else {
         const data = await safeJson(response);
         setPasswordError(data.error?.message || 'Failed to change password');

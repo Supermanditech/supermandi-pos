@@ -466,10 +466,25 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
     const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
 
     // P1-INV-001: Get total count + aggregate totals across ALL products (not just page)
+    // STG-061: Include totalPurchaseValue and totalSellRevenue in the aggregate query
     const countResult = await pool.query(
       `SELECT
         COUNT(*)::int as "totalProducts",
-        COALESCE(SUM(COALESCE(sb.current_qty, sp.current_stock, 0)), 0)::bigint as "totalStockQty"
+        COALESCE(SUM(COALESCE(sb.current_qty, sp.current_stock, 0)), 0)::bigint as "totalStockQty",
+        COALESCE(SUM(
+          (SELECT SUM(ABS(delta_qty) * COALESCE(unit_cost, 0))
+           FROM inventory.inventory_ledger il
+           WHERE il.store_id = sp.store_id
+             AND il.product_id = sp.product_id
+             AND il.transaction_type IN ('purchase_received', 'opening_stock'))
+        ), 0)::bigint as "totalPurchaseValue",
+        COALESCE(SUM(
+          (SELECT SUM(ABS(delta_qty) * COALESCE(unit_cost, 0))
+           FROM inventory.inventory_ledger il
+           WHERE il.store_id = sp.store_id
+             AND il.product_id = sp.product_id
+             AND il.transaction_type = 'sale')
+        ), 0)::bigint as "totalSellRevenue"
       FROM catalog.store_products sp
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
       WHERE sp.store_id = $1
@@ -478,6 +493,8 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
     );
     const totalProducts = Number(countResult.rows[0]?.totalProducts) || 0;
     const totalStockQty = Number(countResult.rows[0]?.totalStockQty) || 0;
+    const globalTotalPurchaseValue = Number(countResult.rows[0]?.totalPurchaseValue) || 0;
+    const globalTotalSellRevenue = Number(countResult.rows[0]?.totalSellRevenue) || 0;
 
     // CA-1.4-004: Query store_products with canonical stock from stock_balances
     // Prioritize inventory.stock_balances as the source of truth, fallback to sp.current_stock
@@ -524,11 +541,12 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
 
     // RCAT-METRICS-001: Compute totals server-side for accuracy
     // P1-INV-001: totalProducts and totalStockQty from COUNT query (all products)
+    // STG-061: Use global aggregates instead of page-limited sum
     const totals = {
       totalProducts,
       totalStockQty,
-      totalPurchaseValue: data.reduce((sum, r) => sum + r.totalPurchaseValue, 0),
-      totalSellRevenue: data.reduce((sum, r) => sum + r.totalSellRevenue, 0),
+      totalPurchaseValue: globalTotalPurchaseValue,
+      totalSellRevenue: globalTotalSellRevenue,
     };
 
     // GO-LIVE-261: Add lastUpdated timestamp for data freshness
@@ -604,9 +622,17 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
     }
 
     if (transactionType && typeof transactionType === "string") {
-      whereClause += ` AND il.transaction_type = $${paramIndex}`;
-      params.push(transactionType);
-      paramIndex++;
+      // STG-060: Support comma-separated transaction types for INWARD filter
+      const types = transactionType.split(',').map(t => t.trim()).filter(Boolean);
+      if (types.length === 1) {
+        whereClause += ` AND il.transaction_type = $${paramIndex}`;
+        params.push(types[0]);
+        paramIndex++;
+      } else if (types.length > 1) {
+        const placeholders = types.map((_, i) => `$${paramIndex + i}`).join(', ');
+        whereClause += ` AND il.transaction_type IN (${placeholders})`;
+        types.forEach(t => { params.push(t); paramIndex++; });
+      }
     }
 
     // T-062: Supplier filter
@@ -623,8 +649,12 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
     }
 
     if (endDate && typeof endDate === "string") {
+      // STG-059: Interpret endDate as end-of-day to avoid excluding IST entries
+      // new Date('2026-02-28') gives midnight UTC = 5:30 AM IST, cutting off the day
       whereClause += ` AND il.created_at <= $${paramIndex}`;
-      params.push(new Date(endDate).toISOString());
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      params.push(endOfDay.toISOString());
       paramIndex++;
     }
 

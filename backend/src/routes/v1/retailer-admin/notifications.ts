@@ -17,9 +17,17 @@ import { log } from "../../../lib/logger";
 
 export const retailerNotificationsRouter = Router();
 
+// STG-067: Helper to extract auth context from gateway headers (not req.userId/req.storeId)
+function getNotifUserId(req: Request): string | undefined {
+  return (req.headers['x-user-id'] as string) || undefined;
+}
+function getNotifStoreId(req: Request): string | undefined {
+  return (req.headers['x-actor-id'] as string) || undefined;
+}
+
 // POST /notifications/device-token — Register web push token
 retailerNotificationsRouter.post('/notifications/device-token', async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
+  const userId = getNotifUserId(req);
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
 
   const { token } = req.body as { token?: string };
@@ -38,7 +46,7 @@ retailerNotificationsRouter.post('/notifications/device-token', async (req: Requ
 
 // DELETE /notifications/device-token — Remove push token
 retailerNotificationsRouter.delete('/notifications/device-token', async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
+  const userId = getNotifUserId(req);
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
 
   const { token } = req.body as { token?: string };
@@ -54,8 +62,8 @@ retailerNotificationsRouter.delete('/notifications/device-token', async (req: Re
 
 // GET /notifications — Notification history (paginated)
 retailerNotificationsRouter.get('/notifications', async (req: Request, res: Response) => {
-  const storeId = (req as any).storeId;
-  const userId = (req as any).userId;
+  const storeId = getNotifStoreId(req);
+  const userId = getNotifUserId(req);
   if (!storeId && !userId) return res.status(401).json({ error: 'Authentication required' });
 
   const pool = getPool();
@@ -110,8 +118,8 @@ retailerNotificationsRouter.get('/notifications', async (req: Request, res: Resp
 
 // GET /notifications/unread-count
 retailerNotificationsRouter.get('/notifications/unread-count', async (req: Request, res: Response) => {
-  const storeId = (req as any).storeId;
-  const userId = (req as any).userId;
+  const storeId = getNotifStoreId(req);
+  const userId = getNotifUserId(req);
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });
@@ -134,8 +142,8 @@ retailerNotificationsRouter.get('/notifications/unread-count', async (req: Reque
 
 // PUT /notifications/:id/read — Mark as read
 retailerNotificationsRouter.put('/notifications/:id/read', async (req: Request, res: Response) => {
-  const storeId = (req as any).storeId;
-  const userId = (req as any).userId;
+  const storeId = getNotifStoreId(req);
+  const userId = getNotifUserId(req);
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });
@@ -155,8 +163,8 @@ retailerNotificationsRouter.put('/notifications/:id/read', async (req: Request, 
 
 // PUT /notifications/read-all
 retailerNotificationsRouter.put('/notifications/read-all', async (req: Request, res: Response) => {
-  const storeId = (req as any).storeId;
-  const userId = (req as any).userId;
+  const storeId = getNotifStoreId(req);
+  const userId = getNotifUserId(req);
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });

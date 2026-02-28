@@ -771,7 +771,8 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
     const storeCity = storeResult.rows[0]?.city || null;
     const storeState = storeResult.rows[0]?.state || null;
 
-    let whereClause = `WHERE sp.approval_status = 'approved' AND s.verification_status = 'verified' AND s.status = 'active'`;
+    // STG-062: Added sp.is_active = true to exclude deactivated supplier products from catalog
+    let whereClause = `WHERE sp.approval_status = 'approved' AND s.verification_status = 'verified' AND s.status = 'active' AND sp.is_active = true`;
     const params: any[] = [];
     let paramIndex = 1;
 

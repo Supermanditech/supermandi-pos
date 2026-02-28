@@ -233,9 +233,11 @@ router.all("/lookup", registrationRateLimiter, async (req: Request, res: Respons
       return;
     }
 
-    // For pending/in-progress applications
+    // STG-057: Include application_id for resume flow — phone ownership was already verified via OTP
+    // before the frontend calls this lookup, so exposing the ID is safe
     res.json({
       action: nextStep,
+      application_id: application.id,
       message: nextStep === 'PENDING_APPROVAL'
         ? 'Your application is under review.'
         : 'Please complete your registration before logging in.',
@@ -986,7 +988,8 @@ router.post("/clear", registrationRateLimiter, async (req: Request, res: Respons
     }
 
     const pool = getPool();
-    const normalizedPhone = phone.trim().replace(/\s+/g, '');
+    // STG-056: Use normalizePhoneNumber() to match E.164 format stored in DB
+    const normalizedPhone = normalizePhoneNumber(phone);
 
     // Only expire DRAFT applications — submitted/approved ones are protected
     const result = await pool.query(

@@ -93,6 +93,7 @@ const PUBLIC_PATHS = [
   '/api/v1/retailer-admin/auth/login',
   '/api/v1/retailer-admin/auth/forgot-password',
   '/api/v1/retailer-admin/auth/refresh',
+  '/api/v1/retailer-admin/auth/select-store', // STG-053: Self-verifies JWT (accepts tokens without actorId)
   '/api/v1/retailer-admin/health',
   '/api/v1/retailer-admin/registration',
   // Supplier auth (public)

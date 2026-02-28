@@ -107,10 +107,10 @@ retailerReconciliationRouter.get(
       const refundQuery = `
         SELECT
           DATE(rr.created_at) AS day,
-          COALESCE(SUM(rr.amount_minor), 0) AS refunds_minor
+          COALESCE(SUM(rr.refund_amount), 0) AS refunds_minor
         FROM orders.refund_requests rr
         WHERE rr.store_id = $1
-          AND rr.status IN ('approved', 'completed')
+          AND rr.status IN ('processing', 'completed')
           ${refundDateWhere}
         GROUP BY DATE(rr.created_at)
       `;

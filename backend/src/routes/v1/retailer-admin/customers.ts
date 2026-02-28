@@ -41,9 +41,12 @@ retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Respons
   try {
     const params: any[] = [storeId, limit, offset];
     let searchClause = "";
+    // STG-066: Build separate search clause for count query (uses $2 instead of $4)
+    let countSearchClause = "";
 
     if (q && q.trim()) {
       searchClause = "AND (name ILIKE $4 OR phone ILIKE $4)";
+      countSearchClause = "AND (name ILIKE $2 OR phone ILIKE $2)";
       params.push(`%${q.trim()}%`);
     }
 
@@ -59,7 +62,7 @@ retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Respons
       pool.query(
         `SELECT COUNT(*)::int AS total
          FROM platform.customer_profiles
-         WHERE store_id = $1 ${searchClause}`,
+         WHERE store_id = $1 ${countSearchClause}`,
         q && q.trim() ? [storeId, `%${q.trim()}%`] : [storeId]
       ),
     ]);

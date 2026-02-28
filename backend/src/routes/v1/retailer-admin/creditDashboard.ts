@@ -33,7 +33,7 @@ retailerCreditDashboardRouter.get('/reports/credit-summary', async (req: Request
               s.business_name AS supplier_name,
               p.provider_name
        FROM payments.bnpl_drawdowns d
-       LEFT JOIN platform.suppliers s ON s.id = d.supplier_id
+       LEFT JOIN supplier.suppliers s ON s.id = d.supplier_id
        LEFT JOIN payments.credit_provider_configs p ON p.provider_id = d.provider_id
        WHERE d.store_id = $1 AND d.status IN ('active', 'partial', 'overdue')
        ORDER BY d.due_date ASC`,
@@ -50,7 +50,7 @@ retailerCreditDashboardRouter.get('/reports/credit-summary', async (req: Request
          FROM payments.repayment_schedules rs
          JOIN payments.bnpl_drawdowns d ON d.id = rs.drawdown_id
          LEFT JOIN payments.credit_provider_configs p ON p.provider_id = rs.provider_id
-         LEFT JOIN platform.suppliers s ON s.id = d.supplier_id
+         LEFT JOIN supplier.suppliers s ON s.id = d.supplier_id
          WHERE rs.store_id = $1
            AND rs.status = 'pending'
            AND rs.due_date <= CURRENT_DATE + INTERVAL '30 days'
@@ -68,7 +68,7 @@ retailerCreditDashboardRouter.get('/reports/credit-summary', async (req: Request
               COALESCE(d.provider_id, 'supermandi_internal') AS provider_id,
               s.business_name AS supplier_name
        FROM payments.bnpl_drawdowns d
-       LEFT JOIN platform.suppliers s ON s.id = d.supplier_id
+       LEFT JOIN supplier.suppliers s ON s.id = d.supplier_id
        WHERE d.store_id = $1
          AND d.status IN ('paid', 'defaulted')
          AND d.paid_at >= NOW() - INTERVAL '90 days'

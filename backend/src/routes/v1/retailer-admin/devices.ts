@@ -310,8 +310,8 @@ retailerAdminDevicesRouter.patch("/devices/:deviceId", async (req: Request, res:
       if (!active) {
         updates.push(`token_revoked_at = NOW()`);
       } else {
-        // If reactivating, clear the revoked_at (but device will need new token via re-enrollment)
-        // Note: We don't clear token_revoked_at on reactivation - device must re-enroll
+        // STG-069: Clear token_revoked_at on reactivation so device shows as active
+        updates.push(`token_revoked_at = NULL`);
       }
     }
 

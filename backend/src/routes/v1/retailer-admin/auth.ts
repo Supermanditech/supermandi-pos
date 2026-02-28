@@ -18,6 +18,8 @@ import { authRateLimiter } from "../../../middleware/posRateLimiter";
 // GO-LIVE-195: Enhanced auth protection with per-store-code limiting and progressive lockout
 import { enhancedAuthProtection } from "../../../middleware/authProtection";
 import { log } from "../../../lib/logger";
+// STG-055: Import email service for password reset emails
+import { sendPasswordResetEmail } from "../../../services/emailService";
 
 // GO-LIVE-045: Import Firebase verification from common package
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -550,15 +552,22 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
     }
     const stores = Array.from(uniqueStoresMap.values());
 
-    // Generate JWT token (generic, without specific store)
+    // STG-053: Include actorId (store.id) in JWT when user has exactly 1 store
+    // Gateway requires actorId to set x-actor-id header for downstream services
+    const primaryStoreId = stores.length === 1 ? stores[0].id : undefined;
+
     const jti = randomUUID();
-    const jwtPayload = {
+    const jwtPayload: Record<string, any> = {
       sub: user.id,
       actorType: 'STORE',             // STAGING-FIX-008: Must match gateway policy ('store')
       phone: phoneNormalized,
       permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
       jti,
     };
+    // STG-053: Only include actorId for single-store users; multi-store users must call /auth/select-store
+    if (primaryStoreId) {
+      jwtPayload.actorId = primaryStoreId;
+    }
 
     const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
       issuer: JWT_ISSUER,
@@ -566,13 +575,17 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
     });
 
     // Generate refresh token
+    // STG-054: Include storeId in refresh token so refresh endpoint can find user-store association
     const refreshJti = randomUUID();
-    const refreshPayload = {
+    const refreshPayload: Record<string, any> = {
       sub: user.id,
       type: 'refresh',
       actorType: 'STORE',             // PRA-079: Prevent cross-platform refresh token reuse
       jti: refreshJti,
     };
+    if (primaryStoreId) {
+      refreshPayload.storeId = primaryStoreId;
+    }
 
     const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
       issuer: JWT_ISSUER,
@@ -882,27 +895,36 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
 
     const stores = storesResult.rows;
 
-    // Generate JWT tokens (generic, without specific store — same as OTP flow)
+    // STG-053: Include actorId (store.id) in JWT when user has exactly 1 store
+    const primaryStoreId = stores.length === 1 ? stores[0].id : undefined;
+
     const jti = randomUUID();
-    const jwtPayload = {
+    const jwtPayload: Record<string, any> = {
       sub: user.id,
       actorType: 'STORE',
       permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
       jti,
     };
+    if (primaryStoreId) {
+      jwtPayload.actorId = primaryStoreId;
+    }
 
     const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
       issuer: JWT_ISSUER,
       expiresIn: JWT_EXPIRES_IN,
     });
 
+    // STG-054: Include storeId in refresh token
     const refreshJti = randomUUID();
-    const refreshPayload = {
+    const refreshPayload: Record<string, any> = {
       sub: user.id,
       type: 'refresh',
       actorType: 'STORE',             // PRA-079: Prevent cross-platform refresh token reuse
       jti: refreshJti,
     };
+    if (primaryStoreId) {
+      refreshPayload.storeId = primaryStoreId;
+    }
 
     const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
       issuer: JWT_ISSUER,
@@ -953,6 +975,121 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
         code: s.code,
         name: s.name,
       })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/select-store
+ * STG-053: Multi-store users select a store after login to get a store-specific JWT
+ *
+ * Request body:
+ * - storeId: The store ID to select
+ *
+ * The initial login JWT (without actorId) is passed via Authorization header.
+ * This endpoint verifies the user has access to the store and issues a new JWT with actorId.
+ */
+router.post("/auth/select-store", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { storeId } = req.body as { storeId?: string };
+
+    if (!storeId) {
+      res.status(400).json({ error: { code: "MISSING_FIELDS", message: "storeId is required" } });
+      return;
+    }
+
+    // Extract user from the current JWT (may not have actorId yet)
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+
+    if (!token) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      return;
+    }
+
+    let decoded: { sub?: string; actorType?: string };
+    try {
+      decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { sub?: string; actorType?: string };
+    } catch {
+      res.status(401).json({ error: { code: "INVALID_TOKEN", message: "Invalid or expired token" } });
+      return;
+    }
+
+    if (!decoded.sub) {
+      res.status(401).json({ error: { code: "INVALID_TOKEN", message: "Token missing user ID" } });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Verify user has access to this store
+    const storeResult = await pool.query(
+      `SELECT s.id, s.code, s.name
+       FROM platform.stores s
+       INNER JOIN auth.store_users su ON s.id = su.store_id
+       WHERE s.id = $1 AND su.user_id = $2 AND su.is_active = true AND s.deleted_at IS NULL`,
+      [storeId, decoded.sub]
+    );
+
+    if (!storeResult.rows[0]) {
+      res.status(403).json({ error: { code: "STORE_ACCESS_DENIED", message: "You do not have access to this store" } });
+      return;
+    }
+
+    const store = storeResult.rows[0];
+
+    // Issue new JWT with actorId
+    const newJti = randomUUID();
+    const jwtPayload = {
+      sub: decoded.sub,
+      actorType: 'STORE',
+      actorId: store.id,
+      permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
+      jti: newJti,
+    };
+
+    const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    // Issue new refresh token with storeId
+    const refreshJti = randomUUID();
+    const refreshPayload = {
+      sub: decoded.sub,
+      type: 'refresh',
+      actorType: 'STORE',
+      storeId: store.id,
+      jti: refreshJti,
+    };
+
+    const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: '7d',
+    });
+
+    // AUTH-SESSION-169: Set HttpOnly cookies
+    setAuthCookies(res, accessToken, refreshToken, 86400, 7 * 86400);
+
+    log.info(`[RetailerAuth] STG-053: Store selected for user ${decoded.sub}: ${store.code}`);
+
+    res.json({
+      success: true,
+      token: accessToken,
+      refreshToken,
+      expiresIn: 86400,
+      tokenType: 'Bearer',
+      store: {
+        id: store.id,
+        code: store.code,
+        name: store.name,
+      },
     });
   } catch (error) {
     next(error);
@@ -1158,6 +1295,14 @@ router.post("/auth/forgot-password/email-request", authRateLimiter, async (req: 
 
     log.info(`[RetailerAuth] AUTH-PARITY-002: Email password reset requested for ${emailNormalized}`);
 
+    // STG-055: Actually send the password reset email (was previously missing)
+    try {
+      await sendPasswordResetEmail(emailNormalized, resetToken);
+    } catch (emailErr) {
+      log.error(`[RetailerAuth] STG-055: Failed to send password reset email to ${emailNormalized}:`, emailErr);
+      // Still return success to prevent email enumeration
+    }
+
     res.json({
       success: true,
       message: "If an account exists with this email, a reset link will be sent.",
@@ -1320,18 +1465,38 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
       }
     }
 
-    // Get user and store info, including tokens_revoked_at for bulk revocation check
-    const userResult = await pool.query(
-      `SELECT u.id, u.phone, u.name, u.tokens_revoked_at, su.store_id
-       FROM auth.users u
-       JOIN auth.store_users su ON su.user_id = u.id
-       WHERE u.id = $1 AND su.store_id = $2 AND u.status = 'active' AND su.is_active = true`,
-      [decoded.sub, decoded.storeId]
-    );
+    // STG-054: Handle missing storeId in refresh token (backward compat with tokens issued before fix)
+    // If storeId is present, verify it. If not, find user's first active store.
+    let userResult;
+    if (decoded.storeId) {
+      userResult = await pool.query(
+        `SELECT u.id, u.phone, u.name, u.tokens_revoked_at, su.store_id
+         FROM auth.users u
+         JOIN auth.store_users su ON su.user_id = u.id
+         WHERE u.id = $1 AND su.store_id = $2 AND u.status = 'active' AND su.is_active = true`,
+        [decoded.sub, decoded.storeId]
+      );
+    } else {
+      // Fallback: find user's first active store association
+      userResult = await pool.query(
+        `SELECT u.id, u.phone, u.name, u.tokens_revoked_at, su.store_id
+         FROM auth.users u
+         JOIN auth.store_users su ON su.user_id = u.id
+         JOIN platform.stores s ON s.id = su.store_id
+         WHERE u.id = $1 AND u.status = 'active' AND su.is_active = true AND s.deleted_at IS NULL
+         ORDER BY s.name LIMIT 1`,
+        [decoded.sub]
+      );
+    }
 
     if (!userResult.rows[0]) {
       res.status(401).json({ error: "User or store association not found" });
       return;
+    }
+
+    // STG-054: Use the found storeId for downstream queries (override decoded.storeId if missing)
+    if (!decoded.storeId) {
+      decoded.storeId = userResult.rows[0].store_id;
     }
 
     const user = userResult.rows[0];

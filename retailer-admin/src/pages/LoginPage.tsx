@@ -242,9 +242,30 @@ export default function LoginPage() {
     }
   };
 
-  const handleStoreSelect = (store: Store) => {
+  const handleStoreSelect = async (store: Store) => {
     if (!authData) return;
-    login(authData.token, authData.refreshToken, authData.user, store);
+    try {
+      // STG-053: Call select-store endpoint to get a JWT with actorId for multi-store users
+      const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/select-store', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authData.token}`,
+        },
+        body: JSON.stringify({ storeId: store.id }),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const result = await safeJson<any>(response);
+        login(result.token, result.refreshToken || authData.refreshToken, authData.user, store);
+      } else {
+        // Fallback: use the original token (may still work for single-store users)
+        login(authData.token, authData.refreshToken, authData.user, store);
+      }
+    } catch {
+      // Fallback on network error
+      login(authData.token, authData.refreshToken, authData.user, store);
+    }
     navigate(`/s/${store.code}`, { replace: true });
   };
 
