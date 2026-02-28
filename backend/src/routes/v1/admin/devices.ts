@@ -42,7 +42,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
     queryIdx++;
   }
   if (deviceId) {
-    conditions.push(`d.id ILIKE $${countIdx}`);
+    conditions.push(`d.id::text ILIKE $${countIdx}`);
     countParams.push(`%${deviceId}%`);
     queryParams.push(`%${deviceId}%`);
     countIdx++;

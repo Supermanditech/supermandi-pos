@@ -311,7 +311,7 @@ export function QualityDashboardTab() {
           {renderToolCard("Contract Tests", "📋", overview.tools.contractTests)}
           {renderToolCard("Security Scan", "🔒", overview.tools.securityScan)}
           {renderToolCard("Visual Regression", "🎨", overview.tools.visualRegression)}
-          {renderToolCard("Database Tests", "💾", overview.tools.databaseTests)}
+          {overview.tools.databaseTests && renderToolCard("Database Tests", "💾", overview.tools.databaseTests)}
         </div>
       </div>
 

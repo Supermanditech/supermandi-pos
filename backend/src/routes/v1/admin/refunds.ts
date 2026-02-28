@@ -169,7 +169,7 @@ adminRefundsRouter.post('/refunds/:id/approve', async (req: Request, res: Respon
   try {
     // Fetch refund details including Razorpay payment ID
     const refundResult = await pool.query(
-      `SELECT id, razorpay_payment_id, refund_amount
+      `SELECT id, razorpay_payment_id, refund_amount_minor
        FROM orders.refund_requests
        WHERE id = $1::uuid AND status = 'initiated'`,
       [req.params.id]
@@ -189,7 +189,7 @@ adminRefundsRouter.post('/refunds/:id/approve', async (req: Request, res: Respon
 
     // T-259: Initiate Razorpay refund if payment ID is available
     if (refund.razorpay_payment_id) {
-      initiateRazorpayRefund(pool, refund.id, refund.razorpay_payment_id, refund.refund_amount).catch((err) => {
+      initiateRazorpayRefund(pool, refund.id, refund.razorpay_payment_id, refund.refund_amount_minor).catch((err) => {
         log.error('[T-259] Admin refund Razorpay initiation failed:', err);
       });
     }

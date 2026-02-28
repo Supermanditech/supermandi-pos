@@ -128,13 +128,13 @@ export function WhatsAppTab() {
   // REQ.AUDIT.W5.SUPERADMIN.WHATSAPP-PHONE-VALIDATION-WRONG.001:
   // Validate Indian phone numbers: 10 digits, optionally prefixed with 91 or +91
   const handleSaveCtaConfig = () => {
-    const indianPhone = /^(\+?91)?\d{10}$/;
+    const indianPhone = /^\d{10,15}$/;
     if (!indianPhone.test(ctaDraft.superadminNumber.trim())) {
-      setCtaSaveResult("Error: Superadmin number must be a valid Indian phone (10 digits, optionally prefixed with 91 or +91)");
+      setCtaSaveResult("Error: Superadmin number must be 10-15 digits");
       return;
     }
     if (!indianPhone.test(ctaDraft.companyNumber.trim())) {
-      setCtaSaveResult("Error: Company number must be a valid Indian phone (10 digits, optionally prefixed with 91 or +91)");
+      setCtaSaveResult("Error: Company number must be 10-15 digits");
       return;
     }
     if (!ctaDraft.superadminMessage.trim() || !ctaDraft.companyMessage.trim()) {

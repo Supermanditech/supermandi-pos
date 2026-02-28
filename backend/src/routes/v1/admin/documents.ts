@@ -201,7 +201,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 router.patch("/:id/verify", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).adminUserId || (req as any).userId;
+    const adminId = (req as any).adminId || (req as any).adminUserId || (req as any).userId;
 
     const pool = getPool();
     if (!pool) {
@@ -273,7 +273,7 @@ router.patch("/:id/reject", async (req: Request, res: Response, next: NextFuncti
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const adminId = (req as any).adminUserId || (req as any).userId;
+    const adminId = (req as any).adminId || (req as any).adminUserId || (req as any).userId;
 
     if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
       res.status(400).json({

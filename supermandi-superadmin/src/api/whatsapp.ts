@@ -37,7 +37,8 @@ export interface WhatsAppStats {
 async function parseErrorBody(res: Response): Promise<string> {
   try {
     const body = await res.json();
-    return body?.error || body?.message || `HTTP ${res.status}`;
+    const msg = body?.error || body?.message || `HTTP ${res.status}`;
+    return typeof msg === 'string' ? msg : JSON.stringify(msg);
   } catch {
     return `HTTP ${res.status}`;
   }

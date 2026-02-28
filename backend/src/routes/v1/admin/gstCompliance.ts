@@ -92,18 +92,18 @@ adminGstComplianceRouter.get(
       const supplierBreakdown = await pool.query(`
         SELECT
           i.supplier_id,
-          COALESCE(sp.business_name, sp.owner_name, 'Unknown') AS supplier_name,
+          COALESCE(sp.business_name, sp.primary_contact_name, 'Unknown') AS supplier_name,
           COUNT(*)::int AS invoices,
           COALESCE(SUM(i.taxable_amount), 0)::bigint AS taxable,
           COALESCE(SUM(i.cgst_amount + i.sgst_amount + i.igst_amount), 0)::bigint AS tax
         FROM invoicing.invoices i
-        LEFT JOIN platform.suppliers sp ON sp.id = i.supplier_id
+        LEFT JOIN supplier.suppliers sp ON sp.id = i.supplier_id
         WHERE i.store_id = $1
           AND EXTRACT(MONTH FROM i.invoice_date) = $2
           AND EXTRACT(YEAR FROM i.invoice_date) = $3
           AND i.status != 'cancelled'
           AND i.supplier_id IS NOT NULL
-        GROUP BY i.supplier_id, sp.business_name, sp.owner_name
+        GROUP BY i.supplier_id, sp.business_name, sp.primary_contact_name
         ORDER BY taxable DESC
       `, [storeId, month, year]);
 

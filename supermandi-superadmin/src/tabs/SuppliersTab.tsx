@@ -262,14 +262,14 @@ export function SuppliersTab({
       {suppliersError && <div className="banner" style={{ margin: "0 16px 12px" }}>{suppliersError}</div>}
       {supplierActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{supplierActionError}</div>}
 
-      {pendingSuppliers.filter(s => s.status === "pending").length === 0 ? (
+      {pendingSuppliers.filter(s => ["pending", "KYC_SUBMITTED", "PAYMENTS_SUBMITTED"].includes(s.status)).length === 0 ? (
         <div className="empty">
           {suppliersLoading ? "Loading pending requests..." : "No pending supplier requests."}
         </div>
       ) : (
         <div className="tableWrap">
           <div className="deviceGrid">
-            {pendingSuppliers.filter(s => s.status === "pending").map((request) => (
+            {pendingSuppliers.filter(s => ["pending", "KYC_SUBMITTED", "PAYMENTS_SUBMITTED"].includes(s.status)).map((request) => (
               <div className="deviceCard" key={request.id}>
                 <div className="deviceHeader">
                   <div className="deviceLabelInput" style={{ fontWeight: 600 }}>

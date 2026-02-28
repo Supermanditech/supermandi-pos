@@ -428,14 +428,21 @@ export async function batchProductAction(
       "Content-Type": "application/json",
       ...getAuthHeaders()
     },
-    body: JSON.stringify({ productIds, action, reason })
+    body: JSON.stringify({ productIds, action, rejectionReason: reason })
   });
 
   if (!res.ok) {
     throw new Error(await parseError(res));
   }
 
-  return res.json();
+  const json = await res.json();
+  const data = json?.data ?? json;
+  return {
+    processed: data.processed ?? 0,
+    succeeded: (data.processed ?? 0) - (data.failed ?? 0),
+    failed: data.failed ?? 0,
+    errors: data.errors ?? [],
+  };
 }
 
 /**

@@ -523,12 +523,11 @@ adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminTok
       [supplierId, enabled]
     );
 
-    // Audit log
+    // Audit log — use valid entity_type/action per chk_approval_logs constraints
     await pool.query(
-      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
-       VALUES ('supplier_auto_approve', $1::uuid, $2, NULL, $3, $4::uuid)`,
-      [supplierId, enabled ? 'enable_auto_approve' : 'disable_auto_approve',
-       enabled ? 'enabled' : 'disabled', adminId]
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, changes)
+       VALUES ('supplier', $1::uuid, 'edit', NULL, NULL, $2::uuid, $3::jsonb)`,
+      [supplierId, adminId, JSON.stringify({ auto_approve_products: enabled })]
     );
 
     log.info(`[T-066] Auto-approval ${enabled ? 'enabled' : 'disabled'} for supplier ${check.rows[0].business_name} by admin ${adminId}`);
@@ -1655,10 +1654,10 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
       publishedCount++;
     }
 
-    // Audit log
+    // Audit log — use valid entity_type/action per chk_approval_logs constraints
     await client.query(
-      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
-       VALUES ('product_publish', $1::uuid, 'publish', 'approved', 'published', $2::uuid)`,
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, changes)
+       VALUES ('product', $1::uuid, 'approve', 'approved', 'published', $2::uuid, '{"action":"publish"}'::jsonb)`,
       [productId, adminId]
     );
 

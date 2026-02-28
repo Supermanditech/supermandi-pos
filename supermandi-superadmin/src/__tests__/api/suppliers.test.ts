@@ -597,7 +597,7 @@ describe('suppliers API client', () => {
 
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(body.action).toBe('reject');
-      expect(body.reason).toBe('Quality issue');
+      expect(body.rejectionReason).toBe('Quality issue');
     });
 
     it('throws on error', async () => {
