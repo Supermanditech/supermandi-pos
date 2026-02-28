@@ -132,9 +132,9 @@ router.get("/summary", requireSupplierAuth, async (req: SupplierAuthRequest, res
     let totalRevenue = 0;
     try {
       const revenueResult = await pool.query(
-        `SELECT COALESCE(SUM(po.total_amount_minor), 0) as total
+        `SELECT COALESCE(SUM(po.total_amount), 0) as total
         FROM orders.purchase_orders po
-        INNER JOIN orders.purchase_order_items poi ON po.id = poi.purchase_order_id
+        INNER JOIN orders.purchase_order_items poi ON po.id = poi.order_id
         INNER JOIN catalog.supplier_products sp ON poi.supplier_product_id = sp.id
         WHERE sp.supplier_id = $1 AND po.status = 'delivered'`,
         [req.supplierId]
@@ -240,7 +240,8 @@ router.get("/:id", requireSupplierAuth, async (req: SupplierAuthRequest, res: Re
         currency: payout.currency,
         status: payout.status,
         bankAccount: {
-          accountNumber: payout.bank_account_number,
+          // STG-198: Mask bank account number (matches list endpoint PII protection)
+          accountNumber: maskBankAccountNumber(payout.bank_account_number),
           ifsc: payout.bank_ifsc,
           accountName: payout.bank_account_name,
         },

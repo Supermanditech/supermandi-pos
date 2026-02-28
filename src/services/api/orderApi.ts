@@ -206,7 +206,8 @@ export interface ListReceivesResponse {
 }
 
 // GL-WF-004: Payment confirmation types
-export type BuyPaymentMode = "UPI" | "BNPL" | "CREDIT" | "COD";
+// STG-204: Align with DB constraint (migration 171): UPI, BANK, BNPL, CREDIT, CASH
+export type BuyPaymentMode = "UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH";
 
 export interface ConfirmPaymentResponse {
   success: boolean;

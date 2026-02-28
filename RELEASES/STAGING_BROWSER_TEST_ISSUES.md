@@ -1903,19 +1903,129 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Severity**: LOW — Timing side-channel (requires network analysis)
 - **Status**: FIXED
 
+### STG-196: POS — Shift cash calculation uses payment_mode (always zero for confirm-flow sales)
+- **Portal**: POS App
+- **Page**: Shifts → End Shift → Expected Cash
+- **Symptom**: Expected cash at end-of-shift always shows 0 cash sales. Cash variance is always equal to the full closing cash amount.
+- **Root Cause**: `shifts.ts:160` uses `payment_mode = 'CASH'` to calculate cash sales during shift. But the `POST /sales/:saleId/confirm` endpoint (primary payment flow) sets `status = 'PAID_CASH'` without setting `payment_mode`. Additionally, `status = 'completed'` filter (line 167) misses `PAID_CASH`, `PAID_UPI`, and `DUE` sales entirely.
+- **Fix**: Changed `payment_mode = 'CASH'` to `status = 'PAID_CASH'` and expanded status filter to `IN ('PAID_CASH', 'PAID_UPI', 'DUE', 'completed')`.
+- **Files**: `backend/src/routes/v1/pos/shifts.ts:158-169`
+- **Severity**: CRITICAL — Breaks end-of-shift cash reconciliation for every shift
+- **Status**: FIXED
+
+### STG-197: POS — Overdue payments list misses DUE sales from confirm endpoint
+- **Portal**: POS App
+- **Page**: Overdue Dues screen
+- **Symptom**: Overdue payment list is empty or missing DUE sales created via the `confirm` endpoint.
+- **Root Cause**: `overduePayments.ts:41` uses `s.payment_mode = 'DUE'` but the `confirm` endpoint sets `status = 'DUE'` without setting `payment_mode`. Only the legacy `/payments/due` endpoint sets `payment_mode`.
+- **Fix**: Changed `s.payment_mode = 'DUE'` to `s.status = 'DUE'`.
+- **Files**: `backend/src/routes/v1/pos/overduePayments.ts:41`
+- **Severity**: HIGH — DUE sales invisible in overdue list
+- **Status**: FIXED
+
+### STG-198: Supplier — Payout detail endpoint exposes unmasked bank account number (PII)
+- **Portal**: Supplier Portal
+- **Page**: Earnings → Payout detail
+- **Symptom**: Single payout detail response returns full `bank_account_number` unmasked, while the list endpoint correctly masks it with `****XXXX`.
+- **Root Cause**: `payouts.ts:243` returns `payout.bank_account_number` directly instead of using `maskBankAccountNumber()` helper (which the list endpoint at line 81 correctly uses).
+- **Fix**: Changed to `maskBankAccountNumber(payout.bank_account_number)`.
+- **Files**: `backend/src/routes/v1/supplier/payouts.ts:243`
+- **Severity**: HIGH — PII exposure (bank account number)
+- **Status**: FIXED
+
+### STG-199: Supplier — Payout revenue summary SQL uses non-existent columns (silent zero)
+- **Portal**: Supplier Portal
+- **Page**: Earnings → Summary (total revenue)
+- **Symptom**: Total revenue always shows 0 in payout summary. No error shown because the query failure is caught silently.
+- **Root Cause**: `payouts.ts:135` references `po.total_amount_minor` (should be `po.total_amount`) and line 137 uses `poi.purchase_order_id` (should be `poi.order_id`). Both columns don't exist — caught by `try/catch` at line 143, silently returns 0.
+- **Fix**: Changed `po.total_amount_minor` → `po.total_amount` and `poi.purchase_order_id` → `poi.order_id`.
+- **Files**: `backend/src/routes/v1/supplier/payouts.ts:135,137`
+- **Severity**: HIGH — Revenue summary always zero
+- **Status**: FIXED
+
+### STG-200: SuperAdmin — Refunds list query joins wrong stores schema (stores.stores → platform.stores)
+- **Portal**: SuperAdmin
+- **Page**: Refunds tab
+- **Symptom**: Refund list returns empty data with no error. Store names are always NULL.
+- **Root Cause**: `refunds.ts:125` uses `LEFT JOIN stores.stores` but the stores table is in `platform.stores` schema. PostgreSQL throws `42P01` (undefined table) which is caught at line 156 and silently returns empty results. The original STG-016 fix was supposed to correct this but it was missed.
+- **Fix**: Changed `stores.stores` → `platform.stores`.
+- **Files**: `backend/src/routes/v1/admin/refunds.ts:125`
+- **Severity**: HIGH — Refunds tab completely broken (shows empty)
+- **Status**: FIXED
+
+### STG-201: POS — Daily summary counts split payments as cash (wrong status grouping)
+- **Portal**: POS App
+- **Page**: Sales → Daily Summary
+- **Symptom**: Cash count/total inflated by split payments. Split count always 0 (used dead `'SPLIT'` status value).
+- **Root Cause**: `sales.ts:627` groups `status IN ('PAID_CASH', 'completed')` as "cash", but `completed` is the status for split payments (not cash-only). Line 633 uses `status = 'SPLIT'` which is never a status value (it's a `payment_mode` value).
+- **Fix**: Cash = `PAID_CASH` only. Split = `completed`. Removed dead `'SPLIT'` status. Status filter now `IN ('PAID_CASH', 'PAID_UPI', 'DUE', 'completed')`.
+- **Files**: `backend/src/routes/v1/pos/sales.ts:627-637`
+- **Severity**: MEDIUM — Cash total inflated, split count always zero
+- **Status**: FIXED
+
+### STG-202: Supplier — BNPL visibility endpoint missing requireSupplierAuth middleware
+- **Portal**: Supplier Portal
+- **Page**: BNPL Orders
+- **Symptom**: Defense-in-depth gap — endpoint uses raw `x-actor-id` header instead of verified middleware auth.
+- **Root Cause**: `bnplVisibility.ts:19` reads `req.headers['x-actor-id']` directly. All other supplier routes use `requireSupplierAuth` middleware which verifies JWT, checks revocation, and extracts supplier ID securely.
+- **Fix**: Added `requireSupplierAuth` middleware and changed to use `req.supplierId` from authenticated context.
+- **Files**: `backend/src/routes/v1/supplier/bnplVisibility.ts:15,19`
+- **Severity**: MEDIUM — Security defense-in-depth gap
+- **Status**: FIXED
+
+### STG-203: Supplier — GSTIN regex inconsistency between register endpoints
+- **Portal**: Supplier Portal
+- **Page**: Registration (Firebase phone auth flow)
+- **Symptom**: `/auth/firebase-register` accepts invalid GSTIN format (missing mandatory Z at position 13), while `/auth/register` correctly enforces it.
+- **Root Cause**: `supplier/auth.ts:1596` uses `[0-9A-Z]{1}[0-9A-Z]{1}` at positions 13-14, but standard GSTIN format requires Z at position 13 (as enforced at line 399). The comment "GL-CRIT-0031: position 14 can be any alphanumeric" is incorrect — it's position 15 that's the check digit.
+- **Fix**: Aligned firebase-register regex with the strict pattern: `[1-9A-Z]{1}Z[0-9A-Z]{1}`.
+- **Files**: `backend/src/routes/v1/supplier/auth.ts:1596`
+- **Severity**: MEDIUM — Invalid GSTINs accepted through one registration path
+- **Status**: FIXED
+
+### STG-204: POS — BuyPaymentMode TypeScript type doesn't match DB constraint
+- **Portal**: POS App
+- **Page**: Purchase Orders → Payment
+- **Symptom**: TypeScript type includes `"COD"` (not in DB), missing `"BANK"` and `"CASH"` (which are in DB constraint).
+- **Root Cause**: `orderApi.ts:209` defines `BuyPaymentMode = "UPI" | "BNPL" | "CREDIT" | "COD"` but migration 171 CHECK constraint allows `('UPI', 'BANK', 'BNPL', 'CREDIT', 'CASH')`.
+- **Fix**: Changed type to `"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH"` to match DB.
+- **Files**: `src/services/api/orderApi.ts:209`
+- **Severity**: LOW — Type mismatch, not currently causing runtime errors
+- **Status**: FIXED
+
+### STG-205: POS — uiStatusApi console.log statements in production without __DEV__ guard
+- **Portal**: POS App
+- **Page**: App startup (UI status fetch)
+- **Symptom**: Production builds log device token suffix, store info, and error details to console. Not a security vulnerability (token is truncated) but pollutes production logs.
+- **Root Cause**: `uiStatusApi.ts:125,129,155,170` have `console.log()` without `__DEV__` guard.
+- **Fix**: Wrapped all 4 console.log calls with `if (__DEV__)`.
+- **Files**: `src/services/api/uiStatusApi.ts:125,129,155,170`
+- **Severity**: LOW — Production log pollution
+- **Status**: FIXED
+
+### STG-206: POS — Daily closing expectedCashMinor subtracts all refunds including UPI (potential issue)
+- **Portal**: POS App
+- **Page**: Daily Closing → Expected Cash
+- **Symptom**: Expected cash calculation may be incorrect if UPI refunds exist in `orders.refunds` table — would make expected cash appear lower than actual.
+- **Root Cause**: `dailyClosing.ts:40-46` sums ALL refunds regardless of payment method. If `orders.refunds` contains UPI refunds (processed via Razorpay), they shouldn't reduce expected cash in drawer.
+- **Assessment**: Deferred — the `orders.refunds` table may only contain POS-initiated cash refunds (not Razorpay UPI refunds, which use `orders.refund_requests`). Schema verification needed before changing reconciliation math.
+- **Files**: `backend/src/routes/v1/pos/dailyClosing.ts:40-46`
+- **Severity**: MEDIUM — Potential incorrect cash reconciliation
+- **Status**: DIAGNOSED (deferred — needs schema verification before fix)
+
 ---
 
 ## Summary
 
 | Status | Count |
 |--------|-------|
-| FIXED | 194 |
-| DIAGNOSED | 0 |
+| FIXED | 204 |
+| DIAGNOSED | 1 |
 | INFRA-ONLY | 0 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
-| **Total** | **195** |
+| **Total** | **206** |
 
 | Source | Range | Count |
 |--------|-------|-------|
@@ -1924,7 +2034,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 | Code-level audit: Supplier | STG-072 → STG-091 | 20 |
 | Code-level audit: POS App | STG-092 → STG-174 | 83 |
 | **Live staging audit** | **STG-175 → STG-185** | **11** |
-| **Reiteration regression audit** | **STG-186 → STG-195** | **10** |
+| **Reiteration 1 regression audit** | **STG-186 → STG-195** | **10** |
+| **Reiteration 2 regression audit** | **STG-196 → STG-206** | **11** |
 
 ---
 

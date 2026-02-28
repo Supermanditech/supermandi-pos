@@ -38,7 +38,7 @@ posOverduePaymentsRouter.get(
         FROM sales s
         LEFT JOIN payments.sell_payments sp ON sp.sale_id = s.id
         WHERE s.store_id = $1
-          AND s.payment_mode = 'DUE'
+          AND s.status = 'DUE'
           AND s.status != 'refunded'
           AND (s.total_minor - COALESCE(sp.paid_amount_minor, 0)) > 0
           AND (sp.due_date IS NULL OR sp.due_date < CURRENT_DATE)

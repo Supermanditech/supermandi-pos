@@ -155,16 +155,17 @@ posShiftsRouter.post("/shifts/:shiftId/end", requireDeviceToken, requireActiveSt
     }
 
     // Compute expected cash: opening + cash sales during shift
+    // STG-196: Use status = 'PAID_CASH' (not payment_mode), include all sale statuses
     const salesResult = await client.query(
       `SELECT
-        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::bigint AS cash_sales,
+        COALESCE(SUM(CASE WHEN status = 'PAID_CASH' THEN total_minor ELSE 0 END), 0)::bigint AS cash_sales,
         COUNT(*)::int AS sales_count,
         COALESCE(SUM(total_minor), 0)::bigint AS sales_total
       FROM public.sales
       WHERE store_id = $1
         AND created_at >= $2
         AND created_at <= NOW()
-        AND status = 'completed'`,
+        AND status IN ('PAID_CASH', 'PAID_UPI', 'DUE', 'completed')`,
       [storeId, shift.shift_start]
     );
 

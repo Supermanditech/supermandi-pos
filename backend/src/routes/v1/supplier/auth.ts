@@ -1592,8 +1592,8 @@ router.post("/auth/firebase-register", async (req: Request, res: Response, next:
       return;
     }
 
-    // Validate GSTIN if provided (GL-CRIT-0031: position 14 can be any alphanumeric)
-    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/.test(gstin.toUpperCase())) {
+    // STG-203: Align GSTIN regex with /auth/register (position 13 must be Z per Indian GSTIN format)
+    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin.toUpperCase())) {
       res.status(400).json({
         error: { code: 'INVALID_GSTIN', message: 'Invalid GSTIN format' }
       });

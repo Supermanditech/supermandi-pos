@@ -122,11 +122,11 @@ function getDefaultUiStatus(): UiStatusResponse {
 export async function fetchUiStatus(): Promise<UiStatusResponse> {
   const deviceToken = await getDeviceToken();
   const tokenSuffix = deviceToken ? deviceToken.slice(-6) : "none";
-  console.log("[uiStatus] Fetching with token:", tokenSuffix);
+  if (__DEV__) console.log("[uiStatus] Fetching with token:", tokenSuffix);
 
   // If no token, return defaults with local store info
   if (!deviceToken) {
-    console.log("[uiStatus] No token, returning defaults with local store info");
+    if (__DEV__) console.log("[uiStatus] No token, returning defaults with local store info");
     const session = await getDeviceSession();
     const settings = useSettingsStore.getState();
     return {
@@ -152,7 +152,7 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.log("[uiStatus] Failed:", response.status);
+      if (__DEV__) console.log("[uiStatus] Failed:", response.status);
       // Fall back to local session data
       const session = await getDeviceSession();
       const settings = useSettingsStore.getState();
@@ -167,7 +167,7 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
 
     const data = await response.json();
     const parsed = parseUiStatusResponse(data);
-    console.log("[uiStatus] Response:", parsed.storeId, parsed.storeName, parsed.storeCode);
+    if (__DEV__) console.log("[uiStatus] Response:", parsed.storeId, parsed.storeName, parsed.storeCode);
     return parsed;
   } catch (err) {
     console.error("[uiStatus] Error:", err);

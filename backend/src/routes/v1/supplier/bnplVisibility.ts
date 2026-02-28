@@ -4,19 +4,20 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../../../db/client';
 import { log } from "../../../lib/logger";
+import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 
 export const supplierBnplRouter = Router();
 
 /**
  * GET /api/v1/supplier/bnpl/backed-orders
  * List purchase orders that are BNPL-backed for this supplier
- * Supplier ID comes from JWT token (x-actor-id header from gateway)
+ * STG-202: Use requireSupplierAuth middleware (matches all other supplier routes)
  */
-supplierBnplRouter.get('/backed-orders', async (req: Request, res: Response) => {
+supplierBnplRouter.get('/backed-orders', requireSupplierAuth, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) { res.status(503).json({ error: { code: 'DB_UNAVAILABLE' } }); return; }
 
-  const supplierId = req.headers['x-actor-id'] as string;
+  const supplierId = (req as SupplierAuthRequest).supplierId;
   if (!supplierId) { res.status(401).json({ error: { code: 'NO_SUPPLIER' } }); return; }
 
   const status = typeof req.query.status === 'string' ? req.query.status : null;

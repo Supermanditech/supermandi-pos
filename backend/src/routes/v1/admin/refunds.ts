@@ -122,7 +122,7 @@ adminRefundsRouter.get('/refunds', async (req: Request, res: Response) => {
               r.processed_at, r.failure_reason, r.created_at,
               s.name AS store_name
        FROM orders.refund_requests r
-       LEFT JOIN stores.stores s ON s.id = r.store_id
+       LEFT JOIN platform.stores s ON s.id = r.store_id
        ${whereClause}
        ORDER BY r.created_at DESC
        LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,
