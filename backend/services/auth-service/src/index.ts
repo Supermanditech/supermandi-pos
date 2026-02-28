@@ -3,7 +3,7 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import { ApiError, ERROR_CODES, healthCheck, initializeFirebase, createLogger } from '@supermandi/common';
+import { ApiError, ERROR_CODES, healthCheck, initializeFirebase, getFirebaseHealth, createLogger } from '@supermandi/common';
 import { config } from './config';
 import internalRoutes from './routes/internal';
 import authRoutes from './routes/auth';
@@ -16,7 +16,11 @@ const logger = createLogger({ service: 'auth-service', level: process.env.LOG_LE
 // FIREBASE INITIALIZATION
 // =============================================================================
 
+// FIREBASE-HARDENING-A: Track whether Firebase was expected but failed
+let firebaseExpected = false;
+
 if (config.firebase.enabled) {
+  firebaseExpected = true;
   try {
     initializeFirebase({
       serviceAccountPath: config.firebase.serviceAccountPath,
@@ -24,8 +28,8 @@ if (config.firebase.enabled) {
     });
     logger.info('[Auth Service] Firebase Admin SDK initialized');
   } catch (error) {
-    logger.error('[Auth Service] Failed to initialize Firebase:', error instanceof Error ? error : undefined);
-    // Don't crash the service - retailer auth will fail gracefully
+    // FIREBASE-HARDENING-A: Log failure clearly — health endpoint will report degraded
+    logger.error('[Auth Service] Firebase init FAILED — phone OTP auth will be unavailable', error instanceof Error ? error : undefined);
   }
 } else {
   logger.info('[Auth Service] Firebase disabled (FIREBASE_ENABLED != true)');
@@ -55,11 +59,16 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 app.get('/health', async (_req: Request, res: Response) => {
   const dbHealthy = await healthCheck();
-  res.status(dbHealthy ? 200 : 503).json({
-    status: dbHealthy ? 'ok' : 'degraded',
+  // FIREBASE-HARDENING-A: Include Firebase health when enabled
+  const fbHealth = firebaseExpected ? getFirebaseHealth() : null;
+  const fbHealthy = !firebaseExpected || fbHealth?.status === 'ok';
+  const overall = dbHealthy && fbHealthy;
+  res.status(overall ? 200 : 503).json({
+    status: overall ? 'ok' : 'degraded',
     service: 'auth-service',
     version: '3.0.9',
     database: dbHealthy ? 'connected' : 'disconnected',
+    ...(firebaseExpected && { firebase: fbHealth?.status === 'ok' ? 'connected' : 'failed' }),
   });
 });
 

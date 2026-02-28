@@ -1,6 +1,11 @@
 /**
  * DRX-001: Firebase configuration for POS phone OTP
  *
+ * FIREBASE-HARDENING-E: POS Firebase scope — OUT OF SCOPE for production auth.
+ * POS uses device enrollment + JWT (deviceSession.ts), not Firebase phone OTP.
+ * This config exists as scaffolding for future POS OTP capability.
+ * isFirebaseReady() is not consumed by any production screen or service.
+ *
  * Reads Firebase config from EXPO_PUBLIC_* env vars (set via app.config.js).
  * Gracefully degrades: if not configured, isFirebaseReady() returns false
  * and OTP flows fall back to dev bypass mode.

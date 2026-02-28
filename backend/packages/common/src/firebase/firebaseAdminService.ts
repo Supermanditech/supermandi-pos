@@ -14,33 +14,48 @@ export interface FirebaseConfig {
 
 let firebaseApp: admin.app.App | null = null;
 
+// FIREBASE-HARDENING-A: Track init status for health endpoint
+let _firebaseInitStatus: 'not_attempted' | 'ok' | 'failed' = 'not_attempted';
+let _firebaseInitError: string | null = null;
+
+/**
+ * Returns Firebase init health for service health endpoints.
+ * Only meaningful when FIREBASE_ENABLED=true.
+ */
+export function getFirebaseHealth(): { status: typeof _firebaseInitStatus; error: string | null } {
+  return { status: _firebaseInitStatus, error: _firebaseInitError };
+}
+
 /**
  * Initialize Firebase Admin SDK
  */
 export function initializeFirebase(config: FirebaseConfig): void {
   if (firebaseApp) {
-    console.log('[Firebase] Already initialized, skipping...');
     return;
   }
 
   const initOptions: admin.AppOptions = {};
 
   if (config.serviceAccountPath) {
-    // Use service account file
+    // Local dev / explicit service account file
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const serviceAccount = require(config.serviceAccountPath);
     initOptions.credential = admin.credential.cert(serviceAccount);
     initOptions.projectId = serviceAccount.project_id;
   } else if (config.projectId) {
-    // Use Application Default Credentials (for GCE/Cloud Run)
+    // FIREBASE-HARDENING-D: Production path — Application Default Credentials.
+    // On Cloud Run, ADC uses the service's configured IAM service account.
+    // Requires: Firebase Authentication Admin role on the Cloud Run service account.
     initOptions.credential = admin.credential.applicationDefault();
     initOptions.projectId = config.projectId;
   } else {
+    _firebaseInitStatus = 'failed';
+    _firebaseInitError = 'Missing serviceAccountPath and projectId';
     throw new Error('Firebase config requires either serviceAccountPath or projectId');
   }
 
   firebaseApp = admin.initializeApp(initOptions);
-  console.log(`[Firebase] Initialized with project: ${initOptions.projectId}`);
+  _firebaseInitStatus = 'ok';
 }
 
 /**
@@ -92,12 +107,6 @@ const FIREBASE_VERIFY_TIMEOUT_MS = 10000;
  * GO-LIVE-HOME-001: Added timeout to prevent hanging when credentials are misconfigured
  */
 export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyTokenResponse> {
-  // Debug logging
-  const tokenPreview = idToken
-    ? `${idToken.substring(0, 20)}...${idToken.substring(idToken.length - 10)} (len=${idToken.length})`
-    : 'EMPTY/NULL';
-  console.log(`[Firebase] Verifying token: ${tokenPreview}`);
-
   const app = getApp();
   const auth = app.auth();
 
@@ -109,11 +118,14 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
       }, FIREBASE_VERIFY_TIMEOUT_MS);
     });
 
+    // FIREBASE-HARDENING-C: checkRevoked=true — reject revoked tokens.
+    // Requires Cloud Run service account to have Firebase Authentication Admin IAM role.
     const decodedToken = await Promise.race([
-      auth.verifyIdToken(idToken, false), // checkRevoked = false (ADC on GCE lacks identitytoolkit scope)
+      auth.verifyIdToken(idToken, true),
       timeoutPromise,
     ]);
-    console.log(`[Firebase] Token verified! UID: ${decodedToken.uid}, phone: ${decodedToken.phone_number}`);
+    // FIREBASE-HARDENING-B: Log verification success without PII
+    console.log(`[Firebase] Token verified — provider: ${decodedToken.firebase?.sign_in_provider || 'unknown'}`);
 
     // Extract sign-in provider
     const signInProvider = decodedToken.firebase?.sign_in_provider || 'unknown';
@@ -131,7 +143,8 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
     };
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };
-    console.error(`[Firebase] Token verification error - code: ${firebaseError.code}, message: ${firebaseError.message}`);
+    // FIREBASE-HARDENING-B: Log error code only — no raw message (may contain token/credential details)
+    console.error(`[Firebase] Token verification failed — code: ${firebaseError.code || 'unknown'}`);
 
     // GO-LIVE-HOME-001: Handle timeout errors specifically
     if (firebaseError.message?.includes('timed out')) {
@@ -171,7 +184,7 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
 
     return {
       success: false,
-      error: firebaseError.message || 'Token verification failed',
+      error: 'Token verification failed',
       code: 'UNKNOWN',
     };
   }
