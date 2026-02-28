@@ -1,3 +1,4 @@
+// STG-211: Replaced hardcoded hex colors with CSS variables for dark mode
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -272,7 +273,7 @@ export default function DashboardPage() {
   return (
     <div style={{
       minHeight: '100%',
-      background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
+      background: 'var(--background)',
       padding: '2rem',
     }}>
       {/* T-112: Breadcrumb navigation */}
@@ -345,7 +346,7 @@ export default function DashboardPage() {
           {/* RCAT-SEARCH-001: Search Bar with Results Dropdown */}
           <div ref={searchRef} style={{ maxWidth: '560px', position: 'relative' }}>
             <div style={{
-              background: 'white',
+              background: 'var(--surface)',
               borderRadius: '14px',
               padding: '4px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
@@ -363,7 +364,7 @@ export default function DashboardPage() {
                   border: 'none',
                   borderRadius: '10px',
                   background: 'transparent',
-                  color: '#1e293b',
+                  color: 'var(--text)',
                   outline: 'none',
                 }}
               />
@@ -377,16 +378,16 @@ export default function DashboardPage() {
                 left: 0,
                 right: 0,
                 marginTop: '0.5rem',
-                background: 'white',
+                background: 'var(--surface)',
                 borderRadius: '12px',
                 boxShadow: '0 12px 48px rgba(0,0,0,0.2)',
                 maxHeight: '400px',
                 overflow: 'auto',
                 zIndex: 200,
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--border)',
               }}>
                 {searchLoading && (
-                  <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                     Searching...
                   </div>
                 )}
@@ -396,26 +397,26 @@ export default function DashboardPage() {
                     {/* Products Section */}
                     {searchResults.products.length > 0 && (
                       <div>
-                        <div style={{ padding: '0.5rem 1rem', background: '#f8fafc', fontSize: '0.7rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '0.5rem 1rem', background: 'var(--background)', fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Products ({searchResults.products.length})
                         </div>
                         {searchResults.products.map((p) => (
                           <div
                             key={p.id}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(p.name)}`); }}
-                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                             onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
                           >
                             <div>
-                              <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.9rem' }}>{p.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              <div style={{ fontWeight: '500', color: 'var(--text)', fontSize: '0.9rem' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                 {p.brand && <span>{p.brand} | </span>}
                                 <span style={{ fontFamily: 'monospace' }}>{p.barcode || 'No barcode'}</span>
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.85rem' }}>
+                              <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '0.85rem' }}>
                                 {formatCurrency(p.sellPrice)}
                               </div>
                               <div style={{ fontSize: '0.7rem', color: p.stock > 0 ? '#059669' : '#dc2626' }}>
@@ -430,20 +431,20 @@ export default function DashboardPage() {
                     {/* Suppliers Section */}
                     {searchResults.suppliers.length > 0 && (
                       <div>
-                        <div style={{ padding: '0.5rem 1rem', background: '#f8fafc', fontSize: '0.7rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '0.5rem 1rem', background: 'var(--background)', fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Suppliers ({searchResults.suppliers.length})
                         </div>
                         {searchResults.suppliers.map((s) => (
                           <div
                             key={s.id}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/suppliers`); }}
-                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                             onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
                           >
                             <div>
-                              <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.9rem' }}>{s.businessName}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              <div style={{ fontWeight: '500', color: 'var(--text)', fontSize: '0.9rem' }}>{s.businessName}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                 {s.phone && <span>{s.phone} | </span>}
                                 {s.gstin && <span style={{ fontFamily: 'monospace' }}>{s.gstin}</span>}
                               </div>
@@ -453,7 +454,7 @@ export default function DashboardPage() {
                               borderRadius: '4px',
                               fontSize: '0.65rem',
                               fontWeight: '600',
-                              background: s.isSupermandi ? '#dbeafe' : s.verificationStatus === 'verified' ? '#dcfce7' : '#f1f5f9',
+                              background: s.isSupermandi ? '#dbeafe' : s.verificationStatus === 'verified' ? '#dcfce7' : 'var(--background)',
                               color: s.isSupermandi ? '#1d4ed8' : s.verificationStatus === 'verified' ? '#166534' : '#64748b',
                             }}>
                               {s.isSupermandi ? 'SuperMandi' : s.verificationStatus}
@@ -466,20 +467,20 @@ export default function DashboardPage() {
                     {/* Barcode Matches Section */}
                     {searchResults.barcodes.length > 0 && (
                       <div>
-                        <div style={{ padding: '0.5rem 1rem', background: '#f8fafc', fontSize: '0.7rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '0.5rem 1rem', background: 'var(--background)', fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Barcode Matches ({searchResults.barcodes.length})
                         </div>
                         {searchResults.barcodes.map((b) => (
                           <div
                             key={b.storeProductId}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(b.barcode)}`); }}
-                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                             onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
                           >
                             <div>
-                              <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.9rem' }}>{b.productName}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>{b.barcode}</div>
+                              <div style={{ fontWeight: '500', color: 'var(--text)', fontSize: '0.9rem' }}>{b.productName}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{b.barcode}</div>
                             </div>
                             <span style={{
                               padding: '0.2rem 0.5rem',
@@ -498,7 +499,7 @@ export default function DashboardPage() {
 
                     {/* No Results */}
                     {searchResults.products.length === 0 && searchResults.suppliers.length === 0 && searchResults.barcodes.length === 0 && (
-                      <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                      <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                         No results found for "{searchQuery}"
                       </div>
                     )}
@@ -519,11 +520,11 @@ export default function DashboardPage() {
       }}>
         {/* Total Products */}
         <div style={{
-          background: 'white',
+          background: 'var(--surface)',
           borderRadius: '14px',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
+          border: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <span style={{
@@ -536,20 +537,20 @@ export default function DashboardPage() {
               justifyContent: 'center',
               fontSize: '1.3rem',
             }}>📦</span>
-            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Products</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Products</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text)' }}>
             {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : inventoryTotals.totalProducts}
           </div>
         </div>
 
         {/* Total Stock Qty */}
         <div style={{
-          background: 'white',
+          background: 'var(--surface)',
           borderRadius: '14px',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
+          border: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <span style={{
@@ -562,20 +563,20 @@ export default function DashboardPage() {
               justifyContent: 'center',
               fontSize: '1.3rem',
             }}>📋</span>
-            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Stock Qty</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Stock Qty</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text)' }}>
             {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : inventoryTotals.totalStockQty.toLocaleString('en-IN')}
           </div>
         </div>
 
         {/* Total Purchase Value */}
         <div style={{
-          background: 'white',
+          background: 'var(--surface)',
           borderRadius: '14px',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
+          border: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <span style={{
@@ -588,20 +589,20 @@ export default function DashboardPage() {
               justifyContent: 'center',
               fontSize: '1.3rem',
             }}>💰</span>
-            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Purchase Value</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Purchase Value</span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text)' }}>
             {inventoryLoading ? <span style={{ display: 'inline-block', width: '80px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : formatCurrencyWhole(inventoryTotals.totalPurchaseValue)}
           </div>
         </div>
 
         {/* Total Sell Revenue */}
         <div style={{
-          background: 'white',
+          background: 'var(--surface)',
           borderRadius: '14px',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
+          border: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <span style={{
@@ -614,7 +615,7 @@ export default function DashboardPage() {
               justifyContent: 'center',
               fontSize: '1.3rem',
             }}>📈</span>
-            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Sell Revenue</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Sell Revenue</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#059669' }}>
             {inventoryLoading ? <span style={{ display: 'inline-block', width: '80px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : formatCurrencyWhole(inventoryTotals.totalSellRevenue)}
@@ -624,11 +625,11 @@ export default function DashboardPage() {
 
       {/* GL-RJ-009: Daily Sales Summary Section */}
       <div style={{
-        background: 'white',
+        background: 'var(--surface)',
         borderRadius: '14px',
         padding: '1.5rem',
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        border: '1px solid #e2e8f0',
+        border: '1px solid var(--border)',
         marginBottom: '2rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -636,7 +637,7 @@ export default function DashboardPage() {
             margin: 0,
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#1e293b',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -645,7 +646,7 @@ export default function DashboardPage() {
             Today's Sales Summary
           </h2>
           {dailySummary && (
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {formatDateShort(dailySummary.date)}
             </span>
           )}
@@ -654,7 +655,7 @@ export default function DashboardPage() {
         {dailySummaryLoading ? (
           <div style={{ padding: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} style={{ borderRadius: '10px', padding: '1rem', background: '#f8fafc' }}>
+              <div key={i} style={{ borderRadius: '10px', padding: '1rem', background: 'var(--background)' }}>
                 <div style={{ width: '60%', height: '1.5rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px', margin: '0 auto 0.5rem' }} />
                 <div style={{ width: '40%', height: '0.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', margin: '0 auto' }} />
               </div>
@@ -682,7 +683,7 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#059669' }}>
                   {formatCurrency(dailySummary.totalSales)}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Total Sales</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Total Sales</div>
               </div>
 
               {/* Total Bills */}
@@ -695,7 +696,7 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#2563eb' }}>
                   {dailySummary.totalBills}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Bills</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Bills</div>
               </div>
 
               {/* Average Bill */}
@@ -708,7 +709,7 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#d97706' }}>
                   {formatCurrency(dailySummary.averageBillValue)}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Avg Bill</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Avg Bill</div>
               </div>
 
               {/* Items Sold */}
@@ -721,21 +722,21 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#db2777' }}>
                   {dailySummary.itemsSold}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Items Sold</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Items Sold</div>
               </div>
             </div>
 
             {/* Payment Breakdown */}
             {(dailySummary.paymentBreakdown.cash > 0 || dailySummary.paymentBreakdown.upi > 0) && (
               <div style={{
-                borderTop: '1px solid #e2e8f0',
+                borderTop: '1px solid var(--border)',
                 paddingTop: '1rem',
                 display: 'flex',
                 flexWrap: 'wrap',
                 gap: '1rem',
                 fontSize: '0.85rem',
               }}>
-                <span style={{ color: '#64748b', fontWeight: '500' }}>Payment Modes:</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Payment Modes:</span>
                 {dailySummary.paymentBreakdown.cash > 0 && (
                   <span style={{ color: '#059669' }}>
                     💵 Cash: {formatCurrency(dailySummary.paymentBreakdown.cash)}
@@ -755,7 +756,7 @@ export default function DashboardPage() {
             )}
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
             No sales data for today
           </div>
         )}
@@ -767,7 +768,7 @@ export default function DashboardPage() {
           margin: '0 0 1rem',
           fontSize: '0.85rem',
           fontWeight: '600',
-          color: '#64748b',
+          color: 'var(--text-muted)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
         }}>
@@ -813,13 +814,13 @@ export default function DashboardPage() {
                 top: '100%',
                 left: 0,
                 marginTop: '0.5rem',
-                background: 'white',
+                background: 'var(--surface)',
                 borderRadius: '14px',
                 boxShadow: '0 12px 48px rgba(0,0,0,0.15)',
                 minWidth: '200px',
                 zIndex: 100,
                 overflow: 'hidden',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--border)',
               }}>
                 <button
                   onClick={() => {
@@ -834,11 +835,11 @@ export default function DashboardPage() {
                     padding: '1rem 1.25rem',
                     background: 'none',
                     border: 'none',
-                    borderBottom: '1px solid #f1f5f9',
+                    borderBottom: '1px solid var(--border)',
                     textAlign: 'left',
                     cursor: 'pointer',
                     fontSize: '0.95rem',
-                    color: '#334155',
+                    color: 'var(--text)',
                     transition: 'background 0.15s',
                   }}
                   onMouseOver={(e) => e.currentTarget.style.background = '#f0fdf4'}
@@ -863,7 +864,7 @@ export default function DashboardPage() {
                     textAlign: 'left',
                     cursor: 'pointer',
                     fontSize: '0.95rem',
-                    color: '#334155',
+                    color: 'var(--text)',
                     transition: 'background 0.15s',
                   }}
                   onMouseOver={(e) => e.currentTarget.style.background = '#f0fdf4'}
@@ -914,9 +915,9 @@ export default function DashboardPage() {
               alignItems: 'center',
               gap: '0.5rem',
               padding: '1.25rem 1.5rem',
-              background: 'white',
-              color: '#475569',
-              border: '2px solid #e2e8f0',
+              background: 'var(--surface)',
+              color: 'var(--text-muted)',
+              border: '2px solid var(--border)',
               borderRadius: '14px',
               fontWeight: '500',
               fontSize: '0.95rem',
@@ -924,12 +925,12 @@ export default function DashboardPage() {
               transition: 'all 0.2s ease',
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#cbd5e1';
-              e.currentTarget.style.background = '#f8fafc';
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.background = 'var(--background)';
             }}
             onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#e2e8f0';
-              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.background = 'var(--surface)';
             }}
             onClick={() => {
               // GL-WF-031: Export inventory to CSV
@@ -1003,7 +1004,7 @@ export default function DashboardPage() {
             margin: 0,
             fontSize: '0.85rem',
             fontWeight: '600',
-            color: '#64748b',
+            color: 'var(--text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
           }}>
@@ -1014,7 +1015,7 @@ export default function DashboardPage() {
             <button
               onClick={() => setShowHiddenCategories(!showHiddenCategories)}
               style={{
-                background: 'none', border: 'none', color: '#64748b', fontSize: '0.75rem',
+                background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem',
                 cursor: 'pointer', textDecoration: 'underline',
               }}
             >
@@ -1030,7 +1031,7 @@ export default function DashboardPage() {
           {categoriesLoading ? (
             <>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '1.25rem', border: '1px solid #e2e8f0' }}>
+                <div key={i} style={{ background: 'var(--surface)', borderRadius: '12px', padding: '1.25rem', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <span style={{ width: '36px', height: '36px', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '8px', display: 'inline-block' }} />
                     <span style={{ width: '60%', height: '0.95rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', display: 'inline-block' }} />
@@ -1044,7 +1045,7 @@ export default function DashboardPage() {
               {categoriesError}
             </div>
           ) : categories.length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+            <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               No categories yet. Add products to see category breakdown.
             </div>
           ) : (
@@ -1054,11 +1055,11 @@ export default function DashboardPage() {
               <div
                 key={category.id}
                 style={{
-                  background: category.isHidden ? '#f8fafc' : 'white',
+                  background: category.isHidden ? 'var(--background)' : 'var(--surface)',
                   borderRadius: '12px',
                   padding: '1.25rem',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  border: `1px solid ${category.isHidden ? '#cbd5e1' : '#e2e8f0'}`,
+                  border: '1px solid var(--border)',
                   transition: 'all 0.2s ease',
                   cursor: 'pointer',
                   opacity: category.isHidden ? 0.6 : 1,
@@ -1089,9 +1090,9 @@ export default function DashboardPage() {
                     style={{
                       background: 'none', border: 'none', cursor: 'pointer',
                       fontSize: '0.7rem', padding: '2px 4px', borderRadius: '4px',
-                      color: '#64748b',
+                      color: 'var(--text-muted)',
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = '#e2e8f0'; }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = 'var(--background)'; }}
                     onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
                   >
                     Edit
@@ -1107,7 +1108,7 @@ export default function DashboardPage() {
                       fontSize: '0.7rem', padding: '2px 4px', borderRadius: '4px',
                       color: category.isHidden ? '#166534' : '#dc2626',
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = '#e2e8f0'; }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = 'var(--background)'; }}
                     onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
                   >
                     {category.isHidden ? 'Show' : 'Hide'}
@@ -1130,11 +1131,11 @@ export default function DashboardPage() {
                       {getCategoryIcon(category.iconKey)}
                     </span>
                     <div>
-                      <div style={{ fontWeight: '600', color: '#334155', fontSize: '0.95rem' }}>
+                      <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '0.95rem' }}>
                         {category.labelEn}
                       </div>
                       {category.labelHi && (
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           {category.labelHi}
                         </div>
                       )}
@@ -1143,7 +1144,7 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{
                       padding: '0.25rem 0.5rem',
-                      background: category.productCount > 0 ? '#dcfce7' : '#f1f5f9',
+                      background: category.productCount > 0 ? '#dcfce7' : 'var(--background)',
                       color: category.productCount > 0 ? '#166534' : '#64748b',
                       borderRadius: '6px',
                       fontSize: '0.75rem',
@@ -1151,7 +1152,7 @@ export default function DashboardPage() {
                     }}>
                       {Number(category.productCount) || 0} products
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       {Number(category.stockValue || 0) > 0
                         ? formatCurrency(Number(category.stockValue))
                         : '—'}
@@ -1171,14 +1172,14 @@ export default function DashboardPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
         }} onClick={() => { if (!catEditSaving) { setEditingCategory(null); setCatEditError(null); } }}>
           <div style={{
-            background: 'white', borderRadius: '12px', padding: '1.5rem',
+            background: 'var(--surface)', borderRadius: '12px', padding: '1.5rem',
             width: '100%', maxWidth: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
           }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: '#334155' }}>
+            <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: 'var(--text)' }}>
               Rename Category (Store Override)
             </h3>
             <div style={{ marginBottom: '0.75rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
                 English Name
               </label>
               <input
@@ -1186,13 +1187,13 @@ export default function DashboardPage() {
                 value={catEditNameEn}
                 onChange={(e) => setCatEditNameEn(e.target.value)}
                 style={{
-                  width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+                  width: '100%', padding: '8px 12px', border: '1px solid var(--border)',
                   borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box',
                 }}
               />
             </div>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
                 Hindi Name
               </label>
               <input
@@ -1200,7 +1201,7 @@ export default function DashboardPage() {
                 value={catEditNameHi}
                 onChange={(e) => setCatEditNameHi(e.target.value)}
                 style={{
-                  width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+                  width: '100%', padding: '8px 12px', border: '1px solid var(--border)',
                   borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box',
                 }}
               />
@@ -1219,7 +1220,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => { setEditingCategory(null); setCatEditError(null); }}
                 style={{
-                  padding: '8px 16px', border: '1px solid #e2e8f0', background: 'white',
+                  padding: '8px 16px', border: '1px solid var(--border)', background: 'var(--surface)',
                   borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem',
                 }}
               >
@@ -1254,7 +1255,7 @@ export default function DashboardPage() {
             margin: 0,
             fontSize: '0.85rem',
             fontWeight: '600',
-            color: '#64748b',
+            color: 'var(--text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
           }}>
@@ -1273,24 +1274,24 @@ export default function DashboardPage() {
         </div>
 
         <div style={{
-          background: 'white',
+          background: 'var(--surface)',
           borderRadius: '16px',
           overflow: 'hidden',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)',
-          border: '1px solid #e2e8f0',
+          border: '1px solid var(--border)',
         }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#f8fafc' }}>
+              <tr style={{ background: 'var(--background)' }}>
                 <th style={{
                   padding: '1rem 1.5rem',
                   textAlign: 'left',
                   fontWeight: '600',
                   fontSize: '0.75rem',
-                  color: '#64748b',
+                  color: 'var(--text-muted)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
-                  borderBottom: '1px solid #e2e8f0',
+                  borderBottom: '1px solid var(--border)',
                 }}>
                   Product Name
                 </th>
@@ -1299,10 +1300,10 @@ export default function DashboardPage() {
                   textAlign: 'right',
                   fontWeight: '600',
                   fontSize: '0.75rem',
-                  color: '#64748b',
+                  color: 'var(--text-muted)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
-                  borderBottom: '1px solid #e2e8f0',
+                  borderBottom: '1px solid var(--border)',
                 }}>
                   Total Stock Qty
                 </th>
@@ -1311,10 +1312,10 @@ export default function DashboardPage() {
                   textAlign: 'right',
                   fontWeight: '600',
                   fontSize: '0.75rem',
-                  color: '#64748b',
+                  color: 'var(--text-muted)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
-                  borderBottom: '1px solid #e2e8f0',
+                  borderBottom: '1px solid var(--border)',
                 }}>
                   Total Purchase Value
                 </th>
@@ -1323,10 +1324,10 @@ export default function DashboardPage() {
                   textAlign: 'right',
                   fontWeight: '600',
                   fontSize: '0.75rem',
-                  color: '#64748b',
+                  color: 'var(--text-muted)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
-                  borderBottom: '1px solid #e2e8f0',
+                  borderBottom: '1px solid var(--border)',
                 }}>
                   Total Sell Revenue
                 </th>
@@ -1336,7 +1337,7 @@ export default function DashboardPage() {
               {inventoryLoading ? (
                 <>
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                       {Array.from({ length: 4 }).map((_, j) => (
                         <td key={j} style={{ padding: '1rem 1.5rem' }}>
                           <span style={{ display: 'inline-block', width: j === 0 ? '70%' : '50%', height: '1rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px' }} />
@@ -1373,7 +1374,7 @@ export default function DashboardPage() {
                       </div>
                       <h3 style={{
                         margin: '0 0 0.5rem',
-                        color: '#334155',
+                        color: 'var(--text)',
                         fontWeight: '600',
                         fontSize: '1.1rem',
                       }}>
@@ -1381,7 +1382,7 @@ export default function DashboardPage() {
                       </h3>
                       <p style={{
                         margin: 0,
-                        color: '#94a3b8',
+                        color: 'var(--text-muted)',
                         fontSize: '0.9rem',
                         lineHeight: '1.6',
                       }}>
@@ -1392,10 +1393,10 @@ export default function DashboardPage() {
                 </tr>
               ) : (
                 inventory.slice(invPage * INV_PAGE_SIZE, (invPage + 1) * INV_PAGE_SIZE).map((item) => (
-                  <tr key={item.productId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <tr key={item.productId} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{
                       padding: '1rem 1.5rem',
-                      color: '#334155',
+                      color: 'var(--text)',
                       fontWeight: '500',
                     }}>
                       {item.productName || item.productId}
@@ -1403,7 +1404,7 @@ export default function DashboardPage() {
                     <td style={{
                       padding: '1rem 1.5rem',
                       textAlign: 'right',
-                      color: '#475569',
+                      color: 'var(--text-muted)',
                       fontWeight: '600',
                     }}>
                       {Number(item.totalStockQty) || 0}
@@ -1411,7 +1412,7 @@ export default function DashboardPage() {
                     <td style={{
                       padding: '1rem 1.5rem',
                       textAlign: 'right',
-                      color: '#475569',
+                      color: 'var(--text-muted)',
                     }}>
                       {formatCurrency(Number(item.totalPurchaseValue || 0))}
                     </td>
@@ -1430,13 +1431,13 @@ export default function DashboardPage() {
           </table>
           {/* AUDIT-RET-011: Pagination controls */}
           {inventory.length > INV_PAGE_SIZE && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.5rem', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
-              <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.5rem', borderTop: '1px solid var(--border)', background: 'var(--background)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 Showing {invPage * INV_PAGE_SIZE + 1}–{Math.min((invPage + 1) * INV_PAGE_SIZE, inventory.length)} of {inventory.length}
               </span>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => setInvPage(p => Math.max(0, p - 1))} disabled={invPage === 0} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: invPage === 0 ? '#f1f5f9' : 'white', color: invPage === 0 ? '#94a3b8' : '#334155', cursor: invPage === 0 ? 'default' : 'pointer', fontSize: '0.85rem' }}>Previous</button>
-                <button onClick={() => setInvPage(p => Math.min(Math.ceil(inventory.length / INV_PAGE_SIZE) - 1, p + 1))} disabled={(invPage + 1) * INV_PAGE_SIZE >= inventory.length} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? '#f1f5f9' : 'white', color: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? '#94a3b8' : '#334155', cursor: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'default' : 'pointer', fontSize: '0.85rem' }}>Next</button>
+                <button onClick={() => setInvPage(p => Math.max(0, p - 1))} disabled={invPage === 0} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: invPage === 0 ? 'var(--background)' : 'var(--surface)', color: invPage === 0 ? 'var(--text-muted)' : 'var(--text)', cursor: invPage === 0 ? 'default' : 'pointer', fontSize: '0.85rem' }}>Previous</button>
+                <button onClick={() => setInvPage(p => Math.min(Math.ceil(inventory.length / INV_PAGE_SIZE) - 1, p + 1))} disabled={(invPage + 1) * INV_PAGE_SIZE >= inventory.length} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'var(--background)' : 'var(--surface)', color: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'var(--text-muted)' : 'var(--text)', cursor: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'default' : 'pointer', fontSize: '0.85rem' }}>Next</button>
               </div>
             </div>
           )}

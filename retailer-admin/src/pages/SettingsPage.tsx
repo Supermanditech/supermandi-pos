@@ -1,3 +1,4 @@
+// STG-220: Replaced hardcoded hex colors with CSS variables for dark mode
 // GL-RJ-005: Store Settings Page
 // Allows retailers to configure UPI VPA, tax rates, and store preferences
 
@@ -290,13 +291,13 @@ export default function SettingsPage() {
     return (
       <div style={{
         minHeight: '100%',
-        background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
+        background: 'var(--background)',
         padding: '2rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <div style={{ color: '#64748b', fontSize: '1rem' }}>Loading settings...</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Loading settings...</div>
       </div>
     );
   }
@@ -304,7 +305,7 @@ export default function SettingsPage() {
   return (
     <div style={{
       minHeight: '100%',
-      background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
+      background: 'var(--background)',
       padding: '2rem',
     }}>
       {/* T-112: Breadcrumb navigation */}
@@ -315,14 +316,14 @@ export default function SettingsPage() {
           margin: '0 0 0.5rem',
           fontSize: '1.75rem',
           fontWeight: '700',
-          color: '#1e293b',
+          color: 'var(--text)',
         }}>
           Store Settings
         </h1>
         <p style={{
           margin: 0,
           fontSize: '0.95rem',
-          color: '#64748b',
+          color: 'var(--text-muted)',
         }}>
           Configure your store's payment, tax, and display preferences
         </p>
@@ -375,18 +376,15 @@ export default function SettingsPage() {
       {/* Settings Form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Payment Settings */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -401,13 +399,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 UPI VPA (Virtual Payment Address)
               </label>
               <input
                 type="text"
+                className="form-input"
                 value={settings.upiVpa}
                 onChange={(e) => handleChange('upiVpa', e.target.value)}
                 placeholder="yourstore@upi"
@@ -415,21 +414,21 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: `1px solid ${errors.upiVpa ? '#ef4444' : '#e2e8f0'}`,
+                  borderColor: errors.upiVpa ? '#ef4444' : undefined,
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
                   transition: 'border-color 0.2s',
                 }}
                 onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.currentTarget.style.borderColor = errors.upiVpa ? '#ef4444' : '#e2e8f0'}
+                onBlur={(e) => e.currentTarget.style.borderColor = errors.upiVpa ? '#ef4444' : ''}
               />
               {errors.upiVpa && (
                 <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#ef4444' }}>
                   {errors.upiVpa}
                 </p>
               )}
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 This will be used for UPI payments in the POS app
               </p>
             </div>
@@ -437,18 +436,15 @@ export default function SettingsPage() {
         </section>
 
         {/* Tax Settings */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -463,13 +459,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 GST Rate (%)
               </label>
               <input
                 type="number"
+                className="form-input"
                 value={settings.taxRate}
                 onChange={(e) => handleChange('taxRate', parseFloat(e.target.value) || 0)}
                 min="0"
@@ -479,7 +476,7 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: `1px solid ${errors.taxRate ? '#ef4444' : '#e2e8f0'}`,
+                  borderColor: errors.taxRate ? '#ef4444' : undefined,
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -497,13 +494,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 GST Number (GSTIN)
               </label>
               <input
                 type="text"
+                className="form-input"
                 value={settings.gstNumber}
                 onChange={(e) => handleChange('gstNumber', e.target.value.toUpperCase())}
                 placeholder="22AAAAA0000A1Z5"
@@ -512,7 +510,7 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: `1px solid ${errors.gstNumber ? '#ef4444' : '#e2e8f0'}`,
+                  borderColor: errors.gstNumber ? '#ef4444' : undefined,
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -529,18 +527,15 @@ export default function SettingsPage() {
         </section>
 
         {/* Store Information */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -555,20 +550,20 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Store Name
               </label>
               <input
                 type="text"
+                className="form-input"
                 value={settings.storeName}
                 onChange={(e) => handleChange('storeName', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -581,13 +576,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Phone Number
               </label>
               <input
                 type="tel"
+                className="form-input"
                 value={settings.phone}
                 onChange={(e) => handleChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                 placeholder="9876543210"
@@ -596,7 +592,7 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: `1px solid ${errors.phone ? '#ef4444' : '#e2e8f0'}`,
+                  borderColor: errors.phone ? '#ef4444' : undefined,
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -614,12 +610,13 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Address
               </label>
               <textarea
+                className="form-input"
                 value={settings.address}
                 onChange={(e) => handleChange('address', e.target.value)}
                 rows={2}
@@ -627,7 +624,6 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -639,18 +635,15 @@ export default function SettingsPage() {
         </section>
 
         {/* Operating Hours & Receipt */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -665,20 +658,20 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Opening Time
               </label>
               <input
                 type="time"
+                className="form-input"
                 value={settings.operatingHours.open}
                 onChange={(e) => handleOperatingHoursChange('open', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -691,20 +684,20 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Closing Time
               </label>
               <input
                 type="time"
+                className="form-input"
                 value={settings.operatingHours.close}
                 onChange={(e) => handleOperatingHoursChange('close', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -717,12 +710,13 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Receipt Footer Message
               </label>
               <textarea
+                className="form-input"
                 value={settings.receiptFooter}
                 onChange={(e) => handleChange('receiptFooter', e.target.value)}
                 rows={2}
@@ -732,14 +726,13 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
                   resize: 'vertical',
                 }}
               />
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 This message will appear at the bottom of printed receipts ({settings.receiptFooter?.length || 0}/200 characters)
               </p>
             </div>
@@ -747,18 +740,15 @@ export default function SettingsPage() {
         </section>
 
         {/* T-156: Receipt Customization */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -773,13 +763,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Receipt GSTIN
               </label>
               <input
                 type="text"
+                className="form-input"
                 value={settings.receiptGstin}
                 onChange={(e) => handleChange('receiptGstin', e.target.value.toUpperCase())}
                 placeholder="22AAAAA0000A1Z5"
@@ -788,14 +779,13 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
                   textTransform: 'uppercase',
                 }}
               />
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 GSTIN printed on customer receipts. Leave blank to hide.
               </p>
             </div>
@@ -807,7 +797,7 @@ export default function SettingsPage() {
                 gap: '0.5rem',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 cursor: 'pointer',
               }}>
                 <input
@@ -818,7 +808,7 @@ export default function SettingsPage() {
                 />
                 Show Tax Breakdown on Receipt
               </label>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Print CGST/SGST split on each receipt
               </p>
             </div>
@@ -828,12 +818,13 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Custom Receipt Footer
               </label>
               <textarea
+                className="form-input"
                 value={settings.receiptCustomFooter}
                 onChange={(e) => handleChange('receiptCustomFooter', e.target.value)}
                 rows={3}
@@ -843,14 +834,13 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
                   resize: 'vertical',
                 }}
               />
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Additional text printed below the standard footer ({settings.receiptCustomFooter?.length || 0}/300 characters)
               </p>
             </div>
@@ -858,18 +848,15 @@ export default function SettingsPage() {
         </section>
 
         {/* T-004: Change Password */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -912,13 +899,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Current Password
               </label>
               <input
                 type="password"
+                className="form-input"
                 value={currentPassword}
                 onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(null); }}
                 placeholder="Enter current password"
@@ -926,7 +914,6 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -938,13 +925,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 New Password
               </label>
               <input
                 type="password"
+                className="form-input"
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null); }}
                 placeholder="Min 8 chars, 1 upper, 1 lower, 1 number"
@@ -952,7 +940,6 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -964,13 +951,14 @@ export default function SettingsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Confirm New Password
               </label>
               <input
                 type="password"
+                className="form-input"
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null); }}
                 placeholder="Re-enter new password"
@@ -978,7 +966,6 @@ export default function SettingsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -991,8 +978,8 @@ export default function SettingsPage() {
                 disabled={passwordSaving}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: passwordSaving ? '#94a3b8' : '#1e293b',
-                  color: 'white',
+                  background: passwordSaving ? 'var(--text-muted)' : 'var(--text)',
+                  color: 'var(--surface)',
                   border: 'none',
                   borderRadius: '10px',
                   fontSize: '0.9rem',
@@ -1013,7 +1000,7 @@ export default function SettingsPage() {
             disabled={saving}
             style={{
               padding: '0.875rem 2rem',
-              background: saving ? '#94a3b8' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              background: saving ? 'var(--text-muted)' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
               color: 'white',
               border: 'none',
               borderRadius: '10px',

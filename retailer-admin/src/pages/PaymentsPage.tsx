@@ -1,3 +1,4 @@
+// STG-216: Replaced hardcoded hex colors with CSS variables for dark mode
 // RET-WEB-003: Payments Setup Page
 // Route: /s/:storeCode/settings/payments
 // Allows retailers to configure UPI VPA for receiving payments
@@ -174,13 +175,13 @@ export default function PaymentsPage() {
     return (
       <div style={{
         minHeight: '100%',
-        background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
+        background: 'var(--background)',
         padding: '2rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <div style={{ color: '#64748b', fontSize: '1rem' }}>Loading payment settings...</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Loading payment settings...</div>
       </div>
     );
   }
@@ -188,7 +189,7 @@ export default function PaymentsPage() {
   return (
     <div style={{
       minHeight: '100%',
-      background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
+      background: 'var(--background)',
       padding: '2rem',
     }}>
       {/* T-112: Breadcrumb navigation */}
@@ -199,14 +200,14 @@ export default function PaymentsPage() {
           margin: '0 0 0.5rem',
           fontSize: '1.75rem',
           fontWeight: '700',
-          color: '#1e293b',
+          color: 'var(--text)',
         }}>
           Payment Settings
         </h1>
         <p style={{
           margin: 0,
           fontSize: '0.95rem',
-          color: '#64748b',
+          color: 'var(--text-muted)',
         }}>
           Configure your payment methods to receive payments from customers
         </p>
@@ -268,18 +269,16 @@ export default function PaymentsPage() {
       {/* Payment Form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* UPI Settings */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -290,7 +289,7 @@ export default function PaymentsPage() {
 
           {/* REQ.AUDIT.W5.RETAILER.PAYMENTS-PAGE-NO-EMPTY-STATE.001: guidance when UPI not set */}
           {!settings.upiVpa && (
-            <p style={{ fontSize: '0.8125rem', color: '#64748b', margin: '0 0 0.75rem' }}>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '0 0 0.75rem' }}>
               Enter your UPI address to start receiving digital payments from customers.
             </p>
           )}
@@ -304,18 +303,16 @@ export default function PaymentsPage() {
         </section>
 
         {/* Bank Account Settings (Optional) */}
-        <section style={{
-          background: 'white',
+        <section className="card" style={{
           borderRadius: '16px',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
         }}>
           <h2 style={{
             margin: '0 0 1.25rem',
             fontSize: '1rem',
             fontWeight: '600',
-            color: '#334155',
+            color: 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -327,7 +324,7 @@ export default function PaymentsPage() {
           <p style={{
             margin: '0 0 1rem',
             fontSize: '0.85rem',
-            color: '#64748b',
+            color: 'var(--text-muted)',
           }}>
             Provide bank account details for NEFT/IMPS settlements (optional)
           </p>
@@ -338,7 +335,7 @@ export default function PaymentsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 Bank Account Number
@@ -352,13 +349,13 @@ export default function PaymentsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--border)',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
                 }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
               />
             </div>
 
@@ -367,7 +364,7 @@ export default function PaymentsPage() {
                 display: 'block',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                color: '#475569',
+                color: 'var(--text-muted)',
                 marginBottom: '0.5rem',
               }}>
                 IFSC Code
@@ -382,19 +379,19 @@ export default function PaymentsPage() {
                   width: '100%',
                   padding: '0.75rem 1rem',
                   fontSize: '0.95rem',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--border)',
                   borderRadius: '10px',
                   outline: 'none',
                   boxSizing: 'border-box',
                   textTransform: 'uppercase',
                 }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
               />
             </div>
           </div>
 
-          <p style={{ margin: '1rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+          <p style={{ margin: '1rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             Bank details are used for NEFT/IMPS settlement processing.
           </p>
         </section>
@@ -406,7 +403,7 @@ export default function PaymentsPage() {
             disabled={saving || !settings.upiVpa}
             style={{
               padding: '0.875rem 2rem',
-              background: saving || !settings.upiVpa ? '#94a3b8' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              background: saving || !settings.upiVpa ? '#94a3b8' : 'var(--primary)',
               color: 'white',
               border: 'none',
               borderRadius: '10px',

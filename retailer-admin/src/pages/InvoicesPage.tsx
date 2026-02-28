@@ -1,3 +1,4 @@
+// STG-217: Replaced hardcoded hex colors with CSS variables for dark mode
 // T-073: Retailer Invoices Page
 // Read-only view of invoices where the store is the buyer
 
@@ -175,7 +176,7 @@ export default function InvoicesPage() {
       {/* Filters */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setOffset(0); }}
-          style={{ padding: "0.4rem 0.6rem", borderRadius: 4, border: "1px solid #d1d5db", fontSize: "0.85rem" }}>
+          style={{ padding: "0.4rem 0.6rem", borderRadius: 4, border: `1px solid var(--border)`, fontSize: "0.85rem" }}>
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="issued">Issued</option>
@@ -183,14 +184,14 @@ export default function InvoicesPage() {
           <option value="overdue">Overdue</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <span style={{ color: "#6b7280", fontSize: "0.85rem" }}>{total} invoice{total !== 1 ? "s" : ""}</span>
+        <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>{total} invoice{total !== 1 ? "s" : ""}</span>
       </div>
 
       {/* Error */}
       {error && <div style={{ color: "#dc2626", marginBottom: "1rem", padding: "0.5rem", background: "#fef2f2", borderRadius: 4 }}>{error}</div>}
 
       {/* Loading */}
-      {loading && <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>Loading invoices...</div>}
+      {loading && <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>Loading invoices...</div>}
 
       {/* Table */}
       {!loading && invoices.length === 0 && (
@@ -205,7 +206,7 @@ export default function InvoicesPage() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
             <thead>
-              <tr style={{ borderBottom: "2px solid #e5e7eb", textAlign: "left" }}>
+              <tr style={{ borderBottom: `2px solid var(--border)`, textAlign: "left" }}>
                 <th style={{ padding: "0.5rem" }}>Invoice #</th>
                 <th style={{ padding: "0.5rem" }}>Date</th>
                 <th style={{ padding: "0.5rem" }}>Seller</th>
@@ -218,7 +219,7 @@ export default function InvoicesPage() {
             </thead>
             <tbody>
               {invoices.map(inv => (
-                <tr key={inv.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                <tr key={inv.id} style={{ borderBottom: `1px solid var(--border)` }}>
                   <td style={{ padding: "0.5rem", fontFamily: "monospace", fontSize: "0.8rem" }}>{inv.invoiceNumber}</td>
                   <td style={{ padding: "0.5rem" }}>{fmtDate(inv.invoiceDate)}</td>
                   <td style={{ padding: "0.5rem" }}>{inv.sellerName}</td>
@@ -234,11 +235,11 @@ export default function InvoicesPage() {
                   </td>
                   <td style={{ padding: "0.5rem", display: "flex", gap: "0.5rem" }}>
                     <button onClick={() => openDetail(inv.id)}
-                      style={{ padding: "2px 8px", fontSize: "0.75rem", border: "1px solid #d1d5db", borderRadius: 4, background: "#fff", cursor: "pointer" }}>
+                      style={{ padding: "2px 8px", fontSize: "0.75rem", border: `1px solid var(--border)`, borderRadius: 4, background: "var(--surface)", cursor: "pointer" }}>
                       View
                     </button>
                     <button onClick={() => downloadPdf(inv.id, inv.invoiceNumber)}
-                      style={{ padding: "2px 8px", fontSize: "0.75rem", border: "1px solid #d1d5db", borderRadius: 4, background: "#fff", cursor: "pointer" }}>
+                      style={{ padding: "2px 8px", fontSize: "0.75rem", border: `1px solid var(--border)`, borderRadius: 4, background: "var(--surface)", cursor: "pointer" }}>
                       PDF
                     </button>
                   </td>
@@ -253,12 +254,12 @@ export default function InvoicesPage() {
       {totalPages > 1 && (
         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginTop: "1rem", alignItems: "center" }}>
           <button aria-label="Previous page of invoices" disabled={currentPage <= 1} onClick={() => setOffset(offset - limit)}
-            style={{ padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 4, cursor: currentPage <= 1 ? "default" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1 }}>
+            style={{ padding: "4px 12px", border: `1px solid var(--border)`, borderRadius: 4, cursor: currentPage <= 1 ? "default" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1 }}>
             Prev
           </button>
-          <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>Page {currentPage} of {totalPages}</span>
+          <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Page {currentPage} of {totalPages}</span>
           <button aria-label="Next page of invoices" disabled={currentPage >= totalPages} onClick={() => setOffset(offset + limit)}
-            style={{ padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 4, cursor: currentPage >= totalPages ? "default" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1 }}>
+            style={{ padding: "4px 12px", border: `1px solid var(--border)`, borderRadius: 4, cursor: currentPage >= totalPages ? "default" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1 }}>
             Next
           </button>
         </div>
@@ -270,14 +271,14 @@ export default function InvoicesPage() {
           onClick={() => { setDetail(null); setDetailError(null); }}
           onKeyDown={e => { if (e.key === 'Escape') { setDetail(null); setDetailError(null); } }}
           tabIndex={-1} ref={(el) => { if (el) el.focus(); }}>
-          <div style={{ background: "#fff", borderRadius: 8, width: "90%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "1.5rem" }}
+          <div className="card" style={{ borderRadius: 8, width: "90%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "1.5rem" }}
             onClick={e => e.stopPropagation()}>
             {detailLoading && <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>}
             {detailError && !detailLoading && (
               <div style={{ padding: "2rem", textAlign: "center" }}>
                 <p style={{ color: "#dc2626", fontWeight: 600 }}>Failed to load invoice</p>
-                <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "0.5rem" }}>{detailError}</p>
-                <button onClick={() => setDetailError(null)} style={{ marginTop: "1rem", padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}>Close</button>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "0.5rem" }}>{detailError}</p>
+                <button onClick={() => setDetailError(null)} style={{ marginTop: "1rem", padding: "0.5rem 1rem", border: `1px solid var(--border)`, borderRadius: 6, cursor: "pointer" }}>Close</button>
               </div>
             )}
             {detail && (
@@ -301,7 +302,7 @@ export default function InvoicesPage() {
                 <h4 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.5rem" }}>Items</h4>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", marginBottom: "1rem" }}>
                   <thead>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    <tr style={{ borderBottom: `1px solid var(--border)` }}>
                       <th style={{ padding: "4px", textAlign: "left" }}>Product</th>
                       <th style={{ padding: "4px", textAlign: "right" }}>Qty</th>
                       <th style={{ padding: "4px", textAlign: "right" }}>Rate</th>
@@ -311,7 +312,7 @@ export default function InvoicesPage() {
                   </thead>
                   <tbody>
                     {detail.items.map(item => (
-                      <tr key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                      <tr key={item.id} style={{ borderBottom: `1px solid var(--border)` }}>
                         <td style={{ padding: "4px" }}>{item.productName}</td>
                         <td style={{ padding: "4px", textAlign: "right" }}>{item.quantity} {item.unit}</td>
                         <td style={{ padding: "4px", textAlign: "right" }}>{fmt(item.unitPriceMinor)}</td>
@@ -343,7 +344,7 @@ export default function InvoicesPage() {
                         <span>IGST:</span><span>{fmt(detail.igstMinor)}</span>
                       </div>
                     )}
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderTop: "1px solid #e5e7eb", fontWeight: 700 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderTop: `1px solid var(--border)`, fontWeight: 700 }}>
                       <span>Total:</span><span>{fmt(detail.totalAmountMinor)}</span>
                     </div>
                     {detail.amountPaidMinor > 0 && (
@@ -364,7 +365,7 @@ export default function InvoicesPage() {
                   <div style={{ marginTop: "1rem" }}>
                     <h4 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.5rem" }}>Payment History</h4>
                     {detail.payments.map(p => (
-                      <div key={p.id} style={{ fontSize: "0.8rem", padding: "2px 0", color: "#6b7280" }}>
+                      <div key={p.id} style={{ fontSize: "0.8rem", padding: "2px 0", color: "var(--text-muted)" }}>
                         {fmtDate(p.paymentDate)} — {fmt(p.amountMinor)} via {p.paymentMode}
                         {p.paymentReference ? ` (Ref: ${p.paymentReference})` : ""}
                       </div>
@@ -375,7 +376,7 @@ export default function InvoicesPage() {
                 {/* Download + WhatsApp Share */}
                 <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
                   <button onClick={() => downloadPdf(detail.id, detail.invoiceNumber)}
-                    style={{ padding: "6px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: "0.85rem" }}>
+                    style={{ padding: "6px 16px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: "0.85rem" }}>
                     Download PDF
                   </button>
                   {/* WA-002: sellerPhone now included in API response for direct WhatsApp linking */}

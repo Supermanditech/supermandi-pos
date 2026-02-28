@@ -1,3 +1,4 @@
+// STG-208: Replaced hardcoded hex colors with CSS variables for dark mode
 /**
  * STAGING-FIX-004: Retailer Registration — 5-step KYC flow matching Supplier Portal
  *
@@ -83,12 +84,12 @@ const styles = {
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column' as const,
-    background: '#F7F9FC',
+    background: 'var(--background)',
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   header: {
-    background: 'white',
-    borderBottom: '1px solid #e2e8f0',
+    background: 'var(--surface)',
+    borderBottom: '1px solid var(--border)',
     height: '64px',
     display: 'flex',
     alignItems: 'center',
@@ -112,8 +113,8 @@ const styles = {
     padding: '0.25rem 0.75rem',
     lineHeight: 1,
   },
-  logoSeparator: { color: '#94a3b8' },
-  logoSubtext: { color: '#475569', fontSize: '0.875rem', fontWeight: 500 },
+  logoSeparator: { color: 'var(--text-muted)' },
+  logoSubtext: { color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500 },
   main: {
     flex: 1,
     display: 'flex',
@@ -122,24 +123,24 @@ const styles = {
   },
   container: { width: '100%', maxWidth: '720px' },
   card: {
-    background: 'white',
+    background: 'var(--surface)',
     borderRadius: '8px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0',
+    border: '1px solid var(--border)',
     padding: '2rem',
     marginBottom: '1.5rem',
   },
-  cardTitle: { fontSize: '1.5rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' },
-  cardSubtitle: { color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' },
-  sectionTitle: { fontSize: '1rem', fontWeight: 600, color: '#0F172A', marginBottom: '1rem', marginTop: '1.5rem' },
+  cardTitle: { fontSize: '1.5rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' },
+  cardSubtitle: { color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' },
+  sectionTitle: { fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '1rem', marginTop: '1.5rem' },
   sectionCard: {
-    background: 'white', borderRadius: '8px',
+    background: 'var(--surface)', borderRadius: '8px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0', padding: '1.5rem 2rem',
+    border: '1px solid var(--border)', padding: '1.5rem 2rem',
   },
   sectionHeader: {
-    fontSize: '1.125rem', fontWeight: 600, color: '#0F172A',
-    marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0',
+    fontSize: '1.125rem', fontWeight: 600, color: 'var(--text)',
+    marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)',
   },
   gridTwo: {
     display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem',
@@ -147,16 +148,16 @@ const styles = {
   gridFull: { gridColumn: '1 / -1' } as React.CSSProperties,
   formGroup: { marginBottom: '1rem' },
   formRow: { display: 'flex', gap: '1rem', marginBottom: '1rem' },
-  label: { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '0.5rem' },
+  label: { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)', marginBottom: '0.5rem' },
   input: {
     width: '100%', height: '42px', padding: '0 1rem', fontSize: '0.9375rem',
-    border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none',
+    border: '1px solid var(--border)', borderRadius: '6px', outline: 'none',
     boxSizing: 'border-box' as const, transition: 'border-color 0.15s, box-shadow 0.15s',
   },
   select: {
     width: '100%', height: '42px', padding: '0 0.75rem', fontSize: '0.9375rem',
-    border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none',
-    boxSizing: 'border-box' as const, background: 'white', cursor: 'pointer',
+    border: '1px solid var(--border)', borderRadius: '6px', outline: 'none',
+    boxSizing: 'border-box' as const, background: 'var(--surface)', cursor: 'pointer',
   },
   btnPrimary: {
     width: '100%', height: '46px', padding: '0 1.5rem', fontSize: '0.9375rem',
@@ -166,7 +167,7 @@ const styles = {
   btnPrimaryDisabled: { background: '#93c5fd', cursor: 'not-allowed' },
   btnSecondary: {
     width: '100%', height: '46px', padding: '0 1.5rem', fontSize: '0.9375rem',
-    fontWeight: 500, color: '#0F172A', background: 'white', border: '1px solid #e2e8f0',
+    fontWeight: 500, color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)',
     borderRadius: '6px', cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s',
   },
   alertError: {
@@ -186,19 +187,19 @@ const styles = {
     cursor: 'pointer', background: 'none', border: 'none', padding: 0,
   },
   textLinkDisabled: { color: '#9ca3af', cursor: 'not-allowed' },
-  optionalBadge: { fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400, marginLeft: '0.25rem' },
+  optionalBadge: { fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '0.25rem' },
   requiredStar: { color: '#dc2626', fontWeight: 600 } as React.CSSProperties,
   fieldError: { fontSize: '0.8125rem', color: '#dc2626', marginTop: '0.25rem' },
-  footer: { background: 'white', borderTop: '1px solid #e2e8f0' },
+  footer: { background: 'var(--surface)', borderTop: '1px solid var(--border)' },
   footerInner: {
     maxWidth: '720px', margin: '0 auto', padding: '1rem 1.5rem',
-    textAlign: 'center' as const, fontSize: '0.8125rem', color: '#64748b',
+    textAlign: 'center' as const, fontSize: '0.8125rem', color: 'var(--text-muted)',
   },
   // Document upload styles
   uploadBox: {
-    border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '1.5rem',
+    border: '2px dashed var(--border)', borderRadius: '8px', padding: '1.5rem',
     textAlign: 'center' as const, cursor: 'pointer', transition: 'border-color 0.15s',
-    background: '#fafbfc',
+    background: 'var(--background)',
   },
   uploadBoxUploaded: {
     border: '2px solid #22c55e', background: '#f0fdf4',
@@ -208,7 +209,7 @@ const styles = {
   },
   checkboxLabel: {
     display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-    fontSize: '0.875rem', color: '#374151', cursor: 'pointer',
+    fontSize: '0.875rem', color: 'var(--text-muted)', cursor: 'pointer',
   },
 };
 
@@ -623,10 +624,10 @@ export default function RegisterPage() {
         <div style={styles.container}>
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>
               Register as Retailer
             </h1>
-            <p style={{ color: '#64748b', fontSize: '0.9375rem' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem' }}>
               Complete the registration form to join SuperMandi as a retailer partner
             </p>
           </div>
@@ -642,8 +643,8 @@ export default function RegisterPage() {
                         width: '34px', height: '34px', borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '0.8125rem', fontWeight: 600,
-                        background: progressStep > i ? '#22c55e' : progressStep === i ? '#2563eb' : '#e2e8f0',
-                        color: progressStep >= i ? 'white' : '#64748b',
+                        background: progressStep > i ? '#22c55e' : progressStep === i ? '#2563eb' : 'var(--border)',
+                        color: progressStep >= i ? 'white' : 'var(--text-muted)',
                         transition: 'background 0.15s, color 0.15s',
                       }}>
                         {progressStep > i ? (
@@ -654,14 +655,14 @@ export default function RegisterPage() {
                       </div>
                       <span style={{
                         marginLeft: '0.75rem', fontSize: '0.875rem', fontWeight: 500,
-                        color: progressStep === i ? '#2563eb' : progressStep > i ? '#22c55e' : '#64748b',
+                        color: progressStep === i ? '#2563eb' : progressStep > i ? '#22c55e' : 'var(--text-muted)',
                       }}>{label}</span>
                     </div>
                     {i < PROGRESS_LABELS.length - 1 && (
                       <div style={{
                         flex: 1, height: '4px', margin: '0 1rem',
                         borderRadius: '999px',
-                        background: progressStep > i ? '#22c55e' : '#e2e8f0',
+                        background: progressStep > i ? '#22c55e' : 'var(--border)',
                       }} />
                     )}
                   </div>
@@ -708,8 +709,8 @@ export default function RegisterPage() {
                 </button>
               </form>
 
-              <div style={{ borderTop: '1px solid #e5e7eb', margin: '1.5rem 0', paddingTop: '1rem' }}>
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
+              <div style={{ borderTop: '1px solid var(--border)', margin: '1.5rem 0', paddingTop: '1rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
                   Already registered?{' '}
                   <Link to="/retailer/login" style={styles.textLink}>Sign In</Link>
                 </p>
@@ -740,7 +741,7 @@ export default function RegisterPage() {
 
                 <div aria-live="polite">
                 {otpExpirySeconds > 0 && (
-                  <p style={{ fontSize: '0.8125rem', color: otpExpirySeconds <= 60 ? '#dc2626' : '#64748b', textAlign: 'center', marginBottom: '1rem' }}>
+                  <p style={{ fontSize: '0.8125rem', color: otpExpirySeconds <= 60 ? '#dc2626' : 'var(--text-muted)', textAlign: 'center', marginBottom: '1rem' }}>
                     Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
                   </p>
                 )}
@@ -820,7 +821,7 @@ export default function RegisterPage() {
                     <label style={styles.label} htmlFor="reg-gstin">GSTIN <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-gstin" name="gstin" type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="22AAAAA0000A1Z5" maxLength={15}
                       value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} disabled={isLoading} />
-                    <div style={{ fontSize: '0.75rem', color: gstin.length === 15 ? '#16a34a' : '#94a3b8', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: gstin.length === 15 ? '#16a34a' : 'var(--text-muted)', marginTop: '0.25rem' }}>
                       {gstin.length}/15 characters {gstin.length === 15 ? '— Valid length' : '— GST Identification Number'}
                     </div>
                     {fieldErrors.gstin && <div style={styles.fieldError}>{fieldErrors.gstin}</div>}
@@ -846,7 +847,7 @@ export default function RegisterPage() {
                   </div>
                   <div>
                     <label style={styles.label} htmlFor="reg-phone-verified">Phone (Verified)</label>
-                    <input id="reg-phone-verified" type="text" style={{ ...styles.input, background: '#f1f5f9', cursor: 'not-allowed' }}
+                    <input id="reg-phone-verified" type="text" style={{ ...styles.input, background: 'var(--background)', cursor: 'not-allowed' }}
                       value={phone} disabled />
                   </div>
                 </div>
@@ -885,7 +886,7 @@ export default function RegisterPage() {
                     <label style={styles.label} htmlFor="reg-pincode">Pincode <span style={styles.requiredStar}>*</span></label>
                     <input id="reg-pincode" name="pincode" type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="400001" maxLength={6}
                       value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} disabled={isLoading} />
-                    <div style={{ fontSize: '0.75rem', color: pincode.length === 6 ? '#16a34a' : '#94a3b8', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: pincode.length === 6 ? '#16a34a' : 'var(--text-muted)', marginTop: '0.25rem' }}>
                       {pincode.length}/6 digits {pincode.length === 6 ? '— Valid' : ''}
                     </div>
                     {fieldErrors.pincode && <div style={styles.fieldError}>{fieldErrors.pincode}</div>}
@@ -956,10 +957,10 @@ export default function RegisterPage() {
 
                 return (
                   <div key={key} style={styles.sectionCard}>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>
                       {config.label} {config.required && '*'}
                     </h3>
-                    <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                       Upload a clear copy of your {config.label.toLowerCase()}
                     </p>
                     <label
@@ -985,8 +986,8 @@ export default function RegisterPage() {
                       {isUploading && (
                         <div style={{ textAlign: 'center', width: '100%' }}>
                           <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '0.5rem' }} />
-                          <p style={{ color: '#64748b', margin: '0 0 0.5rem' }}>Uploading...</p>
-                          <div style={{ width: '80%', height: '4px', background: '#e2e8f0', borderRadius: '999px', margin: '0 auto', overflow: 'hidden' }}>
+                          <p style={{ color: 'var(--text-muted)', margin: '0 0 0.5rem' }}>Uploading...</p>
+                          <div style={{ width: '80%', height: '4px', background: 'var(--border)', borderRadius: '999px', margin: '0 auto', overflow: 'hidden' }}>
                             <div style={{ width: '70%', height: '100%', background: '#2563eb', borderRadius: '999px', animation: 'uploadProgress 1.5s ease-in-out infinite' }} />
                           </div>
                         </div>
@@ -997,28 +998,28 @@ export default function RegisterPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                           <p style={{ color: '#16a34a', fontWeight: 500, margin: 0 }}>{doc.file?.name || 'Uploaded'}</p>
-                          <p style={{ color: '#64748b', fontSize: '0.8125rem', margin: '0.25rem 0 0' }}>Click to replace</p>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: '0.25rem 0 0' }}>Click to replace</p>
                         </div>
                       )}
                       {hasError && (
                         <div style={{ textAlign: 'center' }}>
                           <p style={{ color: '#dc2626', fontWeight: 500, margin: '0 0 0.25rem' }}>{doc.error || 'Upload failed'}</p>
-                          <p style={{ color: '#64748b', fontSize: '0.8125rem', margin: 0 }}>Click to try again</p>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: 0 }}>Click to try again</p>
                         </div>
                       )}
                       {doc?.status === 'pending' && (
                         <div style={{ textAlign: 'center' }}>
-                          <svg width="40" height="40" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style={{ marginBottom: '0.75rem' }}>
+                          <svg width="40" height="40" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24" style={{ marginBottom: '0.75rem' }}>
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          <p style={{ color: '#475569', fontWeight: 500, margin: '0 0 0.25rem' }}>Click to upload</p>
-                          <p style={{ color: '#94a3b8', fontSize: '0.8125rem', margin: 0 }}>or drag and drop</p>
+                          <p style={{ color: 'var(--text-muted)', fontWeight: 500, margin: '0 0 0.25rem' }}>Click to upload</p>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: 0 }}>or drag and drop</p>
                         </div>
                       )}
                     </label>
                     {doc?.preview && (
                       <div style={{ marginTop: '1rem' }}>
-                        <img src={doc.preview} alt="Preview" style={{ maxWidth: '100%', height: '96px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                        <img src={doc.preview} alt="Preview" style={{ maxWidth: '100%', height: '96px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)' }} />
                       </div>
                     )}
                   </div>
@@ -1073,11 +1074,11 @@ export default function RegisterPage() {
 
                 {applicationId && (
                   <div style={{
-                    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
+                    background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px',
                     padding: '1rem', textAlign: 'center', marginBottom: '1rem',
                   }}>
-                    <div style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.25rem' }}>Application ID</div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0F172A', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Application ID</div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace' }}>
                       {applicationId}
                     </div>
                   </div>
@@ -1093,7 +1094,7 @@ export default function RegisterPage() {
                   </ol>
                 </div>
 
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', textAlign: 'center', margin: '0.5rem 0' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.5rem 0' }}>
                   Need help? Contact us at{' '}
                   <a href="mailto:hello@supermandi.tech" style={{ color: '#2563eb' }}>hello@supermandi.tech</a>
                 </div>
@@ -1118,7 +1119,7 @@ export default function RegisterPage() {
         <div style={{ ...styles.footerInner, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Link to="/retailer/help" style={{ color: '#94A3B8', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
+            <Link to="/retailer/help" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>Help</Link>
             <BuildStamp />
           </div>
         </div>
