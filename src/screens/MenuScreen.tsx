@@ -6,7 +6,7 @@ import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 
-import { theme, useThemeColors } from "../theme";
+import { theme, colors, useThemeColors } from "../theme";
 import { isQaMenuEnabled } from "./UiShowcaseScreen";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
@@ -875,7 +875,7 @@ export default function MenuScreen() {
         }}
       >
         <View style={[styles.menuIcon, styles.menuIconWhatsapp]}>
-          <MaterialCommunityIcons name={"whatsapp" as any} size={20} color="#25D366" />
+          <MaterialCommunityIcons name={"whatsapp" as any} size={20} color={colors.whatsapp} />
         </View>
         <View style={styles.menuText}>
           <Text style={styles.menuTitle}>WhatsApp Support</Text>
@@ -1366,8 +1366,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary + "15"
   },
   menuIconWhatsapp: {
-    borderColor: "#25D366",
-    backgroundColor: "#25D366" + "15",
+    borderColor: colors.whatsapp,
+    backgroundColor: colors.whatsapp + "15",
   },
   languageToggle: {
     flexDirection: "row",

@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../theme";
+import { theme, colors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDate } from "../i18n/formatters";
 import { apiClient } from "../services/api/apiClient";
@@ -56,8 +56,8 @@ interface OverdueDuesResponse {
 /** Get severity color based on days overdue */
 function getSeverityColor(daysOverdue: number): string {
   if (daysOverdue > 30) return theme.colors.error;
-  if (daysOverdue > 7) return "#F97316"; // orange
-  return "#EAB308"; // yellow
+  if (daysOverdue > 7) return colors.warning; // orange
+  return colors.warning; // yellow
 }
 
 /** Get severity label */

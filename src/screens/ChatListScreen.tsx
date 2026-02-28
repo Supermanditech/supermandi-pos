@@ -8,12 +8,12 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../theme';
+import { theme, colors } from '../theme';
 import * as chatApi from '../services/api/chatApi';
 
-// Support-type conversation uses violet (#7c3aed / #f5f3ff) — not a brand color
-const SUPPORT_ICON_COLOR = '#7c3aed';
-const SUPPORT_BG_COLOR = '#f5f3ff';
+// Support-type conversation uses primary brand color
+const SUPPORT_ICON_COLOR = colors.primary;
+const SUPPORT_BG_COLOR = colors.primarySoft;
 
 interface Props {
   onSelectConversation: (conversation: chatApi.Conversation) => void;

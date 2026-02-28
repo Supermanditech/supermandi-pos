@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     ...typography.button,
-    color: "#fff",
+    color: colors.textInverse,
   },
   skipButton: {
     paddingVertical: spacing.sm,

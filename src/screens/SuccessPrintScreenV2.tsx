@@ -4,7 +4,7 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../theme";
+import { theme, colors } from "../theme";
 import { useCartStore } from "../stores/cartStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import type { CartItem } from "../stores/cartStore";
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border
   },
   btnWhatsApp: {
-    backgroundColor: "#25D366",
+    backgroundColor: colors.whatsapp,
   },
   btnDisabled: {
     opacity: 0.6

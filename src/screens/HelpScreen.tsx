@@ -121,7 +121,7 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
             <MaterialCommunityIcons
               name={"whatsapp" as any}
               size={20}
-              color="#25D366"
+              color={colors.whatsapp}
             />
             <Text style={styles.cardTitle}>WhatsApp Support</Text>
           </View>
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   whatsappCard: {
-    borderColor: "#25D36630",
+    borderColor: colors.whatsapp + "30",
   },
   cardHeader: {
     flexDirection: "row",
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
+    borderTopColor: colors.border,
   },
   linkText: {
     fontSize: typography.bodySmall.fontSize,

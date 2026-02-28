@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../theme";
+import { theme, colors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 import { useCustomerStore } from "../stores/customerStore";
@@ -344,7 +344,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                     }}
                     hitSlop={8}
                   >
-                    <MaterialCommunityIcons name="whatsapp" size={20} color="#25D366" />
+                    <MaterialCommunityIcons name="whatsapp" size={20} color={colors.whatsapp} />
                   </Pressable>
                   )}
                 </View>

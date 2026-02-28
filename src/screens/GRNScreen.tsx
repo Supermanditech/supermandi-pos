@@ -15,7 +15,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme } from "../theme";
+import { theme, colors } from "../theme";
 import { GRNItemRow } from "../components/grn/GRNItemRow";
 import * as orderApi from "../services/api/orderApi";
 import type { PurchaseOrderWithItems, PurchaseOrderItem } from "../services/api/orderApi";
@@ -508,7 +508,7 @@ export default function GRNScreen({
           {/* T-249: Reorder context badge */}
           {order.orderType === "reorder" && (
             <View style={styles.reorderBadge}>
-              <MaterialCommunityIcons name="autorenew" size={12} color="#6366f1" />
+              <MaterialCommunityIcons name="autorenew" size={12} color={colors.primary} />
               <Text style={styles.reorderBadgeText}>
                 Auto Reorder{order.sourceReorderIds?.length ? ` (${order.sourceReorderIds.length} items)` : ""}
               </Text>
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     marginTop: 4,
-    backgroundColor: "#eef2ff",
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
   reorderBadgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#6366f1",
+    color: colors.primary,
   },
   loadingContainer: {
     flex: 1,

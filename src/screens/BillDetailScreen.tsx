@@ -11,7 +11,7 @@ import { shareBillPdf, shareBillWhatsApp } from "../services/billing/billShare";
 import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
-import { theme } from "../theme";
+import { theme, colors } from "../theme";
 // T-122: Standardized back header
 import { BackHeader } from "../components/ui/BackHeader";
 import { asError } from "../utils/errorUtils";
@@ -375,8 +375,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   actionWhatsApp: {
-    backgroundColor: "#25D366",
-    borderColor: "#25D366",
+    backgroundColor: colors.whatsapp,
+    borderColor: colors.whatsapp,
   },
   actionButtonDisabled: {
     opacity: 0.6,

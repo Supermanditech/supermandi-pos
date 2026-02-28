@@ -44,6 +44,9 @@ export const lightColors = {
   warningBorder: "#FDE68A",
   successBorder: "#BBF7D0",
 
+  // Brand colors — third-party services (STG-233)
+  whatsapp: "#25D366",
+
   // Borders
   border: "#E2E8F0",
   borderDark: "#CBD5E1",
@@ -100,6 +103,9 @@ export const darkColors: Record<keyof typeof lightColors, string> = {
   errorBorder: "#7F1D1D",
   warningBorder: "#78350F",
   successBorder: "#14532D",
+
+  // Brand colors — slightly brightened for dark bg
+  whatsapp: "#34E875",
 
   // Borders — slate dark scale
   border: "#334155",

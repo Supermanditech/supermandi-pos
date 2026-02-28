@@ -16,7 +16,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme } from "../theme";
+import { theme, colors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDate } from "../i18n/formatters";
 import { StatusTimeline } from "../components/orders/StatusTimeline";
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: theme.borderRadius.lg,
-    backgroundColor: "#25D366",
+    backgroundColor: colors.whatsapp,
     alignItems: "center",
     justifyContent: "center",
   },
