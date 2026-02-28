@@ -79,24 +79,23 @@ posReportsRouter.get(
       const sales = salesResult.rows[0];
       const refunds = refundsResult.rows[0];
 
+      const totalSalesMinor = parseInt(sales.total_sales_minor, 10);
+      const refundTotalMinor = parseInt(refunds.refund_total_minor, 10);
+
       const report = {
         date,
-        totalSalesMinor: parseInt(sales.total_sales_minor, 10),
-        totalBills: parseInt(sales.total_bills, 10),
-        averageBillMinor: Math.round(parseFloat(sales.average_bill_minor)),
-        totalItemsSold: parseInt(sales.total_items_sold, 10),
-        paymentBreakdown: {
+        totalSalesMinor,
+        totalRevenueMinor: totalSalesMinor - refundTotalMinor,
+        transactionCount: parseInt(sales.total_bills, 10),
+        paymentSplit: {
           cashMinor: parseInt(sales.cash_minor, 10),
           upiMinor: parseInt(sales.upi_minor, 10),
           dueMinor: parseInt(sales.due_minor, 10),
           cardMinor: parseInt(sales.card_minor, 10),
         },
-        refundCount: parseInt(refunds.refund_count, 10),
-        refundTotalMinor: parseInt(refunds.refund_total_minor, 10),
-        netSalesMinor: parseInt(sales.total_sales_minor, 10) - parseInt(refunds.refund_total_minor, 10),
         topProducts: topProductsResult.rows.map((r: any) => ({
-          name: r.name,
-          quantitySold: parseInt(r.quantity_sold, 10),
+          productName: r.name,
+          qtySold: parseInt(r.quantity_sold, 10),
           revenueMinor: parseInt(r.revenue_minor, 10),
         })),
         hourlyBreakdown: hourlyResult.rows.map((r: any) => ({

@@ -66,17 +66,17 @@ async function computeDailySummary(pool: any, storeId: string, date: string) {
 
   return {
     date,
-    openingCashMinor: openingCashMinor.toString(),
-    totalSalesMinor: sales.total_sales_minor.toString(),
-    salesCount: sales.sales_count,
-    salesByPaymentMode: {
-      cashMinor: sales.cash_minor.toString(),
-      upiMinor: sales.upi_minor.toString(),
-      dueMinor: sales.due_minor.toString(),
-      cardMinor: sales.card_minor.toString(),
+    openingCashMinor: Number(openingCashMinor),
+    totalSalesMinor: Number(sales.total_sales_minor),
+    transactionCount: sales.sales_count,
+    salesByPaymentType: {
+      cashMinor: Number(sales.cash_minor),
+      upiMinor: Number(sales.upi_minor),
+      dueMinor: Number(sales.due_minor),
+      cardMinor: Number(sales.card_minor),
     },
-    refundsMinor: refundsMinor.toString(),
-    expectedCashMinor: expectedCashMinor.toString(),
+    refundsMinor: Number(refundsMinor),
+    expectedCashMinor: Number(expectedCashMinor),
   };
 }
 
@@ -156,21 +156,15 @@ posDailyClosingRouter.post("/daily-closing/close", requireDeviceToken, requireAc
         notes = EXCLUDED.notes
       RETURNING
         id,
-        store_id AS "storeId",
-        closing_date AS "closingDate",
+        closing_date AS "date",
         opening_cash_minor AS "openingCashMinor",
+        total_sales_minor AS "totalSalesMinor",
         expected_cash_minor AS "expectedCashMinor",
         actual_cash_minor AS "actualCashMinor",
-        difference_minor AS "differenceMinor",
-        total_sales_minor AS "totalSalesMinor",
-        total_cash_minor AS "totalCashMinor",
-        total_upi_minor AS "totalUpiMinor",
-        total_due_minor AS "totalDueMinor",
-        sales_count AS "salesCount",
-        closed_by AS "closedBy",
-        closed_at AS "closedAt",
+        difference_minor AS "varianceMinor",
+        closed_by AS "closedByStaffId",
         notes,
-        created_at AS "createdAt"`,
+        closed_at AS "closedAt"`,
       [
         storeId,
         date,
@@ -179,16 +173,25 @@ posDailyClosingRouter.post("/daily-closing/close", requireDeviceToken, requireAc
         actualCashMinor,
         difference.toString(),
         summary.totalSalesMinor,
-        summary.salesByPaymentMode.cashMinor,
-        summary.salesByPaymentMode.upiMinor,
-        summary.salesByPaymentMode.dueMinor,
-        summary.salesCount,
+        summary.salesByPaymentType.cashMinor,
+        summary.salesByPaymentType.upiMinor,
+        summary.salesByPaymentType.dueMinor,
+        summary.transactionCount,
         (req as PosRequest).posDevice.deviceId,
         notes || null,
       ]
     );
 
-    return res.status(201).json({ record: result.rows[0] });
+    // Coerce BIGINT monetary columns to numbers for JSON serialization
+    const record = {
+      ...result.rows[0],
+      openingCashMinor: Number(result.rows[0].openingCashMinor ?? 0),
+      totalSalesMinor: Number(result.rows[0].totalSalesMinor ?? 0),
+      expectedCashMinor: Number(result.rows[0].expectedCashMinor ?? 0),
+      actualCashMinor: Number(result.rows[0].actualCashMinor ?? 0),
+      varianceMinor: Number(result.rows[0].varianceMinor ?? 0),
+    };
+    return res.status(201).json({ record });
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[DailyClosingAPI] Close error:", error.message);
@@ -212,21 +215,15 @@ posDailyClosingRouter.get("/daily-closing/history", requireDeviceToken, async (r
     const result = await pool.query(
       `SELECT
         id,
-        store_id AS "storeId",
-        closing_date AS "closingDate",
+        closing_date AS "date",
         opening_cash_minor AS "openingCashMinor",
+        total_sales_minor AS "totalSalesMinor",
         expected_cash_minor AS "expectedCashMinor",
         actual_cash_minor AS "actualCashMinor",
-        difference_minor AS "differenceMinor",
-        total_sales_minor AS "totalSalesMinor",
-        total_cash_minor AS "totalCashMinor",
-        total_upi_minor AS "totalUpiMinor",
-        total_due_minor AS "totalDueMinor",
-        sales_count AS "salesCount",
-        closed_by AS "closedBy",
-        closed_at AS "closedAt",
+        difference_minor AS "varianceMinor",
+        closed_by AS "closedByStaffId",
         notes,
-        created_at AS "createdAt"
+        closed_at AS "closedAt"
       FROM orders.daily_closings
       WHERE store_id = $1
       ORDER BY closing_date DESC
@@ -234,7 +231,16 @@ posDailyClosingRouter.get("/daily-closing/history", requireDeviceToken, async (r
       [storeId, limit]
     );
 
-    return res.json({ records: result.rows });
+    // Coerce BIGINT monetary columns to numbers for JSON serialization
+    const records = result.rows.map((row: any) => ({
+      ...row,
+      openingCashMinor: Number(row.openingCashMinor ?? 0),
+      totalSalesMinor: Number(row.totalSalesMinor ?? 0),
+      expectedCashMinor: Number(row.expectedCashMinor ?? 0),
+      actualCashMinor: Number(row.actualCashMinor ?? 0),
+      varianceMinor: Number(row.varianceMinor ?? 0),
+    }));
+    return res.json({ records });
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[DailyClosingAPI] History error:", error.message);

@@ -30,6 +30,15 @@ const CUSTOMER_COLUMNS = `
   updated_at AS "updatedAt"
 `;
 
+/** Coerce BIGINT monetary columns from strings to numbers for JSON serialization */
+function coerceCustomerBigints(row: any): any {
+  return {
+    ...row,
+    creditLimitMinor: Number(row.creditLimitMinor ?? 0),
+    totalPurchasesMinor: Number(row.totalPurchasesMinor ?? 0),
+  };
+}
+
 /**
  * GET /api/v1/pos/customers
  * List customer profiles for this store.
@@ -62,7 +71,7 @@ posCustomersRouter.get("/customers", requireDeviceToken, async (req: Request, re
       params
     );
 
-    return res.json({ customers: result.rows });
+    return res.json({ customers: result.rows.map(coerceCustomerBigints) });
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[CustomersAPI] List error:", error.message);
@@ -94,7 +103,7 @@ posCustomersRouter.get("/customers/:customerId", requireDeviceToken, async (req:
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    const customer = customerResult.rows[0];
+    const customer = coerceCustomerBigints(customerResult.rows[0]);
 
     // Get recent purchases by customer phone
     const purchasesResult = await pool.query(
@@ -131,6 +140,7 @@ posCustomersRouter.get("/customers/:customerId", requireDeviceToken, async (req:
 
     const purchases = purchasesResult.rows.map((row: any) => ({
       ...row,
+      totalMinor: Number(row.totalMinor ?? 0),
       itemCount: itemCounts[row.saleId] || 0,
     }));
 
@@ -187,7 +197,7 @@ posCustomersRouter.post("/customers", requireDeviceToken, requireActiveStore, as
       [storeId, name.trim(), phone.trim(), email || null, address || null]
     );
 
-    return res.status(201).json({ customer: result.rows[0] });
+    return res.status(201).json({ customer: coerceCustomerBigints(result.rows[0]) });
   } catch (_error: unknown) {
     const error = asError(_error);
     // Handle unique constraint violation
@@ -253,7 +263,7 @@ posCustomersRouter.patch("/customers/:customerId", requireDeviceToken, requireAc
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    return res.json({ customer: result.rows[0] });
+    return res.json({ customer: coerceCustomerBigints(result.rows[0]) });
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[CustomersAPI] Update error:", error.message);

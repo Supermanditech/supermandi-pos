@@ -60,7 +60,7 @@ posKhataRouter.get("/khata/customers", requireDeviceToken, async (req: Request, 
       id: row.phone,
       name: row.name,
       phone: row.phone,
-      balanceMinor: row.balance_minor.toString(),
+      balanceMinor: Number(row.balance_minor),
       lastEntryAt: row.last_entry_at,
       entryCount: row.entry_count,
     }));
@@ -94,17 +94,13 @@ posKhataRouter.get("/khata/entries", requireDeviceToken, async (req: Request, re
     const entriesResult = await pool.query(
       `SELECT
         id,
-        store_id AS "storeId",
-        customer_name AS "customerName",
-        customer_phone AS "customerPhone",
-        entry_type AS "entryType",
+        customer_phone AS "customerId",
+        UPPER(entry_type) AS "type",
         amount_minor AS "amountMinor",
         description,
-        sale_id AS "saleId",
-        balance_minor AS "balanceMinor",
-        created_by AS "createdBy",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+        balance_minor AS "runningBalanceMinor",
+        created_by AS "createdByStaffId",
+        created_at AS "createdAt"
       FROM orders.khata_entries
       WHERE store_id = $1 AND customer_phone = $2
       ORDER BY created_at DESC`,
@@ -135,19 +131,26 @@ posKhataRouter.get("/khata/entries", requireDeviceToken, async (req: Request, re
           id: balanceResult.rows[0].phone,
           name: balanceResult.rows[0].name,
           phone: balanceResult.rows[0].phone,
-          balanceMinor: balanceResult.rows[0].balance_minor.toString(),
+          balanceMinor: Number(balanceResult.rows[0].balance_minor),
           entryCount: balanceResult.rows[0].entry_count,
         }
       : {
           id: phone,
           name: null,
           phone,
-          balanceMinor: "0",
+          balanceMinor: 0,
           entryCount: 0,
         };
 
+    // Ensure BIGINT monetary columns are returned as numbers
+    const entries = entriesResult.rows.map((row: any) => ({
+      ...row,
+      amountMinor: Number(row.amountMinor),
+      runningBalanceMinor: Number(row.runningBalanceMinor),
+    }));
+
     return res.json({
-      entries: entriesResult.rows,
+      entries,
       customer,
     });
   } catch (_error: unknown) {
@@ -167,14 +170,18 @@ posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, as
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as PosRequest).posDevice;
-  const { customerPhone, customerName, entryType, amountMinor, description, saleId } = req.body;
+  const { customerPhone, customerName, type: rawType, entryType: legacyEntryType, amountMinor, description, saleId } = req.body;
+  // Accept both "type" (frontend contract) and "entryType" (legacy) — prefer "type"
+  const requestType = rawType || legacyEntryType;
+  // Frontend sends uppercase (CREDIT/DEBIT/PAYMENT), DB stores lowercase
+  const entryType = typeof requestType === "string" ? requestType.toLowerCase() : requestType;
 
   // Validation
   if (!customerPhone || typeof customerPhone !== "string") {
     return res.status(400).json({ error: "customerPhone is required" });
   }
   if (!entryType || !["credit", "debit", "payment"].includes(entryType)) {
-    return res.status(400).json({ error: "entryType must be 'credit', 'debit', or 'payment'" });
+    return res.status(400).json({ error: "type must be 'CREDIT', 'DEBIT', or 'PAYMENT'" });
   }
   if (!amountMinor || typeof amountMinor !== "number" || amountMinor <= 0) {
     return res.status(400).json({ error: "amountMinor must be a positive number" });
@@ -230,17 +237,13 @@ posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, as
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING
         id,
-        store_id AS "storeId",
-        customer_name AS "customerName",
-        customer_phone AS "customerPhone",
-        entry_type AS "entryType",
+        customer_phone AS "customerId",
+        UPPER(entry_type) AS "type",
         amount_minor AS "amountMinor",
         description,
-        sale_id AS "saleId",
-        balance_minor AS "balanceMinor",
-        created_by AS "createdBy",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"`,
+        balance_minor AS "runningBalanceMinor",
+        created_by AS "createdByStaffId",
+        created_at AS "createdAt"`,
       [
         storeId,
         resolvedName,
@@ -256,13 +259,20 @@ posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, as
 
     await client.query("COMMIT");
 
+    // Ensure BIGINT monetary columns are returned as numbers
+    const entry = {
+      ...insertResult.rows[0],
+      amountMinor: Number(insertResult.rows[0].amountMinor),
+      runningBalanceMinor: Number(insertResult.rows[0].runningBalanceMinor),
+    };
+
     return res.status(201).json({
-      entry: insertResult.rows[0],
+      entry,
       customer: {
         id: customerPhone,
         name: resolvedName,
         phone: customerPhone,
-        balanceMinor: newBalance.toString(),
+        balanceMinor: Number(newBalance),
       },
     });
   } catch (_error: unknown) {

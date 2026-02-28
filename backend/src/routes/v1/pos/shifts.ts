@@ -29,16 +29,15 @@ posShiftsRouter.get("/shifts/current", requireDeviceToken, async (req: Request, 
     const result = await pool.query(
       `SELECT
         id,
-        store_id AS "storeId",
-        staff_user_id AS "staffUserId",
-        shift_start AS "shiftStart",
-        shift_end AS "shiftEnd",
+        staff_user_id AS "staffId",
+        shift_start AS "startedAt",
+        shift_end AS "endedAt",
         opening_cash_minor AS "openingCashMinor",
         closing_cash_minor AS "closingCashMinor",
         sales_count AS "salesCount",
         sales_total_minor AS "salesTotalMinor",
         notes,
-        created_at AS "createdAt"
+        CASE WHEN shift_end IS NULL THEN 'ACTIVE' ELSE 'CLOSED' END AS "status"
       FROM platform.staff_shifts
       WHERE store_id = $1 AND shift_end IS NULL
       ORDER BY shift_start DESC
@@ -94,16 +93,15 @@ posShiftsRouter.post("/shifts/start", requireDeviceToken, requireActiveStore, as
       VALUES ($1, $2, $3)
       RETURNING
         id,
-        store_id AS "storeId",
-        staff_user_id AS "staffUserId",
-        shift_start AS "shiftStart",
-        shift_end AS "shiftEnd",
+        staff_user_id AS "staffId",
+        shift_start AS "startedAt",
+        shift_end AS "endedAt",
         opening_cash_minor AS "openingCashMinor",
         closing_cash_minor AS "closingCashMinor",
         sales_count AS "salesCount",
         sales_total_minor AS "salesTotalMinor",
         notes,
-        created_at AS "createdAt"`,
+        CASE WHEN shift_end IS NULL THEN 'ACTIVE' ELSE 'CLOSED' END AS "status"`,
       [storeId, staffId, openingCashMinor]
     );
 
@@ -187,16 +185,15 @@ posShiftsRouter.post("/shifts/:shiftId/end", requireDeviceToken, requireActiveSt
        WHERE id = $5
        RETURNING
          id,
-         store_id AS "storeId",
-         staff_user_id AS "staffUserId",
-         shift_start AS "shiftStart",
-         shift_end AS "shiftEnd",
+         staff_user_id AS "staffId",
+         shift_start AS "startedAt",
+         shift_end AS "endedAt",
          opening_cash_minor AS "openingCashMinor",
          closing_cash_minor AS "closingCashMinor",
          sales_count AS "salesCount",
          sales_total_minor AS "salesTotalMinor",
          notes,
-         created_at AS "createdAt"`,
+         CASE WHEN shift_end IS NULL THEN 'ACTIVE' ELSE 'CLOSED' END AS "status"`,
       [
         closingCashMinor,
         salesResult.rows[0].sales_count,
@@ -211,8 +208,8 @@ posShiftsRouter.post("/shifts/:shiftId/end", requireDeviceToken, requireActiveSt
     return res.json({
       shift: {
         ...updateResult.rows[0],
-        expectedCashMinor: expectedCash.toString(),
-        varianceMinor: variance.toString(),
+        expectedCashMinor: Number(expectedCash),
+        varianceMinor: Number(variance),
       },
     });
   } catch (_error: unknown) {
@@ -241,16 +238,15 @@ posShiftsRouter.get("/shifts/history", requireDeviceToken, async (req: Request, 
     const result = await pool.query(
       `SELECT
         id,
-        store_id AS "storeId",
-        staff_user_id AS "staffUserId",
-        shift_start AS "shiftStart",
-        shift_end AS "shiftEnd",
+        staff_user_id AS "staffId",
+        shift_start AS "startedAt",
+        shift_end AS "endedAt",
         opening_cash_minor AS "openingCashMinor",
         closing_cash_minor AS "closingCashMinor",
         sales_count AS "salesCount",
         sales_total_minor AS "salesTotalMinor",
         notes,
-        created_at AS "createdAt"
+        CASE WHEN shift_end IS NULL THEN 'ACTIVE' ELSE 'CLOSED' END AS "status"
       FROM platform.staff_shifts
       WHERE store_id = $1
       ORDER BY shift_start DESC
