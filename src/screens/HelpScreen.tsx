@@ -223,7 +223,6 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
       {/* Company Info */}
       <View style={styles.companyInfo}>
         <Text style={styles.companyText}>SuperMandi Tech Pvt Ltd</Text>
-        <Text style={styles.companyText}>Made in India</Text>
       </View>
     </ScrollView>
   );

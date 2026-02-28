@@ -3487,7 +3487,7 @@ export default function App() {
 
       {/* T-097: Unified footer — standard text + BuildStamp */}
       <footer style={{ background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', padding: '12px 24px', fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+        <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
         <BuildStamp />
       </footer>
     </div>

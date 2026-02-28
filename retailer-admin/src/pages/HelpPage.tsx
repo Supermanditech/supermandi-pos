@@ -34,7 +34,7 @@ export default function HelpPage() {
       {/* Footer */}
       <footer className="login-footer">
         <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <Link to="/retailer/login" style={{ color: 'inherit', fontSize: '0.75rem', textDecoration: 'none' }}>Sign In</Link>
             <BuildStamp />

@@ -315,7 +315,7 @@ export default function ProtectedLayout() {
 
         {/* T-097: Unified footer — standard text + BuildStamp */}
         <footer className="layout-footer">
-          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <BuildStamp />
         </footer>
       </div>

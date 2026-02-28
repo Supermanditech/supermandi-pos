@@ -128,7 +128,6 @@ export default function HelpPageContent() {
       {/* Company Info */}
       <div style={styles.company}>
         <p style={{ margin: 0 }}>SuperMandi Tech Pvt Ltd</p>
-        <p style={{ margin: 0 }}>Made in India</p>
       </div>
     </div>
   );

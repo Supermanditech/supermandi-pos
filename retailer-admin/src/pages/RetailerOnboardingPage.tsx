@@ -1308,7 +1308,7 @@ export default function RetailerOnboardingPage() {
       {/* Footer */}
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
-          &copy; 2026 SuperMandi Tech Pvt Ltd. All rights reserved.
+          &copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd. All rights reserved.
           <BuildStamp />
         </div>
       </footer>

@@ -76,7 +76,7 @@ describe('ForgotPasswordPage', () => {
   it('renders footer with copyright', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
     expect(screen.getByText(/SuperMandi Tech Pvt Ltd/)).toBeInTheDocument();
-    expect(screen.getByText(/Made in India/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(String(new Date().getFullYear())))).toBeInTheDocument();
   });
 
   it('renders build stamp', () => {

@@ -54,7 +54,6 @@ export default function HelpPage() {
       {/* Company */}
       <div className="text-center text-slate-400 text-xs mt-8">
         <p>SuperMandi Tech Pvt Ltd</p>
-        <p>Made in India</p>
       </div>
     </>
   );

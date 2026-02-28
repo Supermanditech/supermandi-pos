@@ -29,7 +29,7 @@ export default function HelpLayout({
 
       {/* Footer */}
       <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+        <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/supplier/login" style={{ color: '#94A3B8', fontSize: 12, textDecoration: 'none' }}>Sign In</a>
           <BuildStamp />

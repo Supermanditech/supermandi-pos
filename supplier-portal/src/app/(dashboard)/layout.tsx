@@ -442,7 +442,7 @@ export default function DashboardLayout({
 
         {/* T-097: Unified footer — standard text + BuildStamp */}
         <footer className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-3 text-xs text-slate-400 flex justify-between items-center">
-          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <BuildStamp />
         </footer>
       </main>

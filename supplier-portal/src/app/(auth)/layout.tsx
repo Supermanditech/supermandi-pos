@@ -37,7 +37,7 @@ export default function AuthLayout({
       {/* T-097: Unified footer — standard text + Help link + BuildStamp */}
       <footer className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
         <div className="max-w-[1152px] mx-auto px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <div className="flex items-center gap-4">
             <a href="/supplier/help" className="text-slate-400 text-xs no-underline hover:underline">
               Help

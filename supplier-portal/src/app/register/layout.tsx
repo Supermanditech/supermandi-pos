@@ -29,7 +29,7 @@ export default function RegisterLayout({
       {/* Footer - minimal, muted per spec */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-[720px] mx-auto px-4 py-4 text-[13px] text-slate-500 flex items-center justify-between">
-          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+          <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <div className="flex items-center gap-4">
             <a href="/supplier/help" className="text-slate-400 text-xs no-underline hover:underline">
               Help
