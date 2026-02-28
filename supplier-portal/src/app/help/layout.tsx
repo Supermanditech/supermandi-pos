@@ -1,9 +1,11 @@
 import { BuildStamp } from '@/components/BuildStamp';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 /**
  * HELP-001: Standalone layout for Help & Support page.
  * Matches auth layout style but with wider content area.
  * Accessible both pre-login and post-login (top-level route avoids route group collision).
+ * STG-223: Replaced inline styles with Tailwind classes + dark mode support
  */
 export default function HelpLayout({
   children,
@@ -11,13 +13,16 @@ export default function HelpLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F9FC]">
+    <div className="min-h-screen flex flex-col bg-[#F7F9FC] dark:bg-slate-900">
       {/* Header — same as auth layout */}
-      <header style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #E2E8F0', background: 'white' }}>
-        <img src="/supplier/brand/logo-shortmark.svg" alt="" width={24} height={24} />
-        <span style={{ marginLeft: 10, fontWeight: 700, fontSize: 18, color: '#fff', background: '#2563EB', borderRadius: 999, padding: '4px 12px', lineHeight: 1 }}>SuperMandi</span>
-        <span style={{ margin: '0 12px', color: '#CBD5E1' }}>|</span>
-        <span style={{ color: '#64748B', fontSize: 16 }}>Supplier Portal</span>
+      <header className="h-16 flex items-center justify-between px-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <div className="flex items-center">
+          <img src="/supplier/brand/logo-shortmark.svg" alt="" width={24} height={24} />
+          <span className="ml-2.5 font-bold text-lg text-white bg-[#2563EB] dark:text-slate-900 dark:bg-white rounded-full px-3 py-1 leading-none">SuperMandi</span>
+          <span className="mx-3 text-slate-300 dark:text-slate-600">|</span>
+          <span className="text-slate-500 dark:text-slate-400 text-base">Supplier Portal</span>
+        </div>
+        <ThemeToggle />
       </header>
 
       {/* Main Content — wider than auth card for help content */}
@@ -28,10 +33,10 @@ export default function HelpLayout({
       </main>
 
       {/* Footer */}
-      <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <footer className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-3 px-6 text-xs text-slate-400 dark:text-slate-500 flex justify-between items-center">
         <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/supplier/login" style={{ color: '#94A3B8', fontSize: 12, textDecoration: 'none' }}>Sign In</a>
+        <div className="flex items-center gap-4">
+          <a href="/supplier/login" className="text-slate-400 dark:text-slate-500 text-xs no-underline hover:underline">Sign In</a>
           <BuildStamp />
         </div>
       </footer>

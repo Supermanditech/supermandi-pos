@@ -2,6 +2,7 @@
 
 // GO-LIVE-172: Error boundary for Next.js App Router
 // This file automatically acts as an error boundary for this route segment
+// STG-226: Replaced gray-* with slate-* for dark mode consistency
 
 import { useEffect } from 'react';
 
@@ -21,18 +22,18 @@ export default function Error({ error, reset }: ErrorPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
         <div className="text-red-500 text-6xl mb-4">⚠️</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
           Something went wrong
         </h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-slate-600 mb-6">
           An unexpected error occurred. Please try again.
         </p>
 
         {process.env.NODE_ENV === 'development' && (
-          <details className="text-left mb-6 p-4 bg-gray-100 rounded text-sm">
+          <details className="text-left mb-6 p-4 bg-slate-100 rounded text-sm">
             <summary className="cursor-pointer font-semibold">
               Error details
             </summary>
@@ -41,7 +42,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
               {error.stack && `\n\n${error.stack}`}
             </pre>
             {error.digest && (
-              <p className="mt-2 text-gray-500">
+              <p className="mt-2 text-slate-500">
                 Error digest: {error.digest}
               </p>
             )}
@@ -57,7 +58,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
           </button>
           <button
             onClick={handleGoHome}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="px-6 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
           >
             Go Home
           </button>

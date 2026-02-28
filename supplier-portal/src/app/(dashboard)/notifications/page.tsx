@@ -72,7 +72,7 @@ export default function NotificationsPage() {
       case 'order_status': return <Truck size={18} className="text-blue-500" />;
       case 'delivery_update': return <Package size={18} className="text-green-500" />;
       case 'grn_mismatch': return <AlertTriangle size={18} className="text-red-500" />;
-      default: return <Bell size={18} className="text-gray-500" />;
+      default: return <Bell size={18} className="text-slate-500" />;
     }
   };
 
@@ -85,8 +85,8 @@ export default function NotificationsPage() {
 
       <div className="flex justify-between items-center mt-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl font-bold text-slate-900">Notifications</h1>
+          <p className="text-sm text-slate-500 mt-1">
             {total} total {unreadCount > 0 && `(${unreadCount} unread)`}
           </p>
         </div>
@@ -101,7 +101,7 @@ export default function NotificationsPage() {
           )}
           <button
             onClick={fetchNotifications}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded-md hover:bg-gray-100"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-slate-50 text-slate-700 border border-slate-200 rounded-md hover:bg-slate-100"
           >
             <RefreshCw size={14} /> Refresh
           </button>
@@ -133,9 +133,9 @@ export default function NotificationsPage() {
         </div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-12">
-          <Bell size={48} className="text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No notifications yet</p>
-          <p className="text-gray-400 text-sm mt-1">You'll see order updates and delivery alerts here.</p>
+          <Bell size={48} className="text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-500">No notifications yet</p>
+          <p className="text-slate-400 text-sm mt-1">You'll see order updates and delivery alerts here.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -144,18 +144,18 @@ export default function NotificationsPage() {
               key={n.id}
               onClick={() => !n.isRead && markAsRead(n.id)}
               className={`flex gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                n.isRead ? 'bg-white border-gray-200' : 'bg-green-50 border-green-200 hover:bg-green-100'
+                n.isRead ? 'bg-white border-slate-200' : 'bg-green-50 border-green-200 hover:bg-green-100'
               }`}
             >
               <div className="flex-shrink-0 mt-0.5">{getIcon(n.type)}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">
-                  <h3 className={`text-sm ${n.isRead ? 'font-medium' : 'font-semibold'} text-gray-900`}>{n.title}</h3>
-                  <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                  <h3 className={`text-sm ${n.isRead ? 'font-medium' : 'font-semibold'} text-slate-900`}>{n.title}</h3>
+                  <span className="text-xs text-slate-400 flex-shrink-0 ml-2">
                     {formatDateTime(n.createdAt)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600 mt-1 leading-relaxed">{n.body}</p>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">{n.body}</p>
               </div>
               {!n.isRead && <div className="flex-shrink-0 w-2 h-2 rounded-full bg-green-500 mt-1.5" />}
             </div>
@@ -171,7 +171,7 @@ export default function NotificationsPage() {
               >
                 Previous
               </button>
-              <span className="px-3 py-1.5 text-xs text-gray-500">
+              <span className="px-3 py-1.5 text-xs text-slate-500">
                 {offset + 1}–{Math.min(offset + limit, total)} of {total}
               </span>
               <button

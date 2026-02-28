@@ -715,7 +715,7 @@ export default function SupplierOnboardingPage() {
             {panFile && (
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{panFile.name}</p>
             )}
-            {uploadProgress['PAN'] && (
+            {uploadProgress['pan_card'] && (
               <p className="text-xs text-slate-500 mt-1">Uploading...</p>
             )}
           </div>
@@ -731,7 +731,7 @@ export default function SupplierOnboardingPage() {
             {gstinFile && (
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{gstinFile.name}</p>
             )}
-            {uploadProgress['GSTIN_CERTIFICATE'] && (
+            {uploadProgress['gstin_certificate'] && (
               <p className="text-xs text-slate-500 mt-1">Uploading...</p>
             )}
           </div>
@@ -750,7 +750,7 @@ export default function SupplierOnboardingPage() {
             {addressProofFile && (
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{addressProofFile.name}</p>
             )}
-            {uploadProgress['ADDRESS_PROOF'] && (
+            {uploadProgress['address_proof'] && (
               <p className="text-xs text-slate-500 mt-1">Uploading...</p>
             )}
           </div>
