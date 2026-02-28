@@ -334,7 +334,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
 
   try {
     let whereClause = `
-      WHERE s.status = 'verified'
+      WHERE s.status = 'ACTIVE'
         AND sp.approval_status = 'approved'
         AND sp.is_active = true
         AND ssl.store_id = $1
@@ -408,7 +408,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           sp.bnpl_eligible,
           sp.bnpl_max_days,
           s.id AS supplier_id,
-          COALESCE(s.business_name, s.trade_name, s.name, 'Unknown') AS supplier_name,
+          COALESCE(s.business_name, s.trade_name, 'Unknown') AS supplier_name,
           COALESCE(ssl.is_preferred, false) AS is_preferred,
           COALESCE(ssl.min_order_value, 0) AS min_order_value,
           COALESCE(spm.product_id, sp.id) AS group_id,
@@ -534,7 +534,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/categories", requireDeviceToken,
        FROM catalog.supplier_products sp
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
        JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
-       WHERE s.status = 'verified'
+       WHERE s.status = 'ACTIVE'
          AND sp.approval_status = 'approved'
          AND sp.is_active = true
          AND ssl.store_id = $1
@@ -598,7 +598,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/suppliers", requireDeviceToken, 
        LEFT JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
          AND sp.approval_status = 'approved'
          AND sp.is_active = true
-       WHERE s.status = 'verified'
+       WHERE s.status = 'ACTIVE'
          AND ssl.store_id = $1
          AND ssl.status = 'active'
        GROUP BY s.id, s.business_name, s.trade_name, s.city, s.rating,
@@ -688,7 +688,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           sp.bnpl_eligible,
           sp.bnpl_max_days,
           s.id AS supplier_id,
-          COALESCE(s.business_name, s.trade_name, s.name, 'Unknown') AS supplier_name,
+          COALESCE(s.business_name, s.trade_name, 'Unknown') AS supplier_name,
           COALESCE(ssl.is_preferred, false) AS is_preferred,
           COALESCE(ssl.min_order_value, 0) AS min_order_value,
           COALESCE(spm.product_id, sp.id) AS group_id,
@@ -702,7 +702,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
         LEFT JOIN catalog.supplier_product_map spm ON spm.supplier_product_id = sp.id
         LEFT JOIN catalog.products mp ON mp.id = spm.product_id
-        WHERE s.status = 'verified'
+        WHERE s.status = 'ACTIVE'
           AND sp.approval_status = 'approved'
           AND sp.is_active = true
           AND ssl.store_id = $1

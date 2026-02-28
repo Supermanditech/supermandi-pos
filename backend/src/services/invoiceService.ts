@@ -504,10 +504,10 @@ export async function getInvoice(pool: Pool, invoiceId: string): Promise<any> {
 
   if (invoice.sellerType === "supplier" && invoice.sellerId) {
     const sp = await pool.query(
-      `SELECT phone FROM supplier.suppliers WHERE id = $1::uuid`,
+      `SELECT primary_phone FROM supplier.suppliers WHERE id = $1::uuid`,
       [invoice.sellerId]
     );
-    sellerPhone = sp.rows[0]?.phone || null;
+    sellerPhone = sp.rows[0]?.primary_phone || null;
   }
 
   if (invoice.buyerType === "store" && invoice.buyerId) {

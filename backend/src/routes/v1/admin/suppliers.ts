@@ -131,7 +131,7 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
   const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
   try {
-    let whereClause = "WHERE (s.verification_status = 'verified' OR s.status = 'active')";
+    let whereClause = "WHERE (s.verification_status = 'ACTIVE' OR s.status = 'active')";
     const params: any[] = [];
     let paramIdx = 1;
 
@@ -246,7 +246,7 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
     if (verifySupplier && !linkedSupplierId) {
       const supplierResult = await client.query(
         `INSERT INTO supplier.suppliers (gstin, business_name, primary_phone, primary_email, verification_status, status)
-         VALUES ($1, $2, $3, $4, 'verified', 'active')
+         VALUES ($1, $2, $3, $4, 'ACTIVE', 'active')
          RETURNING id`,
         [
           request.requested_gstin || 'PENDING-' + supplierId.substring(0, 8),
@@ -511,7 +511,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminTok
       return res.status(404).json({ error: "Supplier not found" });
     }
 
-    if (enabled && check.rows[0].verification_status !== 'verified') {
+    if (enabled && check.rows[0].verification_status !== 'ACTIVE') {
       return res.status(400).json({
         error: "supplier_not_verified",
         message: "Cannot enable auto-approval for non-verified suppliers"
@@ -584,15 +584,15 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
       return res.status(404).json({ error: "Supplier not found" });
     }
 
-    if (checkResult.rows[0].verification_status !== 'pending') {
+    if (checkResult.rows[0].verification_status !== 'KYC_SUBMITTED') {
       await client.query("ROLLBACK");
       return res.status(400).json({ error: "Supplier is not pending verification" });
     }
 
-    // Update supplier to verified
+    // Update supplier to ACTIVE
     const updateResult = await client.query(
       `UPDATE supplier.suppliers
-       SET verification_status = 'verified', verified_at = NOW(), status = 'active'
+       SET verification_status = 'ACTIVE', verified_at = NOW(), status = 'active'
        WHERE id = $1::uuid
        RETURNING id, verification_status as "status", verified_at as "verifiedAt"`,
       [supplierId]
@@ -601,7 +601,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
     // Log the approval
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
-       VALUES ('supplier', $1::uuid, 'approve', 'pending', 'verified', $2::uuid)`,
+       VALUES ('supplier', $1::uuid, 'approve', 'KYC_SUBMITTED', 'ACTIVE', $2::uuid)`,
       [supplierId, adminId]
     );
 
@@ -825,13 +825,13 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
       });
     }
 
-    // GO-LIVE-131: Verify supplier is verified before approving product
-    if (product.supplier_status !== 'verified') {
+    // GO-LIVE-131: Verify supplier is ACTIVE before approving product
+    if (product.supplier_status !== 'ACTIVE') {
       await client.query("ROLLBACK");
-      log.warn(`[admin/products/approve] GO-LIVE-131: Cannot approve product from non-verified supplier: ${product.supplier_name}`);
+      log.warn(`[admin/products/approve] GO-LIVE-131: Cannot approve product from non-ACTIVE supplier: ${product.supplier_name}`);
       return res.status(400).json({
         error: "supplier_not_verified",
-        message: `Cannot approve product - supplier "${product.supplier_name}" is not verified (status: ${product.supplier_status || 'unknown'})`
+        message: `Cannot approve product - supplier "${product.supplier_name}" is not ACTIVE (status: ${product.supplier_status || 'unknown'})`
       });
     }
 
@@ -1141,10 +1141,10 @@ adminSuppliersRouter.post(
               continue;
             }
 
-            if (product.supplier_status !== 'verified') {
+            if (product.supplier_status !== 'ACTIVE') {
               errors.push({
                 productId,
-                error: `Supplier "${product.supplier_name}" is not verified (status: ${product.supplier_status || 'unknown'})`
+                error: `Supplier "${product.supplier_name}" is not ACTIVE (status: ${product.supplier_status || 'unknown'})`
               });
               continue;
             }
@@ -1384,9 +1384,9 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
       });
     }
 
-    // GO-LIVE-131: Warn if supplier is not verified (but allow edit for admin)
-    if (current.supplier_status && current.supplier_status !== 'verified') {
-      log.warn(`[admin/products/edit] GO-LIVE-131: Editing product from non-verified supplier: ${current.supplier_name} (${current.supplier_status})`);
+    // GO-LIVE-131: Warn if supplier is not ACTIVE (but allow edit for admin)
+    if (current.supplier_status && current.supplier_status !== 'ACTIVE') {
+      log.warn(`[admin/products/edit] GO-LIVE-131: Editing product from non-ACTIVE supplier: ${current.supplier_name} (${current.supplier_status})`);
     }
 
     const purchasePrice = current.purchase_price;

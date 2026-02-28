@@ -70,7 +70,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
 
     // 1. Verify supplier exists and is verified
     const supplierResult = await client.query(
-      `SELECT id, name, business_name, trade_name, status FROM supplier.suppliers WHERE id = $1`,
+      `SELECT id, business_name, trade_name, status FROM supplier.suppliers WHERE id = $1`,
       [supplierId]
     );
     if (supplierResult.rows.length === 0 || supplierResult.rows[0].status !== "verified") {
@@ -78,7 +78,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       return res.status(400).json({ success: false, error: "invalid_supplier", message: "Supplier not found or not verified" });
     }
     const supplier = supplierResult.rows[0];
-    const supplierName = supplier.business_name || supplier.trade_name || supplier.name || "Unknown Supplier";
+    const supplierName = supplier.business_name || supplier.trade_name || "Unknown Supplier";
 
     // 2. Verify supplier is linked to this store
     const linkResult = await client.query(
@@ -207,8 +207,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       const itemResult = await client.query(
         `INSERT INTO orders.purchase_order_items (
           id, order_id, supplier_product_id, product_id,
-          ordered_quantity, received_quantity, unit_price, total_price, status
-        ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'pending')
+          ordered_quantity, received_quantity, unit_price, line_total, product_name, status
+        ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, 'pending')
         RETURNING
           id,
           order_id as "orderId",
@@ -217,10 +217,10 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
           ordered_quantity as "orderedQuantity",
           received_quantity as "receivedQuantity",
           unit_price as "unitPrice",
-          total_price as "totalPrice",
+          line_total as "totalPrice",
           status,
           notes`,
-        [itemId, orderId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice]
+        [itemId, orderId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice, item.productName]
       );
 
       insertedItems.push({
@@ -339,7 +339,7 @@ ordersRouter.get("/stores/:storeId/orders", requireDeviceToken, async (req: Requ
         po.order_number as "orderNumber",
         po.store_id as "storeId",
         po.supplier_id as "supplierId",
-        COALESCE(s.name, 'Unknown Supplier') as "supplierName",
+        COALESCE(s.business_name, s.trade_name, 'Unknown Supplier') as "supplierName",
         po.order_type as "orderType",
         po.status,
         po.total_amount as "totalAmount",
@@ -417,8 +417,8 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (
         po.order_number as "orderNumber",
         po.store_id as "storeId",
         po.supplier_id as "supplierId",
-        COALESCE(s.name, 'Unknown Supplier') as "supplierName",
-        s.phone as "supplierPhone",
+        COALESCE(s.business_name, s.trade_name, 'Unknown Supplier') as "supplierName",
+        s.primary_phone as "supplierPhone",
         po.order_type as "orderType",
         po.status,
         po.total_amount as "totalAmount",
@@ -462,7 +462,7 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (
         poi.ordered_quantity as "orderedQuantity",
         poi.received_quantity as "receivedQuantity",
         poi.unit_price as "unitPrice",
-        poi.total_price as "totalPrice",
+        poi.line_total as "totalPrice",
         poi.status,
         poi.notes
       FROM orders.purchase_order_items poi

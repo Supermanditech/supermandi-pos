@@ -36,7 +36,7 @@ supplierBnplRouter.get('/backed-orders', async (req: Request, res: Response) => 
               d.purchase_order_id, d.created_at,
               COALESCE(d.provider_id, 'supermandi_internal') AS provider_id,
               COALESCE(p.provider_name, 'SuperMandi BNPL') AS provider_name,
-              st.store_name, st.store_code
+              st.name AS store_name, st.code AS store_code
        FROM payments.bnpl_drawdowns d
        LEFT JOIN payments.credit_provider_configs p ON p.provider_id = d.provider_id
        LEFT JOIN platform.stores st ON st.id = d.store_id

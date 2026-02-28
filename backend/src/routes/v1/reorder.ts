@@ -217,7 +217,7 @@ reorderRouter.get("/stores/:storeId/reorder/policies", requireDeviceToken, async
         rp.target_stock as "targetStock",
         rp.max_reorder_qty as "maxReorderQty",
         rp.preferred_supplier_id as "preferredSupplierId",
-        NULL as "preferredSupplierName",
+        COALESCE(ss.business_name, ss.trade_name) as "preferredSupplierName",
         rp.is_enabled as "isEnabled",
         COALESCE(sb.current_qty, sp.current_stock, 0) as "currentStock",
         rp.created_at as "createdAt",
@@ -226,6 +226,7 @@ reorderRouter.get("/stores/:storeId/reorder/policies", requireDeviceToken, async
       JOIN catalog.store_products sp ON sp.store_id = rp.store_id AND sp.product_id = rp.product_id
       JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+      LEFT JOIN supplier.suppliers ss ON ss.id = rp.preferred_supplier_id
       ${whereClause}
       ORDER BY COALESCE(sp.display_name, p.name) ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -366,11 +367,11 @@ reorderRouter.get("/stores/:storeId/reorder/pending", requireDeviceToken, async 
         COALESCE(sp.display_name, p.name) as "productName",
         p.primary_barcode as barcode,
         COALESCE(sb.current_qty, sp.current_stock, 0) as "currentStock",
-        rp.min_stock as "minStock",
-        rp.target_stock as "targetStock",
+        pr.min_threshold as "minThreshold",
+        pr.target_stock as "targetStock",
         pr.suggested_quantity as "suggestedQuantity",
         pr.suggested_supplier_id as "suggestedSupplierId",
-        NULL as "suggestedSupplierName",
+        COALESCE(ss.business_name, ss.trade_name) as "suggestedSupplierName",
         pr.suggested_unit_price as "suggestedUnitPrice",
         pr.supplier_product_id as "supplierProductId",
         pr.status,
@@ -384,6 +385,7 @@ reorderRouter.get("/stores/:storeId/reorder/pending", requireDeviceToken, async 
       LEFT JOIN catalog.products p ON p.id = pr.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = pr.store_id AND sb.product_id = pr.product_id
       LEFT JOIN reorder.reorder_policies rp ON rp.store_id = pr.store_id AND rp.product_id = pr.product_id
+      LEFT JOIN supplier.suppliers ss ON ss.id = pr.suggested_supplier_id
       ${whereClause}
       ORDER BY pr.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -528,7 +530,7 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
         for (const item of items) {
           await client.query(
             `INSERT INTO orders.purchase_order_items
-              (order_id, supplier_product_id, product_id, ordered_quantity, unit_price, total_price, status)
+              (order_id, supplier_product_id, product_id, ordered_quantity, unit_price, line_total, status)
              VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
             [
               poId,
@@ -541,6 +543,15 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
           );
         }
 
+        // Update pending reorders for this supplier group with purchase_order_id
+        const groupIds = items.map((i) => i.id);
+        await client.query(
+          `UPDATE reorder.pending_reorders
+           SET status = 'approved', purchase_order_id = $2, updated_at = NOW()
+           WHERE id = ANY($1::uuid[])`,
+          [groupIds, poId]
+        );
+
         draftPurchaseOrders.push({
           id: poId,
           orderNumber: poResult.rows[0].orderNumber,
@@ -550,24 +561,16 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
         });
       }
 
-      // Update pending reorders status to approved with purchase_order_id
-      const approvedIds = pendingResult.rows.map((r) => r.id);
-      await client.query(
-        `UPDATE reorder.pending_reorders
-         SET status = 'approved', updated_at = NOW()
-         WHERE id = ANY($1::uuid[])`,
-        [approvedIds]
-      );
-
       await client.query("COMMIT");
 
+      const approvedCount = pendingResult.rows.length;
       return res.json({
         success: true,
         data: {
-          approvedCount: approvedIds.length,
+          approvedCount,
           draftPurchaseOrders,
         },
-        message: `Approved ${approvedIds.length} pending reorders. Created ${draftPurchaseOrders.length} draft purchase orders.`,
+        message: `Approved ${approvedCount} pending reorders. Created ${draftPurchaseOrders.length} draft purchase orders.`,
       });
     } catch (innerError) {
       await client.query("ROLLBACK");
