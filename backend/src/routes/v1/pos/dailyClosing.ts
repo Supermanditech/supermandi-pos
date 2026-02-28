@@ -37,12 +37,15 @@ async function computeDailySummary(pool: any, storeId: string, date: string) {
   );
 
   // Refunds for the day — STG-156: IST timezone
+  // STG-206: Only cash refunds reduce the physical cash drawer.
+  // UPI/khata/adjustment refunds don't take cash out of the register.
   const refundsResult = await pool.query(
     `SELECT COALESCE(SUM(refund_amount_minor), 0)::bigint AS refunds_minor
      FROM orders.refunds
      WHERE store_id = $1
        AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2
-       AND status IN ('approved', 'processed')`,
+       AND status IN ('approved', 'processed')
+       AND refund_method = 'cash'`,
     [storeId, date]
   );
 

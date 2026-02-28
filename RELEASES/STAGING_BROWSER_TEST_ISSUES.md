@@ -2003,15 +2003,15 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Severity**: LOW — Production log pollution
 - **Status**: FIXED
 
-### STG-206: POS — Daily closing expectedCashMinor subtracts all refunds including UPI (potential issue)
+### STG-206: POS — Daily closing expectedCashMinor subtracts all refunds including UPI
 - **Portal**: POS App
 - **Page**: Daily Closing → Expected Cash
-- **Symptom**: Expected cash calculation may be incorrect if UPI refunds exist in `orders.refunds` table — would make expected cash appear lower than actual.
-- **Root Cause**: `dailyClosing.ts:40-46` sums ALL refunds regardless of payment method. If `orders.refunds` contains UPI refunds (processed via Razorpay), they shouldn't reduce expected cash in drawer.
-- **Assessment**: Deferred — the `orders.refunds` table may only contain POS-initiated cash refunds (not Razorpay UPI refunds, which use `orders.refund_requests`). Schema verification needed before changing reconciliation math.
-- **Files**: `backend/src/routes/v1/pos/dailyClosing.ts:40-46`
-- **Severity**: MEDIUM — Potential incorrect cash reconciliation
-- **Status**: DIAGNOSED (deferred — needs schema verification before fix)
+- **Symptom**: Expected cash calculation subtracts ALL refunds (cash + UPI + khata + adjustment) from expected cash in drawer. Only cash refunds physically reduce the cash drawer.
+- **Root Cause**: `dailyClosing.ts:40-46` sums ALL refunds from `orders.refunds` regardless of `refund_method`. Schema verification confirmed: `orders.refunds` has a `refund_method` column (`'cash'`, `'upi'`, `'khata'`, `'adjustment'`). UPI refunds go through Razorpay (no cash leaves drawer). Khata/adjustment refunds are credit entries (no cash leaves drawer).
+- **Fix**: Added `AND refund_method = 'cash'` filter to the refund query so only cash refunds reduce expected cash.
+- **Files**: `backend/src/routes/v1/pos/dailyClosing.ts:42`
+- **Severity**: MEDIUM — Incorrect cash reconciliation when non-cash refunds exist
+- **Status**: FIXED
 
 ---
 
@@ -2019,8 +2019,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 | Status | Count |
 |--------|-------|
-| FIXED | 204 |
-| DIAGNOSED | 1 |
+| FIXED | 205 |
+| DIAGNOSED | 0 |
 | INFRA-ONLY | 0 |
 | FOUND | 0 |
 | VERIFIED | 0 |
