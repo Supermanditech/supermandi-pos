@@ -144,7 +144,7 @@
 - **Root Cause**: Firebase `signInWithPhoneNumber` fails. Likely causes: (1) `staging.supermandi.tech` not added to Firebase Console → Authentication → Settings → Authorized Domains, (2) `NEXT_PUBLIC_FIREBASE_*` env vars not set in supplier-portal Cloud Run build, (3) reCAPTCHA verifier failing on staging domain. Error is the generic fallback at `firebase.ts:172`.
 - **Fix**: (infra) Add `staging.supermandi.tech` to Firebase authorized domains. Verify `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID` are set in the supplier-portal service env vars.
 - **Files**: `supplier-portal/src/lib/firebase.ts:14-21,143-185` (code is correct, issue is config)
-- **Status**: INFRA-ONLY (requires Firebase Console domain config)
+- **Status**: FIXED (operator added `staging.supermandi.tech` to Firebase authorized domains)
 
 ### STG-014: Supplier Portal — BNPL Orders page "Failed to load BNPL orders" (wrong column names)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/bnpl-orders/`)
@@ -1722,7 +1722,7 @@
 - **Fix**: Either (a) add `/s` exact match to URL map pointing to retailer-admin, or (b) add a redirect from `/s` to `/retailer/` in the landing page nginx config.
 - **Files**: GCP URL map configuration (load balancer path rules)
 - **Severity**: LOW — Edge case, unlikely user path
-- **Status**: INFRA-ONLY (requires GCP URL map update)
+- **Status**: FIXED (added `location = /s` redirect in both retailer-admin and landing nginx configs)
 
 ### STG-183: API — Error response format inconsistent across gateway vs backend
 - **Portal**: All
@@ -1803,9 +1803,9 @@
 
 | Status | Count |
 |--------|-------|
-| FIXED | 182 |
+| FIXED | 184 |
 | DIAGNOSED | 0 |
-| INFRA-ONLY | 2 |
+| INFRA-ONLY | 0 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
