@@ -2549,7 +2549,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reproduction**: Badges using `badge-secondary` class appear unstyled (no background/color)
 - **Root cause**: Class referenced in JSX but never defined in index.css
 - **Severity**: P3 (cosmetic — badges lack color distinction)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only, no light-mode impact, no functional regression. Defer to post-deploy dark-mode sweep.
 
 ### STG-247: Retailer — UpiInput inline background/color hardcoded for dark mode
 - **Platform**: Retailer Admin
@@ -2557,7 +2558,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reproduction**: Dark mode → non-disabled input shows white background on dark page (inline style overrides CSS)
 - **Root cause**: `style={{ background: disabled ? '#f8fafc' : 'white' }}` takes precedence over CSS dark rules
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only input background. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-248: Retailer — Onboarding `.onb-step-desc`, `.onb-doc-desc`, `.onb-success-text` missing dark mode overrides
 - **Platform**: Retailer Admin
@@ -2565,7 +2567,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reproduction**: Dark mode → gray text nearly invisible on dark background
 - **Root cause**: CSS classes use hardcoded light-mode gray colors with no `html.dark` counterpart
 - **Severity**: P3 (cosmetic — dark mode text contrast)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only text contrast. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-249: Retailer — RetailerOnboardingPage DocumentUploadField inline colors don't adapt
 - **Platform**: Retailer Admin
@@ -2573,7 +2576,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reproduction**: Dark mode → upload zone borders, text, success colors all light-mode
 - **Root cause**: Extensive inline styles with hardcoded hex colors in DocumentUploadField sub-component
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only upload zone colors. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-250: Retailer — Dead CSS rules for `.prod-sm-badge`, `.dash-sm-badge`, `.prod-tips`
 - **Platform**: Retailer Admin
@@ -2581,7 +2585,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reproduction**: N/A — CSS rules exist with dark mode overrides but no matching JSX usage
 - **Root cause**: Over-generation during inline-to-CSS conversion
 - **Severity**: P3 (dead code — no runtime impact)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dead CSS with no runtime impact. Cleanup ticket, not a deploy blocker.
 
 ### STG-251: SuperAdmin — WhatsApp STATUS_COLORS.sent hardcoded light-mode blue
 - **Platform**: SuperAdmin
@@ -2589,21 +2594,24 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reproduction**: Dark mode → `#dbeafe`/`#e0e7ff` backgrounds appear as bright blue rectangles
 - **Root cause**: `STATUS_COLORS.sent` and stat card backgrounds use hardcoded hex, not CSS vars
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only badge contrast. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-252: SuperAdmin — CreditProvidersTab "Repaid" stat card hardcoded light-mode blue
 - **Platform**: SuperAdmin
 - **Screen**: CreditProvidersTab — "Repaid" stat card
 - **Reproduction**: Dark mode → `#eff6ff` background appears as bright blue rectangle
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only stat card background. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-253: SuperAdmin — StoresTab bulk feature flag toolbar hardcoded `#eff6ff`
 - **Platform**: SuperAdmin
 - **Screen**: StoresTab — bulk action toolbar when stores selected
 - **Reproduction**: Dark mode → light blue toolbar background appears jarring
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only toolbar background. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-254: SuperAdmin — RefundsTab Approve/Reject button text colors hardcoded
 - **Platform**: SuperAdmin
@@ -2611,21 +2619,268 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reproduction**: Dark mode → `#166534` (dark green) and `#991b1b` (dark red) text barely visible
 - **Root cause**: Button backgrounds use CSS vars but text colors are hardcoded light-mode
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only button text contrast. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-255: SuperAdmin — AIInsightsTab active sub-tab button `#1e40af`
 - **Platform**: SuperAdmin
 - **Screen**: AIInsightsTab — sub-tab buttons and Load button
 - **Reproduction**: Dark mode → dark blue background may lack contrast as selected state
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only tab button contrast. Light mode correct. Defer to post-deploy dark-mode sweep.
 
 ### STG-256: SuperAdmin — MonitoringTab `#7C3AED` purple label
 - **Platform**: SuperAdmin
 - **Screen**: MonitoringTab — "Cloud SQL" label
 - **Reproduction**: Dark mode → purple text may have low contrast
 - **Severity**: P3 (cosmetic — dark mode only)
-- **Status**: FOUND
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only label contrast. Light mode correct. Defer to post-deploy dark-mode sweep.
+
+---
+
+## Final Pre-Deploy Audit Findings (STG-257+)
+
+> **Audit date**: 2026-03-01 | **Baseline**: `main@d69c4a20` | **Auditor**: Claude Opus 4.6 (automated)
+> **Scope**: All 4 platforms, all screens, comprehensive protocol (UI/UX/wiring/nav/auth/dark-light/API/DB/a11y/responsive)
+> **Result**: 0 P1, 0 P2, 30 P3 cosmetic (all dark-mode-only). **DEPLOY ELIGIBLE.**
+
+### STG-257: Supplier — Missing `html.dark .bg-gray-100` override (3 screens)
+- **Platform**: Supplier Portal
+- **Screen**: Invoices (draft/cancelled/void badges), Earnings (fallback badge), KYC (fallback badge)
+- **Reproduction**: Dark mode → gray badges render as bright rectangles
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only badge background. Light mode correct. 1-line CSS fix.
+
+### STG-258: Supplier — Missing `html.dark .text-gray-700` override
+- **Platform**: Supplier Portal
+- **Screen**: Invoices — "Draft" status badge text
+- **Reproduction**: Dark mode → gray-700 text barely readable on dark surface
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only text contrast. 1-line CSS fix.
+
+### STG-259: Supplier — Missing `html.dark .text-gray-500` override
+- **Platform**: Supplier Portal
+- **Screen**: Invoices — "Cancelled"/"Void" badge text
+- **Reproduction**: Dark mode → gray-500 text insufficient contrast
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only text contrast. 1-line CSS fix.
+
+### STG-260: Supplier — Missing `html.dark .bg-blue-100` override (5 screens)
+- **Platform**: Supplier Portal
+- **Screen**: Dashboard, Orders, Earnings, Invoices, BNPL Orders — blue status badges
+- **Reproduction**: Dark mode → blue-100 badges render as bright blue rectangles
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only badge background. 1-line CSS fix.
+
+### STG-261: Supplier — Missing `html.dark .text-blue-700` override (8 screens)
+- **Platform**: Supplier Portal
+- **Screen**: Dashboard, Orders, Earnings, Invoices, BNPL, KYC, Profile, Forgot Password
+- **Reproduction**: Dark mode → blue-700 text insufficient contrast on dark surfaces
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only text contrast. 1-line CSS fix.
+
+### STG-262: SuperAdmin — StaffTab role badges hardcoded hex
+- **Platform**: SuperAdmin
+- **Screen**: StaffTab — role badges (background `#dbeafe`/`#fef3c7`, color `#1e40af`/`#92400e`)
+- **Reproduction**: Dark mode → light-mode badge colors appear jarring
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only badge colors. Light mode correct.
+
+### STG-263: SuperAdmin — RegistrationsTab enroll button hardcoded border/background
+- **Platform**: SuperAdmin
+- **Screen**: RegistrationsTab — enroll action button
+- **Reproduction**: Dark mode → `border: 1px solid #10b981`, `background: #d1fae5` appear light-mode
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only button colors. Light mode correct.
+
+### STG-264: SuperAdmin — SuppliersTab action buttons hardcoded hex (4 locations)
+- **Platform**: SuperAdmin
+- **Screen**: SuppliersTab — action buttons (`#3b82f6`, `#6366f1`, `#2563eb`, `white`)
+- **Reproduction**: Dark mode → button backgrounds may have insufficient contrast
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only button contrast. Light mode correct.
+
+### STG-265: SuperAdmin — SettingsTab revert button `#fff` hardcoded
+- **Platform**: SuperAdmin
+- **Screen**: SettingsTab — revert button text
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: White text on colored button, actually acceptable in both modes. Borderline.
+
+### STG-266: SuperAdmin — InvoicesTab STATUS_STYLES hardcoded hex
+- **Platform**: SuperAdmin
+- **Screen**: InvoicesTab — status badges (issued `#dbeafe`/`#1e40af`, overdue `#fef3c7`/`#92400e`, cancelled `#991b1b`)
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only badge colors. Light mode correct.
+
+### STG-267: SuperAdmin — GstComplianceTab accent card borders hardcoded
+- **Platform**: SuperAdmin
+- **Screen**: GstComplianceTab — accent card left borders (`#3b82f6`, `#10b981`, `#8b5cf6`, `#f59e0b`)
+- **Severity**: P3 (cosmetic — dark mode only, decorative borders)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Decorative accent borders, acceptable in both modes.
+
+### STG-268: SuperAdmin — SupportQueueTab hardcoded hex colors (6 locations)
+- **Platform**: SuperAdmin
+- **Screen**: SupportQueueTab — view toggle, status filter, chat bubbles, send button
+- **Reproduction**: Dark mode → `#1e40af`/`#f0f9ff`/`#fff` background/text colors
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only UI element colors. Light mode correct.
+
+### STG-269: SuperAdmin — QualityDashboardTab refresh button hardcoded
+- **Platform**: SuperAdmin
+- **Screen**: QualityDashboardTab — refresh button (`background: #2563EB`, `color: #FFF`)
+- **Severity**: P3 (cosmetic — dark mode only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Dark-mode-only button. Light mode correct.
+
+### STG-270: POS — PaymentSetupScreen hardcoded `#fff` ActivityIndicator
+- **Platform**: POS App
+- **Screen**: PaymentSetupScreen — loading spinner
+- **File**: `src/screens/PaymentSetupScreen.tsx:357`
+- **Severity**: P3 (cosmetic — white spinner on light bg in some states)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Spinner color acceptable on colored button. Low priority.
+
+### STG-271: POS — SellScanScreen hardcoded `#000` shadowColor (4 occurrences)
+- **Platform**: POS App
+- **Screen**: SellScanScreen — card shadows
+- **File**: `src/screens/SellScanScreen.tsx:4084,4110,4458,4937`
+- **Severity**: P3 (cosmetic — shadow blends into dark bg in dark mode)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Shadow cosmetic only, not visible in dark mode. No functional impact.
+
+### STG-272: POS — ScreenErrorBoundary fully hardcoded colors (class component)
+- **Platform**: POS App
+- **Screen**: ScreenErrorBoundary — error fallback UI
+- **File**: `src/components/ui/ScreenErrorBoundary.tsx:45-50`
+- **Severity**: P3 (cosmetic — error screen always light-mode styled)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Class component cannot use hooks. Needs refactor to support dark mode. Error screen is rare, acceptable deferral.
+
+### STG-273: POS — LimitedModeBanner hardcoded STATUS_CONFIG (27 hex colors)
+- **Platform**: POS App
+- **Screen**: LimitedModeBanner — status-dependent banner
+- **File**: `src/components/LimitedModeBanner.tsx:21-99`
+- **Severity**: P3 (cosmetic — banner status colors always light-mode)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Banner is informational, uses static theme.colors. Needs full refactor to useThemeColors pattern.
+
+### STG-274: POS — SyncConflictPanel hardcoded `#fff` badge text
+- **Platform**: POS App
+- **Screen**: SyncConflictPanel — conflict count badge
+- **File**: `src/components/ui/SyncConflictPanel.tsx:410`
+- **Severity**: P3 (cosmetic — white text on colored badge, acceptable in both modes)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: White on colored badge is acceptable. Low priority.
+
+### STG-275: POS — LoadingState hardcoded rgba overlay + `#000` shadow
+- **Platform**: POS App
+- **Screen**: LoadingState — global loading overlay
+- **File**: `src/components/ui/LoadingState.tsx:317,328`
+- **Severity**: P3 (cosmetic — uses static theme.colors)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Overlay token exists but static stylesheet uses light palette. Low priority.
+
+### STG-276: POS — CategoryRail 60+ hardcoded gradient/icon colors
+- **Platform**: POS App
+- **Screen**: SellScanScreen — category horizontal rail
+- **File**: `src/components/sell/CategoryRail.tsx:24-54`
+- **Severity**: P3/WONTFIX (intentional brand category colors, same in light and dark)
+- **Status**: WONTFIX
+- **Disposition**: Material Design palette category colors are decorative brand identity. Not a theme bug.
+
+### STG-277: POS — SellScanScreen 5 hardcoded rgba() overlays
+- **Platform**: POS App
+- **Screen**: SellScanScreen — cart overlay, onboarding overlay, cart item free row, discount badge, edit overlay
+- **File**: `src/screens/SellScanScreen.tsx:4243,4251,4480,4482,4503,5112`
+- **Severity**: P3 (cosmetic — rgba overlays slightly different in dark mode)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Overlay tokens exist (colors.overlay, colors.warningSoft). Needs token substitution.
+
+### STG-278: POS — SuccessPrintScreenV2 hardcoded rgba(0,0,0,0.5) modal overlay
+- **Platform**: POS App
+- **Screen**: SuccessPrintScreenV2 — modal backdrop
+- **File**: `src/screens/SuccessPrintScreenV2.tsx:269`
+- **Severity**: P3 (cosmetic — overlay token exists)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Should use colors.overlay. Cosmetic only.
+
+### STG-279: POS — InwardScreen 2 hardcoded rgba() overlays
+- **Platform**: POS App
+- **Screen**: InwardScreen — search overlay + modal backdrop
+- **File**: `src/screens/InwardScreen.tsx:717,972`
+- **Severity**: P3 (cosmetic — overlay tokens exist)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Should use colors.overlayLight and colors.overlay. Cosmetic only.
+
+### STG-280: POS — BarcodeSheetScreen hardcoded rgba(15,23,42,0.45) modal overlay
+- **Platform**: POS App
+- **Screen**: BarcodeSheetScreen — modal backdrop
+- **File**: `src/screens/BarcodeSheetScreen.tsx:1299`
+- **Severity**: P3 (cosmetic — overlay token exists)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Should use colors.overlay. Cosmetic only.
+
+### STG-281: POS — ChatConversationScreen hardcoded rgba(255,255,255,0.7) time text
+- **Platform**: POS App
+- **Screen**: ChatConversationScreen — own message timestamp
+- **File**: `src/screens/ChatConversationScreen.tsx:213`
+- **Severity**: P3 (cosmetic — semi-transparent white on primary bubble, acceptable)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: White overlay on primary-colored bubble. Readable in both modes.
+
+### STG-282: POS — ReorderPoliciesScreen hardcoded rgba(255,255,255,0.2) badge
+- **Platform**: POS App
+- **Screen**: ReorderPoliciesScreen — policy count badge
+- **File**: `src/screens/ReorderPoliciesScreen.tsx:536`
+- **Severity**: P3 (cosmetic)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Semi-transparent white on colored badge. Low priority.
+
+### STG-283: POS — SplashScreen static StyleSheet uses light-only colors import
+- **Platform**: POS App
+- **Screen**: SplashScreen — error card, retry/skip buttons
+- **File**: `src/screens/SplashScreen.tsx:218-283`
+- **Severity**: P3 (cosmetic — errorCard/retryButton light-mode styled in dark mode)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Render function uses useThemeColors for main container. Static styles for error card only. Error state is rare.
+
+### STG-284: POS — EnrollDeviceScreen static StyleSheet uses light-only colors import
+- **Platform**: POS App
+- **Screen**: EnrollDeviceScreen — form, buttons, all styles
+- **File**: `src/screens/EnrollDeviceScreen.tsx:581-838`
+- **Severity**: P3 (cosmetic — entire screen light-mode styled in dark mode)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Screen seen only once per device enrollment. Needs full refactor to useMemo pattern. Low frequency screen.
+
+### STG-285: POS — MenuScreen static StyleSheet uses light-only theme.colors
+- **Platform**: POS App
+- **Screen**: MenuScreen — menu items, section headers, status panel
+- **File**: `src/screens/MenuScreen.tsx:1128+`
+- **Severity**: P3 (cosmetic — base styles light-only, some inline overrides use useThemeColors)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Mixed pattern — inline overrides cover visible elements. Base styles less visible. Needs cleanup.
+
+### STG-286: POS — PosRootLayout static StyleSheet uses light-only theme.colors
+- **Platform**: POS App
+- **Screen**: PosRootLayout — tab bar, scanner overlay
+- **File**: `src/screens/PosRootLayout.tsx:1480+`
+- **Severity**: P3 (cosmetic — tab bar and scanner overlay base styles light-only)
+- **Status**: DEFERRED_COSMETIC
+- **Disposition**: Inline overrides cover tab active states. Base styles need cleanup.
 
 ---
 

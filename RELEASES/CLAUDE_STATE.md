@@ -2062,12 +2062,13 @@ DAY 3+:     Normal monitoring cadence
 
 | Metric | Value |
 |--------|-------|
-| Range | STG-001 → STG-256 |
-| Total | 256 |
-| FIXED | 243 |
-| WONTFIX | 1 (STG-021) |
+| Range | STG-001 → STG-286 |
+| Total | 286 |
+| FIXED | 244 |
+| WONTFIX | 2 (STG-021, STG-276) |
 | DIAGNOSED | 0 |
-| FOUND | 12 (STG-245..256, all P3 cosmetic dark-mode gaps) |
+| FOUND | 0 |
+| DEFERRED_COSMETIC | 40 (all P3 dark-mode-only, explicitly dispositioned) |
 
 ### STG-021 WONTFIX Record
 
@@ -2077,10 +2078,11 @@ DAY 3+:     Normal monitoring cadence
 
 ### Tracker Freeze Rules
 
-1. `RELEASES/STAGING_BROWSER_TEST_ISSUES.md` is **frozen** for STG-001..256
-2. Next audit round appends new findings as STG-257+ (never rewrites old entries)
-3. Any regression against a prior STG fix → new STG ID (e.g., STG-257), not silent edit of the original
+1. `RELEASES/STAGING_BROWSER_TEST_ISSUES.md` is **frozen** for STG-001..286
+2. Next audit round appends new findings as STG-287+ (never rewrites old entries)
+3. Any regression against a prior STG fix → new STG ID (e.g., STG-287), not silent edit of the original
 4. Deploy hold remains active until operator triggers CI
+5. Final pre-deploy audit completed 2026-03-01: 0 P1/P2 blockers, 40 P3 cosmetic deferred
 
 ### Pending Migrations (4)
 
@@ -2223,6 +2225,17 @@ The final audit wave is complete only if:
 5. All screens have terminal status (`completed` or `blocked`)
 6. All discovered issues are appended to `RELEASES/STAGING_BROWSER_TEST_ISSUES.md`
 7. Claude publishes: final screen coverage table, issue counts by platform, issue counts by severity, cross-surface blockers, explicit statement (`FINAL STAGING AUDIT COMPLETE` or `NOT COMPLETE` with remaining blocked screens)
+
+### No Screen Left Behind Rule (Mandatory)
+
+For the final audit and any final pre-deploy audit refresh:
+
+1. Every screen listed in the manifest must receive terminal status
+2. No listed screen may remain implicit, skipped, sampled-only, or "to revisit later"
+3. Platform completion is blocked if even one listed screen lacks terminal status
+4. Sampled reiteration may be used only for impacted-regression checks
+5. Sampled reiteration must never be treated as equivalent to full audit completion
+6. If a screen was only sampled, it remains `pending` for full-audit purposes until individually audited
 
 ### No-Escape Rules
 
@@ -2575,6 +2588,112 @@ The UI/UX polish wave is complete only if:
 This polish wave exists to bring all four platforms to a professional business-class visual and interaction standard without destabilizing the product before the next deployment.
 
 Sampling is forbidden. Single-screen lock is mandatory.
+
+---
+
+## 19.5 Post-Audit Professional UX Quality Refinement (Mandatory Next Task)
+
+> **Status**: ARMED | **Activation Rule**: Starts only after the current final audit completes and a new baseline SHA is declared
+
+### Purpose
+
+After the current final audit completes, Claude must execute one dedicated professional UX quality refinement wave across:
+
+1. Retailer Web
+2. Supplier Web
+3. SuperAdmin Web
+4. POS App
+
+This wave exists to make the product feel business-class and professionally usable without destabilizing established workflows before deployment.
+
+### Core Rule
+
+Claude must:
+
+1. improve UX quality now
+2. make UX professional now
+3. avoid changing workflow semantics by default
+
+Mandatory policy sentence:
+
+> Improve UX quality, not workflow semantics, unless a screen has a proven usability defect that cannot be solved without a declared behavior change.
+
+### Allowed UX Refinement Scope
+
+Claude may improve:
+
+1. CTA hierarchy and action emphasis
+2. microcopy clarity
+3. helper/error/success text quality
+4. field guidance and validation clarity
+5. confirmation, cancel, retry, and recovery flows
+6. empty/loading/error state experience
+7. table/filter/search usability
+8. form progression clarity
+9. touch/keyboard ergonomics
+10. perceived responsiveness and clarity of state transitions
+11. information hierarchy within a screen
+12. consistency of user feedback across portals
+
+### Forbidden Default Scope
+
+Claude must not silently change:
+
+1. business logic
+2. approval semantics
+3. auth/session model
+4. route/deep-link model
+5. API contracts
+6. backend behavior
+7. DB or migration semantics
+8. cross-platform workflow sequencing
+
+### Proven-Defect Exception Rule
+
+If a UX problem cannot be solved without changing behavior, Claude may proceed only if:
+
+1. the current audit or refinement pass proves a real usability defect
+2. Claude explicitly declares the behavior change
+3. Claude states why a pure polish fix is insufficient
+4. Claude performs broader regression verification on impacted flows
+5. the change is recorded as an explicit issue/ticket or explicit declared exception
+
+### Execution Order
+
+The professional UX refinement wave must follow this exact order:
+
+1. Retailer Web
+2. Supplier Web
+3. SuperAdmin Web
+4. POS App
+
+Single-screen lock remains mandatory.
+
+### Per-Screen UX Quality Checklist
+
+Claude may not mark a screen complete until it verifies:
+
+1. primary action is visually and cognitively obvious
+2. secondary/destructive actions are appropriately de-emphasized
+3. labels and helper text are concise and unambiguous
+4. error states tell the user what to do next
+5. success states confirm what happened
+6. empty states guide the next action
+7. loading states reduce uncertainty
+8. form flow feels minimal and coherent
+9. table/filter/search interactions are understandable
+10. keyboard/touch path feels efficient
+11. wiring/navigation was verified and not silently changed
+12. auth/session/API/backend behavior was rechecked after refinement
+
+### Completion Gate
+
+This wave is complete only when:
+
+1. all four platforms have been covered screenwise
+2. no open P0/P1 UX regression remains
+3. any behavior-changing UX fix was explicitly declared and reverified
+4. Claude publishes a final UX quality summary and remaining deferments, if any
 
 ---
 

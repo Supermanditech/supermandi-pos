@@ -1,20 +1,21 @@
 {
   "version": "66.0",
   "lastUpdated": "2026-03-01T00:00:00.000Z",
-  "currentPhase": "POST_FIREBASE_UI_UX_POLISH_COMPLETE + REITERATION_COMPLETE: STG-001..244 fixed, STG-245..256 found (12 P3 cosmetic), baseline main@d69c4a20, deploy hold active, final fresh audit in progress.",
+  "currentPhase": "FINAL_PRE_DEPLOY_AUDIT_COMPLETE: STG-001..286 tracked, 244 fixed, 2 wontfix, 40 deferred cosmetic. 0 P1/P2 blockers. baseline main@d69c4a20. Deploy hold active. Ready for deploy-prep decision.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "d69c4a20",
     "baselineBranch": "main",
-    "issueRange": "STG-001..STG-256",
+    "issueRange": "STG-001..STG-286",
     "summary": {
-      "total": 256,
-      "fixed": 243,
-      "wontfix": 1,
+      "total": 286,
+      "fixed": 244,
+      "wontfix": 2,
       "diagnosed": 0,
-      "found": 12
+      "found": 0,
+      "deferredCosmetic": 40
     },
     "wontfixRegistry": {
       "STG-021": {
@@ -28,9 +29,9 @@
     "deployHold": true,
     "nextRoundRules": {
       "auditFrom": "main@d69c4a20",
-      "newFindingsStartAt": "STG-257",
-      "regressionAgainstPriorFixes": "Append as new STG-257+ IDs, do NOT silently edit historical closures",
-      "doNotRewrite": "STG-001..STG-256 entries are frozen — only append, never edit"
+      "newFindingsStartAt": "STG-287",
+      "regressionAgainstPriorFixes": "Append as new STG-287+ IDs, do NOT silently edit historical closures",
+      "doNotRewrite": "STG-001..STG-286 entries are frozen — only append, never edit"
     },
     "migrations": {
       "pending": ["168_fix_check_constraints.sql", "169_add_pending_mrp.sql", "170_credit_app_columns_and_constraint.sql", "171_fix_buy_payments_mode_constraint.sql"],
@@ -38,20 +39,21 @@
       "lockRisk": "LOW (sub-second ACCESS EXCLUSIVE on small tables)"
     },
     "latestWave": {
-      "issueRange": "STG-237..STG-256",
-      "implementedAndReiteratedAt": "d69c4a20",
+      "issueRange": "STG-257..STG-286",
+      "type": "final_pre_deploy_audit",
+      "auditDate": "2026-03-01",
       "summary": {
-        "type": "post-Firebase UI/UX polish reiteration",
-        "newP2FoundAndFixed": 8,
-        "newP3FoundNotFixed": 12,
-        "totalNewIssues": 20,
-        "totalFixedInWave": 8,
-        "openP1P2": 0
+        "newP3Found": 30,
+        "newWontfix": 1,
+        "allDeferredCosmetic": true,
+        "openP1P2": 0,
+        "deployEligible": true
       },
       "priorWave": {
-        "issueRange": "STG-207..STG-236",
-        "implementedAndReiteratedAt": "1d2b4288",
-        "totalClosedInWave": 30
+        "issueRange": "STG-237..STG-256",
+        "implementedAndReiteratedAt": "d69c4a20",
+        "p2Fixed": 8,
+        "p3Logged": 12
       },
       "safeToPark": true
     },

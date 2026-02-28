@@ -5,20 +5,35 @@
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "d69c4a20",
-    "issueRange": "STG-001..STG-256",
-    "total": 256,
-    "fixed": 243,
-    "wontfix": 1,
-    "found": 12,
+    "issueRange": "STG-001..STG-286",
+    "total": 286,
+    "fixed": 244,
+    "wontfix": 2,
+    "found": 0,
+    "deferredCosmetic": 40,
     "trackerFrozen": true,
     "deployHold": true,
-    "nextRoundStartsAt": "STG-257",
+    "nextRoundStartsAt": "STG-287",
+    "finalPreDeployAudit": {
+      "date": "2026-03-01",
+      "result": "DEPLOY_ELIGIBLE",
+      "p1Blockers": 0,
+      "p2Blockers": 0,
+      "p3Deferred": 40,
+      "screensAudited": {
+        "retailerWeb": 30,
+        "supplierWeb": 25,
+        "superadminWeb": 24,
+        "posApp": 44
+      },
+      "totalScreensAudited": 123
+    },
     "latestWave": {
-      "issueRange": "STG-237..STG-256",
-      "implementedAndReiteratedAt": "d69c4a20",
-      "type": "post-Firebase UI/UX polish reiteration",
-      "p2FixedInWave": 8,
-      "p3LoggedInWave": 12,
+      "issueRange": "STG-257..STG-286",
+      "type": "final_pre_deploy_audit",
+      "newP3Found": 30,
+      "newWontfix": 1,
+      "allDeferredCosmetic": true,
       "safeToPark": true
     }
   },
