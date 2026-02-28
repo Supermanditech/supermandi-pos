@@ -72,7 +72,7 @@
 - **Symptom**: Footer shows "© 2026 SuperMandi Tech Pvt Ltd · Made in India" — operator wants "Made in India" removed
 - **Root Cause**: Hardcoded in 17 locations across all portals
 - **Files**: `supplier-portal/src/app/(dashboard)/layout.tsx:445`, `supplier-portal/src/app/register/layout.tsx:32`, `supplier-portal/src/app/help/page.tsx:57`, `supplier-portal/src/app/help/layout.tsx:32`, `supplier-portal/src/app/(auth)/layout.tsx:40`, `retailer-admin/src/components/ProtectedLayout.tsx:318`, `retailer-admin/src/components/HelpPageContent.tsx:131`, `retailer-admin/src/pages/RegisterPage.tsx:1119`, `retailer-admin/src/pages/LoginPage.tsx:730`, `retailer-admin/src/pages/ForgotPasswordPage.tsx:641`, `retailer-admin/src/pages/ResetPasswordPage.tsx:261`, `retailer-admin/src/pages/HelpPage.tsx:37`, `supermandi-superadmin/src/App.tsx:3490`, `supermandi-superadmin/src/components/LoginGate.tsx:191`, `src/screens/HelpScreen.tsx:226`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `b6a112ae`
 
 ### STG-006: ALL PORTALS — Hardcoded copyright year 2026 will go stale
 - **Portal**: ALL
@@ -80,7 +80,7 @@
 - **Symptom**: Footer shows `© 2026` — hardcoded, will be wrong in 2027
 - **Root Cause**: Hardcoded year string in same 17 locations as STG-005
 - **Fix**: Replace `2026` with dynamic `new Date().getFullYear()` (React) / `{new Date().getFullYear()}` (JSX)
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `b6a112ae`
 
 ### STG-007: Supplier Portal — Dashboard orders/products queries missing loading states
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/dashboard/`)
@@ -88,7 +88,7 @@
 - **Symptom**: "No orders yet." shows immediately even while API is still loading. No skeleton/spinner.
 - **Root Cause**: `useQuery` for orders and products doesn't destructure `isLoading`/`isError`. Recent Orders section treats "not loaded" same as "empty".
 - **Files**: `supplier-portal/src/app/(dashboard)/dashboard/page.tsx:66-75`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-008: Supplier Portal — Quick Actions don't check supplier verification status
 - **Portal**: Supplier
@@ -96,7 +96,7 @@
 - **Symptom**: "Add Product", "Upload CSV" buttons are enabled even for unverified suppliers — clicking leads to API permission error
 - **Root Cause**: Quick action `<Link>` components don't check `supplier.verificationStatus`. Layout has `LimitedModeBanner` but buttons aren't disabled.
 - **Files**: `supplier-portal/src/app/(dashboard)/dashboard/page.tsx:174-191`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ---
 
@@ -109,7 +109,7 @@
 - **Root Cause**: Backend `GET /api/v1/supplier/products` query selects `pending_mrp` column (line 229) that doesn't exist in `catalog.supplier_products`. Migration 146 adds `pending_purchase_price` but never adds `pending_mrp`. PostgreSQL throws "column does not exist" → 500 error.
 - **Fix**: Add migration to create `pending_mrp BIGINT` column on `catalog.supplier_products` (same pattern as `pending_purchase_price`)
 - **Files**: `backend/src/routes/v1/supplier/products.ts:229,264,606,633,657,696`, migration needed
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-010: Supplier Portal — "+ Add Product" button enabled despite API failure
 - **Portal**: Supplier
@@ -117,7 +117,7 @@
 - **Symptom**: "+ Add Product" button is blue and clickable even when products API fails. Clicking will also fail since the same schema gap affects product creation.
 - **Root Cause**: Button has no guard for API health or supplier verification status (same pattern as STG-008 Quick Actions)
 - **Files**: `supplier-portal/src/app/(dashboard)/products/page.tsx`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-011: Supplier Portal — "Partial_received" tab label has underscore
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/orders/`)
@@ -126,7 +126,7 @@
 - **Root Cause**: Line 336 uses naive `charAt(0).toUpperCase() + slice(1)` which doesn't handle underscores. Should use a display label map.
 - **Fix**: Add status display label mapping (e.g., `{ partial_received: 'Partially Received' }`) or replace underscores with spaces
 - **Files**: `supplier-portal/src/app/(dashboard)/orders/page.tsx:336`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-012: Supplier Portal — Clicking Notifications logs user out (missing auth middleware)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/notifications/`)
@@ -135,7 +135,7 @@
 - **Root Cause**: `supplierNotificationsRouter` routes don't use `requireSupplierAuth` middleware. They manually check `(req as any).supplierId` (line 44-46) but this property is never set without the middleware → returns 401 → frontend `handle401Response()` clears token and redirects to `/supplier/login`. All 6 notification endpoints are affected.
 - **Fix**: Add `requireSupplierAuth` middleware to all notification route handlers (same pattern as products, orders, KYC routes)
 - **Files**: `backend/src/routes/v1/supplier/notifications.ts:13,29,43,83,103,119`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-013: Supplier Portal — "Unable to send OTP" on login page (Firebase Phone Auth)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/login/`)
@@ -153,7 +153,7 @@
 - **Root Cause**: Backend `GET /api/v1/supplier/bnpl/backed-orders` query at line 39 references `st.store_name, st.store_code` but `platform.stores` table has columns `name` and `code` (not `store_name`/`store_code`). PostgreSQL throws "column does not exist" → caught by blanket `catch` → returns 500.
 - **Fix**: Change query to use `st.name AS store_name, st.code AS store_code` in `bnplVisibility.ts:39`
 - **Files**: `backend/src/routes/v1/supplier/bnplVisibility.ts:39`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-015: Supplier Portal — Help page loses sidebar navigation (renders outside dashboard)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/help/`)
@@ -162,7 +162,7 @@
 - **Root Cause**: Dashboard sidebar links to `/help` but `help/page.tsx` is a top-level route outside the `(dashboard)` route group. It uses its own standalone `help/layout.tsx` (designed for pre-login access) instead of the dashboard layout. Content is generic landing-page material, not supplier-specific help.
 - **Fix**: Create `(dashboard)/help/page.tsx` with supplier-specific content (FAQ, how-to guides for products/orders/KYC/BNPL). Dashboard sidebar will then render help within the dashboard layout. Keep top-level `help/` for pre-login access. Add dark mode support. Remove redundant "Made in India" (covered by STG-005).
 - **Files**: `supplier-portal/src/app/help/page.tsx`, `supplier-portal/src/app/help/layout.tsx`, `supplier-portal/src/app/(dashboard)/layout.tsx:31` (nav item href)
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-016: SuperAdmin — Refunds tab broken (wrong table schema + column name)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#refunds`)
@@ -171,7 +171,7 @@
 - **Root Cause**: Two bugs in `admin/refunds.ts`: (1) Line 125: `LEFT JOIN stores.stores` should be `LEFT JOIN platform.stores` — `stores.stores` schema doesn't exist. (2) Line 120: `r.refund_amount_minor` column doesn't exist — migration 152 defines column as `refund_amount` (not `refund_amount_minor`). Also frontend status type uses `"processed"` (RefundsTab.tsx:14) but DB constraint uses `"completed"` (migration 152:174-176).
 - **Fix**: (1) Change `stores.stores` to `platform.stores` at line 125. (2) Change `r.refund_amount_minor` to `r.refund_amount` at line 120. (3) Update frontend status style/filter from `processed` to `completed`.
 - **Files**: `backend/src/routes/v1/admin/refunds.ts:120,125`, `supermandi-superadmin/src/tabs/RefundsTab.tsx:14,120`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-017: SuperAdmin — GST Compliance tab broken (wrong supplier schema + missing columns)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#gst-compliance`)
@@ -180,7 +180,7 @@
 - **Root Cause**: The entire `gstCompliance.ts` was written against column names that don't match `invoicing.invoices` (migration 134). Every column is wrong: `store_id` (doesn't exist), `taxable_amount` (actual: `taxable_amount_minor`), `cgst_amount` (actual: `cgst_minor`), `sgst_amount` (actual: `sgst_minor`), `igst_amount` (actual: `igst_minor`), `cess_amount` (doesn't exist), `total_amount` (actual: `total_amount_minor`), `buyer_state` (doesn't exist), `seller_state` (doesn't exist). Also: `LEFT JOIN platform.suppliers` should be `supplier.suppliers` (line 100).
 - **Fix**: Rewrite all SQL queries in `gstCompliance.ts` to use correct column names from migration 134. Use `seller_id` with `seller_type` filter instead of `store_id`. Use `_minor` suffix columns. Add `buyer_state`/`seller_state` columns via new migration OR remove state breakdown.
 - **Files**: `backend/src/routes/v1/admin/gstCompliance.ts` (entire file — lines 54-108, 165-220, 271-310)
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-018: SuperAdmin — Support Queue tab broken (wrong API endpoint paths)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#support`)
@@ -189,7 +189,7 @@
 - **Root Cause**: Frontend calls `/api/v1/admin/chat/*` (SupportQueueTab.tsx lines 82,93,108,120,134,147) but backend mounts chat routes at `/api/v1/chat/*` (index.ts:253). No `/admin/chat/` route exists anywhere — not in v1 router, not in API gateway. All 6 support endpoints (queue, templates, messages, send, assign, resolve) will 404.
 - **Fix**: Change all `/api/v1/admin/chat/` prefixes to `/api/v1/chat/` in SupportQueueTab.tsx (6 occurrences).
 - **Files**: `supermandi-superadmin/src/tabs/SupportQueueTab.tsx:82,93,108,120,134,147`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-019: SuperAdmin — AI Intelligence shows "AI not configured" (missing OPENAI_API_KEY)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#ai-intelligence`)
@@ -197,7 +197,7 @@
 - **Symptom**: Red "AI not configured" badge on AI Intelligence tab and AI Copilot sidebar panel. "Ask AI" button disabled.
 - **Root Cause**: Backend AI health check (`/api/v1/admin/ai/health`) returns `{ configured: false }` because `OPENAI_API_KEY` env var is not set in the main-backend Cloud Run service.
 - **Fix**: (infra) Add `OPENAI_API_KEY` secret to GCP Secret Manager and mount as env var on `main-backend` Cloud Run service. No code change needed.
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e` (code fix: alerts engine table/column references). OPENAI_API_KEY still needs to be set in GCP.
 
 ### STG-020: SuperAdmin — Monitoring tab hardcoded staging domain + stale service list
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#monitoring`)
@@ -206,7 +206,7 @@
 - **Root Cause**: MonitoringTab.tsx has hardcoded data instead of fetching from backend dynamically. Code has TODO comment acknowledging this (lines 79-82).
 - **Fix**: Replace hardcoded domain with `window.location.hostname`. For alert policies and services, either fetch from a backend endpoint or at minimum derive from env vars. Remove internal port display.
 - **Files**: `supermandi-superadmin/src/tabs/MonitoringTab.tsx:79-105,295`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### ~~STG-021~~: RESOLVED — Build stamps are correct
 - All 4 services show `e56f0f4` (commit `e56f0f42` — 2 docs-only commits after deploy tag `e63dba14`). Services are aligned and running latest code.
@@ -219,7 +219,7 @@
 - **Root Cause**: WhatsAppTab.tsx:131 frontend validation and backend whatsapp.ts:303 validation use incompatible regexes.
 - **Fix**: Normalize phone in frontend before sending — strip `+` and `91` prefix: `superadminNumber.replace(/^\+?91/, '')`. Or update backend to accept and normalize +91 prefix.
 - **Files**: `supermandi-superadmin/src/tabs/WhatsAppTab.tsx:131`, `backend/src/routes/v1/admin/whatsapp.ts:303`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-023: SuperAdmin — Enrollment code "Resend" fails — reads wrong phone column
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#stores`)
@@ -237,7 +237,7 @@
 - **Root Cause**: `QualityDashboardTab.tsx:314` renders `renderToolCard("Database Tests", "💾", overview.tools.databaseTests)` but the backend (`qualityDashboard.ts:103-112`) does NOT include `databaseTests` in the `tools` response. `overview.tools.databaseTests` is `undefined` → `renderToolCard` accesses `tool.status` on undefined → `TypeError: Cannot read properties of undefined (reading 'status')` → React error boundary catches it. The logout happens because subsequent health checks may hit 429 rate limit or the error boundary's "Go Home" clears the session.
 - **Fix**: Either (a) add `databaseTests: { installed: true, suites: 5, status: 'configured' }` to backend response tools object, or (b) add null guard in frontend: `overview.tools.databaseTests && renderToolCard(...)`.
 - **Files**: `supermandi-superadmin/src/tabs/QualityDashboardTab.tsx:314`, `backend/src/routes/v1/admin/qualityDashboard.ts:103-112`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-025: SuperAdmin — WhatsApp CTA Config shows "[object Object]" error
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#whatsapp`)
@@ -246,7 +246,7 @@
 - **Root Cause**: `whatsapp.ts:40` — `parseErrorBody()` returns `body?.error` which can be an object (`{ code: "...", message: "..." }`) instead of a string. When passed to `new Error(obj)`, `err.message` becomes `"[object Object]"` which renders in the UI at `WhatsAppTab.tsx:307-308`.
 - **Fix**: Change `parseErrorBody` to always return a string: `typeof body?.error === 'string' ? body.error : (body?.error?.message || body?.message || \`HTTP ${res.status}\`)`.
 - **Files**: `supermandi-superadmin/src/api/whatsapp.ts:37-44`, `supermandi-superadmin/src/tabs/WhatsAppTab.tsx:307`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-026: SuperAdmin — AI alerts engine queries wrong table for overdue payments
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#ai-insights` → Jobs → Run Alert Analysis)
@@ -255,7 +255,7 @@
 - **Root Cause**: `alertsEngine.ts:142-153` queries `payments.sell_payments` with columns that don't exist: `customer_phone`, `due_date`, `amount`, `paid_amount`, status value `'due'`. The correct table is `payments.customer_dues` (migration 049) which has `customer_phone`, `due_date`, `amount_minor`, `paid_amount_minor`, status `'pending'`.
 - **Fix**: Change query to use `payments.customer_dues` table with correct column names (`amount_minor`, `paid_amount_minor`) and status value (`'pending'` instead of `'due'`).
 - **Files**: `backend/src/services/ai/alertsEngine.ts:142-153`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### STG-027: SuperAdmin — Device ID filter crashes query (UUID ILIKE mismatch)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#devices`)
@@ -264,7 +264,7 @@
 - **Root Cause**: `devices.ts:45` uses `d.id ILIKE $N` but after migration 163, `pos_devices.id` was converted from TEXT to UUID. PostgreSQL does not support ILIKE on UUID columns.
 - **Fix**: Cast to text: change `d.id ILIKE $N` to `d.id::text ILIKE $N` at line 45 (and same for the COUNT query using the same conditions).
 - **Files**: `backend/src/routes/v1/admin/devices.ts:45`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-028: SuperAdmin — Staff "Stock-Ins" column always shows 0
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#staff`)
@@ -273,7 +273,7 @@
 - **Root Cause**: `staff.ts:31` subquery searches `inventory.inventory_ledger.notes LIKE '%' || s.id::text || '%'` — but the stock-in route (`pos/stockIn.ts:287`) never writes the staff UUID into the `notes` field. The `inventory_ledger` table has no `staff_id` column at all.
 - **Fix**: Either (a) add `staff_id` column to `inventory.inventory_ledger` and populate from stock-in route, or (b) remove the Stock-Ins column from the staff table until data pipeline supports it.
 - **Files**: `backend/src/routes/v1/admin/staff.ts:31`, `backend/src/routes/v1/pos/stockIn.ts:287`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-029: SuperAdmin — Invoice View/Download fails for supplier invoices (wrong column)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#invoices`)
@@ -282,7 +282,7 @@
 - **Root Cause**: `invoiceService.ts:507` queries `SELECT phone FROM supplier.suppliers` but the actual column name is `primary_phone` (migration 003 line 28). This crashes for any invoice where the seller is a supplier.
 - **Fix**: Change `SELECT phone` to `SELECT primary_phone AS phone` at `invoiceService.ts:507`.
 - **Files**: `backend/src/services/invoiceService.ts:507`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-030: SuperAdmin — Document preview returns 403 (admin can't review documents)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#documents`)
@@ -291,7 +291,7 @@
 - **Root Cause**: `fetchDocumentBlob` calls `GET /api/v1/documents/:id` (non-admin path). Gateway's `adminAuthMiddleware` skips non-`/admin/` paths, so no `x-admin-token` is injected. Backend authorization check fails: `isValidAdminRequest(req)` = false, `actorType === 'ADMIN'` = false. Returns 403.
 - **Fix**: Either (a) route document blob fetch through `/api/v1/admin/documents/:id/blob`, or (b) make the gateway inject admin token for `/api/v1/documents/` paths too, or (c) add a dedicated admin document proxy endpoint.
 - **Files**: `supermandi-superadmin/src/api/documents.ts:198-213`, `backend/src/routes/v1/documents.ts:388-400`, `backend/services/api-gateway/src/middleware/adminAuth.ts:100,148`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### STG-031: SuperAdmin — Document approve/reject loses admin identity (verified_by = NULL)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#documents`)
@@ -300,7 +300,7 @@
 - **Root Cause**: `documents.ts:204,276` reads `(req as any).adminUserId || (req as any).userId` but middleware sets `req.adminId`. Neither `adminUserId` nor `userId` is populated → `undefined` → NULL.
 - **Fix**: Change to `(req as any).adminId` at lines 204 and 276.
 - **Files**: `backend/src/routes/v1/admin/documents.ts:204,276`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-032: SuperAdmin — Application detail always returns empty documents array
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#applications`)
@@ -309,7 +309,7 @@
 - **Root Cause**: `applications.ts:183-189` queries `auth.documents` table which doesn't exist (correct table is `platform.documents`), and uses column `file_url` which should be `file_path`. Silently caught and returns empty array.
 - **Fix**: Change `auth.documents` to `platform.documents` and `file_url` to `file_path`.
 - **Files**: `backend/src/routes/v1/admin/applications.ts:183-189`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### STG-033: SuperAdmin — Supplier approve/auto-approve/publish ALL blocked ('verified' vs 'ACTIVE')
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -318,7 +318,7 @@
 - **Root Cause**: Migration 097 changed all `verification_status = 'verified'` to `'ACTIVE'`, but `suppliers.ts` still checks `!== 'verified'` at lines 514, 829, 1144, 1388. No supplier will ever have status `'verified'` post-migration.
 - **Fix**: Replace all `'verified'` checks with `'ACTIVE'` in `suppliers.ts` at lines 134, 514, 829, 1144, 1388.
 - **Files**: `backend/src/routes/v1/admin/suppliers.ts:134,514,829,1144,1388`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-034: SuperAdmin — Batch reject always fails (field name mismatch)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -327,7 +327,7 @@
 - **Root Cause**: Frontend sends `{ reason }` (`api/suppliers.ts:431`) but backend destructures `{ rejectionReason }` (`suppliers.ts:1050-1053`). `rejectionReason` is always `undefined`.
 - **Fix**: Change frontend to send `rejectionReason` instead of `reason`, or change backend to read `reason`.
 - **Files**: `supermandi-superadmin/src/api/suppliers.ts:431`, `backend/src/routes/v1/admin/suppliers.ts:1050-1053`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-035: SuperAdmin — Batch approve progress shows "undefined approved, undefined failed"
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -336,7 +336,7 @@
 - **Root Cause**: Backend returns `{ success: true, data: { processed, failed, errors } }` (nested under `data`, no `succeeded` field). Frontend reads `result.succeeded` and `result.failed` at top level — both undefined.
 - **Fix**: Either unwrap `data` in frontend response parsing, or flatten backend response. Add `succeeded: processed - failed` to response.
 - **Files**: `supermandi-superadmin/src/api/suppliers.ts:406-411`, `supermandi-superadmin/src/tabs/SuppliersTab.tsx:192`, `backend/src/routes/v1/admin/suppliers.ts:1253-1260`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-036: SuperAdmin — Auto-approve toggle and Publish crash (approval_logs constraint violation)
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -345,7 +345,7 @@
 - **Root Cause**: Backend inserts `entity_type = 'supplier_auto_approve'` and `action = 'enable_auto_approve'` into `supplier.approval_logs` (line 528-531), but CHECK constraint only allows `entity_type IN ('supplier','product','bank_change')` and `action IN ('approve','reject','suspend','reactivate','edit','submit')`. Also `product_publish`/`publish` at line 1660.
 - **Fix**: Add `'supplier_auto_approve','product_publish'` to entity_type constraint and `'enable_auto_approve','disable_auto_approve','publish'` to action constraint via migration.
 - **Files**: `backend/src/routes/v1/admin/suppliers.ts:528-531,1660`, migration `048_supplier_verification_schema.sql`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-037: SuperAdmin — Self-registered suppliers invisible in pending queue
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -354,7 +354,7 @@
 - **Root Cause**: Backend returns self-registered suppliers with status `'KYC_SUBMITTED'`/`'PAYMENTS_SUBMITTED'`, but frontend filters `s.status === "pending"` at `SuppliersTab.tsx:265,272`, which excludes them.
 - **Fix**: Update frontend filter to include `'KYC_SUBMITTED'` and `'PAYMENTS_SUBMITTED'` statuses, or map them to `'pending'` in the API response.
 - **Files**: `supermandi-superadmin/src/tabs/SuppliersTab.tsx:265,272`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `0ac31608`
 
 ### STG-038: SuperAdmin — Verify/Reject self-registered supplier returns 404
 - **Portal**: SuperAdmin (`staging.supermandi.tech/admin/#suppliers`)
@@ -498,7 +498,7 @@
 - **Root Cause**: OTP login (`auth.ts:555-561`) and password login (`auth.ts:887-892`) generate JWT access tokens without `actorId` field. Gateway `jwtAuth.ts:244` rejects tokens missing `actorId`. No `/auth/select-store` endpoint exists to issue a store-specific JWT after store selection.
 - **Fix**: Add `actorId: store.id` to JWT payload when store is known (single-store users), or add a `/auth/select-store` endpoint that issues a new JWT with `actorId` after store selection.
 - **Files**: `backend/src/routes/v1/retailer-admin/auth.ts:555-561,887-892`, `backend/services/api-gateway/src/middleware/jwtAuth.ts:244`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-054: Retailer — Token refresh fails after 24h (missing storeId in refresh token)
 - **Portal**: Retailer
@@ -507,7 +507,7 @@
 - **Root Cause**: OTP login (`auth.ts:570-574`) and password login (`auth.ts:900-904`) generate refresh tokens without `storeId`. Refresh endpoint (`auth.ts:1324-1329`) queries `WHERE u.id = $1 AND su.store_id = $2` with `decoded.storeId` = undefined → returns no rows → 401.
 - **Fix**: Include `storeId` in refresh token payload when store is selected, or modify refresh endpoint to handle missing `storeId` by looking up user's active store.
 - **Files**: `backend/src/routes/v1/retailer-admin/auth.ts:570-574,900-904,1324-1329`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-055: Retailer — Email password reset never sends the email
 - **Portal**: Retailer (`staging.supermandi.tech/retailer/forgot-password`)
@@ -516,7 +516,7 @@
 - **Root Cause**: `auth.ts:1152-1166` generates JWT reset token but never calls `sendPasswordResetEmail()`. Token is only returned as `devToken` in non-production environments. The `emailService.sendPasswordResetEmail()` function exists but is never imported or called.
 - **Fix**: Import `sendPasswordResetEmail` from emailService and call it with the generated token and user email before sending the response.
 - **Files**: `backend/src/routes/v1/retailer-admin/auth.ts:1152-1166`, `backend/src/services/emailService.ts:456`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-056: Retailer — Registration /clear endpoint wrong phone normalization, never matches
 - **Portal**: Retailer (`staging.supermandi.tech/retailer/login`)
@@ -525,7 +525,7 @@
 - **Root Cause**: `registration.ts:989` normalizes phone with `.trim().replace(/\s+/g, '')` (only strips whitespace) instead of using `normalizePhoneNumber()` which adds `+91` prefix. DB stores E.164 format (`+919876543210`), query never matches.
 - **Fix**: Use `normalizePhoneNumber()` at line 989 instead of the manual trim/replace.
 - **Files**: `backend/src/routes/v1/retailer-admin/registration.ts:989-994`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-057: Retailer — Registration resume flow broken (application_id never returned)
 - **Portal**: Retailer (`staging.supermandi.tech/retailer/register`)
@@ -534,7 +534,7 @@
 - **Root Cause**: `RegisterPage.tsx:323-326` reads `lookup.application_id` from lookup API response, but backend (`registration.ts:237-242`) never includes `application_id` in response (per DR-009: no internal IDs for unauthenticated callers).
 - **Fix**: Either return `application_id` in the lookup response (after verifying caller is authenticated via OTP), or redesign resume flow to work without application_id.
 - **Files**: `retailer-admin/src/pages/RegisterPage.tsx:323-326`, `backend/src/routes/v1/retailer-admin/registration.ts:237-242`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-058: Retailer — Dashboard sales may exclude split payments (SPLIT status not in constraint)
 - **Portal**: Retailer (`staging.supermandi.tech/retailer/`)
@@ -543,7 +543,7 @@
 - **Root Cause**: `inventory.ts:132,148,164,269,270,301` filters `status IN ('completed','PAID_CASH','PAID_UPI','DUE','SPLIT')` but DB constraint `chk_sale_status` (migration 078) does NOT include `'SPLIT'`. Either split payment inserts crash (if POS sets status='SPLIT') or the SPLIT filter is dead code.
 - **Fix**: Add `'SPLIT'` to the CHECK constraint via migration, or verify POS never sets `status='SPLIT'` and remove from queries.
 - **Files**: `backend/src/routes/v1/retailer-admin/inventory.ts:132,148,164`, migration `078_go_live_batch5_inventory_ledger.sql:190-197`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-059: Retailer — Inventory date filter excludes same-day entries for IST users
 - **Portal**: Retailer
@@ -552,7 +552,7 @@
 - **Root Cause**: `inventory.ts:625-628` converts `endDate = '2026-02-28'` to `new Date('2026-02-28').toISOString()` = `'2026-02-28T00:00:00.000Z'` (midnight UTC = 5:30 AM IST). Everything after 5:30 AM IST on the selected date is excluded.
 - **Fix**: Interpret endDate as end-of-day: append `T23:59:59.999Z` or use `< next_day` instead of `<=`.
 - **Files**: `backend/src/routes/v1/retailer-admin/inventory.ts:625-628`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-060: Retailer — Inventory INWARD filter misses sale_return and opening_stock types
 - **Portal**: Retailer
@@ -561,7 +561,7 @@
 - **Root Cause**: Frontend INWARD filter only sends `transactionType=purchase_received` (`InventoryPage.tsx:95-96`) but `getDisplayType()` classifies `sale_return` and `opening_stock` as INWARD too (lines 50-62). Backend only accepts single `transactionType` parameter.
 - **Fix**: Send all INWARD types: `purchase_received,sale_return,opening_stock`, and update backend to accept comma-separated values with `IN (...)`.
 - **Files**: `retailer-admin/src/pages/InventoryPage.tsx:95-96`, `backend/src/routes/v1/retailer-admin/inventory.ts:606-609`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-061: Retailer — Dashboard purchase/sell totals only reflect first 50 products
 - **Portal**: Retailer
@@ -570,7 +570,7 @@
 - **Root Cause**: `inventory.ts:530-531` sums `totalPurchaseValue` and `totalSellRevenue` from paginated `data` array (default limit 50), not from a store-wide aggregate query. `totalProducts` and `totalStockQty` are correctly computed from separate COUNT/SUM.
 - **Fix**: Add `SUM(...)` aggregations to the separate count query (lines 469-478) for purchase value and sell revenue across all products.
 - **Files**: `backend/src/routes/v1/retailer-admin/inventory.ts:530-531,469-478`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-062: Retailer — Supplier Catalog shows deactivated products (missing is_active filter)
 - **Portal**: Retailer
@@ -579,7 +579,7 @@
 - **Root Cause**: `suppliers.ts:774` WHERE clause filters on `approval_status = 'approved'` and `s.status = 'active'` but does NOT filter `sp.is_active = true`. `catalog.supplier_products.is_active` column exists per migration 004.
 - **Fix**: Add `AND sp.is_active = true` to WHERE clause at line 774 and the count query at lines 804-809.
 - **Files**: `backend/src/routes/v1/retailer-admin/suppliers.ts:774,804-809`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-063: Retailer — Credit Dashboard crashes 500 (queries non-existent platform.suppliers)
 - **Portal**: Retailer (`staging.supermandi.tech/retailer/`)
@@ -588,7 +588,7 @@
 - **Root Cause**: `creditDashboard.ts:36,53,71` all JOIN `platform.suppliers` which doesn't exist. Correct table is `supplier.suppliers`.
 - **Fix**: Change `platform.suppliers` to `supplier.suppliers` on lines 36, 53, and 71.
 - **Files**: `backend/src/routes/v1/retailer-admin/creditDashboard.ts:36,53,71`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-064: Retailer — Purchase Orders list/detail crash (wrong supplier phone column)
 - **Portal**: Retailer
@@ -597,7 +597,7 @@
 - **Root Cause**: `purchaseOrders.ts:62,115` queries `s.phone as "supplierPhone"` but `supplier.suppliers` column is `primary_phone` (migration 003).
 - **Fix**: Change `s.phone` to `s.primary_phone` on lines 62 and 115.
 - **Files**: `backend/src/routes/v1/retailer-admin/purchaseOrders.ts:62,115`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-065: Retailer — Reconciliation refund amounts always ₹0 (wrong column + status)
 - **Portal**: Retailer
@@ -606,7 +606,7 @@
 - **Root Cause**: Two bugs: (1) `reconciliation.ts:110` queries `rr.amount_minor` but correct column is `refund_amount` (migration 152). (2) `reconciliation.ts:113` filters `status IN ('approved','completed')` but 'approved' is not a valid status — constraint allows `('initiated','processing','completed','failed','cancelled')`.
 - **Fix**: Change `rr.amount_minor` to `rr.refund_amount` and change `'approved'` to `'processing'` or remove it.
 - **Files**: `backend/src/routes/v1/retailer-admin/reconciliation.ts:110,113`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-066: Retailer — Customer search crashes backend (SQL parameter mismatch)
 - **Portal**: Retailer
@@ -615,7 +615,7 @@
 - **Root Cause**: `customers.ts:59-64` count query reuses `searchClause` containing `$4` but only passes 2 params `[storeId, '%search%']`. Data query correctly uses 4 params `[storeId, limit, offset, '%search%']`.
 - **Fix**: Build a separate count searchClause using `$2` instead of `$4`.
 - **Files**: `backend/src/routes/v1/retailer-admin/customers.ts:59-64`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-067: Retailer — Notifications always return 401 (missing store context middleware)
 - **Portal**: Retailer
@@ -624,7 +624,7 @@
 - **Root Cause**: `notifications.ts:57-59` checks `(req as any).storeId` and `(req as any).userId` but `requireStoreContext` middleware is NOT applied to the notifications router. The global retailer-admin middleware chain sets `req.headers['x-actor-id']` and `req.headers['x-user-id']` but NOT `req.storeId`/`req.userId`.
 - **Fix**: Either add `requireStoreContext` middleware to the notifications router, or change checks to read from `req.headers['x-actor-id']` and `req.headers['x-user-id']`.
 - **Files**: `backend/src/routes/v1/retailer-admin/notifications.ts:57-59` (and lines 22, 112, 136, 157)
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-068: Retailer — Chat support conversations invisible (missing store_id)
 - **Portal**: Retailer
@@ -633,7 +633,7 @@
 - **Root Cause**: `ChatPage.tsx:123-127` creates conversation with `{ displayName: 'Store Owner' }` but doesn't send `storeId`. Backend inserts `store_id = null`. List query filters `c.store_id = $4` (from x-actor-id header), excluding conversations with null store_id.
 - **Fix**: Include `storeId` from auth context in the POST body, or have backend fall back to `req.headers['x-actor-id']`.
 - **Files**: `retailer-admin/src/pages/ChatPage.tsx:123-127`, `backend/src/routes/v1/chat.ts:130-137`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-069: Retailer — Device reactivation permanently broken (token_revoked_at never cleared)
 - **Portal**: Retailer
@@ -642,7 +642,7 @@
 - **Root Cause**: `devices.ts:310-311` sets `token_revoked_at = NOW()` on deactivate but line 313-314 explicitly does NOT clear it on reactivate. Response computes `isActive: device.active && !device.revokedAt` — always false once revokedAt is set.
 - **Fix**: When `active = true`, also clear `token_revoked_at = NULL` in the SQL updates.
 - **Files**: `backend/src/routes/v1/retailer-admin/devices.ts:304-315,247,362`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-070: Retailer — Settings save error shows "[object Object]"
 - **Portal**: Retailer
@@ -651,7 +651,7 @@
 - **Root Cause**: `SettingsPage.tsx:226` does `setSaveError(data.error || 'Failed to save settings')` but `data.error` is an object `{ code, message, errors }`, not a string. React renders it as "[object Object]".
 - **Fix**: Change to `setSaveError(data.error?.message || 'Failed to save settings')`.
 - **Files**: `retailer-admin/src/pages/SettingsPage.tsx:226`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-071: Retailer — Password change succeeds but silently invalidates session
 - **Portal**: Retailer
@@ -660,7 +660,7 @@
 - **Root Cause**: `auth.ts:1543-1545` revokes all tokens after password change (`SET tokens_revoked_at = NOW()`). Frontend shows custom success message but does NOT log user out or redirect. Next API call hits 401 → silent logout.
 - **Fix**: After successful password change, explicitly call `logout()` and redirect to login with a "Password changed, please log in again" message.
 - **Files**: `retailer-admin/src/pages/SettingsPage.tsx:266-271`, `backend/src/routes/v1/retailer-admin/auth.ts:1536-1546`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a4305dfa`
 
 ### STG-072: Supplier — Registration document upload sends wrong field names (all uploads 400)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/onboard`)
@@ -669,7 +669,7 @@
 - **Root Cause**: `api.ts:1364-1368` sends camelCase field names (`documentType`, `entityType`, `entityId`) but backend `documents.ts:161` destructures snake_case (`document_type`, `entity_type`, `entity_id`). Also `entityType: 'supplier_application'` is not a valid value — should be `'application'`.
 - **Fix**: Change to `form.append('document_type', ...)`, `form.append('entity_type', 'application')`, `form.append('entity_id', ...)`.
 - **Files**: `supplier-portal/src/lib/api.ts:1364-1368`, `backend/src/routes/v1/documents.ts:161,174`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-073: Supplier — Registration document type keys wrong (PAN vs pan_card)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/onboard`)
@@ -678,7 +678,7 @@
 - **Root Cause**: `onboard/page.tsx:325-331` sends types `'PAN'`, `'GSTIN_CERTIFICATE'`, `'ADDRESS_PROOF'` (uppercase) but backend only accepts lowercase: `'pan_card'`, `'gstin_certificate'`, `'address_proof'`.
 - **Fix**: Change to `'pan_card'`, `'gstin_certificate'`, `'address_proof'`.
 - **Files**: `supplier-portal/src/app/(auth)/onboard/page.tsx:325-331`, `backend/src/routes/v1/documents.ts:82-96`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-074: Supplier — Register page missing required documents (submit-kyc fails)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/register`)
@@ -687,7 +687,7 @@
 - **Root Cause**: Register page (`register/page.tsx:36-41`) only has upload fields for gstin_certificate, pan_card, business_license, owner_photo. Missing `address_proof` (required) and `cancelled_cheque` (required per migration 103).
 - **Fix**: Add address_proof and cancelled_cheque upload fields to the register page document step.
 - **Files**: `supplier-portal/src/app/register/page.tsx:36-41`, migration `103_reg_auth_document_storage.sql:108-116`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-075: Supplier — Suspended suppliers bypass OTP login check (case mismatch)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/login`)
@@ -696,7 +696,7 @@
 - **Root Cause**: `auth.ts:1826` checks `verification_status === 'suspended'` (lowercase) but migration 097 standardized to `'SUSPENDED'` (uppercase). Check never matches. Password login at line 611 correctly uses `'SUSPENDED'`.
 - **Fix**: Change `'suspended'` to `'SUSPENDED'` at line 1826.
 - **Files**: `backend/src/routes/v1/supplier/auth.ts:1826`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-076: Supplier — Password login never returns PASSWORD_NOT_SET for OTP-only accounts
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/login`)
@@ -705,7 +705,7 @@
 - **Root Cause**: `auth.ts:582-587` returns `INVALID_CREDENTIALS` when `!supplier.password_hash`, but frontend (`login/page.tsx:272-273`) has a handler for `PASSWORD_NOT_SET` that never fires.
 - **Fix**: Return `PASSWORD_NOT_SET` error code when supplier exists but `password_hash` is null.
 - **Files**: `backend/src/routes/v1/supplier/auth.ts:582-587`, `supplier-portal/src/app/(auth)/login/page.tsx:272-273`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-077: Supplier — Password reset email says "24 hours" but token expires in 1 hour
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/forgot-password`)
@@ -714,7 +714,7 @@
 - **Root Cause**: Email template (`emailService.ts:503`) says "expires in 24 hours" but `auth.ts:873` sets `resetExpiry = Date.now() + 60*60*1000` (1 hour).
 - **Fix**: Either change email text to "1 hour" or extend token expiry to 24 hours.
 - **Files**: `backend/src/services/emailService.ts:503`, `backend/src/routes/v1/supplier/auth.ts:873`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-078: Supplier — Order status/shipment updates crash (non-existent orders.outbox table)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/orders`)
@@ -723,7 +723,7 @@
 - **Root Cause**: `orders.ts:37` writes to `orders.outbox` but table doesn't exist — correct table is `orders.event_outbox` (migration 006). Error propagates because outbox INSERT is not in try/catch. Status UPDATE succeeds but response returns 500.
 - **Fix**: Change `orders.outbox` to `orders.event_outbox` at line 37.
 - **Files**: `backend/src/routes/v1/supplier/orders.ts:37`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-079: Supplier — "Partial_received" status button shown but always rejected by backend
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/orders`)
@@ -732,7 +732,7 @@
 - **Root Cause**: Frontend `orders/page.tsx:38-48` offers `partial_received` as valid transition from `shipped`, but backend `orders.ts:507` only accepts `['submitted','confirmed','shipped','delivered','cancelled']`.
 - **Fix**: Either add `'partial_received'` to backend validStatuses or remove from frontend statusFlow.
 - **Files**: `supplier-portal/src/app/(dashboard)/orders/page.tsx:38-48`, `backend/src/routes/v1/supplier/orders.ts:507`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-080: Supplier — Product image upload succeeds but URL never saved to database
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/products`)
@@ -741,7 +741,7 @@
 - **Root Cause**: Frontend sends `imageUrl` in product data (`products/page.tsx:352-367`), but backend CREATE (`products.ts:288-299`) and UPDATE (`products.ts:433-444`) do NOT destructure or INSERT/UPDATE `image_url`. Column exists per migration 138.
 - **Fix**: Add `imageUrl` to backend destructure and include `image_url` in INSERT/UPDATE queries.
 - **Files**: `supplier-portal/src/app/(dashboard)/products/page.tsx:352-367`, `backend/src/routes/v1/supplier/products.ts:288-299,433-444`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-081: Supplier — Product description field silently dropped (no DB column)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/products`)
@@ -750,7 +750,7 @@
 - **Root Cause**: Frontend has description textarea, backend destructures `description` but never uses it in INSERT or UPDATE. `catalog.supplier_products` table (migration 004) has no `description` column.
 - **Fix**: Either add `description TEXT` column via migration and include in queries, or remove the description field from the frontend form.
 - **Files**: `supplier-portal/src/app/(dashboard)/products/page.tsx:591-601`, `backend/src/routes/v1/supplier/products.ts:290,350-391`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-082: Supplier — Products search/filter only works within current page
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/products`)
@@ -759,7 +759,7 @@
 - **Root Cause**: Frontend fetches paginated data without search/status params (`products/page.tsx:101-102`), then applies client-side filter (`lines 398-408`). Pagination shows total from unfiltered backend response.
 - **Fix**: Pass search and status filter as query params to backend API and filter server-side.
 - **Files**: `supplier-portal/src/app/(dashboard)/products/page.tsx:101-102,398-408`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-083: Supplier — Payout history always shows empty (apiFetch double-unwrap)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/earnings`)
@@ -768,7 +768,7 @@
 - **Root Cause**: `apiFetch` (`api.ts:271`) does `data.data ?? data` which unwraps the envelope. Backend returns `{ data: [...payouts], pagination: {...} }`. After unwrap, frontend gets the array directly. `payoutsData?.data` on the array is `undefined` → always empty.
 - **Fix**: Change `getPayouts` to not double-unwrap, or access the response correctly.
 - **Files**: `supplier-portal/src/lib/api.ts:271,975-981`, `supplier-portal/src/app/(dashboard)/earnings/page.tsx:63-64`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-084: Supplier — Invoice list always shows empty (apiFetch double-unwrap)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/invoices`)
@@ -777,7 +777,7 @@
 - **Root Cause**: Same `apiFetch` double-unwrap as STG-083. `getSupplierInvoices` (`api.ts:1214-1221`) types return as `{ data: SupplierInvoice[], total }` but `apiFetch` already unwraps, so `invoicesData?.data` is `undefined`.
 - **Fix**: Remove the extra `.data` access in the consuming code or fix the `apiFetch` unwrap logic.
 - **Files**: `supplier-portal/src/lib/api.ts:1214-1221`, `supplier-portal/src/app/(dashboard)/invoices/page.tsx:35-37`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-085: Supplier — Invoice detail modal always blank (double-unwrap)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/invoices`)
@@ -786,7 +786,7 @@
 - **Root Cause**: `getSupplierInvoiceDetail` (`api.ts:1223-1226`) does `return result.data` after `apiFetch` already unwrapped. `result` IS the invoice object, `.data` is undefined.
 - **Fix**: Change to `return apiFetch<SupplierInvoiceDetail>(...)` without the extra `.data` access.
 - **Files**: `supplier-portal/src/lib/api.ts:1223-1226`, `supplier-portal/src/app/(dashboard)/invoices/page.tsx:211`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-086: Supplier — Revenue and Available Balance always show ₹0 (wrong SQL tables)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/earnings`)
@@ -795,7 +795,7 @@
 - **Root Cause**: `payouts.ts:134-141` queries non-existent tables: `orders.orders` (should be `orders.purchase_orders`), `orders.order_items` (should be `orders.purchase_order_items`), `supplier.supplier_products` (should be `catalog.supplier_products`). Error silently caught, returns 0.
 - **Fix**: Change to correct table names and column references.
 - **Files**: `backend/src/routes/v1/supplier/payouts.ts:134-141`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-087: Supplier — KYC "Profile Verified" requirement always shows incomplete
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/kyc`)
@@ -804,7 +804,7 @@
 - **Root Cause**: `kyc.ts:444` checks `verification_status === 'verified'` but migration 097 changed to `'ACTIVE'`. Value `'verified'` can never exist. Same pattern as STG-033.
 - **Fix**: Change to `verification_status === 'ACTIVE'`.
 - **Files**: `backend/src/routes/v1/supplier/kyc.ts:444`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-088: Supplier — Profile bankName silently dropped on save
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/profile`)
@@ -813,7 +813,7 @@
 - **Root Cause**: Frontend sends `bankName` in PATCH body, but `profile.ts:204-225` only handles `accountNumber`, `ifscCode`, `accountName` — ignores `bankName`. GET also doesn't SELECT `bank_name`. DB column exists (migration 060) but profile route never reads/writes it.
 - **Fix**: Add `bankName`/`bank_name` to both PATCH handler and GET SELECT query in profile.ts.
 - **Files**: `backend/src/routes/v1/supplier/profile.ts:204-225,29-53`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-089: Supplier — BNPL Orders pagination broken (no total in response)
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/bnpl-orders`)
@@ -822,7 +822,7 @@
 - **Root Cause**: Backend response has no `total` field at root level (`bnplVisibility.ts:65-89`). Frontend falls back to `json.orders?.length` (max 20) → `totalPages = 1`.
 - **Fix**: Add `total: parseInt(summary.total)` to backend response, or frontend reads `json.summary.totalOrders`.
 - **Files**: `backend/src/routes/v1/supplier/bnplVisibility.ts:65-89`, `supplier-portal/src/app/(dashboard)/bnpl-orders/page.tsx:50`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-090: Supplier — CSV Upload "View Products" link goes to 404
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/upload`)
@@ -831,7 +831,7 @@
 - **Root Cause**: `upload/page.tsx:296` uses `<a href="/products">` instead of `<Link href="/products">`. Next.js `basePath: '/supplier'` only auto-prepends for `<Link>`, not raw `<a>` tags.
 - **Fix**: Change to `<Link href="/products">` (from `next/link`) or hardcode `href="/supplier/products"`.
 - **Files**: `supplier-portal/src/app/(dashboard)/upload/page.tsx:296`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ### STG-091: Supplier — Password change doesn't invalidate existing sessions
 - **Portal**: Supplier (`staging.supermandi.tech/supplier/profile`)
@@ -840,7 +840,7 @@
 - **Root Cause**: `auth.ts:817-824` updates `password_hash` but never updates `tokens_revoked_at` or blacklists current token. Compare to retailer (STG-071) which at least revokes tokens (but doesn't redirect).
 - **Fix**: Add `UPDATE supplier.suppliers SET tokens_revoked_at = NOW()` after password change, and blacklist current token.
 - **Files**: `backend/src/routes/v1/supplier/auth.ts:817-824`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `90eff076`
 
 ---
 
@@ -855,7 +855,7 @@
 - **Root Cause**: `EnrollDeviceScreen.tsx:182-188` `deviceMeta` useMemo includes manufacturer/model/appVersion but NOT `deviceType`. Backend `enroll.ts:117-139` validates `meta.deviceType`, finds undefined → 400.
 - **Fix**: Add `deviceType: "RETAILER_PHONE"` to the `deviceMeta` useMemo.
 - **Files**: `src/screens/EnrollDeviceScreen.tsx:182-188,289`, `backend/src/routes/v1/pos/enroll.ts:117-139`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-093: POS — ui-status always returns upiVpa: null (const + missing SQL column)
 - **Portal**: POS App
@@ -864,7 +864,7 @@
 - **Root Cause**: `uiStatus.ts:49` declares `const upiVpa: string | null = null` (can never be reassigned). SQL at line 72 does NOT select `upi_vpa` column.
 - **Fix**: Change `const` to `let`, add `upi_vpa` to SELECT, assign from query result.
 - **Files**: `backend/src/routes/v1/pos/uiStatus.ts:49,72,203`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-094: POS — Token refresh never returns new token, forces re-enrollment on every 401
 - **Portal**: POS App
@@ -873,7 +873,7 @@
 - **Root Cause**: Client `apiClient.ts:248-249` reads `data?.deviceToken`. Server `tokenManagement.ts:37-43` returns `{ success, expiresAt, message }` — no token field. Server only extends expiry, doesn't generate new token.
 - **Fix**: Client should treat `data.success === true` as valid (existing token still works), not require a new token.
 - **Files**: `src/services/api/apiClient.ts:240-256`, `backend/src/routes/v1/pos/tokenManagement.ts:37-43`, `backend/src/middleware/tokenSecurity.ts:146-185`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-095: POS — ui-status reorderEnabled queries non-existent table (always defaults true)
 - **Portal**: POS App
@@ -882,7 +882,7 @@
 - **Root Cause**: `uiStatus.ts:95` queries `SELECT reorder_enabled FROM reorder_settings` — table doesn't exist. Migration 150 dropped `reorder.store_settings`. Correct table: `reorder.store_reorder_settings` (migration 007). Error silently caught, defaults to true.
 - **Fix**: Change to `SELECT reorder_enabled FROM reorder.store_reorder_settings WHERE store_id = $1`.
 - **Files**: `backend/src/routes/v1/pos/uiStatus.ts:94-104`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-096: POS — Enrollment response missing activeDeviceCount (multi-device warning dead)
 - **Portal**: POS App
@@ -891,7 +891,7 @@
 - **Root Cause**: Frontend `EnrollDeviceScreen.tsx:359-364` checks `res.activeDeviceCount`. Backend `enroll.ts:566-575` never includes it in response, even though device count is already queried at line 371-375.
 - **Fix**: Add `activeDeviceCount` to enrollment response.
 - **Files**: `backend/src/routes/v1/pos/enroll.ts:566-575`, `src/screens/EnrollDeviceScreen.tsx:359-364`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-097: POS — fetchUiStatus/fetchUiStatusStrict bypass apiClient (no timeout, hangs on slow networks)
 - **Portal**: POS App
@@ -900,7 +900,7 @@
 - **Root Cause**: `uiStatusApi.ts:142-147,198-203` use raw `fetch()` directly, bypassing apiClient's 60s timeout, rate limiting, and token refresh.
 - **Fix**: Add AbortController timeout (10s for splash, 15s for gate screens).
 - **Files**: `src/services/api/uiStatusApi.ts:142-147,198-203`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-098: POS — lookup-activation only checks `phone`, not `contact_phone`
 - **Portal**: POS App
@@ -909,7 +909,7 @@
 - **Root Cause**: `enroll.ts:741-746` queries `WHERE s.phone = ANY($1::text[])` only. Migration 038 added `contact_phone` as separate column.
 - **Fix**: Add `OR s.contact_phone = ANY($1::text[])` to WHERE clause.
 - **Files**: `backend/src/routes/v1/pos/enroll.ts:741-746`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-099: POS — Split payment_mode 'SPLIT' blocked by legacy CHECK constraint
 - **Portal**: POS App
@@ -918,7 +918,7 @@
 - **Root Cause**: Migration 018 creates `chk_sale_payment_mode CHECK (payment_mode IN ('CASH','UPI','DUE'))`. Migration 051 drops `chk_payment_mode` (different name!) and adds new one with 'SPLIT'. Original constraint never dropped.
 - **Fix**: New migration: `ALTER TABLE public.sales DROP CONSTRAINT IF EXISTS chk_sale_payment_mode`.
 - **Files**: `backend/migrations/018_sales_schema.sql:55-57`, `backend/migrations/051_split_payments.sql:9-11`, `backend/src/routes/v1/pos/payments.ts:684`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `d56a1448`
 
 ### STG-100: POS — Payment endpoints ignore stock_quantity for retail variant sales (wrong deduction)
 - **Portal**: POS App
@@ -927,7 +927,7 @@
 - **Root Cause**: UPI confirm-manual (sales.ts:1850-1857), Cash (1995-2001), Due (2148-2154) only SELECT `variant_id, quantity` — not `stock_quantity`. The `/sales/:saleId/confirm` endpoint at 1385-1402 correctly uses `stock_quantity`.
 - **Fix**: Add `stock_quantity` to all three payment endpoint sale_items queries.
 - **Files**: `backend/src/routes/v1/pos/sales.ts:1850-1862,1995-2007,2148-2160`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-101: POS — Double inventory deduction: backend payment endpoints + frontend checkoutService
 - **Portal**: POS App
@@ -936,7 +936,7 @@
 - **Root Cause**: `checkoutService.ts:80-130` calls both payment endpoint (which deducts via `applyBulkDeductions`) AND `recordSaleTransaction` (which deducts from `catalog.store_products.current_stock`). Two different stock systems both deducted.
 - **Fix**: Remove `recordSaleTransaction` call from `completeCheckout` — backend already handles deduction.
 - **Files**: `src/services/checkoutService.ts:80-130`, `backend/src/routes/v1/pos/sales.ts:1880-1884,2025-2029,2178-2182`, `backend/src/routes/v1/pos/inventory.ts:298-324`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-102: POS — customer_dues.sale_id is UUID but sales.id is VARCHAR(100) — type cast crash
 - **Portal**: POS App
@@ -945,7 +945,7 @@
 - **Root Cause**: `payments.customer_dues.sale_id` is UUID (migration 049:273). `public.sales.id` is VARCHAR(100) (migration 018:23). DUE handler at `sales.ts:2212` casts `$2::uuid`.
 - **Fix**: Change `customer_dues.sale_id` to TEXT, or remove `::uuid` cast.
 - **Files**: `backend/migrations/049_payments_schema.sql:273`, `backend/migrations/018_sales_schema.sql:23`, `backend/src/routes/v1/pos/sales.ts:2212,1458`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-103: POS — sell_payments.sale_id is UUID but sales.id is VARCHAR(100) — type mismatch
 - **Portal**: POS App
@@ -954,7 +954,7 @@
 - **Root Cause**: `payments.sell_payments.sale_id` is UUID (migration 049:32). `public.sales.id` is VARCHAR(100). Query at `payments.ts:152-157` joins on mismatched types.
 - **Fix**: Change `sell_payments.sale_id` to TEXT.
 - **Files**: `backend/migrations/049_payments_schema.sql:32`, `backend/src/routes/v1/pos/payments.ts:152-157,201-205`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-104: POS — Daily summary split payment count always 0 (queries status='SPLIT' not payment_mode)
 - **Portal**: POS App
@@ -963,7 +963,7 @@
 - **Root Cause**: `sales.ts:633-637` filters `WHERE status = 'SPLIT'` but split payments set `payment_mode = 'SPLIT'` (payments.ts:684), not status. Status is `'completed'` (payments.ts:832).
 - **Fix**: Change to `COUNT(*) FILTER (WHERE payment_mode = 'SPLIT')`.
 - **Files**: `backend/src/routes/v1/pos/sales.ts:633-634`, `backend/src/routes/v1/pos/payments.ts:684,832`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-105: POS — Dual payment_status constraints block 'partial' status
 - **Portal**: POS App
@@ -972,7 +972,7 @@
 - **Root Cause**: Migration 077 adds `chk_payment_status` with 'partial'. Migration 125 adds `chk_sale_payment_status` WITHOUT 'partial'. Both constraints active on same column.
 - **Fix**: Drop redundant `chk_payment_status`, ensure `chk_sale_payment_status` includes 'partial'.
 - **Files**: `backend/migrations/077_fix_payments_due_status_constraint.sql:25-29`, `backend/migrations/125_sa_p0_006_constraint_gaps.sql:19-23`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-106: POS — Split CASH+DUE (no UPI) skips stock deduction entirely
 - **Portal**: POS App
@@ -981,7 +981,7 @@
 - **Root Cause**: Split endpoint `payments.ts:580-686` creates payment records but never calls `applyBulkDeductions`. Cash confirm at 828-834 updates status but doesn't deduct stock. Frontend `SplitPaymentModal.tsx:282-332` doesn't call `completeCheckout`.
 - **Fix**: Add `applyBulkDeductions` to split cash-confirm when `pendingCount === 0` (all parts confirmed).
 - **Files**: `backend/src/routes/v1/pos/payments.ts:580-686,828-834`, `src/components/sell/SplitPaymentModal.tsx:282-332`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-107: POS — WhatsApp send-bill uses transactionId (random string) instead of saleId (UUID)
 - **Portal**: POS App
@@ -990,7 +990,7 @@
 - **Root Cause**: `SuccessPrintScreenV2.tsx:181` passes `saleId: transactionId`. `transactionId` is `${Date.now()}-${Math.random()}` not a UUID. Backend needs actual sale ID. PaymentScreen doesn't pass `saleId` to SuccessPrint route params.
 - **Fix**: Pass actual `saleId` in SuccessPrint route params from PaymentScreen.
 - **Files**: `src/screens/SuccessPrintScreenV2.tsx:181`, `src/screens/PaymentScreen.tsx:782-790`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-108: POS — Receipt discount display uses stale full-cart state for partial sales
 - **Portal**: POS App
@@ -999,7 +999,7 @@
 - **Root Cause**: `SuccessPrintScreenV2.tsx:76-82` uses `subtotal` and `discountAmount` from `useCartStore()` as fallbacks. For partial sales, cart still has remaining items. `saleSubtotal` at line 76 uses `subtotal || saleTotalMinor` — full cart subtotal.
 - **Fix**: Always compute discount from `saleItems` and `saleTotalMinor` route params, not from cart store.
 - **Files**: `src/screens/SuccessPrintScreenV2.tsx:41,76-82`, `src/screens/PaymentScreen.tsx:782-790`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-109: POS — Buy catalog returns zero products (s.status='verified' is wrong column)
 - **Portal**: POS App
@@ -1008,7 +1008,7 @@
 - **Root Cause**: `catalog.ts:337` uses `WHERE s.status = 'verified'`. But `supplier.suppliers.status` CHECK (migration 003:47) allows `('active','inactive','suspended')` — never 'verified'. The `verified` value lives in `verification_status` column. Post migration 097, correct value is `'ACTIVE'`.
 - **Fix**: Change to `s.verification_status = 'ACTIVE'` at lines 337, 537, 601, 705.
 - **Files**: `backend/src/routes/v1/catalog.ts:337,537,601,705`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-110: POS — Buy catalog SQL crashes: s.name column does not exist on supplier.suppliers
 - **Portal**: POS App
@@ -1017,7 +1017,7 @@
 - **Root Cause**: `catalog.ts:411` uses `COALESCE(s.business_name, s.trade_name, s.name, 'Unknown')`. `supplier.suppliers` (migration 003) has NO `name` column. Same on line 691.
 - **Fix**: Remove `s.name` from COALESCE chain.
 - **Files**: `backend/src/routes/v1/catalog.ts:411,691`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-111: POS — Purchase order creation fails: total_price column does not exist
 - **Portal**: POS App
@@ -1026,7 +1026,7 @@
 - **Root Cause**: `orders.ts:210` inserts `total_price` into `orders.purchase_order_items`. Correct column is `line_total` (migration 006:139).
 - **Fix**: Change `total_price` to `line_total` at lines 210, 220, 465.
 - **Files**: `backend/src/routes/v1/orders.ts:210,220,465`, `backend/migrations/006_orders_schema.sql:139`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-112: POS — Purchase order creation fails: missing NOT NULL product_name column
 - **Portal**: POS App
@@ -1035,7 +1035,7 @@
 - **Root Cause**: `orders.ts:208-211` INSERT omits `product_name`. Schema (migration 006:126) defines `product_name VARCHAR(500) NOT NULL` with no DEFAULT.
 - **Fix**: Add `product_name` to INSERT column list and values.
 - **Files**: `backend/src/routes/v1/orders.ts:208-223`, `backend/migrations/006_orders_schema.sql:126`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-113: POS — Purchase order supplier lookup crashes: supplier.name column does not exist
 - **Portal**: POS App
@@ -1044,7 +1044,7 @@
 - **Root Cause**: `orders.ts:73` selects `name` from `supplier.suppliers` — column doesn't exist. Also used in fallback chain at line 81.
 - **Fix**: Remove `name` from SELECT; use `COALESCE(business_name, trade_name)` instead.
 - **Files**: `backend/src/routes/v1/orders.ts:73,81`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-114: POS — Reorder approve fails: total_price column does not exist (same as STG-111)
 - **Portal**: POS App
@@ -1053,7 +1053,7 @@
 - **Root Cause**: `reorder.ts:531` uses `total_price` — correct column is `line_total`. Also omits NOT NULL `product_name`.
 - **Fix**: Change `total_price` to `line_total` and add `product_name` column.
 - **Files**: `backend/src/routes/v1/reorder.ts:530-531`, `backend/migrations/006_orders_schema.sql:139`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-115: POS — Reorder approve response missing items/supplierName, frontend crashes
 - **Portal**: POS App
@@ -1062,7 +1062,7 @@
 - **Root Cause**: Backend `reorder.ts:497-550` returns `draftPurchaseOrders` with only `{ id, orderNumber, supplierId, itemCount, totalAmount }`. Frontend `ReorderScreen.tsx:220-230` expects `items[]` array and `supplierName`.
 - **Fix**: Return full items array and supplier name in each draftPurchaseOrder, or rewrite frontend to use simple format.
 - **Files**: `src/screens/ReorderScreen.tsx:220-235`, `src/services/api/reorderApi.ts:46-60`, `backend/src/routes/v1/reorder.ts:497-570`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-116: POS — Reorder policies: backend returns minStock but frontend expects minThreshold
 - **Portal**: POS App
@@ -1071,7 +1071,7 @@
 - **Root Cause**: Backend `reorder.ts:216` returns `rp.min_stock as "minStock"`. Frontend `reorderApi.ts:118` expects `minThreshold`. Filter `p.currentStock < p.minThreshold` compares against undefined → always false.
 - **Fix**: Change backend alias to `"minThreshold"` or update frontend type.
 - **Files**: `backend/src/routes/v1/reorder.ts:216,298,369`, `src/services/api/reorderApi.ts:118`, `src/screens/ReorderPoliciesScreen.tsx:123,133`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-117: POS — Pending reorders suggestedSupplierName hardcoded NULL
 - **Portal**: POS App
@@ -1080,7 +1080,7 @@
 - **Root Cause**: `reorder.ts:373` hardcodes `NULL as "suggestedSupplierName"`. Column `suggested_supplier_name` exists in `pending_reorders` table (migration 007:95).
 - **Fix**: Change to `pr.suggested_supplier_name as "suggestedSupplierName"`.
 - **Files**: `backend/src/routes/v1/reorder.ts:373`, `backend/migrations/007_reorder_schema.sql:95`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-118: POS — Reorder policies preferredSupplierName hardcoded NULL
 - **Portal**: POS App
@@ -1089,7 +1089,7 @@
 - **Root Cause**: `reorder.ts:220` hardcodes `NULL as "preferredSupplierName"`. Should JOIN `supplier.suppliers` to resolve name from `preferred_supplier_id`.
 - **Fix**: Add `LEFT JOIN supplier.suppliers ps ON ps.id = rp.preferred_supplier_id` and return `COALESCE(ps.business_name, ps.trade_name)`.
 - **Files**: `backend/src/routes/v1/reorder.ts:209-232`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-119: POS — Pending reorders minThreshold/targetStock read from policies table not snapshot
 - **Portal**: POS App
@@ -1098,7 +1098,7 @@
 - **Root Cause**: `reorder.ts:369-370` reads from `rp.min_stock` and `rp.target_stock` (policies table) via LEFT JOIN. `pending_reorders` table itself has `min_threshold` and `target_stock` snapshot columns (migration 007:89-90).
 - **Fix**: Use `pr.min_threshold as "minThreshold"` and `pr.target_stock as "targetStock"`.
 - **Files**: `backend/src/routes/v1/reorder.ts:369-370`, `backend/migrations/007_reorder_schema.sql:89-90`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-120: POS — Reorder update policy: frontend sends minThreshold but backend expects minStock
 - **Portal**: POS App
@@ -1107,7 +1107,7 @@
 - **Root Cause**: Frontend `reorderApi.ts:146` sends `minThreshold`. Backend `reorder.ts:281` destructures `minStock` → undefined → COALESCE keeps old value.
 - **Fix**: Align field names between frontend and backend.
 - **Files**: `src/services/api/reorderApi.ts:146`, `backend/src/routes/v1/reorder.ts:281,287`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-121: POS — Reorder approve doesn't set purchase_order_id on pending_reorders
 - **Portal**: POS App
@@ -1116,7 +1116,7 @@
 - **Root Cause**: `reorder.ts:555-559` updates status to `approved` but does NOT SET `purchase_order_id`. Column exists per migration 007:104. Index for GRN auto-close at migration 151 depends on this.
 - **Fix**: Map each pending_reorder to its created PO ID during approval loop and set `purchase_order_id`.
 - **Files**: `backend/src/routes/v1/reorder.ts:554-559`, `backend/migrations/007_reorder_schema.sql:104`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-122: POS — OpeningStockScreen search hits non-existent /products/search endpoint (404)
 - **Portal**: POS App
@@ -1125,7 +1125,7 @@
 - **Root Cause**: `OpeningStockScreen.tsx:51-54` calls `/api/v1/pos/products/search`. No such route exists. Correct endpoint: `/api/v1/pos/store-products/search` (registered in `storeProducts.ts:264`).
 - **Fix**: Change API path to `/api/v1/pos/store-products/search`.
 - **Files**: `src/screens/OpeningStockScreen.tsx:51-54`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-123: POS — OpeningStockScreen submit writes to non-existent tables
 - **Portal**: POS App
@@ -1134,7 +1134,7 @@
 - **Root Cause**: `openingStock.ts:42-54` writes to `inventory_transactions` (doesn't exist — correct: `inventory.inventory_ledger`) and updates `store_products SET stock` (no `stock` column — correct: `catalog.store_products.current_stock`).
 - **Fix**: Rewrite to INSERT into `inventory.inventory_ledger` (type='opening_stock') and UPDATE `catalog.store_products SET current_stock`.
 - **Files**: `backend/src/routes/v1/pos/openingStock.ts:42-54`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-124: POS — Order list/detail always shows "Unknown Supplier" (s.name column missing)
 - **Portal**: POS App
@@ -1143,7 +1143,7 @@
 - **Root Cause**: `orders.ts:342,420` uses `COALESCE(s.name, 'Unknown Supplier')`. `supplier.suppliers` has `business_name` and `trade_name` — no `name` column.
 - **Fix**: Change to `COALESCE(s.business_name, s.trade_name, 'Unknown Supplier')`.
 - **Files**: `backend/src/routes/v1/orders.ts:342,420`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-125: POS — Order detail supplierPhone uses wrong column name
 - **Portal**: POS App
@@ -1152,7 +1152,7 @@
 - **Root Cause**: `orders.ts:421` uses `s.phone as "supplierPhone"`. Correct column: `s.primary_phone` (migration 003).
 - **Fix**: Change `s.phone` to `s.primary_phone`.
 - **Files**: `backend/src/routes/v1/orders.ts:421`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `664dbddd`
 
 ### STG-126: POS — GRN "Receive Goods" button hidden for confirmed orders despite backend support
 - **Portal**: POS App
@@ -1161,7 +1161,7 @@
 - **Root Cause**: Frontend `orderApi.ts:504-506` only allows `["shipped", "partial_received"]`. Backend `orders.ts:1582` allows `["confirmed", "shipped", "partial_received"]`.
 - **Fix**: Add `"confirmed"` to frontend `canReceive()` allowed statuses.
 - **Files**: `src/services/api/orderApi.ts:504-506`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-127: POS — SalesHistoryScreen has no pagination (only first 50 bills visible)
 - **Portal**: POS App
@@ -1170,7 +1170,7 @@
 - **Root Cause**: `billingApi.ts:25` calls `/pos/bills` with no offset/limit params. Backend defaults to 50. `SalesHistoryScreen.tsx` has no `onEndReached` handler.
 - **Fix**: Add pagination state, pass limit/offset to API, implement infinite scroll.
 - **Files**: `src/screens/SalesHistoryScreen.tsx:40-44`, `src/services/api/billingApi.ts:7-52`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-128: POS — OrderHistoryScreen stats computed from paginated data (inaccurate for >20 orders)
 - **Portal**: POS App
@@ -1179,7 +1179,7 @@
 - **Root Cause**: `OrderHistoryScreen.tsx:146-154` computes stats from `orders` state array (max 20 items per page), not from backend-aggregated totals.
 - **Fix**: Add per-status counts to backend response or remove subtitle stats.
 - **Files**: `src/screens/OrderHistoryScreen.tsx:146-154`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-129: POS — StockStatementScreen uses sellPrice for stock valuation (should use purchasePrice)
 - **Portal**: POS App
@@ -1188,7 +1188,7 @@
 - **Root Cause**: `inventory.ts:630` computes `stockValue: currentStock * sellPrice`. Standard accounting uses purchase/cost price.
 - **Fix**: Change to `currentStock * (purchasePrice || sellPrice)`.
 - **Files**: `backend/src/routes/v1/pos/inventory.ts:630`, `src/screens/StockStatementScreen.tsx:128-138`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-130: POS — PurchaseHistoryScreen hardcoded limit of 100, no pagination
 - **Portal**: POS App
@@ -1197,7 +1197,7 @@
 - **Root Cause**: `inventoryApi.ts:326-330` hardcodes `limit: 100`. No pagination controls in screen.
 - **Fix**: Add pagination support with offset/limit params.
 - **Files**: `src/services/api/inventoryApi.ts:321-332`, `src/screens/PurchaseHistoryScreen.tsx:145-164`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-131: POS — StockStatementScreen hardcoded limit of 200, no pagination
 - **Portal**: POS App
@@ -1206,7 +1206,7 @@
 - **Root Cause**: `StockStatementScreen.tsx:108` calls `getStockStatement(200, true)` hardcoded. No pagination support.
 - **Fix**: Add pagination or increase limit, add "showing X of Y" indicator.
 - **Files**: `src/screens/StockStatementScreen.tsx:108`, `src/services/api/inventoryApi.ts:387-414`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-132: POS — Khata add entry: frontend sends `type` but backend expects `entryType`
 - **Portal**: POS App
@@ -1215,7 +1215,7 @@
 - **Root Cause**: Frontend `khataService.ts:33` sends field as `type`. Backend `khata.ts:170` destructures `entryType`. Field name mismatch → undefined → validation fails.
 - **Fix**: Rename frontend field from `type` to `entryType`, or backend to read `type`.
 - **Files**: `src/services/khataService.ts:33`, `src/stores/khataStore.ts:93`, `src/screens/KhataScreen.tsx:157`, `backend/src/routes/v1/pos/khata.ts:170,176`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-133: POS — Khata sends UPPERCASE type values but backend validates lowercase
 - **Portal**: POS App
@@ -1224,7 +1224,7 @@
 - **Root Cause**: Frontend `khataService.ts:20` types as `"CREDIT"|"DEBIT"|"PAYMENT"`. Backend `khata.ts:176` validates `["credit","debit","payment"].includes()`. DB constraint (migration 139:46) also lowercase.
 - **Fix**: Frontend should send lowercase values, or backend should `.toLowerCase()`.
 - **Files**: `src/services/khataService.ts:20,33`, `src/screens/KhataScreen.tsx:157`, `backend/src/routes/v1/pos/khata.ts:176`, `backend/migrations/139_t154_khata_entries.sql:46`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-134: POS — Khata balanceMinor returned as BigInt string, frontend expects number
 - **Portal**: POS App
@@ -1233,7 +1233,7 @@
 - **Root Cause**: Backend `khata.ts:63` returns `balanceMinor: row.balance_minor.toString()` (string). Frontend `khataService.ts:12` declares `balanceMinor: number`.
 - **Fix**: Return `Number(row.balance_minor)` instead of `.toString()`.
 - **Files**: `backend/src/routes/v1/pos/khata.ts:63,138,265`, `src/services/khataService.ts:12`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-135: POS — Khata entries response: 6+ field name mismatches between backend and frontend
 - **Portal**: POS App
@@ -1242,7 +1242,7 @@
 - **Root Cause**: Backend returns `entryType` → frontend expects `type`. Backend returns `balanceMinor` → frontend expects `runningBalanceMinor`. Backend omits `customerId`, `paymentMethod`, `createdByStaffId`, `createdByStaffName`.
 - **Fix**: Align backend response aliases to match frontend `KhataEntry` interface.
 - **Files**: `backend/src/routes/v1/pos/khata.ts:93-107`, `src/services/khataService.ts:17-28`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-136: POS — CustomerList totalPurchasesMinor is BigInt string from PostgreSQL
 - **Portal**: POS App
@@ -1251,7 +1251,7 @@
 - **Root Cause**: `customer_profiles.total_purchases_minor` is BIGINT (migration 140:29). PostgreSQL node driver returns BIGINT as string. Backend doesn't convert.
 - **Fix**: Cast in SELECT: `total_purchases_minor::int AS "totalPurchasesMinor"`.
 - **Files**: `backend/src/routes/v1/pos/customers.ts:25-26`, `src/services/customerService.ts:14`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-137: POS — OverdueDuesScreen response key mismatch (reads `dues`, backend returns `overdues`)
 - **Portal**: POS App
@@ -1260,7 +1260,7 @@
 - **Root Cause**: Frontend `OverdueDuesScreen.tsx:83` reads `response.dues`. Backend `overduePayments.ts:60` returns `{ overdues: [...] }`. Key mismatch.
 - **Fix**: Change frontend to read `response.overdues` or backend to return `{ dues }`.
 - **Files**: `src/screens/OverdueDuesScreen.tsx:43-44,83`, `backend/src/routes/v1/pos/overduePayments.ts:60`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-138: POS — OverdueDuesScreen backend queries missing columns on public.sales
 - **Portal**: POS App
@@ -1269,7 +1269,7 @@
 - **Root Cause**: `overduePayments.ts:25-38` queries `s.due_date` and `s.paid_amount_minor` from `public.sales`. Neither column exists on that table (migration 018). These columns exist on `payments.sell_payments` (migration 146).
 - **Fix**: JOIN with `payments.sell_payments` or `payments.customer_dues` instead of querying `public.sales` directly.
 - **Files**: `backend/src/routes/v1/pos/overduePayments.ts:25-38`, `backend/migrations/018_sales_schema.sql:22-60`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-139: POS — OverdueDuesScreen frontend field names don't match backend response
 - **Portal**: POS App
@@ -1278,7 +1278,7 @@
 - **Root Cause**: Frontend expects `saleId`, `amountMinor`, `reminderSentAt`. Backend returns `id`, `outstandingMinor`, no `reminderSentAt`.
 - **Fix**: Align frontend `OverdueDue` interface to match backend response fields.
 - **Files**: `src/screens/OverdueDuesScreen.tsx:31-41`, `backend/src/routes/v1/pos/overduePayments.ts:43-54`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-140: POS — Credit KYC submit crashes: 'kyc_verified' not in CHECK constraint
 - **Portal**: POS App
@@ -1287,7 +1287,7 @@
 - **Root Cause**: `credit.ts:546` sets `status = 'kyc_verified'`. Constraint `chk_credit_app_status` (migration 049:256) only allows `('submitted','processing','approved','disbursed','rejected')`.
 - **Fix**: Add `'kyc_verified'` to constraint via migration. (Same root cause as STG-047 but different entry point.)
 - **Files**: `backend/src/routes/v1/pos/credit.ts:546`, `backend/migrations/049_payments_schema.sql:256`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `d56a1448`
 
 ### STG-141: POS — Credit KYC success check expects "approved" but backend returns "kyc_verified"
 - **Portal**: POS App
@@ -1296,7 +1296,7 @@
 - **Root Cause**: Frontend `CreditScreen.tsx:254` checks `response.applicationStatus === "approved"`. Backend `credit.ts:558` returns `"kyc_verified"`. Mismatch → error branch.
 - **Fix**: Frontend should check for `"kyc_verified"` as positive outcome.
 - **Files**: `src/screens/CreditScreen.tsx:254`, `backend/src/routes/v1/pos/credit.ts:558`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-142: POS — BNPL partial payment crashes: 'partial' not in CHECK constraint
 - **Portal**: POS App
@@ -1305,7 +1305,7 @@
 - **Root Cause**: `bnpl.ts:314` sets `status = 'partial'`. Constraint `chk_bnpl_status` (migration 049:157) only allows `('active','paid','overdue','defaulted')`.
 - **Fix**: Add `'partial'` to constraint via migration.
 - **Files**: `backend/src/routes/v1/pos/bnpl.ts:312-316`, `backend/migrations/049_payments_schema.sql:157`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `d56a1448`
 
 ### STG-143: POS — BNPL UPI payment crashes: dual constraints on buy_payments.status
 - **Portal**: POS App
@@ -1314,7 +1314,7 @@
 - **Root Cause**: `bnpl.ts:270` inserts `status = 'initiated'`. Migration 052 constraint allows it. But migration 071 adds SECOND constraint `buy_payments_status_check` that only allows `('pending','success','failed','refunded','cancelled','settled')` — excludes 'initiated' and 'completed'.
 - **Fix**: Drop `buy_payments_status_check` (migration 071) or reconcile to single constraint with all needed values.
 - **Files**: `backend/src/routes/v1/pos/bnpl.ts:270,337`, `backend/migrations/052_buy_payments_upi_columns.sql:15-16`, `backend/migrations/071_gl_crit_0009_complete_status_normalization.sql:65-66`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `d56a1448`
 
 ### STG-144: POS — BulkPurchaseCreditScreen field names completely wrong vs backend response
 - **Portal**: POS App
@@ -1323,7 +1323,7 @@
 - **Root Cause**: Local `CreditOffer` interface (BulkPurchaseCreditScreen.tsx:12-21) uses `providerName`, `maxAmount`, `interestRate`, `tenureDays`. Backend returns `source`, `amountMinor`, `interestRateAnnual`, `tenureMonths`.
 - **Fix**: Use shared `CreditOffer` type from `creditApi.ts:12-20` and update render logic.
 - **Files**: `src/screens/BulkPurchaseCreditScreen.tsx:12-21,91-138`, `backend/src/routes/v1/pos/credit.ts:275-286`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-145: POS — BulkPurchaseCredit apply sends only offerId, backend requires requestedAmountMinor
 - **Portal**: POS App
@@ -1332,7 +1332,7 @@
 - **Root Cause**: Frontend `BulkPurchaseCreditScreen.tsx:70` sends `{ offerId }` only. Backend `credit.ts:375` requires both `offerId` AND `requestedAmountMinor`.
 - **Fix**: Show amount input before applying, or use offer's `amountMinor` as default.
 - **Files**: `src/screens/BulkPurchaseCreditScreen.tsx:70`, `backend/src/routes/v1/pos/credit.ts:370-377`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-146: POS — DailyReportScreen field name mismatches with backend (entire response unusable)
 - **Portal**: POS App
@@ -1341,7 +1341,7 @@
 - **Root Cause**: Frontend `DailyReportData` type expects `productName`, `qtySold`, `transactionCount`, `totalRevenueMinor`, `paymentSplit`. Backend returns `name`, `quantitySold`, `totalBills`, `totalSalesMinor`, `paymentBreakdown`. Every field name differs.
 - **Fix**: Align frontend interface to backend response field names.
 - **Files**: `src/screens/DailyReportScreen.tsx:30-48`, `backend/src/routes/v1/pos/reports.ts:82-107`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-147: POS — DailyReportScreen backend queries non-existent item_count column on public.sales
 - **Portal**: POS App
@@ -1350,7 +1350,7 @@
 - **Root Cause**: `reports.ts:31` queries `SUM(item_count)` from `public.sales`. Column only exists on `orders.purchase_orders` (migrations 041/044), not `public.sales`.
 - **Fix**: Compute from `sale_items` table: `SELECT SUM(quantity) FROM sale_items si JOIN sales s2 ON ...`.
 - **Files**: `backend/src/routes/v1/pos/reports.ts:31`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-148: POS — DailyReportScreen refunds query: wrong table name + wrong column
 - **Portal**: POS App
@@ -1359,7 +1359,7 @@
 - **Root Cause**: `reports.ts:46-48` queries `FROM refunds` (no schema prefix — correct: `orders.refunds`) and sums `amount_minor` (correct: `refund_amount_minor`, per migration 143:26).
 - **Fix**: Change to `FROM orders.refunds` and `SUM(refund_amount_minor)`.
 - **Files**: `backend/src/routes/v1/pos/reports.ts:46-48`, `backend/migrations/143_t150_refunds.sql:13,26`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-149: POS — Reports and DailyClosing query CARD payment mode which doesn't exist in constraint
 - **Portal**: POS App
@@ -1368,7 +1368,7 @@
 - **Root Cause**: `reports.ts:35` and `dailyClosing.ts:30` query `WHEN payment_mode = 'CARD'`. Sales constraint (migration 018:55) only allows `('CASH','UPI','DUE')`. No 'CARD' value.
 - **Fix**: Either add 'CARD' to constraint or remove CARD queries and frontend rendering.
 - **Files**: `backend/src/routes/v1/pos/reports.ts:35`, `backend/src/routes/v1/pos/dailyClosing.ts:30`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `d56a1448`
 
 ### STG-150: POS — DailyClosingScreen field name mismatches (summary + history broken)
 - **Portal**: POS App
@@ -1377,7 +1377,7 @@
 - **Root Cause**: Frontend expects `salesByPaymentType` → backend returns `salesByPaymentMode`. Frontend expects `transactionCount` → backend returns `salesCount`. Frontend expects `closedByStaffName` → backend returns `closedBy` (a device UUID, not staff ID). History `varianceMinor` → backend returns `differenceMinor`.
 - **Fix**: Align field names and resolve staff name via JOIN.
 - **Files**: `src/services/dailyClosingService.ts:8-35`, `backend/src/routes/v1/pos/dailyClosing.ts:67-81,211-237`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-151: POS — ShiftScreen field name mismatches (all shift data broken)
 - **Portal**: POS App
@@ -1386,7 +1386,7 @@
 - **Root Cause**: Frontend expects `startedAt`/`endedAt`/`staffName`/`salesByPaymentType`/`expectedCashMinor`. Backend returns `shiftStart`/`shiftEnd`/`staffUserId` (no name JOIN)/no payment breakdown/no expected cash on GET.
 - **Fix**: Rename backend response fields, add staff name JOIN, add payment breakdown query.
 - **Files**: `src/services/shiftService.ts:8-28`, `backend/src/routes/v1/pos/shifts.ts:29-55,233-267`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-152: POS — Chat screens return 401: POS uses device tokens but chat routes require JWT
 - **Portal**: POS App
@@ -1395,7 +1395,7 @@
 - **Root Cause**: POS `apiClient.ts:300-305` sends `x-device-token`. Chat routes require JWT auth via gateway (`jwtAuth.ts:79`). Chat handler `chat.ts:17-24` needs `x-user-id` which device tokens don't provide.
 - **Fix**: Create POS-specific chat auth middleware that derives userId from device token, or have gateway translate device tokens for chat endpoints.
 - **Files**: `src/services/api/chatApi.ts:46-49`, `src/services/api/apiClient.ts:300-309`, `backend/services/api-gateway/src/middleware/jwtAuth.ts:79`, `backend/src/routes/v1/chat.ts:17-24`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-153: POS — SalesStatementScreen aggregates from paginated data (limit:100), totals wrong for large stores
 - **Portal**: POS App
@@ -1404,7 +1404,7 @@
 - **Root Cause**: `inventoryApi.ts:338-349` fetches with `limit: 100`. `SalesStatementScreen.tsx:165-169` reduces over paginated subset for totals.
 - **Fix**: Add server-side aggregate endpoint for sales summary totals.
 - **Files**: `src/screens/SalesStatementScreen.tsx:149,165-169`, `src/services/api/inventoryApi.ts:338-349`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-154: POS — SalesStatementScreen revenue computed from cost price, not sell price
 - **Portal**: POS App
@@ -1413,7 +1413,7 @@
 - **Root Cause**: `SalesStatementScreen.tsx:65` computes `Math.abs(deltaQty) * (unitCost || 0)`. `unitCost` is purchase/cost price from inventory ledger. Revenue should use sell price, which the ledger doesn't store.
 - **Fix**: Use sales data source (`public.sales`/`sale_items`) instead of inventory ledger for revenue calculation.
 - **Files**: `src/screens/SalesStatementScreen.tsx:65`, `src/services/api/inventoryApi.ts:338-349`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-155: POS — SalesStatementScreen date grouping uses UTC instead of IST
 - **Portal**: POS App
@@ -1422,7 +1422,7 @@
 - **Root Cause**: `SalesStatementScreen.tsx:63` uses `new Date(createdAt).toISOString().split("T")[0]` — UTC date. IST is UTC+5:30.
 - **Fix**: Use `date.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })`.
 - **Files**: `src/screens/SalesStatementScreen.tsx:62-63`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-156: POS — All backend DATE() queries use UTC, not IST (reports, dailyClosing, daily-summary)
 - **Portal**: POS App
@@ -1431,7 +1431,7 @@
 - **Root Cause**: `reports.ts:37,47,73`, `dailyClosing.ts:33,43`, `sales.ts:638,660` all use `DATE(created_at)` or `created_at::date` — PostgreSQL applies server timezone (UTC on Cloud SQL).
 - **Fix**: Change all to `DATE(created_at AT TIME ZONE 'Asia/Kolkata')`.
 - **Files**: `backend/src/routes/v1/pos/reports.ts:37,47,73`, `backend/src/routes/v1/pos/dailyClosing.ts:33,43`, `backend/src/routes/v1/pos/sales.ts:638,660`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-157: POS — Reports backend includes cancelled/voided sales in totals (no status filter)
 - **Portal**: POS App
@@ -1440,7 +1440,7 @@
 - **Root Cause**: `reports.ts:37` queries `FROM sales WHERE store_id = $1 AND DATE(created_at) = $2` — no status filter. DailyClosing (`dailyClosing.ts:34`) correctly filters `status = 'completed'`.
 - **Fix**: Add `AND status IN ('completed','PAID_CASH','PAID_UPI','DUE')` to reports query.
 - **Files**: `backend/src/routes/v1/pos/reports.ts:37`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-158: POS — DailyClosingScreen BigInt string serialization, frontend expects numbers
 - **Portal**: POS App
@@ -1449,7 +1449,7 @@
 - **Root Cause**: `dailyClosing.ts:69-80` returns `totalSalesMinor: sales.total_sales_minor.toString()`, etc. Frontend `dailyClosingService.ts:9-20` declares these as `number`.
 - **Fix**: Return `Number()` or `parseInt()` instead of `.toString()`.
 - **Files**: `backend/src/routes/v1/pos/dailyClosing.ts:69-80`, `src/services/dailyClosingService.ts:8-20`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-159: POS — DailyClosingScreen closed_by stores deviceId instead of staff ID
 - **Portal**: POS App
@@ -1458,7 +1458,7 @@
 - **Root Cause**: `dailyClosing.ts:186` uses `(req as PosRequest).posDevice.deviceId` for `closed_by`. Should use `req.headers['x-staff-id']`. No JOIN to resolve staff name.
 - **Fix**: Use `req.headers['x-staff-id']` and add staff name JOIN in history query.
 - **Files**: `backend/src/routes/v1/pos/dailyClosing.ts:186`, `src/screens/DailyClosingScreen.tsx:198`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-160: POS — ShiftScreen start-shift stores deviceId as staff_user_id
 - **Portal**: POS App
@@ -1467,7 +1467,7 @@
 - **Root Cause**: `shifts.ts:73` falls back to `posDevice.deviceId` because frontend `shiftStore.ts:67` doesn't pass `staffUserId`. Should use `req.headers['x-staff-id']`.
 - **Fix**: Read staff ID from `x-staff-id` header in backend, or include staffUserId from `useStaffSessionStore` in frontend request.
 - **Files**: `backend/src/routes/v1/pos/shifts.ts:67,73`, `src/stores/shiftStore.ts:67`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-161: POS — Menu/Reports/DailyClosing use 3 different status filters for "completed sales"
 - **Portal**: POS App
@@ -1476,7 +1476,7 @@
 - **Root Cause**: `/pos/daily-summary` (sales.ts:637): `status IN ('PAID_CASH','PAID_UPI','DUE','completed','SPLIT')`. `/pos/daily-closing/summary` (dailyClosing.ts:34): `status = 'completed'`. `/pos/reports/daily` (reports.ts:37): no filter at all.
 - **Fix**: Standardize to single consistent filter across all three endpoints.
 - **Files**: `backend/src/routes/v1/pos/sales.ts:637`, `backend/src/routes/v1/pos/dailyClosing.ts:34`, `backend/src/routes/v1/pos/reports.ts:37`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-162: POS — StaffLoginScreen sends raw +91 phone but backend doesn't strip prefix
 - **Portal**: POS App
@@ -1485,7 +1485,7 @@
 - **Root Cause**: Frontend `StaffLoginScreen.tsx:39` strips +91 for validation but line 51 sends original `trimmedPhone` (with +91). Backend `staff.ts:41` only trims whitespace, doesn't strip +91. DB stores 10-digit phone → no match.
 - **Fix**: Send normalized `phone10` (10-digit) instead of `trimmedPhone`, or strip +91 in backend.
 - **Files**: `src/screens/StaffLoginScreen.tsx:39,51`, `backend/src/routes/v1/pos/staff.ts:41`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-163: POS — DailyClosing/DailyReport getTodayString() uses UTC date, wrong between 00:00-05:30 IST
 - **Portal**: POS App
@@ -1494,7 +1494,7 @@
 - **Root Cause**: `DailyClosingScreen.tsx:30` and `DailyReportScreen.tsx:66` use `new Date().toISOString().split("T")[0]` — UTC date.
 - **Fix**: Use `new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })`.
 - **Files**: `src/screens/DailyClosingScreen.tsx:30-31`, `src/screens/DailyReportScreen.tsx:65-67`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-164: POS — AIInsightsScreen bypasses apiClient (wrong auth header, no rate limiting)
 - **Portal**: POS App
@@ -1503,7 +1503,7 @@
 - **Root Cause**: `aiApi.ts:7-18` uses raw `fetch()` with `Authorization: Bearer ${token}`. POS middleware expects `x-device-token` header. Bypasses apiClient's timeout, rate limiting, and token refresh.
 - **Fix**: Refactor to use `apiClient.get()`/`apiClient.patch()`.
 - **Files**: `src/services/api/aiApi.ts:7-18`, `src/services/api/apiClient.ts:300-309`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-165: POS — HelpScreen shows literal HTML entities (&amp; &apos;) in React Native Text
 - **Portal**: POS App
@@ -1512,7 +1512,7 @@
 - **Root Cause**: `HelpScreen.tsx:80-82` contains `Help &amp; Support` and `We&apos;re here`. React Native Text doesn't interpret HTML entities.
 - **Fix**: Replace `&amp;` with `&` and `&apos;` with `'`.
 - **Files**: `src/screens/HelpScreen.tsx:80,82`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-166: POS — Menu daily-summary BigInt serialization (totalSales/totalBills are strings)
 - **Portal**: POS App
@@ -1521,7 +1521,7 @@
 - **Root Cause**: `sales.ts:626-627` returns `::bigint` which serializes as string. Frontend `dailySummaryApi.ts:21-28` expects numbers. `formatMoney()` may produce NaN.
 - **Fix**: Parse to number in backend or frontend API layer.
 - **Files**: `src/services/api/dailySummaryApi.ts:8-28`, `backend/src/routes/v1/pos/sales.ts:626-627,677-693`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-167: POS — PaymentScreen sends item.id as productId (fragile multi-step resolution chain)
 - **Portal**: POS App
@@ -1530,7 +1530,7 @@
 - **Root Cause**: `PaymentScreen.tsx:389-390` sends `productId: item.id`. `item.id` can be UUID, barcode string, or other identifier. Backend `sales.ts:1012-1056` has fragile multi-step fallback resolution.
 - **Fix**: Always send `globalProductId`, `storeProductId`, and `barcode` as separate fields.
 - **Files**: `src/screens/PaymentScreen.tsx:373-399`, `backend/src/routes/v1/pos/sales.ts:1012-1075`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-168: POS — Split payment cash-collect step shows local amount, not backend-confirmed amount
 - **Portal**: POS App
@@ -1539,7 +1539,7 @@
 - **Root Cause**: `SplitPaymentModal.tsx:697-698` renders `cashMinor` from `Math.round(parseFloat(cashAmount) * 100)` (local state), not from backend response. Backend split response doesn't include `amountMinor` in cash payment.
 - **Fix**: Display `splitResponse?.cashPayment?.amountMinor` or add it to response.
 - **Files**: `src/components/sell/SplitPaymentModal.tsx:697-698`, `src/services/api/posApi.ts:215-218`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-169: POS — SalesHistoryScreen bill status filter uses 'CREATED' which is dead code
 - **Portal**: POS App
@@ -1548,7 +1548,7 @@
 - **Root Cause**: `sales.ts:717` filters `status NOT IN ('CREATED','PENDING','CANCELLED')`. 'CREATED' is not in CHECK constraint. 'pending' (lowercase) not excluded.
 - **Fix**: Change to `NOT IN ('pending','PENDING','cancelled','CANCELLED')`.
 - **Files**: `backend/src/routes/v1/pos/sales.ts:717`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-170: POS — Reorder settings notifyOnLowStock exists in backend but missing from frontend type
 - **Portal**: POS App
@@ -1557,7 +1557,7 @@
 - **Root Cause**: Backend `reorder.ts:48,60-62` returns/handles `notifyOnLowStock`. Frontend `reorderApi.ts:83-91` ReorderSettings type doesn't include it.
 - **Fix**: Add `notifyOnLowStock: boolean` to frontend type and add toggle in settings screen.
 - **Files**: `src/services/api/reorderApi.ts:83-91`, `backend/src/routes/v1/reorder.ts:48,116`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `a6d72ccf`
 
 ### STG-171: POS — PurchaseCartModal expectedDeliveryDate declared after callbacks that reference it
 - **Portal**: POS App
@@ -1566,7 +1566,7 @@
 - **Root Cause**: `PurchaseCartModal.tsx:556` declares `expectedDeliveryDate` useState, but callbacks at lines 264 and 449 reference it. Works due to hoisting but confusing.
 - **Fix**: Move `expectedDeliveryDate` useState declaration above the callbacks (near lines 70-95).
 - **Files**: `src/components/buy/PurchaseCartModal.tsx:264,449,510,556`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-172: POS — DailyReportScreen shows zero-value report instead of empty state for no-data days
 - **Portal**: POS App
@@ -1575,7 +1575,7 @@
 - **Root Cause**: Backend always returns 200 with zero values. Frontend at `DailyReportScreen.tsx:392` renders report content when `!loading && !error && report` — no check for zero transactions.
 - **Fix**: Add empty-state check: if `report.transactionCount === 0`, show empty state.
 - **Files**: `src/screens/DailyReportScreen.tsx:254-256,392`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-173: POS — Credit feature behind CREDIT_ENABLED flag (all credit/BNPL routes return 403)
 - **Portal**: POS App
@@ -1584,7 +1584,7 @@
 - **Root Cause**: `credit.ts:16-30` gates all routes behind `CREDIT_ENABLED === "true"`. Frontend shows generic error instead of feature-disabled state.
 - **Fix**: Detect `credit_feature_disabled` error code in frontend and show user-friendly empty state.
 - **Files**: `backend/src/routes/v1/pos/credit.ts:16-30`, `src/screens/CreditScreen.tsx:117-122`, `src/screens/BulkPurchaseCreditScreen.tsx:52-53`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ### STG-174: POS — BNPL active query works correctly but blocked by STG-142 constraint fix
 - **Portal**: POS App
@@ -1593,7 +1593,7 @@
 - **Root Cause**: Query filter is correct but blocked by CHECK constraint (STG-142).
 - **Fix**: Fix STG-142 first. This resolves automatically.
 - **Files**: `backend/src/routes/v1/pos/bnpl.ts:52`
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `5cb45d62`
 
 ---
 
@@ -1616,7 +1616,7 @@
 - **Fix**: Add service entry to gateway config: `{ name: 'public-config', url: getMainBackendUrl(), pathPrefix: '/api/v1/public', stripPrefix: false }`
 - **Files**: `backend/services/api-gateway/src/config.ts` (missing entry), `backend/src/routes/v1/publicConfig.ts`, `backend/src/routes/v1/index.ts:118`, `supermandi-landing/index.html` (caller)
 - **Severity**: CRITICAL — Landing page WhatsApp CTA widget is permanently hidden on staging
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `98f6e981`
 
 ### STG-176: GCP Load Balancer — Returns HTML 411 for POST without Content-Length header
 - **Portal**: All (any portal making bodyless POST requests)
@@ -1634,7 +1634,7 @@
 - **Fix**: Either (a) always send `Content-Length: 0` or empty body `{}` in POST requests from frontend, or (b) add a middleware on Cloud Run to handle this.
 - **Files**: `supermandi-superadmin/src/api/authToken.ts` (logout/refresh calls), `retailer-admin/src/contexts/AuthContext.tsx` (logout call), `supplier-portal/src/lib/api.ts` (logout call)
 - **Severity**: HIGH — Logout may silently fail or crash JSON parsing on staging
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `98f6e981`
 
 ### STG-177: POS — Auth error response format inconsistent with all other services
 - **Portal**: POS App (against staging backend)
@@ -1646,7 +1646,7 @@
 - **Fix**: Change POS auth middleware to return `{ error: { code: 'DEVICE_UNAUTHORIZED', message: 'Device not authorized. Please re-enroll.' } }` to match the standard format.
 - **Files**: `backend/src/middleware/posAuth.ts`
 - **Severity**: MEDIUM — POS frontend code that checks `error.code` will get `undefined` instead of a usable error code
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `98f6e981`
 
 ### STG-178: Document Upload — Returns HTTP 500 for client validation error (invalid file type)
 - **Portal**: Retailer / Supplier (registration document upload)
@@ -1657,7 +1657,7 @@
 - **Fix**: Use `res.status(400).json({ error: { code: 'INVALID_FILE_TYPE', message: '...' } })` instead of throwing.
 - **Files**: `backend/src/routes/v1/documents.ts`
 - **Severity**: MEDIUM — Monitoring/alerting will treat file type validation as server errors; frontends may show "server error" instead of "wrong file type"
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `98f6e981`
 
 ### STG-179: Auth Rate Limit — 5/min shared across all auth routes locks out normal login flows
 - **Portal**: Retailer / Supplier
@@ -1673,7 +1673,7 @@
 - **Fix**: Either (a) increase auth rate limit to 15/min (still prevents brute force but allows normal flow + 1 retry), or (b) apply separate limits per sub-route (login: 5/min, forgot-password: 3/min, register: 5/min separately), or (c) use a sliding window instead of fixed window.
 - **Files**: `backend/services/api-gateway/src/middleware/rateLimiter.ts`, `backend/services/api-gateway/src/config.ts`
 - **Severity**: HIGH — Real users will hit 429 during normal registration/login flows
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `98f6e981`
 
 ### STG-180: Landing Page — Missing `<title>` and `<meta>` tags in HTML `<head>`
 - **Portal**: Landing Page (`staging.supermandi.tech/`)
@@ -1684,7 +1684,7 @@
 - **Fix**: Add `<title>SuperMandi — The Infrastructure Retail Runs On</title>` and `<meta name="description" content="...">` and Open Graph tags to `<head>`.
 - **Files**: `supermandi-landing/index.html`
 - **Severity**: LOW — SEO and social sharing impact only
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### STG-181: Landing Page — robots.txt and sitemap.xml both return nginx 404 HTML
 - **Portal**: Landing Page
@@ -1695,7 +1695,7 @@
 - **Fix**: Add `robots.txt` (allow all, link sitemap) and `sitemap.xml` (list main pages) to landing page static assets.
 - **Files**: `supermandi-landing/` (add `robots.txt` and `sitemap.xml`)
 - **Severity**: LOW — SEO impact and minor server info disclosure
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### STG-182: Landing Page — `/s` bare route returns 404 instead of redirect
 - **Portal**: Landing Page / Retailer
@@ -1722,7 +1722,7 @@
 - **Fix**: Standardize all error responses to `{ error: { code, message }, requestId }` format. Add requestId injection in backend middleware too.
 - **Files**: `backend/services/api-gateway/src/middleware/errorHandler.ts`, `backend/src/middleware/errorHandler.ts`, `backend/src/middleware/posAuth.ts`
 - **Severity**: MEDIUM — Frontend error handling must handle 5 different error shapes
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### STG-184: CSRF Middleware — Blocks multipart/form-data uploads without X-Requested-With header
 - **Portal**: Retailer / Supplier (registration)
@@ -1734,7 +1734,7 @@
 - **Fix**: The retailer and supplier frontends DO set `X-Requested-With: XMLHttpRequest` on upload calls (confirmed in code). This is a documentation/awareness issue — any new upload consumer must include this header. Consider also allowing `Content-Type: multipart/form-data` in the CSRF check.
 - **Files**: `backend/services/api-gateway/src/middleware/csrf.ts`, `retailer-admin/src/contexts/AuthContext.tsx` (upload call), `supplier-portal/src/lib/api.ts` (upload call)
 - **Severity**: LOW — Current frontends handle this correctly; affects only new consumers
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ### STG-185: Admin Portal — CSP meta tag vs server header mismatch (server wins, more restrictive)
 - **Portal**: SuperAdmin
@@ -1746,7 +1746,7 @@
 - **Fix**: Either (a) align server header with meta tag to include `https://*.run.app`, or (b) remove the dead `*.run.app` from the meta tag since it's never used.
 - **Files**: `supermandi-superadmin/index.html` (meta CSP), `supermandi-superadmin/Dockerfile` or `nginx.conf` (server CSP header)
 - **Severity**: LOW — No current impact; cosmetic inconsistency
-- **Status**: DIAGNOSED
+- **Status**: FIXED — Commit: `f779300e`
 
 ---
 
@@ -1787,8 +1787,8 @@
 
 | Status | Count |
 |--------|-------|
-| FIXED | 4 |
-| DIAGNOSED | 180 |
+| FIXED | 166 |
+| DIAGNOSED | 18 |
 | FOUND | 0 |
 | VERIFIED | 0 |
 | WONTFIX | 1 |
