@@ -104,12 +104,15 @@ export async function refreshSession(): Promise<boolean> {
 async function _doRefreshSession(currentToken: string): Promise<boolean> {
   try {
     // STAGING-FIX-006: Use fetchWithTimeout (30s) instead of raw fetch to prevent hanging
+    // STG-176: Include body + Content-Type to prevent GCP LB 411 on bodyless POST
     const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/refresh`, {
       method: "POST",
       credentials: 'include',
       headers: {
         Authorization: `Bearer ${currentToken}`,
+        'Content-Type': 'application/json',
       },
+      body: '{}',
     });
 
     if (!res.ok) {
@@ -157,13 +160,16 @@ export async function logout(): Promise<void> {
   if (sessionToken) {
     try {
       // STAGING-FIX-006: Use fetchWithTimeout (10s) — logout should not hang
+      // STG-176: Include body + Content-Type to prevent GCP LB 411 on bodyless POST
       await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/logout`, {
         method: "POST",
         credentials: 'include',
         timeoutMs: 10000,
         headers: {
           Authorization: `Bearer ${sessionToken}`,
+          'Content-Type': 'application/json',
         },
+        body: '{}',
       });
     } catch {
       // Ignore errors - still clear local storage

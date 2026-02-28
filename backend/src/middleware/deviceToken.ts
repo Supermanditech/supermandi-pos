@@ -77,7 +77,7 @@ function enforceStoreBinding(req: Request, res: Response, status: PosDeviceStatu
     mismatches
   });
 
-  res.status(403).json({ error: "store_mismatch" });
+  res.status(403).json({ error: { code: "STORE_MISMATCH", message: "Device store binding mismatch. Request rejected." } });
   return false;
 }
 
@@ -95,13 +95,13 @@ type PosDeviceStatusContextExtended = PosDeviceStatusContext & {
 async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosDeviceStatusContextExtended | null> {
   const token = req.header("x-device-token")?.trim();
   if (!token) {
-    res.status(401).json({ error: "device_unauthorized" });
+    res.status(401).json({ error: { code: "DEVICE_UNAUTHORIZED", message: "Device not authorized. Please enroll the device." } });
     return null;
   }
 
   const pool = getPool();
   if (!pool) {
-    res.status(503).json({ error: "database unavailable" });
+    res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Database unavailable. Please try again later." } });
     return null;
   }
 
@@ -122,7 +122,7 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
 
   const row = result.rows[0];
   if (!row) {
-    res.status(401).json({ error: "device_unauthorized" });
+    res.status(401).json({ error: { code: "DEVICE_UNAUTHORIZED", message: "Device not authorized. Please enroll the device." } });
     return null;
   }
 
@@ -224,11 +224,11 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
   if (!enforceStoreBinding(req, res, status)) return;
 
   if (!status.storeId) {
-    res.status(403).json({ error: "device_not_enrolled" });
+    res.status(403).json({ error: { code: "DEVICE_NOT_ENROLLED", message: "Device is not enrolled to any store." } });
     return;
   }
   if (!status.deviceActive) {
-    res.status(403).json({ error: "device_inactive" });
+    res.status(403).json({ error: { code: "DEVICE_INACTIVE", message: "Device is inactive. Contact your store administrator." } });
     return;
   }
   // SEC-001: Removed storeActive check - let status gate middleware handle status-based access control

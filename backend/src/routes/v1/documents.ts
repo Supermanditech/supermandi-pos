@@ -156,7 +156,18 @@ function buildGcsObjectKey(entityType: string, entityId: string, documentType: s
  * - entity_id: UUID of the entity
  * - document_type: Type of document (aadhaar, pan, gstin, etc.)
  */
-router.post("/upload", upload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
+// STG-178: Handle multer errors (invalid file type, file too large) as 400 not 500
+router.post("/upload", (req: Request, res: Response, next: NextFunction) => {
+  upload.single('file')(req, res, (err: any) => {
+    if (err) {
+      const message = err.message || 'File upload failed';
+      const code = err.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : 'INVALID_FILE';
+      res.status(400).json({ error: { code, message } });
+      return;
+    }
+    next();
+  });
+}, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { entity_type, entity_id, document_type } = req.body;
 

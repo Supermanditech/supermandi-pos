@@ -69,7 +69,9 @@ export const config: GatewayConfig = {
   rateLimitWindowMs: getEnvIntOrDefault('RATE_LIMIT_WINDOW_MS', 60000), // 1 minute
   rateLimitMax: getEnvIntOrDefault('RATE_LIMIT_MAX', 30), // 30 requests per window
   // Auth endpoints have stricter limit
-  authRateLimitMax: getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 5), // 5 auth attempts per window
+  // STG-179: Increased from 5 to 15 — normal login flow uses 5 requests (lookup+OTP+verify+login+status),
+  // leaving zero margin for retries. 15/min still prevents brute force but allows legitimate use.
+  authRateLimitMax: getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 15), // 15 auth attempts per window
   // LIVE.ADMIN.AUTH_RATE_LIMIT_TUNING.001: Admin login rate limit (env-tunable, defaults to AUTH_RATE_LIMIT_MAX)
   adminLoginRateLimitMax: getEnvIntOrDefault('ADMIN_LOGIN_RATE_LIMIT_MAX', getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 5)),
   // STAGING-FIX-012: Admin panel API rate limit (60/min default — authenticated calls, not brute-force)
@@ -390,6 +392,15 @@ export const config: GatewayConfig = {
       name: 'retailer',
       url: getMainBackendUrl(),
       pathPrefix: '/api/v1/retailer',
+      stripPrefix: false,
+    },
+    // ==========================================================================
+    // STG-175: Public config routes -> main backend (WhatsApp CTA, app-version, etc.)
+    // ==========================================================================
+    {
+      name: 'public-config',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/public',
       stripPrefix: false,
     },
   ],
