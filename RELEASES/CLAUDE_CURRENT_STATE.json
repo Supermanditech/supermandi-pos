@@ -1,12 +1,12 @@
 {
-  "version": "67.0",
-  "lastUpdated": "2026-03-01T00:00:00.000Z",
-  "currentPhase": "POST_AUDIT_UX_REFINEMENT_COMPLETE: STG-001..286 all closed. 283 fixed, 2 wontfix, 1 accepted. 0 P1/P2 blockers. 0 deferred. Cosmetic polish production-grade complete. Deploy hold active. Ready for deploy-prep.",
+  "version": "68.0",
+  "lastUpdated": "2026-03-01T02:00:00.000Z",
+  "currentPhase": "STG_DISCIPLINE_RECONCILED + FINAL_MEGA_GO_LIVE_AUDIT_ARMED: STG-001..286 all closed and reconciled. 283 fixed, 2 wontfix, 1 accepted. Canonical baseline main@940e0832. Deploy hold active. Next machine-enforced task is the final screen-locked go-live audit.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
-    "baselineSha": "f032299c",
+    "baselineSha": "940e0832",
     "baselineBranch": "main",
     "issueRange": "STG-001..STG-286",
     "summary": {
@@ -41,7 +41,7 @@
     "trackerFrozen": true,
     "deployHold": true,
     "nextRoundRules": {
-      "auditFrom": "main@f032299c",
+      "auditFrom": "main@940e0832",
       "newFindingsStartAt": "STG-287",
       "regressionAgainstPriorFixes": "Append as new STG-287+ IDs, do NOT silently edit historical closures",
       "doNotRewrite": "STG-001..STG-286 entries are frozen — only append, never edit"
@@ -153,6 +153,46 @@
       "SuperAdmin Web": "Command-center control plane with strongest hierarchy, exception-first visibility, fast approvals, and clear risk signaling.",
       "POS App": "Touch-first cashier-grade UX with large targets, instant feedback, unambiguous actions, and speed over decoration."
     }
+  },
+  "finalMegaGoLiveAudit": {
+    "status": "ARMED_NOT_STARTED",
+    "baselineSha": "940e0832",
+    "nextFindingsStartAt": "STG-287",
+    "platformOrder": [
+      "Retailer Web",
+      "Supplier Web",
+      "SuperAdmin Web",
+      "POS App"
+    ],
+    "singleScreenLock": true,
+    "singleActionCoverageLock": true,
+    "noScreenLeftBehind": true,
+    "samplingForbidden": true,
+    "requiredPerScreenLayers": [
+      "user_actions_and_interaction_flow",
+      "business_logic_behavior",
+      "ui",
+      "ux",
+      "navigation",
+      "wiring",
+      "api_symptoms_and_contracts",
+      "backend_behavior",
+      "db_table_and_data_integrity_symptoms",
+      "migration_dependency_and_number_parity",
+      "gcp_parity_and_runtime_behavior",
+      "external_infra_or_service_dependency",
+      "accessibility",
+      "responsive_mobile_behavior"
+    ],
+    "rules": [
+      "full_platform_manifest_required_before_start",
+      "one_active_screen_at_a_time",
+      "screen_cannot_exit_until_all_meaningful_user_actions_are_covered",
+      "no_sampling_no_skipping_no_partial_screen_closure",
+      "new_findings_append_as_stg_287_plus",
+      "regressions_against_prior_fixes_get_new_stg_ids",
+      "cross_platform_matrix_runs_only_after_all_platforms_complete"
+    ]
   },
   "ticketStatus": {
     "T-054": "DONE",

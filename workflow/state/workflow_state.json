@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-01T00:00:00.000Z",
+  "updatedAt": "2026-03-01T02:00:00.000Z",
   "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
-    "baselineSha": "f032299c",
+    "baselineSha": "940e0832",
     "issueRange": "STG-001..STG-286",
     "total": 286,
     "fixed": 283,
@@ -81,6 +81,46 @@
       "posApp": "COMPLETED"
     },
     "reiterationStgRange": "STG-237..STG-256"
+  },
+  "finalMegaGoLiveAudit": {
+    "status": "ARMED_NOT_STARTED",
+    "baselineSha": "940e0832",
+    "nextFindingsStartAt": "STG-287",
+    "platformOrder": [
+      "Retailer Web",
+      "Supplier Web",
+      "SuperAdmin Web",
+      "POS App"
+    ],
+    "singleScreenLock": true,
+    "singleActionCoverageLock": true,
+    "noScreenLeftBehind": true,
+    "samplingForbidden": true,
+    "requiredPerScreenLayers": [
+      "user_actions_and_interaction_flow",
+      "business_logic_behavior",
+      "ui",
+      "ux",
+      "navigation",
+      "wiring",
+      "api_symptoms_and_contracts",
+      "backend_behavior",
+      "db_table_and_data_integrity_symptoms",
+      "migration_dependency_and_number_parity",
+      "gcp_parity_and_runtime_behavior",
+      "external_infra_or_service_dependency",
+      "accessibility",
+      "responsive_mobile_behavior"
+    ],
+    "rules": [
+      "full_platform_manifest_required_before_start",
+      "one_active_screen_at_a_time",
+      "screen_cannot_exit_until_all_meaningful_user_actions_are_covered",
+      "no_sampling_no_skipping_no_partial_screen_closure",
+      "new_findings_append_as_stg_287_plus",
+      "regressions_against_prior_fixes_get_new_stg_ids",
+      "cross_platform_matrix_runs_only_after_all_platforms_complete"
+    ]
   },
   "machineEnforcement": {
     "enabled": true,

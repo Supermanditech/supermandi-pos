@@ -2711,6 +2711,144 @@ This wave is complete only when:
 
 ---
 
+## 19.6 Final Mega Go-Live Audit (Mandatory Next Task)
+
+> **Status**: ARMED | **Activation Rule**: Starts only after full STG git-discipline reconciliation is complete and a single canonical baseline SHA is locked
+
+### Purpose
+
+This is the final deepest pre-deploy audit pass before any deploy-prep or staging deployment decision.
+
+Claude must audit from fresh git truth and real product behavior expectations, one platform at a time and one screen at a time, until every screen, every user action, and every relevant technical layer has been covered.
+
+### Canonical Baseline
+
+1. baseline SHA must be locked before this audit starts
+2. current canonical baseline for the next round is `main@940e0832`
+3. all new findings from this round append as `STG-287+`
+
+### Fixed Platform Order
+
+Claude must audit platforms in this exact order:
+
+1. Retailer Web
+2. Supplier Web
+3. SuperAdmin Web
+4. POS App
+
+Claude cannot change this order unless explicitly instructed by operator.
+
+### Platform Entry Gate
+
+Before starting any platform, Claude must publish:
+
+1. platform name
+2. complete screen manifest
+3. audit order for those screens
+4. authenticated and unauthenticated flows
+5. shared components and infra/service dependencies relevant to that platform
+
+No audit work is valid until the full manifest is declared first.
+
+### Screen Lock Rule
+
+Claude may have only ONE active screen at a time.
+
+The current screen must be audited to terminal status before Claude may move to the next screen:
+
+- `completed`
+- `blocked`
+
+No screen may be skipped, partially audited, sampled-only, or deferred without explicit blocker record.
+
+### User-Action Lock
+
+Claude may not exit a screen until all meaningful user interactions on that screen are covered, including:
+
+1. clicks
+2. taps
+3. form entry
+4. dropdown/select interactions
+5. modal open/close paths
+6. submit/cancel/retry flows
+7. pagination/filter/search
+8. upload/download if present
+9. back/forward/refresh behavior
+10. validation and unhappy paths
+
+### Mandatory Per-Screen Audit Layers
+
+Each screen must be audited across all of the following before it can be marked complete:
+
+1. user actions and interaction flow
+2. business logic behavior
+3. UI
+4. UX
+5. navigation
+6. wiring
+7. API symptoms/contracts
+8. backend behavior
+9. DB table/data integrity symptoms
+10. migration dependency and migration-number parity
+11. GCP parity/runtime behavior
+12. external infra/service dependency relevant to the screen
+13. accessibility
+14. responsive/mobile behavior
+
+### No-Exit Rule
+
+Claude must not exit a screen while any of the following remain unresolved for that screen:
+
+1. untested user action branches
+2. missing UI/UX assessment
+3. unverified navigation or wiring
+4. unverified API/backend/DB symptoms where the screen depends on them
+5. unidentified migration or external dependency where such dependency is relevant
+
+### Issue Handling
+
+1. preserve `STG-001..286` as frozen historical record
+2. all new findings from this audit append as `STG-287+`
+3. regressions against previously fixed STG items also get new STG IDs
+4. no silent rewriting of historical issues
+
+### Full Audit Completion Gate
+
+This final mega go-live audit is complete only if:
+
+1. all four platforms are fully covered
+2. every listed screen has terminal status
+3. cross-platform matrix checks are completed after all four platforms
+4. all new findings are appended into `RELEASES/STAGING_BROWSER_TEST_ISSUES.md`
+5. Claude publishes:
+   - full screen coverage table
+   - new issue counts by platform
+   - new issue counts by severity
+   - technical dependency blockers
+   - explicit statement:
+     - `FINAL MEGA GO-LIVE AUDIT COMPLETE`, or
+     - `NOT COMPLETE` with exact remaining screens/blockers
+
+### Cross-Platform Matrix (After All Platforms)
+
+Only after all four platforms are fully completed, Claude must audit:
+
+1. retailer registration -> superadmin approval -> retailer login
+2. supplier registration -> superadmin approval -> supplier login
+3. retailer -> POS enrollment -> downstream POS use
+4. support/chat/admin visibility flows
+5. password reset / session invalidation flows
+6. any cross-platform dependency discovered during screen audit
+
+### No-Sampling Rule
+
+Sampling is forbidden for this wave.
+
+Impacted-only reiteration is not sufficient.
+This wave is a full screenwise, actionwise, layerwise audit from fresh git truth.
+
+---
+
 **END OF CLAUDE STATE OPERATING SYSTEM**
 
 *This file is the single source of truth. All other rule files are historical reference only.*
