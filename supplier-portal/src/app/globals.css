@@ -106,6 +106,11 @@ html.dark .bg-green-50 { background-color: #052e16; }
 html.dark .bg-red-50 { background-color: #450a0a; }
 
 /* Dark mode status badges & semantic colors */
+html.dark .bg-gray-100 { background-color: #374151; }   /* STG-257: Invoices draft/cancelled/void, Earnings, KYC */
+html.dark .text-gray-700 { color: #d1d5db; }            /* STG-258: Invoices "Draft" badge text */
+html.dark .text-gray-500 { color: #9ca3af; }            /* STG-259: Invoices "Cancelled"/"Void" badge text */
+html.dark .bg-blue-100 { background-color: #1e3a5f; }   /* STG-260: Dashboard/Orders/Earnings/Invoices/BNPL blue badges */
+html.dark .text-blue-700 { color: #93c5fd; }            /* STG-261: Blue status text across 8 screens */
 html.dark .bg-yellow-100 { background-color: #422006; }
 html.dark .bg-yellow-50 { background-color: #1a1400; }
 html.dark .text-yellow-600 { color: #fbbf24; }

@@ -354,7 +354,7 @@ export default function PaymentSetupScreen() {
             testID="payment-save-button"
           >
             {saving ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={colors.surface} size="small" />
             ) : (
               <Text style={styles.saveButtonText}>Save & Continue</Text>
             )}

@@ -2064,11 +2064,12 @@ DAY 3+:     Normal monitoring cadence
 |--------|-------|
 | Range | STG-001 → STG-286 |
 | Total | 286 |
-| FIXED | 244 |
+| FIXED | 283 |
 | WONTFIX | 2 (STG-021, STG-276) |
+| ACCEPTED | 1 (STG-281 — intentional rgba on primary bubble) |
 | DIAGNOSED | 0 |
 | FOUND | 0 |
-| DEFERRED_COSMETIC | 40 (all P3 dark-mode-only, explicitly dispositioned) |
+| DEFERRED_COSMETIC | 0 |
 
 ### STG-021 WONTFIX Record
 
@@ -2082,7 +2083,8 @@ DAY 3+:     Normal monitoring cadence
 2. Next audit round appends new findings as STG-287+ (never rewrites old entries)
 3. Any regression against a prior STG fix → new STG ID (e.g., STG-287), not silent edit of the original
 4. Deploy hold remains active until operator triggers CI
-5. Final pre-deploy audit completed 2026-03-01: 0 P1/P2 blockers, 40 P3 cosmetic deferred
+5. Final pre-deploy audit completed 2026-03-01: 0 P1/P2 blockers
+6. Post-audit UX refinement wave 2026-03-01: all 40 P3 cosmetics resolved (39 FIXED, 1 ACCEPTED). Production-grade complete.
 
 ### Pending Migrations (4)
 

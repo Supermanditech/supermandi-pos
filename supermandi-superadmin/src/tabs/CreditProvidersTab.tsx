@@ -147,7 +147,7 @@ export function CreditProvidersTab() {
           <div className="sa-stat-label sa-text-error">Outstanding</div>
           <div className="sa-stat-value--sm sa-fw-700 sa-text-danger">{fmt(totalOutstanding)}</div>
         </div>
-        <div className="sa-stat-card" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+        <div className="sa-stat-card" style={{ background: 'var(--color-primary-light)', borderColor: 'var(--color-primary-soft)' }}>
           <div className="sa-stat-label sa-text-info">Repaid</div>
           <div className="sa-stat-value--sm sa-fw-700">{fmt(totalRepaid)}</div>
         </div>

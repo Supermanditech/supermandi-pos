@@ -69,9 +69,9 @@ export function MonitoringTab() {
   };
 
   const statusColor = (status: string) => {
-    if (status === "healthy") return { bg: "var(--color-success-soft)", text: "#166534", dot: "var(--color-success)" };
-    if (status === "warning") return { bg: "var(--color-warning-soft)", text: "#92400E", dot: "var(--color-warning)" };
-    return { bg: "var(--color-error-soft)", text: "#991B1B", dot: "var(--color-error)" };
+    if (status === "healthy") return { bg: "var(--color-success-soft)", text: "var(--color-success-dark)", dot: "var(--color-success)" };
+    if (status === "warning") return { bg: "var(--color-warning-soft)", text: "var(--color-warning-dark)", dot: "var(--color-warning)" };
+    return { bg: "var(--color-error-soft)", text: "var(--color-error-dark)", dot: "var(--color-error)" };
   };
 
   const overallColor = health ? statusColor(health.status) : statusColor("unhealthy");
@@ -278,7 +278,7 @@ export function MonitoringTab() {
             <div className="sa-text-sm sa-text-muted">Global HTTPS + SSL cert</div>
           </div>
           <div>
-            <strong style={{ color: "#7C3AED" }}>Cloud SQL</strong>
+            <strong style={{ color: "var(--color-accent)" }}>Cloud SQL</strong>
             <div className="sa-text-muted">PostgreSQL 15</div>
             <div className="sa-text-sm sa-text-muted">db-f1-micro, asia-south1</div>
           </div>

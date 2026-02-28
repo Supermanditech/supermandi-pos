@@ -218,7 +218,7 @@ export function SettingsTab({
                           <button
                             onClick={() => handleRemoveOverride(flag.flag_key)}
                             disabled={storeFlagSaving[flag.flag_key]}
-                            className="sa-btn-xs" style={{ background: "var(--color-text-secondary)", color: "#fff", border: "none" }}
+                            className="sa-btn-xs" style={{ background: "var(--color-text-secondary)", color: "var(--color-text-inverse)", border: "none" }}
                           >Revert</button>
                         )}
                       </td>

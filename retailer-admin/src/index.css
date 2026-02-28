@@ -645,6 +645,13 @@ input, select, textarea {
   color: #1E40AF;
 }
 
+/* STG-246: Neutral/gray badge for secondary status (e.g. "Loose" mode, "expired" status) */
+.badge-secondary {
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
@@ -2950,6 +2957,7 @@ input, select, textarea {
   color: #ef4444;
 }
 
+/* STG-247: UPI input with proper light/dark mode support (no inline styles) */
 .upi-input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -2957,7 +2965,20 @@ input, select, textarea {
   border-radius: 10px;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.upi-input:focus {
+  border-color: var(--primary);
+}
+.upi-input:disabled {
+  background: var(--bg-alt);
+  color: var(--text-muted);
+}
+.upi-input.upi-input--error {
+  border-color: var(--danger);
 }
 
 .upi-error {
@@ -3599,6 +3620,13 @@ html.dark .breadcrumb-link {
 html.dark .breadcrumb-current {
   color: #f1f5f9;
 }
+
+/* STG-246: Badge dark mode overrides */
+html.dark .badge-success { background: #052e16; border-color: #166534; color: #86efac; }
+html.dark .badge-warning { background: #422006; border-color: #92400e; color: #fde68a; }
+html.dark .badge-danger { background: #450a0a; border-color: #991b1b; color: #fca5a5; }
+html.dark .badge-info { background: #1e3a5f; border-color: #1e40af; color: #93c5fd; }
+html.dark .badge-secondary { background: #334155; border-color: #475569; color: #cbd5e1; }
 
 /* EmptyState: Dark mode */
 html.dark .empty-state-icon {
@@ -5272,11 +5300,11 @@ html.dark .prod-created-title { color: #86efac; }
 html.dark .prod-barcode-text { color: #86efac; }
 html.dark .prod-barcode-hint { color: #86efac; }
 html.dark .prod-barcode-code { background: var(--surface); }
-html.dark .prod-sm-badge { background: #312e81; color: #a5b4fc; }
+/* STG-250: .prod-sm-badge removed — dead rule, no JSX usage */
 html.dark .prod-mode-packaged { background: #1e3a5f; color: #93c5fd; }
 html.dark .prod-mode-loose { background: #422006; color: #fde68a; }
 html.dark .prod-disabled-stock { background-color: var(--surface); }
-html.dark .prod-tips { background: var(--surface); }
+/* STG-250: .prod-tips removed — dead rule, no JSX usage */
 
 /* ===== DashboardPage ===== */
 .dash-container { min-height: 100%; background: var(--background); padding: 2rem; }
@@ -5624,7 +5652,7 @@ html.dark .dash-metric-icon--revenue { background: linear-gradient(135deg, #052e
 html.dark .dash-cat-icon { background: linear-gradient(135deg, #1e3a5f, #1e40af30); }
 html.dark .dash-inv-empty-icon { background: linear-gradient(135deg, #1e3a5f, #1e40af30); }
 html.dark .dash-shimmer { background: linear-gradient(90deg, var(--surface) 25%, #334155 50%, var(--surface) 75%); }
-html.dark .dash-sm-badge { background: #312e81; color: #a5b4fc; }
+/* STG-250: .dash-sm-badge removed — dead rule, no JSX usage */
 
 /* ===== RetailerOnboardingPage ===== */
 .onb-page { min-height: 100vh; background: #F7F9FC; display: flex; flex-direction: column; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -5694,6 +5722,30 @@ html.dark .dash-sm-badge { background: #312e81; color: #a5b4fc; }
 .onb-success-app-label { font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem; }
 .onb-success-app-value { font-family: monospace; color: #0F172A; }
 
+/* STG-249: DocumentUploadField — CSS classes replacing inline hex colors */
+.onb-doc-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100%; padding: 2rem 1.5rem;
+  border: 2px dashed var(--border); border-radius: 12px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  background: transparent;
+}
+.onb-doc-dropzone--disabled { cursor: not-allowed; }
+.onb-doc-dropzone--uploaded { background: var(--success-soft); border-color: var(--success-soft-border); }
+.onb-doc-spinner {
+  display: inline-block; width: 2rem; height: 2rem;
+  border: 2px solid var(--primary); border-top-color: transparent;
+  border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 0.5rem;
+}
+.onb-doc-status-text { color: var(--text-muted); }
+.onb-doc-file-name { color: var(--success); font-weight: 500; }
+.onb-doc-replace-text { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+.onb-doc-upload-text { color: var(--text-secondary); font-weight: 500; }
+.onb-doc-hint-text { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+.onb-doc-preview { margin-top: 1rem; }
+.onb-doc-preview img { max-width: 100%; height: 6rem; object-fit: contain; border-radius: 8px; border: 1px solid var(--border); }
+.onb-doc-error { color: var(--danger); font-size: 0.875rem; margin-top: 0.5rem; }
+
 /* RetailerOnboardingPage dark mode */
 html.dark .onb-page { background: var(--background); }
 html.dark .onb-header { background: var(--surface); border-color: var(--border); }
@@ -5719,6 +5771,13 @@ html.dark .onb-logo-text { background: #1d4ed8; }
 html.dark .onb-step-subtitle { color: var(--text); }
 html.dark .onb-doc-title { color: var(--text); }
 html.dark .onb-input--disabled { background: var(--surface); }
+/* STG-248: Missing dark mode overrides for onboarding text classes */
+html.dark .onb-step-desc { color: var(--text-muted); }
+html.dark .onb-doc-desc { color: var(--text-muted); }
+html.dark .onb-success-text { color: var(--text-secondary); }
+html.dark .onb-success-app-label { color: var(--text-muted); }
+html.dark .onb-logo-sub { color: var(--text-muted); }
+html.dark .onb-logo-sep { color: var(--text-muted); }
 
 /* --- Remaining static inline extractions --- */
 

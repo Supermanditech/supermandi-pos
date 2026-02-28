@@ -341,7 +341,7 @@ export function SuppliersTab({
                   <button
                     onClick={() => handleVerifySupplierDirectly(request.id)}
                     disabled={supplierActionLoading[request.id]}
-                    style={{ background: "#3b82f6", color: "white" }}
+                    style={{ background: "var(--color-primary)", color: "var(--color-text-inverse)" }}
                     title="Verify the supplier directly without linking to another"
                   >
                     {supplierActionLoading[request.id] ? "Verifying..." : "Verify Directly"}
@@ -349,7 +349,7 @@ export function SuppliersTab({
                   <button
                     onClick={() => handleVerifySupplier(request.id)}
                     disabled={supplierActionLoading[request.id] || !selectedSupplierForLink[request.id]}
-                    style={{ background: "var(--color-success)", color: "white" }}
+                    style={{ background: "var(--color-success)", color: "var(--color-text-inverse)" }}
                     title="Link to an existing verified supplier"
                   >
                     {supplierActionLoading[request.id] ? "Linking..." : "Link to Verified"}
@@ -609,7 +609,7 @@ export function SuppliersTab({
           <div className="deviceGrid">
             {pendingProducts.map((product) => (
               <div className="deviceCard" key={product.id} style={{
-                border: selectedProductIds.has(product.id) ? "2px solid #3b82f6" : undefined,
+                border: selectedProductIds.has(product.id) ? "2px solid var(--color-primary)" : undefined,
               }}>
                 <div className="deviceHeader">
                   {/* T-188: Checkbox + T-162: Product image thumbnail (48x48) */}
@@ -686,7 +686,7 @@ export function SuppliersTab({
                 <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
                   <button
                     onClick={() => handleOpenEditProduct(product)}
-                    style={{ background: "#6366f1", color: "white" }}
+                    style={{ background: "var(--color-primary)", color: "var(--color-text-inverse)" }}
                     title="Edit product details, set margin and BNPL"
                   >
                     Edit / Set Margin
@@ -694,7 +694,7 @@ export function SuppliersTab({
                   <button
                     onClick={() => handleApproveProduct(product.id)}
                     disabled={productActionLoading[product.id]}
-                    style={{ background: "var(--color-success)", color: "white" }}
+                    style={{ background: "var(--color-success)", color: "var(--color-text-inverse)" }}
                     title="Approve this product"
                   >
                     {productActionLoading[product.id] ? "Approving..." : "Approve"}
@@ -706,7 +706,7 @@ export function SuppliersTab({
                       await handlePublishProduct(product.id);
                     }}
                     disabled={productActionLoading[product.id] || publishLoading[product.id]}
-                    style={{ background: "#2563eb", color: "white" }}
+                    style={{ background: "var(--color-primary)", color: "var(--color-text-inverse)" }}
                     title="Approve and publish to all linked stores"
                   >
                     {publishLoading[product.id] ? "Publishing..." : "Approve & Publish"}
@@ -767,7 +767,7 @@ export function SuppliersTab({
                 disabled={batchRejectReason.length < 10 || batchActionLoading}
                 style={{
                   background: batchRejectReason.length >= 10 ? "var(--color-error)" : "var(--color-surface-alt)",
-                  color: batchRejectReason.length >= 10 ? "white" : "var(--color-text-secondary)",
+                  color: batchRejectReason.length >= 10 ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
                   border: "none", borderRadius: 4, padding: "8px 16px", fontSize: 14,
                   cursor: batchRejectReason.length >= 10 ? "pointer" : "default",
                 }}
@@ -951,7 +951,7 @@ export function SuppliersTab({
               <button
                 onClick={handleSubmitEditProduct}
                 disabled={editProductLoading}
-                style={{ background: "#3b82f6", color: "white" }}
+                style={{ background: "var(--color-primary)", color: "var(--color-text-inverse)" }}
               >
                 {editProductLoading ? "Saving..." : "Save Changes"}
               </button>

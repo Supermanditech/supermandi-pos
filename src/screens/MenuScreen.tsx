@@ -1,12 +1,12 @@
 // T-108: Brand identity header with shortmark icon
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, ScrollView, StyleSheet, Text, Pressable, View, Alert, RefreshControl } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 
-import { theme, colors, useThemeColors } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { isQaMenuEnabled } from "./UiShowcaseScreen";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
@@ -65,6 +65,8 @@ export default function MenuScreen() {
   const showQaMenu = isQaMenuEnabled();
   // LIVE.POS.THEME.TOKENS_BRAND_PARITY.001: Dynamic theme colors
   const tc = useThemeColors();
+  // STG-285: Dynamic styles for dark mode support
+  const styles = useMemo(() => createStyles(tc), [tc]);
   const buildShaLabel = String((BUILD_INFO as any).gitSha || (BUILD_INFO as any).version || "unknown");
   const buildTimeLabel = String((BUILD_INFO as any).buildTime || (BUILD_INFO as any).buildDate || "unknown");
 
@@ -875,7 +877,7 @@ export default function MenuScreen() {
         }}
       >
         <View style={[styles.menuIcon, styles.menuIconWhatsapp]}>
-          <MaterialCommunityIcons name={"whatsapp" as any} size={20} color={colors.whatsapp} />
+          <MaterialCommunityIcons name={"whatsapp" as any} size={20} color={tc.whatsapp} />
         </View>
         <View style={styles.menuText}>
           <Text style={styles.menuTitle}>WhatsApp Support</Text>
@@ -1125,10 +1127,11 @@ export default function MenuScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+// STG-285: Dynamic styles for dark mode support
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   content: {
     padding: 16,
@@ -1150,8 +1153,8 @@ const styles = StyleSheet.create({
   brandPillText: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textInverse,
-    backgroundColor: theme.colors.primary,
+    color: colors.textInverse,
+    backgroundColor: colors.primary,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1160,14 +1163,14 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   // GO-LIVE-244: Offline indicator styles
   offlineIndicator: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1175,7 +1178,7 @@ const styles = StyleSheet.create({
   offlineText: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.error,
+    color: colors.error,
   },
   // GO-LIVE-237: Sync button styles
   syncRow: {
@@ -1190,25 +1193,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: theme.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
   },
   syncButtonDisabled: {
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
   },
   syncButtonText: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   syncButtonTextDisabled: {
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   statusPanel: {
     marginTop: 12,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 12,
   },
   statusHeader: {
@@ -1220,7 +1223,7 @@ const styles = StyleSheet.create({
   statusHeaderText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: colors.primary,
     textTransform: "uppercase",
   },
   statusRow: {
@@ -1232,44 +1235,44 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     flex: 1,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
   },
   statusBadgeActive: {
-    backgroundColor: theme.colors.successSoft,
+    backgroundColor: colors.successSoft,
   },
   statusBadgeInactive: {
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
   },
   statusBadgeWarning: {
-    backgroundColor: theme.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
   },
   statusBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   statusBadgeTextActive: {
-    color: theme.colors.success,
+    color: colors.success,
   },
   statusBadgeTextInactive: {
-    color: theme.colors.error,
+    color: colors.error,
   },
   statusBadgeTextWarning: {
-    color: theme.colors.warning,
+    color: colors.warning,
   },
   menuItem: {
     marginTop: 16,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -1280,8 +1283,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -1291,12 +1294,12 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary
+    color: colors.textPrimary
   },
   menuSubtitle: {
     marginTop: 2,
     fontSize: 12,
-    color: theme.colors.textSecondary
+    color: colors.textSecondary
   },
   billActions: {
     flexDirection: "row",
@@ -1305,10 +1308,10 @@ const styles = StyleSheet.create({
   },
   billAction: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     paddingVertical: 10,
     alignItems: "center",
     gap: 6
@@ -1316,7 +1319,7 @@ const styles = StyleSheet.create({
   billActionText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textSecondary
+    color: colors.textSecondary
   },
   // POS-PRINT-002: Printer status row styles
   printerStatusRow: {
@@ -1334,7 +1337,7 @@ const styles = StyleSheet.create({
   printerTestLink: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   sectionHeader: {
     marginTop: 24,
@@ -1344,26 +1347,26 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 0.5
   },
   menuIconQa: {
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warning + "15"
+    borderColor: colors.warning,
+    backgroundColor: colors.warning + "15"
   },
   menuIconDanger: {
-    borderColor: theme.colors.error,
-    backgroundColor: theme.colors.error + "15"
+    borderColor: colors.error,
+    backgroundColor: colors.error + "15"
   },
   // SM-020: BNPL menu icon style
   menuIconBnpl: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accent + "15"
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + "15"
   },
   menuIconAi: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + "15"
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + "15"
   },
   menuIconWhatsapp: {
     borderColor: colors.whatsapp,
@@ -1372,7 +1375,7 @@ const styles = StyleSheet.create({
   languageToggle: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -1381,59 +1384,59 @@ const styles = StyleSheet.create({
   langOption: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     paddingHorizontal: 4
   },
   langOptionActive: {
-    color: theme.colors.primary
+    color: colors.primary
   },
   langDivider: {
-    color: theme.colors.border,
+    color: colors.border,
     fontSize: 14
   },
   buildInfo: {
     marginTop: 32,
     padding: 12,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderStyle: "dashed"
   },
   buildInfoDirty: {
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warning + "10"
+    borderColor: colors.warning,
+    backgroundColor: colors.warning + "10"
   },
   buildInfoLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.warning,
+    color: colors.warning,
     marginBottom: 4,
     textTransform: "uppercase"
   },
   buildInfoFingerprint: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4
   },
   buildInfoText: {
     fontSize: 11,
     fontFamily: "monospace",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2
   },
   buildInfoDirtyText: {
     fontSize: 11,
     fontFamily: "monospace",
-    color: theme.colors.warning,
+    color: colors.warning,
     marginTop: 2
   },
   devInfoSection: {
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   releaseBuildInfo: {
     marginTop: 24,
@@ -1443,22 +1446,22 @@ const styles = StyleSheet.create({
   releaseBuildInfoText: {
     fontSize: 11,
     fontFamily: "monospace",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   devInfoLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: colors.primary,
     marginBottom: 4,
     textTransform: "uppercase"
   },
   // TICKET-002: Daily Summary Card styles
   summaryCard: {
     marginTop: 12,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 12,
   },
   summaryGrid: {
@@ -1474,16 +1477,16 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   summaryLabel: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   summaryLoading: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     paddingVertical: 16,
     textAlign: "center",
   },
@@ -1491,12 +1494,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   breakdownTitle: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   breakdownRow: {
@@ -1506,7 +1509,7 @@ const styles = StyleSheet.create({
   },
   breakdownItem: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   // GL-RJ-009: Summary refresh and error styles
   summaryRefresh: {
@@ -1520,19 +1523,19 @@ const styles = StyleSheet.create({
   },
   summaryErrorText: {
     fontSize: 13,
-    color: theme.colors.error,
+    color: colors.error,
     textAlign: 'center',
   },
   summaryRetryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 8,
   },
   summaryRetryText: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   // GO-LIVE-250: Trend indicator styles
   summaryValueRow: {
@@ -1549,19 +1552,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   trendBadgeUp: {
-    backgroundColor: theme.colors.successSoft,
+    backgroundColor: colors.successSoft,
   },
   trendBadgeDown: {
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
   },
   trendText: {
     fontSize: 9,
     fontWeight: '600',
   },
   trendTextUp: {
-    color: theme.colors.success,
+    color: colors.success,
   },
   trendTextDown: {
-    color: theme.colors.error,
+    color: colors.error,
   },
-});
+}); }

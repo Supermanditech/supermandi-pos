@@ -1,5 +1,6 @@
 /**
  * GL-CRIT-0083, GL-CRIT-0084, GL-CRIT-0085: Unified Loading States
+ * STG-275: Converted to useThemeColors() for dark mode support
  *
  * Provides consistent loading UX across the app:
  * - LoadingState: Full-screen or inline loading indicator
@@ -7,7 +8,7 @@
  * - useLoadingCoordinator: Coordinates multiple async operations
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -18,7 +19,7 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../../theme";
+import { useThemeColors } from "../../theme";
 
 // =============================================================================
 // TYPES
@@ -86,6 +87,8 @@ export function LoadingState({
   minDisplayMs = 0,
 }: LoadingStateProps) {
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [shouldShow, setShouldShow] = useState(loading);
   const loadStartRef = useRef<number>(0);
 
@@ -118,7 +121,7 @@ export function LoadingState({
     return (
       <View style={[styles.fullScreenContainer, style]}>
         <View style={styles.loadingCard}>
-          <ActivityIndicator size={size} color={theme.colors.primary} />
+          <ActivityIndicator size={size} color={colors.primary} />
           <Text style={styles.loadingText}>{displayMessage}</Text>
         </View>
       </View>
@@ -127,7 +130,7 @@ export function LoadingState({
 
   return (
     <View style={[styles.inlineContainer, style]}>
-      <ActivityIndicator size={size} color={theme.colors.primary} />
+      <ActivityIndicator size={size} color={colors.primary} />
       {message !== "" && <Text style={styles.loadingText}>{displayMessage}</Text>}
     </View>
   );
@@ -146,6 +149,8 @@ export function Skeleton({
   borderRadius = 4,
   style,
 }: SkeletonProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -197,6 +202,8 @@ export function SkeletonList({
   spacing = 8,
   showThumbnail = false,
 }: SkeletonListProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.skeletonList}>
       {Array.from({ length: count }).map((_, index) => (
@@ -225,6 +232,8 @@ export function SkeletonList({
  * GL-CRIT-0084: Skeleton grid for BuyScreen catalog.
  */
 export function SkeletonGrid({ count = 6 }: { count?: number }) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.skeletonGrid}>
       {Array.from({ length: count }).map((_, index) => (
@@ -311,21 +320,21 @@ export function useLoadingCoordinator(
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   fullScreenContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: colors.overlay,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
   },
   loadingCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 24,
     alignItems: "center",
     minWidth: 150,
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -340,11 +349,11 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
   },
   skeleton: {
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
   },
   skeletonList: {
     padding: 16,
@@ -352,7 +361,7 @@ const styles = StyleSheet.create({
   skeletonItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     padding: 12,
   },
@@ -379,6 +388,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
   },
-});
+}); }
 
 export default LoadingState;

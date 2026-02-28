@@ -210,7 +210,7 @@ export default function ChatConversationScreen({
     ownText: { color: colors.textInverse },
     otherText: { color: colors.textPrimary },
     time: { fontSize: 10, marginTop: 2 },
-    ownTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' }, // Semi-transparent white on primary bg
+    ownTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' }, // STG-281: ACCEPTED — semi-transparent white on primary bubble works in both light/dark mode
     otherTime: { color: colors.textTertiary },
     attachmentPreview: {
       flexDirection: 'row', alignItems: 'center', gap: 4,

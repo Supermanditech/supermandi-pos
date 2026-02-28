@@ -1,8 +1,9 @@
 // T-213: Offline sync conflict resolution panel
 // Full-screen modal showing pending items, failed items, and stock drifts
 // with resolution actions (retry, discard, accept server value)
+// STG-274: Converted to useThemeColors() for dark mode support
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -12,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { theme } from "../../theme";
+import { useThemeColors } from "../../theme";
 import { useSyncStore, type StockDrift } from "../../stores/syncStore";
 import { getPendingEvents, type OfflineEvent } from "../../services/offline/outbox";
 import {
@@ -29,6 +30,8 @@ interface Props {
 }
 
 export function SyncConflictPanel({ visible, onClose }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<TabKey>("pending");
   const [pendingItems, setPendingItems] = useState<OfflineEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,7 +98,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
           <MaterialCommunityIcons
             name="clock-outline"
             size={14}
-            color={theme.colors.warning}
+            color={colors.warning}
           />
           <Text style={styles.itemType}>{item.type.replace(/_/g, " ")}</Text>
         </View>
@@ -111,7 +114,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
 
   function renderDriftItem(drift: StockDrift) {
     const direction = drift.delta > 0 ? "up" : "down";
-    const color = drift.delta > 0 ? theme.colors.success : theme.colors.error;
+    const color = drift.delta > 0 ? colors.success : colors.error;
     return (
       <View style={styles.itemCard}>
         <View style={styles.itemHeader}>
@@ -131,7 +134,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
           <MaterialCommunityIcons
             name="arrow-right"
             size={12}
-            color={theme.colors.textTertiary}
+            color={colors.textTertiary}
           />
           <Text style={styles.driftLabel}>
             Server: <Text style={styles.driftNumber}>{drift.serverStock}</Text>
@@ -159,7 +162,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
             <MaterialCommunityIcons
               name="close"
               size={22}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         </View>
@@ -201,7 +204,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                   <MaterialCommunityIcons
                     name="check-circle-outline"
                     size={48}
-                    color={theme.colors.success}
+                    color={colors.success}
                   />
                   <Text style={styles.emptyTitle}>All synced!</Text>
                   <Text style={styles.emptySubtitle}>
@@ -225,7 +228,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                   <MaterialCommunityIcons
                     name="sync"
                     size={16}
-                    color={theme.colors.textInverse}
+                    color={colors.textInverse}
                   />
                   <Text style={styles.primaryBtnText}>
                     {syncing ? "Syncing..." : "Sync All"}
@@ -242,7 +245,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                   <MaterialCommunityIcons
                     name="check-circle-outline"
                     size={48}
-                    color={theme.colors.success}
+                    color={colors.success}
                   />
                   <Text style={styles.emptyTitle}>No failures</Text>
                   <Text style={styles.emptySubtitle}>
@@ -254,7 +257,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                   <MaterialCommunityIcons
                     name="alert-circle"
                     size={32}
-                    color={theme.colors.error}
+                    color={colors.error}
                   />
                   <Text style={styles.failedCount}>
                     {deadletterCount} failed item{deadletterCount !== 1 ? "s" : ""}
@@ -274,7 +277,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                     <MaterialCommunityIcons
                       name="refresh"
                       size={16}
-                      color={theme.colors.textInverse}
+                      color={colors.textInverse}
                     />
                     <Text style={styles.primaryBtnText}>Retry All</Text>
                   </Pressable>
@@ -285,7 +288,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                     <MaterialCommunityIcons
                       name="delete-outline"
                       size={16}
-                      color={theme.colors.error}
+                      color={colors.error}
                     />
                     <Text style={styles.dangerBtnText}>Clear All</Text>
                   </Pressable>
@@ -301,7 +304,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                   <MaterialCommunityIcons
                     name="check-circle-outline"
                     size={48}
-                    color={theme.colors.success}
+                    color={colors.success}
                   />
                   <Text style={styles.emptyTitle}>No drifts</Text>
                   <Text style={styles.emptySubtitle}>
@@ -332,7 +335,7 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
                     <MaterialCommunityIcons
                       name="sync"
                       size={16}
-                      color={theme.colors.textInverse}
+                      color={colors.textInverse}
                     />
                     <Text style={styles.primaryBtnText}>
                       {syncing ? "Syncing..." : "Force Sync"}
@@ -348,10 +351,10 @@ export function SyncConflictPanel({ visible, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -360,19 +363,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   tabBar: {
     flexDirection: "row",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
@@ -385,18 +388,18 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   tabActive: {
-    borderBottomColor: theme.colors.primary,
+    borderBottomColor: colors.primary,
   },
   tabText: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   tabTextActive: {
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   tabBadge: {
-    backgroundColor: theme.colors.error,
+    backgroundColor: colors.error,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -407,7 +410,7 @@ const styles = StyleSheet.create({
   tabBadgeText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#fff",
+    color: colors.textInverse,
   },
   content: {
     flex: 1,
@@ -426,20 +429,20 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginTop: 8,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
   },
   itemCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     gap: 4,
   },
   itemHeader: {
@@ -450,17 +453,17 @@ const styles = StyleSheet.create({
   itemType: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     flex: 1,
   },
   itemId: {
     fontSize: 10,
     fontFamily: "monospace",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   itemTime: {
     fontSize: 10,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   driftValues: {
     flexDirection: "row",
@@ -470,11 +473,11 @@ const styles = StyleSheet.create({
   },
   driftLabel: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   driftNumber: {
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   driftDelta: {
     fontSize: 12,
@@ -482,7 +485,7 @@ const styles = StyleSheet.create({
   },
   driftExplainer: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     padding: 12,
     lineHeight: 18,
   },
@@ -496,12 +499,12 @@ const styles = StyleSheet.create({
   failedCount: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.error,
+    color: colors.error,
     marginTop: 8,
   },
   failedHelp: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     lineHeight: 18,
   },
@@ -510,8 +513,8 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 12,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
   },
   actionBtn: {
     flex: 1,
@@ -523,23 +526,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   primaryBtn: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   primaryBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   dangerBtn: {
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
     borderWidth: 1,
-    borderColor: theme.colors.error,
+    borderColor: colors.error,
   },
   dangerBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.error,
+    color: colors.error,
   },
-});
+}); }
 
 export default SyncConflictPanel;

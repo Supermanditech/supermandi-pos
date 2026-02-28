@@ -1,11 +1,12 @@
 // T-107: Brand-styled splash screen with shortmark icon
 // SCR-S1-HARDENING: Production-grade error handling, timeout, retry, a11y
-import React, { useEffect, useState, useCallback } from "react";
+// STG-283: Converted error card/retry styles to use dynamic theme colors
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Pressable, BackHandler } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { theme, colors, typography, spacing, useThemeColors } from "../theme";
+import { theme, typography, spacing, useThemeColors } from "../theme";
 import { startCloudEventLogger } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
 import { startAutoSync } from "../services/syncService";
@@ -37,6 +38,59 @@ export default function SplashScreen() {
   const [errorState, setErrorState] = useState<string | null>(null);
   // LIVE.POS.THEME.TOKENS_BRAND_PARITY.001: Dynamic theme colors for brand treatment
   const tc = useThemeColors();
+
+  const dynamicStyles = useMemo(() => StyleSheet.create({
+    brandName: {
+      ...typography.h2,
+      color: tc.textInverse,
+      marginTop: spacing.md,
+    },
+    subtitle: {
+      ...typography.label,
+      color: tc.textInverse,
+      opacity: 0.8,
+      marginTop: spacing.xs,
+    },
+    errorCard: {
+      marginTop: spacing.xl,
+      backgroundColor: tc.overlayInverse,
+      borderRadius: theme.borderRadius.lg,
+      padding: spacing.lg,
+      alignItems: "center",
+      maxWidth: 280,
+    },
+    errorText: {
+      ...typography.label,
+      color: tc.textInverse,
+      fontWeight: "600",
+      marginBottom: spacing.xs,
+    },
+    errorDetail: {
+      ...typography.caption,
+      color: tc.textInverse,
+      opacity: 0.7,
+      textAlign: "center",
+      marginBottom: spacing.md,
+    },
+    retryButton: {
+      backgroundColor: tc.textInverse,
+      borderRadius: theme.borderRadius.md,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    retryText: {
+      ...typography.label,
+      color: tc.primary,
+      fontWeight: "600",
+    },
+    skipText: {
+      ...typography.caption,
+      color: tc.textInverse,
+      opacity: 0.8,
+      textDecorationLine: "underline",
+    },
+  }), [tc]);
 
   // #405: Prevent Android back button during splash (consistent with gate screens)
   useEffect(() => {
@@ -143,24 +197,24 @@ export default function SplashScreen() {
           dotColor={tc.textInverse}
           radius={10}
         />
-        <Text style={styles.brandName} accessibilityRole="header">SuperMandi</Text>
-        <View style={styles.errorCard} testID="splash-error-card">
+        <Text style={dynamicStyles.brandName} accessibilityRole="header">SuperMandi</Text>
+        <View style={dynamicStyles.errorCard} testID="splash-error-card">
           <Text
-            style={styles.errorText}
+            style={dynamicStyles.errorText}
             accessibilityLabel={`Error: ${errorState}`}
             accessibilityRole="alert"
           >
             Something went wrong
           </Text>
-          <Text style={styles.errorDetail}>{errorState}</Text>
+          <Text style={dynamicStyles.errorDetail}>{errorState}</Text>
           <Pressable
             onPress={handleRetry}
-            style={styles.retryButton}
+            style={dynamicStyles.retryButton}
             testID="splash-retry-button"
             accessibilityLabel="Retry loading"
             accessibilityRole="button"
           >
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={dynamicStyles.retryText}>Retry</Text>
           </Pressable>
           <Pressable
             onPress={() => navigation.replace("EnrollDevice")}
@@ -169,7 +223,7 @@ export default function SplashScreen() {
             accessibilityLabel="Continue to enrollment"
             accessibilityRole="button"
           >
-            <Text style={styles.skipText}>Continue without session</Text>
+            <Text style={dynamicStyles.skipText}>Continue without session</Text>
           </Pressable>
         </View>
       </View>
@@ -191,14 +245,14 @@ export default function SplashScreen() {
         radius={10}
       />
       <Text
-        style={styles.brandName}
+        style={dynamicStyles.brandName}
         testID="splash-brand-name"
         accessibilityRole="header"
       >
         SuperMandi
       </Text>
       <Text
-        style={styles.subtitle}
+        style={dynamicStyles.subtitle}
         testID="splash-subtitle"
       >
         POS
@@ -215,69 +269,18 @@ export default function SplashScreen() {
   );
 }
 
+// Layout-only styles that don't depend on theme colors
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: theme.colors.primary,
-  },
-  brandName: {
-    ...typography.h2,
-    color: colors.textInverse,
-    marginTop: spacing.md,
-  },
-  subtitle: {
-    ...typography.label,
-    color: colors.textInverse,
-    opacity: 0.8,
-    marginTop: spacing.xs,
   },
   loader: {
     marginTop: spacing.xl,
   },
-  // S1-1: Error state styles
-  errorCard: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.overlayInverse,
-    borderRadius: theme.borderRadius.lg,
-    padding: spacing.lg,
-    alignItems: "center",
-    maxWidth: 280,
-  },
-  errorText: {
-    ...typography.label,
-    color: colors.textInverse,
-    fontWeight: "600",
-    marginBottom: spacing.xs,
-  },
-  errorDetail: {
-    ...typography.caption,
-    color: colors.textInverse,
-    opacity: 0.7,
-    textAlign: "center",
-    marginBottom: spacing.md,
-  },
-  retryButton: {
-    backgroundColor: colors.textInverse,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.sm,
-  },
-  retryText: {
-    ...typography.label,
-    color: colors.primary,
-    fontWeight: "600",
-  },
   skipButton: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-  },
-  skipText: {
-    ...typography.caption,
-    color: colors.textInverse,
-    opacity: 0.8,
-    textDecorationLine: "underline",
   },
 });

@@ -165,8 +165,8 @@ export function SupportQueueTab() {
             onClick={() => setView('queue')}
             className={`sa-btn-sm sa-border sa-radius-6 ${view === 'queue' ? 'sa-text-md' : 'sa-text-md sa-text-muted'}`}
             style={{
-              background: view === 'queue' ? '#1e40af' : 'var(--color-surface)',
-              color: view === 'queue' ? '#fff' : undefined,
+              background: view === 'queue' ? 'var(--color-primary-dark)' : 'var(--color-surface)',
+              color: view === 'queue' ? 'var(--color-text-inverse)' : undefined,
               cursor: 'pointer',
             }}
           >Support Queue</button>
@@ -174,8 +174,8 @@ export function SupportQueueTab() {
             onClick={() => setView('templates')}
             className={`sa-btn-sm sa-border sa-radius-6 ${view === 'templates' ? 'sa-text-md' : 'sa-text-md sa-text-muted'}`}
             style={{
-              background: view === 'templates' ? '#1e40af' : 'var(--color-surface)',
-              color: view === 'templates' ? '#fff' : undefined,
+              background: view === 'templates' ? 'var(--color-primary-dark)' : 'var(--color-surface)',
+              color: view === 'templates' ? 'var(--color-text-inverse)' : undefined,
               cursor: 'pointer',
             }}
           >Templates</button>
@@ -198,8 +198,8 @@ export function SupportQueueTab() {
                 onClick={() => setStatusFilter(s)}
                 className={`sa-btn-sm sa-border sa-radius-6 ${statusFilter === s ? 'sa-fw-600' : ''}`}
                 style={{
-                  background: statusFilter === s ? '#f0f9ff' : 'var(--color-surface)',
-                  color: statusFilter === s ? '#1e40af' : 'var(--color-text-secondary)',
+                  background: statusFilter === s ? 'var(--color-primary-light)' : 'var(--color-surface)',
+                  color: statusFilter === s ? 'var(--color-primary-dark)' : 'var(--color-text-secondary)',
                   cursor: 'pointer',
                 }}
               >{s.charAt(0).toUpperCase() + s.slice(1)}</button>
@@ -263,8 +263,8 @@ export function SupportQueueTab() {
                         ) : (
                           <div className={msg.senderType === 'support' || msg.senderType === 'admin' ? 'sa-msg-sent' : 'sa-msg-received'}>
                             <div className="sa-msg-bubble" style={{
-                              background: msg.senderType === 'support' || msg.senderType === 'admin' ? '#1e40af' : 'var(--color-surface)',
-                              color: msg.senderType === 'support' || msg.senderType === 'admin' ? '#fff' : 'var(--color-text-primary)',
+                              background: msg.senderType === 'support' || msg.senderType === 'admin' ? 'var(--color-primary-dark)' : 'var(--color-surface)',
+                              color: msg.senderType === 'support' || msg.senderType === 'admin' ? 'var(--color-text-inverse)' : 'var(--color-text-primary)',
                               border: msg.senderType === 'support' || msg.senderType === 'admin' ? 'none' : '1px solid var(--color-border)',
                             }}>
                               <div className="sa-text-xs" style={{ opacity: 0.7, marginBottom: 2 }}>{msg.senderType}</div>
@@ -289,8 +289,8 @@ export function SupportQueueTab() {
                     />
                     <button onClick={sendReply} disabled={!replyText.trim()} className="sa-btn-sm sa-radius-6 sa-text-md" style={{
                       padding: '0.5rem 1rem', border: 'none',
-                      background: replyText.trim() ? '#1e40af' : 'var(--color-text-secondary)',
-                      color: '#fff', cursor: 'pointer',
+                      background: replyText.trim() ? 'var(--color-primary-dark)' : 'var(--color-text-secondary)',
+                      color: 'var(--color-text-inverse)', cursor: 'pointer',
                     }}>Send</button>
                   </div>
                 </>

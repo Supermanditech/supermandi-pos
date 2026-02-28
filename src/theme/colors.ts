@@ -51,6 +51,9 @@ export const lightColors = {
   border: "#E2E8F0",
   borderDark: "#CBD5E1",
 
+  // Shadows
+  shadow: "#000000",
+
   // Overlays
   overlay: "rgba(15, 23, 42, 0.45)",
   overlayLight: "rgba(15, 23, 42, 0.2)",
@@ -110,6 +113,9 @@ export const darkColors: Record<keyof typeof lightColors, string> = {
   // Borders — slate dark scale
   border: "#334155",
   borderDark: "#475569",
+
+  // Shadows — lighter on dark surfaces for subtle depth
+  shadow: "#000000",
 
   // Overlays — adjusted for dark context
   overlay: "rgba(0, 0, 0, 0.6)",

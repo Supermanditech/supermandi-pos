@@ -1006,22 +1006,11 @@ function DocumentUploadField({
   accept: string;
   disabled?: boolean;
 }) {
+  const dropzoneClass = `onb-doc-dropzone${disabled ? ' onb-doc-dropzone--disabled' : ''}${document.status === 'uploaded' ? ' onb-doc-dropzone--uploaded' : ''}`;
+
   return (
     <div>
-      <label style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-        padding: '2rem 1.5rem',
-        border: '2px dashed #cbd5e1',
-        borderRadius: '12px',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'border-color 0.15s, background 0.15s',
-        background: document.status === 'uploaded' ? '#f0fdf4' : 'transparent',
-        borderColor: document.status === 'uploaded' ? '#86efac' : '#cbd5e1',
-      }}>
+      <label className={dropzoneClass}>
         <input
           type="file"
           accept={accept}
@@ -1031,49 +1020,39 @@ function DocumentUploadField({
         />
         {document.status === 'uploading' ? (
           <div style={{ textAlign: 'center' }}>
-            <span style={{
-              display: 'inline-block',
-              width: '2rem',
-              height: '2rem',
-              border: '2px solid #2563eb',
-              borderTopColor: 'transparent',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              marginBottom: '0.5rem',
-            }} />
-            <p style={{ color: '#64748b' }}>Uploading...</p>
+            <span className="onb-doc-spinner" />
+            <p className="onb-doc-status-text">Uploading...</p>
           </div>
         ) : document.file || document.status === 'uploaded' ? (
           <div style={{ textAlign: 'center' }}>
-            <svg width="32" height="32" fill="none" stroke="#22c55e" viewBox="0 0 24 24" style={{ marginBottom: '0.5rem' }}>
+            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ marginBottom: '0.5rem', color: 'var(--success)' }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <p style={{ color: '#22c55e', fontWeight: 500 }}>{document.file?.name || 'Uploaded'}</p>
-            <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '0.25rem' }}>Click to replace</p>
+            <p className="onb-doc-file-name">{document.file?.name || 'Uploaded'}</p>
+            <p className="onb-doc-replace-text">Click to replace</p>
           </div>
         ) : (
           <div style={{ textAlign: 'center' }}>
-            <svg width="40" height="40" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style={{ marginBottom: '0.75rem' }}>
+            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ marginBottom: '0.75rem', color: 'var(--text-muted)' }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            <p style={{ color: '#475569', fontWeight: 500 }}>Click to upload</p>
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.25rem' }}>or drag and drop</p>
+            <p className="onb-doc-upload-text">Click to upload</p>
+            <p className="onb-doc-hint-text">or drag and drop</p>
           </div>
         )}
       </label>
 
       {document.preview && (
-        <div style={{ marginTop: '1rem' }}>
+        <div className="onb-doc-preview">
           <img
             src={document.preview}
             alt="Preview"
-            style={{ maxWidth: '100%', height: '6rem', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }}
           />
         </div>
       )}
 
       {document.error && (
-        <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.5rem' }}>{document.error}</p>
+        <p className="onb-doc-error">{document.error}</p>
       )}
     </div>
   );

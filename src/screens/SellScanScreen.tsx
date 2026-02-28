@@ -4081,7 +4081,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.27,
     shadowRadius: 4.65,
@@ -4107,7 +4107,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: 8,
     gap: 12,
     elevation: 6,
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.27,
     shadowRadius: 4.65,
@@ -4240,7 +4240,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   cartOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    backgroundColor: colors.overlay,
     justifyContent: "flex-end",
   },
   cartOverlayTap: {
@@ -4248,7 +4248,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   onboardingOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    backgroundColor: colors.overlay,
     justifyContent: "flex-end",
   },
   onboardingOverlayTap: {
@@ -4455,7 +4455,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     marginVertical: 4,
     borderRadius: 10,
     backgroundColor: colors.surface,
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 3,
@@ -4477,9 +4477,9 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: 10,
   },
   cartItemRowFree: {
-    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    backgroundColor: colors.warningSoft,
     borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.2)",
+    borderColor: colors.warningBorder,
   },
   cartItemNameRow: {
     flexDirection: "row",
@@ -4500,7 +4500,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     gap: 4,
   },
   discountBadge: {
-    backgroundColor: "rgba(29, 78, 216, 0.12)",
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -4934,7 +4934,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderColor: colors.border,
     padding: 12,
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -5109,7 +5109,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   editOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    backgroundColor: colors.overlay,
     justifyContent: "flex-end",
   },
   editOverlayTap: {

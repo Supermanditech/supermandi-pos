@@ -266,7 +266,7 @@ export default function SuccessPrintScreenV2() {
     // WA-001: Phone modal styles
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
+      backgroundColor: colors.overlay,
       justifyContent: "center",
       alignItems: "center",
       padding: 24,

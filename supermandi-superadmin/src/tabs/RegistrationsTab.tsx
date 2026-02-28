@@ -144,8 +144,8 @@ export function RegistrationsTab({
                     <button
                       className="sa-btn-xs sa-fw-600 sa-text-green"
                       style={{
-                        border: "1px solid #10b981",
-                        background: sendingEnrollment === evt.storeId ? "#d1fae5" : "var(--color-success-soft)",
+                        border: "1px solid var(--color-success)",
+                        background: sendingEnrollment === evt.storeId ? "var(--color-success-soft)" : "var(--color-success-soft)",
                         cursor: sendingEnrollment === evt.storeId ? "wait" : "pointer",
                       }}
                       disabled={!!sendingEnrollment}

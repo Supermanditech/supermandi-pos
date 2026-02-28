@@ -1,7 +1,7 @@
 {
-  "version": "66.0",
+  "version": "67.0",
   "lastUpdated": "2026-03-01T00:00:00.000Z",
-  "currentPhase": "FINAL_PRE_DEPLOY_AUDIT_COMPLETE: STG-001..286 tracked, 244 fixed, 2 wontfix, 40 deferred cosmetic. 0 P1/P2 blockers. baseline main@d69c4a20. Deploy hold active. Ready for deploy-prep decision.",
+  "currentPhase": "POST_AUDIT_UX_REFINEMENT_COMPLETE: STG-001..286 all closed. 283 fixed, 2 wontfix, 1 accepted. 0 P1/P2 blockers. 0 deferred. Cosmetic polish production-grade complete. Deploy hold active. Ready for deploy-prep.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -11,11 +11,12 @@
     "issueRange": "STG-001..STG-286",
     "summary": {
       "total": 286,
-      "fixed": 244,
+      "fixed": 283,
       "wontfix": 2,
       "diagnosed": 0,
       "found": 0,
-      "deferredCosmetic": 40
+      "deferredCosmetic": 0,
+      "accepted": 1
     },
     "wontfixRegistry": {
       "STG-021": {
@@ -39,23 +40,24 @@
       "lockRisk": "LOW (sub-second ACCESS EXCLUSIVE on small tables)"
     },
     "latestWave": {
-      "issueRange": "STG-257..STG-286",
-      "type": "final_pre_deploy_audit",
-      "auditDate": "2026-03-01",
+      "issueRange": "STG-246..STG-286",
+      "type": "post_audit_ux_refinement",
+      "date": "2026-03-01",
       "summary": {
-        "newP3Found": 30,
-        "newWontfix": 1,
-        "allDeferredCosmetic": true,
-        "openP1P2": 0,
-        "deployEligible": true
+        "totalInScope": 41,
+        "fixed": 39,
+        "wontfix": 1,
+        "accepted": 1,
+        "deferredCosmetic": 0,
+        "newRegressions": 0,
+        "productionGradeComplete": true
       },
-      "priorWave": {
-        "issueRange": "STG-237..STG-256",
-        "implementedAndReiteratedAt": "d69c4a20",
-        "p2Fixed": 8,
-        "p3Logged": 12
-      },
-      "safeToPark": true
+      "platforms": {
+        "retailerWeb": "5 fixed (STG-246..250)",
+        "supplierWeb": "5 fixed (STG-257..261)",
+        "superadminWeb": "14 fixed (STG-251..256, STG-262..269)",
+        "posApp": "15 fixed + 1 wontfix + 1 accepted (STG-270..286)"
+      }
     },
     "operatorStepsRemaining": [
       "Cloud SQL backup before migration run",

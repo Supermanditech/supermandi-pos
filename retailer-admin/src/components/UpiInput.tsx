@@ -43,7 +43,6 @@ export function validateUpiVpa(vpa: string): string | undefined {
 
 export default function UpiInput({ value, onChange, disabled = false, required = false }: UpiInputProps) {
   const [touched, setTouched] = useState(false);
-  const [focused, setFocused] = useState(false);
 
   const error = touched ? validateUpiVpa(value) || (required && !value ? 'UPI VPA is required' : undefined) : undefined;
 
@@ -54,11 +53,6 @@ export default function UpiInput({ value, onChange, disabled = false, required =
 
   const handleBlur = useCallback(() => {
     setTouched(true);
-    setFocused(false);
-  }, []);
-
-  const handleFocus = useCallback(() => {
-    setFocused(true);
   }, []);
 
   return (
@@ -71,17 +65,11 @@ export default function UpiInput({ value, onChange, disabled = false, required =
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}
-        onFocus={handleFocus}
         disabled={disabled}
         placeholder="yourstore@upi"
         autoComplete="off"
         spellCheck={false}
-        className="upi-input"
-        style={{
-          border: `1px solid ${error ? '#ef4444' : focused ? '#3b82f6' : '#e2e8f0'}`,
-          background: disabled ? '#f8fafc' : 'white',
-          color: disabled ? '#94a3b8' : '#1e293b',
-        }}
+        className={`upi-input${error ? ' upi-input--error' : ''}`}
       />
       {error && (
         <p className="upi-error">

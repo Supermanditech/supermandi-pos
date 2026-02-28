@@ -1296,7 +1296,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
 function createModalStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    backgroundColor: colors.overlay,
     justifyContent: "center",
     padding: 20,
   },

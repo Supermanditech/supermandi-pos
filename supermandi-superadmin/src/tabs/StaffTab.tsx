@@ -129,7 +129,7 @@ export function StaffTab({
                       onChange={(e) => handleStaffRoleChange(s.id, e.target.value as "CASHIER" | "STOCK_MANAGER" | "MANAGER")}
                       disabled={staffActionLoading === s.id}
                       className="sa-text-xs sa-fw-600 sa-radius-6 sa-border"
-                      style={{ padding: "2px 6px", background: s.role === "MANAGER" ? "#dbeafe" : s.role === "STOCK_MANAGER" ? "#fef3c7" : "var(--color-surface-alt)", color: s.role === "MANAGER" ? "#1e40af" : s.role === "STOCK_MANAGER" ? "#92400e" : "var(--color-text-secondary)", cursor: "pointer" }}
+                      style={{ padding: "2px 6px", background: s.role === "MANAGER" ? "var(--color-primary-light)" : s.role === "STOCK_MANAGER" ? "var(--color-warning-soft)" : "var(--color-surface-alt)", color: s.role === "MANAGER" ? "var(--color-primary-dark)" : s.role === "STOCK_MANAGER" ? "var(--color-warning-dark)" : "var(--color-text-secondary)", cursor: "pointer" }}
                     >
                       <option value="CASHIER">CASHIER</option>
                       <option value="STOCK_MANAGER">STOCK_MANAGER</option>

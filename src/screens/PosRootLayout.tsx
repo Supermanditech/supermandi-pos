@@ -125,6 +125,8 @@ export default function PosRootLayout() {
   const hidInputRef = useRef<TextInput>(null);
   // LIVE.POS.THEME.TOKENS_BRAND_PARITY.001: Dynamic theme colors
   const tc = useThemeColors();
+  // STG-286: Dynamic styles for dark mode support
+  const styles = useMemo(() => createStyles(tc), [tc]);
   const hidFocusRequestRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hidActiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1477,10 +1479,11 @@ export default function PosRootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+// STG-286: Dynamic styles for dark mode support
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   // REG-AUTH-401: storeInactiveBanner styles removed - replaced by LimitedModeBanner component
   // UI-REVEAL: API connection error banner styles
@@ -1490,15 +1493,15 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: theme.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.warning,
+    borderBottomColor: colors.warning,
   },
   apiConnectionBannerText: {
     flex: 1,
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.warning,
+    color: colors.warning,
   },
   tabs: {
     flexDirection: "row",
@@ -1506,15 +1509,15 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
     position: "relative",
   },
   tabIndicator: {
     position: "absolute",
     left: 0,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 999,
   },
   tabButton: {
@@ -1527,7 +1530,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
     backgroundColor: "transparent",
     zIndex: 1,
   },
@@ -1536,7 +1539,7 @@ const styles = StyleSheet.create({
   },
   tabButtonDisabled: {
     opacity: 0.5,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   tabMenuContent: {
     flexDirection: "row",
@@ -1556,31 +1559,31 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 11,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   tabTextCompact: {
     fontSize: 11,
   },
   tabTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   reorderTab: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
   },
   reorderTabOn: {
-    backgroundColor: theme.colors.success,
-    borderColor: theme.colors.success,
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   reorderTabOff: {
-    backgroundColor: theme.colors.error,
-    borderColor: theme.colors.error,
+    backgroundColor: colors.error,
+    borderColor: colors.error,
   },
   reorderPulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: theme.colors.textInverse,
+    backgroundColor: colors.textInverse,
   },
   noticeWrap: {
     paddingHorizontal: 12,
@@ -1591,15 +1594,15 @@ const styles = StyleSheet.create({
   },
   cameraOverlay: {
     flex: 1,
-    backgroundColor: theme.colors.overlayLight,
+    backgroundColor: colors.overlayLight,
     justifyContent: "center",
     padding: theme.spacing.md,
   },
   cameraCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.xl,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
   },
   cameraView: {
@@ -1619,18 +1622,18 @@ const styles = StyleSheet.create({
   },
   cameraHint: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "600",
   },
   cameraTimeoutHint: {
     marginTop: 2,
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     fontWeight: "600",
   },
   cameraClose: {
     fontSize: 12,
-    color: theme.colors.primary,
+    color: colors.primary,
     fontWeight: "700",
   },
   cameraPermission: {
@@ -1639,18 +1642,18 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   cameraPermissionText: {
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
   },
   cameraPermissionButton: {
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
     borderRadius: theme.borderRadius.lg,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },
   cameraPermissionButtonText: {
-    color: theme.colors.primary,
+    color: colors.primary,
     fontWeight: "700",
   },
   hidInput: {
@@ -1659,4 +1662,4 @@ const styles = StyleSheet.create({
     width: 1,
     height: 1,
   },
-});
+}); }

@@ -189,7 +189,7 @@ export function QualityDashboardTab() {
             onClick={loadData}
             disabled={loading}
             style={{
-              padding: "6px 12px", fontSize: 13, background: "#2563EB", color: "#FFF",
+              padding: "6px 12px", fontSize: 13, background: "var(--color-primary)", color: "var(--color-text-inverse)",
               border: "none", borderRadius: 6,
               opacity: loading ? 0.6 : 1,
             }}

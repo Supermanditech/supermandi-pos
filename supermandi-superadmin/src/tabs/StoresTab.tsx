@@ -287,7 +287,7 @@ export function StoresTab({
 
       {/* SA-P1-007: Bulk feature flag toolbar */}
       {selectedStoreIds.size > 0 && (
-        <div className="sa-flex sa-gap-8 sa-py-8 sa-px-12 sa-radius-6" style={{ background: "#eff6ff", margin: "0 16px 8px" }}>
+        <div className="sa-flex sa-gap-8 sa-py-8 sa-px-12 sa-radius-6" style={{ background: "var(--color-primary-light)", margin: "0 16px 8px" }}>
           <span className="sa-text-md sa-fw-500">{selectedStoreIds.size} store(s) selected</span>
           <select value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} className="sa-select sa-input--sm">
             <option value="">Select flag...</option>

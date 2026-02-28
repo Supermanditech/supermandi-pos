@@ -1,106 +1,112 @@
 // REG-AUTH-401: LIMITED MODE Banner for POS App
 // Displays when store's application status is not ACTIVE
 // Shows status-specific messages and blocked actions
+// STG-273: All colors use useThemeColors() for dark mode support
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../theme";
+import { useThemeColors } from "../theme";
+import type { ColorPalette } from "../theme/colors";
 
-// Status configuration for display
-const STATUS_CONFIG: Record<string, {
+// Status configuration for display — returns theme-aware colors
+function getStatusConfig(colors: ColorPalette): Record<string, {
   color: string;
   bgColor: string;
   borderColor: string;
   icon: string;
   label: string;
   message: string;
-}> = {
-  DRAFT: {
-    color: "#92400E",
-    bgColor: "#FEF3C7",
-    borderColor: "#F59E0B",
-    icon: "file-document-edit-outline",
-    label: "Draft",
-    message: "Complete your registration and upload documents to get approved.",
-  },
-  KYC_SUBMITTED: {
-    color: "#1E40AF",
-    bgColor: "#DBEAFE",
-    borderColor: "#3B82F6",
-    icon: "file-clock-outline",
-    label: "Under Review",
-    message: "Your documents are being reviewed. This usually takes 1-2 business days.",
-  },
-  PAYMENTS_SUBMITTED: {
-    color: "#1E40AF",
-    bgColor: "#DBEAFE",
-    borderColor: "#3B82F6",
-    icon: "clock-check-outline",
-    label: "Final Review",
-    message: "Your application is in final review stage.",
-  },
-  ENROLLED: {
-    color: "#92400E",
-    bgColor: "#FEF3C7",
-    borderColor: "#F59E0B",
-    icon: "account-clock-outline",
-    label: "Enrolled",
-    message: "Your store is enrolled but awaiting full approval.",
-  },
-  NEEDS_FIX: {
-    color: "#991B1B",
-    bgColor: "#FEE2E2",
-    borderColor: "#EF4444",
-    icon: "alert-circle-outline",
-    label: "Action Required",
-    message: "Please update your information and resubmit.",
-  },
-  // SA-P0-001: Store suspension display
-  SUSPENDED: {
-    color: "#991B1B",
-    bgColor: "#FEE2E2",
-    borderColor: "#EF4444",
-    icon: "store-alert-outline",
-    label: "Suspended",
-    message: "This store has been temporarily suspended by the administrator. Contact support for details.",
-  },
-  REJECTED: {
-    color: "#991B1B",
-    bgColor: "#FEE2E2",
-    borderColor: "#EF4444",
-    icon: "close-circle-outline",
-    label: "Rejected",
-    message: "Your application was not approved. Please contact support.",
-  },
-  EXPIRED: {
-    color: "#475569",
-    bgColor: "#F1F5F9",
-    borderColor: "#94A3B8",
-    icon: "clock-alert-outline",
-    label: "Expired",
-    message: "Your application has expired. Please contact support.",
-  },
-  PENDING: {
-    color: "#92400E",
-    bgColor: "#FEF3C7",
-    borderColor: "#F59E0B",
-    icon: "clock-outline",
-    label: "Pending",
-    message: "Your account is pending admin approval.",
-  },
-};
+}> {
+  return {
+    DRAFT: {
+      color: colors.warningDark,
+      bgColor: colors.warningSoft,
+      borderColor: colors.warning,
+      icon: "file-document-edit-outline",
+      label: "Draft",
+      message: "Complete your registration and upload documents to get approved.",
+    },
+    KYC_SUBMITTED: {
+      color: colors.primaryDark,
+      bgColor: colors.primarySoft,
+      borderColor: colors.primary,
+      icon: "file-clock-outline",
+      label: "Under Review",
+      message: "Your documents are being reviewed. This usually takes 1-2 business days.",
+    },
+    PAYMENTS_SUBMITTED: {
+      color: colors.primaryDark,
+      bgColor: colors.primarySoft,
+      borderColor: colors.primary,
+      icon: "clock-check-outline",
+      label: "Final Review",
+      message: "Your application is in final review stage.",
+    },
+    ENROLLED: {
+      color: colors.warningDark,
+      bgColor: colors.warningSoft,
+      borderColor: colors.warning,
+      icon: "account-clock-outline",
+      label: "Enrolled",
+      message: "Your store is enrolled but awaiting full approval.",
+    },
+    NEEDS_FIX: {
+      color: colors.errorDark,
+      bgColor: colors.errorSoft,
+      borderColor: colors.error,
+      icon: "alert-circle-outline",
+      label: "Action Required",
+      message: "Please update your information and resubmit.",
+    },
+    // SA-P0-001: Store suspension display
+    SUSPENDED: {
+      color: colors.errorDark,
+      bgColor: colors.errorSoft,
+      borderColor: colors.error,
+      icon: "store-alert-outline",
+      label: "Suspended",
+      message: "This store has been temporarily suspended by the administrator. Contact support for details.",
+    },
+    REJECTED: {
+      color: colors.errorDark,
+      bgColor: colors.errorSoft,
+      borderColor: colors.error,
+      icon: "close-circle-outline",
+      label: "Rejected",
+      message: "Your application was not approved. Please contact support.",
+    },
+    EXPIRED: {
+      color: colors.textSecondary,
+      bgColor: colors.backgroundSecondary,
+      borderColor: colors.textTertiary,
+      icon: "clock-alert-outline",
+      label: "Expired",
+      message: "Your application has expired. Please contact support.",
+    },
+    PENDING: {
+      color: colors.warningDark,
+      bgColor: colors.warningSoft,
+      borderColor: colors.warning,
+      icon: "clock-outline",
+      label: "Pending",
+      message: "Your account is pending admin approval.",
+    },
+  };
+}
 
 // Default config for unknown statuses
-const DEFAULT_CONFIG = {
-  color: "#92400E",
-  bgColor: "#FEF3C7",
-  borderColor: "#F59E0B",
-  icon: "information-outline",
-  label: "Pending",
-  message: "Your account is pending approval. Some features are restricted.",
-};
+function getDefaultConfig(colors: ColorPalette) {
+  return {
+    color: colors.warningDark,
+    bgColor: colors.warningSoft,
+    borderColor: colors.warning,
+    icon: "information-outline",
+    label: "Pending",
+    message: "Your account is pending approval. Some features are restricted.",
+  };
+}
 
 // Actions blocked in LIMITED MODE
 const BLOCKED_ACTIONS = [
@@ -128,7 +134,13 @@ export default function LimitedModeBanner({
   storeName,
   compact = false,
 }: LimitedModeBannerProps) {
+  const colors = useThemeColors();
   const [expanded, setExpanded] = useState(false);
+
+  const statusConfig = useMemo(() => getStatusConfig(colors), [colors]);
+  const defaultConfig = useMemo(() => getDefaultConfig(colors), [colors]);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Don't show for ACTIVE status
   const normalizedStatus = status?.toUpperCase();
@@ -136,7 +148,7 @@ export default function LimitedModeBanner({
     return null;
   }
 
-  const config = STATUS_CONFIG[normalizedStatus] || DEFAULT_CONFIG;
+  const config = statusConfig[normalizedStatus] || defaultConfig;
 
   // Compact mode - just a pill indicator
   if (compact) {
@@ -160,7 +172,7 @@ export default function LimitedModeBanner({
             <View style={[styles.badge, { backgroundColor: config.borderColor }]}>
               <Text style={styles.badgeText}>LIMITED MODE</Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.statusBadge, { backgroundColor: colors.surface }]}>
               <Text style={[styles.statusText, { color: config.color }]}>
                 Status: {config.label}
               </Text>
@@ -186,7 +198,7 @@ export default function LimitedModeBanner({
         <MaterialCommunityIcons
           name={expanded ? "chevron-up" : "chevron-down"}
           size={16}
-          color={theme.colors.textSecondary}
+          color={colors.textSecondary}
         />
       </Pressable>
 
@@ -196,16 +208,16 @@ export default function LimitedModeBanner({
             <Text style={styles.restrictionHeader}>Blocked:</Text>
             {BLOCKED_ACTIONS.map((action) => (
               <View key={action} style={styles.restrictionRow}>
-                <MaterialCommunityIcons name="close-circle" size={12} color={theme.colors.error} />
+                <MaterialCommunityIcons name="close-circle" size={12} color={colors.error} />
                 <Text style={styles.restrictionText}>{action}</Text>
               </View>
             ))}
           </View>
           <View style={styles.restrictionColumn}>
-            <Text style={[styles.restrictionHeader, { color: theme.colors.success }]}>Allowed:</Text>
+            <Text style={[styles.restrictionHeader, { color: colors.success }]}>Allowed:</Text>
             {ALLOWED_ACTIONS.map((action) => (
               <View key={action} style={styles.restrictionRow}>
-                <MaterialCommunityIcons name="check-circle" size={12} color={theme.colors.success} />
+                <MaterialCommunityIcons name="check-circle" size={12} color={colors.success} />
                 <Text style={styles.restrictionText}>{action}</Text>
               </View>
             ))}
@@ -218,12 +230,17 @@ export default function LimitedModeBanner({
 
 // Compact pill indicator for status bar
 export function LimitedModeIndicator({ status }: { status: string | null }) {
+  const colors = useThemeColors();
+  const statusConfig = useMemo(() => getStatusConfig(colors), [colors]);
+  const defaultConfig = useMemo(() => getDefaultConfig(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const normalizedStatus = status?.toUpperCase();
   if (!normalizedStatus || normalizedStatus === "ACTIVE") {
     return null;
   }
 
-  const config = STATUS_CONFIG[normalizedStatus] || DEFAULT_CONFIG;
+  const config = statusConfig[normalizedStatus] || defaultConfig;
 
   return (
     <View style={[styles.indicator, { backgroundColor: config.bgColor, borderColor: config.borderColor }]}>
@@ -234,7 +251,7 @@ export function LimitedModeIndicator({ status }: { status: string | null }) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     borderWidth: 1,
     borderRadius: 10,
@@ -264,7 +281,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   badgeText: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,
@@ -291,14 +308,14 @@ const styles = StyleSheet.create({
   expandText: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   restrictionsContainer: {
     flexDirection: "row",
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   restrictionColumn: {
     flex: 1,
@@ -306,7 +323,7 @@ const styles = StyleSheet.create({
   restrictionHeader: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.error,
+    color: colors.error,
     marginBottom: 4,
   },
   restrictionRow: {
@@ -317,7 +334,7 @@ const styles = StyleSheet.create({
   },
   restrictionText: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   compactContainer: {
     flexDirection: "row",
@@ -344,4 +361,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-});
+}); }

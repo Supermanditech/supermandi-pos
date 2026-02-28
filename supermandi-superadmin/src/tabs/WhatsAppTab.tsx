@@ -18,7 +18,7 @@ import { formatDateTime } from "../lib/formatters";
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  sent:      { bg: "#dbeafe", color: "#1e40af" },
+  sent:      { bg: "var(--color-primary-light)", color: "var(--color-primary-dark)" },
   delivered: { bg: "var(--color-success-soft)", color: "var(--color-success)" },
   read:      { bg: "var(--color-success-soft)", color: "var(--color-success)" },
   failed:    { bg: "var(--color-error-soft)", color: "var(--color-error)" },
@@ -421,12 +421,12 @@ export function WhatsAppTab() {
         <div className="sa-grid-auto sa-gap-12 sa-mb-20">
           {[
             { label: "Total", value: stats.totalMessages, bg: "var(--color-surface-alt)" },
-            { label: "Sent", value: stats.sent, bg: "#dbeafe" },
+            { label: "Sent", value: stats.sent, bg: "var(--color-primary-light)" },
             { label: "Delivered", value: stats.delivered, bg: "var(--color-success-soft)" },
             { label: "Read", value: stats.read, bg: "var(--color-success-soft)" },
             { label: "Failed", value: stats.failed, bg: "var(--color-error-soft)" },
             { label: "Last 24h", value: stats.last24h, bg: "var(--color-warning-soft)" },
-            { label: "Last 7d", value: stats.last7d, bg: "#e0e7ff" },
+            { label: "Last 7d", value: stats.last7d, bg: "var(--color-primary-soft)" },
           ].map(card => (
             <div key={card.label} className="sa-radius-8 sa-text-center sa-p-12" style={{ background: card.bg }}>
               <div className="sa-text-xl sa-fw-700">{card.value}</div>
@@ -474,7 +474,7 @@ export function WhatsAppTab() {
             disabled={sending || !sendPhone.trim() || !sendMessage.trim()}
             className="sa-fw-600"
             style={{
-              padding: "6px 16px", background: "#25D366", color: "#fff", border: "none",
+              padding: "6px 16px", background: "#25D366", color: "var(--color-text-inverse)", border: "none",
               borderRadius: 4, fontSize: "0.85rem",
               opacity: sending ? 0.6 : 1,
             }}
@@ -532,7 +532,7 @@ export function WhatsAppTab() {
               disabled={broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()}
               className="sa-fw-600"
               style={{
-                padding: "6px 16px", background: "var(--color-warning)", color: "#fff", border: "none",
+                padding: "6px 16px", background: "var(--color-warning)", color: "var(--color-text-inverse)", border: "none",
                 borderRadius: 4, fontSize: "0.85rem",
                 opacity: (broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()) ? 0.6 : 1,
               }}

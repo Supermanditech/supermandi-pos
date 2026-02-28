@@ -96,7 +96,7 @@ export function AIInsightsTab() {
     switch (s) {
       case 'critical': return 'var(--color-error)';
       case 'warning': return 'var(--color-warning)';
-      default: return '#0EA5E9';
+      default: return 'var(--color-primary)';
     }
   };
 
@@ -107,8 +107,8 @@ export function AIInsightsTab() {
         <div className="sa-flex sa-gap-8">
           {(['anomalies', 'alerts', 'jobs'] as const).map(v => (
             <button key={v} onClick={() => setView(v)} className="sa-btn-sm sa-radius-6 sa-border" style={{
-              background: view === v ? '#1e40af' : 'var(--color-surface)',
-              color: view === v ? '#fff' : 'var(--color-text-secondary)',
+              background: view === v ? 'var(--color-primary-dark)' : 'var(--color-surface)',
+              color: view === v ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
             }}>{v.charAt(0).toUpperCase() + v.slice(1)}</button>
           ))}
         </div>
@@ -129,7 +129,7 @@ export function AIInsightsTab() {
             className="sa-input sa-radius-6" style={{ width: 300 }}
           />
           <button onClick={fetchData} disabled={!storeId} className="sa-btn-sm sa-radius-6" style={{
-            background: storeId ? '#1e40af' : 'var(--color-text-secondary)', color: '#fff',
+            background: storeId ? 'var(--color-primary-dark)' : 'var(--color-text-secondary)', color: 'var(--color-text-inverse)',
           }}>Load</button>
         </div>
       )}

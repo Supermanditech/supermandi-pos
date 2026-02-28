@@ -533,7 +533,7 @@ function FilterChip({ label, selected, onPress, count, warning }: FilterChipProp
       paddingHorizontal: 4,
     },
     filterChipBadgeSelected: {
-      backgroundColor: "rgba(255,255,255,0.2)",
+      backgroundColor: colors.overlayInverse,
     },
     filterChipBadgeWarning: {
       backgroundColor: colors.warningSoft,

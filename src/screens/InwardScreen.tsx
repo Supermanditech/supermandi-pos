@@ -714,7 +714,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   searchOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: colors.overlayLight,
     zIndex: 10,
   },
   searchDropdown: {
@@ -969,7 +969,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: colors.overlay,
   },
   pickerSheet: {
     backgroundColor: colors.surface,

@@ -7,19 +7,22 @@
     "baselineSha": "d69c4a20",
     "issueRange": "STG-001..STG-286",
     "total": 286,
-    "fixed": 244,
+    "fixed": 283,
     "wontfix": 2,
     "found": 0,
-    "deferredCosmetic": 40,
+    "deferredCosmetic": 0,
+    "accepted": 1,
     "trackerFrozen": true,
     "deployHold": true,
     "nextRoundStartsAt": "STG-287",
     "finalPreDeployAudit": {
       "date": "2026-03-01",
-      "result": "DEPLOY_ELIGIBLE",
+      "result": "PRODUCTION_GRADE_COMPLETE",
       "p1Blockers": 0,
       "p2Blockers": 0,
-      "p3Deferred": 40,
+      "p3Deferred": 0,
+      "p3Fixed": 39,
+      "p3Accepted": 1,
       "screensAudited": {
         "retailerWeb": 30,
         "supplierWeb": 25,
@@ -29,12 +32,13 @@
       "totalScreensAudited": 123
     },
     "latestWave": {
-      "issueRange": "STG-257..STG-286",
-      "type": "final_pre_deploy_audit",
-      "newP3Found": 30,
-      "newWontfix": 1,
-      "allDeferredCosmetic": true,
-      "safeToPark": true
+      "issueRange": "STG-246..STG-286",
+      "type": "post_audit_ux_refinement",
+      "fixed": 39,
+      "wontfix": 1,
+      "accepted": 1,
+      "deferredCosmetic": 0,
+      "productionGradeComplete": true
     }
   },
   "firebaseProductionAudit": {

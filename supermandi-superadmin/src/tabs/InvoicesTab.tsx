@@ -12,10 +12,10 @@ function formatMinor(minor: number): string {
 
 const STATUS_STYLES: Record<InvoiceStatus, { bg: string; color: string }> = {
   draft:     { bg: "var(--color-surface-alt)", color: "var(--color-text-secondary)" },
-  issued:    { bg: "#dbeafe", color: "#1e40af" },
-  paid:      { bg: "var(--color-success-soft)", color: "#166534" },
-  overdue:   { bg: "#fef3c7", color: "#92400e" },
-  cancelled: { bg: "var(--color-error-soft)", color: "#991b1b" },
+  issued:    { bg: "var(--color-primary-light)", color: "var(--color-primary-dark)" },
+  paid:      { bg: "var(--color-success-soft)", color: "var(--color-success-dark)" },
+  overdue:   { bg: "var(--color-warning-soft)", color: "var(--color-warning-dark)" },
+  cancelled: { bg: "var(--color-error-soft)", color: "var(--color-error-dark)" },
   void:      { bg: "var(--color-border)", color: "var(--color-text-secondary)" },
 };
 

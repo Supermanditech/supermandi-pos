@@ -36,7 +36,7 @@ import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../serv
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { POS_MESSAGES } from "../utils/uiStatus";
-import { theme, colors, typography, spacing, useThemeColors } from "../theme";
+import { theme, typography, spacing, useThemeColors } from "../theme";
 import { API_BASE_URL, BUILD_INFO, TEST_STORE_CONFIG } from "../config/api";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { useCartStore } from "../stores/cartStore";
@@ -164,6 +164,8 @@ export default function EnrollDeviceScreen() {
   const route = useRoute<EnrollRoute>();
   // LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: Theme-aware build stamp
   const tc = useThemeColors();
+  // STG-284: Dynamic styles for dark mode support
+  const styles = useMemo(() => createStyles(tc), [tc]);
   const buildShaLabel = String((BUILD_INFO as any).gitSha || (BUILD_INFO as any).version || "unknown");
   const buildTimeLabel = String((BUILD_INFO as any).buildTime || (BUILD_INFO as any).buildDate || "unknown");
   // #342: Accept both ?enrollmentCode=X and ?code=X from deep links
@@ -414,7 +416,7 @@ export default function EnrollDeviceScreen() {
   if (checkingSession) {
     return (
       <View style={styles.sessionCheckContainer} testID="enroll-session-checking">
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={tc.primary} />
       </View>
     );
   }
@@ -432,9 +434,9 @@ export default function EnrollDeviceScreen() {
         <View style={styles.brandLockup}>
           <BrandShortmark
             size={36}
-            backgroundColor={colors.primary}
-            lineColor={colors.textInverse}
-            dotColor={colors.textInverse}
+            backgroundColor={tc.primary}
+            lineColor={tc.textInverse}
+            dotColor={tc.textInverse}
             radius={9}
           />
           <Text style={styles.brandPillText}>SuperMandi</Text>
@@ -473,7 +475,7 @@ export default function EnrollDeviceScreen() {
         <TextInput
           style={styles.labelInput}
           placeholder="e.g., Counter-1, Billing-Main"
-          placeholderTextColor={colors.textTertiary}
+          placeholderTextColor={tc.textTertiary}
           value={labelInput}
           onChangeText={setLabelInput}
           testID="enroll-label-input"
@@ -499,7 +501,7 @@ export default function EnrollDeviceScreen() {
         >
           {loading ? (
             <View style={styles.activatingRow}>
-              <ActivityIndicator size="small" color={colors.textInverse} style={{ marginRight: spacing.xs }} />
+              <ActivityIndicator size="small" color={tc.textInverse} style={{ marginRight: spacing.xs }} />
               <Text style={styles.activateButtonText}>Activating...</Text>
             </View>
           ) : (
@@ -511,7 +513,7 @@ export default function EnrollDeviceScreen() {
       {/* ENROLL-MISSING-ERROR-STATE-UI: Persistent inline error banner after API failure */}
       {enrollError ? (
         <View style={styles.enrollErrorBanner} testID="enroll-error-banner">
-          <MaterialCommunityIcons name="alert-circle" size={16} color={theme.colors.error} />
+          <MaterialCommunityIcons name="alert-circle" size={16} color={tc.error} />
           <Text style={styles.enrollErrorText}>{enrollError}</Text>
         </View>
       ) : null}
@@ -578,7 +580,8 @@ export default function EnrollDeviceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+// STG-284: Dynamic styles for dark mode support
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: colors.background,
@@ -835,4 +838,4 @@ const styles = StyleSheet.create({
     fontFamily: "monospace",
     color: colors.textTertiary,
   },
-});
+}); }

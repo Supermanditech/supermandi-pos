@@ -13,6 +13,7 @@
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
   --color-primary-soft: #e0e7ff;
+  --color-primary-light: #dbeafe;
   --color-accent: #14b8a6;
   --color-accent-soft: #ecfeff;
   --color-bg: #F7F9FC; /* T-016: Aligned with retailer background */
@@ -24,8 +25,11 @@
   --color-text-secondary: #64748b;
   --color-text-inverse: #ffffff;
   --color-success: #22c55e;
+  --color-success-dark: #166534;
   --color-warning: #f59e0b;
+  --color-warning-dark: #92400e;
   --color-error: #dc2626;
+  --color-error-dark: #991b1b;
   --color-success-soft: #ecfdf5;
   --color-warning-soft: #fff7ed;
   --color-error-soft: #fef2f2;
@@ -57,10 +61,14 @@
   --color-text-secondary: #94a3b8;
   --color-text-inverse: #0f172a;
   --color-primary-soft: #1e3a5f;
+  --color-primary-light: #1e3a5f;
   --color-accent-soft: #0f2b3d;
   --color-success-soft: #052e16;
+  --color-success-dark: #4ade80;
   --color-warning-soft: #451a03;
+  --color-warning-dark: #fbbf24;
   --color-error-soft: #450a0a;
+  --color-error-dark: #f87171;
   --color-ink: #f8fafc;
   --brand-pill-bg: #ffffff;
   --brand-pill-fg: #0b1220;

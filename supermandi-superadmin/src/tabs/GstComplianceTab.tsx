@@ -95,10 +95,10 @@ export function GstComplianceTab() {
       {overview && (
         <div className="sa-grid-4 sa-mb-20">
           {[
-            { label: "Total Sales", value: formatCurrency(overview.totals.totalSales), color: "#3b82f6" },
-            { label: "Total GST Collected", value: formatCurrency(overview.totals.totalTax), color: "#10b981" },
-            { label: "Total Invoices", value: String(overview.totals.totalInvoices), color: "#8b5cf6" },
-            { label: "Filing Deadline", value: overview.filingDeadline, color: "#f59e0b" },
+            { label: "Total Sales", value: formatCurrency(overview.totals.totalSales), color: "var(--color-primary)" },
+            { label: "Total GST Collected", value: formatCurrency(overview.totals.totalTax), color: "var(--color-success)" },
+            { label: "Total Invoices", value: String(overview.totals.totalInvoices), color: "var(--color-accent)" },
+            { label: "Filing Deadline", value: overview.filingDeadline, color: "var(--color-warning)" },
           ].map((card, i) => (
             <div key={i} className="sa-accent-card" style={{ borderLeftColor: card.color }}>
               <div className="sa-stat-label">{card.label}</div>

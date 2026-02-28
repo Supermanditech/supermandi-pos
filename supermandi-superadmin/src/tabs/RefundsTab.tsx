@@ -9,10 +9,10 @@ function formatCurrency(minor: number): string {
 }
 
 const STATUS_STYLES: Record<RefundStatus, { bg: string; color: string; label: string }> = {
-  initiated:  { bg: "var(--color-warning-soft)", color: "#92400e", label: "Initiated" },
-  processing: { bg: "#dbeafe", color: "#1e40af", label: "Processing" },
-  processed:  { bg: "var(--color-success-soft)", color: "#166534", label: "Processed" },
-  failed:     { bg: "var(--color-error-soft)", color: "#991b1b", label: "Failed" },
+  initiated:  { bg: "var(--color-warning-soft)", color: "var(--color-warning-dark)", label: "Initiated" },
+  processing: { bg: "var(--color-primary-light)", color: "var(--color-primary-dark)", label: "Processing" },
+  processed:  { bg: "var(--color-success-soft)", color: "var(--color-success-dark)", label: "Processed" },
+  failed:     { bg: "var(--color-error-soft)", color: "var(--color-error-dark)", label: "Failed" },
   cancelled:  { bg: "var(--color-border)", color: "var(--color-text-secondary)", label: "Cancelled" },
 };
 
@@ -178,14 +178,14 @@ export function RefundsTab() {
                           <button
                             onClick={() => handleApprove(r.id, r.refundAmount)}
                             disabled={actionLoading === r.id}
-                            className="sa-btn-xs" style={{ background: "var(--color-success-soft)", color: "#166534", border: "1px solid var(--color-success)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            className="sa-btn-xs" style={{ background: "var(--color-success-soft)", color: "var(--color-success-dark)", border: "1px solid var(--color-success)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => setRejectId(r.id)}
                             disabled={actionLoading === r.id}
-                            className="sa-btn-xs" style={{ background: "var(--color-error-soft)", color: "#991b1b", border: "1px solid var(--color-error)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            className="sa-btn-xs" style={{ background: "var(--color-error-soft)", color: "var(--color-error-dark)", border: "1px solid var(--color-error)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
                           >
                             Reject
                           </button>
