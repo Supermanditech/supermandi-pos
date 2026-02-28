@@ -441,7 +441,8 @@ router.get("/status", requireSupplierAuth, async (req: SupplierAuthRequest, res:
     // Calculate payout readiness
     const requirements = {
       emailVerified: supplier?.email_verified || false,
-      profileVerified: supplier?.verification_status === 'verified',
+      // STG-087: Migration 097 changed 'verified' to 'ACTIVE'
+      profileVerified: supplier?.verification_status === 'ACTIVE' || supplier?.verification_status === 'verified',
       bankVerified: supplier?.bank_verification_status === 'verified',
       hasBankDetails: supplier?.has_bank_details || false,
       hasGstin: supplier?.has_gstin || false,

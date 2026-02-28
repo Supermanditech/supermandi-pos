@@ -60,8 +60,9 @@ export default function EarningsPage() {
     );
   };
 
-  const payouts = payoutsData?.data || [];
-  const pagination = payoutsData?.pagination;
+  // STG-083: apiFetch unwraps data.data, so payoutsData is the array directly
+  const payouts = Array.isArray(payoutsData) ? payoutsData : (payoutsData?.data || []);
+  const pagination = Array.isArray(payoutsData) ? undefined : payoutsData?.pagination;
   // GO-LIVE-031: Find selected payout for modal
   const selectedPayout = payouts.find(p => p.id === selectedPayoutId);
 

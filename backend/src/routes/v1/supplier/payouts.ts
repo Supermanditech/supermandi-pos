@@ -128,15 +128,15 @@ router.get("/summary", requireSupplierAuth, async (req: SupplierAuthRequest, res
 
     const summary = result.rows[0];
 
-    // Get total revenue from orders (if orders table exists)
+    // STG-086: Get total revenue from orders (corrected table names)
     let totalRevenue = 0;
     try {
       const revenueResult = await pool.query(
-        `SELECT COALESCE(SUM(total_amount), 0) as total
-        FROM orders.orders o
-        INNER JOIN orders.order_items oi ON o.id = oi.order_id
-        INNER JOIN supplier.supplier_products sp ON oi.product_id = sp.id
-        WHERE sp.supplier_id = $1 AND o.status = 'delivered'`,
+        `SELECT COALESCE(SUM(po.total_amount_minor), 0) as total
+        FROM orders.purchase_orders po
+        INNER JOIN orders.purchase_order_items poi ON po.id = poi.purchase_order_id
+        INNER JOIN catalog.supplier_products sp ON poi.supplier_product_id = sp.id
+        WHERE sp.supplier_id = $1 AND po.status = 'delivered'`,
         [req.supplierId]
       );
       totalRevenue = parseInt(revenueResult.rows[0].total) || 0;

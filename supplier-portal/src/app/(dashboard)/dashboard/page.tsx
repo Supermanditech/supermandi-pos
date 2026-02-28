@@ -63,13 +63,14 @@ export default function DashboardPage() {
 
   // GL-WF-063: Use paginated API calls
   // REQ.AUDIT.W5.SUPPLIER.DASHBOARD-RETRY-WRONG-QUERY-SCOPE.001: expose refetch on all queries
-  const { data: ordersResponse, refetch: refetchOrders } = useQuery({
+  // STG-007: Destructure isLoading/isError for proper loading states
+  const { data: ordersResponse, isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useQuery({
     queryKey: ['recent-orders'],
     queryFn: () => getOrders({ page: 1, limit: 5 }),
   });
   const recentOrders = ordersResponse?.data;
 
-  const { data: productsResponse, refetch: refetchProducts } = useQuery({
+  const { data: productsResponse, isLoading: productsLoading, isError: productsError, refetch: refetchProducts } = useQuery({
     queryKey: ['products'],
     queryFn: () => getProducts({ page: 1, limit: 100 }),
   });
@@ -170,19 +171,40 @@ export default function DashboardPage() {
         <h2 className="text-lg font-semibold text-slate-800 mb-4">
           Quick Actions
         </h2>
+        {/* STG-008: Disable actions for unverified suppliers */}
         <div className="flex flex-wrap gap-3">
-          <Link
-            href="/products?action=add"
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus size={16} /> Add Product
-          </Link>
-          <Link
-            href="/upload"
-            className="btn btn-secondary flex items-center gap-2"
-          >
-            <FileText size={16} /> Upload CSV
-          </Link>
+          {supplier?.verificationStatus === 'ACTIVE' ? (
+            <Link
+              href="/products?action=add"
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus size={16} /> Add Product
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="btn btn-primary flex items-center gap-2 opacity-50 cursor-not-allowed"
+              title="Supplier verification required"
+            >
+              <Plus size={16} /> Add Product
+            </button>
+          )}
+          {supplier?.verificationStatus === 'ACTIVE' ? (
+            <Link
+              href="/upload"
+              className="btn btn-secondary flex items-center gap-2"
+            >
+              <FileText size={16} /> Upload CSV
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="btn btn-secondary flex items-center gap-2 opacity-50 cursor-not-allowed"
+              title="Supplier verification required"
+            >
+              <FileText size={16} /> Upload CSV
+            </button>
+          )}
           <Link
             href="/orders"
             className="btn btn-secondary flex items-center gap-2"
@@ -204,7 +226,20 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {recentOrders && recentOrders.length > 0 ? (
+        {/* STG-007: Show loading/error states before "No orders yet" */}
+        {ordersLoading ? (
+          <div className="py-8 text-center text-slate-500">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-slate-300 border-t-primary-600 rounded-full animate-spin" />
+              <span>Loading orders...</span>
+            </div>
+          </div>
+        ) : ordersError ? (
+          <div className="py-8 text-center">
+            <p className="text-red-600 font-medium">Failed to load orders</p>
+            <button onClick={() => { void refetchOrders(); }} className="text-sm text-primary-600 hover:underline mt-2">Retry</button>
+          </div>
+        ) : recentOrders && recentOrders.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';  // STG-090
 import toast from 'react-hot-toast';
 import { uploadProductsCsv, CsvUploadResult } from '@/lib/api';
 // T-113: Breadcrumb navigation
@@ -293,9 +294,10 @@ export default function UploadPage() {
               <button onClick={handleReset} className="btn btn-primary">
                 Upload Another File
               </button>
-              <a href="/products" className="btn btn-secondary">
+              {/* STG-090: Use Next.js Link for proper basePath handling */}
+              <Link href="/products" className="btn btn-secondary">
                 View Products
-              </a>
+              </Link>
             </div>
           </div>
         )}

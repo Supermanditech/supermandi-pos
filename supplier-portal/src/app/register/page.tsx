@@ -33,9 +33,12 @@ const SUPPLIER_TYPES = [
 ];
 
 // Document types with labels
+// STG-074: Added address_proof and cancelled_cheque (required per migration 103)
 const DOCUMENT_TYPES = {
   gstin_certificate: { label: 'GST Certificate', accept: 'image/*,application/pdf' },
   pan_card: { label: 'ID Proof (Aadhaar/PAN/Driving License)', accept: 'image/*,application/pdf' },
+  address_proof: { label: 'Address Proof (Utility Bill/Rent Agreement)', accept: 'image/*,application/pdf' },
+  cancelled_cheque: { label: 'Cancelled Cheque / Bank Passbook', accept: 'image/*,application/pdf' },
   business_license: { label: 'Business Proof (Shop License/MSME/Trade License)', accept: 'image/*,application/pdf' },
   owner_photo: { label: 'Authorized Person Selfie', accept: 'image/*' },
 };

@@ -306,7 +306,8 @@ export interface Supplier {
   city?: string;
   state?: string;
   pincode?: string;
-  verificationStatus: 'pending' | 'verified' | 'rejected';
+  // STG-008/STG-010: Updated to include post-migration-097 status values
+  verificationStatus: 'pending' | 'verified' | 'rejected' | 'ACTIVE' | 'SUSPENDED' | 'KYC_SUBMITTED' | 'PAYMENTS_SUBMITTED';
   emailVerified?: boolean; // GL-WF-034: Email verification status
   bankDetails?: {
     accountName?: string;
@@ -517,10 +518,13 @@ export interface PaginationParams {
   limit?: number;
 }
 
-export async function getProducts(params: PaginationParams = {}): Promise<PaginatedResponse<Product>> {
+// STG-082: Added search and status params for server-side filtering
+export async function getProducts(params: PaginationParams & { search?: string; status?: string } = {}): Promise<PaginatedResponse<Product>> {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.set('page', params.page.toString());
   if (params.limit) queryParams.set('limit', params.limit.toString());
+  if (params.search) queryParams.set('search', params.search);
+  if (params.status) queryParams.set('status', params.status);
   const queryString = queryParams.toString();
   const url = `/api/v1/supplier/products${queryString ? `?${queryString}` : ''}`;
   return apiFetch<PaginatedResponse<Product>>(url);
@@ -1220,9 +1224,9 @@ export async function getSupplierInvoices(params: { page?: number; limit?: numbe
   return apiFetch<{ data: SupplierInvoice[]; total: number }>(`/api/v1/supplier/invoices${qs ? `?${qs}` : ''}`);
 }
 
+// STG-085: apiFetch already unwraps data.data — don't double-unwrap
 export async function getSupplierInvoiceDetail(invoiceId: string): Promise<SupplierInvoiceDetail> {
-  const result = await apiFetch<{ data: SupplierInvoiceDetail }>(`/api/v1/supplier/invoices/${invoiceId}`);
-  return result.data;
+  return apiFetch<SupplierInvoiceDetail>(`/api/v1/supplier/invoices/${invoiceId}`);
 }
 
 // ============================================================================
@@ -1361,11 +1365,12 @@ export async function uploadSupplierDocument(
     throw new ApiError(400, 'FILE_TOO_LARGE', 'File size exceeds maximum allowed (5MB)');
   }
 
+  // STG-072: Backend expects snake_case field names and entity_type = 'application'
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('documentType', documentType);
-  formData.append('entityType', 'supplier_application');
-  formData.append('entityId', applicationId);
+  formData.append('document_type', documentType);
+  formData.append('entity_type', 'application');
+  formData.append('entity_id', applicationId);
 
   // AUTH-STORAGE-001: credentials: 'include' for cookie auth
   // STBT-185.3: Add 60s timeout for FormData uploads

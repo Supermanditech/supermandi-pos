@@ -23,6 +23,8 @@ import { MAX_PRODUCT_IMAGE_SIZE_BYTES, MAX_PRODUCT_IMAGE_SIZE_LABEL } from '@/li
 import { useUrlState } from '@/hooks/useUrlState';
 // GAP-3: EmptyState component for consistent empty states
 import EmptyState from '@/components/EmptyState';
+// STG-010: Check supplier verification status
+import { useAuth } from '@/lib/auth';
 import { Package, Upload, X, ImageIcon } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
@@ -51,6 +53,8 @@ const PRODUCT_CATEGORIES = [
 ];
 
 export default function ProductsPage() {
+  // STG-010: Get supplier verification status
+  const { supplier } = useAuth();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -97,9 +101,10 @@ export default function ProductsPage() {
 
   // GL-WF-063: Paginated products query
   // GL-CRIT-0034: Track error state for API failures
+  // STG-082: Pass search and status filter to backend for server-side filtering
   const { data: productsResponse, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['products', currentPage, pageSize],
-    queryFn: () => getProducts({ page: currentPage, limit: pageSize }),
+    queryKey: ['products', currentPage, pageSize, searchTerm, statusFilter],
+    queryFn: () => getProducts({ page: currentPage, limit: pageSize, search: searchTerm || undefined, status: statusFilter === 'all' ? undefined : statusFilter }),
   });
 
   const products = productsResponse?.data;
@@ -457,9 +462,12 @@ export default function ProductsPage() {
           </p>
         </div>
         {/* GL-WF-062: Use handleCancel when form has unsaved changes */}
+        {/* STG-010: Disable button when API failed or supplier unverified */}
         <button
           onClick={() => showForm ? handleCancel() : setShowForm(true)}
           className="btn btn-primary"
+          disabled={!showForm && (isError || supplier?.verificationStatus !== 'ACTIVE')}
+          title={isError ? 'Products failed to load' : supplier?.verificationStatus !== 'ACTIVE' ? 'Supplier verification required' : undefined}
         >
           {showForm ? 'Cancel' : '+ Add Product'}
         </button>
@@ -588,17 +596,8 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div>
-              <label className="label">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="input"
-                rows={3}
-                placeholder="Product description..."
-              />
-            </div>
+            {/* STG-081: Description field removed — catalog.supplier_products has no description column.
+                Re-add after migration adds the column. */}
 
             {/* T-161: Product Image Upload */}
             <div>

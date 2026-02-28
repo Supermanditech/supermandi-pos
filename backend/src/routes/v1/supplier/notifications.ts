@@ -1,17 +1,20 @@
 /**
  * Phase 8: Supplier Portal Notification Routes
  * Push notification history + token management for suppliers
+ * STG-012: All routes now use requireSupplierAuth middleware
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { getPool } from '../../../db/client';
 import { registerDeviceToken, removeDeviceToken } from '../../../services/fcmService';
+import { requireSupplierAuth, SupplierAuthRequest } from './auth';
 
 export const supplierNotificationsRouter = Router();
 
 // POST /supplier/notifications/device-token
-supplierNotificationsRouter.post('/notifications/device-token', async (req: Request, res: Response) => {
-  const userId = (req as any).supplierId || (req as any).userId;
+// STG-012: Added requireSupplierAuth middleware
+supplierNotificationsRouter.post('/notifications/device-token', requireSupplierAuth, async (req: SupplierAuthRequest, res: Response) => {
+  const userId = req.supplierId || (req as any).userId;
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
 
   const { token, platform } = req.body as { token?: string; platform?: string };
@@ -26,8 +29,9 @@ supplierNotificationsRouter.post('/notifications/device-token', async (req: Requ
 });
 
 // DELETE /supplier/notifications/device-token
-supplierNotificationsRouter.delete('/notifications/device-token', async (req: Request, res: Response) => {
-  const userId = (req as any).supplierId || (req as any).userId;
+// STG-012: Added requireSupplierAuth middleware
+supplierNotificationsRouter.delete('/notifications/device-token', requireSupplierAuth, async (req: SupplierAuthRequest, res: Response) => {
+  const userId = req.supplierId || (req as any).userId;
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
 
   const { token } = req.body as { token?: string };
@@ -40,8 +44,9 @@ supplierNotificationsRouter.delete('/notifications/device-token', async (req: Re
 });
 
 // GET /supplier/notifications
-supplierNotificationsRouter.get('/notifications', async (req: Request, res: Response) => {
-  const supplierId = (req as any).supplierId;
+// STG-012: Added requireSupplierAuth middleware
+supplierNotificationsRouter.get('/notifications', requireSupplierAuth, async (req: SupplierAuthRequest, res: Response) => {
+  const supplierId = req.supplierId;
   const userId = (req as any).userId;
   if (!supplierId && !userId) return res.status(401).json({ error: 'Authentication required' });
 
@@ -80,8 +85,9 @@ supplierNotificationsRouter.get('/notifications', async (req: Request, res: Resp
 });
 
 // GET /supplier/notifications/unread-count
-supplierNotificationsRouter.get('/notifications/unread-count', async (req: Request, res: Response) => {
-  const supplierId = (req as any).supplierId;
+// STG-012: Added requireSupplierAuth middleware
+supplierNotificationsRouter.get('/notifications/unread-count', requireSupplierAuth, async (req: SupplierAuthRequest, res: Response) => {
+  const supplierId = req.supplierId;
   const userId = (req as any).userId;
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });
@@ -100,8 +106,9 @@ supplierNotificationsRouter.get('/notifications/unread-count', async (req: Reque
 });
 
 // PUT /supplier/notifications/:id/read
-supplierNotificationsRouter.put('/notifications/:id/read', async (req: Request, res: Response) => {
-  const supplierId = (req as any).supplierId;
+// STG-012: Added requireSupplierAuth middleware
+supplierNotificationsRouter.put('/notifications/:id/read', requireSupplierAuth, async (req: SupplierAuthRequest, res: Response) => {
+  const supplierId = req.supplierId;
   const userId = (req as any).userId;
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });
@@ -116,8 +123,9 @@ supplierNotificationsRouter.put('/notifications/:id/read', async (req: Request, 
 });
 
 // PUT /supplier/notifications/read-all
-supplierNotificationsRouter.put('/notifications/read-all', async (req: Request, res: Response) => {
-  const supplierId = (req as any).supplierId;
+// STG-012: Added requireSupplierAuth middleware
+supplierNotificationsRouter.put('/notifications/read-all', requireSupplierAuth, async (req: SupplierAuthRequest, res: Response) => {
+  const supplierId = req.supplierId;
   const userId = (req as any).userId;
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });

@@ -333,7 +333,8 @@ export default function OrdersPage() {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                {/* STG-011: Display label map for statuses with underscores */}
+                {({ all: 'All', draft: 'Draft', submitted: 'Submitted', confirmed: 'Confirmed', shipped: 'Shipped', partial_received: 'Partially Received', delivered: 'Delivered', cancelled: 'Cancelled' } as Record<string, string>)[status] || status}
                 <span
                   className={`px-1.5 py-0.5 rounded text-xs ${
                     statusFilter === status

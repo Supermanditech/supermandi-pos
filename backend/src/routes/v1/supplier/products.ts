@@ -193,16 +193,41 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const offset = (page - 1) * limit;
 
+    // STG-082: Server-side search and status filter
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const statusParam = typeof req.query.status === 'string' ? req.query.status : '';
+    const validStatuses = ['pending', 'approved', 'rejected'];
+    const statusFilter = validStatuses.includes(statusParam) ? statusParam : '';
+
+    // Build WHERE clause
+    const conditions: string[] = ['supplier_id = $1'];
+    const queryParams: (string | number)[] = [req.supplierId!];
+    let paramIdx = 2;
+
+    if (search) {
+      conditions.push(`(name ILIKE $${paramIdx} OR barcode ILIKE $${paramIdx} OR supplier_sku ILIKE $${paramIdx})`);
+      queryParams.push(`%${search}%`);
+      paramIdx++;
+    }
+    if (statusFilter) {
+      conditions.push(`approval_status = $${paramIdx}`);
+      queryParams.push(statusFilter);
+      paramIdx++;
+    }
+
+    const whereClause = conditions.join(' AND ');
+
     // GL-WF-063: Get total count for pagination
     const countResult = await pool.query(
-      `SELECT COUNT(*) as total FROM catalog.supplier_products WHERE supplier_id = $1`,
-      [req.supplierId]
+      `SELECT COUNT(*) as total FROM catalog.supplier_products WHERE ${whereClause}`,
+      queryParams
     );
     const total = parseInt(countResult.rows[0]?.total || '0');
 
     // GL-WF-036: Include rejection_reason in product list
     // GL-WF-063: Add LIMIT and OFFSET for pagination
     // STBT-190.6: Include admin-edited fields so supplier sees platform overrides
+    const paginationParams = [...queryParams, limit, offset];
     const result = await pool.query(
       `SELECT
         id,
@@ -227,13 +252,15 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         price_change_pending,
         pending_purchase_price,
         pending_mrp,
+        image_url,
+        thumbnail_url,
         created_at,
         updated_at
       FROM catalog.supplier_products
-      WHERE supplier_id = $1
+      WHERE ${whereClause}
       ORDER BY created_at DESC
-      LIMIT $2 OFFSET $3`,
-      [req.supplierId, limit, offset]
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
+      paginationParams
     );
 
     res.json({
@@ -262,6 +289,9 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         priceChangePending: p.price_change_pending || false,
         pendingPurchasePrice: p.pending_purchase_price || null,
         pendingMrp: p.pending_mrp || null,
+        // STG-080: Include image URLs in response
+        imageUrl: p.image_url || null,
+        thumbnailUrl: p.thumbnail_url || null,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })),
@@ -285,6 +315,7 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
  */
 router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
+    // STG-080: Added imageUrl to destructuring for product image persistence
     const {
       name,
       description,
@@ -296,6 +327,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       mrp,
       moq,
       unit,
+      imageUrl,
     } = req.body;
 
     // Validation
@@ -347,6 +379,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       return;
     }
 
+    // STG-080: Include image_url in INSERT
     const result = await pool.query(
       `INSERT INTO catalog.supplier_products (
         supplier_id,
@@ -359,9 +392,10 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         mrp,
         moq,
         unit,
+        image_url,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', true)
       RETURNING
         id,
         name,
@@ -373,6 +407,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         mrp,
         moq,
         unit,
+        image_url,
         approval_status,
         is_active,
         created_at`,
@@ -387,6 +422,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         mrp || null,
         moq || 1,
         unit || 'PCS',
+        imageUrl || null,
       ]
     );
 
@@ -441,6 +477,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       mrp,
       moq,
       unit,
+      imageUrl,  // STG-080: Accept imageUrl in update
     } = req.body;
 
     const pool = getPool();
@@ -565,6 +602,11 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
     if (unit !== undefined) {
       updates.push(`unit = $${paramIndex++}`);
       values.push(unit);
+    }
+    // STG-080: Include image_url in UPDATE
+    if (imageUrl !== undefined) {
+      updates.push(`image_url = $${paramIndex++}`);
+      values.push(imageUrl || null);
     }
 
     if (updates.length === 0) {

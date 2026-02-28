@@ -500,7 +500,7 @@ export async function sendPasswordResetEmail(
     <p>Click the button below to reset your password:</p>
     <a href="${resetUrl}" class="button">Reset Password</a>
     <p>Or copy this link: ${resetUrl}</p>
-    <p class="warning">This link will expire in 24 hours. If you didn't request this, please ignore this email.</p>
+    <p class="warning">This link will expire in 1 hour. If you didn't request this, please ignore this email.</p>
   </div>
   <div class="footer">
     &copy; ${new Date().getFullYear()} SuperMandi. All rights reserved.
@@ -514,7 +514,7 @@ A password reset was requested for your SuperMandi supplier account.
 
 Click here to reset your password: ${resetUrl}
 
-This link will expire in 24 hours. If you didn't request this, please ignore this email.
+This link will expire in 1 hour. If you didn't request this, please ignore this email.
 
 - The SuperMandi Team`;
 

@@ -32,8 +32,9 @@ export default function InvoicesPage() {
     enabled: !!selectedId,
   });
 
-  const invoices = invoicesData?.data || [];
-  const total = invoicesData?.total || 0;
+  // STG-084: apiFetch unwraps data.data, so invoicesData may be the array directly
+  const invoices = Array.isArray(invoicesData) ? invoicesData : (invoicesData?.data || []);
+  const total = Array.isArray(invoicesData) ? invoicesData.length : (invoicesData?.total || 0);
   const totalPages = Math.ceil(total / limit);
 
   const statusColors: Record<string, string> = {

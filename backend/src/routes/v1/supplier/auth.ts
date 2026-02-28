@@ -579,9 +579,17 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
 
     // Use constant-time comparison to prevent timing attacks
     // Don't reveal whether email exists or not
-    if (!supplier || !supplier.password_hash) {
+    if (!supplier) {
       res.status(401).json({
         error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+      });
+      return;
+    }
+
+    // STG-076: Return PASSWORD_NOT_SET for OTP-only accounts (no password hash set)
+    if (!supplier.password_hash) {
+      res.status(401).json({
+        error: { code: 'PASSWORD_NOT_SET', message: 'This account uses OTP login. Please use the OTP option to sign in.' }
       });
       return;
     }
@@ -815,13 +823,14 @@ router.post("/auth/change-password", requireSupplierAuth, passwordChangeRateLimi
     }
 
     // Hash new password and update
+    // STG-091: Also set tokens_revoked_at to invalidate all existing sessions
     const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await pool.query(
-      `UPDATE supplier.suppliers SET password_hash = $1 WHERE id = $2`,
+      `UPDATE supplier.suppliers SET password_hash = $1, tokens_revoked_at = NOW() WHERE id = $2`,
       [newHash, req.supplierId]
     );
 
-    res.json({ data: { success: true } });
+    res.json({ data: { success: true, sessionsInvalidated: true } });
   } catch (error) {
     next(error);
   }
@@ -1822,8 +1831,8 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
     }
 
     // SA-P1-005: Block suspended suppliers
-    // REQ.AUTH.BACKEND_DB_MIGRATION_PARITY_IF_REQUIRED: verification_status stored lowercase ('suspended', not 'SUSPENDED')
-    if (supplier.verification_status === 'suspended') {
+    // STG-075: Migration 097 standardized to uppercase. Check both for safety.
+    if (supplier.verification_status === 'SUSPENDED' || supplier.verification_status === 'suspended') {
       res.status(403).json({
         error: { code: 'ACCOUNT_SUSPENDED', message: 'Your account has been suspended. Please contact support.' }
       });

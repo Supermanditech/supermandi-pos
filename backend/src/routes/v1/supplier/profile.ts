@@ -47,6 +47,7 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
         bank_account_number,
         bank_ifsc,
         bank_account_name,
+        bank_name,
         bank_verification_status,
         created_at
       FROM supplier.suppliers
@@ -80,10 +81,12 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
         emailVerified: supplier.email_verified || false, // GL-WF-034
         status: supplier.status,
         rating: parseFloat(supplier.rating),
+        // STG-088: Include bankName in response
         bankDetails: supplier.bank_account_number ? {
           accountNumber: supplier.bank_account_number,
           ifscCode: supplier.bank_ifsc,
           accountName: supplier.bank_account_name,
+          bankName: supplier.bank_name || null,
         } : null,
         bankVerificationStatus: supplier.bank_verification_status || 'pending',
         createdAt: supplier.created_at,
@@ -223,6 +226,11 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
         updates.push(`bank_account_name = $${paramIndex++}`);
         values.push(bankDetails.accountName);
       }
+      // STG-088: Handle bankName in update
+      if (bankDetails.bankName !== undefined) {
+        updates.push(`bank_name = $${paramIndex++}`);
+        values.push(bankDetails.bankName);
+      }
 
       // SA-P1-008: If bank fields actually changed, trigger re-verification
       if (bankFieldsChanging) {
@@ -260,6 +268,7 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
          bank_account_number,
          bank_ifsc,
          bank_account_name,
+         bank_name,
          bank_verification_status`,
       values
     );
@@ -301,10 +310,12 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
         state: supplier.state,
         pincode: supplier.pincode,
         verificationStatus: supplier.verification_status,
+        // STG-088: Include bankName in response
         bankDetails: supplier.bank_account_number ? {
           accountNumber: supplier.bank_account_number,
           ifscCode: supplier.bank_ifsc,
           accountName: supplier.bank_account_name,
+          bankName: supplier.bank_name || null,
         } : null,
         bankVerificationStatus: supplier.bank_verification_status || 'pending',
       },

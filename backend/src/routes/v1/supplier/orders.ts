@@ -34,7 +34,7 @@ async function writeSupplierOutboxEvent(
 ): Promise<void> {
   if (!pool) return;
   await pool.query(
-    `INSERT INTO orders.outbox (event_type, aggregate_type, aggregate_id, payload)
+    `INSERT INTO orders.event_outbox (event_type, aggregate_type, aggregate_id, payload)
      VALUES ($1, 'PurchaseOrder', $2, $3)`,
     [eventType, orderId, JSON.stringify(payload)]
   );
@@ -504,7 +504,8 @@ router.patch("/orders/:id/status", requireSupplierAuth, requireActiveSupplier, a
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['submitted', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    // STG-079: Added partial_received to align with frontend status flow
+    const validStatuses = ['submitted', 'confirmed', 'shipped', 'delivered', 'partial_received', 'cancelled'];
     if (!status || !validStatuses.includes(status)) {
       res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: `Status must be one of: ${validStatuses.join(', ')}` }

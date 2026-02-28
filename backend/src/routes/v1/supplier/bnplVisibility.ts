@@ -62,8 +62,10 @@ supplierBnplRouter.get('/backed-orders', async (req: Request, res: Response) => 
 
     const summary = summaryResult.rows[0];
 
+    // STG-089: Add total at root level for frontend pagination
     res.json({
       success: true,
+      total: parseInt(summary.total, 10),
       orders: result.rows.map(row => ({
         drawdownId: row.drawdown_id,
         purchaseOrderId: row.purchase_order_id,

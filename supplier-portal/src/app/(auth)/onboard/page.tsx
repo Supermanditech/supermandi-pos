@@ -322,13 +322,14 @@ export default function SupplierOnboardingPage() {
 
     try {
       // Upload all documents
-      const panSuccess = await uploadDocument(panFile, 'PAN');
+      // STG-073: Backend expects lowercase document type keys
+      const panSuccess = await uploadDocument(panFile, 'pan_card');
       if (!panSuccess) return;
 
-      const gstinSuccess = await uploadDocument(gstinFile, 'GSTIN_CERTIFICATE');
+      const gstinSuccess = await uploadDocument(gstinFile, 'gstin_certificate');
       if (!gstinSuccess) return;
 
-      const addressSuccess = await uploadDocument(addressProofFile, 'ADDRESS_PROOF');
+      const addressSuccess = await uploadDocument(addressProofFile, 'address_proof');
       if (!addressSuccess) return;
 
       // Submit KYC
