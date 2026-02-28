@@ -1,17 +1,67 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-02-28T12:00:00.000Z",
+  "updatedAt": "2026-03-01T00:00:00.000Z",
   "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
-    "baselineSha": "34a98968f6b8f5fd587594011a6fed884fec58a1",
-    "issueRange": "STG-001..STG-206",
-    "total": 206,
-    "fixed": 205,
+    "baselineSha": "d69c4a20",
+    "issueRange": "STG-001..STG-256",
+    "total": 256,
+    "fixed": 243,
     "wontfix": 1,
+    "found": 12,
     "trackerFrozen": true,
     "deployHold": true,
-    "nextRoundStartsAt": "STG-207"
+    "nextRoundStartsAt": "STG-257",
+    "latestWave": {
+      "issueRange": "STG-237..STG-256",
+      "implementedAndReiteratedAt": "d69c4a20",
+      "type": "post-Firebase UI/UX polish reiteration",
+      "p2FixedInWave": 8,
+      "p3LoggedInWave": 12,
+      "safeToPark": true
+    }
+  },
+  "firebaseProductionAudit": {
+    "status": "REPO_HARDENED_OPERATOR_VERIFICATION_DEFERRED",
+    "artifacts": [
+      "RELEASES/FIREBASE_PRODUCTION_AUDIT_CHECKLIST.md",
+      "RELEASES/FIREBASE_PRODUCTION_AUDIT_REPORT_2026-02-28.md"
+    ],
+    "provenBlockers": [
+      "recaptcha_audit_mode_not_enforced",
+      "recaptcha_assessment_count_zero",
+      "authorized_domains_unverified",
+      "sms_region_policy_unverified",
+      "live_retailer_supplier_otp_unverified"
+    ],
+    "nextWaveExecutionOrder": [
+      "repo_hardening_complete_init_health",
+      "repo_hardening_complete_log_sanitization",
+      "repo_hardening_complete_revoked_token_policy",
+      "runtime_credential_source_verified",
+      "pos_firebase_scope_verified",
+      "operator_authorized_domains_audit",
+      "operator_sms_region_policy_audit",
+      "operator_retailer_otp_staging_test",
+      "operator_supplier_otp_staging_test",
+      "operator_recaptcha_assessment_confirmation",
+      "switch_audit_to_enforce_after_evidence"
+    ],
+    "carryForward": true
+  },
+  "postFirebaseUiPolish": {
+    "status": "COMPLETED_AND_COMMITTED",
+    "completedAt": "d69c4a20",
+    "completedDate": "2026-03-01",
+    "totalFilesChanged": 81,
+    "platformStatus": {
+      "retailerWeb": "COMPLETED",
+      "supplierWeb": "COMPLETED",
+      "superadminWeb": "COMPLETED",
+      "posApp": "COMPLETED"
+    },
+    "reiterationStgRange": "STG-237..STG-256"
   },
   "machineEnforcement": {
     "enabled": true,

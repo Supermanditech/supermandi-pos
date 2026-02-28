@@ -2056,18 +2056,18 @@ DAY 3+:     Normal monitoring cadence
 
 ## 19.1 Staging Browser Test Wave — Freeze Record
 
-> **Status**: CLOSED_IN_GIT | **Baseline**: `main@34a98968` | **Date**: 2026-02-28
+> **Status**: CLOSED_IN_GIT | **Baseline**: `main@d69c4a20` | **Date**: 2026-03-01
 
 ### Wave Summary
 
 | Metric | Value |
 |--------|-------|
-| Range | STG-001 → STG-206 |
-| Total | 206 |
-| FIXED | 205 |
+| Range | STG-001 → STG-256 |
+| Total | 256 |
+| FIXED | 243 |
 | WONTFIX | 1 (STG-021) |
 | DIAGNOSED | 0 |
-| FOUND | 0 |
+| FOUND | 12 (STG-245..256, all P3 cosmetic dark-mode gaps) |
 
 ### STG-021 WONTFIX Record
 
@@ -2077,9 +2077,9 @@ DAY 3+:     Normal monitoring cadence
 
 ### Tracker Freeze Rules
 
-1. `RELEASES/STAGING_BROWSER_TEST_ISSUES.md` is **frozen** for STG-001..206
-2. Next audit round appends new findings as STG-207+ (never rewrites old entries)
-3. Any regression against a prior STG fix → new STG ID (e.g., STG-207), not silent edit of the original
+1. `RELEASES/STAGING_BROWSER_TEST_ISSUES.md` is **frozen** for STG-001..256
+2. Next audit round appends new findings as STG-257+ (never rewrites old entries)
+3. Any regression against a prior STG fix → new STG ID (e.g., STG-257), not silent edit of the original
 4. Deploy hold remains active until operator triggers CI
 
 ### Pending Migrations (4)
@@ -2262,6 +2262,319 @@ If sub-agents increase context loss risk, Claude must not use them.
 ### Final Objective
 
 This final audit is intended to exhaustively discover remaining production-grade gaps before any next deploy. Coverage completeness is mandatory. Sampling is forbidden.
+
+---
+
+## 19.3 Firebase Production Audit — Persistent Machine State
+
+> **Status**: NOT_PRODUCTION_READY | **Date**: 2026-02-28 | **Artifacts**:
+> `RELEASES/FIREBASE_PRODUCTION_AUDIT_CHECKLIST.md`,
+> `RELEASES/FIREBASE_PRODUCTION_AUDIT_REPORT_2026-02-28.md`
+
+### Scope
+
+This Firebase audit state applies to:
+
+1. Retailer web phone OTP
+2. Supplier web phone OTP
+3. Backend Firebase Admin token verification
+4. POS Firebase usage if POS is in production auth scope
+5. Identity Platform / Firebase Authentication console settings
+
+### Frozen Findings
+
+Firebase is **not** production-grade ready yet.
+
+Proven blockers:
+
+1. Identity Platform reCAPTCHA phone auth is still in `AUDIT`
+2. All configured reCAPTCHA keys show `0` assessments
+3. Backend Firebase initialization fails soft instead of fail-fast or degraded health
+4. Revoked Firebase tokens are not checked in server verification
+5. Firebase auth logging is too verbose for production
+6. Authorized domains are not yet explicitly verified
+7. SMS region policy is not yet explicitly verified
+8. Live retailer/supplier OTP flows are not yet operator-verified end to end
+
+### Repo Truth Persisted
+
+Verified repo/runtime findings:
+
+1. Retailer and supplier both use Firebase phone auth client-side
+2. Backend verifies Firebase tokens server-side
+3. Deploy workflow sets `FIREBASE_ENABLED=true` and `FIREBASE_PROJECT_ID=supermandi-pos`
+4. Supplier build currently relies on `.env.production.example` fallback for public Firebase client config
+5. Staging auth pages are reachable
+6. Staging API health is reachable
+
+### Mandatory Next-Wave Execution Order
+
+Before any Firebase production-ready claim, Claude must execute in this order:
+
+1. Repo-side hardening
+   - fail-fast or degraded-health behavior when Firebase is enabled but initialization fails
+   - sanitize Firebase auth logs
+   - decide and implement revoked-token verification policy
+2. Runtime/config confirmation
+   - verify intended Firebase credential source
+   - verify POS Firebase scope (in scope or explicitly out of scope)
+3. Operator / console verification
+   - authorized domains audit
+   - SMS region policy audit
+   - live retailer OTP test on staging
+   - live supplier OTP test on staging
+   - reCAPTCHA assessment confirmation
+4. Only after evidence exists:
+   - switch Identity Platform phone auth protection from `AUDIT` to `ENFORCE`
+
+### No-Closure Rules
+
+Claude must not mark Firebase as production-grade ready while any of the following remains true:
+
+1. reCAPTCHA assessment count remains `0`
+2. phone auth remains in `AUDIT` without live evidence
+3. Firebase initialization can fail while service health remains falsely green
+4. revoked-token policy is unresolved
+5. sensitive Firebase auth logs remain in production paths
+6. authorized domains are not explicitly verified
+7. SMS region policy is not explicitly verified
+8. live retailer/supplier OTP staging flows are not verified end to end
+
+### Operator-Bound Evidence Required
+
+Before Firebase closure, operator evidence must include:
+
+1. exact authorized domain list
+2. exact sign-in methods enabled
+3. reCAPTCHA mode and assessment counts
+4. SMS region policy
+5. one successful retailer OTP staging flow
+6. one successful supplier OTP staging flow
+7. at least one negative-path OTP test result
+
+### Carry-Forward Rule
+
+This section remains active across future waves until Firebase is explicitly re-audited and all gates pass.
+
+Claude must re-read:
+
+1. `RELEASES/FIREBASE_PRODUCTION_AUDIT_CHECKLIST.md`
+2. `RELEASES/FIREBASE_PRODUCTION_AUDIT_REPORT_2026-02-28.md`
+
+before starting any Firebase-related implementation or closure attempt.
+
+---
+
+## 19.4 Post-Firebase UI/UX Polish Lockdown Protocol (Mandatory)
+
+> **Status**: COMPLETED | **Committed at**: `main@d69c4a20` | **Date**: 2026-03-01 | **Files changed**: 81 across 4 portals | **Reiteration**: STG-237..256 (8 P2 fixed, 12 P3 logged)
+
+### Purpose
+
+After Firebase hardening is complete and Firebase console/live verification is either complete or explicitly deferred by operator, Claude must execute one dedicated business-class UI/UX polishing wave across:
+
+1. Retailer Web
+2. Supplier Web
+3. SuperAdmin Web
+4. POS App
+
+This polish wave is for professional refinement only. It must not create functional regression, navigation regression, API regression, backend regression, auth/session regression, or theme regressions.
+
+### Activation Preconditions
+
+Claude must not start UI/UX polish until:
+
+1. Firebase repo-side hardening is complete
+2. Firebase operator/console verification is either complete or explicitly deferred by operator
+3. Current active implementation/reiteration wave is frozen in git
+4. A baseline SHA is declared before polish starts
+
+### Fixed Platform Order (Mandatory)
+
+Claude must polish platforms in this exact order:
+
+1. Retailer Web
+2. Supplier Web
+3. SuperAdmin Web
+4. POS App
+
+Claude cannot change this order unless explicitly instructed by operator.
+
+### Platform Entry Gate
+
+Before polishing a platform, Claude must publish:
+
+1. platform name
+2. complete screen list
+3. screen polish order
+4. shared components/tokens likely to be affected
+5. regression-sensitive files for that platform
+
+No platform work is valid until the full polish manifest is listed first.
+
+### Single-Screen Polish Lock (Mandatory)
+
+Claude may have only ONE active screen under polish at a time.
+
+For the active screen:
+- status must be exactly one of:
+  - `pending`
+  - `in_progress`
+  - `completed`
+  - `blocked`
+
+Claude cannot move to the next screen until the current screen is:
+- `completed`, or
+- `blocked` with exact blocker, owner, and unblock plan
+
+### Allowed Polish Scope
+
+UI/UX polish may improve:
+
+1. visual hierarchy
+2. spacing/alignment
+3. typography consistency
+4. component consistency
+5. card/table/form polish
+6. empty/loading/error state polish
+7. dark mode/light mode consistency
+8. business-class look and feel
+9. iconography consistency
+10. design token adoption
+11. action hierarchy and CTA clarity
+12. microcopy and helper/error text clarity
+13. confirmation/cancellation flow clarity
+14. keyboard/touch ergonomics
+15. table/filter/search workflow clarity
+16. success/failure feedback quality
+
+UI/UX polish must not silently alter:
+
+1. API contracts
+2. business logic
+3. permission rules
+4. wiring behavior
+5. navigation behavior
+5. DB behavior
+6. migration behavior
+7. auth/session behavior
+
+If polish work requires touching these layers, Claude must explicitly declare the impact and run broader regression checks.
+
+Wiring/navigation rule:
+
+1. wiring and navigation must be verified on every polished screen
+2. wiring and navigation are not an unrestricted polish scope
+3. if Claude discovers a real wiring/navigation defect during polish, it must:
+   - stop treating it as pure polish
+   - record it as a new issue/ticket if not already tracked
+   - declare the impact explicitly before fixing
+4. no silent route, redirect, click-path, deep-link, focus-order, or state-transition change is allowed under "polish only"
+
+### Per-Screen Polish Checklist (Mandatory)
+
+A screen is not polished until all of the following are checked:
+
+1. layout hierarchy
+2. spacing rhythm
+3. typography consistency
+4. color/token consistency
+5. button/input/card consistency
+6. empty/loading/error visual quality
+7. dark mode/light mode parity
+8. action hierarchy and CTA clarity
+9. microcopy clarity
+10. form guidance and validation clarity
+11. confirmation/cancel/retry UX quality
+12. responsive/mobile polish
+13. accessibility polish
+14. keyboard/touch ergonomics
+15. regression check against:
+   - navigation
+   - wiring
+   - API behavior
+   - auth/session
+   - backend behavior
+
+### Professional UX Direction (Mandatory)
+
+Claude must preserve one coherent business-class UX language across all platforms:
+
+1. POS App
+   - touch-first, cashier-grade, large targets, zero ambiguity, immediate action feedback
+2. Retailer Web
+   - dense but calm operations workspace, fast entry/editing, strong summaries, clear tables
+3. Supplier Web
+   - calmer catalog/fulfillment workflow, strong guidance for uploads, payouts, and compliance
+4. SuperAdmin Web
+   - command center / control-plane UX, strongest hierarchy, exception-first and approval-first flows
+
+Polish must make each platform feel more professional without making them stylistically unrelated.
+
+### Regression Guard Rule
+
+After polishing each screen, Claude must verify:
+
+1. no click path broke
+2. no form broke
+3. no route broke
+4. no state handling broke
+5. no theme token regression leaked into adjacent screens
+6. no shared component regression leaked across the platform
+
+If shared tokens/components are changed, impacted sibling screens must be rechecked before advancing.
+
+### Batch Discipline
+
+Claude may use micro-batches only when:
+
+1. the batch stays within one platform
+2. the batch uses one shared primitive or one coherent screen cluster
+3. impacted screens are immediately rechecked
+
+No mixed-platform UI polish commit is allowed unless the change is a true shared primitive used by all of them.
+
+### Evidence Rule
+
+For each polished screen Claude must publish:
+
+1. screen name
+2. polish status
+3. files touched
+4. visual areas improved
+5. regression checks performed
+6. any new issue IDs if polish exposed a hidden defect
+
+### Platform Exit Gate
+
+Claude may leave a platform only when:
+
+1. every listed screen is `completed` or `blocked`
+2. all impacted shared components are rechecked
+3. no open polish regression remains in that platform
+4. platform summary is published:
+   - total screens
+   - completed
+   - blocked
+   - shared primitives changed
+   - regressions found/fixed
+
+### Full UI/UX Polish Completion Gate
+
+The UI/UX polish wave is complete only if:
+
+1. Retailer polished
+2. Supplier polished
+3. SuperAdmin polished
+4. POS polished
+5. all impacted regressions are fixed or blocked explicitly
+6. Claude publishes a final visual-system summary and lists the highest-risk files touched
+
+### Final Objective
+
+This polish wave exists to bring all four platforms to a professional business-class visual and interaction standard without destabilizing the product before the next deployment.
+
+Sampling is forbidden. Single-screen lock is mandatory.
 
 ---
 

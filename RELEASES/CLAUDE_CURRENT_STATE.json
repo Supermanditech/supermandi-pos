@@ -1,20 +1,20 @@
 {
-  "version": "62.0",
-  "lastUpdated": "2026-02-28T12:00:00.000Z",
-  "currentPhase": "FINAL_STAGING_AUDIT: §19.2 lockdown protocol active. STG-001..206 frozen. New findings start at STG-207+. Fixed platform order: Retailer → Supplier → SuperAdmin → POS. Single-screen lock enforced. Deploy hold active.",
+  "version": "66.0",
+  "lastUpdated": "2026-03-01T00:00:00.000Z",
+  "currentPhase": "POST_FIREBASE_UI_UX_POLISH_COMPLETE + REITERATION_COMPLETE: STG-001..244 fixed, STG-245..256 found (12 P3 cosmetic), baseline main@d69c4a20, deploy hold active, final fresh audit in progress.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
-    "baselineSha": "34a98968f6b8f5fd587594011a6fed884fec58a1",
+    "baselineSha": "d69c4a20",
     "baselineBranch": "main",
-    "issueRange": "STG-001..STG-206",
+    "issueRange": "STG-001..STG-256",
     "summary": {
-      "total": 206,
-      "fixed": 205,
+      "total": 256,
+      "fixed": 243,
       "wontfix": 1,
       "diagnosed": 0,
-      "found": 0
+      "found": 12
     },
     "wontfixRegistry": {
       "STG-021": {
@@ -27,15 +27,33 @@
     "trackerFrozen": true,
     "deployHold": true,
     "nextRoundRules": {
-      "auditFrom": "main@34a98968",
-      "newFindingsStartAt": "STG-207",
-      "regressionAgainstPriorFixes": "Append as new STG-207+ IDs, do NOT silently edit historical closures",
-      "doNotRewrite": "STG-001..STG-206 entries are frozen — only append, never edit"
+      "auditFrom": "main@d69c4a20",
+      "newFindingsStartAt": "STG-257",
+      "regressionAgainstPriorFixes": "Append as new STG-257+ IDs, do NOT silently edit historical closures",
+      "doNotRewrite": "STG-001..STG-256 entries are frozen — only append, never edit"
     },
     "migrations": {
       "pending": ["168_fix_check_constraints.sql", "169_add_pending_mrp.sql", "170_credit_app_columns_and_constraint.sql", "171_fix_buy_payments_mode_constraint.sql"],
       "safetyVerdict": "All 4 backward-compatible, idempotent, migration-first required",
       "lockRisk": "LOW (sub-second ACCESS EXCLUSIVE on small tables)"
+    },
+    "latestWave": {
+      "issueRange": "STG-237..STG-256",
+      "implementedAndReiteratedAt": "d69c4a20",
+      "summary": {
+        "type": "post-Firebase UI/UX polish reiteration",
+        "newP2FoundAndFixed": 8,
+        "newP3FoundNotFixed": 12,
+        "totalNewIssues": 20,
+        "totalFixedInWave": 8,
+        "openP1P2": 0
+      },
+      "priorWave": {
+        "issueRange": "STG-207..STG-236",
+        "implementedAndReiteratedAt": "1d2b4288",
+        "totalClosedInWave": 30
+      },
+      "safeToPark": true
     },
     "operatorStepsRemaining": [
       "Cloud SQL backup before migration run",
@@ -44,6 +62,81 @@
       "Browser verification of all 6 staging services post-deploy",
       "STG-004 email: verify smtp-password secret is present in Secret Manager"
     ]
+  },
+  "firebaseProductionAudit": {
+    "status": "REPO_HARDENED_OPERATOR_VERIFICATION_DEFERRED",
+    "artifacts": [
+      "RELEASES/FIREBASE_PRODUCTION_AUDIT_CHECKLIST.md",
+      "RELEASES/FIREBASE_PRODUCTION_AUDIT_REPORT_2026-02-28.md"
+    ],
+    "provenBlockers": [
+      "Identity Platform reCAPTCHA phone auth is still in AUDIT",
+      "All configured reCAPTCHA keys show 0 assessments",
+      "Authorized domains not yet explicitly verified",
+      "SMS region policy not yet explicitly verified",
+      "Live retailer/supplier OTP flows not yet operator-verified end to end"
+    ],
+    "repoTruth": [
+      "Retailer and supplier both use Firebase phone auth client-side",
+      "Backend verifies Firebase tokens server-side",
+      "Deploy workflow sets FIREBASE_ENABLED=true and FIREBASE_PROJECT_ID=supermandi-pos",
+      "Supplier build relies on .env.production.example fallback for public Firebase client config",
+      "Staging auth pages are reachable",
+      "Staging API health is reachable"
+    ],
+    "nextWaveExecutionOrder": [
+      "Repo hardening complete: fail-fast/degraded health on Firebase init failure",
+      "Repo hardening complete: sanitize Firebase auth logs",
+      "Repo hardening complete: revoked-token verification enforced",
+      "Runtime confirmation complete: verify intended Firebase credential source",
+      "Runtime confirmation complete: verify POS Firebase scope",
+      "Operator console audit: authorized domains",
+      "Operator console audit: SMS region policy",
+      "Operator live test: retailer OTP on staging",
+      "Operator live test: supplier OTP on staging",
+      "Operator confirmation: reCAPTCHA assessments increase above zero",
+      "Only after evidence: move reCAPTCHA SMS defense from AUDIT to ENFORCE"
+    ],
+    "closureBlockedUntil": [
+      "reCAPTCHA assessments are non-zero",
+      "phone auth protection is validated beyond AUDIT mode",
+      "authorized domains are verified",
+      "SMS region policy is verified",
+      "retailer and supplier OTP staging flows are verified end to end"
+    ]
+  },
+  "postFirebaseUiPolish": {
+    "status": "COMPLETED_AND_COMMITTED",
+    "completedAt": "d69c4a20",
+    "completedDate": "2026-03-01",
+    "scope": [
+      "UI",
+      "UX"
+    ],
+    "platformOrder": [
+      "Retailer Web",
+      "Supplier Web",
+      "SuperAdmin Web",
+      "POS App"
+    ],
+    "platformStatus": {
+      "Retailer Web": "COMPLETED — 36 files, inline→CSS with dark mode",
+      "Supplier Web": "COMPLETED — 3 files, Tailwind dark overrides",
+      "SuperAdmin Web": "COMPLETED — 31 files, inline→CSS with dark mode",
+      "POS App": "COMPLETED — 5 files, hardcoded hex→theme tokens"
+    },
+    "totalFilesChanged": 81,
+    "reiterationResult": {
+      "p2FoundAndFixed": 8,
+      "p3FoundAndLogged": 12,
+      "stgRange": "STG-237..STG-256"
+    },
+    "professionalUxDirection": {
+      "Retailer Web": "Dense but calm operations workspace with strong summaries, clear tables, fast entry/editing, and low-friction daily workflows.",
+      "Supplier Web": "Calmer catalog and fulfillment workspace with guided uploads, payout clarity, compliance confidence, and minimal ambiguity.",
+      "SuperAdmin Web": "Command-center control plane with strongest hierarchy, exception-first visibility, fast approvals, and clear risk signaling.",
+      "POS App": "Touch-first cashier-grade UX with large targets, instant feedback, unambiguous actions, and speed over decoration."
+    }
   },
   "ticketStatus": {
     "T-054": "DONE",
