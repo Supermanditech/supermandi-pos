@@ -184,11 +184,11 @@ export function AuditTab({
                     background: log.action === "delete" ? "#ffebee" :
                                log.action === "create" ? "#e8f5e9" :
                                log.action === "approve" ? "#e3f2fd" :
-                               log.action === "reject" ? "#fff3e0" : "#f5f5f5",
+                               log.action === "reject" ? "#fff3e0" : "var(--color-surface-alt)",
                     color: log.action === "delete" ? "#c62828" :
                            log.action === "create" ? "#2e7d32" :
                            log.action === "approve" ? "#1565c0" :
-                           log.action === "reject" ? "#e65100" : "#666"
+                           log.action === "reject" ? "#e65100" : "var(--color-text-secondary)"
                   }}>
                     {log.action.toUpperCase()}
                   </span>
@@ -221,7 +221,7 @@ export function AuditTab({
             ))}
             {auditLogs.length === 0 && !auditLogsLoading && (
               <tr>
-                <td colSpan={7} style={{ textAlign: "center", color: "#888", padding: 24 }}>
+                <td colSpan={7} style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 24 }}>
                   No audit logs found
                 </td>
               </tr>

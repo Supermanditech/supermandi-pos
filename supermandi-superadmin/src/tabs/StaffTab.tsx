@@ -55,7 +55,7 @@ export function StaffTab({
         <select
           value={staffStoreId}
           onChange={(e) => { setStaffStoreId(e.target.value); setStaffList([]); }}
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
+          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }}
         >
           <option value="">Select a store...</option>
           {storeDirectory.map((s) => (
@@ -72,28 +72,28 @@ export function StaffTab({
         )}
       </div>
 
-      {staffError && <div className="alertDanger" style={{ marginBottom: 12 }}>{staffError}</div>}
-      {staffSuccess && <div style={{ color: '#16a34a', background: '#f0fdf4', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>{staffSuccess}</div>}
+      {staffError && <div className="banner" style={{ marginBottom: 12 }}>{staffError}</div>}
+      {staffSuccess && <div style={{ color: 'var(--color-success)', background: 'var(--color-success-soft)', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>{staffSuccess}</div>}
 
       {showAddStaff && (
-        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <div style={{ background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", borderRadius: 8, padding: 16, marginBottom: 16 }}>
           <div style={{ fontWeight: 600, marginBottom: 12 }}>Add New Staff Member</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Name</label>
-              <input type="text" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} placeholder="Staff name" style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>Name</label>
+              <input type="text" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} placeholder="Staff name" style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }} />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Phone (10 digits)</label>
-              <input type="tel" inputMode="numeric" pattern="\d{10}" value={newStaffPhone} onChange={(e) => setNewStaffPhone(e.target.value.replace(/\D/g, ''))} placeholder="9876543210" maxLength={10} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>Phone (10 digits)</label>
+              <input type="tel" inputMode="numeric" pattern="\d{10}" value={newStaffPhone} onChange={(e) => setNewStaffPhone(e.target.value.replace(/\D/g, ''))} placeholder="9876543210" maxLength={10} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }} />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>PIN (4-6 digits)</label>
-              <input type="password" inputMode="numeric" pattern="\d{4,6}" value={newStaffPin} onChange={(e) => setNewStaffPin(e.target.value.replace(/\D/g, ''))} placeholder="1234" maxLength={6} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>PIN (4-6 digits)</label>
+              <input type="password" inputMode="numeric" pattern="\d{4,6}" value={newStaffPin} onChange={(e) => setNewStaffPin(e.target.value.replace(/\D/g, ''))} placeholder="1234" maxLength={6} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }} />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Role</label>
-              <select value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value as any)} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>Role</label>
+              <select value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value as any)} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }}>
                 <option value="CASHIER">CASHIER (sell only)</option>
                 <option value="STOCK_MANAGER">STOCK_MANAGER (sell + stock-in)</option>
                 <option value="MANAGER">MANAGER (all operations)</option>
@@ -128,7 +128,7 @@ export function StaffTab({
                       value={s.role}
                       onChange={(e) => handleStaffRoleChange(s.id, e.target.value as "CASHIER" | "STOCK_MANAGER" | "MANAGER")}
                       disabled={staffActionLoading === s.id}
-                      style={{ padding: "2px 6px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid #d1d5db", background: s.role === "MANAGER" ? "#dbeafe" : s.role === "STOCK_MANAGER" ? "#fef3c7" : "#f1f5f9", color: s.role === "MANAGER" ? "#1e40af" : s.role === "STOCK_MANAGER" ? "#92400e" : "#475569", cursor: "pointer" }}
+                      style={{ padding: "2px 6px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid var(--color-border)", background: s.role === "MANAGER" ? "#dbeafe" : s.role === "STOCK_MANAGER" ? "#fef3c7" : "var(--color-surface-alt)", color: s.role === "MANAGER" ? "#1e40af" : s.role === "STOCK_MANAGER" ? "#92400e" : "var(--color-text-secondary)", cursor: "pointer" }}
                     >
                       <option value="CASHIER">CASHIER</option>
                       <option value="STOCK_MANAGER">STOCK_MANAGER</option>
@@ -136,7 +136,7 @@ export function StaffTab({
                     </select>
                   </td>
                   <td>
-                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: s.is_active ? "#dcfce7" : "#fee2e2", color: s.is_active ? "#166534" : "#991b1b" }}>
+                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: s.is_active ? "var(--color-success-soft)" : "var(--color-error-soft)", color: s.is_active ? "#166534" : "#991b1b" }}>
                       {s.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
@@ -154,7 +154,7 @@ export function StaffTab({
                     </div>
                     {resetPinStaffId === s.id && (
                       <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                        <input type="password" inputMode="numeric" pattern="\d{4,6}" value={resetPinValue} onChange={(e) => setResetPinValue(e.target.value.replace(/\D/g, ''))} placeholder="New PIN" maxLength={6} style={{ width: 80, padding: "2px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 12 }} />
+                        <input type="password" inputMode="numeric" pattern="\d{4,6}" value={resetPinValue} onChange={(e) => setResetPinValue(e.target.value.replace(/\D/g, ''))} placeholder="New PIN" maxLength={6} style={{ width: 80, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--color-border)", fontSize: 12 }} />
                         <button className="btnSuccess btnSm" onClick={handleResetPin} style={{ fontSize: 11, padding: "2px 6px" }}>Save</button>
                         <button className="btnGhost btnSm" onClick={() => setResetPinStaffId(null)} style={{ fontSize: 11, padding: "2px 6px" }}>Cancel</button>
                       </div>

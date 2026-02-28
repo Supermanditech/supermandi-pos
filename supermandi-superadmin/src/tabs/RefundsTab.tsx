@@ -9,11 +9,11 @@ function formatCurrency(minor: number): string {
 }
 
 const STATUS_STYLES: Record<RefundStatus, { bg: string; color: string; label: string }> = {
-  initiated:  { bg: "#fef3c7", color: "#92400e", label: "Initiated" },
+  initiated:  { bg: "var(--color-warning-soft)", color: "#92400e", label: "Initiated" },
   processing: { bg: "#dbeafe", color: "#1e40af", label: "Processing" },
-  processed:  { bg: "#dcfce7", color: "#166534", label: "Processed" },
-  failed:     { bg: "#fecaca", color: "#991b1b", label: "Failed" },
-  cancelled:  { bg: "#e5e7eb", color: "#6b7280", label: "Cancelled" },
+  processed:  { bg: "var(--color-success-soft)", color: "#166534", label: "Processed" },
+  failed:     { bg: "var(--color-error-soft)", color: "#991b1b", label: "Failed" },
+  cancelled:  { bg: "var(--color-border)", color: "var(--color-text-secondary)", label: "Cancelled" },
 };
 
 export function RefundsTab() {
@@ -103,8 +103,8 @@ export function RefundsTab() {
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={actionLoading !== null} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>Refund Management</h2>
-          <p style={{ fontSize: "0.8125rem", color: "#64748b", marginTop: "0.25rem" }}>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-text-primary)" }}>Refund Management</h2>
+          <p style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
             {total} total refund requests{statusFilter ? ` (${statusFilter})` : ""}
           </p>
         </div>
@@ -112,7 +112,7 @@ export function RefundsTab() {
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value as RefundStatus | ""); setOffset(0); }}
-            style={{ padding: "0.375rem 0.75rem", border: "1px solid #d1d5db", borderRadius: "0.375rem", fontSize: "0.8125rem" }}
+            style={{ padding: "0.375rem 0.75rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", fontSize: "0.8125rem" }}
           >
             <option value="">All Statuses</option>
             <option value="initiated">Initiated</option>
@@ -121,47 +121,47 @@ export function RefundsTab() {
             <option value="failed">Failed</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button onClick={refresh} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "#f1f5f9", border: "1px solid #d1d5db", borderRadius: "0.375rem", cursor: "pointer" }}>
+          <button onClick={refresh} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: "pointer" }}>
             Refresh
           </button>
         </div>
       </div>
 
-      {error && <div style={{ padding: "0.75rem", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.5rem", color: "#991b1b", marginBottom: "1rem", fontSize: "0.8125rem" }}>{error}</div>}
+      {error && <div style={{ padding: "0.75rem", background: "var(--color-error-soft)", border: "1px solid var(--color-error)", borderRadius: "0.5rem", color: "#991b1b", marginBottom: "1rem", fontSize: "0.8125rem" }}>{error}</div>}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>Loading refunds...</div>
+        <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>Loading refunds...</div>
       ) : refunds.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>No refund requests found</div>
+        <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>No refund requests found</div>
       ) : (
         <>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "#475569" }}>Store</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "#475569" }}>Order</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "#475569" }}>Amount</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "#475569" }}>Reason</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "center", fontWeight: 600, color: "#475569" }}>Status</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "#475569" }}>Date</th>
-                <th style={{ padding: "0.625rem 0.75rem", textAlign: "center", fontWeight: 600, color: "#475569" }}>Actions</th>
+              <tr style={{ background: "var(--color-surface-alt)", borderBottom: "2px solid var(--color-border)" }}>
+                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Store</th>
+                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Order</th>
+                <th style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "var(--color-text-secondary)" }}>Amount</th>
+                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Reason</th>
+                <th style={{ padding: "0.625rem 0.75rem", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)" }}>Status</th>
+                <th style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>Date</th>
+                <th style={{ padding: "0.625rem 0.75rem", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {refunds.map((r) => {
                 const style = STATUS_STYLES[r.status] || STATUS_STYLES.initiated;
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <tr key={r.id} style={{ borderBottom: "1px solid var(--color-surface-alt)" }}>
                     <td style={{ padding: "0.625rem 0.75rem" }}>
-                      <div style={{ fontWeight: 500, color: "#1e293b" }}>{r.storeName || r.storeId.slice(0, 8)}</div>
+                      <div style={{ fontWeight: 500, color: "var(--color-text-primary)" }}>{r.storeName || r.storeId.slice(0, 8)}</div>
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569" }}>
+                    <td style={{ padding: "0.625rem 0.75rem", fontFamily: "monospace", fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
                       {r.orderId.slice(0, 8)}...
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "#1e293b" }}>
+                    <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "var(--color-text-primary)" }}>
                       {formatCurrency(r.refundAmount)}
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", color: "#475569", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "0.625rem 0.75rem", color: "var(--color-text-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {r.reason}
                     </td>
                     <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
@@ -169,7 +169,7 @@ export function RefundsTab() {
                         {style.label}
                       </span>
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", fontSize: "0.75rem", color: "#64748b" }}>
+                    <td style={{ padding: "0.625rem 0.75rem", fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
                       {formatDate(r.createdAt)}
                     </td>
                     <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
@@ -178,14 +178,14 @@ export function RefundsTab() {
                           <button
                             onClick={() => handleApprove(r.id, r.refundAmount)}
                             disabled={actionLoading === r.id}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", borderRadius: "0.25rem", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "var(--color-success-soft)", color: "#166534", border: "1px solid var(--color-success)", borderRadius: "0.25rem", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => setRejectId(r.id)}
                             disabled={actionLoading === r.id}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca", borderRadius: "0.25rem", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "var(--color-error-soft)", color: "#991b1b", border: "1px solid var(--color-error)", borderRadius: "0.25rem", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
                           >
                             Reject
                           </button>
@@ -207,17 +207,17 @@ export function RefundsTab() {
               <button
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - limit))}
-                style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", border: "1px solid #d1d5db", borderRadius: "0.375rem", cursor: offset === 0 ? "not-allowed" : "pointer", opacity: offset === 0 ? 0.5 : 1 }}
+                style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: offset === 0 ? "not-allowed" : "pointer", opacity: offset === 0 ? 0.5 : 1 }}
               >
                 Previous
               </button>
-              <span style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", color: "#6b7280" }}>
+              <span style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", color: "var(--color-text-secondary)" }}>
                 {offset + 1}–{Math.min(offset + limit, total)} of {total}
               </span>
               <button
                 disabled={offset + limit >= total}
                 onClick={() => setOffset((o) => o + limit)}
-                style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", border: "1px solid #d1d5db", borderRadius: "0.375rem", cursor: offset + limit >= total ? "not-allowed" : "pointer", opacity: offset + limit >= total ? 0.5 : 1 }}
+                style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: offset + limit >= total ? "not-allowed" : "pointer", opacity: offset + limit >= total ? 0.5 : 1 }}
               >
                 Next
               </button>
@@ -230,15 +230,15 @@ export function RefundsTab() {
       {rejectId && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }} onClick={() => { setRejectId(null); setRejectReason(""); }}>
           <div style={{ background: "#fff", borderRadius: "0.75rem", padding: "1.5rem", maxWidth: "400px", width: "90%" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#1e293b", marginBottom: "0.75rem" }}>Reject Refund</h3>
+            <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text-primary)", marginBottom: "0.75rem" }}>Reject Refund</h3>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Reason for rejection..."
-              style={{ width: "100%", minHeight: "80px", padding: "0.5rem", border: "1px solid #d1d5db", borderRadius: "0.375rem", fontSize: "0.8125rem", resize: "vertical", boxSizing: "border-box" }}
+              style={{ width: "100%", minHeight: "80px", padding: "0.5rem", border: "1px solid var(--color-border)", borderRadius: "0.375rem", fontSize: "0.8125rem", resize: "vertical", boxSizing: "border-box" }}
             />
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.75rem" }}>
-              <button onClick={() => { setRejectId(null); setRejectReason(""); }} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "#f1f5f9", border: "1px solid #d1d5db", borderRadius: "0.375rem", cursor: "pointer" }}>
+              <button onClick={() => { setRejectId(null); setRejectReason(""); }} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", background: "var(--color-surface-alt)", border: "1px solid var(--color-border)", borderRadius: "0.375rem", cursor: "pointer" }}>
                 Cancel
               </button>
               <button

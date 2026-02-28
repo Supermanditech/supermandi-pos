@@ -348,7 +348,7 @@ export function SuppliersTab({
                   <button
                     onClick={() => handleVerifySupplier(request.id)}
                     disabled={supplierActionLoading[request.id] || !selectedSupplierForLink[request.id]}
-                    style={{ background: "#22c55e", color: "white" }}
+                    style={{ background: "var(--color-success)", color: "white" }}
                     title="Link to an existing verified supplier"
                   >
                     {supplierActionLoading[request.id] ? "Linking..." : "Link to Verified"}
@@ -357,7 +357,7 @@ export function SuppliersTab({
                     className="btnGhost"
                     onClick={() => handleRejectSupplier(request.id)}
                     disabled={supplierActionLoading[request.id]}
-                    style={{ color: "#ef4444" }}
+                    style={{ color: "var(--color-error)" }}
                   >
                     {supplierActionLoading[request.id] ? "Rejecting..." : "Reject"}
                   </button>
@@ -387,18 +387,18 @@ export function SuppliersTab({
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{bc.businessName}</div>
-                    <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>GSTIN: {bc.gstin}</div>
-                    {bc.phone && <div style={{ fontSize: 12, color: "#666" }}>Phone: {bc.phone}</div>}
+                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>GSTIN: {bc.gstin}</div>
+                    {bc.phone && <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Phone: {bc.phone}</div>}
                   </div>
-                  <div style={{ textAlign: "right", fontSize: 11, color: "#888" }}>
+                  <div style={{ textAlign: "right", fontSize: 11, color: "var(--color-text-secondary)" }}>
                     Changed: {new Date(bc.updatedAt).toLocaleDateString()}
                   </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 24, marginTop: 8, fontSize: 13 }}>
-                  <div><span style={{ color: "#666" }}>Account:</span> {bc.bankAccountMasked || "N/A"}</div>
-                  <div><span style={{ color: "#666" }}>IFSC:</span> {bc.bankIfsc || "N/A"}</div>
-                  <div><span style={{ color: "#666" }}>Holder:</span> {bc.bankAccountName || "N/A"}</div>
+                  <div><span style={{ color: "var(--color-text-secondary)" }}>Account:</span> {bc.bankAccountMasked || "N/A"}</div>
+                  <div><span style={{ color: "var(--color-text-secondary)" }}>IFSC:</span> {bc.bankIfsc || "N/A"}</div>
+                  <div><span style={{ color: "var(--color-text-secondary)" }}>Holder:</span> {bc.bankAccountName || "N/A"}</div>
                 </div>
 
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
@@ -415,13 +415,13 @@ export function SuppliersTab({
                     placeholder="Rejection reason (min 10 chars)"
                     value={bankRejectReason[bc.id] || ""}
                     onChange={(e) => setBankRejectReason((prev) => ({ ...prev, [bc.id]: e.target.value }))}
-                    style={{ flex: 1, fontSize: 12, padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4 }}
+                    style={{ flex: 1, fontSize: 12, padding: "4px 8px", border: "1px solid var(--color-border)", borderRadius: 4 }}
                   />
                   <button
                     className="btnGhost"
                     onClick={() => handleBankVerify(bc.id, "reject")}
                     disabled={bankVerifyLoading[bc.id]}
-                    style={{ color: "#ef4444", fontSize: 12, padding: "4px 12px" }}
+                    style={{ color: "var(--color-error)", fontSize: 12, padding: "4px 12px" }}
                   >
                     {bankVerifyLoading[bc.id] ? "..." : "Reject"}
                   </button>
@@ -513,9 +513,9 @@ export function SuppliersTab({
                       onClick={() => handleToggleAutoApprove(s.id, !!s.autoApproveProducts)}
                       disabled={autoApproveLoading[s.id]}
                       style={{
-                        padding: "4px 10px", fontSize: 12, border: "1px solid #d1d5db", borderRadius: 4, cursor: "pointer",
-                        background: s.autoApproveProducts ? "#22c55e" : "#f3f4f6",
-                        color: s.autoApproveProducts ? "#fff" : "#374151",
+                        padding: "4px 10px", fontSize: 12, border: "1px solid var(--color-border)", borderRadius: 4, cursor: "pointer",
+                        background: s.autoApproveProducts ? "var(--color-success)" : "var(--color-surface-alt)",
+                        color: s.autoApproveProducts ? "#fff" : "var(--color-text-primary)",
                       }}
                     >
                       {autoApproveLoading[s.id] ? "..." : s.autoApproveProducts ? "ON" : "OFF"}
@@ -524,7 +524,7 @@ export function SuppliersTab({
                   <td>
                     {s.verificationStatus === "SUSPENDED" ? (
                       <button
-                        style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+                        style={{ background: "var(--color-success)", color: "white", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
                         onClick={() => requestSupplierStatusChange(s.id, s.businessName, "reactivate")}
                       >
                         Reactivate
@@ -547,7 +547,7 @@ export function SuppliersTab({
       )}
 
       {/* SA-1.3-001 to SA-1.3-003: Pending Products Section */}
-      <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb" }}>
+      <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid var(--color-border)" }}>
         <div>
           <div className="cardTitle">
             Pending Products
@@ -581,7 +581,7 @@ export function SuppliersTab({
                 onClick={handleBatchApprove}
                 disabled={batchActionLoading}
                 style={{
-                  background: "#22c55e", color: "white", border: "none", borderRadius: 4,
+                  background: "var(--color-success)", color: "white", border: "none", borderRadius: 4,
                   padding: "6px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600,
                 }}
               >
@@ -591,7 +591,7 @@ export function SuppliersTab({
                 onClick={() => setBatchRejectModalOpen(true)}
                 disabled={batchActionLoading}
                 style={{
-                  background: "#ef4444", color: "white", border: "none", borderRadius: 4,
+                  background: "var(--color-error)", color: "white", border: "none", borderRadius: 4,
                   padding: "6px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600,
                 }}
               >
@@ -602,7 +602,7 @@ export function SuppliersTab({
           {batchProgress && (
             <span style={{
               fontSize: 12,
-              color: batchProgress.startsWith("Error") ? "#dc2626" : batchProgress.startsWith("Done") ? "#16a34a" : "#6b7280",
+              color: batchProgress.startsWith("Error") ? "var(--color-error)" : batchProgress.startsWith("Done") ? "var(--color-success)" : "var(--color-text-secondary)",
               fontWeight: 500,
             }}>
               {batchProgress}
@@ -640,7 +640,7 @@ export function SuppliersTab({
                           height: 48,
                           objectFit: "cover",
                           borderRadius: 6,
-                          border: "1px solid #e2e8f0",
+                          border: "1px solid var(--color-border)",
                           flexShrink: 0,
                         }}
                       />
@@ -650,14 +650,14 @@ export function SuppliersTab({
                           width: 48,
                           height: 48,
                           borderRadius: 6,
-                          background: "#f1f5f9",
+                          background: "var(--color-surface-alt)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          color: "#94a3b8",
+                          color: "var(--color-text-secondary)",
                           fontSize: 20,
                           flexShrink: 0,
-                          border: "1px solid #e2e8f0",
+                          border: "1px solid var(--color-border)",
                         }}
                         title="No product image"
                       >
@@ -716,7 +716,7 @@ export function SuppliersTab({
                   <button
                     onClick={() => handleApproveProduct(product.id)}
                     disabled={productActionLoading[product.id]}
-                    style={{ background: "#22c55e", color: "white" }}
+                    style={{ background: "var(--color-success)", color: "white" }}
                     title="Approve this product"
                   >
                     {productActionLoading[product.id] ? "Approving..." : "Approve"}
@@ -737,14 +737,14 @@ export function SuppliersTab({
                     className="btnGhost"
                     onClick={() => handleRejectProduct(product.id)}
                     disabled={productActionLoading[product.id] || (productRejectReason[product.id]?.length || 0) < 10}
-                    style={{ color: "#ef4444" }}
+                    style={{ color: "var(--color-error)" }}
                     title="Reject this product"
                   >
                     {productActionLoading[product.id] ? "Rejecting..." : "Reject"}
                   </button>
                 </div>
                 {publishResult[product.id] && (
-                  <div style={{ marginTop: 4, fontSize: 11, color: publishResult[product.id].startsWith("Error") ? "#dc2626" : "#16a34a" }}>
+                  <div style={{ marginTop: 4, fontSize: 11, color: publishResult[product.id].startsWith("Error") ? "var(--color-error)" : "var(--color-success)" }}>
                     {publishResult[product.id]}
                   </div>
                 )}
@@ -763,7 +763,7 @@ export function SuppliersTab({
               <button className="btnGhost" onClick={() => setBatchRejectModalOpen(false)} aria-label="Close">&times;</button>
             </div>
             <div className="modalBody">
-              <p style={{ marginBottom: 12, fontSize: 14, color: "#6b7280" }}>
+              <p style={{ marginBottom: 12, fontSize: 14, color: "var(--color-text-secondary)" }}>
                 Provide a reason for rejecting the selected products. This will be sent to the supplier.
               </p>
               <div className="control">
@@ -773,11 +773,11 @@ export function SuppliersTab({
                   onChange={(e) => setBatchRejectReason(e.target.value)}
                   placeholder="Enter reason for rejection..."
                   rows={3}
-                  style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 14, resize: "vertical" }}
+                  style={{ width: "100%", padding: "8px", border: "1px solid var(--color-border)", borderRadius: 4, fontSize: 14, resize: "vertical" }}
                 />
               </div>
               {batchRejectReason.length > 0 && batchRejectReason.length < 10 && (
-                <div style={{ fontSize: 12, color: "#dc2626", marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--color-error)", marginTop: 4 }}>
                   Reason must be at least 10 characters ({batchRejectReason.length}/10)
                 </div>
               )}
@@ -788,8 +788,8 @@ export function SuppliersTab({
                 onClick={handleBatchRejectConfirm}
                 disabled={batchRejectReason.length < 10 || batchActionLoading}
                 style={{
-                  background: batchRejectReason.length >= 10 ? "#ef4444" : "#f3f4f6",
-                  color: batchRejectReason.length >= 10 ? "white" : "#9ca3af",
+                  background: batchRejectReason.length >= 10 ? "var(--color-error)" : "var(--color-surface-alt)",
+                  color: batchRejectReason.length >= 10 ? "white" : "var(--color-text-secondary)",
                   border: "none", borderRadius: 4, padding: "8px 16px", fontSize: 14,
                   cursor: batchRejectReason.length >= 10 ? "pointer" : "default",
                 }}
@@ -824,7 +824,7 @@ export function SuppliersTab({
                       height: 200,
                       objectFit: "cover",
                       borderRadius: 6,
-                      border: "1px solid #e2e8f0",
+                      border: "1px solid var(--color-border)",
                       display: "inline-block",
                     }}
                   />
@@ -834,13 +834,13 @@ export function SuppliersTab({
                       width: 200,
                       height: 200,
                       borderRadius: 6,
-                      background: "#f1f5f9",
+                      background: "var(--color-surface-alt)",
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
                       flexDirection: "column",
-                      color: "#94a3b8",
-                      border: "1px solid #e2e8f0",
+                      color: "var(--color-text-secondary)",
+                      border: "1px solid var(--color-border)",
                       gap: 8,
                     }}
                   >
@@ -859,7 +859,7 @@ export function SuppliersTab({
                 <strong>MRP:</strong> INR {(editingProduct.mrp / 100).toFixed(2)}
               </div>
 
-              <hr style={{ margin: "16px 0", borderColor: "#e5e7eb" }} />
+              <hr style={{ margin: "16px 0", borderColor: "var(--color-border)" }} />
 
               <div className="control" style={{ marginBottom: 16 }}>
                 <label>Display Name (optional override)</label>
@@ -938,7 +938,7 @@ export function SuppliersTab({
                 </div>
               )}
 
-              <hr style={{ margin: "16px 0", borderColor: "#e5e7eb" }} />
+              <hr style={{ margin: "16px 0", borderColor: "var(--color-border)" }} />
 
               {/* T-070: Invoice Configuration */}
               <div className="control" style={{ marginBottom: 16 }}>
@@ -982,7 +982,7 @@ export function SuppliersTab({
               </div>
 
               {editProductError && <div className="banner">{editProductError}</div>}
-              {editProductSuccess && <div className="muted" style={{ color: "#22c55e", marginTop: 8 }}>{editProductSuccess}</div>}
+              {editProductSuccess && <div className="muted" style={{ color: "var(--color-success)", marginTop: 8 }}>{editProductSuccess}</div>}
             </div>
 
             <div className="modalFooter">
@@ -1000,7 +1000,7 @@ export function SuppliersTab({
         </div>
       )}
 
-      <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb" }}>
+      <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid var(--color-border)" }}>
         <div>
           <div className="cardTitle">Recently Processed</div>
           <div className="muted">Approved and rejected requests</div>

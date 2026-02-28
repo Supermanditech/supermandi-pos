@@ -35,13 +35,13 @@ export function UsersTab({
           <div className="cardTitle">Users Management</div>
           <div className="muted">Manage platform users and their access</div>
         </div>
-        <button onClick={() => setShowCreateUser(!showCreateUser)} style={{ background: showCreateUser ? "#6b7280" : "#3b82f6", color: "white" }}>
+        <button onClick={() => setShowCreateUser(!showCreateUser)} style={{ background: showCreateUser ? "var(--color-text-secondary)" : "#3b82f6", color: "white" }}>
           {showCreateUser ? "Cancel" : "+ Create User"}
         </button>
       </div>
 
       {showCreateUser && (
-        <div className="tableWrap" style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: 16 }}>
+        <div className="tableWrap" style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: 16 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
             <div className="control">
               <label>Name *</label>
@@ -71,16 +71,16 @@ export function UsersTab({
             </div>
           )}
           {createUserForm.actor_type === "platform" && (
-            <div className="muted" style={{ marginTop: 8, color: "#b45309", background: "#fef3c7", padding: 8, borderRadius: 4 }}>
+            <div className="muted" style={{ marginTop: 8, color: "var(--color-warning)", background: "var(--color-warning-soft)", padding: 8, borderRadius: 4 }}>
               Creating a Platform Admin grants full system access. Additional verification required.
             </div>
           )}
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={requestCreateUser} disabled={createUserLoading} style={{ background: "#22c55e", color: "white" }}>
+            <button onClick={requestCreateUser} disabled={createUserLoading} style={{ background: "var(--color-success)", color: "white" }}>
               {createUserLoading ? "Creating..." : "Create User"}
             </button>
             {createUserError && <span className="errorText">{createUserError}</span>}
-            {createUserSuccess && <span style={{ color: "#22c55e", fontWeight: 600 }}>{createUserSuccess}</span>}
+            {createUserSuccess && <span style={{ color: "var(--color-success)", fontWeight: 600 }}>{createUserSuccess}</span>}
           </div>
           <div className="muted" style={{ marginTop: 8 }}>* Name and Email are required.</div>
         </div>
@@ -119,7 +119,7 @@ export function UsersTab({
               </tr>
             ))}
             {userRecords.length === 0 && !usersLoading && (
-              <tr><td colSpan={7} style={{ textAlign: "center", color: "#888" }}>No users found</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--color-text-secondary)" }}>No users found</td></tr>
             )}
           </tbody>
         </table>

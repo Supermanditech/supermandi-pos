@@ -109,7 +109,7 @@ export function AnalyticsTab({
         {/* UNMAPPED.041: Loading skeleton when data is null and loading */}
         {analyticsLoading && (
           <div style={{ marginTop: 12, padding: 24, textAlign: "center" }}>
-            <div style={{ display: "inline-block", width: 24, height: 24, border: "3px solid #e2e8f0", borderTopColor: "#6366f1", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <div style={{ display: "inline-block", width: 24, height: 24, border: "3px solid var(--color-border)", borderTopColor: "#6366f1", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
             <div className="muted" style={{ marginTop: 8 }}>Loading analytics...</div>
           </div>
         )}

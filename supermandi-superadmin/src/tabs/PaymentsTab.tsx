@@ -28,9 +28,9 @@ export function PaymentsTab({ paymentEvents, loading, error }: PaymentsTabProps)
 
       {/* UIUX-SA-013: Show loading/error states instead of misleading empty state */}
       {loading ? (
-        <div className="empty" style={{ color: '#64748b' }}>Loading payment events...</div>
+        <div className="empty" style={{ color: 'var(--color-text-secondary)' }}>Loading payment events...</div>
       ) : error ? (
-        <div className="empty" style={{ color: '#dc2626' }}>{error}</div>
+        <div className="empty" style={{ color: 'var(--color-error)' }}>{error}</div>
       ) : paymentEvents.length === 0 ? (
         <div className="empty">No payment events found for the current filters.</div>
       ) : (
@@ -62,7 +62,7 @@ export function PaymentsTab({ paymentEvents, loading, error }: PaymentsTabProps)
             </table>
           </div>
           {paymentEvents.length > PAYMENTS_PAGE_SIZE && (
-            <div style={{ padding: "8px 16px", fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 12 }}>
               <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={{ fontSize: 12, padding: "2px 8px" }}>←</button>
               <span>Page {page + 1} / {maxPage + 1} ({paymentEvents.length} total)</span>
               <button onClick={() => setPage(p => Math.min(maxPage, p + 1))} disabled={page >= maxPage} style={{ fontSize: 12, padding: "2px 8px" }}>→</button>

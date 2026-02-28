@@ -82,10 +82,10 @@ export function QualityDashboardTab() {
 
   const statusColor = (status: string) => {
     if (status === "healthy" || status === "running" || status === "configured" || status === "enabled" || status === "passed")
-      return { bg: "#DCFCE7", text: "#166534", dot: "#22C55E" };
+      return { bg: "var(--color-success-soft)", text: "var(--color-success)", dot: "var(--color-success)" };
     if (status === "warning" || status === "degraded" || status === "scripts-ready")
-      return { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" };
-    return { bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" };
+      return { bg: "var(--color-warning-soft)", text: "var(--color-warning)", dot: "var(--color-warning)" };
+    return { bg: "var(--color-error-soft)", text: "var(--color-error)", dot: "var(--color-error)" };
   };
 
   const renderToolCard = (name: string, icon: string, tool: ToolStatus) => {
@@ -103,17 +103,17 @@ export function QualityDashboardTab() {
       <div
         key={name}
         style={{
-          border: "1px solid #E2E8F0",
+          border: "1px solid var(--color-border)",
           borderRadius: 8,
           padding: 16,
-          background: "#FFF",
+          background: "var(--color-surface)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 24 }}>{icon}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{name}</div>
-            <div style={{ fontSize: 12, color: "#64748B" }}>{metric}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{metric}</div>
           </div>
         </div>
         <div
@@ -145,7 +145,7 @@ export function QualityDashboardTab() {
 
   if (loading && !overview) {
     return (
-      <div style={{ padding: 24, textAlign: "center", color: "#64748B" }}>
+      <div style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)" }}>
         Loading quality dashboard...
       </div>
     );
@@ -157,8 +157,8 @@ export function QualityDashboardTab() {
         <div
           style={{
             padding: 12,
-            background: "#FEE2E2",
-            color: "#991B1B",
+            background: "var(--color-error-soft)",
+            color: "var(--color-error)",
             borderRadius: 6,
             fontSize: 14,
           }}
@@ -187,7 +187,7 @@ export function QualityDashboardTab() {
       >
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Quality Dashboard</h2>
-          <p style={{ margin: "4px 0 0", color: "#64748B", fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--color-text-secondary)", fontSize: 14 }}>
             9 testing tools + GCP native monitoring + live system metrics
           </p>
         </div>
@@ -195,7 +195,7 @@ export function QualityDashboardTab() {
           <label
             style={{
               fontSize: 13,
-              color: "#64748B",
+              color: "var(--color-text-secondary)",
               display: "flex",
               alignItems: "center",
               gap: 4,
@@ -215,8 +215,8 @@ export function QualityDashboardTab() {
             style={{
               padding: "6px 12px",
               fontSize: 13,
-              background: "#FFF",
-              border: "1px solid #CBD5E1",
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
               borderRadius: 6,
               cursor: resettingMetrics ? "not-allowed" : "pointer",
               opacity: resettingMetrics ? 0.6 : 1,
@@ -261,31 +261,31 @@ export function QualityDashboardTab() {
           }}
         >
           <div>
-            <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Uptime</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Uptime</div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>
               {formatUptime(overview.system.uptime)}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Memory</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Memory</div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>{overview.system.memoryMB} MB</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Error Rate</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Error Rate</div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>{overview.system.errorRate}</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>P95 Latency</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>P95 Latency</div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>{overview.system.p95LatencyMs}ms</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Total Requests</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Total Requests</div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>
               {overview.system.totalRequests.toLocaleString()}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Avg Latency</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Avg Latency</div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>
               {overview.system.avgLatencyMs}ms
             </div>
@@ -325,21 +325,21 @@ export function QualityDashboardTab() {
             gap: 12,
           }}
         >
-          <div style={{ border: "1px solid #E2E8F0", borderRadius: 8, padding: 12 }}>
+          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
               Cloud Monitoring
             </div>
-            <div style={{ fontSize: 13, color: "#64748B" }}>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
               {overview.gcp.alertPolicies} alert policies
             </div>
           </div>
-          <div style={{ border: "1px solid #E2E8F0", borderRadius: 8, padding: 12 }}>
+          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Uptime Checks</div>
-            <div style={{ fontSize: 13, color: "#64748B" }}>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
               {overview.gcp.uptimeChecks} services
             </div>
           </div>
-          <div style={{ border: "1px solid #E2E8F0", borderRadius: 8, padding: 12 }}>
+          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
               Error Reporting
             </div>
@@ -353,7 +353,7 @@ export function QualityDashboardTab() {
               {overview.gcp.errorReporting}
             </div>
           </div>
-          <div style={{ border: "1px solid #E2E8F0", borderRadius: 8, padding: 12 }}>
+          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Cloud Trace</div>
             <div
               style={{
@@ -365,7 +365,7 @@ export function QualityDashboardTab() {
               {overview.gcp.cloudTrace}
             </div>
           </div>
-          <div style={{ border: "1px solid #E2E8F0", borderRadius: 8, padding: 12 }}>
+          <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Cloud Profiler</div>
             <div
               style={{
@@ -384,7 +384,7 @@ export function QualityDashboardTab() {
       {testResults && (
         <div style={{ marginBottom: 24 }}>
           <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Test Results</h3>
-          <div style={{ fontSize: 12, color: "#64748B", marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8 }}>
             Last run: {testResults.lastRun}
           </div>
           <table
@@ -392,14 +392,14 @@ export function QualityDashboardTab() {
               width: "100%",
               borderCollapse: "collapse",
               fontSize: 13,
-              background: "#FFF",
-              border: "1px solid #E2E8F0",
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
               borderRadius: 8,
               overflow: "hidden",
             }}
           >
             <thead>
-              <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+              <tr style={{ background: "var(--color-surface-alt)", borderBottom: "1px solid var(--color-border)" }}>
                 <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Suite</th>
                 <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Passed</th>
                 <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Failed</th>
@@ -413,18 +413,18 @@ export function QualityDashboardTab() {
                 const status = result.failed > 0 ? "failed" : "passed";
                 const statusCol = statusColor(status);
                 return (
-                  <tr key={suite} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                  <tr key={suite} style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <td style={{ padding: 10 }}>{suite}</td>
-                    <td style={{ padding: 10, textAlign: "right", color: "#166534" }}>
+                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-success)" }}>
                       {result.passed}
                     </td>
-                    <td style={{ padding: 10, textAlign: "right", color: "#991B1B" }}>
+                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-error)" }}>
                       {result.failed}
                     </td>
-                    <td style={{ padding: 10, textAlign: "right", color: "#64748B" }}>
+                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-text-secondary)" }}>
                       {result.skipped}
                     </td>
-                    <td style={{ padding: 10, textAlign: "right", color: "#64748B" }}>
+                    <td style={{ padding: 10, textAlign: "right", color: "var(--color-text-secondary)" }}>
                       {result.duration}
                     </td>
                     <td style={{ padding: 10, textAlign: "center" }}>
@@ -469,14 +469,14 @@ export function QualityDashboardTab() {
               width: "100%",
               borderCollapse: "collapse",
               fontSize: 13,
-              background: "#FFF",
-              border: "1px solid #E2E8F0",
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
               borderRadius: 8,
               overflow: "hidden",
             }}
           >
             <thead>
-              <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+              <tr style={{ background: "var(--color-surface-alt)", borderBottom: "1px solid var(--color-border)" }}>
                 <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Project</th>
                 <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Statements</th>
                 <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Branches</th>
@@ -486,7 +486,7 @@ export function QualityDashboardTab() {
             </thead>
             <tbody>
               {Object.entries(testResults.coverage).map(([project, cov]) => (
-                <tr key={project} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                <tr key={project} style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <td style={{ padding: 10 }}>{project}</td>
                   <td style={{ padding: 10, textAlign: "right" }}>{cov.statements}%</td>
                   <td style={{ padding: 10, textAlign: "right" }}>{cov.branches}%</td>
@@ -504,10 +504,10 @@ export function QualityDashboardTab() {
         <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>CI Gate Summary</h3>
         <div
           style={{
-            border: "1px solid #E2E8F0",
+            border: "1px solid var(--color-border)",
             borderRadius: 8,
             padding: 16,
-            background: "#FFF",
+            background: "var(--color-surface)",
           }}
         >
           <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
@@ -527,12 +527,12 @@ export function QualityDashboardTab() {
                   display: "flex",
                   justifyContent: "space-between",
                   padding: "6px 8px",
-                  background: "#F8FAFC",
+                  background: "var(--color-surface-alt)",
                   borderRadius: 4,
                   fontSize: 12,
                 }}
               >
-                <span style={{ color: "#64748B" }}>{category}</span>
+                <span style={{ color: "var(--color-text-secondary)" }}>{category}</span>
                 <span style={{ fontWeight: 600 }}>{count}</span>
               </div>
             ))}
@@ -548,14 +548,14 @@ export function QualityDashboardTab() {
             width: "100%",
             borderCollapse: "collapse",
             fontSize: 13,
-            background: "#FFF",
-            border: "1px solid #E2E8F0",
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
             borderRadius: 8,
             overflow: "hidden",
           }}
         >
           <thead>
-            <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+            <tr style={{ background: "var(--color-surface-alt)", borderBottom: "1px solid var(--color-border)" }}>
               <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Method</th>
               <th style={{ padding: 10, textAlign: "left", fontWeight: 600 }}>Path</th>
               <th style={{ padding: 10, textAlign: "right", fontWeight: 600 }}>Count</th>
@@ -568,7 +568,7 @@ export function QualityDashboardTab() {
             {overview.topEndpoints.map((ep, i) => {
               const errorRate = ep.count > 0 ? ((ep.errorCount / ep.count) * 100).toFixed(1) : "0.0";
               return (
-                <tr key={i} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                <tr key={i} style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <td
                     style={{
                       padding: 10,
@@ -588,12 +588,12 @@ export function QualityDashboardTab() {
                     style={{
                       padding: 10,
                       textAlign: "right",
-                      color: parseFloat(errorRate) > 5 ? "#991B1B" : "#64748B",
+                      color: parseFloat(errorRate) > 5 ? "var(--color-error)" : "var(--color-text-secondary)",
                     }}
                   >
                     {errorRate}%
                   </td>
-                  <td style={{ padding: 10, color: "#64748B", fontSize: 11 }}>
+                  <td style={{ padding: 10, color: "var(--color-text-secondary)", fontSize: 11 }}>
                     {new Date(ep.lastSeen).toLocaleString()}
                   </td>
                 </tr>
@@ -608,10 +608,10 @@ export function QualityDashboardTab() {
         <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Database Health</h3>
         <div
           style={{
-            border: "1px solid #E2E8F0",
+            border: "1px solid var(--color-border)",
             borderRadius: 8,
             padding: 16,
-            background: "#FFF",
+            background: "var(--color-surface)",
           }}
         >
           <div
@@ -623,7 +623,7 @@ export function QualityDashboardTab() {
             }}
           >
             <div>
-              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Status</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Status</div>
               <div
                 style={{
                   fontSize: 14,
@@ -635,28 +635,28 @@ export function QualityDashboardTab() {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Latency</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Latency</div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{overview.database.latencyMs}ms</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Connections</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Connections</div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>
                 {overview.database.activeConnections}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Migrations</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Migrations</div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{overview.database.migrations}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>Latest</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>Latest</div>
               <div style={{ fontSize: 11, fontWeight: 600, fontFamily: "monospace" }}>
                 {overview.database.latestMigration}
               </div>
             </div>
           </div>
-          <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "#64748B" }}>
+          <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "var(--color-text-secondary)" }}>
               Table Row Counts
             </div>
             <div
@@ -673,12 +673,12 @@ export function QualityDashboardTab() {
                     display: "flex",
                     justifyContent: "space-between",
                     padding: "4px 8px",
-                    background: "#F8FAFC",
+                    background: "var(--color-surface-alt)",
                     borderRadius: 4,
                     fontSize: 11,
                   }}
                 >
-                  <span style={{ color: "#64748B", fontFamily: "monospace" }}>{table}</span>
+                  <span style={{ color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{table}</span>
                   <span style={{ fontWeight: 600 }}>{count.toLocaleString()}</span>
                 </div>
               ))}
@@ -702,10 +702,10 @@ export function QualityDashboardTab() {
             return (
               <div
                 key={svc.name}
-                style={{ border: "1px solid #E2E8F0", borderRadius: 8, padding: 12 }}
+                style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12 }}
               >
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{svc.name}</div>
-                <div style={{ fontSize: 11, color: "#64748B", marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 6 }}>
                   Port {svc.port} • {svc.framework}
                 </div>
                 <span

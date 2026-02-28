@@ -122,8 +122,8 @@ export function RegistrationsTab({
                     borderRadius: 4,
                     fontSize: 11,
                     fontWeight: 600,
-                    background: evt.source === "PORTAL" ? "#eff6ff" : evt.source === "POS_MOBILE" ? "#ecfdf5" : "#f5f3ff",
-                    color: evt.source === "PORTAL" ? "#1d4ed8" : evt.source === "POS_MOBILE" ? "#16a34a" : "#7c3aed",
+                    background: evt.source === "PORTAL" ? "#eff6ff" : evt.source === "POS_MOBILE" ? "var(--color-success-soft)" : "#f5f3ff",
+                    color: evt.source === "PORTAL" ? "#1d4ed8" : evt.source === "POS_MOBILE" ? "var(--color-success)" : "#7c3aed",
                   }}>
                     {evt.source}
                   </span>
@@ -135,7 +135,7 @@ export function RegistrationsTab({
                     borderRadius: 4,
                     fontSize: 11,
                     fontWeight: 600,
-                    background: evt.outcome === "SUCCESS" ? "#dcfce7" : evt.outcome === "IDEMPOTENT" ? "#fef9c3" : evt.outcome === "ERROR" ? "#fecaca" : "#fee2e2",
+                    background: evt.outcome === "SUCCESS" ? "var(--color-success-soft)" : evt.outcome === "IDEMPOTENT" ? "#fef9c3" : evt.outcome === "ERROR" ? "var(--color-error-soft)" : "var(--color-error-soft)",
                     color: evt.outcome === "SUCCESS" ? "#166534" : evt.outcome === "IDEMPOTENT" ? "#854d0e" : "#991b1b",
                   }}>
                     {evt.outcome}
@@ -163,7 +163,7 @@ export function RegistrationsTab({
                         padding: "3px 10px",
                         borderRadius: 4,
                         border: "1px solid #10b981",
-                        background: sendingEnrollment === evt.storeId ? "#d1fae5" : "#ecfdf5",
+                        background: sendingEnrollment === evt.storeId ? "#d1fae5" : "var(--color-success-soft)",
                         color: "#059669",
                         cursor: sendingEnrollment === evt.storeId ? "wait" : "pointer",
                         fontWeight: 600,
@@ -197,7 +197,7 @@ export function RegistrationsTab({
             ))}
             {regEvents.length === 0 && !regEventsLoading && (
               <tr>
-                <td colSpan={9} style={{ textAlign: "center", color: "#888", padding: 24 }}>
+                <td colSpan={9} style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 24 }}>
                   No registration events found
                 </td>
               </tr>
@@ -208,7 +208,7 @@ export function RegistrationsTab({
 
       {/* STBT-186.4: Enrollment error banner */}
       {enrollmentError && (
-        <div style={{ color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginTop: 8, fontSize: 13 }}>
+        <div style={{ color: 'var(--color-error)', background: 'var(--color-error-soft)', padding: '8px 12px', borderRadius: 6, marginTop: 8, fontSize: 13 }}>
           {enrollmentError}
         </div>
       )}

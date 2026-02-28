@@ -30,7 +30,7 @@ export function GrnAlertsTab({
       </div>
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-        <select value={grnAlertsFilter} onChange={(e) => { setGrnAlertsFilter(e.target.value as any); setGrnAlertsOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}>
+        <select value={grnAlertsFilter} onChange={(e) => { setGrnAlertsFilter(e.target.value as any); setGrnAlertsOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }}>
           <option value="">All Statuses</option>
           <option value="OPEN">Open</option>
           <option value="ACKNOWLEDGED">Acknowledged</option>
@@ -42,12 +42,12 @@ export function GrnAlertsTab({
         <span className="muted" style={{ marginLeft: "auto", fontSize: 12 }}>
           {grnAlertsTotal} alert{grnAlertsTotal !== 1 ? "s" : ""} total
           {grnAlertsOpenCount > 0 && (
-            <span style={{ marginLeft: 6, color: "#f59e0b", fontWeight: 600 }}>({grnAlertsOpenCount} open)</span>
+            <span style={{ marginLeft: 6, color: "var(--color-warning)", fontWeight: 600 }}>({grnAlertsOpenCount} open)</span>
           )}
         </span>
       </div>
 
-      {grnAlertsError && <div className="alertDanger" style={{ marginBottom: 12 }}>{grnAlertsError}</div>}
+      {grnAlertsError && <div className="banner" style={{ marginBottom: 12 }}>{grnAlertsError}</div>}
 
       {grnAlerts.length > 0 && (
         <div className="tableWrap">
@@ -65,10 +65,10 @@ export function GrnAlertsTab({
                   <td style={{ fontWeight: 600, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.product_name}</td>
                   <td>{a.ordered_qty}</td>
                   <td style={{ fontWeight: 600 }}>{a.total_received_qty}</td>
-                  <td style={{ color: "#dc2626", fontWeight: 600 }}>+{a.excess_qty}</td>
-                  <td style={{ color: "#f59e0b", fontWeight: 600 }}>{a.excess_pct}%</td>
+                  <td style={{ color: "var(--color-error)", fontWeight: 600 }}>+{a.excess_qty}</td>
+                  <td style={{ color: "var(--color-warning)", fontWeight: 600 }}>{a.excess_pct}%</td>
                   <td>
-                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: a.status === "OPEN" ? "#fef3c7" : a.status === "ACKNOWLEDGED" ? "#dbeafe" : "#f1f5f9", color: a.status === "OPEN" ? "#92400e" : a.status === "ACKNOWLEDGED" ? "#1e40af" : "#475569" }}>
+                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: a.status === "OPEN" ? "#fef3c7" : a.status === "ACKNOWLEDGED" ? "#dbeafe" : "var(--color-surface-alt)", color: a.status === "OPEN" ? "#92400e" : a.status === "ACKNOWLEDGED" ? "#1e40af" : "var(--color-text-secondary)" }}>
                       {a.status}
                     </span>
                   </td>

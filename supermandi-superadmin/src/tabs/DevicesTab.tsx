@@ -82,7 +82,7 @@ export function DevicesTab({
             <select
               value={enrollStoreId}
               onChange={(e) => setEnrollStoreId(e.target.value)}
-              style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ddd", fontSize: 13, minWidth: 260 }}
+              style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid var(--color-border)", fontSize: 13, minWidth: 260 }}
             >
               <option value="">-- Select a store --</option>
               {storeDirectory.map((s) => (
@@ -148,7 +148,7 @@ export function DevicesTab({
                     onClick={() => handleRevokeEnrollment(enrollment.code)}
                     disabled={revokeLoading}
                     title="Revoke this enrollment code so it can no longer be used"
-                    style={{ color: "#dc2626" }}
+                    style={{ color: "var(--color-error)" }}
                   >
                     {revokeLoading ? "Revoking..." : "Revoke Code"}
                   </button>
@@ -206,7 +206,7 @@ export function DevicesTab({
                 pendingOutboxCount: pending
               });
               return (
-                <div className="deviceCard" key={d.id} style={!d.active ? { opacity: 0.55, borderColor: '#e5e7eb', background: '#f9fafb' } : undefined}>
+                <div className="deviceCard" key={d.id} style={!d.active ? { opacity: 0.55, borderColor: 'var(--color-border)', background: 'var(--color-surface-alt)' } : undefined}>
                   <div className="deviceHeader">
                     <input
                       className="deviceLabelInput"
@@ -326,7 +326,7 @@ export function DevicesTab({
       )}
 
       {/* ISSUE-MICRO-061: Visual separator between device registry and events-derived summary */}
-      <hr style={{ margin: "16px 0", borderColor: "#e2e8f0" }} />
+      <hr style={{ margin: "16px 0", borderColor: "var(--color-border)" }} />
       <div className="cardHeader" style={{ paddingTop: 0 }}>
         <div className="cardTitle">Device Activity (from events)</div>
         <div className="muted">Unique devices in last {limit} events: {devices.length} — derived from event log, independent of device registry above</div>

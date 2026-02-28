@@ -109,9 +109,9 @@ export function DocumentsTab({
               {pendingDocuments.map((doc) => (
                 <tr key={doc.id}>
                   <td>
-                    <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase" }}>{doc.entity_type}</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)", textTransform: "uppercase" }}>{doc.entity_type}</div>
                     <div className="mono" style={{ fontSize: 11 }}>{doc.entity_name || doc.entity_id.slice(0, 8)}</div>
-                    {doc.owner_name && <div style={{ fontSize: 11, color: "#666" }}>{doc.owner_name}</div>}
+                    {doc.owner_name && <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{doc.owner_name}</div>}
                   </td>
                   <td>{doc.document_type}</td>
                   <td>
@@ -135,7 +135,7 @@ export function DocumentsTab({
       {/* T-119: Document review modal with dirty guard on close */}
       {selectedDocument && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={handleCloseDocument}>
-          <div style={{ backgroundColor: "#ffffff", borderRadius: 8, padding: 24, maxWidth: "90vw", maxHeight: "90vh", overflow: "auto", minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ backgroundColor: "var(--color-surface)", borderRadius: 8, padding: 24, maxWidth: "90vw", maxHeight: "90vh", overflow: "auto", minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>Review Document</h3>
               <button onClick={handleCloseDocument} style={{ padding: "4px 8px" }} aria-label="Close document review">✕</button>
@@ -147,11 +147,11 @@ export function DocumentsTab({
               <div style={{ marginBottom: 8 }}><strong>Uploaded:</strong> {formatDateTime(selectedDocument.uploaded_at)}</div>
             </div>
             {/* T-014: Document preview via authenticated blob URL */}
-            <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "#f8fafc", padding: 16, borderRadius: 4, minHeight: 120 }}>
+            <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "var(--color-surface-alt)", padding: 16, borderRadius: 4, minHeight: 120 }}>
               {blobLoading ? (
-                <div style={{ color: "#888", padding: 40 }}>Loading document preview...</div>
+                <div style={{ color: "var(--color-text-secondary)", padding: 40 }}>Loading document preview...</div>
               ) : blobError ? (
-                <div style={{ color: "#ef4444", padding: 40 }}>{blobError}</div>
+                <div style={{ color: "var(--color-error)", padding: 40 }}>{blobError}</div>
               ) : blobUrl && selectedDocument.content_type.startsWith("image/") ? (
                 <img src={blobUrl} alt={selectedDocument.file_name} style={{ maxWidth: "100%", maxHeight: 400 }} />
               ) : blobUrl && selectedDocument.content_type === "application/pdf" ? (
@@ -161,12 +161,12 @@ export function DocumentsTab({
               ) : null}
             </div>
             <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-              <button onClick={() => handleApproveDocument(selectedDocument.id)} disabled={documentActionLoading === selectedDocument.id} style={{ padding: "10px 20px", backgroundColor: "#22c55e", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading ? "wait" : "pointer" }}>
+              <button onClick={() => handleApproveDocument(selectedDocument.id)} disabled={documentActionLoading === selectedDocument.id} style={{ padding: "10px 20px", backgroundColor: "var(--color-success)", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading ? "wait" : "pointer" }}>
                 {documentActionLoading === selectedDocument.id ? "Processing..." : "✓ Approve Document"}
               </button>
               <div style={{ display: "flex", gap: 8 }}>
                 <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => { setDocRejectReason(e.target.value); onModalDirty(true); }} style={{ flex: 1, padding: "8px 12px" }} />
-                <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10} style={{ padding: "10px 20px", backgroundColor: "#ef4444", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading || docRejectReason.trim().length < 10 ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 ? 0.5 : 1 }}>
+                <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10} style={{ padding: "10px 20px", backgroundColor: "var(--color-error)", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading || docRejectReason.trim().length < 10 ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 ? 0.5 : 1 }}>
                   ✕ Reject
                 </button>
               </div>

@@ -11,12 +11,12 @@ function formatMinor(minor: number): string {
 }
 
 const STATUS_STYLES: Record<InvoiceStatus, { bg: string; color: string }> = {
-  draft:     { bg: "#f1f5f9", color: "#475569" },
+  draft:     { bg: "var(--color-surface-alt)", color: "var(--color-text-secondary)" },
   issued:    { bg: "#dbeafe", color: "#1e40af" },
-  paid:      { bg: "#dcfce7", color: "#166534" },
+  paid:      { bg: "var(--color-success-soft)", color: "#166534" },
   overdue:   { bg: "#fef3c7", color: "#92400e" },
-  cancelled: { bg: "#fecaca", color: "#991b1b" },
-  void:      { bg: "#e5e7eb", color: "#6b7280" },
+  cancelled: { bg: "var(--color-error-soft)", color: "#991b1b" },
+  void:      { bg: "var(--color-border)", color: "var(--color-text-secondary)" },
 };
 
 export function InvoicesTab() {
@@ -125,12 +125,12 @@ export function InvoicesTab() {
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
-        <select value={modelFilter} onChange={(e) => { setModelFilter(e.target.value as any); setOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}>
+        <select value={modelFilter} onChange={(e) => { setModelFilter(e.target.value as any); setOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }}>
           <option value="">All Models</option>
           <option value="buy_resell">Buy-Resell</option>
           <option value="platform_fee">Platform Fee</option>
         </select>
-        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value as any); setOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}>
+        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value as any); setOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }}>
           <option value="">All Types</option>
           <option value="purchase">Purchase</option>
           <option value="sale">Sale</option>
@@ -138,7 +138,7 @@ export function InvoicesTab() {
           <option value="credit_note">Credit Note</option>
           <option value="debit_note">Debit Note</option>
         </select>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); setOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}>
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); setOffset(0); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13 }}>
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="issued">Issued</option>
@@ -152,7 +152,7 @@ export function InvoicesTab() {
         <span className="muted" style={{ marginLeft: "auto", fontSize: 12 }}>{total} invoice{total !== 1 ? "s" : ""}</span>
       </div>
 
-      {error && <div className="alertDanger" style={{ marginBottom: 12 }}>{error}</div>}
+      {error && <div className="banner" style={{ marginBottom: 12 }}>{error}</div>}
 
       {/* Table */}
       {invoices.length > 0 && (
@@ -177,7 +177,7 @@ export function InvoicesTab() {
                     <td style={{ fontSize: 12, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.sellerName}</td>
                     <td style={{ fontSize: 12, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.buyerName}</td>
                     <td style={{ textAlign: "right", fontWeight: 600, fontSize: 12 }}>{formatMinor(inv.totalAmountMinor)}</td>
-                    <td style={{ textAlign: "right", fontSize: 12, color: inv.balanceDueMinor > 0 ? "#dc2626" : "#16a34a" }}>{formatMinor(inv.balanceDueMinor)}</td>
+                    <td style={{ textAlign: "right", fontSize: 12, color: inv.balanceDueMinor > 0 ? "var(--color-error)" : "var(--color-success)" }}>{formatMinor(inv.balanceDueMinor)}</td>
                     <td>
                       <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color }}>{inv.status.toUpperCase()}</span>
                     </td>
@@ -211,7 +211,7 @@ export function InvoicesTab() {
       {/* Detail Modal */}
       {(detail || detailLoading) && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => !detailLoading && setDetail(null)}>
-          <div style={{ background: "white", borderRadius: 12, padding: 24, maxWidth: 800, width: "90%", maxHeight: "85vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 24, maxWidth: 800, width: "90%", maxHeight: "85vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
             {detailLoading && <div className="muted" style={{ textAlign: "center", padding: 32 }}>Loading invoice...</div>}
             {detail && (
               <>
@@ -225,7 +225,7 @@ export function InvoicesTab() {
                       <button className="btn btnSm" onClick={() => handleIssue(detail.id)} disabled={actionLoading}>Issue</button>
                     )}
                     {(detail.status === "draft" || detail.status === "issued") && (
-                      <button className="btnGhost btnSm" style={{ color: "#dc2626" }} onClick={() => handleCancel(detail.id)} disabled={actionLoading}>Cancel</button>
+                      <button className="btnGhost btnSm" style={{ color: "var(--color-error)" }} onClick={() => handleCancel(detail.id)} disabled={actionLoading}>Cancel</button>
                     )}
                     <button className="btn btnSm" onClick={() => handleDownload(detail.id, detail.invoiceNumber)}>Download PDF</button>
                     <button className="btnGhost btnSm" onClick={() => setDetail(null)}>Close</button>
@@ -234,13 +234,13 @@ export function InvoicesTab() {
 
                 {/* Parties */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                  <div style={{ padding: 12, border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                  <div style={{ padding: 12, border: "1px solid var(--color-border)", borderRadius: 8 }}>
                     <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 4 }}>From (Seller)</div>
                     <div style={{ fontSize: 13 }}>{detail.sellerName}</div>
                     {detail.sellerGstin && <div className="muted" style={{ fontSize: 11 }}>GSTIN: {detail.sellerGstin}</div>}
                     {detail.sellerAddress && <div className="muted" style={{ fontSize: 11 }}>{detail.sellerAddress}</div>}
                   </div>
-                  <div style={{ padding: 12, border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                  <div style={{ padding: 12, border: "1px solid var(--color-border)", borderRadius: 8 }}>
                     <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 4 }}>To (Buyer)</div>
                     <div style={{ fontSize: 13 }}>{detail.buyerName}</div>
                     {detail.buyerGstin && <div className="muted" style={{ fontSize: 11 }}>GSTIN: {detail.buyerGstin}</div>}
@@ -314,7 +314,7 @@ export function InvoicesTab() {
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 4 }}>
                           <span>Paid:</span><span>{formatMinor(detail.amountPaidMinor)}</span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: detail.balanceDueMinor > 0 ? "#dc2626" : "#16a34a" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: detail.balanceDueMinor > 0 ? "var(--color-error)" : "var(--color-success)" }}>
                           <span>Balance:</span><span>{formatMinor(detail.balanceDueMinor)}</span>
                         </div>
                       </>

@@ -642,6 +642,18 @@
   border-color: #b91c1c;
 }
 
+/* STG-229: Add success button class (was undefined, StaffTab uses it) */
+.btnSuccess {
+  background: var(--color-success);
+  color: white;
+  border: 1px solid var(--color-success);
+}
+
+.btnSuccess:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
 .errorText {
   color: var(--color-error);
   font-weight: 600;

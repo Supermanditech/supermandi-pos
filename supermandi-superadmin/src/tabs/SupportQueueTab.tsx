@@ -164,18 +164,18 @@ export function SupportQueueTab() {
           <button
             onClick={() => setView('queue')}
             style={{
-              padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid #e2e8f0',
-              background: view === 'queue' ? '#1e40af' : '#fff',
-              color: view === 'queue' ? '#fff' : '#475569',
+              padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid var(--color-border)',
+              background: view === 'queue' ? '#1e40af' : 'var(--color-surface)',
+              color: view === 'queue' ? '#fff' : 'var(--color-text-secondary)',
               cursor: 'pointer', fontSize: '0.8rem',
             }}
           >Support Queue</button>
           <button
             onClick={() => setView('templates')}
             style={{
-              padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid #e2e8f0',
-              background: view === 'templates' ? '#1e40af' : '#fff',
-              color: view === 'templates' ? '#fff' : '#475569',
+              padding: '0.4rem 0.8rem', borderRadius: 6, border: '1px solid var(--color-border)',
+              background: view === 'templates' ? '#1e40af' : 'var(--color-surface)',
+              color: view === 'templates' ? '#fff' : 'var(--color-text-secondary)',
               cursor: 'pointer', fontSize: '0.8rem',
             }}
           >Templates</button>
@@ -183,7 +183,7 @@ export function SupportQueueTab() {
       </div>
 
       {error && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: 6, marginBottom: '1rem', fontSize: '0.85rem' }}>
+        <div style={{ background: 'var(--color-error-soft)', color: '#991b1b', padding: '0.75rem', borderRadius: 6, marginBottom: '1rem', fontSize: '0.85rem' }}>
           {error}
         </div>
       )}
@@ -197,9 +197,9 @@ export function SupportQueueTab() {
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 style={{
-                  padding: '0.3rem 0.7rem', borderRadius: 6, border: '1px solid #e2e8f0',
-                  background: statusFilter === s ? '#f0f9ff' : '#fff',
-                  color: statusFilter === s ? '#1e40af' : '#475569',
+                  padding: '0.3rem 0.7rem', borderRadius: 6, border: '1px solid var(--color-border)',
+                  background: statusFilter === s ? '#f0f9ff' : 'var(--color-surface)',
+                  color: statusFilter === s ? '#1e40af' : 'var(--color-text-secondary)',
                   cursor: 'pointer', fontSize: '0.8rem', fontWeight: statusFilter === s ? 600 : 400,
                 }}
               >{s.charAt(0).toUpperCase() + s.slice(1)}</button>
@@ -208,11 +208,11 @@ export function SupportQueueTab() {
 
           <div style={{ display: 'flex', gap: '1rem', height: 'calc(100vh - 240px)' }}>
             {/* Conversation List */}
-            <div style={{ width: 300, borderRight: '1px solid #e2e8f0', overflowY: 'auto' }}>
+            <div style={{ width: 300, borderRight: '1px solid var(--color-border)', overflowY: 'auto' }}>
               {loading ? (
-                <div style={{ padding: '2rem', color: '#64748b', textAlign: 'center' }}>Loading...</div>
+                <div style={{ padding: '2rem', color: 'var(--color-text-secondary)', textAlign: 'center' }}>Loading...</div>
               ) : conversations.length === 0 ? (
-                <div style={{ padding: '2rem', color: '#64748b', textAlign: 'center', fontSize: '0.85rem' }}>
+                <div style={{ padding: '2rem', color: 'var(--color-text-secondary)', textAlign: 'center', fontSize: '0.85rem' }}>
                   No {statusFilter} support conversations
                 </div>
               ) : conversations.map(conv => (
@@ -220,21 +220,21 @@ export function SupportQueueTab() {
                   key={conv.id}
                   onClick={() => selectConversation(conv.id)}
                   style={{
-                    padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9',
+                    padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--color-surface-alt)',
                     background: selectedConvId === conv.id ? '#f0f9ff' : 'transparent',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>{conv.title || 'Support Chat'}</span>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{formatTime(conv.lastMessageAt)}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>{formatTime(conv.lastMessageAt)}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {conv.lastMessagePreview || 'No messages'}
                   </div>
                   <span style={{
                     fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: 4, marginTop: 4, display: 'inline-block',
-                    background: conv.isActive ? '#dcfce7' : '#f1f5f9',
-                    color: conv.isActive ? '#166534' : '#64748b',
+                    background: conv.isActive ? 'var(--color-success-soft)' : 'var(--color-surface-alt)',
+                    color: conv.isActive ? '#166534' : 'var(--color-text-secondary)',
                   }}>{conv.isActive ? 'Open' : 'Resolved'}</span>
                 </div>
               ))}
@@ -243,17 +243,17 @@ export function SupportQueueTab() {
             {/* Message Thread */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               {!selectedConvId ? (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)' }}>
                   Select a conversation to view messages
                 </div>
               ) : (
                 <>
                   {/* Actions */}
-                  <div style={{ padding: '0.5rem 0', display: 'flex', gap: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
-                    <button onClick={() => assignToMe(selectedConvId)} style={{ padding: '0.3rem 0.6rem', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontSize: '0.75rem' }}>
+                  <div style={{ padding: '0.5rem 0', display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--color-border)' }}>
+                    <button onClick={() => assignToMe(selectedConvId)} style={{ padding: '0.3rem 0.6rem', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-surface)', cursor: 'pointer', fontSize: '0.75rem' }}>
                       Assign to Me
                     </button>
-                    <button onClick={() => setConfirmDialog({ title: 'Resolve Conversation', message: 'Mark this conversation as resolved? The customer will no longer see it as active.', confirmLabel: 'Resolve', variant: 'warning', onConfirm: () => { setConfirmDialog(null); resolveConversation(selectedConvId); } })} style={{ padding: '0.3rem 0.6rem', borderRadius: 4, border: '1px solid #dcfce7', background: '#f0fdf4', cursor: 'pointer', fontSize: '0.75rem', color: '#166534' }}>
+                    <button onClick={() => setConfirmDialog({ title: 'Resolve Conversation', message: 'Mark this conversation as resolved? The customer will no longer see it as active.', confirmLabel: 'Resolve', variant: 'warning', onConfirm: () => { setConfirmDialog(null); resolveConversation(selectedConvId); } })} style={{ padding: '0.3rem 0.6rem', borderRadius: 4, border: '1px solid var(--color-success-soft)', background: 'var(--color-success-soft)', cursor: 'pointer', fontSize: '0.75rem', color: '#166534' }}>
                       Resolve
                     </button>
                   </div>
@@ -263,16 +263,16 @@ export function SupportQueueTab() {
                     {messages.map(msg => (
                       <div key={msg.id} style={{ marginBottom: '0.5rem' }}>
                         {msg.senderType === 'system' ? (
-                          <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
+                          <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
                             {msg.content}
                           </div>
                         ) : (
                           <div style={{ display: 'flex', justifyContent: msg.senderType === 'support' || msg.senderType === 'admin' ? 'flex-end' : 'flex-start' }}>
                             <div style={{
                               maxWidth: '70%', padding: '0.5rem 0.75rem', borderRadius: 8,
-                              background: msg.senderType === 'support' || msg.senderType === 'admin' ? '#1e40af' : '#fff',
-                              color: msg.senderType === 'support' || msg.senderType === 'admin' ? '#fff' : '#1e293b',
-                              border: msg.senderType === 'support' || msg.senderType === 'admin' ? 'none' : '1px solid #e2e8f0',
+                              background: msg.senderType === 'support' || msg.senderType === 'admin' ? '#1e40af' : 'var(--color-surface)',
+                              color: msg.senderType === 'support' || msg.senderType === 'admin' ? '#fff' : 'var(--color-text-primary)',
+                              border: msg.senderType === 'support' || msg.senderType === 'admin' ? 'none' : '1px solid var(--color-border)',
                             }}>
                               <div style={{ fontSize: '0.65rem', opacity: 0.7, marginBottom: 2 }}>{msg.senderType}</div>
                               <div style={{ fontSize: '0.85rem' }}>{msg.content}</div>
@@ -285,17 +285,17 @@ export function SupportQueueTab() {
                   </div>
 
                   {/* Reply */}
-                  <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', borderTop: '1px solid var(--color-border)' }}>
                     <input
                       value={replyText}
                       onChange={e => setReplyText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendReply())}
                       placeholder="Type a reply..."
-                      style={{ flex: 1, padding: '0.5rem', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.85rem', outline: 'none' }}
+                      style={{ flex: 1, padding: '0.5rem', borderRadius: 6, border: '1px solid var(--color-border)', fontSize: '0.85rem', outline: 'none' }}
                     />
                     <button onClick={sendReply} disabled={!replyText.trim()} style={{
                       padding: '0.5rem 1rem', borderRadius: 6, border: 'none',
-                      background: replyText.trim() ? '#1e40af' : '#94a3b8',
+                      background: replyText.trim() ? '#1e40af' : 'var(--color-text-secondary)',
                       color: '#fff', cursor: 'pointer', fontSize: '0.85rem',
                     }}>Send</button>
                   </div>
@@ -308,7 +308,7 @@ export function SupportQueueTab() {
         /* Templates View */
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+            <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
               <th style={{ textAlign: 'left', padding: '0.5rem' }}>Name</th>
               <th style={{ textAlign: 'left', padding: '0.5rem' }}>Category</th>
               <th style={{ textAlign: 'left', padding: '0.5rem' }}>Channel</th>
@@ -318,25 +318,25 @@ export function SupportQueueTab() {
           </thead>
           <tbody>
             {templates.map(t => (
-              <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={t.id} style={{ borderBottom: '1px solid var(--color-surface-alt)' }}>
                 <td style={{ padding: '0.5rem', fontWeight: 500 }}>{t.name}</td>
                 <td style={{ padding: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: '#f1f5f9' }}>{t.category}</span>
+                  <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: 'var(--color-surface-alt)' }}>{t.category}</span>
                 </td>
                 <td style={{ padding: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: t.channel === 'both' ? '#dbeafe' : '#f1f5f9' }}>{t.channel}</span>
+                  <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: t.channel === 'both' ? '#dbeafe' : 'var(--color-surface-alt)' }}>{t.channel}</span>
                 </td>
-                <td style={{ padding: '0.5rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#64748b' }}>
+                <td style={{ padding: '0.5rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-secondary)' }}>
                   {t.bodyTemplate}
                 </td>
                 <td style={{ textAlign: 'center', padding: '0.5rem' }}>
-                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: t.isActive ? '#22c55e' : '#94a3b8' }} />
+                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: t.isActive ? 'var(--color-success)' : 'var(--color-text-secondary)' }} />
                 </td>
               </tr>
             ))}
             {templates.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>No templates found</td>
+                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>No templates found</td>
               </tr>
             )}
           </tbody>

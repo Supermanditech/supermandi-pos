@@ -301,7 +301,7 @@ export function StoresTab({
             {bulkFlagLoading ? "Applying..." : "Apply"}
           </button>
           <button className="btnGhost" onClick={() => setSelectedStoreIds(new Set())}>Clear</button>
-          {bulkFlagResult && <span style={{ fontSize: 12, color: "#666" }}>{bulkFlagResult}</span>}
+          {bulkFlagResult && <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{bulkFlagResult}</span>}
         </div>
       )}
 
@@ -323,12 +323,12 @@ export function StoresTab({
               <tbody>
                 {[1, 2, 3, 4, 5].map(i => (
                   <tr key={i}>
-                    <td><div style={{ width: 14, height: 14, background: "#e2e8f0", borderRadius: 3 }} /></td>
-                    <td><div style={{ height: 14, width: "80%", background: "#e2e8f0", borderRadius: 4 }} /></td>
-                    <td><div style={{ height: 14, width: "70%", background: "#e2e8f0", borderRadius: 4 }} /></td>
-                    <td><div style={{ height: 14, width: "50%", background: "#e2e8f0", borderRadius: 4 }} /></td>
-                    <td><div style={{ height: 14, width: 60, background: "#e2e8f0", borderRadius: 4 }} /></td>
-                    <td><div style={{ height: 14, width: 50, background: "#e2e8f0", borderRadius: 4 }} /></td>
+                    <td><div style={{ width: 14, height: 14, background: "var(--color-border)", borderRadius: 3 }} /></td>
+                    <td><div style={{ height: 14, width: "80%", background: "var(--color-border)", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: "70%", background: "var(--color-border)", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: "50%", background: "var(--color-border)", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: 60, background: "var(--color-border)", borderRadius: 4 }} /></td>
+                    <td><div style={{ height: 14, width: 50, background: "var(--color-border)", borderRadius: 4 }} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -404,10 +404,10 @@ export function StoresTab({
                           fontSize: 12,
                           fontWeight: 600,
                           ...(s.status === "SUSPENDED"
-                            ? { background: "#fee2e2", color: "#991b1b" }
+                            ? { background: "var(--color-error-soft)", color: "#991b1b" }
                             : s.status === "ACTIVE"
-                            ? { background: "#dcfce7", color: "#166534" }
-                            : { background: "#f3f4f6", color: "#374151" }),
+                            ? { background: "var(--color-success-soft)", color: "#166534" }
+                            : { background: "var(--color-surface-alt)", color: "var(--color-text-primary)" }),
                         }}>
                           {s.status ?? (s.active ? "ACTIVE" : "INACTIVE")}
                         </span>
@@ -438,7 +438,7 @@ export function StoresTab({
                         )}
                         {s.status === "SUSPENDED" && (
                           <button
-                            style={{ fontSize: 12, padding: "4px 8px", background: "#16a34a", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
+                            style={{ fontSize: 12, padding: "4px 8px", background: "var(--color-success)", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
                             onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "reactivate")}
                           >
                             Reactivate
@@ -448,10 +448,10 @@ export function StoresTab({
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={6} style={{ background: "#f9fafb", padding: "12px" }}>
+                        <td colSpan={6} style={{ background: "var(--color-surface-alt)", padding: "12px" }}>
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", maxWidth: "600px" }}>
                             <div>
-                              <label style={{ fontSize: "12px", color: "#666" }}>Contact Name</label>
+                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Contact Name</label>
                               <input
                                 className="tableInput"
                                 value={contactDraft.contactName}
@@ -460,7 +460,7 @@ export function StoresTab({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "12px", color: "#666" }}>Phone</label>
+                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Phone</label>
                               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                 <input
                                   className="tableInput"
@@ -482,7 +482,7 @@ export function StoresTab({
                               </div>
                             </div>
                             <div>
-                              <label style={{ fontSize: "12px", color: "#666" }}>Email</label>
+                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Email</label>
                               <input
                                 className="tableInput"
                                 value={contactDraft.contactEmail}
@@ -491,7 +491,7 @@ export function StoresTab({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "12px", color: "#666" }}>Address</label>
+                              <label style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>Address</label>
                               <input
                                 className="tableInput"
                                 value={contactDraft.address}
@@ -502,7 +502,7 @@ export function StoresTab({
                           </div>
                           {/* SA-P1-006: Payment method checkboxes */}
                           <div style={{ marginTop: "12px" }}>
-                            <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Payment Methods</label>
+                            <label style={{ fontSize: "12px", color: "var(--color-text-secondary)", display: "block", marginBottom: "6px" }}>Payment Methods</label>
                             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                               {(["CASH", "UPI", "DUE"] as const).map((method) => {
                                 const draft = getStorePaymentDraft(s);
@@ -521,9 +521,9 @@ export function StoresTab({
                           </div>
                           {/* SA-P1-007: Per-store feature flag overrides */}
                           <div style={{ marginTop: "12px" }}>
-                            <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Feature Flags</label>
+                            <label style={{ fontSize: "12px", color: "var(--color-text-secondary)", display: "block", marginBottom: "6px" }}>Feature Flags</label>
                             {storeFFLoading[s.id] ? (
-                              <span style={{ fontSize: 12, color: "#888" }}>Loading...</span>
+                              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Loading...</span>
                             ) : storeFeatureFlags[s.id] ? (
                               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                                 {storeFeatureFlags[s.id].map((f) => (
@@ -535,8 +535,8 @@ export function StoresTab({
                                       onChange={() => handleStoreFFToggle(s.id, f)}
                                     />
                                     <span>{f.flag_key}</span>
-                                    {f.store_override !== null && <span style={{ fontSize: 10, color: "#f59e0b" }}>(override)</span>}
-                                    {!f.global_enabled && <span style={{ fontSize: 10, color: "#ef4444" }}>(killed)</span>}
+                                    {f.store_override !== null && <span style={{ fontSize: 10, color: "var(--color-warning)" }}>(override)</span>}
+                                    {!f.global_enabled && <span style={{ fontSize: 10, color: "var(--color-error)" }}>(killed)</span>}
                                   </label>
                                 ))}
                               </div>
@@ -544,19 +544,19 @@ export function StoresTab({
                           </div>
                           {/* SA-ENROLL-UX G5: Per-store enrollment codes */}
                           <div style={{ marginTop: "12px" }}>
-                            <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Enrollment Codes</label>
+                            <label style={{ fontSize: "12px", color: "var(--color-text-secondary)", display: "block", marginBottom: "6px" }}>Enrollment Codes</label>
                             {storeEnrollmentsLoading[s.id] ? (
-                              <span style={{ fontSize: 12, color: "#888" }}>Loading...</span>
+                              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Loading...</span>
                             ) : storeEnrollments[s.id] && storeEnrollments[s.id].length > 0 ? (
                               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                                 {storeEnrollments[s.id].map((e) => {
                                   const badgeStyle: React.CSSProperties = {
                                     display: "inline-flex", alignItems: "center", gap: 6,
                                     padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 500,
-                                    ...(e.status === "ACTIVE" ? { background: "#dcfce7", color: "#166534" }
-                                      : e.status === "REVOKED" ? { background: "#fee2e2", color: "#991b1b" }
+                                    ...(e.status === "ACTIVE" ? { background: "var(--color-success-soft)", color: "#166534" }
+                                      : e.status === "REVOKED" ? { background: "var(--color-error-soft)", color: "#991b1b" }
                                       : e.status === "USED" ? { background: "#dbeafe", color: "#1e40af" }
-                                      : { background: "#fef3c7", color: "#92400e" }),
+                                      : { background: "var(--color-warning-soft)", color: "#92400e" }),
                                   };
                                   return (
                                     <span key={e.id} style={badgeStyle}>
@@ -570,7 +570,7 @@ export function StoresTab({
                                           <button
                                             onClick={() => handleRevokeEnrollment(e.code)}
                                             disabled={revokeLoading}
-                                            style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 11, textDecoration: "underline", padding: 0 }}
+                                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-error)", fontSize: 11, textDecoration: "underline", padding: 0 }}
                                           >
                                             revoke
                                           </button>
@@ -590,7 +590,7 @@ export function StoresTab({
                                 })}
                               </div>
                             ) : (
-                              <span style={{ fontSize: 12, color: "#888" }}>No enrollment codes yet</span>
+                              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>No enrollment codes yet</span>
                             )}
                           </div>
                         </td>

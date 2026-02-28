@@ -69,9 +69,9 @@ export function MonitoringTab() {
   };
 
   const statusColor = (status: string) => {
-    if (status === "healthy") return { bg: "#DCFCE7", text: "#166534", dot: "#22C55E" };
-    if (status === "warning") return { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" };
-    return { bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" };
+    if (status === "healthy") return { bg: "var(--color-success-soft)", text: "#166534", dot: "var(--color-success)" };
+    if (status === "warning") return { bg: "var(--color-warning-soft)", text: "#92400E", dot: "var(--color-warning)" };
+    return { bg: "var(--color-error-soft)", text: "#991B1B", dot: "var(--color-error)" };
   };
 
   const overallColor = health ? statusColor(health.status) : statusColor("unhealthy");
@@ -110,19 +110,19 @@ export function MonitoringTab() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>System Monitoring</h2>
-          <p style={{ margin: "4px 0 0", color: "#64748B", fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: "var(--color-text-secondary)", fontSize: 14 }}>
             T-223: Cloud Run services health, GCP alert policies, infrastructure status
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <label style={{ fontSize: 13, color: "#64748B", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+          <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
             <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
             Auto-refresh (30s)
           </label>
           <button
             onClick={loadHealth}
             disabled={loading}
-            style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #CBD5E1", background: "#FFF", cursor: "pointer", fontSize: 13 }}
+            style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: "pointer", fontSize: 13 }}
           >
             {loading ? "Checking..." : "Refresh"}
           </button>
@@ -131,7 +131,7 @@ export function MonitoringTab() {
             disabled={cleaningUp}
             style={{
               padding: "8px 16px", borderRadius: 6, border: "none",
-              background: cleaningUp ? "#94A3B8" : "#DC2626", color: "#FFF",
+              background: cleaningUp ? "var(--color-text-secondary)" : "var(--color-error)", color: "#FFF",
               cursor: cleaningUp ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 500,
             }}
           >
@@ -141,13 +141,13 @@ export function MonitoringTab() {
       </div>
 
       {cleanupResult && (
-        <div style={{ padding: 12, marginBottom: 16, borderRadius: 8, backgroundColor: "#DCFCE7", border: "1px solid #BBF7D0", fontSize: 13 }}>
+        <div style={{ padding: 12, marginBottom: 16, borderRadius: 8, backgroundColor: "var(--color-success-soft)", border: "1px solid var(--color-success)", fontSize: 13 }}>
           Token cleanup complete: <strong>{cleanupResult.deactivated}</strong> deactivated (90+ days), <strong>{cleanupResult.deleted}</strong> deleted (180+ days)
         </div>
       )}
 
       {error && (
-        <div style={{ padding: 12, marginBottom: 16, borderRadius: 8, backgroundColor: "#FEE2E2", color: "#991B1B", fontSize: 13 }}>
+        <div style={{ padding: 12, marginBottom: 16, borderRadius: 8, backgroundColor: "var(--color-error-soft)", color: "#991B1B", fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -184,15 +184,15 @@ export function MonitoringTab() {
       )}
 
       {/* Health checks grid */}
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "#334155" }}>Service Health Checks</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "var(--color-text-primary)" }}>Service Health Checks</h3>
       {loading && !health ? (
-        <div style={{ textAlign: "center", padding: 40, color: "#64748B" }}>Loading health status...</div>
+        <div style={{ textAlign: "center", padding: 40, color: "var(--color-text-secondary)" }}>Loading health status...</div>
       ) : health ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
           {Object.entries(health.checks).map(([name, check]) => {
             const c = statusColor(check.status);
             return (
-              <div key={name} style={{ padding: 16, borderRadius: 8, border: "1px solid #E2E8F0", backgroundColor: "#FFF" }}>
+              <div key={name} style={{ padding: 16, borderRadius: 8, border: "1px solid var(--color-border)", backgroundColor: "var(--color-surface)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, textTransform: "capitalize" }}>{name}</div>
                   <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 500, backgroundColor: c.bg, color: c.text }}>
@@ -200,12 +200,12 @@ export function MonitoringTab() {
                   </span>
                 </div>
                 {check.latencyMs !== undefined && (
-                  <div style={{ fontSize: 13, color: "#64748B" }}>
+                  <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
                     Latency: <strong>{check.latencyMs}ms</strong>
                   </div>
                 )}
                 {check.details && (
-                  <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>{check.details}</div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>{check.details}</div>
                 )}
               </div>
             );
@@ -214,21 +214,21 @@ export function MonitoringTab() {
       ) : null}
 
       {/* Cloud Run services table */}
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "#334155" }}>Cloud Run Services</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "var(--color-text-primary)" }}>Cloud Run Services</h3>
       <div style={{ overflowX: "auto", marginBottom: 24 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr style={{ borderBottom: "2px solid #E2E8F0", textAlign: "left" }}>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Service</th>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Port</th>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Framework</th>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Region</th>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>URL</th>
+            <tr style={{ borderBottom: "2px solid var(--color-border)", textAlign: "left" }}>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Service</th>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Port</th>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Framework</th>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Region</th>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>URL</th>
             </tr>
           </thead>
           <tbody>
             {services.map((svc) => (
-              <tr key={svc.name} style={{ borderBottom: "1px solid #F1F5F9" }}>
+              <tr key={svc.name} style={{ borderBottom: "1px solid var(--color-surface-alt)" }}>
                 <td style={{ padding: "8px 12px", fontWeight: 500 }}>{svc.name}</td>
                 <td style={{ padding: "8px 12px", fontFamily: "monospace" }}>{svc.port}</td>
                 <td style={{ padding: "8px 12px" }}>{svc.type}</td>
@@ -243,25 +243,25 @@ export function MonitoringTab() {
       </div>
 
       {/* Alert policies reference */}
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "#334155" }}>GCP Alert Policies (10 active)</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: "var(--color-text-primary)" }}>GCP Alert Policies (10 active)</h3>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr style={{ borderBottom: "2px solid #E2E8F0", textAlign: "left" }}>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Alert Policy</th>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Trigger Condition</th>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Service Scope</th>
-              <th style={{ padding: "8px 12px", color: "#64748B", fontWeight: 600 }}>Status</th>
+            <tr style={{ borderBottom: "2px solid var(--color-border)", textAlign: "left" }}>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Alert Policy</th>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Trigger Condition</th>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Service Scope</th>
+              <th style={{ padding: "8px 12px", color: "var(--color-text-secondary)", fontWeight: 600 }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {alertPolicies.map((policy) => (
-              <tr key={policy.name} style={{ borderBottom: "1px solid #F1F5F9" }}>
+              <tr key={policy.name} style={{ borderBottom: "1px solid var(--color-surface-alt)" }}>
                 <td style={{ padding: "8px 12px", fontWeight: 500 }}>{policy.name}</td>
-                <td style={{ padding: "8px 12px", fontFamily: "monospace", color: "#DC2626" }}>{policy.condition}</td>
+                <td style={{ padding: "8px 12px", fontFamily: "monospace", color: "var(--color-error)" }}>{policy.condition}</td>
                 <td style={{ padding: "8px 12px" }}>{policy.service}</td>
                 <td style={{ padding: "8px 12px" }}>
-                  <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 500, backgroundColor: "#DCFCE7", color: "#166534" }}>
+                  <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 500, backgroundColor: "var(--color-success-soft)", color: "#166534" }}>
                     Active
                   </span>
                 </td>
@@ -272,28 +272,28 @@ export function MonitoringTab() {
       </div>
 
       {/* Infrastructure info */}
-      <div style={{ marginTop: 24, padding: 16, borderRadius: 8, backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}>
-        <h3 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 600, color: "#334155" }}>Infrastructure Overview</h3>
+      <div style={{ marginTop: 24, padding: 16, borderRadius: 8, backgroundColor: "var(--color-surface-alt)", border: "1px solid var(--color-border)" }}>
+        <h3 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Infrastructure Overview</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, fontSize: 13 }}>
           <div>
             <strong style={{ color: "#1E40AF" }}>Load Balancer</strong>
-            <div style={{ color: "#64748B" }}>supermandi-staging-lb</div>
-            <div style={{ color: "#94A3B8", fontSize: 12 }}>Global HTTPS + SSL cert</div>
+            <div style={{ color: "var(--color-text-secondary)" }}>supermandi-staging-lb</div>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Global HTTPS + SSL cert</div>
           </div>
           <div>
             <strong style={{ color: "#7C3AED" }}>Cloud SQL</strong>
-            <div style={{ color: "#64748B" }}>PostgreSQL 15</div>
-            <div style={{ color: "#94A3B8", fontSize: 12 }}>db-f1-micro, asia-south1</div>
+            <div style={{ color: "var(--color-text-secondary)" }}>PostgreSQL 15</div>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>db-f1-micro, asia-south1</div>
           </div>
           <div>
-            <strong style={{ color: "#DC2626" }}>Redis</strong>
-            <div style={{ color: "#64748B" }}>Memorystore M1</div>
-            <div style={{ color: "#94A3B8", fontSize: 12 }}>1GB, asia-south1</div>
+            <strong style={{ color: "var(--color-error)" }}>Redis</strong>
+            <div style={{ color: "var(--color-text-secondary)" }}>Memorystore M1</div>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>1GB, asia-south1</div>
           </div>
           <div>
             <strong style={{ color: "#166534" }}>Domain</strong>
-            <div style={{ color: "#64748B" }}>{typeof window !== 'undefined' ? window.location.hostname : 'supermandi.tech'}</div>
-            <div style={{ color: "#94A3B8", fontSize: 12 }}>Cloudflare DNS</div>
+            <div style={{ color: "var(--color-text-secondary)" }}>{typeof window !== 'undefined' ? window.location.hostname : 'supermandi.tech'}</div>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Cloudflare DNS</div>
           </div>
         </div>
       </div>

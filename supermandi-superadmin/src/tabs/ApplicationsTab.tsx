@@ -119,7 +119,7 @@ export function ApplicationsTab({
                     </div>
                   )}
                   {app.rejectionReason && (
-                    <div style={{ gridColumn: "1 / -1", color: "#dc2626" }}>
+                    <div style={{ gridColumn: "1 / -1", color: "var(--color-error)" }}>
                       <strong>Previous Rejection:</strong> <span>{app.rejectionReason}</span>
                     </div>
                   )}
@@ -140,13 +140,13 @@ export function ApplicationsTab({
                 <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
                   {app.status === 'NEEDS_FIX' ? (
                     <>
-                      <span style={{ fontSize: 12, color: "#f59e0b", fontStyle: "italic", alignSelf: "center" }}>
+                      <span style={{ fontSize: 12, color: "var(--color-warning)", fontStyle: "italic", alignSelf: "center" }}>
                         Awaiting applicant resubmission
                       </span>
                       <button
                         onClick={() => handleApproveApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ background: "#22c55e", color: "white" }}
+                        style={{ background: "var(--color-success)", color: "white" }}
                         title={`Approve resubmitted ${app.entityType === 'retailer' ? 'store' : 'supplier'} application`}
                       >
                         {appActionLoading[app.id] ? "Approving..." : "Approve"}
@@ -155,7 +155,7 @@ export function ApplicationsTab({
                         className="btnGhost"
                         onClick={() => handleRejectApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ color: "#ef4444" }}
+                        style={{ color: "var(--color-error)" }}
                         title="Update rejection reason and send back"
                       >
                         {appActionLoading[app.id] ? "Updating..." : "Update Rejection"}
@@ -166,7 +166,7 @@ export function ApplicationsTab({
                       <button
                         onClick={() => handleApproveApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ background: "#22c55e", color: "white" }}
+                        style={{ background: "var(--color-success)", color: "white" }}
                         title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
                       >
                         {appActionLoading[app.id] ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
@@ -175,7 +175,7 @@ export function ApplicationsTab({
                         className="btnGhost"
                         onClick={() => handleRejectApplication(app.id)}
                         disabled={appActionLoading[app.id]}
-                        style={{ color: "#ef4444" }}
+                        style={{ color: "var(--color-error)" }}
                       >
                         {appActionLoading[app.id] ? "Rejecting..." : "Reject"}
                       </button>
@@ -188,11 +188,11 @@ export function ApplicationsTab({
         </div>
       )}
 
-      <div style={{ padding: "12px 16px", fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ padding: "12px 16px", fontSize: 12, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 12 }}>
         <span>Showing {applications.length} of {applicationsTotal} pending applications</span>
         {/* APPLICATIONS-UNBOUNDED-LOADMORE: cap at 500 to prevent memory bloat */}
         {applications.length >= 500 ? (
-          <span style={{ color: "#b45309", fontStyle: "italic" }}>
+          <span style={{ color: "var(--color-warning)", fontStyle: "italic" }}>
             Max reached — use search to narrow results.
           </span>
         ) : (
