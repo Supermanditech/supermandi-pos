@@ -4,11 +4,12 @@ import type { BillSnapshot, BillSummary } from "../billing/billTypes";
 import { paymentModeFromStatus } from "../billing/billTypes";
 import { fetchLocalBillSnapshot, listLocalBills, upsertLocalBillSnapshot } from "../billing/billStorage";
 
-export async function listBills(): Promise<BillSummary[]> {
+// STG-127: Added pagination support with limit/offset params
+export async function listBills(limit = 50, offset = 0): Promise<{ bills: BillSummary[]; hasMore: boolean }> {
   const local = await listLocalBills();
 
   if (!(await isOnline())) {
-    return local;
+    return { bills: local, hasMore: false };
   }
 
   try {
@@ -22,7 +23,7 @@ export async function listBills(): Promise<BillSummary[]> {
         createdAt: string;
         currency?: string;
       }>;
-    }>("/api/v1/pos/bills");
+    }>(`/api/v1/pos/bills?limit=${limit}&offset=${offset}`);
 
     const remote = res.bills.map((bill) => ({
       saleId: bill.saleId,
@@ -35,19 +36,24 @@ export async function listBills(): Promise<BillSummary[]> {
       source: "remote" as const
     }));
 
-    const merged = new Map<string, BillSummary>();
-    for (const bill of remote) {
-      merged.set(bill.saleId, bill);
-    }
-    for (const bill of local) {
-      if (!merged.has(bill.saleId)) {
+    // For first page, merge with local bills
+    if (offset === 0) {
+      const merged = new Map<string, BillSummary>();
+      for (const bill of remote) {
         merged.set(bill.saleId, bill);
       }
+      for (const bill of local) {
+        if (!merged.has(bill.saleId)) {
+          merged.set(bill.saleId, bill);
+        }
+      }
+      const sorted = Array.from(merged.values()).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+      return { bills: sorted, hasMore: res.bills.length >= limit };
     }
 
-    return Array.from(merged.values()).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return { bills: remote, hasMore: res.bills.length >= limit };
   } catch {
-    return local;
+    return { bills: local, hasMore: false };
   }
 }
 

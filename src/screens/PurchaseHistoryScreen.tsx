@@ -151,8 +151,9 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
     setError(null);
 
     try {
-      const entries = await getPurchaseHistory();
-      const grouped = groupEntriesByReference(entries);
+      // STG-130: Use paginated response
+      const result = await getPurchaseHistory();
+      const grouped = groupEntriesByReference(result.entries);
       setPurchases(grouped);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load data";

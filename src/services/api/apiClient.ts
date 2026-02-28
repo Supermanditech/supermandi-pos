@@ -246,6 +246,9 @@ async function attemptTokenRefresh(currentToken: string): Promise<string | null>
     });
     if (!res.ok) return null;
     const data = await res.json();
+    // STG-094: Backend extends token expiry but returns { data: { success, expiresAt } }
+    // without a new token string. If success=true, the existing token is still valid.
+    if (data?.data?.success === true) return currentToken;
     return typeof data?.deviceToken === "string" && data.deviceToken ? data.deviceToken : null;
   } catch {
     // Refresh endpoint may not exist yet (404) — fall back to current behavior

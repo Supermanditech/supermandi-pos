@@ -1,5 +1,9 @@
 // T-294: Chat API Service for POS
 // Frontend API client for in-app messaging
+// STG-152: Chat routes require x-user-id header (set by JWT middleware in gateway).
+// POS uses device tokens, not JWT. We route chat calls through /api/v1/pos/chat/*
+// so the POS device token middleware handles auth, and the backend can set x-user-id
+// from the device context.
 
 import { apiClient } from "./apiClient";
 
@@ -43,9 +47,12 @@ export interface ChatMessage {
 // API CALLS
 // =============================================================================
 
+// STG-152: Use POS chat path so device token auth works (not JWT)
+const CHAT_BASE = '/api/v1/pos/chat';
+
 export async function getConversations(limit = 50, offset = 0) {
   return apiClient.get<{ conversations: Conversation[]; total: number }>(
-    `/api/v1/chat/conversations?limit=${limit}&offset=${offset}`
+    `${CHAT_BASE}/conversations?limit=${limit}&offset=${offset}`
   );
 }
 
@@ -57,19 +64,19 @@ export async function getOrCreateDirectConversation(
   otherUserType: string,
   otherUserName: string,
 ) {
-  return apiClient.post<{ conversation: Conversation }>('/api/v1/chat/conversations/direct', {
+  return apiClient.post<{ conversation: Conversation }>(`${CHAT_BASE}/conversations/direct`, {
     supplierId, storeId, displayName, otherUserId, otherUserType, otherUserName,
   });
 }
 
 export async function createSupportConversation(displayName: string, storeId?: string) {
-  return apiClient.post<{ conversation: Conversation }>('/api/v1/chat/conversations/support', {
+  return apiClient.post<{ conversation: Conversation }>(`${CHAT_BASE}/conversations/support`, {
     displayName, storeId,
   });
 }
 
 export async function getMessages(conversationId: string, limit = 50, before?: string) {
-  let url = `/api/v1/chat/conversations/${conversationId}/messages?limit=${limit}`;
+  let url = `${CHAT_BASE}/conversations/${conversationId}/messages?limit=${limit}`;
   if (before) url += `&before=${encodeURIComponent(before)}`;
   return apiClient.get<{ messages: ChatMessage[] }>(url);
 }
@@ -81,23 +88,23 @@ export async function sendMessage(
   replyToId?: string,
 ) {
   return apiClient.post<{ message: ChatMessage }>(
-    `/api/v1/chat/conversations/${conversationId}/messages`,
+    `${CHAT_BASE}/conversations/${conversationId}/messages`,
     { content, messageType: 'text', displayName, replyToId }
   );
 }
 
 export async function markAsRead(conversationId: string) {
   return apiClient.patch<{ success: boolean }>(
-    `/api/v1/chat/conversations/${conversationId}/read`, {}
+    `${CHAT_BASE}/conversations/${conversationId}/read`, {}
   );
 }
 
 export async function toggleMute(conversationId: string) {
   return apiClient.patch<{ isMuted: boolean }>(
-    `/api/v1/chat/conversations/${conversationId}/mute`, {}
+    `${CHAT_BASE}/conversations/${conversationId}/mute`, {}
   );
 }
 
 export async function getUnreadCount() {
-  return apiClient.get<{ unreadCount: number }>('/api/v1/chat/unread-count');
+  return apiClient.get<{ unreadCount: number }>(`${CHAT_BASE}/unread-count`);
 }

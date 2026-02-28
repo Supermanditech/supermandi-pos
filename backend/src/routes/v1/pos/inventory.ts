@@ -627,7 +627,8 @@ posInventoryRouter.get("/inventory/statement", requireDeviceToken, async (req: R
       sellPrice: row.sellPrice ?? 0,
       purchasePrice: row.purchasePrice ?? 0,
       currentStock: row.currentStock ?? 0,
-      stockValue: (row.currentStock ?? 0) * (row.sellPrice ?? 0),
+      // STG-129: Use purchasePrice (cost) for stock valuation, fallback to sellPrice
+      stockValue: (row.currentStock ?? 0) * (row.purchasePrice || row.sellPrice || 0),
       mrp: row.mrp ?? 0,
       unit: row.unit || 'pcs',
     }));

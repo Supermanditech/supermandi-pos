@@ -22,33 +22,37 @@ posReportsRouter.get(
     const date = (req.query.date as string) || new Date().toISOString().split("T")[0];
 
     try {
-      // Sales summary
+      // STG-147: Compute item count from sale_items instead of non-existent sales.item_count
+      // STG-156: Use IST timezone for date comparison
+      // STG-161: Add status filter to exclude cancelled/voided sales
       const salesResult = await pool.query(
         `SELECT
-          COALESCE(SUM(total_minor), 0)::text as total_sales_minor,
+          COALESCE(SUM(s.total_minor), 0)::text as total_sales_minor,
           COUNT(*)::text as total_bills,
-          COALESCE(AVG(total_minor), 0)::text as average_bill_minor,
-          COALESCE(SUM(item_count), 0)::text as total_items_sold,
-          COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::text as cash_minor,
-          COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_minor ELSE 0 END), 0)::text as upi_minor,
-          COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::text as due_minor,
-          COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_minor ELSE 0 END), 0)::text as card_minor
-        FROM sales
-        WHERE store_id = $1 AND DATE(created_at) = $2`,
+          COALESCE(AVG(s.total_minor), 0)::text as average_bill_minor,
+          COALESCE((SELECT SUM(si.quantity) FROM sale_items si WHERE si.sale_id = ANY(ARRAY_AGG(s.id))), 0)::text as total_items_sold,
+          COALESCE(SUM(CASE WHEN s.payment_mode = 'CASH' THEN s.total_minor ELSE 0 END), 0)::text as cash_minor,
+          COALESCE(SUM(CASE WHEN s.payment_mode = 'UPI' THEN s.total_minor ELSE 0 END), 0)::text as upi_minor,
+          COALESCE(SUM(CASE WHEN s.payment_mode = 'DUE' THEN s.total_minor ELSE 0 END), 0)::text as due_minor
+        FROM sales s
+        WHERE s.store_id = $1
+          AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+          AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')`,
         [storeId, date]
       );
 
-      // Refunds
+      // STG-148: Use orders.refunds (correct schema) and refund_amount_minor (correct column)
+      // STG-156: Use IST timezone for date comparison
       const refundsResult = await pool.query(
         `SELECT
           COUNT(*)::text as refund_count,
-          COALESCE(SUM(amount_minor), 0)::text as refund_total_minor
-        FROM refunds
-        WHERE store_id = $1 AND DATE(created_at) = $2`,
+          COALESCE(SUM(refund_amount_minor), 0)::text as refund_total_minor
+        FROM orders.refunds
+        WHERE store_id = $1 AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2`,
         [storeId, date]
       );
 
-      // Top selling products
+      // Top selling products — STG-156: IST timezone
       const topProductsResult = await pool.query(
         `SELECT
           si.product_name as name,
@@ -56,22 +60,26 @@ posReportsRouter.get(
           SUM(si.line_total_minor)::text as revenue_minor
         FROM sale_items si
         JOIN sales s ON si.sale_id = s.id
-        WHERE s.store_id = $1 AND DATE(s.created_at) = $2
+        WHERE s.store_id = $1
+          AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+          AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
         GROUP BY si.product_name
         ORDER BY SUM(si.quantity) DESC
         LIMIT 10`,
         [storeId, date]
       );
 
-      // Hourly breakdown
+      // Hourly breakdown — STG-156: IST timezone
       const hourlyResult = await pool.query(
         `SELECT
-          EXTRACT(HOUR FROM created_at)::integer as hour,
+          EXTRACT(HOUR FROM created_at AT TIME ZONE 'Asia/Kolkata')::integer as hour,
           COUNT(*)::text as bill_count,
           COALESCE(SUM(total_minor), 0)::text as sales_minor
         FROM sales
-        WHERE store_id = $1 AND DATE(created_at) = $2
-        GROUP BY EXTRACT(HOUR FROM created_at)
+        WHERE store_id = $1
+          AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2
+          AND status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
+        GROUP BY EXTRACT(HOUR FROM created_at AT TIME ZONE 'Asia/Kolkata')
         ORDER BY hour`,
         [storeId, date]
       );
@@ -91,7 +99,6 @@ posReportsRouter.get(
           cashMinor: parseInt(sales.cash_minor, 10),
           upiMinor: parseInt(sales.upi_minor, 10),
           dueMinor: parseInt(sales.due_minor, 10),
-          cardMinor: parseInt(sales.card_minor, 10),
         },
         topProducts: topProductsResult.rows.map((r: any) => ({
           productName: r.name,

@@ -46,7 +46,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let storeCode: string | null = null; // STORECODE-003
   // REG-AUTH-401: Store status for LIMITED MODE display
   let storeStatus: string | null = null;
-  const upiVpa: string | null = null;
+  // STG-093: Changed from const to let so upiVpa can be assigned from DB query
+  let upiVpa: string | null = null;
   const storeScanLookupV2Enabled = false;
   // GO-LIVE-REVEAL-001: Feature flags for tab visibility (default enabled for live testing)
   let buyEnabled = true;
@@ -69,7 +70,7 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   if (status.storeId) {
     try {
       const storeRes = await pool.query(
-        `SELECT name, code, status, bnpl_enabled, credit_enabled, allowed_payment_methods FROM platform.stores WHERE id = $1::uuid`,
+        `SELECT name, code, status, upi_vpa, bnpl_enabled, credit_enabled, allowed_payment_methods FROM platform.stores WHERE id = $1::uuid`,
         [status.storeId]
       );
       const storeRow = storeRes.rows[0];
@@ -77,6 +78,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       storeCode = storeRow?.code ? String(storeRow.code) : null;
       // REG-AUTH-401: Store status for LIMITED MODE banner
       storeStatus = storeRow?.status ? String(storeRow.status).toUpperCase() : null;
+      // STG-093: Assign upiVpa from store record
+      upiVpa = storeRow?.upi_vpa ? String(storeRow.upi_vpa) : null;
       // GL-AUD-007: BNPL enabled status
       bnplEnabled = storeRow?.bnpl_enabled === true;
       // CA-1.4-005: Credit enabled status from store settings
@@ -91,8 +94,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
 
     // GO-LIVE-REVEAL-001: Check reorder_settings for reorderEnabled if store has settings
     try {
+      // STG-095: Changed from non-existent `reorder_settings` to correct table
       const reorderRes = await pool.query(
-        `SELECT reorder_enabled FROM reorder_settings WHERE store_id = $1`,
+        `SELECT reorder_enabled FROM reorder.store_reorder_settings WHERE store_id = $1`,
         [status.storeId]
       );
       if (reorderRes.rows[0] !== undefined) {

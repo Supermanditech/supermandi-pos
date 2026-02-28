@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -26,6 +26,9 @@ type RootStackParamList = {
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "SalesHistory">;
 
+// STG-127: Added pagination support with infinite scroll
+const PAGE_SIZE = 50;
+
 export default function SalesHistoryScreen() {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
@@ -33,22 +36,34 @@ export default function SalesHistoryScreen() {
   const { t } = useTranslation();
   const [bills, setBills] = useState<BillSummary[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [hasMore, setHasMore] = useState(true);
   // T-125: Pull-to-refresh state
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadBills = async () => {
-    setLoading(true);
+  const loadBills = async (offset = 0, isRefresh = false) => {
+    if (offset === 0) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     setError("");
     try {
-      const results = await listBills();
-      setBills(results);
+      const result = await listBills(PAGE_SIZE, offset);
+      if (offset === 0 || isRefresh) {
+        setBills(result.bills);
+      } else {
+        setBills(prev => [...prev, ...result.bills]);
+      }
+      setHasMore(result.hasMore);
     } catch (_e: unknown) {
     const e = asError(_e);
       // GL-CRIT-0095: Use i18n for error messages
       setError(e?.message ? String(e.message) : t('history.loadError', 'Failed to load bills.'));
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
@@ -56,8 +71,15 @@ export default function SalesHistoryScreen() {
   // T-125: Pull-to-refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    void loadBills();
+    void loadBills(0, true);
   }, []);
+
+  // STG-127: Load more on scroll end
+  const onEndReached = useCallback(() => {
+    if (!loadingMore && hasMore && !loading) {
+      void loadBills(bills.length);
+    }
+  }, [loadingMore, hasMore, loading, bills.length]);
 
   useEffect(() => {
     if (isFocused) {
@@ -132,6 +154,13 @@ export default function SalesHistoryScreen() {
               tintColor={theme.colors.primary}
             />
           }
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={loadingMore ? (
+            <View style={{ paddingVertical: 16, alignItems: "center" }}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+          ) : null}
         />
       )}
     </View>

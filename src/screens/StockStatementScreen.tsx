@@ -105,7 +105,8 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
     try {
       // AUD-074-B FIX: Use getStockStatement to get ACTUAL inventory from inventory.stock_balances
       // This returns real transactional inventory, not cached/supplier stock
-      const response = await getStockStatement(200, true);
+      // STG-131: Increased limit from 200 to 500 (max supported by API)
+      const response = await getStockStatement(500, true);
 
       // UIUX-POS-016: Show offline indicator instead of error when offline
       if (!response.success && response.meta?.source === 'offline') {

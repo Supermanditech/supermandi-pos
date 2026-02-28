@@ -77,9 +77,9 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
       </Pressable>
 
       <Text style={styles.title} accessibilityRole="header">
-        Help &amp; Support
+        Help & Support
       </Text>
-      <Text style={styles.subtitle}>Need help? We&apos;re here for you.</Text>
+      <Text style={styles.subtitle}>Need help? We're here for you.</Text>
 
       {/* Contact Card */}
       <View style={styles.card}>

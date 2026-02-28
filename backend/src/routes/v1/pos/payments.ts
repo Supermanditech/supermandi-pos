@@ -15,6 +15,8 @@ import { financialOperationsRateLimiter } from "../../../middleware/posRateLimit
 // T-254: Razorpay order creation for real UPI payment tracking
 import { createRazorpayOrder, isRazorpayOrdersConfigured } from "../../../services/razorpayOrderService";
 import { log } from "../../../lib/logger";
+// STG-106: Import applyBulkDeductions for split payment stock deduction
+import { applyBulkDeductions } from "../../../services/inventoryService";
 
 export const posPaymentsRouter = Router();
 
@@ -666,7 +668,7 @@ posPaymentsRouter.post(
           // POS-DUE-002: Auto-create customer_dues record for due tracking
           await client.query(
             `INSERT INTO payments.customer_dues (store_id, sale_id, customer_name, customer_phone, amount_minor, status)
-             VALUES ($1, $2::uuid, $3, $4, $5, 'pending')
+             VALUES ($1, $2, $3, $4, $5, 'pending')
              ON CONFLICT DO NOTHING`,
             [storeId, saleId, sale.customer_name || null, sale.customer_phone || null, p.amountMinor]
           );
@@ -832,6 +834,29 @@ posPaymentsRouter.post(
           `UPDATE public.sales SET status = 'completed' WHERE id = $1 AND store_id = $2`,
           [payment.sale_id, storeId]
         );
+
+        // STG-106: Deduct stock when all split payments are confirmed
+        // Previously, split CASH+DUE payments skipped stock deduction entirely
+        const itemsRes = await client.query(
+          `SELECT variant_id, quantity, stock_quantity FROM sale_items WHERE sale_id = $1`,
+          [payment.sale_id]
+        );
+        const deductionItems = itemsRes.rows.map((row: any) => {
+          const billingQty = Number(row.quantity ?? 0);
+          const stockQty = row.stock_quantity != null ? Number(row.stock_quantity) : billingQty;
+          return {
+            variantId: String(row.variant_id),
+            quantity: Number.isFinite(stockQty) && stockQty > 0 ? stockQty : billingQty
+          };
+        });
+        if (deductionItems.length > 0) {
+          await applyBulkDeductions({
+            client,
+            storeId,
+            items: deductionItems,
+          });
+          log.info(`[SM-013] STG-106: Stock deducted for split sale ${payment.sale_id}, ${deductionItems.length} items`);
+        }
       }
 
       await client.query("COMMIT");

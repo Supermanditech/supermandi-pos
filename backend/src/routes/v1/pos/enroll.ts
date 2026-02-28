@@ -563,6 +563,18 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       });
     }
 
+    // STG-096: Query active device count for multi-device warning in frontend
+    let activeDeviceCount = 1;
+    try {
+      const countRes = await client.query(
+        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND active = true`,
+        [enrollment.store_id]
+      );
+      activeDeviceCount = countRes.rows[0]?.count ?? 1;
+    } catch {
+      // Non-critical — default to 1
+    }
+
     return res.json({
       deviceId,
       storeId: store.id,
@@ -572,6 +584,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       storeActive: Boolean(store.active),
       reEnrolled: Boolean(existingDevice),
       upiVpa: store.upi_vpa || null, // #333: For payment setup prompt
+      activeDeviceCount, // STG-096: Enable multi-device warning in frontend
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -739,9 +752,9 @@ posEnrollRouter.post("/lookup-activation", lookupBurstLimiter, lookupSustainedLi
   try {
     // Find store by phone
     const storeRes = await pool.query(
-      `SELECT s.id::TEXT as id, s.name, COALESCE(s.store_code, s.code) as code
+      `SELECT s.id::TEXT as id, s.name, COALESCE(s.store_code, s.code) as code, s.contact_phone
        FROM platform.stores s
-       WHERE s.phone = ANY($1::text[]) AND s.status != 'deleted'
+       WHERE (s.phone = ANY($1::text[]) OR s.contact_phone = ANY($1::text[])) AND s.status != 'deleted'
        ORDER BY s.created_at DESC LIMIT 1`,
       [phoneVariants]
     );

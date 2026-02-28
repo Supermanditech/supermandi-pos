@@ -184,6 +184,8 @@ export default function EnrollDeviceScreen() {
     model: Device.modelName ?? Device.deviceName ?? Constants.deviceName ?? null,
     androidVersion: Platform.OS === "android" ? String(Platform.Version) : Device.osVersion ?? null,
     appVersion: getAppVersion(),
+    // STG-092: deviceType required by backend enroll.ts validation
+    deviceType: "RETAILER_PHONE" as const,
     // #404: label is set dynamically, not memoized — added at call site
   }), []);
 

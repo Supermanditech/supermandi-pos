@@ -142,7 +142,8 @@ export default function OrderHistoryScreen({
     [onSelectOrder]
   );
 
-  // Stats
+  // STG-128: Stats from visible orders only, with note when paginated
+  // These are approximate counts from loaded data; full counts would require backend aggregation
   const stats = useMemo(() => {
     const active = orders.filter((o) =>
       ["draft", "submitted", "confirmed", "shipped", "partial_received"].includes(o.status)
@@ -150,8 +151,8 @@ export default function OrderHistoryScreen({
     const receivable = orders.filter((o) =>
       ["shipped", "partial_received", "confirmed"].includes(o.status)
     ).length;
-    return { total: orders.length, active, receivable };
-  }, [orders]);
+    return { total: orders.length, active, receivable, hasMore };
+  }, [orders, hasMore]);
 
   // Render item
   const renderItem = useCallback(
@@ -231,7 +232,7 @@ export default function OrderHistoryScreen({
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>Order History</Text>
           <Text style={styles.headerSubtitle}>
-            {stats.active} active | {stats.receivable} ready to receive
+            {stats.active} active | {stats.receivable} ready to receive{stats.hasMore ? '+' : ''}
           </Text>
         </View>
       </View>

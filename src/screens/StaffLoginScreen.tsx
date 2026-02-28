@@ -48,7 +48,8 @@ export default function StaffLoginScreen({ storeName }: Props) {
 
     setLoading(true);
     try {
-      const result = await staffLogin({ phone: trimmedPhone, pin: trimmedPin });
+      // STG-162: Send normalized 10-digit phone (strip +91/91 prefix) since DB stores 10-digit
+      const result = await staffLogin({ phone: phone10, pin: trimmedPin });
       setSession({
         staffId: result.staffId,
         name: result.name,

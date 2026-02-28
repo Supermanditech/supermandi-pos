@@ -25,6 +25,7 @@ type RootStackParamList = {
     paymentMode: "UPI" | "CASH" | "DUE";
     transactionId: string;
     billId: string;
+    saleId?: string; // STG-107: Actual backend sale UUID for WhatsApp bill
     saleItems?: CartItem[];
     saleTotalMinor?: number;
     saleCurrency?: string;
@@ -54,6 +55,8 @@ export default function SuccessPrintScreenV2() {
   const isPartialSale = route.params?.partialSale === true;
   // For reconciliation: tie receipt/print outcomes to a bill id.
   const transactionId = route.params?.transactionId ?? fallbackTxnRef.current;
+  // STG-107: Use actual backend sale UUID for WhatsApp bill (fallback to transactionId)
+  const actualSaleId = route.params?.saleId ?? transactionId;
 
   const [printStatus, setPrintStatus] = useState<"idle" | "printing" | "success" | "failed">("idle");
   const [operatorStoreId, setOperatorStoreId] = useState<string | null>(null);
@@ -72,14 +75,19 @@ export default function SuccessPrintScreenV2() {
       .catch(() => setWaConfigured(false));
   }, []);
 
-  // POS-PRINT-001: Snapshot discount from cart (fallback to route params)
-  const saleSubtotal = subtotal || saleTotalMinor;
-  const saleDiscountAmount = discountAmount || 0;
-  const saleDiscountLabel = discount
+  // STG-108: Compute subtotal from saleItems (not cart store) to avoid stale values for partial sales.
+  // For partial sales, cart still has remaining items — using cart subtotal/discount is wrong.
+  const computedSubtotal = saleItems.reduce((sum, i) => sum + i.priceMinor * i.quantity, 0);
+  const saleSubtotal = computedSubtotal > 0 ? computedSubtotal : saleTotalMinor;
+  // Discount is the difference between subtotal and total (what was actually charged)
+  const saleDiscountAmount = saleSubtotal > saleTotalMinor ? saleSubtotal - saleTotalMinor : 0;
+  const saleDiscountLabel = !isPartialSale && discount
     ? discount.type === "percentage"
       ? `${discount.value}%`
       : formatMoney(discount.value, currency)
-    : null;
+    : saleDiscountAmount > 0
+      ? formatMoney(saleDiscountAmount, currency)
+      : null;
 
   const generateReceiptContent = (): string => {
     // ISSUE-MICRO-029: Detect offline sales (bill refs from offline start with "OFF-")
@@ -178,8 +186,9 @@ export default function SuccessPrintScreenV2() {
     setShowPhoneModal(false);
 
     try {
+      // STG-107: Use actual backend sale UUID, not client-generated transactionId
       const result = await sendBillWhatsApp({
-        saleId: transactionId,
+        saleId: actualSaleId,
         recipientPhone: cleanPhone,
       });
 

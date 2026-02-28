@@ -7,11 +7,8 @@ import {
   recordCashPayment,
   recordDuePayment,
 } from "./api/posApi";
-import {
-  recordSaleTransaction,
-  InventoryTransactionItem,
-} from "./api/inventoryApi";
-import { enqueueEvent } from "./offline/outbox"; // GL-CRIT-0016: For retry queue
+// STG-101: Removed recordSaleTransaction + enqueueEvent imports — backend handles inventory deduction
+import type { InventoryTransactionItem } from "./api/inventoryApi";
 
 // =============================================================================
 // TYPES
@@ -77,57 +74,10 @@ export async function completeCheckout(
     throw error;
   }
 
-  // Step 2: Record inventory deduction
-  let inventoryDeducted = false;
-  try {
-    const inventoryItems: InventoryTransactionItem[] = items.map((item) => ({
-      productId: item.id,
-      quantity: item.quantity,
-      unitCost: item.priceMinor,
-    }));
-
-    await recordSaleTransaction(saleId, inventoryItems, `Sale ${billRef}`);
-    inventoryDeducted = true;
-
-    console.log(`[Checkout] Inventory deducted for sale ${saleId}, ${items.length} items`);
-  } catch (inventoryError) {
-    // GO-LIVE-114: Inventory deduction failed - enqueue for retry
-    // Don't fail checkout, but ensure inventory is eventually deducted
-    console.warn(
-      `[Checkout] GO-LIVE-114: Inventory deduction failed for sale ${saleId}, queueing for retry:`,
-      inventoryError
-    );
-
-    // GO-LIVE-114: Add to offline outbox for retry
-    // IMPORTANT: Format payload to match what sync.ts expects for SALE_CREATED
-    // Use barcode/name/priceMinor (sync format) instead of productId/unitCost (inventory format)
-    try {
-      await enqueueEvent("SALE_CREATED", {
-        saleId,
-        billRef,
-        offlineReceiptRef: billRef, // sync.ts uses offlineReceiptRef or billRef
-        items: items.map((item) => ({
-          barcode: item.barcode,
-          name: item.name,
-          quantity: item.quantity,
-          priceMinor: item.priceMinor,
-          globalProductId: item.metadata?.globalProductId ?? null,
-        })),
-        currency: input.currency,
-        discountMinor: 0, // Discount already applied to sale, don't re-apply
-        retryInventoryDeduction: true, // GO-LIVE-114: Flag for sync processor to run inventory only
-        originalError: inventoryError instanceof Error ? inventoryError.message : String(inventoryError),
-        queuedAt: new Date().toISOString(),
-      });
-      console.log(`[Checkout] GO-LIVE-114: Queued inventory deduction retry for sale ${saleId}`);
-    } catch (queueError) {
-      // If even queueing fails, log critical error
-      console.error(
-        `[Checkout] CRITICAL: Failed to queue inventory retry for sale ${saleId}:`,
-        queueError
-      );
-    }
-  }
+  // STG-101: Inventory deduction is handled by backend payment endpoints (applyBulkDeductions).
+  // Previously, frontend also called recordSaleTransaction here, causing DOUBLE deduction.
+  // Backend is the single source of truth for stock changes.
+  const inventoryDeducted = true; // Backend handles via applyBulkDeductions
 
   // Step 3: Return result
   console.log(`[Checkout] Completed sale ${saleId}, payment: ${paymentStatus}, inventory: ${inventoryDeducted}`);

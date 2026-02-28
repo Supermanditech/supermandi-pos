@@ -635,7 +635,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
       FROM sales
       WHERE store_id = $1
         AND status IN ('PAID_CASH', 'PAID_UPI', 'DUE', 'completed', 'SPLIT')
-        AND created_at::date = $2::date
+        AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2::date
       `,
       [storeId, targetDate]
     );
@@ -645,7 +645,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
     const totalSales = Number(row.total_sales || 0);
     const averageBillValue = totalBills > 0 ? Math.round(totalSales / totalBills) : 0;
 
-    // Get items sold count and top selling items
+    // Get items sold count and top selling items — STG-156: IST timezone
     const itemsRes = await pool.query(
       `
       SELECT
@@ -657,7 +657,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
       JOIN sales s ON s.id = si.sale_id
       WHERE s.store_id = $1
         AND s.status IN ('PAID_CASH', 'PAID_UPI', 'DUE', 'completed', 'SPLIT')
-        AND s.created_at::date = $2::date
+        AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2::date
       GROUP BY si.variant_id, si.name
       ORDER BY quantity_sold DESC
       LIMIT 10
@@ -1455,7 +1455,7 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
       // POS-DUE-002: Auto-create customer_dues record for due tracking
       await client.query(
         `INSERT INTO payments.customer_dues (store_id, sale_id, customer_name, customer_phone, amount_minor, status)
-         VALUES ($1, $2::uuid, $3, $4, $5, 'pending')
+         VALUES ($1, $2, $3, $4, $5, 'pending')
          ON CONFLICT DO NOTHING`,
         [storeId, saleId, sale.customer_name || null, sale.customer_phone || null, sale.total_minor]
       );
@@ -1847,19 +1847,25 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
     }
 
     // Get sale items for stock deduction
+    // STG-100: Include stock_quantity for retail variant deduction (same as confirm endpoint)
     const itemsRes = await client.query(
       `
-      SELECT variant_id, quantity
+      SELECT variant_id, quantity, stock_quantity
       FROM sale_items
       WHERE sale_id = $1
       `,
       [saleId]
     );
 
-    const items = itemsRes.rows.map((row) => ({
-      variantId: String(row.variant_id),
-      quantity: Number(row.quantity ?? 0)
-    }));
+    const items = itemsRes.rows.map((row) => {
+      const billingQty = Number(row.quantity ?? 0);
+      // STG-100: Use stock_quantity if present (retail variant), otherwise billing quantity
+      const stockQty = row.stock_quantity != null ? Number(row.stock_quantity) : billingQty;
+      return {
+        variantId: String(row.variant_id),
+        quantity: Number.isFinite(stockQty) && stockQty > 0 ? stockQty : billingQty
+      };
+    });
 
     // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
     // Stock is NOT reserved during PENDING state - another sale could consume it
@@ -1992,19 +1998,25 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
     }
 
     // Get sale items for stock deduction
+    // STG-100: Include stock_quantity for retail variant deduction (same as confirm endpoint)
     const itemsRes = await client.query(
       `
-      SELECT variant_id, quantity
+      SELECT variant_id, quantity, stock_quantity
       FROM sale_items
       WHERE sale_id = $1
       `,
       [saleId]
     );
 
-    const items = itemsRes.rows.map((row) => ({
-      variantId: String(row.variant_id),
-      quantity: Number(row.quantity ?? 0)
-    }));
+    const items = itemsRes.rows.map((row) => {
+      const billingQty = Number(row.quantity ?? 0);
+      // STG-100: Use stock_quantity if present (retail variant), otherwise billing quantity
+      const stockQty = row.stock_quantity != null ? Number(row.stock_quantity) : billingQty;
+      return {
+        variantId: String(row.variant_id),
+        quantity: Number.isFinite(stockQty) && stockQty > 0 ? stockQty : billingQty
+      };
+    });
 
     // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
     // Stock is NOT reserved during PENDING state - another sale could consume it
@@ -2145,19 +2157,25 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
     }
 
     // Get sale items for stock deduction
+    // STG-100: Include stock_quantity for retail variant deduction (same as confirm endpoint)
     const itemsRes = await client.query(
       `
-      SELECT variant_id, quantity
+      SELECT variant_id, quantity, stock_quantity
       FROM sale_items
       WHERE sale_id = $1
       `,
       [saleId]
     );
 
-    const items = itemsRes.rows.map((row) => ({
-      variantId: String(row.variant_id),
-      quantity: Number(row.quantity ?? 0)
-    }));
+    const items = itemsRes.rows.map((row) => {
+      const billingQty = Number(row.quantity ?? 0);
+      // STG-100: Use stock_quantity if present (retail variant), otherwise billing quantity
+      const stockQty = row.stock_quantity != null ? Number(row.stock_quantity) : billingQty;
+      return {
+        variantId: String(row.variant_id),
+        quantity: Number.isFinite(stockQty) && stockQty > 0 ? stockQty : billingQty
+      };
+    });
 
     // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
     // Stock is NOT reserved during PENDING state - another sale could consume it

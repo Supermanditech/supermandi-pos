@@ -26,6 +26,7 @@ import { tokenManagementRouter } from "./pos/tokenManagement";  // GL-WF-045-A: 
 import { posStaffRouter } from "./pos/staff";  // SA-P1-001: POS staff login
 import { posShiftsRouter } from "./pos/shifts";  // POS-SHIFT-001: Staff shift management
 import { posDailyClosingRouter } from "./pos/dailyClosing";  // POS-DAILY-001: Daily closing reconciliation
+import { posChatRouter } from "./pos/chat";  // STG-152: POS chat proxy with device token auth
 import { posKhataRouter } from "./pos/khata";  // POS-KHATA-001: Khata credit ledger
 import { posCustomersRouter } from "./pos/customers";  // POS-CUST-001: Customer profiles
 import { adminStaffRouter } from "./admin/staff";  // SA-P1-001: Admin staff CRUD
@@ -145,6 +146,7 @@ v1Router.use("/pos", posShiftsRouter);  // POS-SHIFT-001: Staff shift management
 v1Router.use("/pos", posDailyClosingRouter);  // POS-DAILY-001: Daily closing reconciliation
 v1Router.use("/pos", posKhataRouter);  // POS-KHATA-001: Khata credit ledger
 v1Router.use("/pos", posCustomersRouter);  // POS-CUST-001: Customer profiles
+v1Router.use("/pos", posChatRouter);  // STG-152: POS chat proxy with device token auth
 v1Router.use("/pos", posSyncEventsRouter);  // T-173: SSE real-time sync
 v1Router.use("/pos", posNotificationsRouter);  // Phase 8: FCM push notifications + device token CRUD
 v1Router.use("/pos", posRefundRequestsRouter);  // T-219: UPI refund request management

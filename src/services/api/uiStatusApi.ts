@@ -139,12 +139,17 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
   }
 
   try {
+    // STG-097: Add AbortController timeout to prevent indefinite hang on slow networks
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s for splash
     const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
       headers: {
         "X-Device-Token": deviceToken,
         "X-App-Version": getDeviceMeta().appVersion ?? "unknown",
       },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.log("[uiStatus] Failed:", response.status);
@@ -195,12 +200,17 @@ export async function fetchUiStatusStrict(): Promise<UiStatusResponse> {
     throw new ApiError(401, "DEVICE_SESSION_MISSING");
   }
 
+  // STG-097: Add AbortController timeout to prevent indefinite hang on slow networks
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s for gate screens
   const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
     headers: {
       "X-Device-Token": deviceToken,
       "X-App-Version": getDeviceMeta().appVersion ?? "unknown",
     },
+    signal: controller.signal,
   });
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");

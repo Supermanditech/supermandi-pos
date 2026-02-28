@@ -49,7 +49,7 @@ interface OpeningStockSubmitItem {
 
 async function searchProducts(query: string): Promise<ProductSearchResult[]> {
   const response = await apiClient.get<{ products: ProductSearchResult[] }>(
-    `/api/v1/pos/products/search?q=${encodeURIComponent(query)}&stockCheck=true`
+    `/api/v1/pos/store-products/search?q=${encodeURIComponent(query)}&stockCheck=true`
   );
   return response.products;
 }

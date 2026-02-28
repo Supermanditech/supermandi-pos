@@ -317,18 +317,21 @@ export async function getLedgerEntries(
 /**
  * Get purchase history (purchase_received transactions).
  * GO-LIVE-006
+ * STG-130: Added pagination support with limit/offset params
  */
 export async function getPurchaseHistory(
   startDate?: string,
-  endDate?: string
-): Promise<LedgerEntry[]> {
-  const result = await getLedgerEntries({
+  endDate?: string,
+  limit = 100,
+  offset = 0
+): Promise<LedgerQueryResponse> {
+  return getLedgerEntries({
     transactionType: "purchase_received",
     startDate,
     endDate,
-    limit: 100,
+    limit,
+    offset,
   });
-  return result.entries;
 }
 
 /**

@@ -28,20 +28,25 @@ import { asError } from "../utils/errorUtils";
 // TYPES
 // =============================================================================
 
+// STG-139: Aligned to match backend response field names from overduePayments.ts
 interface OverdueDue {
-  id: string;
-  saleId: string;
+  id: string;         // backend returns 'id' (sale id)
   billRef: string;
   customerName: string;
   customerPhone: string;
-  amountMinor: number;
-  dueDate: string; // ISO date
-  daysOverdue: number;
-  reminderSentAt: string | null;
+  totalMinor: number;
+  outstandingMinor: number;
+  paidAmountMinor: number;
+  dueDate: string | null; // ISO date
+  daysOverdue: number | null;
+  createdAt: string;
 }
 
+// STG-137: Backend returns 'overdues' key, not 'dues'
 interface OverdueDuesResponse {
-  dues: OverdueDue[];
+  overdues: OverdueDue[];
+  totalCount: number;
+  totalOutstandingMinor: number;
 }
 
 // =============================================================================
@@ -80,7 +85,8 @@ async function fetchOverdueDues(): Promise<OverdueDue[]> {
   const response = await apiClient.get<OverdueDuesResponse>(
     "/api/v1/pos/payments/overdue"
   );
-  return response.dues;
+  // STG-137: Backend returns 'overdues' key
+  return response.overdues;
 }
 
 // =============================================================================
@@ -110,7 +116,7 @@ export default function OverdueDuesScreen({
     try {
       const data = await fetchOverdueDues();
       // Sort by days overdue descending (oldest first)
-      const sorted = [...data].sort((a, b) => b.daysOverdue - a.daysOverdue);
+      const sorted = [...data].sort((a, b) => (b.daysOverdue ?? 0) - (a.daysOverdue ?? 0));
       setDues(sorted);
     } catch (_e: unknown) {
     const e = asError(_e);
@@ -135,8 +141,8 @@ export default function OverdueDuesScreen({
   const handleSendReminder = useCallback(
     async (due: OverdueDue) => {
       const storeName = "SuperMandi"; // fallback store name
-      const amountStr = formatMoney(due.amountMinor);
-      const dateStr = formatIndianDate(due.dueDate);
+      const amountStr = formatMoney(due.outstandingMinor);
+      const dateStr = due.dueDate ? formatIndianDate(due.dueDate) : "N/A";
       const message = `Dear ${due.customerName}, you have an outstanding payment of ${amountStr} from ${dateStr}. Please pay at your earliest. - ${storeName}`;
 
       // Try WhatsApp first, fallback to Share
@@ -181,7 +187,8 @@ export default function OverdueDuesScreen({
   const handleRecordPayment = useCallback(
     (due: OverdueDue) => {
       if (onNavigateToPayment) {
-        onNavigateToPayment(due.saleId);
+        // STG-139: Backend returns 'id' which is the sale ID
+        onNavigateToPayment(due.id);
       } else {
         Alert.alert("Record Payment", "Navigate to payment screen to record payment for this due.");
       }
@@ -189,14 +196,16 @@ export default function OverdueDuesScreen({
     [onNavigateToPayment]
   );
 
-  const totalOverdue = dues.reduce((sum, d) => sum + d.amountMinor, 0);
+  // STG-139: Use outstandingMinor instead of amountMinor
+  const totalOverdue = dues.reduce((sum, d) => sum + d.outstandingMinor, 0);
 
   const renderDueItem = useCallback(
     ({ item }: { item: OverdueDue }) => {
-      const severityColor = getSeverityColor(item.daysOverdue);
-      const severityLabel = getSeverityLabel(item.daysOverdue);
-      const reminderSent =
-        reminderSentMap[item.id] || item.reminderSentAt;
+      // STG-139: daysOverdue can be null if no due_date set
+      const daysOverdue = item.daysOverdue ?? 0;
+      const severityColor = getSeverityColor(daysOverdue);
+      const severityLabel = getSeverityLabel(daysOverdue);
+      const reminderSent = reminderSentMap[item.id];
 
       return (
         <View style={styles.card}>
@@ -235,21 +244,23 @@ export default function OverdueDuesScreen({
               <Text style={styles.detailValue}>{item.billRef}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Amount</Text>
+              <Text style={styles.detailLabel}>Outstanding</Text>
               <Text style={[styles.detailValueBold, { color: severityColor }]}>
-                {formatMoney(item.amountMinor)}
+                {formatMoney(item.outstandingMinor)}
               </Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Due Date</Text>
-              <Text style={styles.detailValue}>
-                {formatIndianDate(item.dueDate)}
-              </Text>
-            </View>
+            {item.dueDate && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Due Date</Text>
+                <Text style={styles.detailValue}>
+                  {formatIndianDate(item.dueDate)}
+                </Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Days Overdue</Text>
               <Text style={[styles.detailValueBold, { color: severityColor }]}>
-                {item.daysOverdue} days
+                {daysOverdue} days
               </Text>
             </View>
           </View>

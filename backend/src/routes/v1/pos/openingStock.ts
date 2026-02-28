@@ -38,17 +38,17 @@ posOpeningStockRouter.post(
           continue;
         }
 
-        // Insert inventory transaction for opening stock
+        // STG-123: Insert into inventory.inventory_ledger (correct table)
         await client.query(
-          `INSERT INTO inventory_transactions (store_id, product_id, type, quantity, reason, created_at)
-           VALUES ($1, $2, 'opening_stock', $3, 'Opening stock entry', NOW())`,
+          `INSERT INTO inventory.inventory_ledger (store_id, product_id, delta_qty, transaction_type, reference_type, notes, created_at)
+           VALUES ($1, $2, $3, 'opening_stock', 'manual', 'Opening stock entry', NOW())`,
           [storeId, item.productId, item.quantity]
         );
 
-        // Update store_products stock
+        // STG-123: Update catalog.store_products.current_stock (correct table/column)
         await client.query(
-          `UPDATE store_products
-           SET stock = stock + $3, updated_at = NOW()
+          `UPDATE catalog.store_products
+           SET current_stock = current_stock + $3, updated_at = NOW()
            WHERE store_id = $1 AND product_id = $2`,
           [storeId, item.productId, item.quantity]
         );

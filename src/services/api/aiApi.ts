@@ -1,22 +1,8 @@
-// T-303→T-316: POS AI API client
-// Calls the AI intelligence endpoints
+// T-303->T-316: POS AI API client
+// STG-164: Refactored to use apiClient instead of raw fetch
+// This ensures proper x-device-token auth, rate limiting, and timeout handling
 
-import { API_BASE_URL } from "../../config/api";
-import { getDeviceToken } from "../deviceSession";
-
-async function aiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = await getDeviceToken();
-  const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  });
-  if (!res.ok) throw new Error(`AI API ${res.status}`);
-  return res.json();
-}
+import { apiClient } from "./apiClient";
 
 // T-307: Alerts
 export interface Alert {
@@ -29,20 +15,20 @@ export async function getAlerts(opts?: { unreadOnly?: boolean; limit?: number })
   const params = new URLSearchParams();
   if (opts?.unreadOnly) params.set('unreadOnly', 'true');
   if (opts?.limit) params.set('limit', String(opts.limit));
-  return aiFetch(`/pos/ai/alerts?${params}`);
+  return apiClient.get(`/api/v1/pos/ai/alerts?${params}`);
 }
 
 export async function getUnreadAlertCount(): Promise<number> {
-  const res = await aiFetch<{ count: number }>('/pos/ai/alerts/count');
+  const res = await apiClient.get<{ count: number }>('/api/v1/pos/ai/alerts/count');
   return res.count;
 }
 
 export async function markAlertRead(alertId: string): Promise<void> {
-  await aiFetch(`/pos/ai/alerts/${alertId}/read`, { method: 'PATCH' });
+  await apiClient.patch(`/api/v1/pos/ai/alerts/${alertId}/read`, {});
 }
 
 export async function dismissAlert(alertId: string): Promise<void> {
-  await aiFetch(`/pos/ai/alerts/${alertId}/dismiss`, { method: 'PATCH' });
+  await apiClient.patch(`/api/v1/pos/ai/alerts/${alertId}/dismiss`, {});
 }
 
 // T-308: Forecasts
@@ -56,7 +42,7 @@ export async function getForecasts(opts?: { productId?: string; days?: number })
   const params = new URLSearchParams();
   if (opts?.productId) params.set('productId', opts.productId);
   if (opts?.days) params.set('days', String(opts.days));
-  return aiFetch(`/pos/ai/forecasts?${params}`);
+  return apiClient.get(`/api/v1/pos/ai/forecasts?${params}`);
 }
 
 // T-303: Recommendations
@@ -66,11 +52,11 @@ export interface ProductRec {
 }
 
 export async function getProductRecommendations(productId: string): Promise<{ recommendations: ProductRec[] }> {
-  return aiFetch(`/pos/ai/recommendations/${productId}`);
+  return apiClient.get(`/api/v1/pos/ai/recommendations/${productId}`);
 }
 
 export async function getTrendingProducts(): Promise<{ trending: ProductRec[] }> {
-  return aiFetch('/pos/ai/trending');
+  return apiClient.get('/api/v1/pos/ai/trending');
 }
 
 // T-310: Auto closing config
@@ -79,11 +65,11 @@ export interface AutoClosingConfig {
 }
 
 export async function getAutoClosingConfig(): Promise<AutoClosingConfig> {
-  return aiFetch('/pos/ai/auto-closing/config');
+  return apiClient.get('/api/v1/pos/ai/auto-closing/config');
 }
 
 export async function updateAutoClosingConfig(config: { enabled?: boolean; closeTime?: string }): Promise<void> {
-  await aiFetch('/pos/ai/auto-closing/config', { method: 'PATCH', body: JSON.stringify(config) });
+  await apiClient.patch('/api/v1/pos/ai/auto-closing/config', config);
 }
 
 // T-311: Price comparisons
@@ -97,7 +83,7 @@ export async function getPriceComparisons(opts?: { onlyWithSavings?: boolean; li
   const params = new URLSearchParams();
   if (opts?.onlyWithSavings) params.set('onlyWithSavings', 'true');
   if (opts?.limit) params.set('limit', String(opts.limit));
-  return aiFetch(`/pos/ai/price-comparisons?${params}`);
+  return apiClient.get(`/api/v1/pos/ai/price-comparisons?${params}`);
 }
 
 // T-313: Slow movers
@@ -107,7 +93,7 @@ export interface SlowMover {
 }
 
 export async function getSlowMovers(): Promise<{ slowMovers: SlowMover[]; total: number }> {
-  return aiFetch('/pos/ai/slow-movers');
+  return apiClient.get('/api/v1/pos/ai/slow-movers');
 }
 
 // T-314: Expiry tracking
@@ -119,9 +105,9 @@ export interface ExpiryItem {
 export async function getExpiringProducts(opts?: { daysAhead?: number }): Promise<{ items: ExpiryItem[]; total: number }> {
   const params = new URLSearchParams();
   if (opts?.daysAhead) params.set('daysAhead', String(opts.daysAhead));
-  return aiFetch(`/pos/ai/expiring?${params}`);
+  return apiClient.get(`/api/v1/pos/ai/expiring?${params}`);
 }
 
 export async function updateProductExpiry(productId: string, expiryDate: string | null): Promise<void> {
-  await aiFetch(`/pos/ai/expiry/${productId}`, { method: 'PATCH', body: JSON.stringify({ expiryDate }) });
+  await apiClient.patch(`/api/v1/pos/ai/expiry/${productId}`, { expiryDate });
 }

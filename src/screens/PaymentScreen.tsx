@@ -59,6 +59,7 @@ type RootStackParamList = {
     paymentMode: "UPI" | "CASH" | "DUE";
     transactionId: string;
     billId: string;
+    saleId?: string; // STG-107: Actual backend sale UUID for WhatsApp bill
     saleItems?: CartItem[];
     saleTotalMinor?: number;
     saleCurrency?: string;
@@ -783,6 +784,7 @@ const PaymentScreen = () => {
         paymentMode: selectedMode,
         transactionId,
         billId: billRef,
+        saleId: saleId || undefined, // STG-107: Pass actual backend sale UUID for WhatsApp bill
         saleItems: isPartialSale ? saleItems : undefined,
         saleTotalMinor: isPartialSale ? totalMinor : undefined,
         saleCurrency: isPartialSale ? currency : undefined,

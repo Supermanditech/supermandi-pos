@@ -20,27 +20,28 @@ interface PosRequest extends Request {
  */
 async function computeDailySummary(pool: any, storeId: string, date: string) {
   // Sales breakdown by payment mode
+  // STG-156: Use IST timezone for date comparison
+  // STG-161: Standardize status filter to match daily-summary endpoint
   const salesResult = await pool.query(
     `SELECT
       COALESCE(SUM(total_minor), 0)::bigint AS total_sales_minor,
       COUNT(*)::int AS sales_count,
       COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::bigint AS cash_minor,
       COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_minor ELSE 0 END), 0)::bigint AS upi_minor,
-      COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint AS due_minor,
-      COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_minor ELSE 0 END), 0)::bigint AS card_minor
+      COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint AS due_minor
     FROM public.sales
     WHERE store_id = $1
-      AND DATE(created_at) = $2
-      AND status = 'completed'`,
+      AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2
+      AND status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')`,
     [storeId, date]
   );
 
-  // Refunds for the day
+  // Refunds for the day — STG-156: IST timezone
   const refundsResult = await pool.query(
     `SELECT COALESCE(SUM(refund_amount_minor), 0)::bigint AS refunds_minor
      FROM orders.refunds
      WHERE store_id = $1
-       AND DATE(created_at) = $2
+       AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2
        AND status IN ('approved', 'processed')`,
     [storeId, date]
   );
@@ -73,7 +74,6 @@ async function computeDailySummary(pool: any, storeId: string, date: string) {
       cashMinor: Number(sales.cash_minor),
       upiMinor: Number(sales.upi_minor),
       dueMinor: Number(sales.due_minor),
-      cardMinor: Number(sales.card_minor),
     },
     refundsMinor: Number(refundsMinor),
     expectedCashMinor: Number(expectedCashMinor),
