@@ -2039,6 +2039,378 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+## §19.2 Final Staging Audit — Wave 2 (STG-207+)
+
+> **Audit baseline**: `main@34a98968` | **Started**: 2026-02-28
+> **Protocol**: §19.2 Final Audit Lockdown (CLAUDE_STATE.md)
+> **Platform order**: Retailer Web → Supplier Web → SuperAdmin Web → POS App
+
+### STG-207: Authenticated user not redirected from login page
+- **Platform**: Retailer Web
+- **Screen**: Login Page (`/retailer/login`)
+- **Reproduction**: Log in successfully → manually navigate to `/retailer/login` → login form appears instead of redirecting to dashboard
+- **Expected**: Authenticated user should be redirected to `/s/{storeCode}` (dashboard)
+- **Actual**: Login form renders regardless of auth state
+- **Severity**: P2
+- **Root cause**: `LoginPage.tsx:44` destructures only `{ login }` from `useAuth()` — never checks `isAuthenticated`. Route at `App.tsx:282` has no redirect guard.
+- **Fix**: Add `isAuthenticated` + `store` check at top of LoginPage → redirect to `/s/${store.code}`. Or wrap route with redirect-if-authenticated guard.
+- **Files**: `retailer-admin/src/pages/LoginPage.tsx`, `retailer-admin/src/App.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-208: Registration page has no dark mode support
+- **Platform**: Retailer Web
+- **Screen**: Registration Page (`/retailer/register`)
+- **Reproduction**: Toggle dark mode on Login page → navigate to Register → page renders with hardcoded light colors
+- **Expected**: Registration page should respect dark mode theme
+- **Actual**: All styles are inline JS objects with hardcoded light colors (`#F7F9FC`, `white`, `#0F172A`). No ThemeToggle component, no CSS class dark-mode variants.
+- **Severity**: P3
+- **Root cause**: `RegisterPage.tsx` uses inline `styles` object (lines 81-212) instead of CSS classes. LoginPage uses `.login-*` CSS classes with `html.dark` variants.
+- **Fix**: Replaced all hardcoded colors with CSS variables (`var(--background)`, `var(--surface)`, `var(--text)`, `var(--border)`, etc.)
+- **Files**: `retailer-admin/src/pages/RegisterPage.tsx`
+- **Commit**: `b7aa415c`
+- **Status**: FIXED
+
+### STG-209: Back button from details step forces OTP re-verification
+- **Platform**: Retailer Web
+- **Screen**: Registration Page (`/retailer/register`) — Details step
+- **Reproduction**: Complete phone + OTP → arrive at Business Details → click "Back" → OTP input form appears → must re-enter OTP
+- **Expected**: Back should not require re-verifying OTP (one-way gate)
+- **Actual**: Back button sets `step = 'otp'` (line 914), requiring re-verification of already-verified phone
+- **Severity**: P3
+- **Root cause**: `RegisterPage.tsx:914` — `onClick={() => { setStep('otp'); ... }}` — should not go back past the OTP gate
+- **Fix**: Either disable Back from details (OTP is irreversible), or go to `phone` step (re-enter phone + new OTP cycle)
+- **Files**: `retailer-admin/src/pages/RegisterPage.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-210: Terms of Service and Privacy Policy links are broken (404)
+- **Platform**: Retailer Web
+- **Screen**: Registration Page (`/retailer/register`) — Details step
+- **Reproduction**: On business details form, check agreement checkbox → click "Terms of Service" or "Privacy Policy" link → 404 page
+- **Expected**: Legal pages should open with actual terms/privacy content
+- **Actual**: Links point to `/terms` and `/privacy` which have no routes in `App.tsx`
+- **Severity**: P2 (legal compliance — terms must be accessible before registration)
+- **Root cause**: `RegisterPage.tsx:903` — links to `/terms` and `/privacy` but no routes defined
+- **Fix**: Either create static legal pages at those routes, or link to external URLs (e.g., `https://supermandi.tech/terms`)
+- **Files**: `retailer-admin/src/pages/RegisterPage.tsx`, `retailer-admin/src/App.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-211: Dashboard has no dark mode support
+- **Platform**: Retailer Web
+- **Screen**: Dashboard (`/s/:storeCode`)
+- **Reproduction**: Toggle dark mode → navigate to Dashboard → entire page renders with hardcoded light colors
+- **Expected**: Dashboard should respect dark mode theme
+- **Actual**: Entire 1430-line DashboardPage.tsx uses inline `style={{...}}` objects with hardcoded light colors. Main container: `#f0f9ff`/`#f8fafc`. All cards: `white`. All text: `#1e293b`, `#64748b`, `#334155`. Search dropdown, category rename modal, inventory table — all white backgrounds. No CSS classes with `html.dark` variants.
+- **Severity**: P1 (most-used screen — dashboard is the primary view after login)
+- **Root cause**: `DashboardPage.tsx` uses inline styles throughout instead of CSS classes with dark mode variants (like LoginPage does with `.login-*` classes)
+- **Fix**: Convert inline styles to CSS classes with `html.dark` variants, or adopt CSS variables for theming
+- **Files**: `retailer-admin/src/pages/DashboardPage.tsx`
+- **Commit**: `b7aa415c` (dark mode), `cf8e15a0` (functional fixes)
+- **Status**: FIXED
+
+### STG-212: Category fetch error silently shows empty state instead of error message
+- **Platform**: Retailer Web
+- **Screen**: Dashboard → Product Categories section
+- **Reproduction**: Simulate API failure (e.g., 500 on `/api/v1/retailer-admin/categories`) → categories section shows "No categories yet. Add products to see category breakdown."
+- **Expected**: Error message should be displayed (like inventory and daily summary sections do)
+- **Actual**: Catch block at `DashboardPage.tsx:161` sets `setCategories([])` with no error state. The empty state message is misleading — user thinks they have no categories when the real issue is a server/network error.
+- **Severity**: P2 (misleading UX — inventory and daily summary both properly track and display errors)
+- **Root cause**: No `categoriesError` state variable. Lines 154-165: catch only logs to console and sets empty array, unlike `inventoryError` (line 147) and `dailySummaryError` (line 176) which properly surface errors.
+- **Fix**: Add `categoriesError` state, set it in catch block, display error banner in categories section (matching inventory/dailySummary pattern)
+- **Files**: `retailer-admin/src/pages/DashboardPage.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-213: No AbortController cleanup on dashboard data fetches
+- **Platform**: Retailer Web
+- **Screen**: Dashboard (`/s/:storeCode`)
+- **Reproduction**: Navigate to dashboard → quickly navigate away before data loads → React warning about setState on unmounted component
+- **Expected**: Fetch requests should be cancelled on unmount (like ForgotPasswordPage and ResetPasswordPage)
+- **Actual**: `useEffect` at `DashboardPage.tsx:132-187` fires three async functions (`loadInventory`, `loadCategories`, `loadDailySummary`) with no AbortController cleanup return. If user navigates away mid-fetch, setState calls execute on unmounted component.
+- **Severity**: P3 (memory leak / React warning on unmount — not user-visible but violates cleanup pattern used elsewhere)
+- **Root cause**: Missing `return () => { controller.abort(); }` in the useEffect cleanup
+- **Fix**: Add AbortController, pass signal to authFetch calls, abort on cleanup
+- **Files**: `retailer-admin/src/pages/DashboardPage.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-214: Bulk paste commit does not report partial failures
+- **Platform**: Retailer Web
+- **Screen**: Products Management (`/s/:storeCode/products`) — Bulk Paste Upload
+- **Reproduction**: Paste 10 product rows where 3 have invalid data → Preview → Commit → see "Successfully imported 7 products!" with no mention of 3 failures
+- **Expected**: Show partial failure warning (e.g., "7 created, 3 failed: [reasons]")
+- **Actual**: `handleBulkSubmit` at `ProductsPage.tsx:736` shows success with `data.data?.created` count but never checks for `errors` or `categorizedWarnings` in the response body
+- **Severity**: P2 (user loses visibility into failed rows — may think all were imported)
+- **Root cause**: `ProductsPage.tsx:730-737` — response data is only checked for `created` count, not `errors` array or `categorizedWarnings`
+- **Fix**: Check `data.data?.errors?.length` and display warning with failed row details alongside the success message
+- **Files**: `retailer-admin/src/pages/ProductsPage.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-215: Missing rate limiting on bulk-paste endpoints
+- **Platform**: Retailer Web (Backend)
+- **Screen**: Products Management — Bulk Paste Upload
+- **Reproduction**: Repeatedly call `/api/v1/retailer-admin/products/bulk-paste/preview` and `/bulk-paste/commit` — no rate limit enforced
+- **Expected**: Rate limiting should match CSV upload endpoint (which has `csvUploadRateLimiter`)
+- **Actual**: Only `/products/import/upload` has rate limiter (`csvImport.ts:25-33`). Bulk-paste preview and commit endpoints have no rate limiting.
+- **Severity**: P2 (security — could allow bulk operation abuse)
+- **Root cause**: `backend/src/routes/v1/retailer-admin/csvImport.ts:25-33` applies rate limiter only to CSV upload, not to bulk-paste routes
+- **Fix**: Apply same `csvUploadRateLimiter` middleware to `/products/bulk-paste/preview` and `/products/bulk-paste/commit` routes
+- **Files**: `backend/src/routes/v1/retailer-admin/csvImport.ts`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-220: SettingsPage — No dark mode support (all inline styles)
+- **Platform**: Retailer Web
+- **Screen**: Store Settings (`/s/:storeCode/settings`)
+- **Reproduction**: Toggle dark mode → entire page remains light. Background `linear-gradient(180deg, #f0f9ff, #f8fafc)`, section cards `white` bg, `#e2e8f0` borders, labels `#475569`, text `#1e293b` — all hardcoded.
+- **Expected**: Page should respect CSS variables / dark theme
+- **Actual**: ALL layout via inline `style={{...}}` with hardcoded hex colors — 6 sections (Payment, Tax, Store Info, Preferences, Receipt, Password), all inputs, buttons, alerts
+- **Severity**: P1 (visual — entire page ignores dark mode, high-use settings page)
+- **Root cause**: `retailer-admin/src/pages/SettingsPage.tsx` — every element uses inline styles instead of CSS classes + CSS variables
+- **Fix**: Replace inline styles with CSS classes (`card`, `form-group`, `form-label`, `form-input`, `btn`, `page-header`) and CSS variables
+- **Files**: `retailer-admin/src/pages/SettingsPage.tsx`
+- **Commit**: `b7aa415c`
+- **Status**: FIXED
+
+### STG-221: DeviceActivationPage — No dark mode support (all inline styles)
+- **Platform**: Retailer Web
+- **Screen**: Device Activation (`/s/:storeCode/device-activation`)
+- **Reproduction**: Toggle dark mode → entire page remains light. Same `linear-gradient` background, `white` cards, hardcoded `#e2e8f0` borders, `#1e293b`/`#64748b` text.
+- **Expected**: Page should respect CSS variables / dark theme
+- **Actual**: ALL layout via inline `style={{...}}` with hardcoded hex colors — activation form, connected devices list, instructions panel
+- **Severity**: P1 (visual — entire page ignores dark mode)
+- **Root cause**: `retailer-admin/src/pages/DeviceActivationPage.tsx` — every element uses inline styles instead of CSS classes + CSS variables
+- **Fix**: Replace inline styles with CSS classes (`card`, `form-label`, `form-input`, `btn`, `page-header`) and CSS variables
+- **Files**: `retailer-admin/src/pages/DeviceActivationPage.tsx`
+- **Commit**: `b7aa415c`
+- **Status**: FIXED
+
+### STG-218: AnalyticsPage — No dark mode support (all inline styles)
+- **Platform**: Retailer Web
+- **Screen**: Sales Analytics (`/s/:storeCode/analytics`)
+- **Reproduction**: Toggle dark mode → entire page remains light. Summary cards `#fff` bg, `#e2e8f0` border, `#64748b`/`#1e293b` text — all hardcoded inline.
+- **Expected**: Page should respect CSS variables / dark theme
+- **Actual**: ALL layout via inline `style={{...}}` with hardcoded hex colors — summary cards, daily chart, payment breakdown, top products, category bars
+- **Severity**: P1 (visual — entire page ignores dark mode)
+- **Root cause**: `retailer-admin/src/pages/AnalyticsPage.tsx` — every element uses inline styles instead of CSS classes + CSS variables
+- **Fix**: Replace inline styles with CSS classes (`card`, `stat-card`, `page-title`) and CSS variables (`var(--bg)`, `var(--text)`, `var(--border)`)
+- **Files**: `retailer-admin/src/pages/AnalyticsPage.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-219: NotificationsPage — No dark mode support (all inline styles)
+- **Platform**: Retailer Web
+- **Screen**: Notifications (`/s/:storeCode/notifications`)
+- **Reproduction**: Toggle dark mode → page remains light. Title `#1f2937`, subtitle `#6b7280`, cards `#fff`/`#f0fdf4`, borders `#e5e7eb`/`#bbf7d0` — all hardcoded.
+- **Expected**: Page should respect CSS variables / dark theme
+- **Actual**: ALL layout via inline `style={{...}}` with hardcoded hex colors — header, buttons, notification cards, pagination
+- **Severity**: P2 (visual — entire page ignores dark mode)
+- **Root cause**: `retailer-admin/src/pages/NotificationsPage.tsx` — every element uses inline styles instead of CSS classes + CSS variables. Also uses Tailwind class names on icons (`text-blue-500`) that don't apply in custom CSS project.
+- **Fix**: Replace inline styles with CSS classes and CSS variables. Replace Tailwind icon classes with inline `style={{ color: 'var(--info)' }}` or equivalent CSS variable colors.
+- **Files**: `retailer-admin/src/pages/NotificationsPage.tsx`
+- **Commit**: `cf8e15a0`
+- **Status**: FIXED
+
+### STG-216: PaymentsPage — No dark mode support (all inline styles)
+- **Platform**: Retailer Web
+- **Screen**: Payments Settings (`/s/:storeCode/payments`)
+- **Reproduction**: Toggle dark mode → entire page remains light. Background `linear-gradient(180deg, #f0f9ff, #f8fafc)`, text `#1e293b`, `#64748b` all hardcoded inline.
+- **Expected**: Page should respect CSS variables / dark theme
+- **Actual**: ALL layout via inline `style={{...}}` with hardcoded hex colors — zero CSS class usage for containers, cards, inputs, buttons
+- **Severity**: P1 (visual — entire page ignores dark mode)
+- **Root cause**: `retailer-admin/src/pages/PaymentsPage.tsx` — every element uses inline styles instead of CSS classes + CSS variables
+- **Fix**: Replace inline styles with CSS classes (`card`, `form-input`, `btn`, `page-header`) and CSS variables (`var(--bg)`, `var(--text)`, `var(--border)`)
+- **Files**: `retailer-admin/src/pages/PaymentsPage.tsx`
+- **Commit**: `b7aa415c`
+- **Status**: FIXED
+
+### STG-217: InvoicesPage — No dark mode support (all inline styles)
+- **Platform**: Retailer Web
+- **Screen**: Invoices (`/s/:storeCode/invoices`)
+- **Reproduction**: Toggle dark mode → page remains light. Status badges, table rows, modal all use hardcoded colors (e.g. `#f8fafc`, `#1e293b`, `#64748b`, `#e2e8f0`).
+- **Expected**: Page should respect CSS variables / dark theme
+- **Actual**: ALL layout via inline `style={{...}}` with hardcoded statusColors map, table borders, modal styles — zero CSS class usage
+- **Severity**: P2 (visual — entire page ignores dark mode, lower priority than Payments)
+- **Root cause**: `retailer-admin/src/pages/InvoicesPage.tsx` — every element uses inline styles instead of CSS classes + CSS variables
+- **Fix**: Replace inline styles with CSS classes and CSS variables. Use `badge badge-success` etc. for status badges.
+- **Files**: `retailer-admin/src/pages/InvoicesPage.tsx`
+- **Commit**: `b7aa415c`
+- **Status**: FIXED
+
+### STG-222: Supplier Register layout — No dark mode support, no ThemeToggle
+- **Platform**: Supplier Web
+- **Screen**: Registration layout (`/supplier/register/*`)
+- **Reproduction**: Toggle dark mode → wrapper background stays `#F7F9FC` (light), brand pill stays `bg-[#2563EB]` with white text. No ThemeToggle button available on register pages.
+- **Expected**: Wrapper background should darken, brand pill should adapt, ThemeToggle should be present (matching auth layout pattern)
+- **Actual**: `bg-[#F7F9FC]` has no `dark:` variant. Auth layout correctly has `dark:bg-slate-900` and `dark:bg-white` on brand pill — register layout missed this.
+- **Severity**: P2 (visual — register flow background stays light in dark mode, no toggle to switch)
+- **Root cause**: `supplier-portal/src/app/register/layout.tsx` — uses `bg-[#F7F9FC]` without `dark:bg-slate-900`, `bg-[#2563EB]` without `dark:bg-white`, and omits `<ThemeToggle />` component
+- **Fix**: Add `dark:bg-slate-900` to wrapper, add `dark:text-slate-900 dark:bg-white` to brand pill, add `<ThemeToggle />` to header. Mirror auth layout's dark mode pattern.
+- **Files**: `supplier-portal/src/app/register/layout.tsx`
+- **Commit**: `0a58ac62`
+- **Status**: FIXED
+
+### STG-223: Supplier Help (public) layout — All inline styles, zero dark mode
+- **Platform**: Supplier Web
+- **Screen**: Public help layout (`/supplier/help`)
+- **Reproduction**: Toggle dark mode → header background stays white, footer stays `#F8FAFC`, all text colors hardcoded. Wrapper bg `#F7F9FC` stays light.
+- **Expected**: Header, footer, and wrapper should respect dark mode
+- **Actual**: ALL layout chrome uses inline `style={{...}}` — `background: 'white'`, `color: '#CBD5E1'`, `color: '#64748B'`, `background: '#2563EB'`, `background: '#F8FAFC'`, `borderTop: '1px solid #E2E8F0'`, `color: '#94A3B8'`. Plus wrapper `bg-[#F7F9FC]` without `dark:` variant.
+- **Severity**: P1 (visual — entire layout chrome broken in dark mode)
+- **Root cause**: `supplier-portal/src/app/help/layout.tsx` — header and footer use inline styles instead of Tailwind classes. The CSS dark mode overrides (`html.dark .bg-white`, etc.) cannot override inline styles.
+- **Fix**: Replace inline `style={{...}}` with Tailwind classes (`bg-white dark:bg-slate-800`, `border-slate-200 dark:border-slate-700`, `text-slate-600 dark:text-slate-400`, etc.). Add `dark:bg-slate-900` to wrapper. Mirror auth layout pattern.
+- **Files**: `supplier-portal/src/app/help/layout.tsx`
+- **Commit**: `0a58ac62`
+- **Status**: FIXED
+
+### STG-224: Supplier Onboard — Upload progress indicators never display (key mismatch)
+- **Platform**: Supplier Web
+- **Screen**: Onboard KYC step (`/supplier/onboard`)
+- **Reproduction**: On KYC step, select a PAN file and start upload → "Uploading..." progress indicator does NOT appear despite upload running.
+- **Expected**: `{uploadProgress['PAN'] && (<progress bar>)}` should show during upload
+- **Actual**: `uploadDocument(panFile, 'pan_card')` sets `uploadProgress['pan_card']` but UI checks `uploadProgress['PAN']` — key mismatch. Same for `gstin_certificate` vs `GSTIN_CERTIFICATE` and `address_proof` vs `ADDRESS_PROOF`.
+- **Severity**: P2 (functional — upload progress indicators invisible, upload still works but user sees no feedback)
+- **Root cause**: `supplier-portal/src/app/(auth)/onboard/page.tsx` — `uploadDocument()` stores progress under API-style keys (`pan_card`, `gstin_certificate`, `address_proof`) but JSX reads UI-style keys (`PAN`, `GSTIN_CERTIFICATE`, `ADDRESS_PROOF`)
+- **Fix**: Align the keys — either change the `uploadDocument` calls to use the same keys the UI reads, or change the UI to read the keys `uploadDocument` sets (e.g., `uploadProgress['pan_card']`).
+- **Files**: `supplier-portal/src/app/(auth)/onboard/page.tsx`
+- **Commit**: `0a58ac62`
+- **Status**: FIXED
+
+### STG-225: Supplier Notifications — Uses text-gray-* instead of text-slate-* (dark mode broken)
+- **Platform**: Supplier Web
+- **Screen**: Notifications (`/supplier/notifications`)
+- **Reproduction**: Toggle dark mode → heading "Notifications" stays dark (`text-gray-900`), subtitle stays medium gray, refresh button bg stays light (`bg-gray-50`), notification cards use `border-gray-200`, empty state text stays dark. Entire page ignores dark mode.
+- **Expected**: Text and backgrounds should adapt to dark mode
+- **Actual**: Page uses `text-gray-*` / `bg-gray-*` / `border-gray-*` classes throughout (lines 88, 89, 104, 136-138, 148, 153-158, 174). The CSS dark mode overrides in `globals.css` only target `text-slate-*` / `bg-slate-*` / `border-slate-*`. Gray classes are completely unaffected.
+- **Severity**: P2 (visual — entire page ignores dark mode despite rest of portal working)
+- **Root cause**: `supplier-portal/src/app/(dashboard)/notifications/page.tsx` — all ~20 color classes use the `gray` palette instead of `slate` palette. The `globals.css` dark overrides only cover `slate-*`.
+- **Fix**: Replace all `text-gray-*` → `text-slate-*`, `bg-gray-*` → `bg-slate-*`, `border-gray-*` → `border-slate-*` throughout the file.
+- **Files**: `supplier-portal/src/app/(dashboard)/notifications/page.tsx`
+- **Commit**: `0a58ac62`
+- **Status**: FIXED
+
+### STG-226: Supplier error.tsx — Uses text-gray-* instead of text-slate-* (dark mode inconsistent)
+- **Platform**: Supplier Web
+- **Screen**: Error boundary (any route crash)
+- **Reproduction**: Trigger a runtime error → error page renders with light `bg-gray-50` background, dark `text-gray-900` heading, light `bg-white` card, all hardcoded gray palette — looks like a light page even in dark mode.
+- **Expected**: Error page should use `slate-*` classes to match dark mode overrides
+- **Actual**: Uses `bg-gray-50`, `text-gray-900`, `text-gray-600`, `bg-gray-100`, `text-gray-500`, `bg-gray-600` — none of which are covered by the CSS dark mode overrides.
+- **Severity**: P3 (visual — error boundary appearance inconsistent in dark mode; low frequency, only visible on crashes)
+- **Root cause**: `supplier-portal/src/app/error.tsx` — all color classes use `gray` palette instead of `slate`
+- **Fix**: Replace all `gray-*` → `slate-*` classes. Also uses `min-h-screen` which may conflict with dashboard layout height — consider removing.
+- **Files**: `supplier-portal/src/app/error.tsx`
+- **Commit**: `0a58ac62`
+- **Status**: FIXED
+
+### STG-227: SuperAdmin — Systemic hardcoded inline styles across 22 of 23 tabs (dark mode broken)
+- **Platform**: SuperAdmin Web
+- **Screen**: All tabs except EventsTab
+- **Reproduction**: Toggle dark mode → tab content retains light-mode colors. Headings stay dark (#1e293b), backgrounds stay light (#f8fafc, #fef2f2), borders stay light (#d1d5db), badges use hardcoded status colors.
+- **Expected**: Tabs should use CSS variables (`var(--color-text-primary)`, `var(--color-surface)`, etc.) or CSS classes (`.card`, `.table`, `.muted`, `.badge`) which auto-adapt via `:root.dark` overrides
+- **Actual**: 451 hardcoded hex color values in inline `style={{...}}` across 22 tabs. ZERO tabs use CSS variables in inline styles. Two severity tiers:
+  - **Tier 1 — Fully broken (8 tabs, zero CSS class usage)**: GstComplianceTab (47 color refs), QualityDashboardTab (57), WhatsAppTab (62), MonitoringTab (39), CreditProvidersTab (16), SupportQueueTab (18), RefundsTab (36), AIInsightsTab (17) — render entirely in light colors in dark mode
+  - **Tier 2 — Partially broken (14 tabs, CSS card wrapper + inline details)**: StoresTab (32), SuppliersTab (38), SettingsTab (25), StaffTab (13), InvoicesTab (13), DocumentsTab (8), ApplicationsTab (8), GrnAlertsTab (4), DevicesTab (4), UsersTab (4), RegistrationsTab (4), PaymentsTab (3), AuditTab (2), AnalyticsTab (1)
+- **Severity**: P2 systemic (visual — most of admin UI ignores dark mode)
+- **Root cause**: Tabs were built with inline `style={{...}}` using literal hex colors instead of CSS variables or CSS classes. The existing CSS variable system is well-designed and available but tabs don't use it.
+- **Fix**: Replace hardcoded inline colors with CSS variables or CSS classes. Priority: Tier 1 tabs first. Example: `color: "#1e293b"` → `color: "var(--color-text-primary)"`, `background: "#f8fafc"` → `background: "var(--color-surface-alt)"`.
+- **Files**: All 22 tab files in `supermandi-superadmin/src/tabs/` (only `EventsTab.tsx` is clean)
+- **Commit**: `0212b500`, `a2f91a78`
+- **Status**: FIXED
+
+### STG-228: SuperAdmin — 3 tabs use undefined `alertDanger` CSS class (error messages unstyled)
+- **Platform**: SuperAdmin Web
+- **Screen**: GRN Alerts, Invoices, Staff tabs
+- **Reproduction**: Trigger an API error → error message appears as unstyled plain text with no red background, no visual distinction from normal content
+- **Expected**: Error messages should have red background + red text (like `.banner` class which IS defined)
+- **Actual**: `className="alertDanger"` is NOT defined in any CSS file. Error messages have no styling at all.
+- **Severity**: P2 (functional — error messages are invisible/inconspicuous to the admin user)
+- **Root cause**: GrnAlertsTab:50, InvoicesTab:155, StaffTab:75 use `className="alertDanger"` which doesn't exist. Should use `className="banner"`.
+- **Fix**: Replace `alertDanger` → `banner` in all 3 files.
+- **Files**: `supermandi-superadmin/src/tabs/GrnAlertsTab.tsx`, `supermandi-superadmin/src/tabs/InvoicesTab.tsx`, `supermandi-superadmin/src/tabs/StaffTab.tsx`
+- **Commit**: `0212b500`
+- **Status**: FIXED
+
+### STG-229: SuperAdmin — StaffTab uses undefined `btnSuccess` CSS class
+- **Platform**: SuperAdmin Web
+- **Screen**: Staff tab (`#staff`)
+- **Reproduction**: View staff management → "+ Add Staff" button appears as standard blue button (same as all other buttons), no green/success differentiation
+- **Expected**: "Add Staff" should be visually distinct (green/success color)
+- **Actual**: `className="btnSuccess"` is NOT defined in any CSS file. Falls back to default button styles (blue). `.btnGhost` and `.btnDanger` ARE defined, but `.btnSuccess` is not.
+- **Severity**: P3 (cosmetic — button works but has no visual differentiation)
+- **Root cause**: StaffTab lines 69 and 104 use `btnSuccess` class that was never created in CSS
+- **Fix**: Add `.btnSuccess` class to `App.css`: `.btnSuccess { background: var(--color-success); color: white; border: 1px solid var(--color-success); }`
+- **Files**: `supermandi-superadmin/src/App.css`, `supermandi-superadmin/src/tabs/StaffTab.tsx`
+- **Commit**: `0212b500`
+- **Status**: FIXED
+
+### STG-230: SuperAdmin — LoginGate OTP info box hardcoded light colors
+- **Platform**: SuperAdmin Web
+- **Screen**: Login (OTP step)
+- **Reproduction**: Toggle dark mode → enter email → get OTP → "OTP sent to..." info box stays light blue (`#e0f2fe` bg, `#0c4a6e` text) inside dark login card
+- **Expected**: Info box should use CSS variables or themed class
+- **Actual**: Line 137 has inline `style={{ background: "#e0f2fe", color: "#0c4a6e" }}` — hardcoded light blue that ignores dark mode
+- **Severity**: P3 (cosmetic — OTP step only, login functional, readable but visually jarring on dark bg)
+- **Root cause**: `supermandi-superadmin/src/components/LoginGate.tsx:137` uses hardcoded inline colors
+- **Fix**: Use CSS variables: `background: "var(--color-primary-soft)"`, `color: "var(--color-primary-dark)"`
+- **Files**: `supermandi-superadmin/src/components/LoginGate.tsx`
+- **Commit**: `0212b500`
+- **Status**: FIXED
+
+### STG-231: POS App — Systemic dark mode adoption gap: 40/44 screens use static light palette
+- **Platform**: POS App (React Native / Expo)
+- **Screen**: All screens except Splash, EnrollDevice, Menu, PosRootLayout
+- **Reproduction**: Toggle dark mode in Menu → navigate to any other screen (Payment, SalesHistory, Orders, GRN, Credit, Khata, etc.) → screen renders with light-mode colors on dark background
+- **Expected**: All screens should use `useThemeColors()` hook which returns the correct palette for the current theme mode. Dark mode should show dark backgrounds, light text, and adjusted accent colors per the 56-token dark palette.
+- **Actual**: 40 of 44 screens import static `theme.colors.*` (which equals `lightColors` — always the light palette regardless of mode). Zero shared components use the dynamic hook either (908 static `theme.colors.*` refs across 38 component files). When user toggles dark mode, only 4 screens respond:
+  - **Working (4)**: SplashScreen, EnrollDeviceScreen, MenuScreen, PosRootLayout — use `useThemeColors()` ✓
+  - **Broken (40)**: All other screens — use `theme.colors.*` (static light palette). This includes ALL business-critical screens: SellScan (247 refs), Payment, Credit (93 refs), Purchase (87 refs), BnplDues (96 refs), Khata (75 refs), BarcodeSheet (107 refs), CustomerManagement (65 refs), etc.
+  - **Components (38 files)**: Zero use `useThemeColors()`. All 908 color references are static.
+  - **Total static refs**: 2,930 across 79 UI files. **Total dynamic refs**: 8 across 4 files (~0.3% adoption).
+- **Severity**: P1 systemic (dark mode feature exists and is toggleable but only works on 4/44 screens — effectively broken)
+- **Root cause**: `theme/index.ts` exports both `colors` (static `lightColors`) and `useThemeColors()` (reactive hook). The static export was created for backward compatibility with `StyleSheet.create()` (which runs at module scope, outside React render). Screens adopted the static import and never migrated to the hook. The `getThemeColors()` non-hook alternative (for StyleSheet factories) also has zero adoption.
+- **Fix**: Two-phase migration:
+  1. **Inline styles**: Replace `theme.colors.X` → `tc.X` where `const tc = useThemeColors()` is called at component top
+  2. **StyleSheet.create()**: These run at module scope and can't use hooks. Either (a) move color assignments to inline styles using `tc`, or (b) use `getThemeColors()` inside a factory function, or (c) keep StyleSheet for layout-only props and use `[styles.foo, { color: tc.textPrimary }]` pattern
+- **Files**: All 40 screen files in `src/screens/` migrated to `useThemeColors()` + `useMemo` pattern
+- **Commit**: `e7aaab00`
+- **Status**: FIXED
+
+### STG-232: POS App — Hardcoded hex colors outside theme system in 5 screens
+- **Platform**: POS App (React Native / Expo)
+- **Screen**: OverdueDues, GRN, ChatList, HelpScreen, PaymentSetup
+- **Reproduction**: These screens use hardcoded hex colors that don't match any theme token, breaking both theme consistency and dark mode.
+- **Expected**: All colors should reference theme tokens (`theme.colors.*` or `tc.*`)
+- **Actual**:
+  - **OverdueDuesScreen:59-60**: Severity colors `#F97316` (orange) and `#EAB308` (yellow) — should use `theme.colors.warning` or add severity tokens
+  - **GRNScreen:511,743,752**: Reorder badge colors `#6366f1` (indigo) and `#eef2ff` (indigo soft) — not in theme palette
+  - **ChatListScreen:15-16**: Support conversation colors `#7c3aed` (violet) and `#f5f3ff` (violet soft) — annotated as "not a brand color" but should still be theme tokens
+  - **HelpScreen:305**: Border color `#F1F5F9` — should be `theme.colors.border`
+  - **PaymentSetupScreen:348**: `color: "#fff"` — should be `colors.textInverse`
+- **Severity**: P3 (visual — these colors may be unreadable on dark backgrounds, but screens already broken by STG-231)
+- **Root cause**: One-off color choices that were never added to the theme system
+- **Fix**: Either add new tokens (e.g., `supportPurple`, `severityOrange`) or map to existing tokens (`warning`, `info`)
+- **Files**: `src/screens/OverdueDuesScreen.tsx`, `src/screens/GRNScreen.tsx`, `src/screens/ChatListScreen.tsx`, `src/screens/HelpScreen.tsx`, `src/screens/PaymentSetupScreen.tsx`
+- **Commit**: `967da7e3`
+- **Status**: FIXED
+
+### STG-233: POS App — WhatsApp brand color `#25D366` duplicated across 6 screens
+- **Platform**: POS App (React Native / Expo)
+- **Screen**: BillDetail, CustomerList, HelpScreen, MenuScreen, OrderDetail, SuccessPrint
+- **Reproduction**: Search codebase for `#25D366` — appears independently in 6 screen files with no shared constant
+- **Expected**: Brand colors for third-party services should be centralized (e.g., `theme.colors.whatsapp` or `BRAND_COLORS.whatsapp`)
+- **Actual**: Each screen independently hardcodes `#25D366` for WhatsApp buttons/icons. If WhatsApp updates their brand color or if dark mode needs a lighter variant, all 6 files must be updated manually.
+- **Severity**: P3 (code quality — no user-visible bug, but maintenance risk and dark mode readiness)
+- **Root cause**: WhatsApp integration added incrementally to each screen without centralizing the color constant
+- **Fix**: Add `whatsapp: "#25D366"` to theme constants (or a separate `BRAND_COLORS` constant) and replace all 6 hardcoded references
+- **Files**: `src/screens/BillDetailScreen.tsx`, `src/screens/CustomerListScreen.tsx`, `src/screens/HelpScreen.tsx`, `src/screens/MenuScreen.tsx`, `src/screens/OrderDetailScreen.tsx`, `src/screens/SuccessPrintScreenV2.tsx`, `src/theme/colors.ts`
+- **Commit**: `967da7e3`
+- **Status**: FIXED
+
+---
+
 ## Redeploy Checklist (run after all issues FIXED)
 
 - [ ] `pnpm -r typecheck` — 0 errors
