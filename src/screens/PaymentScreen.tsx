@@ -46,7 +46,7 @@ import {
   updatePartialSaleConfirmed,
   updatePartialSaleSaleId,
 } from "../services/partialSaleState";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { SplitPaymentModal, SplitPaymentResult } from "../components/sell/SplitPaymentModal";
 
 type RootStackParamList = {
@@ -132,6 +132,8 @@ const computeSaleTotals = (items: CartItem[], cartDiscount: CartDiscount | null)
 };
 
 const PaymentScreen = () => {
+  const colors = useThemeColors();
+
   const navigation = useNavigation<PaymentScreenNavigationProp>();
   const route = useRoute<PaymentScreenRouteProp>();
   const insets = useSafeAreaInsets();
@@ -868,7 +870,7 @@ const PaymentScreen = () => {
         <MaterialCommunityIcons
           name={icon as any}
           size={20}
-          color={selected ? theme.colors.textInverse : theme.colors.textSecondary}
+          color={selected ? colors.textInverse : colors.textSecondary}
         />
         <Text
           style={[
@@ -900,6 +902,192 @@ const PaymentScreen = () => {
     selectedMode === "UPI" ? "Payment Received" : selectedMode === "DUE" ? "Mark as Due" : "Complete Payment";
 
   const formattedStoreName = formatStoreName(upiStoreName);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background
+    },
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between"
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.textPrimary
+    },
+    billRef: {
+      marginTop: 4,
+      fontSize: 12,
+      color: colors.textTertiary
+    },
+    lockedBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      backgroundColor: colors.warningSoft
+    },
+    lockedBadgeText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.warning
+    },
+    banner: {
+      marginHorizontal: 16,
+      marginTop: 12,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      backgroundColor: colors.warningSoft
+    },
+    bannerText: {
+      color: colors.warning,
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center"
+    },
+    modeTabs: {
+      flexDirection: "row",
+      marginHorizontal: 16,
+      marginTop: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      overflow: "hidden"
+    },
+    modeTab: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4
+    },
+    modeTabActive: {
+      backgroundColor: colors.primary
+    },
+    modeTabDisabled: {
+      opacity: 0.5
+    },
+    modeTabText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textSecondary
+    },
+    modeTabTextActive: {
+      color: colors.textInverse
+    },
+    modeTabTextDisabled: {
+      color: colors.textTertiary
+    },
+    splitButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginHorizontal: 16,
+      marginTop: 8,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderStyle: "dashed",
+      backgroundColor: colors.surface
+    },
+    splitButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.primary
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingBottom: 8
+    },
+    qrStage: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 16
+    },
+    cashStage: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 16
+    },
+    amountLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textSecondary
+    },
+    amountValue: {
+      fontSize: 32,
+      fontWeight: "900",
+      color: colors.textPrimary
+    },
+    qrShell: {
+      width: 240,
+      height: 240,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 12,
+      ...theme.shadows.sm
+    },
+    qrHint: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      textAlign: "center"
+    },
+    storeName: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.textSecondary
+    },
+    cashHint: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      textAlign: "center",
+      paddingHorizontal: 24
+    },
+    footer: {
+      padding: 16,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border
+    },
+    primaryCta: {
+      backgroundColor: colors.primary,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: "center"
+    },
+    primaryCtaDisabled: {
+      backgroundColor: colors.textTertiary
+    },
+    primaryCtaText: {
+      color: colors.textInverse,
+      fontSize: 16,
+      fontWeight: "800"
+    }
+  }), [colors]);
 
   return (
     <View style={styles.container}>
@@ -938,7 +1126,7 @@ const PaymentScreen = () => {
           <MaterialCommunityIcons
             name="call-split"
             size={18}
-            color={theme.colors.primary}
+            color={colors.primary}
           />
           <Text style={styles.splitButtonText}>Split Payment (UPI + Cash)</Text>
         </TouchableOpacity>
@@ -971,7 +1159,7 @@ const PaymentScreen = () => {
                 </View>
               ) : loadingUpi ? (
                 <View style={{ alignItems: "center", padding: 16 }}>
-                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <ActivityIndicator size="large" color={colors.primary} />
                   <Text style={[styles.qrHint, { marginTop: 8 }]}>Generating QR...</Text>
                 </View>
               ) : (
@@ -989,7 +1177,7 @@ const PaymentScreen = () => {
             {upiIntent && qrSecondsLeft !== null && qrSecondsLeft > 0 && (
               <Text style={{
                 fontSize: 13,
-                color: qrSecondsLeft <= 60 ? theme.colors.error : theme.colors.textTertiary,
+                color: qrSecondsLeft <= 60 ? colors.error : colors.textTertiary,
                 fontWeight: qrSecondsLeft <= 60 ? "700" : "500",
                 marginTop: 8,
                 textAlign: "center",
@@ -1023,9 +1211,9 @@ const PaymentScreen = () => {
 
       {/* FIX-039: Stale price warning banner */}
       {stalePriceCount > 0 && (
-        <View style={{ backgroundColor: theme.colors.warningSoft, paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
-          <MaterialCommunityIcons name="alert-outline" size={18} color={theme.colors.warning} />
-          <Text style={{ color: theme.colors.warningDark, fontSize: 13, marginLeft: 8, flex: 1 }}>
+        <View style={{ backgroundColor: colors.warningSoft, paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
+          <MaterialCommunityIcons name="alert-outline" size={18} color={colors.warning} />
+          <Text style={{ color: colors.warningDark, fontSize: 13, marginLeft: 8, flex: 1 }}>
             {stalePriceCount} item(s) have prices loaded over 4 hours ago. Prices may have changed.
           </Text>
         </View>
@@ -1127,189 +1315,3 @@ const PaymentScreen = () => {
 };
 
 export default PaymentScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.textPrimary
-  },
-  billRef: {
-    marginTop: 4,
-    fontSize: 12,
-    color: theme.colors.textTertiary
-  },
-  lockedBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warningSoft
-  },
-  lockedBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.warning
-  },
-  banner: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warningSoft
-  },
-  bannerText: {
-    color: theme.colors.warning,
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center"
-  },
-  modeTabs: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    overflow: "hidden"
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4
-  },
-  modeTabActive: {
-    backgroundColor: theme.colors.primary
-  },
-  modeTabDisabled: {
-    opacity: 0.5
-  },
-  modeTabText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary
-  },
-  modeTabTextActive: {
-    color: theme.colors.textInverse
-  },
-  modeTabTextDisabled: {
-    color: theme.colors.textTertiary
-  },
-  splitButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderStyle: "dashed",
-    backgroundColor: theme.colors.surface
-  },
-  splitButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 8
-  },
-  qrStage: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16
-  },
-  cashStage: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16
-  },
-  amountLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary
-  },
-  amountValue: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: theme.colors.textPrimary
-  },
-  qrShell: {
-    width: 240,
-    height: 240,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
-    ...theme.shadows.sm
-  },
-  qrHint: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    textAlign: "center"
-  },
-  storeName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textSecondary
-  },
-  cashHint: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-    paddingHorizontal: 24
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border
-  },
-  primaryCta: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center"
-  },
-  primaryCtaDisabled: {
-    backgroundColor: theme.colors.textTertiary
-  },
-  primaryCtaText: {
-    color: theme.colors.textInverse,
-    fontSize: 16,
-    fontWeight: "800"
-  }
-});

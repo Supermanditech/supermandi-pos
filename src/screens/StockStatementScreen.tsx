@@ -1,7 +1,7 @@
 // StockStatementScreen - Stock Statement Report
 // GO-LIVE-008: Shows current stock levels with valuation
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStockStatusLabel, getStockStatusColor, type StockStatus } from "../services/api/catalogApi";
 import { getStockStatement, type StockStatementItem } from "../services/api/inventoryApi";
 import { formatMoney } from "../utils/money";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
+import type { ColorPalette } from "../theme";
 // T-109: Branded empty state
 import EmptyState from "../components/ui/EmptyState";
 
@@ -38,7 +39,195 @@ interface StockItem {
   stockValue: number;
 }
 
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    refreshButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    summaryBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: colors.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    summaryItem: {
+      flex: 1,
+      alignItems: "center",
+    },
+    summaryValue: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.primaryDark,
+    },
+    summaryValueWarning: {
+      color: colors.warning,
+    },
+    summaryValueSmall: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.primaryDark,
+    },
+    summaryLabel: {
+      fontSize: 10,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    summaryDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: colors.border,
+      marginHorizontal: 12,
+    },
+    centerContent: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    errorText: {
+      fontSize: 14,
+      color: colors.error,
+      marginTop: 12,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: 16,
+      paddingVertical: 10,
+      paddingHorizontal: 24,
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+    },
+    retryText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginTop: 16,
+    },
+    emptyText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 4,
+      textAlign: "center",
+    },
+    listContent: {
+      padding: 16,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginBottom: 12,
+    },
+    cardHeader: {
+      marginBottom: 12,
+    },
+    cardTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    cardTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      flex: 1,
+    },
+    statusBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    statusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    statusText: {
+      fontSize: 10,
+      fontWeight: "700",
+    },
+    cardBarcode: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    cardBody: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 16,
+    },
+    cardStat: {
+      gap: 2,
+    },
+    cardStatRight: {
+      flex: 1,
+      alignItems: "flex-end",
+    },
+    cardStatLabel: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    cardStatValue: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    cardStatValueHighlight: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.primaryDark,
+    },
+  });
+}
+
 function StockCard({ item }: { item: StockItem }) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // R6.POS.006: Remove unnecessary 'as any' — StockStatus is string
   const statusColor = getStockStatusColor(item.stockStatus as StockStatus);
   const statusLabel = getStockStatusLabel(item.stockStatus as StockStatus);
@@ -77,6 +266,8 @@ function StockCard({ item }: { item: StockItem }) {
 }
 
 export default function StockStatementScreen({ onBack }: StockStatementScreenProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
   // UIUX-POS-004: Android hardware back button support
@@ -169,11 +360,11 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Pressable style={styles.backButton} onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>Stock Statement</Text>
         <Pressable style={styles.refreshButton} onPress={() => loadData(true)}>
-          <MaterialCommunityIcons name="refresh" size={22} color={theme.colors.textSecondary} />
+          <MaterialCommunityIcons name="refresh" size={22} color={colors.textSecondary} />
         </Pressable>
       </View>
 
@@ -200,11 +391,11 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
       {/* Content */}
       {loading ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : error ? (
         <View style={styles.centerContent}>
-          <MaterialCommunityIcons name="alert-circle" size={48} color={theme.colors.error} />
+          <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={() => loadData()}>
             <Text style={styles.retryText}>Retry</Text>
@@ -227,8 +418,8 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => loadData(true)}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
@@ -236,186 +427,3 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  summaryBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.primaryDark,
-  },
-  summaryValueWarning: {
-    color: theme.colors.warning,
-  },
-  summaryValueSmall: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: theme.colors.primaryDark,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  summaryDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: theme.colors.border,
-    marginHorizontal: 12,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 14,
-    color: theme.colors.error,
-    marginTop: 12,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 8,
-  },
-  retryText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginTop: 16,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 14,
-    marginBottom: 12,
-  },
-  cardHeader: {
-    marginBottom: 12,
-  },
-  cardTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    flex: 1,
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  cardBarcode: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
-  },
-  cardBody: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 16,
-  },
-  cardStat: {
-    gap: 2,
-  },
-  cardStatRight: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  cardStatLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-  },
-  cardStatValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  cardStatValueHighlight: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: theme.colors.primaryDark,
-  },
-});

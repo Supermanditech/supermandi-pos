@@ -2,7 +2,7 @@
 // Lists all screens, tabs, and modals for testing
 // Only visible when __DEV__ or EXPO_PUBLIC_ENABLE_QA_MENU=true
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -14,7 +14,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { showToast } from "../utils/showToast";
 import { ProductDetailModal } from "../components/buy/ProductDetailModal";
 import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
@@ -58,6 +58,7 @@ interface UiItem {
 // =============================================================================
 
 export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScreenProps) {
+  const colors = useThemeColors();
   // Modal states
   const [productDetailVisible, setProductDetailVisible] = useState(false);
   const [purchaseCartVisible, setPurchaseCartVisible] = useState(false);
@@ -260,7 +261,7 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
                     : "code-braces"
             }
             size={18}
-            color={theme.colors.primary}
+            color={colors.primary}
           />
         </View>
         <View style={styles.itemContent}>
@@ -274,19 +275,137 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
           <MaterialCommunityIcons
             name={canNavigate ? "chevron-right" : "open-in-new"}
             size={20}
-            color={theme.colors.textSecondary}
+            color={colors.textSecondary}
           />
         )}
       </Pressable>
     );
   };
 
+  // =============================================================================
+  // STYLES
+  // =============================================================================
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    headerRight: {
+      width: 40,
+    },
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    section: {
+      marginBottom: 24,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    sectionSubtitle: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 12,
+    },
+    item: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      marginBottom: 8,
+      gap: 12,
+    },
+    itemIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    itemContent: {
+      flex: 1,
+    },
+    itemName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    itemDesc: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    itemTrigger: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 4,
+      fontStyle: "italic",
+    },
+    actionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      gap: 8,
+    },
+    actionButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textInverse,
+    },
+    actionButtonDisabled: {
+      opacity: 0.6,
+    },
+    actionHint: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 8,
+      textAlign: "center",
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>UI Showcase (QA)</Text>
         <View style={styles.headerRight} />
@@ -304,7 +423,7 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
             <MaterialCommunityIcons
               name={seeding ? "loading" : "database-import"}
               size={18}
-              color={theme.colors.textInverse}
+              color={colors.textInverse}
             />
             <Text style={styles.actionButtonText}>
               {seeding ? "Seeding..." : "Seed Demo Data"}
@@ -362,121 +481,3 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
     </View>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  headerRight: {
-    width: 40,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginBottom: 12,
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 12,
-    marginBottom: 8,
-    gap: 12,
-  },
-  itemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  itemContent: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  itemDesc: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  itemTrigger: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textInverse,
-  },
-  actionButtonDisabled: {
-    opacity: 0.6,
-  },
-  actionHint: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 8,
-    textAlign: "center",
-  },
-});

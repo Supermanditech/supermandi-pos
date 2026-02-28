@@ -1,14 +1,14 @@
 // T-294: POS Chat Conversation Screen
 // Message thread view with text input, message bubbles, typing indicator
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TextInput, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, BackHandler, AppState,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../theme';
+import { theme, useThemeColors } from '../theme';
 import * as chatApi from '../services/api/chatApi';
 
 interface Props {
@@ -24,6 +24,7 @@ export default function ChatConversationScreen({
   conversationId, conversationTitle, conversationType,
   currentUserId, currentUserName, onBack,
 }: Props) {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
   // UIUX-POS-004: Android hardware back button support
@@ -144,13 +145,13 @@ export default function ChatConversationScreen({
           {/* Attachment */}
           {item.messageType === 'image' && item.attachmentUrl && (
             <View style={styles.attachmentPreview}>
-              <MaterialCommunityIcons name="image" size={20} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="image" size={20} color={colors.textTertiary} />
               <Text style={styles.attachmentText}>{item.attachmentName || 'Photo'}</Text>
             </View>
           )}
           {item.messageType === 'document' && item.attachmentUrl && (
             <View style={styles.attachmentPreview}>
-              <MaterialCommunityIcons name="file-document" size={20} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="file-document" size={20} color={colors.textTertiary} />
               <Text style={styles.attachmentText}>{item.attachmentName || 'Document'}</Text>
             </View>
           )}
@@ -168,6 +169,70 @@ export default function ChatConversationScreen({
     );
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.surfaceAlt },
+    header: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
+      paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    backBtn: { padding: 4, marginRight: 8 },
+    headerInfo: { flex: 1 },
+    headerTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+    headerSubtitle: { fontSize: 12, color: colors.textTertiary },
+    errorBar: { padding: 8, backgroundColor: colors.errorSoft },
+    errorText: { color: colors.errorDark, fontSize: 12, textAlign: 'center' },
+    errorActions: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
+    retryText: { color: colors.errorDark, fontSize: 12, fontWeight: '600' },
+    dismissText: { color: colors.textTertiary, fontSize: 12 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    emptyCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, transform: [{ scaleY: -1 }] },
+    emptyText: { marginTop: 8, color: colors.textTertiary, fontSize: 14 },
+    messagesList: { paddingHorizontal: 12, paddingVertical: 8 },
+    dateSeparator: {
+      textAlign: 'center', fontSize: 11, color: colors.textTertiary, marginVertical: 8,
+      backgroundColor: colors.backgroundSecondary, alignSelf: 'center', paddingHorizontal: 12,
+      paddingVertical: 3, borderRadius: 10, overflow: 'hidden',
+    },
+    systemMessage: { alignItems: 'center', marginVertical: 4 },
+    systemText: {
+      fontSize: 12, color: colors.textTertiary, fontStyle: 'italic',
+      backgroundColor: colors.backgroundSecondary, paddingHorizontal: 12, paddingVertical: 4,
+      borderRadius: 8, overflow: 'hidden',
+    },
+    bubble: {
+      maxWidth: '78%', paddingHorizontal: 12, paddingVertical: 8,
+      borderRadius: 16, marginVertical: 2,
+    },
+    ownBubble: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+    otherBubble: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
+    messageText: { fontSize: 14, lineHeight: 20 },
+    ownText: { color: colors.textInverse },
+    otherText: { color: colors.textPrimary },
+    time: { fontSize: 10, marginTop: 2 },
+    ownTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' }, // Semi-transparent white on primary bg
+    otherTime: { color: colors.textTertiary },
+    attachmentPreview: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      paddingVertical: 4, marginBottom: 4,
+    },
+    attachmentText: { fontSize: 12, color: colors.textTertiary },
+    inputBar: {
+      flexDirection: 'row', alignItems: 'flex-end', padding: 8,
+      borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
+    },
+    input: {
+      flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 20,
+      paddingHorizontal: 16, paddingVertical: 8, fontSize: 14,
+      maxHeight: 100, color: colors.textPrimary, backgroundColor: colors.surfaceAlt,
+    },
+    sendBtn: {
+      width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary,
+      alignItems: 'center', justifyContent: 'center', marginLeft: 8,
+    },
+    sendBtnDisabled: { backgroundColor: colors.textTertiary },
+  }), [colors]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -177,7 +242,7 @@ export default function ChatConversationScreen({
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
-          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle} numberOfLines={1}>{conversationTitle}</Text>
@@ -205,7 +270,7 @@ export default function ChatConversationScreen({
       {/* Messages */}
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -217,7 +282,7 @@ export default function ChatConversationScreen({
           contentContainerStyle={styles.messagesList}
           ListEmptyComponent={
             <View style={styles.emptyCenter}>
-              <MaterialCommunityIcons name="chat-processing-outline" size={40} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="chat-processing-outline" size={40} color={colors.textTertiary} />
               <Text style={styles.emptyText}>No messages yet. Say hello!</Text>
             </View>
           }
@@ -231,7 +296,7 @@ export default function ChatConversationScreen({
           value={text}
           onChangeText={setText}
           placeholder="Type a message..."
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           multiline
           maxLength={2000}
           editable={!sending}
@@ -247,76 +312,12 @@ export default function ChatConversationScreen({
           testID="chat-send-btn"
         >
           {sending ? (
-            <ActivityIndicator size="small" color={theme.colors.textInverse} />
+            <ActivityIndicator size="small" color={colors.textInverse} />
           ) : (
-            <MaterialCommunityIcons name="send" size={20} color={theme.colors.textInverse} />
+            <MaterialCommunityIcons name="send" size={20} color={colors.textInverse} />
           )}
         </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surfaceAlt },
-  header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  backBtn: { padding: 4, marginRight: 8 },
-  headerInfo: { flex: 1 },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: theme.colors.textPrimary },
-  headerSubtitle: { fontSize: 12, color: theme.colors.textTertiary },
-  errorBar: { padding: 8, backgroundColor: theme.colors.errorSoft },
-  errorText: { color: theme.colors.errorDark, fontSize: 12, textAlign: 'center' },
-  errorActions: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
-  retryText: { color: theme.colors.errorDark, fontSize: 12, fontWeight: '600' },
-  dismissText: { color: theme.colors.textTertiary, fontSize: 12 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, transform: [{ scaleY: -1 }] },
-  emptyText: { marginTop: 8, color: theme.colors.textTertiary, fontSize: 14 },
-  messagesList: { paddingHorizontal: 12, paddingVertical: 8 },
-  dateSeparator: {
-    textAlign: 'center', fontSize: 11, color: theme.colors.textTertiary, marginVertical: 8,
-    backgroundColor: theme.colors.backgroundSecondary, alignSelf: 'center', paddingHorizontal: 12,
-    paddingVertical: 3, borderRadius: 10, overflow: 'hidden',
-  },
-  systemMessage: { alignItems: 'center', marginVertical: 4 },
-  systemText: {
-    fontSize: 12, color: theme.colors.textTertiary, fontStyle: 'italic',
-    backgroundColor: theme.colors.backgroundSecondary, paddingHorizontal: 12, paddingVertical: 4,
-    borderRadius: 8, overflow: 'hidden',
-  },
-  bubble: {
-    maxWidth: '78%', paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 16, marginVertical: 2,
-  },
-  ownBubble: { alignSelf: 'flex-end', backgroundColor: theme.colors.primary, borderBottomRightRadius: 4 },
-  otherBubble: { alignSelf: 'flex-start', backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: theme.colors.border },
-  messageText: { fontSize: 14, lineHeight: 20 },
-  ownText: { color: theme.colors.textInverse },
-  otherText: { color: theme.colors.textPrimary },
-  time: { fontSize: 10, marginTop: 2 },
-  ownTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' }, // Semi-transparent white on primary bg
-  otherTime: { color: theme.colors.textTertiary },
-  attachmentPreview: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingVertical: 4, marginBottom: 4,
-  },
-  attachmentText: { fontSize: 12, color: theme.colors.textTertiary },
-  inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end', padding: 8,
-    borderTopWidth: 1, borderTopColor: theme.colors.border, backgroundColor: theme.colors.surface,
-  },
-  input: {
-    flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 20,
-    paddingHorizontal: 16, paddingVertical: 8, fontSize: 14,
-    maxHeight: 100, color: theme.colors.textPrimary, backgroundColor: theme.colors.surfaceAlt,
-  },
-  sendBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.primary,
-    alignItems: 'center', justifyContent: 'center', marginLeft: 8,
-  },
-  sendBtnDisabled: { backgroundColor: theme.colors.textTertiary },
-});

@@ -1,5 +1,5 @@
 // SA-P1-001: Staff PIN login screen
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { staffLogin } from "../services/api/staffApi";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
 import type { StaffRole } from "../stores/staffSessionStore";
@@ -25,6 +25,7 @@ type Props = {
 };
 
 export default function StaffLoginScreen({ storeName }: Props) {
+  const colors = useThemeColors();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,6 +68,100 @@ export default function StaffLoginScreen({ storeName }: Props) {
     }
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.lg,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.xl,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.lg,
+      alignItems: "center",
+    },
+    brandLockup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    brandPillText: {
+      backgroundColor: colors.primary,
+      color: colors.textInverse,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 4,
+      borderRadius: 999,
+      fontWeight: "700",
+      letterSpacing: -0.2,
+    },
+    iconWrap: {
+      marginBottom: theme.spacing.md,
+    },
+    title: {
+      ...theme.typography.h4,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    storeName: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: colors.primary,
+      marginBottom: theme.spacing.xs,
+    },
+    subtitle: {
+      ...theme.typography.caption,
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.lg,
+      textAlign: "center",
+    },
+    inputGroup: {
+      width: "100%",
+      marginBottom: theme.spacing.md,
+    },
+    label: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.sm,
+    },
+    input: {
+      width: "100%",
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: theme.borderRadius.lg,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      ...theme.typography.bodySmall,
+      color: colors.textPrimary,
+      backgroundColor: colors.background,
+    },
+    loginButton: {
+      width: "100%",
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.lg,
+      paddingVertical: theme.spacing.md,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: theme.spacing.sm,
+      height: 52,
+    },
+    loginButtonDisabled: {
+      opacity: 0.6,
+    },
+    loginButtonText: {
+      ...theme.typography.button,
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -82,15 +177,15 @@ export default function StaffLoginScreen({ storeName }: Props) {
         <View style={styles.brandLockup}>
           <BrandShortmark
             size={30}
-            backgroundColor={theme.colors.primary}
-            lineColor={theme.colors.textInverse}
-            dotColor={theme.colors.textInverse}
+            backgroundColor={colors.primary}
+            lineColor={colors.textInverse}
+            dotColor={colors.textInverse}
             radius={8}
           />
           <Text style={styles.brandPillText}>SuperMandi</Text>
         </View>
         <View style={styles.iconWrap} accessibilityElementsHidden>
-          <MaterialCommunityIcons name="account-lock" size={48} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="account-lock" size={48} color={colors.primary} />
         </View>
 
         <Text
@@ -115,7 +210,7 @@ export default function StaffLoginScreen({ storeName }: Props) {
             value={phone}
             onChangeText={setPhone}
             placeholder="10-digit phone (or +91...)"
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             keyboardType="phone-pad"
             maxLength={13}
             autoFocus
@@ -134,7 +229,7 @@ export default function StaffLoginScreen({ storeName }: Props) {
             value={pin}
             onChangeText={setPin}
             placeholder="4-6 digit PIN"
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             keyboardType="number-pad"
             secureTextEntry
             maxLength={6}
@@ -155,7 +250,7 @@ export default function StaffLoginScreen({ storeName }: Props) {
           accessibilityState={{ disabled: loading }}
         >
           {loading ? (
-            <ActivityIndicator color={theme.colors.textInverse} size="small" />
+            <ActivityIndicator color={colors.textInverse} size="small" />
           ) : (
             <Text style={styles.loginButtonText}>Login</Text>
           )}
@@ -165,97 +260,3 @@ export default function StaffLoginScreen({ storeName }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.lg,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.lg,
-    alignItems: "center",
-  },
-  brandLockup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  brandPillText: {
-    backgroundColor: theme.colors.primary,
-    color: theme.colors.textInverse,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  iconWrap: {
-    marginBottom: theme.spacing.md,
-  },
-  title: {
-    ...theme.typography.h4,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  storeName: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  subtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
-    textAlign: "center",
-  },
-  inputGroup: {
-    width: "100%",
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  input: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    ...theme.typography.bodySmall,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.background,
-  },
-  loginButton: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: theme.spacing.sm,
-    height: 52,
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.textInverse,
-  },
-});

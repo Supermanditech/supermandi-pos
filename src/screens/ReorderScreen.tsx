@@ -16,7 +16,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { PendingReorderCard } from "../components/reorder/PendingReorderCard";
 import { DismissReasonModal } from "../components/reorder/DismissReasonModal";
 import { EditReorderModal } from "../components/reorder/EditReorderModal";
@@ -39,6 +39,129 @@ export interface ReorderScreenProps {
 // =============================================================================
 
 export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
+  const colors = useThemeColors();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    headerSubtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    selectionBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    selectAllButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+    },
+    selectAllText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: "500",
+    },
+    selectedCount: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.md,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+    },
+    listContent: {
+      padding: theme.spacing.md,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.xxxl,
+      paddingHorizontal: theme.spacing.xl,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.md,
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingHorizontal: theme.spacing.md,
+      paddingTop: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      ...theme.shadows.lg,
+    },
+    approveButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.success,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      gap: theme.spacing.sm,
+    },
+    approveButtonDisabled: {
+      opacity: 0.6,
+    },
+    approveButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
@@ -298,7 +421,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={() => loadPendingReorders()} accessibilityLabel="Retry loading reorders" accessibilityRole="button" testID="reorder-retry-btn">
@@ -313,7 +436,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
         <MaterialCommunityIcons
           name="check-circle-outline"
           size={48}
-          color={theme.colors.success}
+          color={colors.success}
         />
         <Text style={styles.emptyTitle}>All caught up!</Text>
         <Text style={styles.emptyText}>
@@ -321,7 +444,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
         </Text>
       </View>
     );
-  }, [loading, error, loadPendingReorders]);
+  }, [loading, error, loadPendingReorders, styles, colors]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -347,7 +470,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
             <MaterialCommunityIcons
               name={allSelected ? "checkbox-marked" : "checkbox-blank-outline"}
               size={20}
-              color={theme.colors.primary}
+              color={colors.primary}
             />
             <Text style={styles.selectAllText}>
               {allSelected ? "Deselect All" : "Select All"}
@@ -365,7 +488,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading pending reorders...</Text>
         </View>
       ) : (
@@ -382,8 +505,8 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -402,13 +525,13 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
             testID="reorder-approve-btn"
           >
             {approving ? (
-              <ActivityIndicator size="small" color={theme.colors.textInverse} />
+              <ActivityIndicator size="small" color={colors.textInverse} />
             ) : (
               <>
                 <MaterialCommunityIcons
                   name="check-circle"
                   size={20}
-                  color={theme.colors.textInverse}
+                  color={colors.textInverse}
                 />
                 <Text style={styles.approveButtonText}>
                   Approve Selected ({selectedIds.size})
@@ -437,128 +560,3 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
     </View>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  selectionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  selectAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  selectAllText: {
-    fontSize: 14,
-    color: theme.colors.primary,
-    fontWeight: "500",
-  },
-  selectedCount: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.md,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-  },
-  listContent: {
-    padding: theme.spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.xxxl,
-    paddingHorizontal: theme.spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    ...theme.shadows.lg,
-  },
-  approveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.success,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    gap: theme.spacing.sm,
-  },
-  approveButtonDisabled: {
-    opacity: 0.6,
-  },
-  approveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});

@@ -1,5 +1,5 @@
 // SCR-AUDIT-310: Production-grade DeviceBlocked with strict fetch + theme tokens + a11y
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator, BackHandler } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -10,7 +10,7 @@ import { fetchUiStatusStrict } from "../services/api/uiStatusApi";
 import { clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { POS_MESSAGES } from "../utils/uiStatus";
-import { theme, colors, typography, spacing } from "../theme";
+import { theme, typography, spacing, useThemeColors } from "../theme";
 import BrandShortmark from "../components/BrandShortmark";
 
 type RootStackParamList = {
@@ -27,6 +27,7 @@ const ICON_SIZE = 28;
 const ICON_WRAP_SIZE = 52;
 
 export default function DeviceBlockedScreen() {
+  const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
   const [checking, setChecking] = useState(false);
 
@@ -80,6 +81,82 @@ export default function DeviceBlockedScreen() {
       setChecking(false);
     }
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: spacing.lg,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    card: {
+      width: "100%",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.xl,
+      padding: spacing.lg,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    brandLockup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    brandPillText: {
+      backgroundColor: colors.primary,
+      color: colors.textInverse,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 999,
+      fontWeight: "700",
+      letterSpacing: -0.2,
+    },
+    iconWrap: {
+      width: ICON_WRAP_SIZE,
+      height: ICON_WRAP_SIZE,
+      borderRadius: ICON_WRAP_SIZE / 2,
+      backgroundColor: colors.errorSoft,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.md,
+    },
+    title: {
+      ...typography.h4,
+      fontWeight: "800",
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    subtitle: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: spacing.lg,
+    },
+    button: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      width: "100%",
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      ...typography.button,
+      color: colors.textInverse,
+    },
+    checkingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+  }), [colors]);
 
   return (
     <View
@@ -138,79 +215,3 @@ export default function DeviceBlockedScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.lg,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  card: {
-    width: "100%",
-    backgroundColor: colors.surface,
-    borderRadius: theme.borderRadius.xl,
-    padding: spacing.lg,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  brandLockup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  brandPillText: {
-    backgroundColor: colors.primary,
-    color: colors.textInverse,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  iconWrap: {
-    width: ICON_WRAP_SIZE,
-    height: ICON_WRAP_SIZE,
-    borderRadius: ICON_WRAP_SIZE / 2,
-    backgroundColor: colors.errorSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  title: {
-    ...typography.h4,
-    fontWeight: "800",
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginBottom: spacing.lg,
-  },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    width: "100%",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    ...typography.button,
-    color: colors.textInverse,
-  },
-  checkingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-});

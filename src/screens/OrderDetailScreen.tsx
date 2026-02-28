@@ -1,7 +1,7 @@
 // OrderDetailScreen - V3.0.9 compliant
 // Purchase order detail view with items and status timeline
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme, colors } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDate } from "../i18n/formatters";
 import { StatusTimeline } from "../components/orders/StatusTimeline";
@@ -56,6 +56,7 @@ export default function OrderDetailScreen({
   onBack,
   onNavigateToGRN,
 }: OrderDetailScreenProps) {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
   // State
@@ -227,6 +228,9 @@ export default function OrderDetailScreen({
     });
   }, [order]);
 
+  // Styles (dynamic, theme-aware)
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // Render loading state
   if (loading) {
     return (
@@ -237,14 +241,14 @@ export default function OrderDetailScreen({
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
           )}
           <Text style={styles.headerTitle}>Order Details</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading order details...</Text>
         </View>
       </View>
@@ -261,7 +265,7 @@ export default function OrderDetailScreen({
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
           )}
@@ -271,7 +275,7 @@ export default function OrderDetailScreen({
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.errorText}>{error || "Order not found"}</Text>
           <Pressable style={styles.retryButton} onPress={loadOrder}>
@@ -297,7 +301,7 @@ export default function OrderDetailScreen({
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         )}
@@ -339,7 +343,7 @@ export default function OrderDetailScreen({
             <MaterialCommunityIcons
               name="store"
               size={18}
-              color={theme.colors.primary}
+              color={colors.primary}
             />
             <Text style={styles.cardTitle}>Supplier</Text>
           </View>
@@ -374,7 +378,7 @@ export default function OrderDetailScreen({
                     value={trackingNumber}
                     onChangeText={setTrackingNumber}
                     placeholder="Enter tracking number"
-                    placeholderTextColor={theme.colors.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     autoFocus
                     editable={!trackingSaving}
                   />
@@ -384,9 +388,9 @@ export default function OrderDetailScreen({
                     disabled={trackingSaving}
                   >
                     {trackingSaving ? (
-                      <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                      <ActivityIndicator size="small" color={colors.textInverse} />
                     ) : (
-                      <MaterialCommunityIcons name="check" size={18} color={theme.colors.textInverse} />
+                      <MaterialCommunityIcons name="check" size={18} color={colors.textInverse} />
                     )}
                   </Pressable>
                   <Pressable
@@ -397,7 +401,7 @@ export default function OrderDetailScreen({
                     }}
                     disabled={trackingSaving}
                   >
-                    <MaterialCommunityIcons name="close" size={18} color={theme.colors.textSecondary} />
+                    <MaterialCommunityIcons name="close" size={18} color={colors.textSecondary} />
                   </Pressable>
                 </View>
               ) : (
@@ -408,7 +412,7 @@ export default function OrderDetailScreen({
                   <Text style={[styles.infoValue, !order.trackingNumber && styles.trackingPlaceholder]}>
                     {order.trackingNumber || "Add tracking..."}
                   </Text>
-                  <MaterialCommunityIcons name="pencil" size={14} color={theme.colors.primary} />
+                  <MaterialCommunityIcons name="pencil" size={14} color={colors.primary} />
                 </Pressable>
               )}
             </View>
@@ -428,7 +432,7 @@ export default function OrderDetailScreen({
             <MaterialCommunityIcons
               name="package-variant"
               size={18}
-              color={theme.colors.primary}
+              color={colors.primary}
             />
             <Text style={styles.cardTitle}>
               Items ({order.items.length})
@@ -458,7 +462,7 @@ export default function OrderDetailScreen({
             <MaterialCommunityIcons
               name="timeline-outline"
               size={18}
-              color={theme.colors.primary}
+              color={colors.primary}
             />
             <Text style={styles.cardTitle}>Timeline</Text>
           </View>
@@ -476,13 +480,13 @@ export default function OrderDetailScreen({
             disabled={cancelling}
           >
             {cancelling ? (
-              <ActivityIndicator size="small" color={theme.colors.error} />
+              <ActivityIndicator size="small" color={colors.error} />
             ) : (
               <>
                 <MaterialCommunityIcons
                   name="close-circle"
                   size={18}
-                  color={theme.colors.error}
+                  color={colors.error}
                 />
                 <Text style={styles.cancelButtonText}>Cancel Order</Text>
               </>
@@ -494,7 +498,7 @@ export default function OrderDetailScreen({
           <MaterialCommunityIcons
             name="whatsapp"
             size={18}
-            color={theme.colors.textInverse}
+            color={colors.textInverse}
           />
         </Pressable>
 
@@ -503,7 +507,7 @@ export default function OrderDetailScreen({
             <MaterialCommunityIcons
               name="package-down"
               size={18}
-              color={theme.colors.textInverse}
+              color={colors.textInverse}
             />
             <Text style={styles.receiveButtonText}>Receive Goods</Text>
           </Pressable>
@@ -523,37 +527,89 @@ interface OrderItemRowProps {
 }
 
 function OrderItemRow({ item, isLast }: OrderItemRowProps) {
+  const colors = useThemeColors();
   const receivedPercent =
     item.orderedQuantity > 0
       ? Math.round((item.receivedQuantity / item.orderedQuantity) * 100)
       : 0;
 
+  const itemStyles = useMemo(() => StyleSheet.create({
+    itemRow: {
+      flexDirection: "row",
+      paddingVertical: theme.spacing.sm,
+    },
+    itemRowBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    itemInfo: {
+      flex: 1,
+      marginRight: theme.spacing.sm,
+    },
+    itemName: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    itemBarcode: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: 4,
+    },
+    itemQuantities: {
+      flexDirection: "row",
+      gap: theme.spacing.md,
+    },
+    itemQuantity: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    itemReceived: {
+      fontSize: 12,
+      color: colors.success,
+    },
+    itemPrice: {
+      alignItems: "flex-end",
+    },
+    itemUnitPrice: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: 2,
+    },
+    itemTotal: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+  }), [colors]);
+
   return (
-    <View style={[styles.itemRow, !isLast && styles.itemRowBorder]}>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={2}>
+    <View style={[itemStyles.itemRow, !isLast && itemStyles.itemRowBorder]}>
+      <View style={itemStyles.itemInfo}>
+        <Text style={itemStyles.itemName} numberOfLines={2}>
           {item.productName}
         </Text>
         {item.barcode && (
-          <Text style={styles.itemBarcode}>{item.barcode}</Text>
+          <Text style={itemStyles.itemBarcode}>{item.barcode}</Text>
         )}
-        <View style={styles.itemQuantities}>
-          <Text style={styles.itemQuantity}>
+        <View style={itemStyles.itemQuantities}>
+          <Text style={itemStyles.itemQuantity}>
             Ordered: {item.orderedQuantity}
           </Text>
           {item.receivedQuantity > 0 && (
-            <Text style={styles.itemReceived}>
+            <Text style={itemStyles.itemReceived}>
               Received: {item.receivedQuantity} ({receivedPercent}%)
             </Text>
           )}
         </View>
       </View>
 
-      <View style={styles.itemPrice}>
-        <Text style={styles.itemUnitPrice}>
+      <View style={itemStyles.itemPrice}>
+        <Text style={itemStyles.itemUnitPrice}>
           {formatMoney(item.unitPrice)} x {item.orderedQuantity}
         </Text>
-        <Text style={styles.itemTotal}>{formatMoney(item.totalPrice)}</Text>
+        <Text style={itemStyles.itemTotal}>{formatMoney(item.totalPrice)}</Text>
       </View>
     </View>
   );
@@ -563,19 +619,20 @@ function OrderItemRow({ item, isLast }: OrderItemRowProps) {
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     marginRight: theme.spacing.sm,
@@ -590,7 +647,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   statusBadge: {
     paddingHorizontal: theme.spacing.sm,
@@ -612,7 +669,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   errorContainer: {
     flex: 1,
@@ -622,7 +679,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     marginTop: theme.spacing.md,
   },
@@ -630,23 +687,23 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: theme.borderRadius.md,
   },
   retryButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   progressSection: {
     padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   progressBar: {
     height: 6,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 3,
     overflow: "hidden",
   },
@@ -656,12 +713,12 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginTop: 4,
     textAlign: "right",
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     margin: theme.spacing.md,
     marginBottom: 0,
     borderRadius: theme.borderRadius.lg,
@@ -674,17 +731,17 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   supplierName: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
   infoGrid: {
@@ -697,28 +754,28 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 13,
     fontWeight: "500",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   notesSection: {
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   notesLabel: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: 4,
   },
   notesText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   itemRow: {
@@ -727,7 +784,7 @@ const styles = StyleSheet.create({
   },
   itemRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   itemInfo: {
     flex: 1,
@@ -736,12 +793,12 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   itemBarcode: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: 4,
   },
   itemQuantities: {
@@ -750,24 +807,24 @@ const styles = StyleSheet.create({
   },
   itemQuantity: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   itemReceived: {
     fontSize: 12,
-    color: theme.colors.success,
+    color: colors.success,
   },
   itemPrice: {
     alignItems: "flex-end",
   },
   itemUnitPrice: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: 2,
   },
   itemTotal: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   totalSection: {
     flexDirection: "row",
@@ -776,26 +833,26 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   totalLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   totalValue: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   footer: {
     flexDirection: "row",
     gap: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   cancelButton: {
     flex: 1,
@@ -805,13 +862,13 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.error,
+    borderColor: colors.error,
     gap: theme.spacing.xs,
   },
   cancelButtonText: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.error,
+    color: colors.error,
   },
   whatsappButton: {
     width: 44,
@@ -828,13 +885,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
-    backgroundColor: theme.colors.success,
+    backgroundColor: colors.success,
     gap: theme.spacing.xs,
   },
   receiveButtonText: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   // GO-LIVE-242: Tracking number styles
   trackingSection: {
@@ -850,20 +907,20 @@ const styles = StyleSheet.create({
   },
   trackingInput: {
     flex: 1,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
   },
   trackingSaveButton: {
     width: 32,
     height: 32,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.success,
+    backgroundColor: colors.success,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -871,7 +928,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -882,7 +939,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   trackingPlaceholder: {
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     fontStyle: "italic",
   },
-});
+  });
+}

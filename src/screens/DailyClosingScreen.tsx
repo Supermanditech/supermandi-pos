@@ -1,6 +1,6 @@
 // T-191: Daily Closing / Z-Report Screen
 // Summary of day's sales, cash reconciliation, closing history
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useTranslation } from "react-i18next";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { useDailyClosingStore } from "../stores/dailyClosingStore";
 import type { DailyClosingRecord } from "../services/dailyClosingService";
@@ -58,6 +58,7 @@ interface DailyClosingScreenProps {
 }
 
 export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) {
+  const colors = useThemeColors();
   const { t } = useTranslation();
   const {
     summary,
@@ -158,10 +159,12 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
     : 0;
   const hasValidCashInput = actualCash.trim().length > 0 && !isNaN(parseFloat(actualCash));
 
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // Render history item
   const renderHistoryItem = useCallback((record: DailyClosingRecord) => {
     const isMatch = record.varianceMinor === 0;
-    const varianceColor = isMatch ? theme.colors.success : theme.colors.error;
+    const varianceColor = isMatch ? colors.success : colors.error;
 
     return (
       <View key={record.id} style={styles.historyCard}>
@@ -200,7 +203,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
         </Text>
       </View>
     );
-  }, []);
+  }, [colors, styles]);
 
   return (
     <View style={styles.container}>
@@ -235,15 +238,15 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         >
           {/* Date picker */}
           <View style={styles.datePicker}>
             <Pressable style={styles.dateArrow} onPress={() => handleDateChange("prev")}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color={theme.colors.primary} />
+              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
             </Pressable>
             <View style={styles.dateDisplay}>
               <Text style={styles.dateText}>{formatDateDDMMYYYY(selectedDate)}</Text>
@@ -257,14 +260,14 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={24}
-                color={isToday ? theme.colors.textTertiary : theme.colors.primary}
+                color={isToday ? colors.textTertiary : colors.primary}
               />
             </Pressable>
           </View>
 
           {loading ? (
             <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>Loading summary...</Text>
             </View>
           ) : summary ? (
@@ -287,7 +290,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryRowIcon}>
-                    <MaterialCommunityIcons name="cash" size={16} color={theme.colors.success} />
+                    <MaterialCommunityIcons name="cash" size={16} color={colors.success} />
                     <Text style={styles.summaryLabel}>Cash</Text>
                   </View>
                   <Text style={styles.summaryValue}>
@@ -296,7 +299,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 </View>
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryRowIcon}>
-                    <MaterialCommunityIcons name="cellphone-nfc" size={16} color={theme.colors.primary} />
+                    <MaterialCommunityIcons name="cellphone-nfc" size={16} color={colors.primary} />
                     <Text style={styles.summaryLabel}>UPI</Text>
                   </View>
                   <Text style={styles.summaryValue}>
@@ -305,7 +308,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 </View>
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryRowIcon}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color={theme.colors.warning} />
+                    <MaterialCommunityIcons name="clock-outline" size={16} color={colors.warning} />
                     <Text style={styles.summaryLabel}>Due</Text>
                   </View>
                   <Text style={styles.summaryValue}>
@@ -318,7 +321,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                     <View style={styles.summaryDivider} />
                     <View style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>Refunds</Text>
-                      <Text style={[styles.summaryValue, { color: theme.colors.error }]}>
+                      <Text style={[styles.summaryValue, { color: colors.error }]}>
                         -{formatMoney(summary.refundsMinor)}
                       </Text>
                     </View>
@@ -332,7 +335,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={[styles.summaryLabel, { fontWeight: "700" }]}>Expected Cash</Text>
-                  <Text style={[styles.summaryValue, { fontWeight: "700", color: theme.colors.textPrimary }]}>
+                  <Text style={[styles.summaryValue, { fontWeight: "700", color: colors.textPrimary }]}>
                     {formatMoney(summary.expectedCashMinor)}
                   </Text>
                 </View>
@@ -346,7 +349,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                   <TextInput
                     style={styles.cashInput}
                     placeholder="0.00"
-                    placeholderTextColor={theme.colors.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     value={actualCash}
                     onChangeText={setActualCash}
                     keyboardType="decimal-pad"
@@ -362,15 +365,15 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                       {
                         backgroundColor:
                           varianceMinor === 0
-                            ? theme.colors.successSoft
-                            : theme.colors.errorSoft,
+                            ? colors.successSoft
+                            : colors.errorSoft,
                       },
                     ]}
                   >
                     <MaterialCommunityIcons
                       name={varianceMinor === 0 ? "check-circle" : "alert-circle"}
                       size={20}
-                      color={varianceMinor === 0 ? theme.colors.success : theme.colors.error}
+                      color={varianceMinor === 0 ? colors.success : colors.error}
                     />
                     <View>
                       <Text
@@ -378,7 +381,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                           styles.varianceText,
                           {
                             color:
-                              varianceMinor === 0 ? theme.colors.success : theme.colors.error,
+                              varianceMinor === 0 ? colors.success : colors.error,
                           },
                         ]}
                       >
@@ -403,10 +406,10 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 disabled={closing || !hasValidCashInput}
               >
                 {closing ? (
-                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                  <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
                   <>
-                    <MaterialCommunityIcons name="check-bold" size={18} color={theme.colors.textInverse} />
+                    <MaterialCommunityIcons name="check-bold" size={18} color={colors.textInverse} />
                     <Text style={styles.closeDayButtonText}>Close Day</Text>
                   </>
                 )}
@@ -430,14 +433,14 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         >
           {historyLoading ? (
             <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : history.length === 0 ? (
             <EmptyState
@@ -458,10 +461,10 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   centerContent: {
     flex: 1,
@@ -472,13 +475,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: theme.spacing.md,
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   tabRow: {
     flexDirection: "row",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
@@ -488,15 +491,15 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   tabActive: {
-    borderBottomColor: theme.colors.primary,
+    borderBottomColor: colors.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   tabTextActive: {
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   content: {
     flex: 1,
@@ -509,10 +512,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
@@ -534,19 +537,19 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   dateTodayBadge: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.primary,
-    backgroundColor: theme.colors.primaryLight,
+    color: colors.primary,
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: theme.borderRadius.full,
   },
   summaryCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
@@ -555,14 +558,14 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     textTransform: "uppercase",
     marginBottom: theme.spacing.md,
   },
   summarySubTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: theme.spacing.sm,
   },
   summaryRow: {
@@ -578,25 +581,25 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   summaryValueLarge: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.primaryDark,
+    color: colors.primaryDark,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
     marginVertical: theme.spacing.sm,
   },
   cashInputCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
@@ -605,29 +608,29 @@ const styles = StyleSheet.create({
   cashInputLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   cashInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing.md,
   },
   cashInputPrefix: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginRight: theme.spacing.sm,
   },
   cashInput: {
     flex: 1,
     fontSize: 20,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     paddingVertical: theme.spacing.md,
   },
   varianceBox: {
@@ -644,7 +647,7 @@ const styles = StyleSheet.create({
   },
   varianceHint: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginTop: 2,
   },
   closeDayButton: {
@@ -652,7 +655,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
   },
@@ -662,11 +665,11 @@ const styles = StyleSheet.create({
   closeDayButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   // History styles
   historyCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
@@ -681,7 +684,7 @@ const styles = StyleSheet.create({
   historyDate: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   historyBadge: {
     paddingHorizontal: theme.spacing.sm,
@@ -703,19 +706,19 @@ const styles = StyleSheet.create({
   },
   historyLabel: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   historyValue: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   historyClosedBy: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginTop: theme.spacing.sm,
     paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
-});
+}); }

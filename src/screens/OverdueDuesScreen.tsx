@@ -1,7 +1,7 @@
 // T-193: Collection/Dunning for Overdue DUE Payments
 // Screen listing overdue DUE payments with color coding, WhatsApp reminder, and payment link
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme, colors } from "../theme";
+import { theme, colors, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDate } from "../i18n/formatters";
 import { apiClient } from "../services/api/apiClient";
@@ -102,6 +102,184 @@ export default function OverdueDuesScreen({
   onBack,
   onNavigateToPayment,
 }: OverdueDuesScreenProps) {
+  const colors = useThemeColors();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: theme.spacing.xl,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    errorText: {
+      marginTop: theme.spacing.md,
+      fontSize: 14,
+      color: colors.error,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.md,
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    summaryBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      margin: theme.spacing.md,
+      padding: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      ...theme.shadows.sm,
+    },
+    summaryItem: {
+      flex: 1,
+      alignItems: "center",
+    },
+    summaryDivider: {
+      width: 1,
+      height: 40,
+      backgroundColor: colors.border,
+    },
+    summaryLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: 4,
+    },
+    summaryValue: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.error,
+    },
+    listContent: {
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.xl,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: theme.spacing.md,
+    },
+    cardHeaderLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      gap: theme.spacing.xs,
+    },
+    customerName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      flex: 1,
+    },
+    severityBadge: {
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: theme.borderRadius.full,
+    },
+    severityText: {
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    cardDetails: {
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    detailRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    detailLabel: {
+      fontSize: 13,
+      color: colors.textTertiary,
+    },
+    detailValue: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: colors.textPrimary,
+    },
+    detailValueBold: {
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    reminderSent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.xs,
+      marginBottom: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      backgroundColor: colors.successSoft,
+      borderRadius: theme.borderRadius.sm,
+    },
+    reminderSentText: {
+      fontSize: 11,
+      color: colors.success,
+      fontWeight: "500",
+    },
+    cardActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+    },
+    reminderButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.successSoft,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+      gap: theme.spacing.xs,
+      borderWidth: 1,
+      borderColor: colors.success + "30",
+    },
+    reminderButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.success,
+    },
+    paymentButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primary,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+      gap: theme.spacing.xs,
+    },
+    paymentButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dues, setDues] = useState<OverdueDue[]>([]);
@@ -215,7 +393,7 @@ export default function OverdueDuesScreen({
               <MaterialCommunityIcons
                 name="account-outline"
                 size={16}
-                color={theme.colors.textSecondary}
+                color={colors.textSecondary}
               />
               <Text style={styles.customerName} numberOfLines={1}>
                 {item.customerName}
@@ -271,7 +449,7 @@ export default function OverdueDuesScreen({
               <MaterialCommunityIcons
                 name="check-circle-outline"
                 size={14}
-                color={theme.colors.success}
+                color={colors.success}
               />
               <Text style={styles.reminderSentText}>
                 Reminder sent {formatDate(reminderSent, "short")}
@@ -288,7 +466,7 @@ export default function OverdueDuesScreen({
               <MaterialCommunityIcons
                 name="whatsapp"
                 size={16}
-                color={theme.colors.success}
+                color={colors.success}
               />
               <Text style={styles.reminderButtonText}>Send Reminder</Text>
             </Pressable>
@@ -299,7 +477,7 @@ export default function OverdueDuesScreen({
               <MaterialCommunityIcons
                 name="cash-register"
                 size={16}
-                color={theme.colors.textInverse}
+                color={colors.textInverse}
               />
               <Text style={styles.paymentButtonText}>Record Payment</Text>
             </Pressable>
@@ -316,7 +494,7 @@ export default function OverdueDuesScreen({
       <View style={styles.container}>
         <BackHeader title="Overdue Dues" onBack={onBack} />
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading overdue dues...</Text>
         </View>
       </View>
@@ -332,7 +510,7 @@ export default function OverdueDuesScreen({
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={() => { setLoading(true); void loadDues(); }}>
@@ -379,8 +557,8 @@ export default function OverdueDuesScreen({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
@@ -389,182 +567,3 @@ export default function OverdueDuesScreen({
   );
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.xl,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  errorText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.error,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  summaryBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    margin: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    ...theme.shadows.sm,
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  summaryDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: theme.colors.border,
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.error,
-  },
-  listContent: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: theme.spacing.md,
-  },
-  cardHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: theme.spacing.xs,
-  },
-  customerName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    flex: 1,
-  },
-  severityBadge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
-  },
-  severityText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  cardDetails: {
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
-  },
-  detailValueBold: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  reminderSent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: theme.colors.successSoft,
-    borderRadius: theme.borderRadius.sm,
-  },
-  reminderSentText: {
-    fontSize: 11,
-    color: theme.colors.success,
-    fontWeight: "500",
-  },
-  cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  reminderButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.successSoft,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.xs,
-    borderWidth: 1,
-    borderColor: theme.colors.success + "30",
-  },
-  reminderButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.success,
-  },
-  paymentButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.xs,
-  },
-  paymentButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});

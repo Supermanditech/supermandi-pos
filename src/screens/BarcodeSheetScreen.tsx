@@ -36,7 +36,7 @@ import {
   type PaperSize,
   type PrintSettings,
 } from "../services/barcodeSheet";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { asError } from "../utils/errorUtils";
 
 // GO-LIVE-243: Persist barcode sheet tier preference
@@ -56,6 +56,8 @@ type BarcodeSheetRouteParams = {
 };
 
 export default function BarcodeSheetScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute<any>();
@@ -316,7 +318,7 @@ export default function BarcodeSheetScreen() {
 
   const previewTitle = activeTier === "TIER_2" ? "Tier 2 Sheet" : "Tier 1 Sheet";
   const actionDisabled = !activeTier || finalItems.length === 0 || loading;
-  const actionIconColor = actionDisabled ? theme.colors.textTertiary : theme.colors.textInverse;
+  const actionIconColor = actionDisabled ? colors.textTertiary : colors.textInverse;
   const sheetCapacity = activeTier ? getBarcodeSheetCapacity(activeTier) : 0;
 
   // T-171: Format price for display in preview
@@ -343,7 +345,7 @@ export default function BarcodeSheetScreen() {
             onPress={() => setShowSettingsModal(true)}
             accessibilityLabel="Print settings"
           >
-            <MaterialCommunityIcons name="cog-outline" size={18} color={theme.colors.textSecondary} />
+            <MaterialCommunityIcons name="cog-outline" size={18} color={colors.textSecondary} />
           </Pressable>
         </View>
         <View style={styles.tierGrid}>
@@ -351,7 +353,7 @@ export default function BarcodeSheetScreen() {
             style={[styles.tierCard, activeTier === "TIER_1" && styles.tierCardActive]}
             onPress={() => handleGenerate("TIER_1")}
           >
-            <MaterialCommunityIcons name="layers" size={20} color={theme.colors.primary} />
+            <MaterialCommunityIcons name="layers" size={20} color={colors.primary} />
             <Text style={styles.tierTitle}>Tier 1 Sheet</Text>
             <Text style={styles.tierSubtitle}>Standard barcode labels</Text>
           </Pressable>
@@ -359,7 +361,7 @@ export default function BarcodeSheetScreen() {
             style={[styles.tierCard, activeTier === "TIER_2" && styles.tierCardActive]}
             onPress={() => handleGenerate("TIER_2")}
           >
-            <MaterialCommunityIcons name="layers-triple" size={20} color={theme.colors.primary} />
+            <MaterialCommunityIcons name="layers-triple" size={20} color={colors.primary} />
             <Text style={styles.tierTitle}>Tier 2 Sheet</Text>
             <Text style={styles.tierSubtitle}>Dense barcode labels</Text>
           </Pressable>
@@ -417,7 +419,7 @@ export default function BarcodeSheetScreen() {
               <MaterialCommunityIcons
                 name={customMode ? "checkbox-multiple-marked" : "checkbox-multiple-blank-outline"}
                 size={16}
-                color={customMode ? theme.colors.textInverse : theme.colors.primary}
+                color={customMode ? colors.textInverse : colors.primary}
               />
               <Text style={[styles.customModeText, customMode && styles.customModeTextActive]}>
                 Custom Selection
@@ -434,11 +436,11 @@ export default function BarcodeSheetScreen() {
           {customMode && (
             <View style={styles.customControls}>
               <View style={styles.searchBar}>
-                <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textTertiary} />
+                <MaterialCommunityIcons name="magnify" size={18} color={colors.textTertiary} />
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Search by name or barcode..."
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   autoCorrect={false}
@@ -446,7 +448,7 @@ export default function BarcodeSheetScreen() {
                 />
                 {searchQuery.length > 0 && (
                   <Pressable onPress={() => setSearchQuery("")}>
-                    <MaterialCommunityIcons name="close-circle" size={16} color={theme.colors.textTertiary} />
+                    <MaterialCommunityIcons name="close-circle" size={16} color={colors.textTertiary} />
                   </Pressable>
                 )}
               </View>
@@ -478,7 +480,7 @@ export default function BarcodeSheetScreen() {
                           <MaterialCommunityIcons
                             name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
                             size={20}
-                            color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
+                            color={isSelected ? colors.primary : colors.textTertiary}
                           />
                           <View style={styles.productInfo}>
                             <Text style={styles.productName} numberOfLines={1}>
@@ -509,7 +511,7 @@ export default function BarcodeSheetScreen() {
                               <MaterialCommunityIcons
                                 name="minus"
                                 size={14}
-                                color={copies <= 1 ? theme.colors.textTertiary : theme.colors.primary}
+                                color={copies <= 1 ? colors.textTertiary : colors.primary}
                               />
                             </Pressable>
                             <Text style={styles.stepperValue}>{copies}</Text>
@@ -521,7 +523,7 @@ export default function BarcodeSheetScreen() {
                               <MaterialCommunityIcons
                                 name="plus"
                                 size={14}
-                                color={copies >= 50 ? theme.colors.textTertiary : theme.colors.primary}
+                                color={copies >= 50 ? colors.textTertiary : colors.primary}
                               />
                             </Pressable>
                           </View>
@@ -542,18 +544,18 @@ export default function BarcodeSheetScreen() {
         <View style={styles.previewCard}>
           {loading ? (
             <View style={styles.previewEmpty}>
-              <ActivityIndicator color={theme.colors.primary} />
+              <ActivityIndicator color={colors.primary} />
               <Text style={styles.previewEmptyText}>Generating preview...</Text>
             </View>
           ) : error ? (
             <View style={styles.previewEmpty}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={24} color={theme.colors.warning} />
+              <MaterialCommunityIcons name="alert-circle-outline" size={24} color={colors.warning} />
               <Text style={styles.previewEmptyText}>{error}</Text>
             </View>
           ) : finalItems.length > 0 ? (
             <View style={styles.previewContent}>
               <View style={styles.previewSheet}>
-                <MaterialCommunityIcons name="barcode" size={28} color={theme.colors.primary} />
+                <MaterialCommunityIcons name="barcode" size={28} color={colors.primary} />
                 <Text style={styles.previewTitle}>{previewTitle}</Text>
                 <Text style={styles.previewMeta}>
                   {/* T-170: Show total labels vs products */}
@@ -585,7 +587,7 @@ export default function BarcodeSheetScreen() {
                         <Text style={styles.previewCellName} numberOfLines={1}>
                           {item.name || "Unnamed"}
                         </Text>
-                        <MaterialCommunityIcons name="barcode" size={22} color={theme.colors.textSecondary} />
+                        <MaterialCommunityIcons name="barcode" size={22} color={colors.textSecondary} />
                         <Text style={styles.previewCellCode} numberOfLines={1}>
                           {item.barcode}
                         </Text>
@@ -620,7 +622,7 @@ export default function BarcodeSheetScreen() {
                     <MaterialCommunityIcons
                       name="chevron-left"
                       size={18}
-                      color={previewPage === 0 ? theme.colors.textTertiary : theme.colors.primary}
+                      color={previewPage === 0 ? colors.textTertiary : colors.primary}
                     />
                     <Text style={[styles.paginationText, previewPage === 0 && styles.paginationTextDisabled]}>
                       Prev
@@ -646,7 +648,7 @@ export default function BarcodeSheetScreen() {
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={18}
-                      color={previewPage >= totalPages - 1 ? theme.colors.textTertiary : theme.colors.primary}
+                      color={previewPage >= totalPages - 1 ? colors.textTertiary : colors.primary}
                     />
                   </Pressable>
                 </View>
@@ -659,7 +661,7 @@ export default function BarcodeSheetScreen() {
             </View>
           ) : hasFetched ? (
             <View style={styles.previewEmpty}>
-              <MaterialCommunityIcons name="package-variant" size={32} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="package-variant" size={32} color={colors.textTertiary} />
               <Text style={styles.emptyTitle}>
                 {t("barcodeSheet.emptyTitle", "No Products Yet")}
               </Text>
@@ -670,7 +672,7 @@ export default function BarcodeSheetScreen() {
                 )}
               </Text>
               <Pressable style={styles.addProductsButton} onPress={handleAddProducts}>
-                <MaterialCommunityIcons name="plus" size={16} color={theme.colors.textInverse} />
+                <MaterialCommunityIcons name="plus" size={16} color={colors.textInverse} />
                 <Text style={styles.addProductsText}>
                   {t("barcodeSheet.addProducts", "Add Products")}
                 </Text>
@@ -678,7 +680,7 @@ export default function BarcodeSheetScreen() {
             </View>
           ) : (
             <View style={styles.previewEmpty}>
-              <MaterialCommunityIcons name="file-outline" size={26} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="file-outline" size={26} color={colors.textTertiary} />
               <Text style={styles.previewEmptyText}>
                 {t("barcodeSheet.generatePrompt", "Generate a sheet to preview.")}
               </Text>
@@ -738,6 +740,8 @@ function PrintSettingsModal({
   onSave: (settings: PrintSettings) => void;
   onClose: () => void;
 }) {
+  const colors = useThemeColors();
+  const modalStyles = useMemo(() => createModalStyles(colors), [colors]);
   const [paperSize, setPaperSize] = useState<PaperSize>(settings.paperSize);
   const [labelSize, setLabelSize] = useState<LabelSize>(settings.labelSize);
   const [labelsPerRow, setLabelsPerRow] = useState(settings.labelsPerRow);
@@ -769,7 +773,7 @@ function PrintSettingsModal({
           <View style={modalStyles.header}>
             <Text style={modalStyles.title}>Print Settings</Text>
             <Pressable onPress={onClose}>
-              <MaterialCommunityIcons name="close" size={22} color={theme.colors.textSecondary} />
+              <MaterialCommunityIcons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>
 
@@ -837,10 +841,10 @@ function PrintSettingsModal({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   content: {
     padding: 16,
@@ -853,11 +857,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   section: {
     marginBottom: 18,
@@ -871,15 +875,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   // T-169: Settings gear button
   settingsButton: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   tierGrid: {
     flexDirection: "row",
@@ -887,25 +891,25 @@ const styles = StyleSheet.create({
   },
   tierCard: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 12,
     gap: 6,
   },
   tierCardActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceAlt,
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceAlt,
   },
   tierTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   tierSubtitle: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
 
   // T-166: Category filter styles
@@ -918,21 +922,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   categoryChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   categoryChipText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   categoryChipTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
 
   // T-167: Custom selection mode styles
@@ -948,26 +952,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
   },
   customModeToggleActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   customModeText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   customModeTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   selectionCount: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   customControls: {
     gap: 10,
@@ -976,9 +980,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -986,7 +990,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     paddingVertical: 4,
   },
   selectionActions: {
@@ -997,23 +1001,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   selectionBtnText: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
 
   // T-167: Product list
   productListContainer: {
     maxHeight: 300,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
   },
   productRow: {
@@ -1022,7 +1026,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   productCheckArea: {
     flex: 1,
@@ -1036,7 +1040,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   productMeta: {
     flexDirection: "row",
@@ -1045,12 +1049,12 @@ const styles = StyleSheet.create({
   },
   productBarcode: {
     fontSize: 10,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   productPrice: {
     fontSize: 10,
     fontWeight: "700",
-    color: theme.colors.success,
+    color: colors.success,
   },
   emptySearch: {
     padding: 20,
@@ -1058,7 +1062,7 @@ const styles = StyleSheet.create({
   },
   emptySearchText: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
 
   // T-170: Copies stepper
@@ -1075,22 +1079,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
   },
   stepperValue: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     minWidth: 22,
     textAlign: "center",
   },
 
   // T-168: Preview styles
   previewCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 16,
     minHeight: 160,
@@ -1104,19 +1108,19 @@ const styles = StyleSheet.create({
     gap: 6,
     padding: 16,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     width: "100%",
   },
   previewTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   previewMeta: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   previewGrid: {
     marginTop: 12,
@@ -1132,39 +1136,39 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     minHeight: 90,
   },
   previewCellCategory: {
     fontSize: 8,
     fontWeight: "600",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   previewCellName: {
     fontSize: 10,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   previewCellCode: {
     fontSize: 8,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     letterSpacing: 0.5,
   },
   previewCellPrice: {
     fontSize: 10,
     fontWeight: "800",
-    color: theme.colors.success,
+    color: colors.success,
   },
   // T-170: Copies badge in preview
   copiesBadge: {
     position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingHorizontal: 5,
     paddingVertical: 1,
@@ -1172,12 +1176,12 @@ const styles = StyleSheet.create({
   copiesBadgeText: {
     fontSize: 8,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   showingLabelsText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 8,
     textAlign: "center",
   },
@@ -1187,7 +1191,7 @@ const styles = StyleSheet.create({
   },
   previewEmptyText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
 
   // Actions
@@ -1200,35 +1204,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   downloadButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   whatsAppButton: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: colors.success,
   },
   actionButtonDisabled: {
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   actionText: {
     fontSize: 13,
     fontWeight: "800",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   actionTextDisabled: {
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
 
   // Empty state styles
   emptyTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginTop: 4,
   },
   emptyDescription: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 18,
     paddingHorizontal: 16,
@@ -1241,13 +1245,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 10,
   },
   addProductsText: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
 
   // Pagination styles
@@ -1267,8 +1271,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   paginationBtnDisabled: {
     opacity: 0.4,
@@ -1276,20 +1280,20 @@ const styles = StyleSheet.create({
   paginationText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   paginationTextDisabled: {
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   paginationInfo: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
-});
+}); }
 
 // T-169: Modal styles
-const modalStyles = StyleSheet.create({
+function createModalStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.45)",
@@ -1297,7 +1301,7 @@ const modalStyles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     gap: 18,
@@ -1310,7 +1314,7 @@ const modalStyles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   fieldGroup: {
     gap: 8,
@@ -1318,11 +1322,11 @@ const modalStyles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   fieldValue: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "600",
   },
   chipRow: {
@@ -1334,13 +1338,13 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   chipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   chipContent: {
     alignItems: "center",
@@ -1349,21 +1353,21 @@ const modalStyles = StyleSheet.create({
   chipText: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   chipTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   chipSubtext: {
     fontSize: 10,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   chipSubtextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
     opacity: 0.8,
   },
   saveButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",
@@ -1371,6 +1375,6 @@ const modalStyles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
-});
+}); }

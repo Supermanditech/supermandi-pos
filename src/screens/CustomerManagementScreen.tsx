@@ -1,7 +1,7 @@
 // T-196: Customer Management Screen
 // Customer list with search, detail view, purchase history, Khata balance, add/edit customer
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,7 +21,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useTranslation } from "react-i18next";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { BackHeader } from "../components/ui/BackHeader";
 import EmptyState from "../components/ui/EmptyState";
@@ -53,6 +53,7 @@ interface CustomerManagementScreenProps {
 export default function CustomerManagementScreen({
   onBack,
 }: CustomerManagementScreenProps) {
+  const colors = useThemeColors();
   const { t } = useTranslation();
   const {
     customers,
@@ -202,6 +203,335 @@ export default function CustomerManagementScreen({
     }
   }, [addName, addPhone, addEmail, addAddress, createCustomer, t]);
 
+  // =========================================================================
+  // STYLES
+  // =========================================================================
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: theme.spacing.xl,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    // Search
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      margin: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: theme.spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+      paddingVertical: 2,
+    },
+    // Customer list
+    listContent: {
+      padding: theme.spacing.md,
+      paddingTop: 0,
+      paddingBottom: theme.spacing.xxxl,
+    },
+    customerCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: theme.spacing.md,
+    },
+    customerAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    customerAvatarText: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    customerInfo: {
+      flex: 1,
+    },
+    customerName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    customerPhone: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    customerMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 4,
+    },
+    customerMetaText: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    customerMetaDot: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    // FAB
+    fab: {
+      position: "absolute",
+      bottom: 24,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      ...theme.shadows.lg,
+    },
+    // Modal shared
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalCloseButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
+    editButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    saveButton: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.xs,
+    },
+    saveButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    // Detail
+    detailScroll: {
+      flex: 1,
+    },
+    detailContent: {
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.xl,
+    },
+    profileCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      alignItems: "center",
+      ...theme.shadows.sm,
+      marginBottom: theme.spacing.md,
+    },
+    profileAvatarLarge: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: theme.spacing.md,
+    },
+    profileAvatarText: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    profileName: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    profilePhone: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    profileEmail: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginBottom: 2,
+    },
+    profileAddress: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      textAlign: "center",
+      marginBottom: theme.spacing.sm,
+    },
+    callButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.success,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.lg,
+      borderRadius: theme.borderRadius.md,
+      marginTop: theme.spacing.sm,
+      gap: theme.spacing.xs,
+    },
+    callButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    // Stats
+    statsRow: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.sm,
+      alignItems: "center",
+      ...theme.shadows.sm,
+    },
+    statValue: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 2,
+      textAlign: "center",
+    },
+    statLabel: {
+      fontSize: 10,
+      color: colors.textTertiary,
+      textAlign: "center",
+    },
+    // Purchases
+    detailSectionTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    purchaseRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.sm,
+      marginBottom: theme.spacing.xs,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    purchaseInfo: {
+      flex: 1,
+    },
+    purchaseBill: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    purchaseDate: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    purchaseAmount: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.primaryDark,
+    },
+    // Edit fields
+    editFields: {
+      width: "100%",
+      marginTop: theme.spacing.md,
+    },
+    editFieldLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.xs,
+      marginTop: theme.spacing.sm,
+    },
+    editFieldInput: {
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    editFieldMultiline: {
+      minHeight: 80,
+      textAlignVertical: "top",
+    },
+    // Add button
+    addButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: "center",
+      marginTop: theme.spacing.lg,
+    },
+    addButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+  }), [colors]);
+
   // Render customer card
   const renderCustomerItem = useCallback(
     ({ item }: { item: Customer }) => (
@@ -229,11 +559,11 @@ export default function CustomerManagementScreen({
         <MaterialCommunityIcons
           name="chevron-right"
           size={22}
-          color={theme.colors.textSecondary}
+          color={colors.textSecondary}
         />
       </Pressable>
     ),
-    [handleOpenDetail]
+    [handleOpenDetail, styles]
   );
 
   return (
@@ -245,12 +575,12 @@ export default function CustomerManagementScreen({
         <MaterialCommunityIcons
           name="magnify"
           size={20}
-          color={theme.colors.textTertiary}
+          color={colors.textTertiary}
         />
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or phone..."
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"
@@ -261,7 +591,7 @@ export default function CustomerManagementScreen({
             <MaterialCommunityIcons
               name="close-circle"
               size={18}
-              color={theme.colors.textTertiary}
+              color={colors.textTertiary}
             />
           </Pressable>
         )}
@@ -270,7 +600,7 @@ export default function CustomerManagementScreen({
       {/* Customer list */}
       {loading && customers.length === 0 ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading customers...</Text>
         </View>
       ) : customers.length === 0 ? (
@@ -293,8 +623,8 @@ export default function CustomerManagementScreen({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
@@ -308,7 +638,7 @@ export default function CustomerManagementScreen({
         <MaterialCommunityIcons
           name="plus"
           size={24}
-          color={theme.colors.textInverse}
+          color={colors.textInverse}
         />
       </Pressable>
 
@@ -327,7 +657,7 @@ export default function CustomerManagementScreen({
               <MaterialCommunityIcons
                 name="close"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
             <Text style={styles.modalTitle}>Customer Detail</Text>
@@ -336,7 +666,7 @@ export default function CustomerManagementScreen({
                 <MaterialCommunityIcons
                   name="pencil-outline"
                   size={20}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                 />
               </Pressable>
             )}
@@ -347,7 +677,7 @@ export default function CustomerManagementScreen({
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <Text style={styles.saveButtonText}>Save</Text>
                 )}
@@ -358,7 +688,7 @@ export default function CustomerManagementScreen({
 
           {detailLoading ? (
             <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : selectedCustomer ? (
             <ScrollView
@@ -381,7 +711,7 @@ export default function CustomerManagementScreen({
                       value={editName}
                       onChangeText={setEditName}
                       placeholder="Customer name"
-                      placeholderTextColor={theme.colors.textTertiary}
+                      placeholderTextColor={colors.textTertiary}
                     />
                     <Text style={styles.editFieldLabel}>Email</Text>
                     <TextInput
@@ -389,7 +719,7 @@ export default function CustomerManagementScreen({
                       value={editEmail}
                       onChangeText={setEditEmail}
                       placeholder="Email (optional)"
-                      placeholderTextColor={theme.colors.textTertiary}
+                      placeholderTextColor={colors.textTertiary}
                       keyboardType="email-address"
                       autoCapitalize="none"
                     />
@@ -399,7 +729,7 @@ export default function CustomerManagementScreen({
                       value={editAddress}
                       onChangeText={setEditAddress}
                       placeholder="Address (optional)"
-                      placeholderTextColor={theme.colors.textTertiary}
+                      placeholderTextColor={colors.textTertiary}
                       multiline
                       numberOfLines={3}
                     />
@@ -430,7 +760,7 @@ export default function CustomerManagementScreen({
                     <MaterialCommunityIcons
                       name="phone-outline"
                       size={18}
-                      color={theme.colors.textInverse}
+                      color={colors.textInverse}
                     />
                     <Text style={styles.callButtonText}>Call Customer</Text>
                   </Pressable>
@@ -509,7 +839,7 @@ export default function CustomerManagementScreen({
               <MaterialCommunityIcons
                 name="close"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
             <Text style={styles.modalTitle}>Add Customer</Text>
@@ -526,7 +856,7 @@ export default function CustomerManagementScreen({
               value={addName}
               onChangeText={setAddName}
               placeholder="Customer name"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               autoCapitalize="words"
             />
 
@@ -536,7 +866,7 @@ export default function CustomerManagementScreen({
               value={addPhone}
               onChangeText={setAddPhone}
               placeholder="10-digit phone number"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               keyboardType="phone-pad"
               maxLength={10}
             />
@@ -547,7 +877,7 @@ export default function CustomerManagementScreen({
               value={addEmail}
               onChangeText={setAddEmail}
               placeholder="Email (optional)"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -558,7 +888,7 @@ export default function CustomerManagementScreen({
               value={addAddress}
               onChangeText={setAddAddress}
               placeholder="Address (optional)"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               multiline
               numberOfLines={3}
             />
@@ -577,7 +907,7 @@ export default function CustomerManagementScreen({
               {addSaving ? (
                 <ActivityIndicator
                   size="small"
-                  color={theme.colors.textInverse}
+                  color={colors.textInverse}
                 />
               ) : (
                 <Text style={styles.addButtonText}>Add Customer</Text>
@@ -590,332 +920,3 @@ export default function CustomerManagementScreen({
     </View>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.xl,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  // Search
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    margin: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    paddingVertical: 2,
-  },
-  // Customer list
-  listContent: {
-    padding: theme.spacing.md,
-    paddingTop: 0,
-    paddingBottom: theme.spacing.xxxl,
-  },
-  customerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
-  customerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  customerAvatarText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  customerInfo: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  customerPhone: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  customerMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  customerMetaText: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  customerMetaDot: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  // FAB
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    ...theme.shadows.lg,
-  },
-  // Modal shared
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalCloseButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  editButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveButton: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-  },
-  saveButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  // Detail
-  detailScroll: {
-    flex: 1,
-  },
-  detailContent: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  profileCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    alignItems: "center",
-    ...theme.shadows.sm,
-    marginBottom: theme.spacing.md,
-  },
-  profileAvatarLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.md,
-  },
-  profileAvatarText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  profilePhone: {
-    fontSize: 15,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-    marginBottom: 2,
-  },
-  profileAddress: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-    textAlign: "center",
-    marginBottom: theme.spacing.sm,
-  },
-  callButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.success,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.xs,
-  },
-  callButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  // Stats
-  statsRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    alignItems: "center",
-    ...theme.shadows.sm,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 2,
-    textAlign: "center",
-  },
-  statLabel: {
-    fontSize: 10,
-    color: theme.colors.textTertiary,
-    textAlign: "center",
-  },
-  // Purchases
-  detailSectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  purchaseRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  purchaseInfo: {
-    flex: 1,
-  },
-  purchaseBill: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  purchaseDate: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  purchaseAmount: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.primaryDark,
-  },
-  // Edit fields
-  editFields: {
-    width: "100%",
-    marginTop: theme.spacing.md,
-  },
-  editFieldLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
-  },
-  editFieldInput: {
-    backgroundColor: theme.colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-  },
-  editFieldMultiline: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
-  // Add button
-  addButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: "center",
-    marginTop: theme.spacing.lg,
-  },
-  addButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-});

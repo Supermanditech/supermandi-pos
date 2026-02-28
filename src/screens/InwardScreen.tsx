@@ -24,7 +24,7 @@ import { getCatalog, type CatalogProduct } from "../services/api/catalogApi";
 import { getSuppliers, type Supplier } from "../services/api/suppliersApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { formatMoney } from "../utils/money";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 
 // GO-LIVE-235: High stock threshold for warning
 const HIGH_STOCK_THRESHOLD = 100;
@@ -52,6 +52,8 @@ function SupplierPicker({
   suppliers: InwardSupplier[];
   suppliersLoading: boolean;
 }) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
   return (
@@ -70,13 +72,13 @@ function SupplierPicker({
           >
             <Text style={styles.pickerOptionText}>No supplier (manual entry)</Text>
             {!selectedSupplier && (
-              <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary} />
+              <MaterialCommunityIcons name="check" size={20} color={colors.primary} />
             )}
           </Pressable>
 
           {suppliersLoading ? (
             <View style={styles.suppliersLoading}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.suppliersLoadingText}>Loading suppliers...</Text>
             </View>
           ) : suppliers.length === 0 ? (
@@ -96,7 +98,7 @@ function SupplierPicker({
               >
                 <Text style={styles.pickerOptionText}>{supplier.name}</Text>
                 {selectedSupplier?.id === supplier.id && (
-                  <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary} />
+                  <MaterialCommunityIcons name="check" size={20} color={colors.primary} />
                 )}
               </Pressable>
             ))
@@ -118,6 +120,8 @@ function InwardItemRow({
   onUpdatePrice: (priceMinor: number) => void;
   onRemove: () => void;
 }) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [qtyText, setQtyText] = useState(String(item.quantity));
   const [priceText, setPriceText] = useState((item.purchasePriceMinor / 100).toFixed(2));
 
@@ -175,7 +179,7 @@ function InwardItemRow({
               <MaterialCommunityIcons
                 name={isPriceGood ? "trending-down" : isPriceBad ? "trending-up" : "minus"}
                 size={10}
-                color={isPriceGood ? theme.colors.success : isPriceBad ? theme.colors.error : theme.colors.textSecondary}
+                color={isPriceGood ? colors.success : isPriceBad ? colors.error : colors.textSecondary}
               />
               <Text style={[
                 styles.marketBadgeText,
@@ -223,7 +227,7 @@ function InwardItemRow({
         </View>
 
         <Pressable style={styles.removeButton} onPress={onRemove}>
-          <MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.colors.error} />
+          <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
         </Pressable>
       </View>
     </View>
@@ -236,6 +240,8 @@ export default function InwardScreen({
   onOpenScanner,
   onBack,
 }: InwardScreenProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
@@ -444,7 +450,7 @@ export default function InwardScreen({
 
     return (
       <Pressable style={styles.searchRow} onPress={() => handleAddProduct(item)}>
-        <MaterialCommunityIcons name="package-variant" size={18} color={theme.colors.primary} />
+        <MaterialCommunityIcons name="package-variant" size={18} color={colors.primary} />
         <View style={styles.searchRowInfo}>
           <Text style={styles.searchRowName} numberOfLines={1}>
             {item.name}
@@ -465,7 +471,7 @@ export default function InwardScreen({
         <View style={styles.headerRow}>
           {onBack && (
             <Pressable style={styles.backButton} onPress={onBack}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
           <Text style={styles.headerTitle}>Stock Inward</Text>
@@ -474,18 +480,18 @@ export default function InwardScreen({
 
         {/* Supplier Selector */}
         <Pressable style={styles.supplierSelector} onPress={() => setShowSupplierPicker(true)}>
-          <MaterialCommunityIcons name="truck-delivery" size={18} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="truck-delivery" size={18} color={colors.primary} />
           <Text style={styles.supplierText} numberOfLines={1}>
             {selectedSupplier?.name ?? "Select supplier (optional)"}
           </Text>
-          <MaterialCommunityIcons name="chevron-down" size={20} color={theme.colors.textSecondary} />
+          <MaterialCommunityIcons name="chevron-down" size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={[styles.searchBar, showSearch && styles.searchBarActive]}>
-          <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textSecondary} />
+          <MaterialCommunityIcons name="magnify" size={18} color={colors.textSecondary} />
           <TextInput
             ref={searchInputRef}
             style={styles.searchInput}
@@ -493,12 +499,12 @@ export default function InwardScreen({
             onChangeText={setSearchQuery}
             onFocus={() => setShowSearch(true)}
             placeholder="Search product by name or barcode"
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             returnKeyType="search"
           />
           {searchQuery ? (
             <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
-              <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.textSecondary} />
+              <MaterialCommunityIcons name="close-circle" size={18} color={colors.textSecondary} />
             </Pressable>
           ) : null}
         </View>
@@ -508,7 +514,7 @@ export default function InwardScreen({
           onPress={onOpenScanner}
           disabled={scanDisabled}
         >
-          <MaterialCommunityIcons name="barcode-scan" size={20} color={theme.colors.textInverse} />
+          <MaterialCommunityIcons name="barcode-scan" size={20} color={colors.textInverse} />
         </Pressable>
       </View>
 
@@ -519,7 +525,7 @@ export default function InwardScreen({
           <View style={styles.searchDropdown}>
             {searchLoading ? (
               <View style={styles.searchLoading}>
-                <ActivityIndicator color={theme.colors.primary} />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : searchResults.length > 0 ? (
               <FlatList
@@ -557,7 +563,7 @@ export default function InwardScreen({
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="package-variant" size={48} color={theme.colors.textTertiary} />
+            <MaterialCommunityIcons name="package-variant" size={48} color={colors.textTertiary} />
             <Text style={styles.emptyTitle}>{t('inward.noItems')}</Text>
             <Text style={styles.emptySubtitle}>{t('inward.addItemsHint')}</Text>
           </View>
@@ -582,7 +588,7 @@ export default function InwardScreen({
             value={notes}
             onChangeText={setNotes}
             placeholder="Add notes (optional)"
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={2}
           />
@@ -602,7 +608,7 @@ export default function InwardScreen({
           disabled={!canSubmit}
         >
           {submitting ? (
-            <ActivityIndicator color={theme.colors.textInverse} />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
             <Text style={styles.submitText}>Submit Inward</Text>
           )}
@@ -622,17 +628,17 @@ export default function InwardScreen({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   headerRow: {
     flexDirection: "row",
@@ -648,7 +654,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   supplierSelector: {
     flexDirection: "row",
@@ -657,15 +663,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   supplierText: {
     flex: 1,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   searchContainer: {
     flexDirection: "row",
@@ -681,25 +687,25 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   searchBarActive: {
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     paddingVertical: 0,
   },
   scanButton: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -717,10 +723,10 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     maxHeight: 300,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     zIndex: 20,
     ...theme.shadows.md,
   },
@@ -738,7 +744,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   searchRowInfo: {
     flex: 1,
@@ -746,17 +752,17 @@ const styles = StyleSheet.create({
   searchRowName: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   searchRowMeta: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   searchRowPrice: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.primaryDark,
+    color: colors.primaryDark,
   },
   searchEmpty: {
     padding: 24,
@@ -764,7 +770,7 @@ const styles = StyleSheet.create({
   },
   searchEmptyText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -779,18 +785,18 @@ const styles = StyleSheet.create({
   cartTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   clearText: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.error,
+    color: colors.error,
   },
   itemRow: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 12,
     marginBottom: 10,
   },
@@ -800,11 +806,11 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   itemBarcode: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   // GO-LIVE-241: Market price comparison styles
   itemMetaRow: {
@@ -820,28 +826,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
   },
   marketBadgeGood: {
-    backgroundColor: theme.colors.successSoft,
+    backgroundColor: colors.successSoft,
   },
   marketBadgeBad: {
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
   },
   marketBadgeText: {
     fontSize: 9,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   marketBadgeTextGood: {
-    color: theme.colors.success,
+    color: colors.success,
   },
   marketBadgeTextBad: {
-    color: theme.colors.error,
+    color: colors.error,
   },
   itemInputWarning: {
-    borderColor: theme.colors.error,
-    backgroundColor: theme.colors.errorSoft,
+    borderColor: colors.error,
+    backgroundColor: colors.errorSoft,
   },
   itemControls: {
     flexDirection: "row",
@@ -854,19 +860,19 @@ const styles = StyleSheet.create({
   itemFieldLabel: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   itemInput: {
     width: 50,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
     fontSize: 13,
     textAlign: "center",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   itemInputWide: {
     width: 70,
@@ -879,12 +885,12 @@ const styles = StyleSheet.create({
   itemTotalLabel: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   itemTotalValue: {
     fontSize: 14,
     fontWeight: "800",
-    color: theme.colors.primaryDark,
+    color: colors.primaryDark,
   },
   removeButton: {
     width: 36,
@@ -900,25 +906,25 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   notesContainer: {
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
   notesInput: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     minHeight: 60,
     textAlignVertical: "top",
   },
@@ -927,9 +933,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
     paddingHorizontal: 16,
     paddingTop: 12,
     ...theme.shadows.lg,
@@ -942,15 +948,15 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   totalValue: {
     fontSize: 18,
     fontWeight: "800",
-    color: theme.colors.primaryDark,
+    color: colors.primaryDark,
   },
   submitButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
@@ -958,7 +964,7 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 15,
     fontWeight: "800",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   modalOverlay: {
     flex: 1,
@@ -966,7 +972,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
   },
   pickerSheet: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 16,
@@ -977,13 +983,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
     marginBottom: 16,
   },
   pickerTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   pickerOption: {
@@ -994,17 +1000,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     marginBottom: 8,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   pickerOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primaryLight + "15",
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight + "15",
   },
   pickerOptionText: {
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   // TICKET-001: Supplier loading styles
   suppliersLoading: {
@@ -1016,12 +1022,12 @@ const styles = StyleSheet.create({
   },
   suppliersLoadingText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   noSuppliersText: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     paddingVertical: 16,
   },
-});
+}); }

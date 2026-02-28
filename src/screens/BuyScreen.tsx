@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { CatalogProductCard } from "../components/buy/CatalogProductCard";
 import { CategoryFilter } from "../components/buy/CategoryFilter";
 import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
@@ -68,6 +68,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 // =============================================================================
 
 export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
+  const colors = useThemeColors();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -394,12 +395,15 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   // Key extractor
   const keyExtractor = useCallback((item: CatalogProduct) => item.id, []);
 
+  // Styles (dynamic, theme-aware)
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // List footer component
   const ListFooter = useMemo(() => {
     if (loadingMore) {
       return (
         <View style={styles.footer}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       );
     }
@@ -424,7 +428,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
         </View>
@@ -436,7 +440,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         <MaterialCommunityIcons
           name="package-variant"
           size={48}
-          color={theme.colors.textTertiary}
+          color={colors.textTertiary}
         />
         <Text style={styles.emptyText}>
           {hasActiveFilters
@@ -473,14 +477,14 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           <MaterialCommunityIcons
             name="magnify"
             size={20}
-            color={theme.colors.textTertiary}
+            color={colors.textTertiary}
             style={styles.searchIcon}
           />
           <TextInput
             ref={searchInputRef}
             style={styles.searchInput}
             placeholder={t('buy.searchProducts')}
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
@@ -492,7 +496,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
-                color={theme.colors.textTertiary}
+                color={colors.textTertiary}
               />
             </Pressable>
           )}
@@ -503,7 +507,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             <MaterialCommunityIcons
               name="barcode-scan"
               size={24}
-              color={theme.colors.textInverse}
+              color={colors.textInverse}
             />
           </Pressable>
         )}
@@ -514,7 +518,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             <MaterialCommunityIcons
               name="credit-card-clock"
               size={14}
-              color={theme.colors.success}
+              color={colors.success}
             />
             <Text style={styles.bnplBadgeText}>{t('buy.bnplAvailable', { defaultValue: 'BNPL' })}</Text>
           </View>
@@ -605,7 +609,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           <MaterialCommunityIcons
             name={isOffline ? "wifi-off" : "database-clock-outline"}
             size={16}
-            color={theme.colors.warning}
+            color={colors.warning}
           />
           <Text style={styles.offlineBannerText}>
             {isOffline
@@ -631,7 +635,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>"{debouncedQuery}"</Text>
               <Pressable onPress={handleClearSearch}>
-                <MaterialCommunityIcons name="close" size={14} color={theme.colors.textSecondary} />
+                <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
           )}
@@ -639,7 +643,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>{selectedCategory}</Text>
               <Pressable onPress={() => setSelectedCategory(null)}>
-                <MaterialCommunityIcons name="close" size={14} color={theme.colors.textSecondary} />
+                <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
           )}
@@ -647,7 +651,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>{selectedStockStatus.replace("_", " ")}</Text>
               <Pressable onPress={() => setSelectedStockStatus("all")}>
-                <MaterialCommunityIcons name="close" size={14} color={theme.colors.textSecondary} />
+                <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
           )}
@@ -660,7 +664,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       {/* Product Grid */}
       {loading && filteredProducts.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading catalog...</Text>
         </View>
       ) : (
@@ -683,8 +687,8 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -704,7 +708,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           <MaterialCommunityIcons
             name="cart"
             size={24}
-            color={theme.colors.textInverse}
+            color={colors.textInverse}
           />
           <View style={styles.cartBadge}>
             <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
@@ -735,26 +739,26 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
     gap: theme.spacing.sm,
   },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: theme.borderRadius.lg,
     paddingHorizontal: theme.spacing.sm,
   },
@@ -765,7 +769,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     fontSize: 15,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   clearIcon: {
     padding: theme.spacing.xs,
@@ -773,7 +777,7 @@ const styles = StyleSheet.create({
   scanButton: {
     width: 44,
     height: 44,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: theme.borderRadius.lg,
     alignItems: "center",
     justifyContent: "center",
@@ -782,7 +786,7 @@ const styles = StyleSheet.create({
   bnplBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.successSoft,
+    backgroundColor: colors.successSoft,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.borderRadius.md,
@@ -791,7 +795,7 @@ const styles = StyleSheet.create({
   bnplBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.success,
+    color: colors.success,
   },
   gridContent: {
     paddingHorizontal: theme.spacing.xs,
@@ -808,7 +812,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   emptyContainer: {
     flex: 1,
@@ -819,18 +823,18 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
   },
   clearButton: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primaryLight,
+    backgroundColor: colors.primaryLight,
     borderRadius: theme.borderRadius.md,
     marginTop: theme.spacing.sm,
   },
   clearButtonText: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -840,7 +844,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   cartFab: {
     position: "absolute",
@@ -848,7 +852,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     ...theme.shadows.lg,
@@ -860,7 +864,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: theme.colors.error,
+    backgroundColor: colors.error,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
@@ -868,51 +872,51 @@ const styles = StyleSheet.create({
   cartBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   // TICKET-003: Stock Filter Styles
   stockFilterContainer: {
     flexDirection: "row",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
     gap: theme.spacing.sm,
   },
   stockChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   stockChipActive: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
   },
   stockChipLow: {
-    backgroundColor: theme.colors.warningSoft,
-    borderColor: theme.colors.warning,
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.warning,
   },
   stockChipOut: {
-    backgroundColor: theme.colors.errorSoft,
-    borderColor: theme.colors.error,
+    backgroundColor: colors.errorSoft,
+    borderColor: colors.error,
   },
   stockChipText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   stockChipTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   stockChipTextLow: {
-    color: theme.colors.warning,
+    color: colors.warning,
   },
   stockChipTextOut: {
-    color: theme.colors.error,
+    color: colors.error,
   },
   activeFiltersContainer: {
     flexDirection: "row",
@@ -920,12 +924,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
     gap: theme.spacing.xs,
   },
   activeFiltersLabel: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginRight: theme.spacing.xs,
   },
   activeFilterChip: {
@@ -933,13 +937,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: theme.borderRadius.sm,
     gap: 4,
   },
   activeFilterText: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   clearAllButton: {
     paddingHorizontal: theme.spacing.sm,
@@ -948,7 +952,7 @@ const styles = StyleSheet.create({
   clearAllText: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.error,
+    color: colors.error,
   },
   // T-146: Offline banner styles
   offlineBanner: {
@@ -956,28 +960,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.warning + "40",
+    borderBottomColor: colors.warning + "40",
     gap: theme.spacing.sm,
   },
   offlineBannerText: {
     flex: 1,
     fontSize: 12,
-    color: theme.colors.warning,
+    color: colors.warning,
     fontWeight: "500",
   },
   offlineRefreshButton: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.borderRadius.sm,
-    backgroundColor: theme.colors.warning + "20",
+    backgroundColor: colors.warning + "20",
   },
   offlineRefreshText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.warning,
+    color: colors.warning,
   },
-});
+}); }
 
 export default BuyScreen;

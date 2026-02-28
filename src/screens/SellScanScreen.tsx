@@ -54,7 +54,7 @@ import {
   submitHidBuffer,
   wasHidCommitRecent,
 } from "../services/hidScannerService";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { CategoryRail, DEMO_CATEGORIES, fmcgCategoryToItem, type CategoryItem } from "../components/sell/CategoryRail";
 import { useSettingsStore } from "../stores/settingsStore";
 import { getFmcgCategories, getCategoryProducts, type CategoryProduct } from "../services/api/catalogApi";
@@ -316,6 +316,8 @@ function CartItemRow({
   onSaveDefaultPrice,
   onRemoveItem
 }: CartItemRowProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isCompactRow = screenWidth <= SMALL_SCREEN_WIDTH || screenHeight <= SMALL_SCREEN_HEIGHT;
   const [priceInput, setPriceInput] = useState(formatPriceInput(item.priceMinor));
@@ -422,7 +424,7 @@ function CartItemRow({
   const removeDisabled = controlsDisabled;
   const qtyHighlightBg = qtyHighlight.interpolate({
     inputRange: [0, 1],
-    outputRange: ["transparent", theme.colors.errorSoft],
+    outputRange: ["transparent", colors.errorSoft],
   });
 
   const commitDefaultPrice = async (priceMinor: number) => {
@@ -577,7 +579,7 @@ function CartItemRow({
             <MaterialCommunityIcons
               name="pencil-outline"
               size={12}
-              color={theme.colors.textTertiary}
+              color={colors.textTertiary}
               style={styles.editHintIcon}
             />
           ) : null}
@@ -599,7 +601,7 @@ function CartItemRow({
           <MaterialCommunityIcons
             name="trash-can-outline"
             size={20}
-            color={removeDisabled ? theme.colors.textTertiary : theme.colors.error}
+            color={removeDisabled ? colors.textTertiary : colors.error}
           />
         </Pressable>
       </View>
@@ -617,7 +619,7 @@ function CartItemRow({
               onEndEditing={handlePriceCommit}
               onTouchStart={(event) => event?.stopPropagation?.()}
               placeholder="₹0.00"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               keyboardType="decimal-pad"
               editable={canEdit}
             />
@@ -640,7 +642,7 @@ function CartItemRow({
             hitSlop={8}
             accessibilityLabel={`Decrease ${item.name}`}
           >
-            <MaterialCommunityIcons name="minus" size={18} color={controlsDisabled ? theme.colors.textTertiary : theme.colors.primary} />
+            <MaterialCommunityIcons name="minus" size={18} color={controlsDisabled ? colors.textTertiary : colors.primary} />
           </Pressable>
           <Animated.Text style={[styles.qtyValue, { transform: [{ scale: qtyScale }] }]} maxFontSizeMultiplier={1.2}>
             {item.quantity}
@@ -652,7 +654,7 @@ function CartItemRow({
             hitSlop={8}
             accessibilityLabel={`Increase ${item.name}`}
           >
-            <MaterialCommunityIcons name="plus" size={18} color={controlsDisabled ? theme.colors.textTertiary : theme.colors.primary} />
+            <MaterialCommunityIcons name="plus" size={18} color={controlsDisabled ? colors.textTertiary : colors.primary} />
           </Pressable>
         </Animated.View>
 
@@ -689,14 +691,14 @@ function CartItemRow({
       {/* CART-STOCK-ERROR-NOT-SHOWN: Show error badge when stock data failed to resolve */}
       {showStock && stockValue === null && (
         <View style={styles.priceErrorRow}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={14} color={theme.colors.warning} />
+          <MaterialCommunityIcons name="alert-circle-outline" size={14} color={colors.warning} />
           <Text style={styles.priceErrorText}>Stock data unavailable — check connection</Text>
         </View>
       )}
       {/* GL-RJ-007: Price resolution error warning */}
       {hasPriceError && (
         <View style={styles.priceErrorRow}>
-          <MaterialCommunityIcons name="alert" size={14} color={theme.colors.warning} />
+          <MaterialCommunityIcons name="alert" size={14} color={colors.warning} />
           <Text style={styles.priceErrorText}>
             {priceErrorMessage || "Price lookup failed - enter price manually"}
           </Text>
@@ -721,6 +723,8 @@ export default function SellScanScreen({
   onSellOnboardingClose,
   isScanningActive = false,
 }: SellScanScreenProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -2406,11 +2410,11 @@ export default function SellScanScreen({
           <Image source={{ uri: item.imageUrl }} style={styles.skuCardImage} />
         ) : (
           <View style={styles.skuCardImageFallback}>
-            <MaterialCommunityIcons name="package-variant" size={20} color={theme.colors.textTertiary} />
+            <MaterialCommunityIcons name="package-variant" size={20} color={colors.textTertiary} />
           </View>
         )}
         <View style={styles.skuCardTop}>
-          <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
+          <MaterialCommunityIcons name="barcode" size={16} color={colors.textSecondary} />
           <View style={styles.pricePill}>
             <Text style={styles.priceText}>{priceLabel}</Text>
           </View>
@@ -2470,9 +2474,9 @@ export default function SellScanScreen({
       accessibilityLabel="Expand categories"
     >
       <View style={styles.categoryPillIconWrap}>
-        <MaterialCommunityIcons name="view-grid" size={22} color={theme.colors.textInverse} />
+        <MaterialCommunityIcons name="view-grid" size={22} color={colors.textInverse} />
       </View>
-      <MaterialCommunityIcons name="chevron-down" size={18} color={theme.colors.textSecondary} />
+      <MaterialCommunityIcons name="chevron-down" size={18} color={colors.textSecondary} />
     </Pressable>
   );
 
@@ -2520,7 +2524,7 @@ export default function SellScanScreen({
             <Image source={{ uri: item.imageUrl }} style={styles.addRowImage} />
           ) : (
             <View style={styles.addRowImageFallback}>
-              <MaterialCommunityIcons name="package-variant" size={16} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="package-variant" size={16} color={colors.textTertiary} />
             </View>
           )}
           <View style={styles.addRowInfo}>
@@ -2600,7 +2604,7 @@ export default function SellScanScreen({
           variant === "expanded" && styles.searchSegmentExpanded,
         ]}
       >
-        <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textPrimary} />
+        <MaterialCommunityIcons name="magnify" size={18} color={colors.textPrimary} />
         <TextInput
           ref={addInputRef}
           style={styles.searchInput}
@@ -2632,7 +2636,7 @@ export default function SellScanScreen({
           onKeyPress={handleAddKeyPress}
           onSubmitEditing={handleAddSubmitEditing}
           placeholder={t('sell.searchProducts')}
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           testID="sell-search-input"
           autoCapitalize="none"
           autoCorrect={false}
@@ -2650,7 +2654,7 @@ export default function SellScanScreen({
             <MaterialCommunityIcons
               name="close-circle"
               size={18}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         ) : null}
@@ -2667,7 +2671,7 @@ export default function SellScanScreen({
         accessibilityLabel="Open camera scanner"
         testID="sell-scan-btn"
       >
-        <MaterialCommunityIcons name="camera" size={18} color={theme.colors.textInverse} />
+        <MaterialCommunityIcons name="camera" size={18} color={colors.textInverse} />
         {variant === "collapsed" ? (
           <Text style={styles.scanSegmentText} numberOfLines={1}>
             {t('sell.scanProduct')}
@@ -2701,14 +2705,14 @@ export default function SellScanScreen({
           <MaterialCommunityIcons
             name="barcode-scan"
             size={18}
-            color={theme.colors.textTertiary}
+            color={colors.textTertiary}
           />
           <TextInput
             style={styles.manualBarcodeInput}
             value={manualBarcode}
             onChangeText={setManualBarcode}
             placeholder="Enter barcode manually"
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             keyboardType="numeric"
             returnKeyType="done"
             onSubmitEditing={handleManualBarcodeSubmit}
@@ -2726,7 +2730,7 @@ export default function SellScanScreen({
               <MaterialCommunityIcons
                 name="arrow-right-circle"
                 size={22}
-                color={theme.colors.primary}
+                color={colors.primary}
               />
             </Pressable>
           )}
@@ -2769,7 +2773,7 @@ export default function SellScanScreen({
                 style={styles.searchHistoryChip}
                 onPress={() => handleSearchHistoryTap(term)}
               >
-                <MaterialCommunityIcons name="history" size={14} color={theme.colors.textSecondary} />
+                <MaterialCommunityIcons name="history" size={14} color={colors.textSecondary} />
                 <Text style={styles.searchHistoryChipText} numberOfLines={1}>{term}</Text>
               </Pressable>
             ))}
@@ -2810,7 +2814,7 @@ export default function SellScanScreen({
           ListFooterComponent={
             addLoading ? (
               <View style={styles.footerLoading}>
-                <ActivityIndicator color={theme.colors.primary} />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : null
           }
@@ -3136,7 +3140,7 @@ export default function SellScanScreen({
                 hitSlop={8}
                 accessibilityLabel="Clear category filter"
               >
-                <MaterialCommunityIcons name="close-circle" size={16} color={theme.colors.textTertiary} />
+                <MaterialCommunityIcons name="close-circle" size={16} color={colors.textTertiary} />
               </Pressable>
             </View>
           )}
@@ -3158,7 +3162,7 @@ export default function SellScanScreen({
             ListFooterComponent={
               catalogLoading ? (
                 <View style={styles.footerLoading}>
-                  <ActivityIndicator color={theme.colors.primary} />
+                  <ActivityIndicator color={colors.primary} />
                 </View>
               ) : null
             }
@@ -3193,7 +3197,7 @@ export default function SellScanScreen({
         >
           <View style={styles.cartBarLeft}>
             <View style={styles.cartBarIconWrap}>
-              <MaterialCommunityIcons name="cart" size={20} color={theme.colors.surface} />
+              <MaterialCommunityIcons name="cart" size={20} color={colors.surface} />
               <View style={styles.cartBarBadge}>
                 <Text style={styles.cartBarBadgeText}>{itemCount}</Text>
               </View>
@@ -3223,7 +3227,7 @@ export default function SellScanScreen({
           </View>
           <View style={styles.cartBarRight}>
             <PriceText style={styles.cartBarTotal}>{totalLabel}</PriceText>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.primary} />
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.primary} />
           </View>
         </Pressable>
       ) : null}
@@ -3260,7 +3264,7 @@ export default function SellScanScreen({
                   <MaterialCommunityIcons
                     name="arrow-left"
                     size={22}
-                    color={theme.colors.primary}
+                    color={colors.primary}
                   />
                 </Pressable>
                 <View style={styles.cartTitleWrap}>
@@ -3388,7 +3392,7 @@ export default function SellScanScreen({
                     placeholder={
                       discountType === "percentage" ? "%" : "INR"
                     }
-                    placeholderTextColor={theme.colors.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     keyboardType="numeric"
                     editable={canEditCart}
                   />
@@ -3457,7 +3461,7 @@ export default function SellScanScreen({
                   value={sellOnboardingNameInput}
                   onChangeText={handleSellOnboardingNameChange}
                   placeholder="Enter product name"
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   autoCapitalize="words"
                   autoCorrect={false}
                   editable={!sellOnboardingBusy}
@@ -3470,7 +3474,7 @@ export default function SellScanScreen({
                   value={sellOnboardingPrice}
                   onChangeText={handleSellOnboardingPriceChange}
                   placeholder="Enter sell price"
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="decimal-pad"
                   editable={!sellOnboardingBusy}
                 />
@@ -3482,7 +3486,7 @@ export default function SellScanScreen({
                   value={sellOnboardingPurchasePrice}
                   onChangeText={handleSellOnboardingPurchasePriceChange}
                   placeholder="Enter purchase price"
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="decimal-pad"
                   editable={!sellOnboardingBusy}
                 />
@@ -3494,7 +3498,7 @@ export default function SellScanScreen({
                   value={sellOnboardingStock}
                   onChangeText={handleSellOnboardingStockChange}
                   placeholder="Enter stock (0 if unknown)"
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="number-pad"
                   editable={!sellOnboardingBusy}
                 />
@@ -3528,7 +3532,7 @@ export default function SellScanScreen({
                 disabled={!sellOnboardingFormValid || sellOnboardingBusy}
               >
                 {sellOnboardingBusy ? (
-                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                  <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
                   <Text style={styles.onboardingButtonTextInverse}>Save & Add</Text>
                 )}
@@ -3567,7 +3571,7 @@ export default function SellScanScreen({
                   value={editProductName}
                   onChangeText={(v) => { setEditProductName(v); setEditProductError(null); }}
                   placeholder="Product name"
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   editable={!editProductBusy}
                 />
               </View>
@@ -3578,7 +3582,7 @@ export default function SellScanScreen({
                   value={editProductPrice}
                   onChangeText={(v) => { setEditProductPrice(v); setEditProductError(null); }}
                   placeholder="Enter sell price"
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="decimal-pad"
                   editable={!editProductBusy}
                 />
@@ -3590,7 +3594,7 @@ export default function SellScanScreen({
                   value={editProductStock}
                   onChangeText={(v) => { setEditProductStock(v); setEditProductError(null); }}
                   placeholder="Enter stock qty"
-                  placeholderTextColor={theme.colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="number-pad"
                   editable={!editProductBusy}
                 />
@@ -3623,7 +3627,7 @@ export default function SellScanScreen({
                 disabled={editProductBusy}
               >
                 {editProductBusy ? (
-                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                  <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
                   <Text style={styles.onboardingButtonTextInverse}>Save</Text>
                 )}
@@ -3670,7 +3674,7 @@ export default function SellScanScreen({
                           value={editorName}
                           onChangeText={setEditorName}
                           placeholder="Product name"
-                          placeholderTextColor={theme.colors.textTertiary}
+                          placeholderTextColor={colors.textTertiary}
                           editable={!editorDisabled}
                         />
                       )}
@@ -3715,7 +3719,7 @@ export default function SellScanScreen({
                         value={editorPurchasePrice}
                         onChangeText={setEditorPurchasePrice}
                         placeholder="Optional"
-                        placeholderTextColor={theme.colors.textTertiary}
+                        placeholderTextColor={colors.textTertiary}
                         keyboardType="decimal-pad"
                         editable={!editorDisabled}
                       />
@@ -3738,7 +3742,7 @@ export default function SellScanScreen({
                           value={editorDiscountValue}
                           onChangeText={setEditorDiscountValue}
                           placeholder="0"
-                          placeholderTextColor={theme.colors.textTertiary}
+                          placeholderTextColor={colors.textTertiary}
                           keyboardType="decimal-pad"
                           editable={!editorDisabled}
                         />
@@ -3844,7 +3848,7 @@ export default function SellScanScreen({
             hitSlop={8}
             accessibilityLabel="Cancel recording"
           >
-            <MaterialCommunityIcons name="close" size={20} color={theme.colors.error} />
+            <MaterialCommunityIcons name="close" size={20} color={colors.error} />
           </Pressable>
 
           {/* Recording indicator with duration */}
@@ -3861,7 +3865,7 @@ export default function SellScanScreen({
             onPress={stopAndSubmitVoice}
             accessibilityLabel="Stop and submit"
           >
-            <MaterialCommunityIcons name="send" size={20} color={theme.colors.textInverse} />
+            <MaterialCommunityIcons name="send" size={20} color={colors.textInverse} />
           </Pressable>
         </View>
       ) : voiceEnabled ? (
@@ -3879,12 +3883,12 @@ export default function SellScanScreen({
           accessibilityLabel="Tap or hold to speak"
         >
           {voiceButtonState === "processing" ? (
-            <ActivityIndicator size={22} color={theme.colors.textInverse} />
+            <ActivityIndicator size={22} color={colors.textInverse} />
           ) : (
             <MaterialCommunityIcons
               name="microphone-outline"
               size={22}
-              color={theme.colors.textInverse}
+              color={colors.textInverse}
             />
           )}
         </Pressable>
@@ -3919,7 +3923,7 @@ export default function SellScanScreen({
                     value={bulkQtyValue}
                     onChangeText={setBulkQtyValue}
                     placeholder="Enter quantity"
-                    placeholderTextColor={theme.colors.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     keyboardType="number-pad"
                     autoFocus
                   />
@@ -3963,10 +3967,10 @@ export default function SellScanScreen({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   // SD-CATEGORY: Row container for rail + product grid
   mainContentRow: {
@@ -3988,7 +3992,7 @@ const styles = StyleSheet.create({
   },
   categoryFilterText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   list: {
     flex: 1,
@@ -4017,15 +4021,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     gap: 8,
   },
   manualBarcodeInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     paddingVertical: 0,
   },
   manualBarcodeSubmit: {
@@ -4035,14 +4039,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     position: "relative",
     overflow: "hidden",
   },
   searchBarExpanded: {
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
   },
   searchBarDisabled: {
     opacity: 0.6,
@@ -4052,7 +4056,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -4062,7 +4066,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     paddingVertical: 0,
   },
   // VOICE-001: Floating voice button (FAB)
@@ -4073,7 +4077,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
@@ -4084,7 +4088,7 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   voiceFabRecording: {
-    backgroundColor: theme.colors.error,
+    backgroundColor: colors.error,
     transform: [{ scale: 1.1 }],
   },
   voiceFabWithCart: {
@@ -4097,7 +4101,7 @@ const styles = StyleSheet.create({
     bottom: 16,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 28,
     paddingVertical: 8,
     paddingHorizontal: 8,
@@ -4109,7 +4113,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
     zIndex: 100,
     borderWidth: 2,
-    borderColor: theme.colors.error,
+    borderColor: colors.error,
   },
   voiceRecordingPanelWithCart: {
     bottom: 76,
@@ -4118,7 +4122,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -4132,12 +4136,12 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: theme.colors.error,
+    backgroundColor: colors.error,
   },
   voiceRecordingText: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     fontVariant: ["tabular-nums"],
     minWidth: 40,
   },
@@ -4145,7 +4149,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -4155,7 +4159,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   scanSegmentExpanded: {
     position: "absolute",
@@ -4171,14 +4175,14 @@ const styles = StyleSheet.create({
   scanSegmentText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   searchPanel: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     padding: 10,
     gap: 8,
     ...theme.shadows.sm,
@@ -4189,7 +4193,7 @@ const styles = StyleSheet.create({
   searchPanelTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   searchPanelList: {
     maxHeight: 260,
@@ -4205,7 +4209,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   addRowInfo: {
     flex: 1,
@@ -4213,11 +4217,11 @@ const styles = StyleSheet.create({
   addRowName: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   addRowMeta: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   addRowRight: {
@@ -4226,13 +4230,13 @@ const styles = StyleSheet.create({
   addRowPrice: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   addRowStock: {
     marginTop: 2,
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   cartOverlay: {
     flex: 1,
@@ -4251,11 +4255,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   onboardingSheet: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 16,
     gap: 12,
     ...theme.shadows.sm,
@@ -4265,7 +4269,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 4,
     borderRadius: 999,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
     marginBottom: 6,
   },
   onboardingHeader: {
@@ -4274,16 +4278,16 @@ const styles = StyleSheet.create({
   onboardingTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   onboardingSubtitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   onboardingBarcode: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   onboardingFields: {
     gap: 10,
@@ -4294,27 +4298,27 @@ const styles = StyleSheet.create({
   onboardingLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   onboardingInput: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   onboardingHelper: {
     fontSize: 10,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginTop: 2,
   },
   onboardingError: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.error,
+    color: colors.error,
   },
   onboardingActions: {
     flexDirection: "row",
@@ -4327,12 +4331,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   onboardingButtonPrimary: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   onboardingButtonGhost: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   onboardingButtonDisabled: {
     opacity: 0.6,
@@ -4340,20 +4344,20 @@ const styles = StyleSheet.create({
   onboardingButtonText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   onboardingButtonTextInverse: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   cartSheet: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 16,
     gap: 10,
     ...theme.shadows.sm,
@@ -4376,7 +4380,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 5,
     borderRadius: 999,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
   },
   cartHeader: {
     flexDirection: "row",
@@ -4397,20 +4401,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: theme.colors.errorSoft,
+    backgroundColor: colors.errorSoft,
   },
   clearCartText: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.error,
+    color: colors.error,
   },
   backButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -4420,14 +4424,14 @@ const styles = StyleSheet.create({
   cartTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   cartTitleCompact: {
     fontSize: 16,
   },
   cartSubtitle: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   cartList: {
@@ -4450,7 +4454,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginVertical: 4,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
@@ -4502,15 +4506,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   discountBadgeFree: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: colors.warning,
   },
   discountBadgeText: {
     fontSize: 9,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   discountBadgeTextFree: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   cartItemMainRow: {
     flexDirection: "row",
@@ -4525,7 +4529,7 @@ const styles = StyleSheet.create({
   cartItemPriceText: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   cartItemTotalBox: {
     minWidth: 70,
@@ -4535,21 +4539,21 @@ const styles = StyleSheet.create({
   cartItemTotalText: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.primaryDark,
+    color: colors.primaryDark,
   },
   cartItemOriginalPrice: {
     fontSize: 10,
     fontWeight: "500",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textDecorationLine: "line-through",
   },
   cartItemDiscountedPrice: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.success,
+    color: colors.success,
   },
   cartItemFreePrice: {
-    color: theme.colors.warning,
+    color: colors.warning,
     fontWeight: "800",
   },
   cartItemInfo: {
@@ -4564,7 +4568,7 @@ const styles = StyleSheet.create({
   cartItemName: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     flexShrink: 1,
     minWidth: 0,
   },
@@ -4577,7 +4581,7 @@ const styles = StyleSheet.create({
   },
   cartItemMeta: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   cartItemPriceRow: {
@@ -4596,7 +4600,7 @@ const styles = StyleSheet.create({
   cartPriceLabel: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   cartPriceInput: {
@@ -4604,36 +4608,36 @@ const styles = StyleSheet.create({
     minWidth: 120,
     minHeight: 52,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 10,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     textAlignVertical: "center",
   },
   cartPriceInputCompact: {
     minWidth: 65,
     maxWidth: 80,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 6,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 6,
     paddingVertical: 4,
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   cartPriceValue: {
     flex: 1,
     minWidth: 120,
     minHeight: 52,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     paddingHorizontal: 10,
     paddingVertical: 10,
     justifyContent: "center",
@@ -4641,7 +4645,7 @@ const styles = StyleSheet.create({
   cartPriceValueText: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   cartItemMetaRow: {
     flexDirection: "row",
@@ -4668,21 +4672,21 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surface,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   qtyButtonDisabled: {
     opacity: 0.5,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   qtyValue: {
     minWidth: 24,
     textAlign: "center",
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   stockRow: {
     flexDirection: "row",
@@ -4690,14 +4694,14 @@ const styles = StyleSheet.create({
   },
   stockLabel: {
     fontSize: 10,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   stockLabelWarning: {
-    color: theme.colors.warning,
+    color: colors.warning,
     fontWeight: "600",
   },
   stockLabelCritical: {
-    color: theme.colors.error,
+    color: colors.error,
     fontWeight: "700",
   },
   // GL-RJ-007: Price resolution error styles
@@ -4710,7 +4714,7 @@ const styles = StyleSheet.create({
   },
   priceErrorText: {
     fontSize: 11,
-    color: theme.colors.warning,
+    color: colors.warning,
     fontWeight: "500",
     fontStyle: "italic",
     flex: 1,
@@ -4718,12 +4722,12 @@ const styles = StyleSheet.create({
   cartItemTotalLabel: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   cartItemTotal: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   cartItemSummary: {
     alignItems: "flex-end",
@@ -4737,19 +4741,19 @@ const styles = StyleSheet.create({
   removeItemButton: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.errorSoft,
-    backgroundColor: theme.colors.errorSoft,
+    borderColor: colors.errorSoft,
+    backgroundColor: colors.errorSoft,
     padding: 8,
   },
   removeItemButtonDisabled: {
     opacity: 0.4,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderColor: theme.colors.border,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
   },
   discountSection: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 12,
     padding: 12,
     gap: 10,
@@ -4767,12 +4771,12 @@ const styles = StyleSheet.create({
   discountTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   discountApplied: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   discountControls: {
     flexDirection: "row",
@@ -4786,35 +4790,35 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
   },
   discountChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   discountChipActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   discountChipText: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   discountChipTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   discountInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   inputDisabled: {
     opacity: 0.6,
@@ -4833,29 +4837,29 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   totalValue: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   totalLabelStrong: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   totalValueStrong: {
     fontSize: 15,
     fontWeight: "800",
-    color: theme.colors.primaryDark,
+    color: colors.primaryDark,
     fontVariant: ["tabular-nums"],
   },
   totalCta: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -4870,12 +4874,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   cartFooter: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     gap: 8,
     flexShrink: 0,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   cartFooterCompact: {
     gap: 6,
@@ -4884,12 +4888,12 @@ const styles = StyleSheet.create({
   totalCtaText: {
     fontSize: 14,
     fontWeight: "800",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   totalCtaAmount: {
     fontSize: 14,
     fontWeight: "800",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
     fontVariant: ["tabular-nums"],
   },
   categoryPillCard: {
@@ -4897,8 +4901,8 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
@@ -4908,7 +4912,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: theme.colors.success,
+    backgroundColor: colors.success,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -4924,10 +4928,10 @@ const styles = StyleSheet.create({
   // CAT-006: First SKU card - fills remaining space
   skuCardFirstRow: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 12,
     justifyContent: "center",
     shadowColor: "#000",
@@ -4942,10 +4946,10 @@ const styles = StyleSheet.create({
   },
   skuCard: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 12,
     marginBottom: 12,
     minHeight: 120,
@@ -4962,31 +4966,31 @@ const styles = StyleSheet.create({
   pricePill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   priceText: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   skuName: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   skuBarcode: {
     marginTop: 6,
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   skuStock: {
     marginTop: 4,
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   emptyState: {
     alignItems: "center",
@@ -4994,7 +4998,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   footerLoading: {
     paddingVertical: 16,
@@ -5004,9 +5008,9 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     bottom: 12,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -5017,8 +5021,8 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   cartBarFlash: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
   },
   cartBarLeft: {
     justifyContent: "center",
@@ -5028,7 +5032,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -5039,7 +5043,7 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: colors.accent,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
@@ -5047,7 +5051,7 @@ const styles = StyleSheet.create({
   cartBarBadgeText: {
     fontSize: 10,
     fontWeight: "800",
-    color: theme.colors.surface,
+    color: colors.surface,
   },
   cartBarCenter: {
     flex: 1,
@@ -5060,8 +5064,8 @@ const styles = StyleSheet.create({
   },
   cartBarLocked: {
     borderWidth: 1,
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warningSoft,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningSoft,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 999,
@@ -5069,12 +5073,12 @@ const styles = StyleSheet.create({
   cartBarLockedText: {
     fontSize: 10,
     fontWeight: "700",
-    color: theme.colors.warning,
+    color: colors.warning,
   },
   cartBarCount: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   cartBarRight: {
     flexDirection: "row",
@@ -5084,7 +5088,7 @@ const styles = StyleSheet.create({
   cartBarTotal: {
     fontSize: 18,
     fontWeight: "800",
-    color: theme.colors.primary,
+    color: colors.primary,
     fontVariant: ["tabular-nums"],
   },
   cartBarBottom: {
@@ -5096,12 +5100,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "500",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   cartBarUndo: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.accent,
+    color: colors.accent,
   },
   editOverlay: {
     flex: 1,
@@ -5112,11 +5116,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   editSheet: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 16,
     gap: 12,
     ...theme.shadows.sm,
@@ -5126,13 +5130,13 @@ const styles = StyleSheet.create({
     width: 46,
     height: 4,
     borderRadius: 999,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
     marginBottom: 6,
   },
   editTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   editContent: {
     gap: 12,
@@ -5140,16 +5144,16 @@ const styles = StyleSheet.create({
   editName: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   editBarcode: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   editStock: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   editFields: {
     gap: 8,
@@ -5171,33 +5175,33 @@ const styles = StyleSheet.create({
   editLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   editInput: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   editInputCompact: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   editNameReadonly: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     paddingVertical: 6,
     paddingHorizontal: 2,
   },
@@ -5216,56 +5220,56 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
   },
   editDiscountTypeBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
   },
   editDiscountTypeBtnActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   editDiscountTypeBtnText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   editDiscountTypeBtnTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   editFreeBtn: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
   },
   editFreeBtnActive: {
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warningSoft,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningSoft,
   },
   editFreeBtnText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   editFreeBtnTextActive: {
-    color: theme.colors.warning,
+    color: colors.warning,
   },
   editInputError: {
-    borderColor: theme.colors.error,
+    borderColor: colors.error,
     borderWidth: 2,
   },
   editLabelError: {
-    color: theme.colors.error,
+    color: colors.error,
   },
   editStockError: {
-    color: theme.colors.error,
+    color: colors.error,
     fontWeight: "700",
   },
   editDiscountRow: {
@@ -5278,30 +5282,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
   },
   editDiscountChip: {
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
   editDiscountChipActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   editDiscountChipText: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   editDiscountChipTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   editDiscountChipFree: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: colors.warning,
   },
   editDiscountChipTextFree: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   editDiscountInput: {
     flex: 1,
@@ -5311,7 +5315,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.warning,
+    color: colors.warning,
     textAlign: "center",
   },
   editTotalRow: {
@@ -5321,12 +5325,12 @@ const styles = StyleSheet.create({
   },
   editTotalLabel: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   editTotalValue: {
     fontSize: 14,
     fontWeight: "800",
-    color: theme.colors.primaryDark,
+    color: colors.primaryDark,
     fontVariant: ["tabular-nums"],
   },
   editActions: {
@@ -5340,12 +5344,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   editButtonPrimary: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   editButtonGhost: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   editButtonDisabled: {
     opacity: 0.6,
@@ -5353,12 +5357,12 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   editButtonTextInverse: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   editRemoveButton: {
     alignItems: "center",
@@ -5370,7 +5374,7 @@ const styles = StyleSheet.create({
   editRemoveText: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.error,
+    color: colors.error,
   },
   ctaDisabled: {
     opacity: 0.5,
@@ -5391,13 +5395,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   searchHistoryChipText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     maxWidth: 100,
   },
   searchHistoryClear: {
@@ -5406,7 +5410,7 @@ const styles = StyleSheet.create({
   },
   searchHistoryClearText: {
     fontSize: 12,
-    color: theme.colors.primary,
+    color: colors.primary,
     fontWeight: "600",
   },
   // T-134: Product image styles for SKU cards
@@ -5421,7 +5425,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 6,
-    backgroundColor: theme.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
@@ -5429,19 +5433,19 @@ const styles = StyleSheet.create({
   },
   // T-136: Out-of-stock text
   addRowStockOut: {
-    color: theme.colors.error,
+    color: colors.error,
   },
   // T-136: Substitution suggestion styles
   substituteSection: {
     paddingHorizontal: 8,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   substituteLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: 4,
   },
   substituteCard: {
@@ -5449,26 +5453,26 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginRight: 8,
     borderRadius: 8,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     minWidth: 100,
   },
   substituteCardName: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     maxWidth: 120,
   },
   substituteCardPrice: {
     fontSize: 11,
-    color: theme.colors.primary,
+    color: colors.primary,
     fontWeight: "700",
     marginTop: 2,
   },
   substituteCardStock: {
     fontSize: 10,
-    color: theme.colors.success,
+    color: colors.success,
     marginTop: 1,
   },
   // T-137: Autocomplete dropdown styles
@@ -5477,9 +5481,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
     marginTop: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     maxHeight: 200,
     ...theme.shadows.md,
   },
@@ -5490,17 +5494,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   autocompleteName: {
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   autocompleteBarcode: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginLeft: 8,
   },
   // T-134: Product image in search result rows
@@ -5513,8 +5517,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 6,
-    backgroundColor: theme.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
     alignItems: "center",
     justifyContent: "center",
   },
-});
+}); }

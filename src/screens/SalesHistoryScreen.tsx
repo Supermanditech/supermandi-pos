@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 import { listBills } from "../services/api/billingApi";
@@ -30,6 +30,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "SalesHistory">;
 const PAGE_SIZE = 50;
 
 export default function SalesHistoryScreen() {
+  const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
   // GL-CRIT-0095: Use i18n for error messages
@@ -87,6 +88,145 @@ export default function SalesHistoryScreen() {
     }
   }, [isFocused]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 16
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8
+    },
+    backButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4
+    },
+    backText: {
+      color: colors.primary,
+      fontWeight: "700"
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary
+    },
+    refresh: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6
+    },
+    refreshText: {
+      color: colors.primary,
+      fontWeight: "700"
+    },
+    error: {
+      color: colors.error,
+      marginBottom: 8
+    },
+    list: {
+      paddingBottom: 20
+    },
+    billRow: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      marginBottom: 10,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    billMain: {
+      flex: 1
+    },
+    billRef: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textPrimary
+    },
+    billMeta: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2
+    },
+    badgeRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 6
+    },
+    badge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    badgeText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.textSecondary
+    },
+    badgeWarning: {
+      backgroundColor: colors.warningSoft,
+      borderColor: colors.warning
+    },
+    badgeWarningText: {
+      color: colors.warning
+    },
+    billRight: {
+      alignItems: "flex-end",
+      gap: 4
+    },
+    billAmount: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.primaryDark
+    },
+    empty: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginTop: 16
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      marginTop: 4,
+      textAlign: "center"
+    },
+    ctaButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 20,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      backgroundColor: colors.primary,
+      borderRadius: 10
+    },
+    ctaButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textInverse
+    }
+  }), [colors]);
+
   const renderItem = ({ item }: { item: BillSummary }) => (
     <Pressable
       style={styles.billRow}
@@ -108,7 +248,7 @@ export default function SalesHistoryScreen() {
       </View>
       <View style={styles.billRight}>
         <Text style={styles.billAmount}>{formatMoney(item.totalMinor, item.currency)}</Text>
-        <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textSecondary} />
+        <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
       </View>
     </Pressable>
   );
@@ -136,7 +276,7 @@ export default function SalesHistoryScreen() {
             style={styles.ctaButton}
             onPress={() => (navigation as any).navigate("SellScan")}
           >
-            <MaterialCommunityIcons name="cart-outline" size={18} color={theme.colors.textInverse} />
+            <MaterialCommunityIcons name="cart-outline" size={18} color={colors.textInverse} />
             <Text style={styles.ctaButtonText}>{t('history.makeFirstSale', 'Make Your First Sale')}</Text>
           </Pressable>
         </EmptyState>
@@ -150,15 +290,15 @@ export default function SalesHistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
           onEndReached={onEndReached}
           onEndReachedThreshold={0.3}
           ListFooterComponent={loadingMore ? (
             <View style={{ paddingVertical: 16, alignItems: "center" }}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <ActivityIndicator size="small" color={colors.primary} />
             </View>
           ) : null}
         />
@@ -166,142 +306,3 @@ export default function SalesHistoryScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: 16
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4
-  },
-  backText: {
-    color: theme.colors.primary,
-    fontWeight: "700"
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary
-  },
-  refresh: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6
-  },
-  refreshText: {
-    color: theme.colors.primary,
-    fontWeight: "700"
-  },
-  error: {
-    color: theme.colors.error,
-    marginBottom: 8
-  },
-  list: {
-    paddingBottom: 20
-  },
-  billRow: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 12,
-    marginBottom: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  billMain: {
-    flex: 1
-  },
-  billRef: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary
-  },
-  billMeta: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2
-  },
-  badgeRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 6
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textSecondary
-  },
-  badgeWarning: {
-    backgroundColor: theme.colors.warningSoft,
-    borderColor: theme.colors.warning
-  },
-  badgeWarningText: {
-    color: theme.colors.warning
-  },
-  billRight: {
-    alignItems: "flex-end",
-    gap: 4
-  },
-  billAmount: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.primaryDark
-  },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginTop: 16
-  },
-  emptyText: {
-    color: theme.colors.textSecondary,
-    marginTop: 4,
-    textAlign: "center"
-  },
-  ctaButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10
-  },
-  ctaButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textInverse
-  }
-});

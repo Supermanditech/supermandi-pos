@@ -15,7 +15,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme, colors } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { GRNItemRow } from "../components/grn/GRNItemRow";
 import * as orderApi from "../services/api/orderApi";
 import type { PurchaseOrderWithItems, PurchaseOrderItem } from "../services/api/orderApi";
@@ -53,6 +53,7 @@ export default function GRNScreen({
   onSuccess,
   onNavigateToBarcodeSheet,
 }: GRNScreenProps) {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
   // State
@@ -399,6 +400,9 @@ export default function GRNScreen({
     }
   }, [storeId, order, canSubmit, receiveQuantities, totals, notes, orderId, onSuccess, onNavigateToBarcodeSheet, excessItems]);
 
+  // Styles (dynamic, theme-aware)
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // Render item
   const renderItem = useCallback(
     ({ item }: { item: PurchaseOrderItem }) => (
@@ -412,7 +416,7 @@ export default function GRNScreen({
             <MaterialCommunityIcons
               name={selectedItems.has(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
               size={24}
-              color={selectedItems.has(item.id) ? theme.colors.primary : theme.colors.textTertiary}
+              color={selectedItems.has(item.id) ? colors.primary : colors.textTertiary}
             />
           </Pressable>
         )}
@@ -442,14 +446,14 @@ export default function GRNScreen({
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
           )}
           <Text style={styles.headerTitle}>Receive Goods</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading order...</Text>
         </View>
       </View>
@@ -466,7 +470,7 @@ export default function GRNScreen({
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
           )}
@@ -476,7 +480,7 @@ export default function GRNScreen({
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.errorText}>{error || "Order not found"}</Text>
           <Pressable style={styles.retryButton} onPress={loadOrder}>
@@ -496,7 +500,7 @@ export default function GRNScreen({
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         )}
@@ -523,12 +527,12 @@ export default function GRNScreen({
           <MaterialCommunityIcons
             name="barcode-scan"
             size={20}
-            color={theme.colors.textTertiary}
+            color={colors.textTertiary}
           />
           <TextInput
             style={styles.searchInput}
             placeholder="Scan barcode or search..."
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
@@ -539,7 +543,7 @@ export default function GRNScreen({
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
-                color={theme.colors.textTertiary}
+                color={colors.textTertiary}
               />
             </Pressable>
           )}
@@ -555,7 +559,7 @@ export default function GRNScreen({
             <MaterialCommunityIcons
               name={bulkMode ? "checkbox-multiple-marked" : "checkbox-multiple-blank-outline"}
               size={16}
-              color={bulkMode ? theme.colors.textInverse : theme.colors.primary}
+              color={bulkMode ? colors.textInverse : colors.primary}
             />
             <Text style={[styles.quickActionText, bulkMode && styles.quickActionTextActive]}>
               {bulkMode ? "Done" : "Bulk"}
@@ -565,7 +569,7 @@ export default function GRNScreen({
             <MaterialCommunityIcons
               name="check-all"
               size={16}
-              color={theme.colors.primary}
+              color={colors.primary}
             />
             <Text style={styles.quickActionText}>All</Text>
           </Pressable>
@@ -573,9 +577,9 @@ export default function GRNScreen({
             <MaterialCommunityIcons
               name="refresh"
               size={16}
-              color={theme.colors.textSecondary}
+              color={colors.textSecondary}
             />
-            <Text style={[styles.quickActionText, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>
               Clear
             </Text>
           </Pressable>
@@ -614,7 +618,7 @@ export default function GRNScreen({
         <TextInput
           style={styles.notesInput}
           placeholder="Add notes (optional)..."
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -680,13 +684,13 @@ export default function GRNScreen({
           disabled={!canSubmit}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color={theme.colors.textInverse} />
+            <ActivityIndicator size="small" color={colors.textInverse} />
           ) : (
             <>
               <MaterialCommunityIcons
                 name="package-down"
                 size={20}
-                color={theme.colors.textInverse}
+                color={colors.textInverse}
               />
               <Text style={styles.submitButtonText}>
                 Receive {totals.receivingItems > 0 ? `(${totals.receivingItems})` : ""}
@@ -703,19 +707,20 @@ export default function GRNScreen({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     marginRight: theme.spacing.sm,
@@ -727,11 +732,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginTop: 2,
   },
   // T-249: Reorder context badge
@@ -759,7 +764,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   errorContainer: {
     flex: 1,
@@ -769,7 +774,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     marginTop: theme.spacing.md,
   },
@@ -777,25 +782,25 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: theme.borderRadius.md,
   },
   retryButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   searchContainer: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
@@ -804,7 +809,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     paddingVertical: theme.spacing.xs,
   },
   quickActions: {
@@ -821,25 +826,25 @@ const styles = StyleSheet.create({
   quickActionText: {
     fontSize: 12,
     fontWeight: "500",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   listContent: {
     padding: theme.spacing.md,
   },
   notesContainer: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   notesInput: {
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     minHeight: 40,
     maxHeight: 60,
     textAlignVertical: "top",
@@ -847,9 +852,9 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
     ...theme.shadows.lg,
   },
   summary: {
@@ -863,40 +868,40 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textTransform: "uppercase",
   },
   summaryValue: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   submitButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.success,
+    backgroundColor: colors.success,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
     gap: theme.spacing.sm,
   },
   submitButtonDisabled: {
-    backgroundColor: theme.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   // GO-LIVE-248: Bulk mode styles
   quickActionActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.borderRadius.sm,
   },
   quickActionTextActive: {
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   bulkSelectionBar: {
     flexDirection: "row",
@@ -905,25 +910,25 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   bulkSelectButton: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: theme.borderRadius.sm,
   },
   bulkSelectButtonText: {
     fontSize: 11,
     fontWeight: "500",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   bulkSelectedCount: {
     flex: 1,
     textAlign: "right",
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   itemRowContainer: {
     flexDirection: "row",
@@ -940,16 +945,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bulkActionBar: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   bulkActionTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   bulkActionButtons: {
@@ -959,21 +964,22 @@ const styles = StyleSheet.create({
   bulkActionButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: theme.borderRadius.md,
     alignItems: "center",
   },
   bulkActionButtonClear: {
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   bulkActionButtonText: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   bulkActionButtonTextClear: {
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
-});
+  });
+}

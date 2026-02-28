@@ -5,7 +5,7 @@
  * All URLs use GCP-correct paths per ROUTING_SPEC.json.
  */
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
   Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { colors, typography, spacing, theme } from "../theme";
+import { typography, spacing, theme, useThemeColors } from "../theme";
 
 interface HelpScreenProps {
   onBack: () => void;
@@ -37,6 +37,8 @@ function openUrl(url: string, fallbackMsg: string) {
 }
 
 export default function HelpScreen({ onBack }: HelpScreenProps) {
+  const colors = useThemeColors();
+
   const handleEmailPress = () => {
     openUrl(
       `mailto:${SUPPORT_EMAIL}`,
@@ -55,6 +57,97 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
       "Please install WhatsApp to use this feature."
     );
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxxl,
+    },
+    backButton: {
+      marginBottom: spacing.md,
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: typography.h3.fontSize,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      fontSize: typography.bodySmall.fontSize,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+    },
+    whatsappCard: {
+      borderColor: colors.whatsapp + "30",
+    },
+    cardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: spacing.sm,
+    },
+    cardTitle: {
+      fontSize: typography.label.fontSize,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    cardDescription: {
+      fontSize: typography.caption.fontSize,
+      color: colors.textSecondary,
+    },
+    actionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: spacing.xs,
+    },
+    emailText: {
+      fontSize: typography.bodySmall.fontSize,
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    responseTime: {
+      fontSize: typography.caption.fontSize,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+    },
+    linkRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    linkText: {
+      fontSize: typography.bodySmall.fontSize,
+      color: colors.primary,
+      fontWeight: "500",
+    },
+    companyInfo: {
+      alignItems: "center",
+      marginTop: spacing.xl,
+    },
+    companyText: {
+      fontSize: typography.caption.fontSize,
+      color: colors.textTertiary,
+    },
+  }), [colors]);
 
   return (
     <ScrollView
@@ -227,94 +320,3 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  backButton: {
-    marginBottom: spacing.md,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.bodySmall.fontSize,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  whatsappCard: {
-    borderColor: colors.whatsapp + "30",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: spacing.sm,
-  },
-  cardTitle: {
-    fontSize: typography.label.fontSize,
-    fontWeight: "700",
-    color: colors.textPrimary,
-  },
-  cardDescription: {
-    fontSize: typography.caption.fontSize,
-    color: colors.textSecondary,
-  },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.xs,
-  },
-  emailText: {
-    fontSize: typography.bodySmall.fontSize,
-    color: colors.primary,
-    fontWeight: "600",
-  },
-  responseTime: {
-    fontSize: typography.caption.fontSize,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
-  },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  linkText: {
-    fontSize: typography.bodySmall.fontSize,
-    color: colors.primary,
-    fontWeight: "500",
-  },
-  companyInfo: {
-    alignItems: "center",
-    marginTop: spacing.xl,
-  },
-  companyText: {
-    fontSize: typography.caption.fontSize,
-    color: colors.textTertiary,
-  },
-});

@@ -1,7 +1,7 @@
 // T-199: Daily Closing Printable Report
 // Today's report with summary cards, top products, payment split, print + share
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { BackHeader } from "../components/ui/BackHeader";
 import { apiClient } from "../services/api/apiClient";
@@ -234,6 +234,8 @@ interface DailyReportScreenProps {
 export default function DailyReportScreen({
   onBack,
 }: DailyReportScreenProps) {
+  const colors = useThemeColors();
+
   const [selectedDate, setSelectedDate] = useState<string>(
     getYYYYMMDD(new Date())
   );
@@ -332,6 +334,216 @@ export default function DailyReportScreen({
     }
   }, [report]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: theme.spacing.xl,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    errorText: {
+      marginTop: theme.spacing.md,
+      fontSize: 14,
+      color: colors.error,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.md,
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    // Date picker
+    datePicker: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    dateArrow: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dateArrowDisabled: {
+      opacity: 0.3,
+    },
+    dateCenter: {
+      alignItems: "center",
+    },
+    dateText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    dateBadge: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.primary,
+      marginTop: 2,
+    },
+    scrollContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.xl,
+    },
+    // Summary
+    summaryRow: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    summaryCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      alignItems: "center",
+      ...theme.shadows.sm,
+    },
+    summaryValue: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.primaryDark,
+      marginBottom: 4,
+    },
+    summaryLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    // Payment split
+    paymentSplitCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    paymentRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    paymentLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+    },
+    paymentLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    paymentAmount: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    // Top products table
+    topProductsCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    tableHeader: {
+      flexDirection: "row",
+      paddingBottom: theme.spacing.sm,
+      borderBottomWidth: 2,
+      borderBottomColor: colors.border,
+    },
+    tableHeaderText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textTertiary,
+      textTransform: "uppercase",
+    },
+    tableRight: {
+      flex: 1,
+      textAlign: "right",
+    },
+    tableRow: {
+      flexDirection: "row",
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    tableCellText: {
+      fontSize: 13,
+      color: colors.textPrimary,
+    },
+    tableCellBold: {
+      fontWeight: "700",
+      color: colors.primaryDark,
+    },
+    // Actions
+    actions: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.lg,
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      gap: theme.spacing.xs,
+    },
+    printButton: {
+      backgroundColor: colors.primary,
+    },
+    actionButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    shareButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    shareButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       <BackHeader title="Daily Report" onBack={onBack} />
@@ -342,7 +554,7 @@ export default function DailyReportScreen({
           <MaterialCommunityIcons
             name="chevron-left"
             size={28}
-            color={theme.colors.textPrimary}
+            color={colors.textPrimary}
           />
         </Pressable>
         <View style={styles.dateCenter}>
@@ -357,7 +569,7 @@ export default function DailyReportScreen({
           <MaterialCommunityIcons
             name="chevron-right"
             size={28}
-            color={isToday ? theme.colors.textTertiary : theme.colors.textPrimary}
+            color={isToday ? colors.textTertiary : colors.textPrimary}
           />
         </Pressable>
       </View>
@@ -365,7 +577,7 @@ export default function DailyReportScreen({
       {/* Loading */}
       {loading && (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading report...</Text>
         </View>
       )}
@@ -376,7 +588,7 @@ export default function DailyReportScreen({
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable
@@ -425,7 +637,7 @@ export default function DailyReportScreen({
                   <MaterialCommunityIcons
                     name="cash"
                     size={18}
-                    color={theme.colors.success}
+                    color={colors.success}
                   />
                   <Text style={styles.paymentLabel}>Cash</Text>
                 </View>
@@ -440,7 +652,7 @@ export default function DailyReportScreen({
                   <MaterialCommunityIcons
                     name="cellphone"
                     size={18}
-                    color={theme.colors.primary}
+                    color={colors.primary}
                   />
                   <Text style={styles.paymentLabel}>UPI</Text>
                 </View>
@@ -455,7 +667,7 @@ export default function DailyReportScreen({
                   <MaterialCommunityIcons
                     name="clock-outline"
                     size={18}
-                    color={theme.colors.warning}
+                    color={colors.warning}
                   />
                   <Text style={styles.paymentLabel}>Due</Text>
                 </View>
@@ -470,7 +682,7 @@ export default function DailyReportScreen({
                   <MaterialCommunityIcons
                     name="credit-card-outline"
                     size={18}
-                    color={theme.colors.accent}
+                    color={colors.accent}
                   />
                   <Text style={styles.paymentLabel}>Card</Text>
                 </View>
@@ -534,14 +746,14 @@ export default function DailyReportScreen({
               {printing ? (
                 <ActivityIndicator
                   size="small"
-                  color={theme.colors.textInverse}
+                  color={colors.textInverse}
                 />
               ) : (
                 <>
                   <MaterialCommunityIcons
                     name="printer-outline"
                     size={18}
-                    color={theme.colors.textInverse}
+                    color={colors.textInverse}
                   />
                   <Text style={styles.actionButtonText}>Print Report</Text>
                 </>
@@ -555,14 +767,14 @@ export default function DailyReportScreen({
               {sharing ? (
                 <ActivityIndicator
                   size="small"
-                  color={theme.colors.primary}
+                  color={colors.primary}
                 />
               ) : (
                 <>
                   <MaterialCommunityIcons
                     name="share-variant"
                     size={18}
-                    color={theme.colors.primary}
+                    color={colors.primary}
                   />
                   <Text style={styles.shareButtonText}>Share Report</Text>
                 </>
@@ -574,217 +786,3 @@ export default function DailyReportScreen({
     </View>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.xl,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  errorText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.error,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  // Date picker
-  datePicker: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  dateArrow: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dateArrowDisabled: {
-    opacity: 0.3,
-  },
-  dateCenter: {
-    alignItems: "center",
-  },
-  dateText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  dateBadge: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.primary,
-    marginTop: 2,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  // Summary
-  summaryRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    alignItems: "center",
-    ...theme.shadows.sm,
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.primaryDark,
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  // Payment split
-  paymentSplitCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  paymentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  paymentLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  paymentLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  paymentAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  // Top products table
-  topProductsCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: theme.colors.border,
-  },
-  tableHeaderText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textTertiary,
-    textTransform: "uppercase",
-  },
-  tableRight: {
-    flex: 1,
-    textAlign: "right",
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  tableCellText: {
-    fontSize: 13,
-    color: theme.colors.textPrimary,
-  },
-  tableCellBold: {
-    fontWeight: "700",
-    color: theme.colors.primaryDark,
-  },
-  // Actions
-  actions: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.xs,
-  },
-  printButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  shareButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
-  shareButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-});

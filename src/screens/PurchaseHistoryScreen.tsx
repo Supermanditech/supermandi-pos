@@ -1,7 +1,7 @@
 // PurchaseHistoryScreen - Purchase History Report
 // GO-LIVE-006: Shows all purchase transactions from ledger
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { useProductsStore } from "../stores/productsStore";
 import { getPurchaseHistory, type LedgerEntry } from "../services/api/inventoryApi";
 import { formatMoney } from "../utils/money";
 import { formatDate, formatTime } from "../i18n/formatters";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { usePurchaseCartStore, type DraftPOItem } from "../stores/purchaseCartStore";
 import { useTranslation } from "react-i18next";
 
@@ -66,11 +66,92 @@ function groupEntriesByReference(entries: LedgerEntry[]): GroupedPurchase[] {
 }
 
 function PurchaseCard({ purchase, onQuickReorder }: { purchase: GroupedPurchase; onQuickReorder?: (purchase: GroupedPurchase) => void }) {
+  const colors = useThemeColors();
   // AUDIT-POS-025: Look up product names from store instead of showing truncated UUIDs
   const products = useProductsStore((s) => s.products);
   const { t } = useTranslation();
   const isManual = purchase.referenceId.startsWith("INWARD-") || purchase.referenceId.startsWith("OPEN-");
   const referenceLabel = isManual ? "Manual Inward" : purchase.referenceId;
+
+  const styles = useMemo(() => StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginBottom: 12,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 12,
+    },
+    cardTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      flex: 1,
+    },
+    cardTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      flex: 1,
+    },
+    cardMeta: {
+      alignItems: "flex-end",
+    },
+    cardDate: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    cardTime: {
+      fontSize: 11,
+      color: colors.textSecondary,
+    },
+    cardBody: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 16,
+    },
+    cardStat: {
+      gap: 2,
+    },
+    cardStatRight: {
+      flex: 1,
+      alignItems: "flex-end",
+    },
+    cardStatLabel: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    cardStatValue: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    quickReorderButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      marginTop: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: colors.accentSoft,
+    },
+    quickReorderText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+  }), [colors]);
 
   return (
     <View style={styles.card}>
@@ -79,7 +160,7 @@ function PurchaseCard({ purchase, onQuickReorder }: { purchase: GroupedPurchase;
           <MaterialCommunityIcons
             name={isManual ? "package-down" : "truck-delivery"}
             size={18}
-            color={theme.colors.primary}
+            color={colors.primary}
           />
           <Text style={styles.cardTitle} numberOfLines={1}>
             {referenceLabel}
@@ -103,7 +184,7 @@ function PurchaseCard({ purchase, onQuickReorder }: { purchase: GroupedPurchase;
         {/* T-201: Show total value from unitCost */}
         <View style={styles.cardStat}>
           <Text style={styles.cardStatLabel}>Value</Text>
-          <Text style={[styles.cardStatValue, { color: theme.colors.primary }]}>
+          <Text style={[styles.cardStatValue, { color: colors.primary }]}>
             {formatMoney(purchase.totalValue)}
           </Text>
         </View>
@@ -124,7 +205,7 @@ function PurchaseCard({ purchase, onQuickReorder }: { purchase: GroupedPurchase;
           style={styles.quickReorderButton}
           onPress={() => onQuickReorder(purchase)}
         >
-          <MaterialCommunityIcons name="cart-plus" size={16} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="cart-plus" size={16} color={colors.primary} />
           <Text style={styles.quickReorderText}>{t("reorder.quickReorder")}</Text>
         </Pressable>
       )}
@@ -133,6 +214,7 @@ function PurchaseCard({ purchase, onQuickReorder }: { purchase: GroupedPurchase;
 }
 
 export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNavigateToBuy }: PurchaseHistoryScreenProps) {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const products = useProductsStore((s) => s.products);
@@ -195,16 +277,134 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
   const totalPurchases = purchases.length;
   const totalItems = purchases.reduce((sum, p) => sum + p.entries.length, 0);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    refreshButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    summaryBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: colors.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    summaryItem: {
+      flex: 1,
+      alignItems: "center",
+    },
+    summaryValue: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.primaryDark,
+    },
+    summaryLabel: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    summaryDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: colors.border,
+      marginHorizontal: 16,
+    },
+    centerContent: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    errorText: {
+      fontSize: 14,
+      color: colors.error,
+      marginTop: 12,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: 16,
+      paddingVertical: 10,
+      paddingHorizontal: 24,
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+    },
+    retryText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginTop: 16,
+    },
+    emptyText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 4,
+      textAlign: "center",
+    },
+    ctaButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 20,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      backgroundColor: colors.primary,
+      borderRadius: 10,
+    },
+    ctaButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textInverse,
+    },
+    listContent: {
+      padding: 16,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Pressable style={styles.backButton} onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>Purchase History</Text>
         <Pressable style={styles.refreshButton} onPress={() => loadData(true)}>
-          <MaterialCommunityIcons name="refresh" size={22} color={theme.colors.textSecondary} />
+          <MaterialCommunityIcons name="refresh" size={22} color={colors.textSecondary} />
         </Pressable>
       </View>
 
@@ -224,11 +424,11 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
       {/* Content */}
       {loading ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : error ? (
         <View style={styles.centerContent}>
-          <MaterialCommunityIcons name="alert-circle" size={48} color={theme.colors.error} />
+          <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={() => loadData()}>
             <Text style={styles.retryText}>Retry</Text>
@@ -236,14 +436,14 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
         </View>
       ) : purchases.length === 0 ? (
         <View style={styles.centerContent}>
-          <MaterialCommunityIcons name="package-variant" size={48} color={theme.colors.textTertiary} />
+          <MaterialCommunityIcons name="package-variant" size={48} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>No purchase history</Text>
           <Text style={styles.emptyText}>
             Stock inward transactions will appear here.
           </Text>
           {onNavigateToInward && (
             <Pressable style={styles.ctaButton} onPress={onNavigateToInward}>
-              <MaterialCommunityIcons name="package-down" size={18} color={theme.colors.textInverse} />
+              <MaterialCommunityIcons name="package-down" size={18} color={colors.textInverse} />
               <Text style={styles.ctaButtonText}>Add Stock Inward</Text>
             </Pressable>
           )}
@@ -258,7 +458,7 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => loadData(true)}
-              colors={[theme.colors.primary]}
+              colors={[colors.primary]}
             />
           }
         />
@@ -266,198 +466,3 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  summaryBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.primaryDark,
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  summaryDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: theme.colors.border,
-    marginHorizontal: 16,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 14,
-    color: theme.colors.error,
-    marginTop: 12,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 8,
-  },
-  retryText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginTop: 16,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  ctaButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-  },
-  ctaButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textInverse,
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 14,
-    marginBottom: 12,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  cardTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    flex: 1,
-  },
-  cardMeta: {
-    alignItems: "flex-end",
-  },
-  cardDate: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  cardTime: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-  },
-  cardBody: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 16,
-  },
-  cardStat: {
-    gap: 2,
-  },
-  cardStatRight: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  cardStatLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-  },
-  cardStatValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  quickReorderButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  quickReorderText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-});

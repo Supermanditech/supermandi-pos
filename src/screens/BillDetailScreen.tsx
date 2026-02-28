@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
@@ -11,7 +11,7 @@ import { shareBillPdf, shareBillWhatsApp } from "../services/billing/billShare";
 import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
-import { theme, colors } from "../theme";
+import { theme, useThemeColors } from "../theme";
 // T-122: Standardized back header
 import { BackHeader } from "../components/ui/BackHeader";
 import { asError } from "../utils/errorUtils";
@@ -24,6 +24,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "BillDetail">;
 type Rt = RouteProp<RootStackParamList, "BillDetail">;
 
 export default function BillDetailScreen() {
+  const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { saleId, billRef } = route.params;
@@ -135,6 +136,183 @@ export default function BillDetailScreen() {
     }
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    backButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    backText: {
+      color: colors.primary,
+      fontWeight: "700",
+    },
+    headerSpacer: {
+      width: 48,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    summaryCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      marginBottom: 12,
+      gap: 6,
+    },
+    summaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    summaryLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    summaryValue: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    summaryMeta: {
+      marginTop: 4,
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    listContent: {
+      paddingBottom: 24,
+      gap: 12,
+    },
+    itemRow: {
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 10,
+      marginBottom: 10,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    itemInfo: {
+      flex: 1,
+      marginRight: 8,
+    },
+    itemName: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    itemMeta: {
+      marginTop: 2,
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    itemTotals: {
+      alignItems: "flex-end",
+      gap: 2,
+    },
+    itemTotal: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.primaryDark,
+    },
+    itemUnit: {
+      fontSize: 11,
+      color: colors.textSecondary,
+    },
+    footer: {
+      gap: 12,
+    },
+    actions: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    actionSecondary: {
+      backgroundColor: colors.surfaceAlt,
+    },
+    actionPrimary: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    actionWhatsApp: {
+      backgroundColor: colors.whatsapp,
+      borderColor: colors.whatsapp,
+    },
+    actionButtonDisabled: {
+      opacity: 0.6,
+    },
+    actionText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    actionTextPrimary: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textInverse,
+    },
+    totalsCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      gap: 6,
+    },
+    totalRow: {
+      marginTop: 4,
+    },
+    totalLabel: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    totalValue: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.primaryDark,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    loadingText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    error: {
+      color: colors.error,
+    },
+  }), [colors]);
+
   const header = snapshot ? (
     <View style={styles.summaryCard}>
       <View style={styles.summaryRow}>
@@ -161,7 +339,7 @@ export default function BillDetailScreen() {
           onPress={handlePrint}
           disabled={printing}
         >
-          <MaterialCommunityIcons name="printer-outline" size={18} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="printer-outline" size={18} color={colors.primary} />
           <Text style={styles.actionText}>{printing ? "..." : "Print"}</Text>
         </Pressable>
         <Pressable
@@ -169,7 +347,7 @@ export default function BillDetailScreen() {
           onPress={handleWhatsApp}
           disabled={whatsapping}
         >
-          <MaterialCommunityIcons name="whatsapp" size={18} color={theme.colors.textInverse} />
+          <MaterialCommunityIcons name="whatsapp" size={18} color={colors.textInverse} />
           <Text style={styles.actionTextPrimary}>{whatsapping ? "..." : "WhatsApp"}</Text>
         </Pressable>
         <Pressable
@@ -177,7 +355,7 @@ export default function BillDetailScreen() {
           onPress={handleShare}
           disabled={sharing}
         >
-          <MaterialCommunityIcons name="share-variant" size={18} color={theme.colors.textInverse} />
+          <MaterialCommunityIcons name="share-variant" size={18} color={colors.textInverse} />
           <Text style={styles.actionTextPrimary}>{sharing ? "..." : "Share"}</Text>
         </Pressable>
       </View>
@@ -212,7 +390,7 @@ export default function BillDetailScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={theme.colors.primary} />
+          <ActivityIndicator color={colors.primary} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       ) : error ? (
@@ -249,180 +427,3 @@ export default function BillDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  backText: {
-    color: theme.colors.primary,
-    fontWeight: "700",
-  },
-  headerSpacer: {
-    width: 48,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  summaryCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 12,
-    marginBottom: 12,
-    gap: 6,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  summaryValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  summaryMeta: {
-    marginTop: 4,
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  listContent: {
-    paddingBottom: 24,
-    gap: 12,
-  },
-  itemRow: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 10,
-    marginBottom: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  itemInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  itemMeta: {
-    marginTop: 2,
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  itemTotals: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
-  itemTotal: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primaryDark,
-  },
-  itemUnit: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-  },
-  footer: {
-    gap: 12,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  actionSecondary: {
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-  actionPrimary: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  actionWhatsApp: {
-    backgroundColor: colors.whatsapp,
-    borderColor: colors.whatsapp,
-  },
-  actionButtonDisabled: {
-    opacity: 0.6,
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  actionTextPrimary: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textInverse,
-  },
-  totalsCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 12,
-    gap: 6,
-  },
-  totalRow: {
-    marginTop: 4,
-  },
-  totalLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  totalValue: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: theme.colors.primaryDark,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  error: {
-    color: theme.colors.error,
-  },
-});

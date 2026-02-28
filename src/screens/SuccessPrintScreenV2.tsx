@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme, colors } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { useCartStore } from "../stores/cartStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import type { CartItem } from "../stores/cartStore";
@@ -37,6 +37,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "SuccessPrint">;
 type Rt = RouteProp<RootStackParamList, "SuccessPrint">;
 
 export default function SuccessPrintScreenV2() {
+  const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { items, total, subtotal, discountAmount, discount, clearCart, unlockCart } = useCartStore();
@@ -226,6 +227,105 @@ export default function SuccessPrintScreenV2() {
     });
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.backgroundSecondary,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24
+    },
+    title: { fontSize: 34, fontWeight: "900", color: colors.textPrimary, textAlign: "center" },
+    sub: { marginTop: 8, fontSize: 18, fontWeight: "700", color: colors.textSecondary },
+    status: { marginTop: 16, fontSize: 16, fontWeight: "800", color: colors.primary },
+    actions: {
+      width: "100%",
+      marginTop: 24,
+      gap: 12
+    },
+    btn: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 22,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center"
+    },
+    btnSecondary: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    btnWhatsApp: {
+      backgroundColor: colors.whatsapp,
+    },
+    btnDisabled: {
+      opacity: 0.6
+    },
+    btnText: { color: colors.textInverse, fontSize: 16, fontWeight: "800" },
+    btnTextSecondary: { color: colors.textPrimary },
+    // WA-001: Phone modal styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 24,
+      width: "100%",
+      maxWidth: 400,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    modalSub: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginTop: 4,
+      marginBottom: 16,
+    },
+    phoneInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      textAlign: "center",
+      letterSpacing: 1,
+    },
+    modalActions: {
+      flexDirection: "row",
+      gap: 12,
+      marginTop: 16,
+    },
+    modalBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: "center",
+    },
+    modalBtnCancel: {
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalBtnCancelText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textSecondary,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{paymentMode === "DUE" ? "Sale Recorded" : "Payment Successful"}</Text>
@@ -257,7 +357,7 @@ export default function SuccessPrintScreenV2() {
             disabled={waStatus === "sending"}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <MaterialCommunityIcons name="whatsapp" size={20} color={theme.colors.textInverse} />
+              <MaterialCommunityIcons name="whatsapp" size={20} color={colors.textInverse} />
               <Text style={styles.btnText}>
                 {waStatus === "sending" ? "Sending..." : waStatus === "sent" ? "Sent! Tap to Resend" : waStatus === "failed" ? "Retry WhatsApp" : "WhatsApp Bill"}
               </Text>
@@ -279,7 +379,7 @@ export default function SuccessPrintScreenV2() {
             <TextInput
               style={styles.phoneInput}
               placeholder="9876543210"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               keyboardType="phone-pad"
               maxLength={10}
               value={waPhone}
@@ -303,7 +403,7 @@ export default function SuccessPrintScreenV2() {
                 disabled={waStatus === "sending"}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <MaterialCommunityIcons name="whatsapp" size={18} color={theme.colors.textInverse} />
+                  <MaterialCommunityIcons name="whatsapp" size={18} color={colors.textInverse} />
                   <Text style={styles.btnText}>{waStatus === "sending" ? "Sending..." : "Send"}</Text>
                 </View>
               </TouchableOpacity>
@@ -314,102 +414,3 @@ export default function SuccessPrintScreenV2() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24
-  },
-  title: { fontSize: 34, fontWeight: "900", color: theme.colors.textPrimary, textAlign: "center" },
-  sub: { marginTop: 8, fontSize: 18, fontWeight: "700", color: theme.colors.textSecondary },
-  status: { marginTop: 16, fontSize: 16, fontWeight: "800", color: theme.colors.primary },
-  actions: {
-    width: "100%",
-    marginTop: 24,
-    gap: 12
-  },
-  btn: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center"
-  },
-  btnSecondary: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border
-  },
-  btnWhatsApp: {
-    backgroundColor: colors.whatsapp,
-  },
-  btnDisabled: {
-    opacity: 0.6
-  },
-  btnText: { color: theme.colors.textInverse, fontSize: 16, fontWeight: "800" },
-  btnTextSecondary: { color: theme.colors.textPrimary },
-  // WA-001: Phone modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: "100%",
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-  },
-  modalSub: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  phoneInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-    letterSpacing: 1,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 16,
-  },
-  modalBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  modalBtnCancel: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  modalBtnCancelText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-  },
-});

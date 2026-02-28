@@ -1,6 +1,6 @@
 // T-155: Customer Profiles Screen
 // List of all customers, search, detail view with purchase history, add/edit customer
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme, colors } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 import { useCustomerStore } from "../stores/customerStore";
@@ -48,6 +48,7 @@ interface CustomerListScreenProps {
 }
 
 export default function CustomerListScreen({ onBack }: CustomerListScreenProps) {
+  const colors = useThemeColors();
   const {
     customers,
     selectedCustomer,
@@ -213,7 +214,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             </Text>
           )}
         </View>
-        <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />
+        <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textTertiary} />
       </Pressable>
     ),
     [handleCustomerTap]
@@ -235,17 +236,355 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
     </View>
   ), []);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      margin: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: theme.spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+      paddingVertical: 4,
+    },
+    addButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.xs,
+      backgroundColor: colors.surface,
+      marginHorizontal: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    addButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    listContent: {
+      padding: theme.spacing.md,
+      paddingTop: 0,
+      paddingBottom: theme.spacing.xl,
+    },
+    customerCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    customerAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    customerAvatarText: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    customerInfo: {
+      flex: 1,
+    },
+    customerName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    customerPhone: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    customerStats: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 4,
+      gap: 6,
+    },
+    customerStat: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      fontWeight: "500",
+    },
+    customerStatDivider: {
+      fontSize: 12,
+      color: colors.border,
+    },
+    customerLastVisit: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    // Modal styles
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalCloseButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    modalHeaderSpacer: {
+      width: 40,
+    },
+    modalEditButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalFormContent: {
+      padding: theme.spacing.md,
+    },
+    // Detail view
+    detailContent: {
+      flex: 1,
+    },
+    detailContentContainer: {
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.xl,
+    },
+    profileCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      alignItems: "center",
+      ...theme.shadows.sm,
+    },
+    profileAvatarLarge: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: theme.spacing.md,
+    },
+    profileAvatarText: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    profileName: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    profilePhoneRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 4,
+    },
+    profilePhone: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    whatsappIconButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    profileEmail: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    profileAddress: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 2,
+      textAlign: "center",
+    },
+    statsRow: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.md,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.sm,
+      alignItems: "center",
+      ...theme.shadows.sm,
+    },
+    statValue: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    statLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 4,
+      textAlign: "center",
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      textTransform: "uppercase",
+      marginTop: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+    },
+    noPurchases: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      textAlign: "center",
+      paddingVertical: theme.spacing.lg,
+    },
+    purchaseItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    purchaseInfo: {
+      flex: 1,
+    },
+    purchaseBillRef: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    purchaseDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    purchaseMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+    },
+    purchaseMetaText: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    purchaseMetaDivider: {
+      fontSize: 11,
+      color: colors.border,
+    },
+    purchaseAmount: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.primaryDark,
+    },
+    // Form styles
+    formLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.xs,
+      marginTop: theme.spacing.md,
+    },
+    formInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    formInputDisabled: {
+      backgroundColor: colors.surfaceAlt,
+      color: colors.textTertiary,
+    },
+    formTextArea: {
+      minHeight: 80,
+      textAlignVertical: "top",
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: theme.spacing.lg,
+    },
+    submitButtonDisabled: {
+      opacity: 0.6,
+    },
+    submitButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       <BackHeader title="Customers" onBack={onBack} />
 
       {/* Search bar */}
       <View style={styles.searchBar}>
-        <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.textTertiary} />
+        <MaterialCommunityIcons name="magnify" size={20} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or phone..."
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={handleSearch}
           autoCapitalize="none"
@@ -253,21 +592,21 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
         />
         {searchQuery.length > 0 && (
           <Pressable onPress={() => handleSearch("")} hitSlop={8}>
-            <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.textTertiary} />
+            <MaterialCommunityIcons name="close-circle" size={18} color={colors.textTertiary} />
           </Pressable>
         )}
       </View>
 
       {/* Add button */}
       <Pressable style={styles.addButton} onPress={handleOpenAddModal}>
-        <MaterialCommunityIcons name="account-plus-outline" size={18} color={theme.colors.primary} />
+        <MaterialCommunityIcons name="account-plus-outline" size={18} color={colors.primary} />
         <Text style={styles.addButtonText}>Add Customer</Text>
       </Pressable>
 
       {/* Customer list */}
       {loading && customers.length === 0 ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading customers...</Text>
         </View>
       ) : customers.length === 0 ? (
@@ -286,8 +625,8 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
@@ -303,17 +642,17 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={handleCloseDetail}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Customer Profile</Text>
             <Pressable style={styles.modalEditButton} onPress={handleOpenEditModal}>
-              <MaterialCommunityIcons name="pencil-outline" size={20} color={theme.colors.primary} />
+              <MaterialCommunityIcons name="pencil-outline" size={20} color={colors.primary} />
             </Pressable>
           </View>
 
           {detailLoading ? (
             <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : selectedCustomer ? (
             <ScrollView style={styles.detailContent} contentContainerStyle={styles.detailContentContainer}>
@@ -398,7 +737,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={() => setShowAddModal(false)}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Add Customer</Text>
             <View style={styles.modalHeaderSpacer} />
@@ -409,7 +748,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <TextInput
               style={styles.formInput}
               placeholder="Customer name"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={formName}
               onChangeText={setFormName}
             />
@@ -418,7 +757,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <TextInput
               style={styles.formInput}
               placeholder="10-digit phone number"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={formPhone}
               onChangeText={setFormPhone}
               keyboardType="phone-pad"
@@ -429,7 +768,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <TextInput
               style={styles.formInput}
               placeholder="email@example.com"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={formEmail}
               onChangeText={setFormEmail}
               keyboardType="email-address"
@@ -440,7 +779,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <TextInput
               style={[styles.formInput, styles.formTextArea]}
               placeholder="Customer address"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={formAddress}
               onChangeText={setFormAddress}
               multiline
@@ -453,7 +792,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               disabled={formSubmitting}
             >
               {formSubmitting ? (
-                <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
                 <Text style={styles.submitButtonText}>Add Customer</Text>
               )}
@@ -472,7 +811,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={() => setShowEditModal(false)}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Edit Customer</Text>
             <View style={styles.modalHeaderSpacer} />
@@ -483,7 +822,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <TextInput
               style={styles.formInput}
               placeholder="Customer name"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={formName}
               onChangeText={setFormName}
             />
@@ -499,7 +838,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <TextInput
               style={styles.formInput}
               placeholder="email@example.com"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={formEmail}
               onChangeText={setFormEmail}
               keyboardType="email-address"
@@ -510,7 +849,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <TextInput
               style={[styles.formInput, styles.formTextArea]}
               placeholder="Customer address"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={formAddress}
               onChangeText={setFormAddress}
               multiline
@@ -523,7 +862,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               disabled={formSubmitting}
             >
               {formSubmitting ? (
-                <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
                 <Text style={styles.submitButtonText}>Save Changes</Text>
               )}
@@ -534,345 +873,3 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
     </View>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    margin: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    paddingVertical: 4,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.xs,
-    backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
-  addButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  listContent: {
-    padding: theme.spacing.md,
-    paddingTop: 0,
-    paddingBottom: theme.spacing.xl,
-  },
-  customerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  customerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  customerAvatarText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  customerInfo: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  customerPhone: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  customerStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    gap: 6,
-  },
-  customerStat: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    fontWeight: "500",
-  },
-  customerStatDivider: {
-    fontSize: 12,
-    color: theme.colors.border,
-  },
-  customerLastVisit: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalCloseButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  modalHeaderSpacer: {
-    width: 40,
-  },
-  modalEditButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalFormContent: {
-    padding: theme.spacing.md,
-  },
-  // Detail view
-  detailContent: {
-    flex: 1,
-  },
-  detailContentContainer: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  profileCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    alignItems: "center",
-    ...theme.shadows.sm,
-  },
-  profileAvatarLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.md,
-  },
-  profileAvatarText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  profilePhoneRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  profilePhone: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  whatsappIconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileEmail: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  profileAddress: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-    textAlign: "center",
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    alignItems: "center",
-    ...theme.shadows.sm,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-    textTransform: "uppercase",
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-  },
-  noPurchases: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-    textAlign: "center",
-    paddingVertical: theme.spacing.lg,
-  },
-  purchaseItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  purchaseInfo: {
-    flex: 1,
-  },
-  purchaseBillRef: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  purchaseDate: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  purchaseMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-  },
-  purchaseMetaText: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  purchaseMetaDivider: {
-    fontSize: 11,
-    color: theme.colors.border,
-  },
-  purchaseAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.primaryDark,
-  },
-  // Form styles
-  formLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-    marginTop: theme.spacing.md,
-  },
-  formInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
-  },
-  formInputDisabled: {
-    backgroundColor: theme.colors.surfaceAlt,
-    color: theme.colors.textTertiary,
-  },
-  formTextArea: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: theme.spacing.lg,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});

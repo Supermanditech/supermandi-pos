@@ -15,7 +15,8 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
+import type { ColorPalette } from "../theme";
 import { OrderCard } from "../components/orders/OrderCard";
 import * as orderApi from "../services/api/orderApi";
 import type { PurchaseOrder, OrderStatus } from "../services/api/orderApi";
@@ -37,6 +38,143 @@ export interface OrderHistoryScreenProps {
 type FilterOption = "all" | "active" | "completed" | "cancelled";
 
 // =============================================================================
+// STYLES FACTORY
+// =============================================================================
+
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      marginRight: theme.spacing.sm,
+      padding: theme.spacing.xs,
+    },
+    headerText: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    filterContainer: {
+      backgroundColor: colors.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    filterContent: {
+      flexDirection: "row",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    filterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.full,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: theme.spacing.xs,
+    },
+    filterChipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    filterChipText: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: colors.textSecondary,
+    },
+    filterChipTextSelected: {
+      color: colors.textInverse,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.md,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+    },
+    listContent: {
+      padding: theme.spacing.md,
+      flexGrow: 1,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.xxxl,
+      paddingHorizontal: theme.spacing.xl,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      textAlign: "center",
+    },
+    ctaButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: theme.spacing.lg,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.md,
+    },
+    ctaButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textInverse,
+    },
+    retryButton: {
+      marginTop: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.md,
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    footerLoader: {
+      paddingVertical: theme.spacing.md,
+      alignItems: "center",
+    },
+  });
+}
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
@@ -45,6 +183,8 @@ export default function OrderHistoryScreen({
   onBack,
   onNavigateToBuy,
 }: OrderHistoryScreenProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
   // State
@@ -170,10 +310,10 @@ export default function OrderHistoryScreen({
     if (!loadingMore) return null;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={theme.colors.primary} />
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
-  }, [loadingMore]);
+  }, [loadingMore, styles, colors]);
 
   // Empty state
   const ListEmpty = useMemo(() => {
@@ -185,7 +325,7 @@ export default function OrderHistoryScreen({
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={() => loadOrders()}>
@@ -208,13 +348,13 @@ export default function OrderHistoryScreen({
       >
         {filter === "all" && onNavigateToBuy && (
           <Pressable style={styles.ctaButton} onPress={onNavigateToBuy}>
-            <MaterialCommunityIcons name="cart-plus" size={18} color={theme.colors.textInverse} />
+            <MaterialCommunityIcons name="cart-plus" size={18} color={colors.textInverse} />
             <Text style={styles.ctaButtonText}>Create First Order</Text>
           </Pressable>
         )}
       </EmptyState>
     );
-  }, [loading, error, filter, loadOrders, onNavigateToBuy]);
+  }, [loading, error, filter, loadOrders, onNavigateToBuy, styles, colors]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -225,7 +365,7 @@ export default function OrderHistoryScreen({
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         )}
@@ -273,7 +413,7 @@ export default function OrderHistoryScreen({
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
       ) : (
@@ -291,8 +431,8 @@ export default function OrderHistoryScreen({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
           onEndReached={handleLoadMore}
@@ -316,6 +456,9 @@ interface FilterChipProps {
 }
 
 function FilterChip({ label, selected, onPress, icon }: FilterChipProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       style={[styles.filterChip, selected && styles.filterChipSelected]}
@@ -325,7 +468,7 @@ function FilterChip({ label, selected, onPress, icon }: FilterChipProps) {
         <MaterialCommunityIcons
           name={icon as keyof typeof MaterialCommunityIcons.glyphMap}
           size={14}
-          color={selected ? theme.colors.textInverse : theme.colors.textSecondary}
+          color={selected ? colors.textInverse : colors.textSecondary}
         />
       )}
       <Text style={[styles.filterChipText, selected && styles.filterChipTextSelected]}>
@@ -334,138 +477,3 @@ function FilterChip({ label, selected, onPress, icon }: FilterChipProps) {
     </Pressable>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    marginRight: theme.spacing.sm,
-    padding: theme.spacing.xs,
-  },
-  headerText: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  filterContainer: {
-    backgroundColor: theme.colors.surfaceAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  filterContent: {
-    flexDirection: "row",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.xs,
-  },
-  filterChipSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
-  },
-  filterChipTextSelected: {
-    color: theme.colors.textInverse,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.md,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-  },
-  listContent: {
-    padding: theme.spacing.md,
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.xxxl,
-    paddingHorizontal: theme.spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-    textAlign: "center",
-  },
-  ctaButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: theme.spacing.lg,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-  },
-  ctaButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textInverse,
-  },
-  retryButton: {
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  footerLoader: {
-    paddingVertical: theme.spacing.md,
-    alignItems: "center",
-  },
-});

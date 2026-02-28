@@ -1,7 +1,7 @@
 // T-194: Return/Refund Processing Screen
 // Lookup bill, select items to return, choose reason + refund method, process return
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { BackHeader } from "../components/ui/BackHeader";
 import { apiClient } from "../services/api/apiClient";
@@ -113,6 +113,7 @@ interface ReturnScreenProps {
 type ScreenStep = "LOOKUP" | "SELECT" | "CONFIRM" | "SUCCESS";
 
 export default function ReturnScreen({ onBack }: ReturnScreenProps) {
+  const colors = useThemeColors();
   // Step state
   const [step, setStep] = useState<ScreenStep>("LOOKUP");
 
@@ -247,6 +248,341 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
   }, []);
 
   // ==========================================================================
+  // STYLES
+  // ==========================================================================
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    stepContainer: {
+      flex: 1,
+      justifyContent: "center",
+      padding: theme.spacing.md,
+    },
+    scrollContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.xl,
+    },
+    // Lookup
+    lookupCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      alignItems: "center",
+      ...theme.shadows.sm,
+    },
+    lookupTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.xs,
+    },
+    lookupSubtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: theme.spacing.lg,
+    },
+    lookupInput: {
+      width: "100%",
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    lookupError: {
+      fontSize: 13,
+      color: colors.error,
+      marginTop: theme.spacing.sm,
+      textAlign: "center",
+    },
+    lookupButton: {
+      width: "100%",
+      backgroundColor: colors.primary,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: "center",
+      marginTop: theme.spacing.md,
+    },
+    lookupButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+    // Sale info
+    saleInfoCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    saleInfoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 4,
+    },
+    saleInfoLabel: {
+      fontSize: 13,
+      color: colors.textTertiary,
+    },
+    saleInfoValue: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    // Items
+    itemCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.sm,
+      marginBottom: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    itemInfo: {
+      flex: 1,
+      marginRight: theme.spacing.sm,
+    },
+    itemName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    itemMeta: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    qtyPicker: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+    },
+    qtyButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surfaceAlt,
+    },
+    qtyButtonDisabled: {
+      opacity: 0.4,
+    },
+    qtyValue: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textTertiary,
+      minWidth: 24,
+      textAlign: "center",
+    },
+    qtyValueActive: {
+      color: colors.error,
+    },
+    // Reason
+    reasonOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: theme.spacing.sm,
+      backgroundColor: colors.surface,
+    },
+    reasonOptionActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.accentSoft,
+    },
+    reasonText: {
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    // Refund methods
+    refundMethods: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    refundMethodCard: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      gap: theme.spacing.xs,
+    },
+    refundMethodCardActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primaryLight,
+    },
+    refundMethodText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    refundMethodTextActive: {
+      color: colors.primary,
+    },
+    // Summary
+    refundSummary: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginTop: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    refundSummaryTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.sm,
+    },
+    refundSummaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 4,
+    },
+    refundSummaryItem: {
+      flex: 1,
+      fontSize: 13,
+      color: colors.textPrimary,
+    },
+    refundSummaryAmount: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    refundTotalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingTop: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    refundTotalLabel: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    refundTotalAmount: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.error,
+    },
+    // Process button
+    processButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.error,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      marginTop: theme.spacing.lg,
+      gap: theme.spacing.xs,
+    },
+    processButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    // Success
+    successContainer: {
+      flex: 1,
+      justifyContent: "center",
+      padding: theme.spacing.md,
+    },
+    successCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xl,
+      alignItems: "center",
+      ...theme.shadows.md,
+    },
+    successIconCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.successSoft,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: theme.spacing.md,
+    },
+    successTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: theme.spacing.sm,
+    },
+    successAmount: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.success,
+      marginBottom: theme.spacing.sm,
+    },
+    successSubtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.xs,
+    },
+    successNote: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginBottom: theme.spacing.lg,
+    },
+    newReturnButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.lg,
+      borderRadius: theme.borderRadius.md,
+    },
+    newReturnButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
+  // ==========================================================================
   // RENDER
   // ==========================================================================
 
@@ -261,7 +597,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
             <MaterialCommunityIcons
               name="magnify"
               size={32}
-              color={theme.colors.primary}
+              color={colors.primary}
             />
             <Text style={styles.lookupTitle}>Find Original Sale</Text>
             <Text style={styles.lookupSubtitle}>
@@ -270,7 +606,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
             <TextInput
               style={styles.lookupInput}
               placeholder="Bill # (e.g. B-00123)"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={billRefInput}
               onChangeText={setBillRefInput}
               autoCapitalize="characters"
@@ -292,7 +628,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
               {lookupLoading ? (
                 <ActivityIndicator
                   size="small"
-                  color={theme.colors.textInverse}
+                  color={colors.textInverse}
                 />
               ) : (
                 <Text style={styles.lookupButtonText}>Look Up Sale</Text>
@@ -361,8 +697,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                       size={18}
                       color={
                         returnQty === 0
-                          ? theme.colors.textTertiary
-                          : theme.colors.error
+                          ? colors.textTertiary
+                          : colors.error
                       }
                     />
                   </Pressable>
@@ -387,8 +723,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                       size={18}
                       color={
                         returnQty >= item.quantity
-                          ? theme.colors.textTertiary
-                          : theme.colors.primary
+                          ? colors.textTertiary
+                          : colors.primary
                       }
                     />
                   </Pressable>
@@ -415,8 +751,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                 size={20}
                 color={
                   reason === r
-                    ? theme.colors.primary
-                    : theme.colors.textTertiary
+                    ? colors.primary
+                    : colors.textTertiary
                 }
               />
               <Text style={styles.reasonText}>{r}</Text>
@@ -440,8 +776,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                   size={24}
                   color={
                     refundMethod === m.id
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary
+                      ? colors.primary
+                      : colors.textSecondary
                   }
                 />
                 <Text
@@ -504,14 +840,14 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
             {processing ? (
               <ActivityIndicator
                 size="small"
-                color={theme.colors.textInverse}
+                color={colors.textInverse}
               />
             ) : (
               <>
                 <MaterialCommunityIcons
                   name="rotate-left"
                   size={18}
-                  color={theme.colors.textInverse}
+                  color={colors.textInverse}
                 />
                 <Text style={styles.processButtonText}>Process Return</Text>
               </>
@@ -528,7 +864,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
               <MaterialCommunityIcons
                 name="check"
                 size={36}
-                color={theme.colors.success}
+                color={colors.success}
               />
             </View>
             <Text style={styles.successTitle}>Return Processed</Text>
@@ -552,338 +888,3 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
     </View>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  stepContainer: {
-    flex: 1,
-    justifyContent: "center",
-    padding: theme.spacing.md,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  // Lookup
-  lookupCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    alignItems: "center",
-    ...theme.shadows.sm,
-  },
-  lookupTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.xs,
-  },
-  lookupSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-    marginBottom: theme.spacing.lg,
-  },
-  lookupInput: {
-    width: "100%",
-    backgroundColor: theme.colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-  },
-  lookupError: {
-    fontSize: 13,
-    color: theme.colors.error,
-    marginTop: theme.spacing.sm,
-    textAlign: "center",
-  },
-  lookupButton: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: "center",
-    marginTop: theme.spacing.md,
-  },
-  lookupButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  // Sale info
-  saleInfoCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  saleInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4,
-  },
-  saleInfoLabel: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-  },
-  saleInfoValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  // Items
-  itemCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  itemInfo: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  itemMeta: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  qtyPicker: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  qtyButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-  qtyButtonDisabled: {
-    opacity: 0.4,
-  },
-  qtyValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textTertiary,
-    minWidth: 24,
-    textAlign: "center",
-  },
-  qtyValueActive: {
-    color: theme.colors.error,
-  },
-  // Reason
-  reasonOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-  },
-  reasonOptionActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  reasonText: {
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-  },
-  // Refund methods
-  refundMethods: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  refundMethodCard: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  refundMethodCardActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primaryLight,
-  },
-  refundMethodText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-  },
-  refundMethodTextActive: {
-    color: theme.colors.primary,
-  },
-  // Summary
-  refundSummary: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginTop: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  refundSummaryTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  refundSummaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4,
-  },
-  refundSummaryItem: {
-    flex: 1,
-    fontSize: 13,
-    color: theme.colors.textPrimary,
-  },
-  refundSummaryAmount: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  refundTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  refundTotalLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  refundTotalAmount: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.error,
-  },
-  // Process button
-  processButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.error,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.xs,
-  },
-  processButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  // Success
-  successContainer: {
-    flex: 1,
-    justifyContent: "center",
-    padding: theme.spacing.md,
-  },
-  successCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    alignItems: "center",
-    ...theme.shadows.md,
-  },
-  successIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.colors.successSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.md,
-  },
-  successTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  successAmount: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: theme.colors.success,
-    marginBottom: theme.spacing.sm,
-  },
-  successSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  successNote: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.lg,
-  },
-  newReturnButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-  },
-  newReturnButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});

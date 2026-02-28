@@ -16,7 +16,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { PolicyRow } from "../components/reorder/PolicyRow";
 import { EditPolicyModal } from "../components/reorder/EditPolicyModal";
 import * as reorderApi from "../services/api/reorderApi";
@@ -40,6 +40,7 @@ type FilterOption = "all" | "enabled" | "disabled" | "low_stock";
 export default function ReorderPoliciesScreen({
   onBack,
 }: ReorderPoliciesScreenProps) {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
   // State
@@ -202,6 +203,115 @@ export default function ReorderPoliciesScreen({
   // Key extractor
   const keyExtractor = useCallback((item: ReorderPolicy) => item.id, []);
 
+  // Styles
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      marginRight: theme.spacing.sm,
+      padding: theme.spacing.xs,
+    },
+    headerText: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    searchContainer: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      gap: theme.spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+      paddingVertical: theme.spacing.xs,
+    },
+    filterContainer: {
+      flexDirection: "row",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surfaceAlt,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: theme.spacing.sm,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.md,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+    },
+    listContent: {
+      flexGrow: 1,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.xxxl,
+      paddingHorizontal: theme.spacing.xl,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.md,
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
   // Empty state
   const ListEmpty = useMemo(() => {
     if (loading) return null;
@@ -212,7 +322,7 @@ export default function ReorderPoliciesScreen({
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={() => loadPolicies()}>
@@ -228,7 +338,7 @@ export default function ReorderPoliciesScreen({
           <MaterialCommunityIcons
             name="filter-off"
             size={48}
-            color={theme.colors.textTertiary}
+            color={colors.textTertiary}
           />
           <Text style={styles.emptyTitle}>No matching policies</Text>
           <Text style={styles.emptyText}>
@@ -243,7 +353,7 @@ export default function ReorderPoliciesScreen({
         <MaterialCommunityIcons
           name="format-list-bulleted"
           size={48}
-          color={theme.colors.textTertiary}
+          color={colors.textTertiary}
         />
         <Text style={styles.emptyTitle}>No Policies Yet</Text>
         <Text style={styles.emptyText}>
@@ -251,7 +361,7 @@ export default function ReorderPoliciesScreen({
         </Text>
       </View>
     );
-  }, [loading, error, searchQuery, filter, loadPolicies]);
+  }, [loading, error, searchQuery, filter, loadPolicies, styles, colors]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -262,7 +372,7 @@ export default function ReorderPoliciesScreen({
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         )}
@@ -280,12 +390,12 @@ export default function ReorderPoliciesScreen({
           <MaterialCommunityIcons
             name="magnify"
             size={20}
-            color={theme.colors.textTertiary}
+            color={colors.textTertiary}
           />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -294,7 +404,7 @@ export default function ReorderPoliciesScreen({
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
-                color={theme.colors.textTertiary}
+                color={colors.textTertiary}
               />
             </Pressable>
           )}
@@ -332,7 +442,7 @@ export default function ReorderPoliciesScreen({
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading policies...</Text>
         </View>
       ) : (
@@ -349,8 +459,8 @@ export default function ReorderPoliciesScreen({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -381,6 +491,63 @@ interface FilterChipProps {
 }
 
 function FilterChip({ label, selected, onPress, count, warning }: FilterChipProps) {
+  const colors = useThemeColors();
+
+  const styles = useMemo(() => StyleSheet.create({
+    filterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      borderRadius: theme.borderRadius.full,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 4,
+    },
+    filterChipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    filterChipWarning: {
+      borderColor: colors.warning,
+    },
+    filterChipText: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: colors.textSecondary,
+    },
+    filterChipTextSelected: {
+      color: colors.textInverse,
+    },
+    filterChipTextWarning: {
+      color: colors.warning,
+    },
+    filterChipBadge: {
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: colors.backgroundSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 4,
+    },
+    filterChipBadgeSelected: {
+      backgroundColor: "rgba(255,255,255,0.2)",
+    },
+    filterChipBadgeWarning: {
+      backgroundColor: colors.warningSoft,
+    },
+    filterChipBadgeText: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.textTertiary,
+    },
+    filterChipBadgeTextSelected: {
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
   return (
     <Pressable
       style={[
@@ -421,166 +588,3 @@ function FilterChip({ label, selected, onPress, count, warning }: FilterChipProp
   );
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    marginRight: theme.spacing.sm,
-    padding: theme.spacing.xs,
-  },
-  headerText: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  searchContainer: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    paddingVertical: theme.spacing.xs,
-  },
-  filterContainer: {
-    flexDirection: "row",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: theme.spacing.sm,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: 4,
-  },
-  filterChipSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  filterChipWarning: {
-    borderColor: theme.colors.warning,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
-  },
-  filterChipTextSelected: {
-    color: theme.colors.textInverse,
-  },
-  filterChipTextWarning: {
-    color: theme.colors.warning,
-  },
-  filterChipBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: theme.colors.backgroundSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  filterChipBadgeSelected: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-  },
-  filterChipBadgeWarning: {
-    backgroundColor: theme.colors.warningSoft,
-  },
-  filterChipBadgeText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.textTertiary,
-  },
-  filterChipBadgeTextSelected: {
-    color: theme.colors.textInverse,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.md,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-  },
-  listContent: {
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.xxxl,
-    paddingHorizontal: theme.spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});

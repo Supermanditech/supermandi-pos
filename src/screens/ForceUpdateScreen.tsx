@@ -1,6 +1,6 @@
 // SA-P2-003: Force update screen — blocks POS access when app version is below minimum
 // SCR-S2-HARDENING: Loading spinner, offline handling, param validation, a11y, throttle, theme tokens
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform, ActivityIndicator, BackHandler, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -11,7 +11,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { fetchUiStatusStrict } from "../services/api/uiStatusApi";
 import { clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
-import { theme, colors, typography, spacing } from "../theme";
+import { theme, typography, spacing, useThemeColors } from "../theme";
 import BrandShortmark from "../components/BrandShortmark";
 
 type RootStackParamList = {
@@ -50,6 +50,7 @@ const ICON_WRAP_SIZE = 52;
 const RETRY_COOLDOWN_MS = 3000;
 
 export default function ForceUpdateScreen() {
+  const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<RootStackParamList, "ForceUpdate">>();
   const [checking, setChecking] = useState(false);
@@ -141,6 +142,127 @@ export default function ForceUpdateScreen() {
     }
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flexGrow: 1,
+      padding: spacing.lg,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    card: {
+      width: "100%",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.xl,
+      padding: spacing.lg,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    brandLockup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    brandPillText: {
+      backgroundColor: colors.primary,
+      color: colors.textInverse,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 999,
+      fontWeight: "700",
+      letterSpacing: -0.2,
+    },
+    iconWrap: {
+      width: ICON_WRAP_SIZE,
+      height: ICON_WRAP_SIZE,
+      borderRadius: ICON_WRAP_SIZE / 2,
+      backgroundColor: colors.errorSoft,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.md,
+    },
+    title: {
+      ...typography.h4,
+      fontWeight: "800",
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    subtitle: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: spacing.lg,
+    },
+    versionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    versionBox: {
+      alignItems: "center",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.background,
+      borderRadius: theme.borderRadius.md,
+    },
+    versionLabel: {
+      ...typography.caption,
+      fontSize: 11,
+      color: colors.textSecondary,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      marginBottom: 2,
+    },
+    versionValue: {
+      ...typography.bodySmall,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    button: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      width: "100%",
+      justifyContent: "center",
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      ...typography.button,
+      color: colors.textInverse,
+    },
+    secondaryButton: {
+      marginTop: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    secondaryButtonText: {
+      ...typography.bodySmall,
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    checkingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    iosNote: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginTop: spacing.xs,
+      fontSize: 11,
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
     <ScrollView
@@ -164,7 +286,7 @@ export default function ForceUpdateScreen() {
           style={styles.iconWrap}
           accessibilityElementsHidden
         >
-          <MaterialCommunityIcons name="cellphone-arrow-down" size={ICON_SIZE} color={theme.colors.error} />
+          <MaterialCommunityIcons name="cellphone-arrow-down" size={ICON_SIZE} color={colors.error} />
         </View>
         <Text
           style={styles.title}
@@ -187,10 +309,10 @@ export default function ForceUpdateScreen() {
             <Text style={styles.versionLabel}>Current</Text>
             <Text style={styles.versionValue} testID="force-update-current-version">{currentVersion}</Text>
           </View>
-          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.textSecondary} accessibilityElementsHidden />
+          <MaterialCommunityIcons name="arrow-right" size={20} color={colors.textSecondary} accessibilityElementsHidden />
           <View style={styles.versionBox}>
             <Text style={styles.versionLabel}>Required</Text>
-            <Text style={[styles.versionValue, { color: theme.colors.primary }]} testID="force-update-required-version">{requiredVersion}</Text>
+            <Text style={[styles.versionValue, { color: colors.primary }]} testID="force-update-required-version">{requiredVersion}</Text>
           </View>
         </View>
 
@@ -235,124 +357,3 @@ export default function ForceUpdateScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flexGrow: 1,
-    padding: spacing.lg,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  card: {
-    width: "100%",
-    backgroundColor: colors.surface,
-    borderRadius: theme.borderRadius.xl,
-    padding: spacing.lg,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  brandLockup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  brandPillText: {
-    backgroundColor: colors.primary,
-    color: colors.textInverse,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  iconWrap: {
-    width: ICON_WRAP_SIZE,
-    height: ICON_WRAP_SIZE,
-    borderRadius: ICON_WRAP_SIZE / 2,
-    backgroundColor: colors.errorSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  title: {
-    ...typography.h4,
-    fontWeight: "800",
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginBottom: spacing.lg,
-  },
-  versionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  versionBox: {
-    alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-    borderRadius: theme.borderRadius.md,
-  },
-  versionLabel: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    marginBottom: 2,
-  },
-  versionValue: {
-    ...typography.bodySmall,
-    fontWeight: "700",
-    color: colors.textPrimary,
-  },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    width: "100%",
-    justifyContent: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    ...typography.button,
-    color: colors.textInverse,
-  },
-  secondaryButton: {
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  secondaryButtonText: {
-    ...typography.bodySmall,
-    color: colors.primary,
-    fontWeight: "600",
-  },
-  checkingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iosNote: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginTop: spacing.xs,
-    fontSize: 11,
-  },
-});

@@ -1,7 +1,7 @@
 // T-195: Thermal Printer Configuration Screen
 // Paper width, auto-print, copies, test print
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -15,7 +15,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { useSettingsStore } from "../stores/settingsStore";
 import { printerService } from "../services/printerService";
 
@@ -24,6 +24,162 @@ interface PrinterSettingsScreenProps {
 }
 
 export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenProps) {
+  const colors = useThemeColors();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      padding: theme.spacing.md,
+      gap: theme.spacing.lg,
+    },
+    section: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    sectionDescription: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 18,
+      marginBottom: theme.spacing.md,
+    },
+    radioGroup: {
+      gap: theme.spacing.sm,
+    },
+    radioOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: theme.spacing.md,
+    },
+    radioOptionSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+    },
+    radioCircle: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioCircleSelected: {
+      borderColor: colors.primary,
+    },
+    radioInner: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: colors.primary,
+    },
+    radioLabel: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    radioLabelSelected: {
+      color: colors.primary,
+    },
+    radioHint: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    toggleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.md,
+    },
+    copiesRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.lg,
+    },
+    copyButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    copyButtonDisabled: {
+      borderColor: colors.border,
+    },
+    copiesText: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      minWidth: 40,
+      textAlign: "center",
+    },
+    testButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primary,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      gap: theme.spacing.sm,
+    },
+    testButtonDisabled: {
+      opacity: 0.6,
+    },
+    testButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    testHint: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      textAlign: "center",
+      marginTop: theme.spacing.sm,
+    },
+  }), [colors]);
+
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -61,7 +217,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
       <View style={styles.header}>
         {onBack && (
           <Pressable style={styles.backButton} onPress={onBack}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
           </Pressable>
         )}
         <Text style={styles.headerTitle}>
@@ -130,8 +286,8 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
             <Switch
               value={printerAutoPrint}
               onValueChange={setPrinterAutoPrint}
-              trackColor={{ false: theme.colors.border, true: theme.colors.primarySoft }}
-              thumbColor={printerAutoPrint ? theme.colors.primary : theme.colors.backgroundTertiary}
+              trackColor={{ false: colors.border, true: colors.primarySoft }}
+              thumbColor={printerAutoPrint ? colors.primary : colors.backgroundTertiary}
             />
           </View>
         </View>
@@ -153,7 +309,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
               <MaterialCommunityIcons
                 name="minus"
                 size={20}
-                color={printerCopies <= 1 ? theme.colors.textTertiary : theme.colors.primary}
+                color={printerCopies <= 1 ? colors.textTertiary : colors.primary}
               />
             </Pressable>
             <Text style={styles.copiesText}>{printerCopies}</Text>
@@ -165,7 +321,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
               <MaterialCommunityIcons
                 name="plus"
                 size={20}
-                color={printerCopies >= 3 ? theme.colors.textTertiary : theme.colors.primary}
+                color={printerCopies >= 3 ? colors.textTertiary : colors.primary}
               />
             </Pressable>
           </View>
@@ -181,7 +337,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
             <MaterialCommunityIcons
               name="printer"
               size={20}
-              color={theme.colors.textInverse}
+              color={colors.textInverse}
             />
             <Text style={styles.testButtonText}>
               {testPrinting
@@ -197,157 +353,3 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.lg,
-  },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  sectionDescription: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: theme.spacing.md,
-  },
-  radioGroup: {
-    gap: theme.spacing.sm,
-  },
-  radioOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
-  radioOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySoft,
-  },
-  radioCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioCircleSelected: {
-    borderColor: theme.colors.primary,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.primary,
-  },
-  radioLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  radioLabelSelected: {
-    color: theme.colors.primary,
-  },
-  radioHint: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.md,
-  },
-  copiesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.lg,
-  },
-  copyButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  copyButtonDisabled: {
-    borderColor: theme.colors.border,
-  },
-  copiesText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    minWidth: 40,
-    textAlign: "center",
-  },
-  testButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.sm,
-  },
-  testButtonDisabled: {
-    opacity: 0.6,
-  },
-  testButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  testHint: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    textAlign: "center",
-    marginTop: theme.spacing.sm,
-  },
-});

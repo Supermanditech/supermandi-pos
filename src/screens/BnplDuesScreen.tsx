@@ -2,7 +2,7 @@
 // Screen showing active BNPL drawdowns with pay button
 // GO-LIVE-192: Added AbortController for proper polling cleanup
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,7 +22,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import * as bnplApi from "../services/api/bnplApi";
 import type { BnplDrawdown } from "../services/api/bnplApi";
@@ -43,6 +43,8 @@ interface BnplDuesScreenProps {
 // =============================================================================
 
 export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -446,7 +448,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               <MaterialCommunityIcons
                 name="store-outline"
                 size={16}
-                color={theme.colors.textSecondary}
+                color={colors.textSecondary}
               />
               <Text style={styles.supplierName} numberOfLines={1}>
                 {drawdown.supplierName}
@@ -474,7 +476,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             {(drawdown.interestRatePercent || 0) > 0 && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Interest ({drawdown.interestRatePercent}%)</Text>
-                <Text style={[styles.detailValue, { color: theme.colors.warning }]}>
+                <Text style={[styles.detailValue, { color: colors.warning }]}>
                   +{formatMoney(drawdown.interestMinor || 0)}
                 </Text>
               </View>
@@ -492,7 +494,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             {(drawdown.paidAmountMinor || 0) > 0 && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Already Paid</Text>
-                <Text style={[styles.detailValue, { color: theme.colors.success }]}>
+                <Text style={[styles.detailValue, { color: colors.success }]}>
                   {formatMoney(drawdown.paidAmountMinor || 0)}
                 </Text>
               </View>
@@ -514,7 +516,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               <MaterialCommunityIcons
                 name="credit-card-outline"
                 size={16}
-                color={theme.colors.textInverse}
+                color={colors.textInverse}
               />
               <Text style={styles.payButtonText}>Pay Now</Text>
             </Pressable>
@@ -525,7 +527,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               <MaterialCommunityIcons
                 name="alert-circle-outline"
                 size={16}
-                color={theme.colors.warning}
+                color={colors.warning}
               />
               <Text style={styles.disputeButtonText}>Dispute</Text>
             </Pressable>
@@ -543,14 +545,14 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         <View style={styles.header}>
           {onBack && (
             <Pressable style={styles.backButton} onPress={onBack}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
           <Text style={styles.headerTitle}>{t("bnpl.title", "BNPL Dues")}</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading BNPL Dues...</Text>
         </View>
       </View>
@@ -569,7 +571,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         )}
@@ -635,7 +637,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} tintColor={colors.primary} />
           }
         >
           <Text style={styles.sectionTitle}>
@@ -655,7 +657,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.closeButton} onPress={handleClosePaymentModal}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Pay BNPL Due</Text>
             <View style={styles.headerRight} />
@@ -681,7 +683,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                     }}
                     keyboardType="decimal-pad"
                     placeholder={(paymentModal.drawdown.principalMinor / 100).toFixed(2)}
-                    placeholderTextColor={theme.colors.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                   />
                 </View>
                 <Text style={styles.paymentAmountHint}>
@@ -706,13 +708,13 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                     <MaterialCommunityIcons
                       name="qrcode"
                       size={24}
-                      color={theme.colors.primary}
+                      color={colors.primary}
                     />
                     <Text style={styles.modeButtonText}>Pay via UPI</Text>
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={20}
-                      color={theme.colors.textTertiary}
+                      color={colors.textTertiary}
                     />
                   </Pressable>
                   <Pressable
@@ -723,13 +725,13 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                     <MaterialCommunityIcons
                       name="cash"
                       size={24}
-                      color={theme.colors.success}
+                      color={colors.success}
                     />
                     <Text style={styles.modeButtonText}>Pay with Cash</Text>
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={20}
-                      color={theme.colors.textTertiary}
+                      color={colors.textTertiary}
                     />
                   </Pressable>
                 </View>
@@ -741,7 +743,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                   {/* GL-RJ-008: Show polling status */}
                   {paymentModal.isPolling && (
                     <View style={styles.pollingStatus}>
-                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                      <ActivityIndicator size="small" color={colors.primary} />
                       <Text style={styles.pollingStatusText}>
                         {paymentModal.pollingStatus || "Waiting for payment..."}
                       </Text>
@@ -765,7 +767,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                       <TextInput
                         style={styles.utrInput}
                         placeholder="Enter UTR / Transaction Reference"
-                        placeholderTextColor={theme.colors.textTertiary}
+                        placeholderTextColor={colors.textTertiary}
                         value={paymentModal.utrInput}
                         onChangeText={(text) =>
                           setPaymentModal((prev) => ({ ...prev, utrInput: text }))
@@ -782,13 +784,13 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                         disabled={!paymentModal.utrInput || paymentModal.paying}
                       >
                         {paymentModal.paying ? (
-                          <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                          <ActivityIndicator size="small" color={colors.textInverse} />
                         ) : (
                           <>
                             <MaterialCommunityIcons
                               name="check"
                               size={18}
-                              color={theme.colors.textInverse}
+                              color={colors.textInverse}
                             />
                             <Text style={styles.confirmButtonText}>Confirm Payment</Text>
                           </>
@@ -809,7 +811,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                       <MaterialCommunityIcons
                         name="refresh"
                         size={16}
-                        color={theme.colors.primary}
+                        color={colors.primary}
                       />
                       <Text style={styles.reopenUpiText}>Re-open UPI App</Text>
                     </Pressable>
@@ -819,7 +821,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
 
               {paymentModal.paying && !paymentModal.repaymentId && (
                 <View style={styles.processingContainer}>
-                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <ActivityIndicator size="large" color={colors.primary} />
                   <Text style={styles.processingText}>Processing payment...</Text>
                 </View>
               )}
@@ -838,7 +840,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.closeButton} onPress={handleCloseDisputeModal}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Dispute Charge</Text>
             <View style={styles.headerRight} />
@@ -878,7 +880,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                   <MaterialCommunityIcons
                     name={disputeModal.reason === reason.id ? "radiobox-marked" : "radiobox-blank"}
                     size={20}
-                    color={disputeModal.reason === reason.id ? theme.colors.primary : theme.colors.textTertiary}
+                    color={disputeModal.reason === reason.id ? colors.primary : colors.textTertiary}
                   />
                   <Text style={styles.disputeReasonText}>{reason.label}</Text>
                 </Pressable>
@@ -891,7 +893,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                 value={disputeModal.description}
                 onChangeText={(text) => setDisputeModal((prev) => ({ ...prev, description: text }))}
                 placeholder="Describe the issue..."
-                placeholderTextColor={theme.colors.textTertiary}
+                placeholderTextColor={colors.textTertiary}
                 multiline
                 numberOfLines={4}
               />
@@ -903,7 +905,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                 disabled={!disputeModal.reason || disputeModal.submitting}
               >
                 {disputeModal.submitting ? (
-                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                  <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
                   <Text style={styles.disputeSubmitText}>Submit Dispute</Text>
                 )}
@@ -920,14 +922,10 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   );
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   centerContent: {
     justifyContent: "center",
@@ -936,7 +934,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: theme.spacing.md,
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   header: {
     flexDirection: "row",
@@ -944,9 +942,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     width: 40,
@@ -957,7 +955,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   headerRight: {
     width: 40,
@@ -965,7 +963,7 @@ const styles = StyleSheet.create({
   summaryCard: {
     margin: theme.spacing.md,
     padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.lg,
     ...theme.shadows.sm,
   },
@@ -980,38 +978,38 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     height: 40,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
   },
   summaryLabel: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   summaryValueLarge: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.warning,
+    color: colors.warning,
   },
   creditBar: {
     height: 6,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 3,
     marginTop: theme.spacing.md,
     overflow: "hidden",
   },
   creditUsed: {
     height: "100%",
-    backgroundColor: theme.colors.warning,
+    backgroundColor: colors.warning,
     borderRadius: 3,
   },
   creditHint: {
     fontSize: 11,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     marginTop: theme.spacing.xs,
   },
@@ -1025,11 +1023,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: theme.spacing.md,
   },
   drawdownCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
@@ -1050,7 +1048,7 @@ const styles = StyleSheet.create({
   supplierName: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     flex: 1,
   },
   statusBadge: {
@@ -1073,20 +1071,20 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   detailValue: {
     fontSize: 13,
     fontWeight: "500",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   amountDue: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   overdueDate: {
-    color: theme.colors.error,
+    color: colors.error,
   },
   // GO-LIVE-240: Action buttons row
   actionButtonsRow: {
@@ -1099,24 +1097,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.borderRadius.md,
     gap: theme.spacing.xs,
   },
   payButtonOverdue: {
-    backgroundColor: theme.colors.error,
+    backgroundColor: colors.error,
   },
   payButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   disputeButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
@@ -1125,30 +1123,30 @@ const styles = StyleSheet.create({
   disputeButtonText: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.colors.warning,
+    color: colors.warning,
   },
   // GO-LIVE-240: Dispute modal styles
   disputeInfoCard: {
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
   disputeInfoLabel: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginBottom: 2,
   },
   disputeInfoValue: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   disputeReasonLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   disputeReasonOption: {
@@ -1159,37 +1157,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     marginBottom: theme.spacing.sm,
   },
   disputeReasonOptionActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.accentSoft,
+    borderColor: colors.primary,
+    backgroundColor: colors.accentSoft,
   },
   disputeReasonText: {
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   disputeDescLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   disputeDescInput: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     minHeight: 100,
     textAlignVertical: "top",
   },
   disputeSubmitButton: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: colors.warning,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     alignItems: "center",
@@ -1199,11 +1197,11 @@ const styles = StyleSheet.create({
   disputeSubmitText: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   disputeNote: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     marginTop: theme.spacing.md,
     lineHeight: 18,
@@ -1220,19 +1218,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   emptyText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: "row",
@@ -1240,9 +1238,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   closeButton: {
     width: 40,
@@ -1253,13 +1251,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 17,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   modalContent: {
     padding: theme.spacing.md,
   },
   paymentAmountCard: {
-    backgroundColor: theme.colors.accentSoft,
+    backgroundColor: colors.accentSoft,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     alignItems: "center",
@@ -1267,13 +1265,13 @@ const styles = StyleSheet.create({
   },
   paymentAmountLabel: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: theme.spacing.xs,
   },
   paymentAmountValue: {
     fontSize: 28,
     fontWeight: "700",
-    color: theme.colors.accent,
+    color: colors.accent,
   },
   // T-153: Partial payment input styles
   partialPayInputRow: {
@@ -1284,27 +1282,27 @@ const styles = StyleSheet.create({
   partialPayCurrency: {
     fontSize: 24,
     fontWeight: "700",
-    color: theme.colors.accent,
+    color: colors.accent,
     marginRight: 4,
   },
   partialPayInput: {
     fontSize: 28,
     fontWeight: "700",
-    color: theme.colors.accent,
+    color: colors.accent,
     minWidth: 100,
     textAlign: "center",
     borderBottomWidth: 2,
-    borderBottomColor: theme.colors.primary,
+    borderBottomColor: colors.primary,
     paddingVertical: 4,
   },
   paymentAmountHint: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginTop: 2,
   },
   paymentSupplier: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   modeSelection: {
@@ -1313,60 +1311,60 @@ const styles = StyleSheet.create({
   modeLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   modeButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     gap: theme.spacing.md,
   },
   modeButtonText: {
     flex: 1,
     fontSize: 15,
     fontWeight: "500",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   upiConfirmSection: {
     gap: theme.spacing.md,
   },
   upiInstructions: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   utrInput: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     fontSize: 16,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   confirmButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.success,
+    backgroundColor: colors.success,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     gap: theme.spacing.xs,
   },
   confirmButtonDisabled: {
-    backgroundColor: theme.colors.textTertiary,
+    backgroundColor: colors.textTertiary,
     opacity: 0.6,
   },
   confirmButtonText: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   reopenUpiButton: {
     flexDirection: "row",
@@ -1377,7 +1375,7 @@ const styles = StyleSheet.create({
   },
   reopenUpiText: {
     fontSize: 14,
-    color: theme.colors.primary,
+    color: colors.primary,
     fontWeight: "500",
   },
   processingContainer: {
@@ -1387,7 +1385,7 @@ const styles = StyleSheet.create({
   processingText: {
     marginTop: theme.spacing.md,
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   // GL-RJ-008: Auto-polling styles
   pollingStatus: {
@@ -1395,14 +1393,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.accentSoft,
+    backgroundColor: colors.accentSoft,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
   },
   pollingStatusText: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   manualEntryDivider: {
     flexDirection: "row",
@@ -1412,13 +1410,13 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
   },
   dividerText: {
     paddingHorizontal: theme.spacing.sm,
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
-});
+}); }
 
 export default BnplDuesScreen;

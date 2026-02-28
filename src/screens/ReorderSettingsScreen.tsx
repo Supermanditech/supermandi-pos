@@ -1,7 +1,7 @@
 // ReorderSettingsScreen - V3.0.9 compliant
 // Reorder settings management with toggles and policies link
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTranslation } from "react-i18next";
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import * as reorderApi from "../services/api/reorderApi";
 import type { ReorderSettings } from "../services/api/reorderApi";
@@ -39,6 +39,7 @@ export default function ReorderSettingsScreen({
   onNavigateToPolicies,
   onBack,
 }: ReorderSettingsScreenProps) {
+  const colors = useThemeColors();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -48,6 +49,8 @@ export default function ReorderSettingsScreen({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Load store ID on mount
   useEffect(() => {
@@ -147,14 +150,14 @@ export default function ReorderSettingsScreen({
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
           )}
           <Text style={styles.headerTitle}>Reorder Settings</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading settings...</Text>
         </View>
       </View>
@@ -171,7 +174,7 @@ export default function ReorderSettingsScreen({
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
-                color={theme.colors.textPrimary}
+                color={colors.textPrimary}
               />
             </Pressable>
           )}
@@ -181,7 +184,7 @@ export default function ReorderSettingsScreen({
           <MaterialCommunityIcons
             name="alert-circle-outline"
             size={48}
-            color={theme.colors.error}
+            color={colors.error}
           />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={loadSettings}>
@@ -201,7 +204,7 @@ export default function ReorderSettingsScreen({
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
-              color={theme.colors.textPrimary}
+              color={colors.textPrimary}
             />
           </Pressable>
         )}
@@ -224,7 +227,7 @@ export default function ReorderSettingsScreen({
                 <MaterialCommunityIcons
                   name="autorenew"
                   size={22}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                 />
               </View>
               <View style={styles.settingTextContainer}>
@@ -238,13 +241,13 @@ export default function ReorderSettingsScreen({
               value={settings?.reorderEnabled ?? false}
               onValueChange={handleToggleReorderEnabled}
               trackColor={{
-                false: theme.colors.borderDark,
-                true: theme.colors.primaryLight,
+                false: colors.borderDark,
+                true: colors.primaryLight,
               }}
               thumbColor={
                 settings?.reorderEnabled
-                  ? theme.colors.primary
-                  : theme.colors.surface
+                  ? colors.primary
+                  : colors.surface
               }
               disabled={saving}
             />
@@ -257,7 +260,7 @@ export default function ReorderSettingsScreen({
                 <MaterialCommunityIcons
                   name="check-decagram"
                   size={22}
-                  color={theme.colors.accent}
+                  color={colors.accent}
                 />
               </View>
               <View style={styles.settingTextContainer}>
@@ -271,13 +274,13 @@ export default function ReorderSettingsScreen({
               value={settings?.requireApproval ?? true}
               onValueChange={handleToggleRequireApproval}
               trackColor={{
-                false: theme.colors.borderDark,
-                true: theme.colors.accentLight,
+                false: colors.borderDark,
+                true: colors.accentLight,
               }}
               thumbColor={
                 settings?.requireApproval
-                  ? theme.colors.accent
-                  : theme.colors.surface
+                  ? colors.accent
+                  : colors.surface
               }
               disabled={saving || !settings?.reorderEnabled}
             />
@@ -289,7 +292,7 @@ export default function ReorderSettingsScreen({
               <MaterialCommunityIcons
                 name="information"
                 size={18}
-                color={theme.colors.warning}
+                color={colors.warning}
               />
               <Text style={styles.infoText}>
                 With approval disabled, reorder suggestions will automatically create draft purchase orders.
@@ -311,7 +314,7 @@ export default function ReorderSettingsScreen({
                 <MaterialCommunityIcons
                   name="format-list-bulleted"
                   size={22}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                 />
               </View>
               <View style={styles.settingTextContainer}>
@@ -324,7 +327,7 @@ export default function ReorderSettingsScreen({
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
-              color={theme.colors.textTertiary}
+              color={colors.textTertiary}
             />
           </Pressable>
         </View>
@@ -340,7 +343,7 @@ export default function ReorderSettingsScreen({
                 <MaterialCommunityIcons
                   name="truck-delivery"
                   size={22}
-                  color={theme.colors.textSecondary}
+                  color={colors.textSecondary}
                 />
               </View>
               <View style={styles.settingTextContainer}>
@@ -366,7 +369,7 @@ export default function ReorderSettingsScreen({
                   <MaterialCommunityIcons
                     name="currency-inr"
                     size={22}
-                    color={theme.colors.textSecondary}
+                    color={colors.textSecondary}
                   />
                 </View>
                 <View style={styles.settingTextContainer}>
@@ -394,7 +397,7 @@ export default function ReorderSettingsScreen({
                   <MaterialCommunityIcons
                     name="check-circle"
                     size={14}
-                    color={theme.colors.success}
+                    color={colors.success}
                   />{" "}
                   Auto-reorder is enabled
                 </>
@@ -403,7 +406,7 @@ export default function ReorderSettingsScreen({
                   <MaterialCommunityIcons
                     name="pause-circle"
                     size={14}
-                    color={theme.colors.textTertiary}
+                    color={colors.textTertiary}
                   />{" "}
                   Auto-reorder is disabled
                 </>
@@ -420,19 +423,19 @@ export default function ReorderSettingsScreen({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     marginRight: theme.spacing.sm,
@@ -441,7 +444,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   content: {
     flex: 1,
@@ -454,7 +457,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   errorContainer: {
     flex: 1,
@@ -464,7 +467,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     marginTop: theme.spacing.md,
   },
@@ -472,25 +475,25 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: theme.borderRadius.md,
   },
   retryButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   section: {
     marginTop: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     paddingHorizontal: theme.spacing.md,
@@ -504,7 +507,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   settingInfo: {
     flex: 1,
@@ -516,7 +519,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginRight: theme.spacing.md,
@@ -527,12 +530,12 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     lineHeight: 16,
   },
   linkRow: {
@@ -542,7 +545,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
   },
   linkInfo: {
     flex: 1,
@@ -553,18 +556,18 @@ const styles = StyleSheet.create({
   valueContainer: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: theme.borderRadius.sm,
   },
   valueText: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   infoBox: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: theme.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
     padding: theme.spacing.sm,
@@ -574,7 +577,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 12,
-    color: theme.colors.warning,
+    color: colors.warning,
     lineHeight: 16,
   },
   statusFooter: {
@@ -583,6 +586,6 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
-});
+}); }

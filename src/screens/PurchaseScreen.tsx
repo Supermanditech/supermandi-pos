@@ -2,7 +2,7 @@
 // Segmented bar: Quick Purchase (scanner) | Live Suppliers (SKU grid)
 // GATE-000: Uses ReadinessGate for runtime endpoint detection
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -37,7 +37,7 @@ const ROTATING_HINTS = [
   "SKU / naam type karo…",
 ];
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { submitStockIn, submitStockInDemo, type StockInPayload } from "../services/api/stockInApi";
 
@@ -110,6 +110,8 @@ export default function PurchaseScreen({
   scannedBarcode,
   onBarcodeProcessed
 }: PurchaseScreenProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -524,28 +526,28 @@ export default function PurchaseScreen({
     <View style={styles.quickItemCard}>
       <View style={styles.quickItemHeader}>
         <View style={styles.barcodeWrap}>
-          <MaterialCommunityIcons name="barcode" size={12} color={theme.colors.textTertiary} />
+          <MaterialCommunityIcons name="barcode" size={12} color={colors.textTertiary} />
           <Text style={styles.barcodeText}>{item.barcode}</Text>
         </View>
         <Pressable onPress={() => removeQuickItem(item.id)} hitSlop={8} accessibilityLabel="Remove item" accessibilityRole="button">
-          <MaterialCommunityIcons name="close" size={16} color={theme.colors.error} />
+          <MaterialCommunityIcons name="close" size={16} color={colors.error} />
         </Pressable>
       </View>
       <TextInput
         style={styles.quickNameInput}
         placeholder="Product name"
-        placeholderTextColor={theme.colors.textTertiary}
+        placeholderTextColor={colors.textTertiary}
         value={item.productName}
         onChangeText={(t) => updateQuickItem(item.id, "productName", t)}
       />
       <View style={styles.quickPriceRow}>
         <View style={styles.qtyWrap}>
           <Pressable style={styles.qtyBtn} onPress={() => updateQuickItem(item.id, "quantity", Math.max(1, item.quantity - 1))} accessibilityLabel="Decrease quantity" accessibilityRole="button">
-            <MaterialCommunityIcons name="minus" size={14} color={theme.colors.textPrimary} />
+            <MaterialCommunityIcons name="minus" size={14} color={colors.textPrimary} />
           </Pressable>
           <Text style={styles.qtyText}>{item.quantity}</Text>
           <Pressable style={styles.qtyBtn} onPress={() => updateQuickItem(item.id, "quantity", item.quantity + 1)} accessibilityLabel="Increase quantity" accessibilityRole="button">
-            <MaterialCommunityIcons name="plus" size={14} color={theme.colors.textPrimary} />
+            <MaterialCommunityIcons name="plus" size={14} color={colors.textPrimary} />
           </Pressable>
         </View>
         <View style={styles.priceInputWrap}>
@@ -554,7 +556,7 @@ export default function PurchaseScreen({
             style={styles.priceInput}
             keyboardType="decimal-pad"
             placeholder="0"
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={item.buyPrice > 0 ? String(item.buyPrice) : ""}
             onChangeText={(t) => updateQuickItem(item.id, "buyPrice", parseFloat(t) || 0)}
           />
@@ -565,7 +567,7 @@ export default function PurchaseScreen({
             style={styles.priceInput}
             keyboardType="decimal-pad"
             placeholder="0"
-            placeholderTextColor={theme.colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={item.sellPrice > 0 ? String(item.sellPrice) : ""}
             onChangeText={(t) => updateQuickItem(item.id, "sellPrice", parseFloat(t) || 0)}
           />
@@ -599,7 +601,7 @@ export default function PurchaseScreen({
             <MaterialCommunityIcons
               name="camera"
               size={20}
-              color={quickItems.length > 0 ? theme.colors.textInverse : theme.colors.textSecondary}
+              color={quickItems.length > 0 ? colors.textInverse : colors.textSecondary}
             />
           </Pressable>
 
@@ -661,7 +663,7 @@ export default function PurchaseScreen({
               <MaterialCommunityIcons
                 name="magnify"
                 size={18}
-                color={theme.colors.textInverse}
+                color={colors.textInverse}
               />
               {isSearchFocused || searchQuery.length > 0 ? (
                 <TextInput
@@ -680,7 +682,7 @@ export default function PurchaseScreen({
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="search"
-                  placeholderTextColor={theme.colors.textInverse}
+                  placeholderTextColor={colors.textInverse}
                 />
               ) : (
                 <Pressable
@@ -705,7 +707,7 @@ export default function PurchaseScreen({
                   <MaterialCommunityIcons
                     name="close-circle"
                     size={16}
-                    color={theme.colors.textInverse}
+                    color={colors.textInverse}
                   />
                 </Pressable>
               )}
@@ -717,7 +719,7 @@ export default function PurchaseScreen({
       {/* T-148: Scan resolution feedback */}
       {scanResolving && (
         <View style={styles.scanFeedbackBar}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <ActivityIndicator size="small" color={colors.primary} />
           <Text style={styles.scanFeedbackText}>Checking supplier catalog...</Text>
         </View>
       )}
@@ -729,11 +731,11 @@ export default function PurchaseScreen({
           <MaterialCommunityIcons
             name={lastScanResult === "supplier" ? "check-circle" : "pencil-plus"}
             size={16}
-            color={lastScanResult === "supplier" ? theme.colors.success : theme.colors.warning}
+            color={lastScanResult === "supplier" ? colors.success : colors.warning}
           />
           <Text style={[
             styles.scanFeedbackText,
-            { color: lastScanResult === "supplier" ? theme.colors.success : theme.colors.warning },
+            { color: lastScanResult === "supplier" ? colors.success : colors.warning },
           ]}>
             {lastScanResult === "supplier"
               ? "Added from supplier catalog"
@@ -765,7 +767,7 @@ export default function PurchaseScreen({
                 <MaterialCommunityIcons
                   name={showSupplierFields ? "chevron-up" : "chevron-down"}
                   size={18}
-                  color={theme.colors.textSecondary}
+                  color={colors.textSecondary}
                 />
                 <Text style={styles.supplierToggleText}>
                   Supplier Details (Optional)
@@ -785,7 +787,7 @@ export default function PurchaseScreen({
                     value={walkInSupplierName}
                     onChangeText={setWalkInSupplierName}
                     placeholder="Supplier Name"
-                    placeholderTextColor={theme.colors.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     autoCapitalize="words"
                   />
                   <TextInput
@@ -793,7 +795,7 @@ export default function PurchaseScreen({
                     value={walkInSupplierGstin}
                     onChangeText={(text) => setWalkInSupplierGstin(text.toUpperCase())}
                     placeholder="GSTIN (e.g. 27AABCU9603R1ZM)"
-                    placeholderTextColor={theme.colors.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     autoCapitalize="characters"
                     maxLength={15}
                   />
@@ -837,7 +839,7 @@ export default function PurchaseScreen({
             <View style={styles.emptyStateContainer}>
               {isCheckingLiveSuppliers ? (
                 <>
-                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <ActivityIndicator size="large" color={colors.primary} />
                   <Text style={styles.emptyStateTitle}>Checking Backend...</Text>
                 </>
               ) : (
@@ -845,7 +847,7 @@ export default function PurchaseScreen({
                   <MaterialCommunityIcons
                     name="store-off-outline"
                     size={64}
-                    color={theme.colors.textTertiary}
+                    color={colors.textTertiary}
                   />
                   <Text style={styles.emptyStateTitle}>Supplier Catalog Coming Soon</Text>
                   <Text style={styles.emptyStateMessage}>
@@ -858,7 +860,7 @@ export default function PurchaseScreen({
                     </Text>
                   </View>
                   <Pressable style={styles.retryButton} onPress={retryLiveSuppliers}>
-                    <MaterialCommunityIcons name="refresh" size={16} color={theme.colors.primary} />
+                    <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
                     <Text style={styles.retryButtonText}>Retry</Text>
                   </Pressable>
                   <Text style={styles.emptyStateHint}>
@@ -869,10 +871,10 @@ export default function PurchaseScreen({
             </View>
           ) : catalogError ? (
             <View style={styles.emptyStateContainer}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={48} color={theme.colors.error} />
+              <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} />
               <Text style={styles.emptyStateTitle}>{catalogError}</Text>
               <Pressable style={styles.retryButton} onPress={() => fetchCatalog(searchQuery, 1)}>
-                <MaterialCommunityIcons name="refresh" size={16} color={theme.colors.primary} />
+                <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
                 <Text style={styles.retryButtonText}>Retry</Text>
               </Pressable>
             </View>
@@ -881,7 +883,7 @@ export default function PurchaseScreen({
               <MaterialCommunityIcons
                 name="magnify"
                 size={48}
-                color={theme.colors.textTertiary}
+                color={colors.textTertiary}
               />
               <Text style={styles.emptyStateTitle}>No Products Found</Text>
               <Text style={styles.emptyStateMessage}>
@@ -915,7 +917,7 @@ export default function PurchaseScreen({
                 onEndReachedThreshold={0.3}
                 ListFooterComponent={
                   catalogLoading ? (
-                    <ActivityIndicator style={{ padding: 16 }} color={theme.colors.primary} />
+                    <ActivityIndicator style={{ padding: 16 }} color={colors.primary} />
                   ) : null
                 }
               />
@@ -1012,27 +1014,27 @@ export default function PurchaseScreen({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
 
   // Segmented Bar
   segmentedBarContainer: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   segmentedBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
     height: 44,
   },
@@ -1051,7 +1053,7 @@ const styles = StyleSheet.create({
   halfSegmentText: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   expandedSegment: {
     flex: 1,
@@ -1065,15 +1067,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   segmentActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   segmentDivider: {
     width: 1,
     height: 24,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
   },
   rotatingHintContainer: {
     flex: 1,
@@ -1081,13 +1083,13 @@ const styles = StyleSheet.create({
   rotatingHintExpanded: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   searchInputExpanded: {
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
     paddingVertical: 0,
   },
 
@@ -1099,10 +1101,10 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   quickItemCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 10,
     marginBottom: 10,
   },
@@ -1120,16 +1122,16 @@ const styles = StyleSheet.create({
   barcodeText: {
     fontSize: 11,
     fontFamily: "monospace",
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
   },
   quickNameInput: {
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   quickPriceRow: {
@@ -1140,7 +1142,7 @@ const styles = StyleSheet.create({
   qtyWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 6,
   },
   qtyBtn: {
@@ -1152,7 +1154,7 @@ const styles = StyleSheet.create({
   qtyText: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     minWidth: 24,
     textAlign: "center",
   },
@@ -1162,17 +1164,17 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   priceInput: {
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 6,
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
 
   // Live Suppliers
@@ -1189,10 +1191,10 @@ const styles = StyleSheet.create({
   },
   skuCard: {
     width: CARD_WIDTH,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     padding: 8,
     alignItems: "center",
   },
@@ -1203,7 +1205,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 6,
-    backgroundColor: theme.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
@@ -1211,24 +1213,24 @@ const styles = StyleSheet.create({
   skuName: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
     minHeight: 28,
   },
   skuMeta: {
     fontSize: 10,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     marginTop: 2,
   },
   skuPrice: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: colors.primary,
     marginTop: 4,
   },
   skuMoq: {
     fontSize: 9,
-    color: theme.colors.warning,
+    color: colors.warning,
     fontWeight: "600",
     marginTop: 2,
   },
@@ -1236,7 +1238,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: theme.colors.success,
+    backgroundColor: colors.success,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -1247,13 +1249,13 @@ const styles = StyleSheet.create({
   cartBadgeText: {
     fontSize: 10,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   outOfStockOverlay: {
     position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: theme.colors.error,
+    backgroundColor: colors.error,
     borderRadius: 4,
     paddingHorizontal: 4,
     paddingVertical: 2,
@@ -1261,7 +1263,7 @@ const styles = StyleSheet.create({
   outOfStockText: {
     fontSize: 8,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
 
   // Action Bar
@@ -1272,9 +1274,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
     paddingHorizontal: 12,
     paddingTop: 10,
     gap: 12,
@@ -1284,15 +1286,15 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   actionTotal: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   actionBtn: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -1302,18 +1304,18 @@ const styles = StyleSheet.create({
   },
   // UI-006: Demo mode button style
   actionBtnDemo: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: colors.warning,
   },
   actionBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.textInverse,
+    color: colors.textInverse,
   },
   // UI-006: Demo mode indicator
   demoModeIndicator: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.warning,
+    color: colors.warning,
     marginTop: 2,
   },
 
@@ -1328,13 +1330,13 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     textAlign: "center",
   },
   emptyStateMessage: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
@@ -1343,21 +1345,21 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: theme.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.warning,
+    borderColor: colors.warning,
   },
   emptyStateBlockerLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.colors.warning,
+    color: colors.warning,
     textTransform: "uppercase",
     marginBottom: 4,
   },
   emptyStateBlockerText: {
     fontSize: 12,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   retryButton: {
     flexDirection: "row",
@@ -1367,28 +1369,28 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.primaryLight,
+    borderColor: colors.primaryLight,
   },
   retryButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   emptyStateHint: {
     fontSize: 12,
-    color: theme.colors.textTertiary,
+    color: colors.textTertiary,
     textAlign: "center",
     marginTop: 20,
     fontStyle: "italic",
   },
   // SA-P0-004: Supplier details styles
   supplierSection: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: colors.border,
     paddingHorizontal: 12,
   },
   supplierToggle: {
@@ -1399,11 +1401,11 @@ const styles = StyleSheet.create({
   },
   supplierToggleText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     flex: 1,
   },
   supplierBadge: {
-    backgroundColor: theme.colors.primaryLight,
+    backgroundColor: colors.primaryLight,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1411,21 +1413,21 @@ const styles = StyleSheet.create({
   supplierBadgeText: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   supplierFields: {
     gap: 8,
     paddingBottom: 10,
   },
   supplierInput: {
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   // T-148: Scan resolution feedback styles
   scanFeedbackBar: {
@@ -1433,20 +1435,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
     gap: 8,
   },
   scanFeedbackText: {
     fontSize: 13,
     fontWeight: "500",
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   scanFeedbackSupplier: {
-    backgroundColor: theme.colors.successSoft,
+    backgroundColor: colors.successSoft,
   },
   scanFeedbackManual: {
-    backgroundColor: theme.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
   },
-});
+}); }

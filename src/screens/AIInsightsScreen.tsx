@@ -1,11 +1,11 @@
 // T-307/T-308/T-311/T-313/T-314: AI Insights Screen for POS
 // Shows alerts, forecasts, slow movers, expiring products, price comparisons
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator, BackHandler, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../theme';
+import { theme, useThemeColors } from '../theme';
 import * as aiApi from '../services/api/aiApi';
 
 type Tab = 'alerts' | 'forecasts' | 'slow' | 'expiry' | 'prices';
@@ -15,6 +15,7 @@ interface Props {
 }
 
 export default function AIInsightsScreen({ onBack }: Props) {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
   // UIUX-POS-004: Android hardware back button support
@@ -99,9 +100,9 @@ export default function AIInsightsScreen({ onBack }: Props) {
 
   const severityColor = (s: string) => {
     switch (s) {
-      case 'critical': return theme.colors.error;
-      case 'warning': return theme.colors.warning;
-      default: return theme.colors.info;
+      case 'critical': return colors.error;
+      case 'warning': return colors.warning;
+      default: return colors.info;
     }
   };
 
@@ -142,8 +143,8 @@ export default function AIInsightsScreen({ onBack }: Props) {
     </View>
   );
 
-  const trendBg = (trend: string) => trend === 'dead_stock' ? theme.colors.errorSoft : theme.colors.warningSoft;
-  const trendFg = (trend: string) => trend === 'dead_stock' ? theme.colors.errorDark : theme.colors.warningDark;
+  const trendBg = (trend: string) => trend === 'dead_stock' ? colors.errorSoft : colors.warningSoft;
+  const trendFg = (trend: string) => trend === 'dead_stock' ? colors.errorDark : colors.warningDark;
 
   const renderSlowMover = ({ item }: { item: aiApi.SlowMover }) => (
     <View style={styles.card}>
@@ -164,9 +165,9 @@ export default function AIInsightsScreen({ onBack }: Props) {
 
   const urgencyColor = (urgency: string) => {
     switch (urgency) {
-      case 'expired': return theme.colors.error;
-      case 'critical': return theme.colors.warning;
-      default: return theme.colors.info;
+      case 'expired': return colors.error;
+      case 'critical': return colors.warning;
+      default: return colors.info;
     }
   };
 
@@ -191,7 +192,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
           Current: {'\u20B9'}{(item.currentPrice / 100).toFixed(2)} | Best: {'\u20B9'}{(item.bestPrice / 100).toFixed(2)}
         </Text>
         {item.maxSavings > 0 && (
-          <Text style={[styles.cardMeta, { color: theme.colors.success }]}>
+          <Text style={[styles.cardMeta, { color: colors.success }]}>
             Save {'\u20B9'}{(item.maxSavings / 100).toFixed(2)} ({item.maxSavingsPercent.toFixed(1)}%)
           </Text>
         )}
@@ -211,12 +212,49 @@ export default function AIInsightsScreen({ onBack }: Props) {
     : tab === 'expiry' ? expiryItems
     : priceComparisons;
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
+      paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface,
+    },
+    backBtn: { padding: 4, marginRight: 8 },
+    headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: colors.textPrimary },
+    tabBar: {
+      flexDirection: 'row', backgroundColor: colors.surface, borderBottomWidth: 1,
+      borderBottomColor: colors.border, paddingHorizontal: 4,
+    },
+    tab: {
+      flex: 1, alignItems: 'center', paddingVertical: 10, gap: 2,
+    },
+    activeTab: { borderBottomWidth: 2, borderBottomColor: colors.primary },
+    tabLabel: { fontSize: 11, color: colors.textTertiary },
+    activeTabLabel: { color: colors.primary, fontWeight: '600' },
+    card: {
+      flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 8, padding: 12,
+      marginBottom: 8, borderWidth: 1, borderColor: colors.border, gap: 10,
+    },
+    unreadCard: { borderLeftWidth: 3, borderLeftColor: colors.primary },
+    severityDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
+    cardTitle: { fontSize: 14, fontWeight: '500', color: colors.textPrimary, marginBottom: 2 },
+    cardDesc: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
+    cardMeta: { fontSize: 11, color: colors.textTertiary },
+    confidenceBar: { height: 4, backgroundColor: colors.backgroundTertiary, borderRadius: 2, marginTop: 4 },
+    confidenceFill: { height: 4, backgroundColor: colors.primary, borderRadius: 2 },
+    badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    badgeText: { fontSize: 10 },
+    errorBar: { backgroundColor: colors.errorSoft, padding: 10 },
+    errorText: { color: colors.errorDark, fontSize: 13 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    emptyText: { fontSize: 14, color: colors.textTertiary, marginTop: 8 },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
-          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>AI Insights</Text>
       </View>
@@ -235,7 +273,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
             <MaterialCommunityIcons
               name={t.icon as any}
               size={18}
-              color={tab === t.key ? theme.colors.primary : theme.colors.textTertiary}
+              color={tab === t.key ? colors.primary : colors.textTertiary}
             />
             <Text style={[styles.tabLabel, tab === t.key && styles.activeTabLabel]}>{t.label}</Text>
           </Pressable>
@@ -251,7 +289,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
 
       {/* Content */}
       {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={theme.colors.primary} /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <FlatList
           data={data as any[]}
@@ -261,7 +299,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.center}>
-              <MaterialCommunityIcons name="robot-happy-outline" size={48} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="robot-happy-outline" size={48} color={colors.textTertiary} />
               <Text style={styles.emptyText}>No {tab} data yet</Text>
             </View>
           }
@@ -270,40 +308,3 @@ export default function AIInsightsScreen({ onBack }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border, backgroundColor: theme.colors.surface,
-  },
-  backBtn: { padding: 4, marginRight: 8 },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: theme.colors.textPrimary },
-  tabBar: {
-    flexDirection: 'row', backgroundColor: theme.colors.surface, borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border, paddingHorizontal: 4,
-  },
-  tab: {
-    flex: 1, alignItems: 'center', paddingVertical: 10, gap: 2,
-  },
-  activeTab: { borderBottomWidth: 2, borderBottomColor: theme.colors.primary },
-  tabLabel: { fontSize: 11, color: theme.colors.textTertiary },
-  activeTabLabel: { color: theme.colors.primary, fontWeight: '600' },
-  card: {
-    flexDirection: 'row', backgroundColor: theme.colors.surface, borderRadius: 8, padding: 12,
-    marginBottom: 8, borderWidth: 1, borderColor: theme.colors.border, gap: 10,
-  },
-  unreadCard: { borderLeftWidth: 3, borderLeftColor: theme.colors.primary },
-  severityDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
-  cardTitle: { fontSize: 14, fontWeight: '500', color: theme.colors.textPrimary, marginBottom: 2 },
-  cardDesc: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 },
-  cardMeta: { fontSize: 11, color: theme.colors.textTertiary },
-  confidenceBar: { height: 4, backgroundColor: theme.colors.backgroundTertiary, borderRadius: 2, marginTop: 4 },
-  confidenceFill: { height: 4, backgroundColor: theme.colors.primary, borderRadius: 2 },
-  badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  badgeText: { fontSize: 10 },
-  errorBar: { backgroundColor: theme.colors.errorSoft, padding: 10 },
-  errorText: { color: theme.colors.errorDark, fontSize: 13 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyText: { fontSize: 14, color: theme.colors.textTertiary, marginTop: 8 },
-});

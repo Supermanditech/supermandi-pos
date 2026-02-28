@@ -1,6 +1,6 @@
 // T-154: Khata (Credit Book) Screen
 // Main list of customers with credit/debit balance, ledger view, add credit/payment modals
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../theme";
+import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 import { useKhataStore } from "../stores/khataStore";
@@ -49,6 +49,7 @@ interface KhataScreenProps {
 }
 
 export default function KhataScreen({ onBack }: KhataScreenProps) {
+  const colors = useThemeColors();
   const {
     customers,
     entries,
@@ -200,16 +201,337 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     }
   }, [paymentPhone, paymentAmount, paymentMethod, recordPayment, fetchCustomers, searchQuery]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      margin: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: theme.spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+      paddingVertical: 4,
+    },
+    actionRow: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.xs,
+      backgroundColor: colors.surface,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    actionButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    listContent: {
+      padding: theme.spacing.md,
+      paddingTop: 0,
+      paddingBottom: theme.spacing.xl,
+    },
+    customerCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    customerInfo: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+    },
+    customerAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    customerAvatarText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    customerDetails: {
+      flex: 1,
+    },
+    customerName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    customerPhone: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    customerLastEntry: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    customerBalance: {
+      alignItems: "flex-end",
+      marginRight: theme.spacing.xs,
+    },
+    balanceAmount: {
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    balanceLabel: {
+      fontSize: 11,
+      fontWeight: "500",
+      marginTop: 2,
+    },
+    // Ledger modal styles
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalCloseButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    modalHeaderSpacer: {
+      width: 40,
+    },
+    modalContent: {
+      padding: theme.spacing.md,
+    },
+    ledgerSummaryCard: {
+      margin: theme.spacing.md,
+      padding: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      ...theme.shadows.sm,
+    },
+    ledgerSummaryName: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    ledgerSummaryPhone: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    ledgerSummaryBalance: {
+      marginTop: theme.spacing.md,
+      paddingTop: theme.spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    ledgerSummaryLabel: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginBottom: 4,
+    },
+    ledgerSummaryAmount: {
+      fontSize: 22,
+      fontWeight: "700",
+    },
+    ledgerList: {
+      flex: 1,
+    },
+    ledgerListContent: {
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.xl,
+    },
+    ledgerEntry: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    ledgerIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    ledgerDetails: {
+      flex: 1,
+    },
+    ledgerType: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      textTransform: "uppercase",
+    },
+    ledgerDescription: {
+      fontSize: 13,
+      color: colors.textPrimary,
+      marginTop: 2,
+    },
+    ledgerDate: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    ledgerPaymentMethod: {
+      fontSize: 11,
+      color: colors.primary,
+      fontWeight: "500",
+      marginTop: 2,
+    },
+    ledgerAmounts: {
+      alignItems: "flex-end",
+    },
+    ledgerAmount: {
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    ledgerRunningBalance: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    // Form styles
+    formLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.xs,
+      marginTop: theme.spacing.md,
+    },
+    formInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    formTextArea: {
+      minHeight: 80,
+      textAlignVertical: "top",
+    },
+    paymentMethodRow: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+    },
+    paymentMethodOption: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    paymentMethodActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primaryLight,
+    },
+    paymentMethodText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textTertiary,
+    },
+    paymentMethodTextActive: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    submitButton: {
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: theme.spacing.lg,
+    },
+    submitButtonCredit: {
+      backgroundColor: colors.error,
+    },
+    submitButtonPayment: {
+      backgroundColor: colors.success,
+    },
+    submitButtonDisabled: {
+      opacity: 0.6,
+    },
+    submitButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  }), [colors]);
+
   // Render customer card
   const renderCustomerCard = useCallback(
     ({ item }: { item: KhataCustomer }) => {
       const isOwes = item.balanceMinor > 0; // They owe store
       const isCredit = item.balanceMinor < 0; // Store owes them
       const balanceColor = isOwes
-        ? theme.colors.error
+        ? colors.error
         : isCredit
-          ? theme.colors.success
-          : theme.colors.textSecondary;
+          ? colors.success
+          : colors.textSecondary;
       const balanceLabel = isOwes ? "Owes" : isCredit ? "Advance" : "Settled";
 
       return (
@@ -238,18 +560,18 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             </Text>
             <Text style={[styles.balanceLabel, { color: balanceColor }]}>{balanceLabel}</Text>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textTertiary} />
         </Pressable>
       );
     },
-    [handleCustomerTap]
+    [handleCustomerTap, colors, styles]
   );
 
   // Render ledger entry
   const renderLedgerEntry = useCallback((entry: KhataEntry) => {
     const isCredit = entry.type === "CREDIT";
     const isPayment = entry.type === "PAYMENT";
-    const entryColor = isPayment ? theme.colors.success : isCredit ? theme.colors.error : theme.colors.textPrimary;
+    const entryColor = isPayment ? colors.success : isCredit ? colors.error : colors.textPrimary;
     const entryIcon = isPayment ? "cash-plus" : isCredit ? "cash-minus" : "swap-horizontal";
     const entrySign = isPayment ? "+" : isCredit ? "-" : "";
 
@@ -281,7 +603,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         </View>
       </View>
     );
-  }, []);
+  }, [colors, styles]);
 
   // Get entries for the selected customer
   const customerEntries = selectedCustomer
@@ -294,11 +616,11 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
 
       {/* Search bar */}
       <View style={styles.searchBar}>
-        <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.textTertiary} />
+        <MaterialCommunityIcons name="magnify" size={20} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or phone..."
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={handleSearch}
           autoCapitalize="none"
@@ -306,7 +628,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         />
         {searchQuery.length > 0 && (
           <Pressable onPress={() => handleSearch("")} hitSlop={8}>
-            <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.textTertiary} />
+            <MaterialCommunityIcons name="close-circle" size={18} color={colors.textTertiary} />
           </Pressable>
         )}
       </View>
@@ -314,19 +636,19 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       {/* Action buttons */}
       <View style={styles.actionRow}>
         <Pressable style={styles.actionButton} onPress={handleOpenCreditModal}>
-          <MaterialCommunityIcons name="plus-circle-outline" size={18} color={theme.colors.error} />
-          <Text style={[styles.actionButtonText, { color: theme.colors.error }]}>Add Credit</Text>
+          <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.error} />
+          <Text style={[styles.actionButtonText, { color: colors.error }]}>Add Credit</Text>
         </Pressable>
         <Pressable style={styles.actionButton} onPress={handleOpenPaymentModal}>
-          <MaterialCommunityIcons name="cash-check" size={18} color={theme.colors.success} />
-          <Text style={[styles.actionButtonText, { color: theme.colors.success }]}>Record Payment</Text>
+          <MaterialCommunityIcons name="cash-check" size={18} color={colors.success} />
+          <Text style={[styles.actionButtonText, { color: colors.success }]}>Record Payment</Text>
         </Pressable>
       </View>
 
       {/* Customer list */}
       {loading && customers.length === 0 ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading khata...</Text>
         </View>
       ) : customers.length === 0 ? (
@@ -345,8 +667,8 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
@@ -362,7 +684,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={handleCloseLedger}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>
               {selectedCustomer?.name || "Customer"} Ledger
@@ -382,10 +704,10 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                     {
                       color:
                         selectedCustomer.balanceMinor > 0
-                          ? theme.colors.error
+                          ? colors.error
                           : selectedCustomer.balanceMinor < 0
-                            ? theme.colors.success
-                            : theme.colors.textSecondary,
+                            ? colors.success
+                            : colors.textSecondary,
                     },
                   ]}
                 >
@@ -402,7 +724,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
 
           {entriesLoading ? (
             <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : customerEntries.length === 0 ? (
             <EmptyState
@@ -429,7 +751,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={() => setShowCreditModal(false)}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Add Credit</Text>
             <View style={styles.modalHeaderSpacer} />
@@ -440,7 +762,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <TextInput
               style={styles.formInput}
               placeholder="10-digit phone number"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={creditPhone}
               onChangeText={setCreditPhone}
               keyboardType="phone-pad"
@@ -451,7 +773,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <TextInput
               style={styles.formInput}
               placeholder="Name (optional for existing)"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={creditName}
               onChangeText={setCreditName}
             />
@@ -460,7 +782,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <TextInput
               style={styles.formInput}
               placeholder="0.00"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={creditAmount}
               onChangeText={setCreditAmount}
               keyboardType="decimal-pad"
@@ -470,7 +792,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <TextInput
               style={[styles.formInput, styles.formTextArea]}
               placeholder="e.g. Purchased groceries on credit"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={creditDescription}
               onChangeText={setCreditDescription}
               multiline
@@ -483,7 +805,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               disabled={creditSubmitting}
             >
               {creditSubmitting ? (
-                <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
                 <Text style={styles.submitButtonText}>Add Credit Entry</Text>
               )}
@@ -504,7 +826,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={() => setShowPaymentModal(false)}>
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Record Payment</Text>
             <View style={styles.modalHeaderSpacer} />
@@ -515,7 +837,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <TextInput
               style={styles.formInput}
               placeholder="10-digit phone number"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={paymentPhone}
               onChangeText={setPaymentPhone}
               keyboardType="phone-pad"
@@ -526,7 +848,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <TextInput
               style={styles.formInput}
               placeholder="0.00"
-              placeholderTextColor={theme.colors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={paymentAmount}
               onChangeText={setPaymentAmount}
               keyboardType="decimal-pad"
@@ -544,7 +866,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                 <MaterialCommunityIcons
                   name="cash"
                   size={20}
-                  color={paymentMethod === "CASH" ? theme.colors.primary : theme.colors.textTertiary}
+                  color={paymentMethod === "CASH" ? colors.primary : colors.textTertiary}
                 />
                 <Text
                   style={[
@@ -565,7 +887,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                 <MaterialCommunityIcons
                   name="cellphone-nfc"
                   size={20}
-                  color={paymentMethod === "UPI" ? theme.colors.primary : theme.colors.textTertiary}
+                  color={paymentMethod === "UPI" ? colors.primary : colors.textTertiary}
                 />
                 <Text
                   style={[
@@ -584,7 +906,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               disabled={paymentSubmitting}
             >
               {paymentSubmitting ? (
-                <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
                 <Text style={styles.submitButtonText}>Record Payment</Text>
               )}
@@ -597,327 +919,3 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
   );
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    margin: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    paddingVertical: 4,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.xs,
-    backgroundColor: theme.colors.surface,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  actionButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  listContent: {
-    padding: theme.spacing.md,
-    paddingTop: 0,
-    paddingBottom: theme.spacing.xl,
-  },
-  customerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  customerInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  customerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  customerAvatarText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  customerDetails: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  customerPhone: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  customerLastEntry: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  customerBalance: {
-    alignItems: "flex-end",
-    marginRight: theme.spacing.xs,
-  },
-  balanceAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  balanceLabel: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 2,
-  },
-  // Ledger modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalCloseButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  modalHeaderSpacer: {
-    width: 40,
-  },
-  modalContent: {
-    padding: theme.spacing.md,
-  },
-  ledgerSummaryCard: {
-    margin: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    ...theme.shadows.sm,
-  },
-  ledgerSummaryName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  ledgerSummaryPhone: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  ledgerSummaryBalance: {
-    marginTop: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  ledgerSummaryLabel: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    marginBottom: 4,
-  },
-  ledgerSummaryAmount: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  ledgerList: {
-    flex: 1,
-  },
-  ledgerListContent: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  ledgerEntry: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  ledgerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ledgerDetails: {
-    flex: 1,
-  },
-  ledgerType: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-    textTransform: "uppercase",
-  },
-  ledgerDescription: {
-    fontSize: 13,
-    color: theme.colors.textPrimary,
-    marginTop: 2,
-  },
-  ledgerDate: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  ledgerPaymentMethod: {
-    fontSize: 11,
-    color: theme.colors.primary,
-    fontWeight: "500",
-    marginTop: 2,
-  },
-  ledgerAmounts: {
-    alignItems: "flex-end",
-  },
-  ledgerAmount: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  ledgerRunningBalance: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  // Form styles
-  formLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-    marginTop: theme.spacing.md,
-  },
-  formInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
-  },
-  formTextArea: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
-  paymentMethodRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  paymentMethodOption: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  paymentMethodActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primaryLight,
-  },
-  paymentMethodText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textTertiary,
-  },
-  paymentMethodTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  submitButton: {
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: theme.spacing.lg,
-  },
-  submitButtonCredit: {
-    backgroundColor: theme.colors.error,
-  },
-  submitButtonPayment: {
-    backgroundColor: theme.colors.success,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});

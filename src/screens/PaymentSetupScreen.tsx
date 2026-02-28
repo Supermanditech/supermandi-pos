@@ -7,7 +7,7 @@
  * If skipped, SellScan shows a banner prompting setup.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
 import {
   View,
@@ -27,7 +27,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { updatePaymentSettings } from "../services/api/enrollApi";
 import { ApiError } from "../services/api/apiClient";
-import { theme, colors, typography, spacing } from "../theme";
+import { theme, typography, spacing, useThemeColors } from "../theme";
 
 type RootStackParamList = {
   PaymentSetup: undefined;
@@ -44,6 +44,7 @@ const BANK_ACCT_REGEX = /^\d{9,18}$/;
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
 export default function PaymentSetupScreen() {
+  const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
 
   const [upiVpa, setUpiVpa] = useState("");
@@ -135,6 +136,111 @@ export default function PaymentSetupScreen() {
     await AsyncStorage.setItem(PAYMENT_PROMPTED_KEY, "1");
     navigation.replace("SellScan");
   }
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      padding: spacing.lg,
+      justifyContent: "center",
+    },
+    header: {
+      alignItems: "center",
+      marginBottom: spacing.xl,
+    },
+    title: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    form: {
+      marginBottom: spacing.xl,
+    },
+    fieldGroup: {
+      marginBottom: spacing.md,
+    },
+    label: {
+      ...typography.caption,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    required: {
+      color: colors.error,
+    },
+    input: {
+      ...typography.body,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: theme.borderRadius.md,
+      padding: spacing.sm,
+      color: colors.textPrimary,
+      backgroundColor: colors.surface,
+    },
+    inputError: {
+      borderColor: colors.error,
+    },
+    errorText: {
+      color: colors.error,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    actions: {
+      alignItems: "center",
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.xl,
+      borderRadius: theme.borderRadius.md,
+      width: "100%",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      ...typography.button,
+      color: colors.textInverse,
+    },
+    skipButton: {
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    skipButtonText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textDecorationLine: "underline",
+    },
+    skipHint: {
+      color: colors.textTertiary,
+      fontSize: 12,
+      textAlign: "center",
+    },
+    offlineBanner: {
+      backgroundColor: colors.warning + "20",
+      borderWidth: 1,
+      borderColor: colors.warning,
+      borderRadius: theme.borderRadius.md,
+      padding: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    offlineBannerText: {
+      ...typography.caption,
+      color: colors.warning,
+      textAlign: "center",
+      fontWeight: "600",
+    },
+  }), [colors]);
 
   return (
     <KeyboardAvoidingView
@@ -271,108 +377,3 @@ export default function PaymentSetupScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: spacing.lg,
-    justifyContent: "center",
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: spacing.xl,
-  },
-  title: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  form: {
-    marginBottom: spacing.xl,
-  },
-  fieldGroup: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    ...typography.caption,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  required: {
-    color: colors.error,
-  },
-  input: {
-    ...typography.body,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: spacing.sm,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  actions: {
-    alignItems: "center",
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.xl,
-    borderRadius: theme.borderRadius.md,
-    width: "100%",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    ...typography.button,
-    color: colors.textInverse,
-  },
-  skipButton: {
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  skipButtonText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textDecorationLine: "underline",
-  },
-  skipHint: {
-    color: colors.textTertiary,
-    fontSize: 12,
-    textAlign: "center",
-  },
-  offlineBanner: {
-    backgroundColor: colors.warning + "20",
-    borderWidth: 1,
-    borderColor: colors.warning,
-    borderRadius: theme.borderRadius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  offlineBannerText: {
-    ...typography.caption,
-    color: colors.warning,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-});
