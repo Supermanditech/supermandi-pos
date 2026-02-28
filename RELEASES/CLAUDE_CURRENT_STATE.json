@@ -6,7 +6,7 @@
   "ticketQueue": [],
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
-    "baselineSha": "d69c4a20",
+    "baselineSha": "f032299c",
     "baselineBranch": "main",
     "issueRange": "STG-001..STG-286",
     "summary": {
@@ -23,13 +23,25 @@
         "title": "Build stamps are correct",
         "reason": "All 4 services show e56f0f4 (commit e56f0f42 — 2 docs-only commits after deploy tag e63dba14). Services are aligned and running latest code. Not a bug.",
         "status": "WONTFIX"
+      },
+      "STG-276": {
+        "title": "CategoryRail intentional Material brand colors",
+        "reason": "60+ hardcoded gradient/icon colors in CATEGORY_COLORS are Material Design palette for 15 FMCG product category icons. Intentional brand decoration, same in light and dark mode by design. Rechecked and confirmed 2026-03-01.",
+        "status": "WONTFIX"
+      }
+    },
+    "acceptedRegistry": {
+      "STG-281": {
+        "title": "ChatConversationScreen rgba(255,255,255,0.7) time text",
+        "reason": "Semi-transparent white on primary-colored chat bubble is intentional design pattern. Readable on both light (#2563EB) and dark (#3B82F6) primary backgrounds. Comment added to code confirming decision.",
+        "status": "ACCEPTED"
       }
     },
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
     "trackerFrozen": true,
     "deployHold": true,
     "nextRoundRules": {
-      "auditFrom": "main@d69c4a20",
+      "auditFrom": "main@f032299c",
       "newFindingsStartAt": "STG-287",
       "regressionAgainstPriorFixes": "Append as new STG-287+ IDs, do NOT silently edit historical closures",
       "doNotRewrite": "STG-001..STG-286 entries are frozen — only append, never edit"

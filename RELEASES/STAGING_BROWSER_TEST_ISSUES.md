@@ -2015,17 +2015,17 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
-## Summary
+## Summary (Final — STG-001..286)
 
 | Status | Count |
 |--------|-------|
-| FIXED | 205 |
-| DIAGNOSED | 0 |
-| INFRA-ONLY | 0 |
+| FIXED | 283 |
+| WONTFIX | 2 (STG-021, STG-276) |
+| ACCEPTED | 1 (STG-281) |
+| DEFERRED_COSMETIC | 0 |
 | FOUND | 0 |
-| VERIFIED | 0 |
-| WONTFIX | 1 |
-| **Total** | **206** |
+| DIAGNOSED | 0 |
+| **Total** | **286** |
 
 | Source | Range | Count |
 |--------|-------|-------|
@@ -2033,9 +2033,12 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 | Code-level audit: Retailer | STG-053 → STG-071 | 19 |
 | Code-level audit: Supplier | STG-072 → STG-091 | 20 |
 | Code-level audit: POS App | STG-092 → STG-174 | 83 |
-| **Live staging audit** | **STG-175 → STG-185** | **11** |
-| **Reiteration 1 regression audit** | **STG-186 → STG-195** | **10** |
-| **Reiteration 2 regression audit** | **STG-196 → STG-206** | **11** |
+| Live staging audit | STG-175 → STG-185 | 11 |
+| Reiteration 1 regression audit | STG-186 → STG-195 | 10 |
+| Reiteration 2 regression audit | STG-196 → STG-206 | 11 |
+| Final staging audit wave 2 | STG-207 → STG-236 | 30 |
+| UI/UX polish reiteration | STG-237 → STG-256 | 20 |
+| Final pre-deploy audit | STG-257 → STG-286 | 30 |
 
 ---
 

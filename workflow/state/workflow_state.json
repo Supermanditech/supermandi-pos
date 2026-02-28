@@ -4,7 +4,7 @@
   "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
-    "baselineSha": "d69c4a20",
+    "baselineSha": "f032299c",
     "issueRange": "STG-001..STG-286",
     "total": 286,
     "fixed": 283,

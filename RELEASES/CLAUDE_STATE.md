@@ -2056,7 +2056,7 @@ DAY 3+:     Normal monitoring cadence
 
 ## 19.1 Staging Browser Test Wave — Freeze Record
 
-> **Status**: CLOSED_IN_GIT | **Baseline**: `main@d69c4a20` | **Date**: 2026-03-01
+> **Status**: CLOSED_IN_GIT | **Baseline**: `main@f032299c` | **Date**: 2026-03-01
 
 ### Wave Summary
 
@@ -2076,6 +2076,18 @@ DAY 3+:     Normal monitoring cadence
 **Issue**: Build stamps are correct.
 **Evidence**: All 4 services show `e56f0f4` (commit `e56f0f42` — 2 docs-only commits after deploy tag `e63dba14`). Services are aligned and running latest code.
 **Verdict**: Not a bug. Build stamps correctly reflect deployed code.
+
+### STG-276 WONTFIX Record
+
+**Issue**: CategoryRail 60+ hardcoded gradient/icon colors.
+**Evidence**: Material Design palette colors for 15 FMCG product category icons. Intentional brand decoration, same appearance in light and dark mode by design.
+**Verdict**: Not a theme bug. Rechecked and confirmed 2026-03-01.
+
+### STG-281 ACCEPTED Record
+
+**Issue**: ChatConversationScreen `rgba(255,255,255,0.7)` time text.
+**Evidence**: Semi-transparent white on primary-colored chat bubble. Readable on both light (`#2563EB`) and dark (`#3B82F6`) primary backgrounds.
+**Verdict**: Intentional design pattern. Comment added to code confirming decision.
 
 ### Tracker Freeze Rules
 
