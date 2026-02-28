@@ -50,7 +50,8 @@ export function csrfProtectionMiddleware(
   // Accept if either:
   // 1. X-Requested-With header is present (any value)
   // 2. Content-Type is application/json (can't be sent by HTML forms)
-  if (requestedWith || (contentType && contentType.includes('application/json'))) {
+  // 3. STG-184: Content-Type is multipart/form-data (file uploads from authenticated JS clients)
+  if (requestedWith || (contentType && (contentType.includes('application/json') || contentType.includes('multipart/form-data')))) {
     next();
     return;
   }

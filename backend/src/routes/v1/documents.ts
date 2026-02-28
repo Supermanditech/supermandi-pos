@@ -398,7 +398,8 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 
     // Authorization check - allow owner or admin
     // DOCS-001: Validate admin token properly (timing-safe comparison)
-    const isAdmin = isValidAdminRequest(req) || (req as any).actorType === 'ADMIN' || (req as any).isAdmin;
+    // STG-030: Also accept actorType 'platform' (set by gateway for admin JWT sessions)
+    const isAdmin = isValidAdminRequest(req) || (req as any).actorType === 'ADMIN' || (req as any).actorType === 'platform' || (req as any).isAdmin;
     const requesterId = (req as any).storeId || (req as any).supplierId || (req as any).userId;
     const isOwner = requesterId === doc.entity_id;
 

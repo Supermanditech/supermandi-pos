@@ -140,11 +140,13 @@ async function checkExpiringProducts(pool: any, storeId: string): Promise<number
 }
 
 async function checkOverduePayments(pool: any, storeId: string): Promise<number> {
+  // STG-026: Fixed to use payments.customer_dues (correct table for DUE-mode payments)
+  // instead of payments.sell_payments which lacks customer_phone/due_date columns
   const result = await pool.query(
     `SELECT customer_phone, COUNT(*) AS overdue_count,
-            SUM(amount - COALESCE(paid_amount, 0)) AS total_due
-     FROM payments.sell_payments
-     WHERE store_id = $1 AND status = 'due'
+            SUM(amount_minor - COALESCE(paid_amount_minor, 0)) AS total_due
+     FROM payments.customer_dues
+     WHERE store_id = $1 AND status IN ('pending', 'partial')
        AND due_date < CURRENT_DATE
      GROUP BY customer_phone
      ORDER BY total_due DESC

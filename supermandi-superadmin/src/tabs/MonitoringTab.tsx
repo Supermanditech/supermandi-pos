@@ -292,7 +292,7 @@ export function MonitoringTab() {
           </div>
           <div>
             <strong style={{ color: "#166534" }}>Domain</strong>
-            <div style={{ color: "#64748B" }}>staging.supermandi.tech</div>
+            <div style={{ color: "#64748B" }}>{typeof window !== 'undefined' ? window.location.hostname : 'supermandi.tech'}</div>
             <div style={{ color: "#94A3B8", fontSize: 12 }}>Cloudflare DNS</div>
           </div>
         </div>

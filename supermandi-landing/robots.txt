@@ -1,0 +1,5 @@
+# STG-181: robots.txt for SuperMandi landing page
+User-agent: *
+Allow: /
+
+Sitemap: https://supermandi.tech/sitemap.xml

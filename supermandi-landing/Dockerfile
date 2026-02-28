@@ -9,6 +9,8 @@ COPY privacy.html /usr/share/nginx/html/privacy.html
 COPY terms.html /usr/share/nginx/html/terms.html
 COPY pos.html /usr/share/nginx/html/pos.html
 COPY favicon.svg /usr/share/nginx/html/favicon.svg
+COPY robots.txt /usr/share/nginx/html/robots.txt
+COPY sitemap.xml /usr/share/nginx/html/sitemap.xml
 COPY brand/ /usr/share/nginx/html/brand/
 
 # Add health check file

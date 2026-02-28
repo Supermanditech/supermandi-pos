@@ -179,11 +179,11 @@ adminApplicationsRouter.get(
 
       const app = result.rows[0];
 
-      // Fetch documents from documents table
+      // STG-032: Fixed table from auth.documents (doesn't exist) to platform.documents
       const docsResult = await pool.query(
-        `SELECT id, document_type, file_url, file_name, file_size, status, created_at
-         FROM auth.documents
-         WHERE entity_type = 'application' AND entity_id = $1
+        `SELECT id, document_type, file_path AS file_url, file_name, file_size, content_type, status, created_at
+         FROM platform.documents
+         WHERE entity_type = 'application' AND entity_id = $1 AND deleted_at IS NULL
          ORDER BY created_at ASC`,
         [id]
       ).catch(() => ({ rows: [] }));

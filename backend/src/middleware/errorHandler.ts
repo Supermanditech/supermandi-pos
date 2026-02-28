@@ -18,10 +18,14 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  // STG-183: Include requestId in all error responses for tracing consistency
+  const requestId = (_req as any).correlationId as string | undefined;
+
   if (err instanceof HttpError) {
     res.status(err.statusCode).json({
       error: err.message,
-      details: err.details ?? undefined
+      details: err.details ?? undefined,
+      ...(requestId && { requestId }),
     });
     return;
   }
@@ -32,10 +36,10 @@ export function errorHandler(
     const constraint = (err as any)?.constraint ?? "";
     const mapped = CONSTRAINT_ERROR_MAP[constraint];
     if (mapped) {
-      return void res.status(409).json({ error: mapped.code, message: mapped.message });
+      return void res.status(409).json({ error: mapped.code, message: mapped.message, ...(requestId && { requestId }) });
     }
     // Unknown constraint — still 409 but generic message
-    return void res.status(409).json({ error: "DUPLICATE_ENTRY", message: "A record with this value already exists" });
+    return void res.status(409).json({ error: "DUPLICATE_ENTRY", message: "A record with this value already exists", ...(requestId && { requestId }) });
   }
 
   // ITER4-P1-007: Don't expose internal error messages/stack traces in production
@@ -51,6 +55,6 @@ export function errorHandler(
     ? "Internal server error"
     : (err instanceof Error ? err.message : "Unknown error");
 
-  res.status(500).json({ error: message });
+  res.status(500).json({ error: message, ...(requestId && { requestId }) });
 }
 
