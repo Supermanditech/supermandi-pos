@@ -233,7 +233,8 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
       // Extract verified phone number from Firebase
       phone = verifyResult.payload?.phone_number || phoneNumber;
       firebaseUid = verifyResult.payload?.uid;
-      log.info(`[RetailerAuth] Firebase token verified. UID: ${firebaseUid}, Phone: ${phone ? '***' + phone.slice(-4) : 'N/A'}`);
+      // FIREBASE-HARDENING-B: Log verification success without full PII
+      log.info(`[RetailerAuth] Firebase token verified — provider: phone`);
     } else {
       // GO-LIVE-104: Firebase Admin SDK is REQUIRED for production
       // The previous fallback allowed JWT forgery by simply base64-decoding the token

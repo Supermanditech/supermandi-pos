@@ -75,7 +75,13 @@ export async function logAuthEvent(event: AuthAuditEvent): Promise<void> {
 
     // Log critical events to console as well
     if (['login_success', 'account_locked', 'logout_all'].includes(event.eventType)) {
-      log.info(`[GO-LIVE-144] Auth event: ${event.eventType} for ${event.email || event.phone || event.actorId} (${event.actorType})`);
+      // FIREBASE-HARDENING-B: Mask PII in console logs (full details remain in audit_log table)
+      const maskedIdentity = event.email
+        ? event.email.split('@')[0].slice(0, 2) + '***@' + (event.email.split('@')[1] || '***')
+        : event.phone
+          ? '***' + event.phone.slice(-4)
+          : event.actorId;
+      log.info(`[GO-LIVE-144] Auth event: ${event.eventType} for ${maskedIdentity} (${event.actorType})`);
     }
   } catch (err) {
     // Non-critical - don't fail the request
