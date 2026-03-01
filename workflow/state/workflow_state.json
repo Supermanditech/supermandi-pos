@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-02T03:00:00Z",
-  "workflowMode": "LIVE_FIX",
+  "updatedAt": "2026-03-02T02:20:00Z",
+  "workflowMode": "POST_DEPLOY_MEGA_LIVE_VERIFICATION",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -125,7 +125,7 @@
         "p3": 15
       }
     },
-    "activePlatform": null,
+    "activePlatform": "Retailer Web",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -2033,12 +2033,16 @@
     ]
   },
   "timestamps": {
-    "updatedAt": "2026-02-28T12:00:00Z"
+    "updatedAt": "2026-03-02T02:20:00Z"
   },
-  "lastUpdated": "2026-02-28T12:00:00Z",
+  "lastUpdated": "2026-03-02T02:20:00Z",
   "postDeployMegaLiveVerification": {
-    "status": "ARMED_BLOCKED_ON_STAGING_DEPLOY",
+    "status": "ACTIVE",
     "deployTargetSha": "aa898b65",
+    "deployedSha": "aa898b65",
+    "workflowRunId": "22552048262",
+    "gate3Status": "PASSED",
+    "gate3PassedAt": "2026-03-01T20:47:59Z",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
     "nextFindingStartsAt": "STG-410",
     "singlePlatformLock": true,

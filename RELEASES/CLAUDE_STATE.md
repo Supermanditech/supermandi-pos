@@ -3084,10 +3084,13 @@ Claude MUST NOT start this phase until:
 2. Cloud Run revision truth is known
 3. operator/runtime testing context is available
 
-Current armed target:
+Current status: **ACTIVE** (Gate 3 PASSED)
 
 1. deploy SHA: aa898b65
-2. next finding start: STG-410
+2. workflow run: 22552048262
+3. Gate 3: PASSED (2026-03-01T20:47:59Z)
+4. next finding start: STG-410
+5. active platform: Retailer Web
 
 ### 15.2 Source of Truth Order
 
@@ -3244,9 +3247,9 @@ For every parity check, Claude must record:
 
 Only after this gate passes may Claude proceed to:
 
-1. staging deploy of aa898b65
-2. Gate 3 post-deploy verification (mandatory sequence below)
-3. post-deploy mega live verification (only after Gate 3 passes)
+1. staging deploy of aa898b65 — **DONE** (run 22552048262)
+2. Gate 3 post-deploy verification — **PASSED** (2026-03-01T20:47:59Z)
+3. post-deploy mega live verification — **ACTIVE** (Retailer Web first)
 
 ### 16.6 Gate 3: Post-Deploy Verification Sequence (Mandatory Order)
 

@@ -533,3 +533,47 @@ done
 ```
 
 Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
+
+---
+
+## DEPLOY EXECUTION LOG
+
+### Deploy Run 1 (FAILED — short SHA)
+- **Run ID**: `22551950938`
+- **Triggered**: `2026-03-01T20:28:35Z`
+- **Input**: `sha=aa898b65` (8-char short SHA)
+- **Result**: FAILED at Checkout — `actions/checkout@v4` with `fetch-depth: 1` cannot resolve short commit SHAs
+- **Root cause**: Shallow clone tries to match ref as branch/tag name, not commit SHA
+
+### Deploy Run 2 (SUCCESS — full SHA)
+- **Run ID**: `22552048262`
+- **Triggered**: `2026-03-01T20:33:54Z`
+- **Input**: `sha=aa898b65459694f97564295a649f6bff7cbaf352` (full 40-char)
+- **Result**: SUCCESS — all 7 jobs passed
+- **Duration**: ~14 minutes (gate → build → pre-deploy → deploy → verify → smoke)
+
+### Gate 3 Results
+| Check | Result |
+|-------|--------|
+| Serving revisions captured (6/6) | PASS |
+| SHA parity (GIT_SHA=aa898b6, 6/6 services) | PASS |
+| main-backend Ready (all 6 conditions True) | PASS |
+| Migrations 168..171 (4/4 applied) | PASS |
+| Smoke Gates 1-13 (13/13) | PASS |
+| Routing infra (L-023..030) | 8 PASS, 0 FAIL |
+| Routing smoke (L-031..047) | PASS |
+| Artifact integrity (C-033/034) | 2 PASS, 0 FAIL |
+| **Gate 3 Verdict** | **PASSED** |
+
+### Post-deploy live verification: UNLOCKED
+- Next findings start at STG-410+
+
+---
+
+## CI FOLLOW-UP (non-blocking)
+
+### CI-HARDEN-001: deploy.yml short-SHA workflow_dispatch support
+- **Severity**: Low (workaround: use full 40-char SHA)
+- **Issue**: `actions/checkout@v4` with `fetch-depth: 1` cannot resolve short commit SHAs passed via `workflow_dispatch` input
+- **Fix**: Change gate job checkout to `fetch-depth: 0` or add a step to resolve short SHA to full SHA before checkout
+- **Status**: Deferred — log as backlog item after staging verification complete
