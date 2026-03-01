@@ -3086,7 +3086,7 @@ Claude MUST NOT start this phase until:
 
 Current armed target:
 
-1. deploy SHA: 07cec20b
+1. deploy SHA: aa898b65
 2. next finding start: STG-410
 
 ### 15.2 Source of Truth Order
@@ -3192,7 +3192,7 @@ Until then, Claude must not claim production-grade live verification completion.
 ## PART 16: Pre-Deploy Parity Gate (Mandatory Before Staging Deploy)
 
 Claude MUST NOT deploy to GCP staging until this gate passes for the target SHA.
-Current target: 07cec20b (Gate 1 CLEARED 2026-03-02, deploy authorized)
+Current target: aa898b65 (Gate 1 CLEARED 2026-03-02, deploy authorized)
 
 ### 16.1 Purpose
 
@@ -3244,13 +3244,13 @@ For every parity check, Claude must record:
 
 Only after this gate passes may Claude proceed to:
 
-1. staging deploy of 07cec20b
+1. staging deploy of aa898b65
 2. Gate 3 post-deploy verification (mandatory sequence below)
 3. post-deploy mega live verification (only after Gate 3 passes)
 
 ### 16.6 Gate 3: Post-Deploy Verification Sequence (Mandatory Order)
 
-After staging deploy of 07cec20b completes:
+After staging deploy of aa898b65 completes:
 
 ```
 STEP 1: Capture serving revisions
@@ -3263,7 +3263,7 @@ STEP 2: Verify main-backend revision readiness
    → If revision fails to become ready → migration failure → investigate logs → rollback
 
 STEP 3: Verify GIT_SHA parity
-   → curl staging-api/version → sha must = 07cec20b
+   → curl staging-api/version → sha must = aa898b65
    → curl staging-api/health → status 200
 
 STEP 4: Verify migration status/count after startup

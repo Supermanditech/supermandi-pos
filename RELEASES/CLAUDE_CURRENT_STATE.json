@@ -1,7 +1,7 @@
 {
-  "version": "77.0",
-  "lastUpdated": "2026-03-02T01:00:00Z",
-  "currentPhase": "STAGING_DEPLOY_GATE_3_PENDING: Gate 1 pre-deploy authorization CLEARED (OP-1/OP-2/OP-3 resolved). Deploy target 07cec20b authorized. Post-deploy sequence: capture serving revisions → verify main-backend revision readiness (entrypoint auto-runs migrate-prod.js up on startup) → verify GIT_SHA parity → verify migration status/count → smoke gates → then unlock post-deploy mega live verification.",
+  "version": "78.0",
+  "lastUpdated": "2026-03-02T03:00:00Z",
+  "currentPhase": "STAGING_DEPLOY_GATE_3_PENDING: Gate 1 pre-deploy authorization CLEARED (OP-1/OP-2/OP-3 resolved). Deploy target aa898b65 authorized. Post-deploy sequence: capture serving revisions → verify main-backend revision readiness (entrypoint auto-runs migrate-prod.js up on startup) → verify GIT_SHA parity → verify migration status/count → smoke gates → then unlock post-deploy mega live verification.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -211,7 +211,7 @@
     "totalScreens": 118,
     "totalClean": 24,
     "activePlatform": null,
-    "activeInstruction": "Gate 1 CLEARED. Deploy target is 07cec20b. Staging deploy authorized. After deploy: capture serving revisions → verify main-backend revision readiness (entrypoint runs migrate-prod.js up on startup) → verify GIT_SHA parity = 07cec20b → verify migration status/count after startup → run smoke gates → then unlock post-deploy mega live verification.",
+    "activeInstruction": "Gate 1 CLEARED. Deploy target is aa898b65. Staging deploy authorized. After deploy: capture serving revisions → verify main-backend revision readiness (entrypoint runs migrate-prod.js up on startup) → verify GIT_SHA parity = aa898b65 → verify migration status/count after startup → run smoke gates → then unlock post-deploy mega live verification.",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -278,7 +278,7 @@
   "finalMegaImplementation": {
     "status": "ALL_FINDINGS_RESOLVED",
     "baselineSha": "cb967459",
-    "headSha": "07cec20b",
+    "headSha": "aa898b65",
     "scopeRange": "STG-287..409",
     "totalFindings": 123,
     "reconciliation": {
@@ -2635,12 +2635,12 @@
   },
   "postDeployMegaLiveVerification": {
     "status": "ARMED_BLOCKED_ON_STAGING_DEPLOY",
-    "deployTargetSha": "07cec20b",
+    "deployTargetSha": "aa898b65",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
     "nextFindingStartsAt": "STG-410",
     "purpose": "Run the final operator-assisted go-live verification on live staging at micro level after deploy, with no screen exit until all required runtime and cross-functional checks are completed or blocked with evidence.",
     "sourceOfTruthOrder": [
-      "live_gcp_staging_behavior_at_sha_07cec20b",
+      "live_gcp_staging_behavior_at_sha_aa898b65",
       "operator_runtime_evidence_browser_device_logs_screenshots",
       "cloud_run_revision_and_runtime_configuration_truth",
       "canonical_git_source_for_root_cause_after_live_reproduction"
@@ -2716,18 +2716,18 @@
   },
   "preDeployParityGate": {
     "status": "PASSED_GATE_1_CLEARED",
-    "targetSha": "07cec20b",
+    "targetSha": "aa898b65",
     "deployBlockedUntilAllChecksPass": false,
     "gate1Resolution": {
       "clearedAt": "2026-03-02T01:00:00Z",
-      "OP1_GitHubSecrets": "RESOLVED — dead Firebase build-args removed from deploy.yml (commit 07cec20b). Only GCP_WIF_PROVIDER + GCP_SA_EMAIL needed, both exist.",
+      "OP1_GitHubSecrets": "RESOLVED — dead Firebase build-args removed from deploy.yml (commit 07cec20b), wrong-project defaults corrected (commit aa898b65). Only GCP_WIF_PROVIDER + GCP_SA_EMAIL needed, both exist.",
       "OP2_DNS": "RESOLVED — Hostinger A record staging → 34.54.26.145 confirmed by operator.",
       "OP3_FirebaseConsole": "RESOLVED — Identity Toolkit REST API confirmed phone auth enabled, staging.supermandi.tech in authorized domains, SMS region restricted to India.",
-      "shaProgression": "132eb8ff (app code) → 0e161261 (state files) → 07cec20b (dead CI removal). No app behavior changes."
+      "shaProgression": "132eb8ff (app code) → 0e161261 (state files) → 07cec20b (dead CI removal) → aa898b65 (wrong-project cleanup). No app behavior changes."
     },
     "sourceOfTruthOrder": [
-      "origin_main_sha_07cec20b",
-      "canonical_repo_source_at_sha_07cec20b",
+      "origin_main_sha_aa898b65",
+      "canonical_repo_source_at_sha_aa898b65",
       "deploy_scripts_and_ci_config",
       "gcp_runtime_and_secret_mapping_truth",
       "firebase_and_identity_platform_runtime_truth"
@@ -2804,6 +2804,6 @@
       "parity_verdict_pass_or_blocked",
       "operator_action_if_blocked"
     ],
-    "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_07cec20b_THEN_GATE_3_POST_DEPLOY_VERIFICATION"
+    "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_aa898b65_THEN_GATE_3_POST_DEPLOY_VERIFICATION"
   }
 }
