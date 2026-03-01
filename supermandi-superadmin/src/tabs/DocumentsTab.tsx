@@ -134,8 +134,8 @@ export function DocumentsTab({
 
       {/* T-119: Document review modal with dirty guard on close */}
       {selectedDocument && (
-        <div className="sa-modal-overlay" onClick={handleCloseDocument}>
-          <div className="sa-modal-lg" style={{ minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+        <div className="sa-modal-overlay" onClick={handleCloseDocument} onKeyDown={(e) => { if (e.key === "Escape") handleCloseDocument(); }}>
+          <div className="sa-modal-lg" role="dialog" aria-modal="true" style={{ minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <div className="sa-flex-between sa-mb-16">
               <h3 style={{ margin: 0 }}>Review Document</h3>
               <button onClick={handleCloseDocument} className="sa-btn-xs" aria-label="Close document review">✕</button>

@@ -66,7 +66,7 @@ import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAl
 import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, bulkSetOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags";
 import { fetchApplications, approveApplication, rejectApplication, type Application } from "./api/applications";
 import { BuildStamp } from "./components/BuildStamp";
-import { formatCurrency } from "./lib/formatters";
+import { formatCurrency, formatDateTime } from "./lib/formatters";
 // SA-001: Shared types and constants
 import { type TabKey, type GroupKey, type AnalyticsTabKey, type DeviceType, ADMIN_POLL_MS, UPI_VPA_PATTERN, clamp, toIsoSafe, includesInsensitive, toIsoStart, toIsoEnd } from "./types";
 // SA-001: Extracted components
@@ -2706,7 +2706,7 @@ export default function App() {
             <span className="healthText">Backend: {health.ok ? "healthy" : "unreachable"}</span>
           </div>
           <div className="muted">
-            {health.lastCheckedAt ? `Health checked: ${new Date(health.lastCheckedAt).toLocaleTimeString()}` : ""}
+            {health.lastCheckedAt ? `Health checked: ${formatDateTime(health.lastCheckedAt)}` : ""}
           </div>
         </div>
       </header>
@@ -2733,7 +2733,8 @@ export default function App() {
           {/* T-086: Brand header */}
           <div className="sidebarBrand">
             <div className="sidebarBrandRow">
-              <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} />
+              <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} className="brand-mark-light" />
+              <img src="/admin/brand/logo-shortmark-inverse.svg" alt="" width={24} height={24} className="brand-mark-dark" />
               <div className="sidebarBrandText">
                 <span className="sidebarBrandTitle">SuperMandi</span>
                 <span className="sidebarBrandSubtitle">SuperAdmin</span>
@@ -2856,7 +2857,7 @@ export default function App() {
 
           <div className="sidebarFooter">
             {eventsLoading && <div>Refreshing…</div>}
-            {lastRefreshAt ? `Last: ${new Date(lastRefreshAt).toLocaleTimeString()}` : ""}
+            {lastRefreshAt ? `Last: ${formatDateTime(lastRefreshAt)}` : ""}
           </div>
         </aside>
 
@@ -3489,8 +3490,9 @@ export default function App() {
       toastOptions={{
         duration: 4000,
         style: {
-          background: '#0F172A',
-          color: '#FFFFFF',
+          background: 'var(--color-surface)',
+          color: 'var(--color-text-primary)',
+          border: '1px solid var(--color-border)',
           borderRadius: '8px',
         },
         success: {

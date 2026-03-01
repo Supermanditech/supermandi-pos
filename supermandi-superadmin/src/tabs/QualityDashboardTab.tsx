@@ -10,6 +10,7 @@ import {
 } from "../api/quality";
 // UIUX-SA-010: Styled confirmation dialog instead of bare confirm()
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
+import { formatDateTime } from "../lib/formatters";
 
 export function QualityDashboardTab() {
   const [overview, setOverview] = useState<QualityOverview | null>(null);
@@ -449,7 +450,7 @@ export function QualityDashboardTab() {
                     {errorRate}%
                   </td>
                   <td className="sa-td sa-text-muted sa-text-xs">
-                    {new Date(ep.lastSeen).toLocaleString()}
+                    {formatDateTime(ep.lastSeen)}
                   </td>
                 </tr>
               );

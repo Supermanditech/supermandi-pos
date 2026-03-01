@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { fetchHealthStatus, triggerTokenCleanup, type HealthResponse, type TokenCleanupResult } from "../api/monitoring";
 // UIUX-SA-009: Styled confirmation dialog instead of bare confirm()
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
+import { formatDateTime } from "../lib/formatters";
 
 export function MonitoringTab() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -111,7 +112,7 @@ export function MonitoringTab() {
         <div>
           <h2 className="sa-text-2xl sa-fw-600" style={{ margin: 0 }}>System Monitoring</h2>
           <p className="sa-text-muted sa-text-base sa-mt-4" style={{ margin: 0 }}>
-            T-223: Cloud Run services health, GCP alert policies, infrastructure status
+            Cloud Run services health, GCP alert policies, infrastructure status
           </p>
         </div>
         <div className="sa-flex sa-gap-8">
@@ -163,7 +164,7 @@ export function MonitoringTab() {
                 {health.status}
               </div>
               <div className="sa-text-sm" style={{ color: overallColor.text, opacity: 0.8 }}>
-                Last checked: {new Date(health.timestamp).toLocaleString("en-IN")}
+                Last checked: {formatDateTime(health.timestamp)}
               </div>
             </div>
           </div>

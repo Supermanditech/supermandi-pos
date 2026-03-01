@@ -1,6 +1,7 @@
 // SA-001: Users management tab extracted from App.tsx
 import type { UserRecord } from "../api/users";
 import { TableSkeleton } from "../components/TableSkeleton";
+import { formatDate } from "../lib/formatters";
 
 interface UsersTabProps {
   userRecords: UserRecord[];
@@ -88,7 +89,8 @@ export function UsersTab({
 
       <div className="tableWrap">
         <div className="sa-flex sa-gap-8 sa-mb-12 sa-flex-wrap">
-          <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search by name, email, or phone..." className="sa-input" style={{ flex: 1, minWidth: 200 }} />
+          <label htmlFor="filter-users-search" className="sa-sr-only">Search users</label>
+          <input id="filter-users-search" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search by name, email, or phone..." className="sa-input" style={{ flex: 1, minWidth: 200 }} />
           <button onClick={refreshUsers} disabled={usersLoading}>{usersLoading ? "Loading..." : "Refresh"}</button>
         </div>
         {userActionError && <div className="errorText sa-mb-8">{userActionError}</div>}
@@ -108,7 +110,7 @@ export function UsersTab({
                 <td>{user.phone ?? "-"}</td>
                 <td><span className="badge">{user.actor_type}</span></td>
                 <td><span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeError" : "badgeWarn"}`}>{user.status}</span></td>
-                <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                <td>{formatDate(user.created_at)}</td>
                 <td>
                   <select value={user.status} onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")} disabled={userStatusSaving[user.id]} className="sa-select" style={{ minWidth: 100 }}>
                     <option value="active">Active</option>

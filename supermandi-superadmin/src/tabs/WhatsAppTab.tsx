@@ -441,8 +441,9 @@ export function WhatsAppTab() {
         <h3 className="sa-text-base sa-fw-600 sa-mb-12" style={{ margin: 0 }}>Send Message</h3>
         <div className="sa-flex sa-gap-8" style={{ flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
-            <label className="sa-form-label">Recipient Phone</label>
+            <label className="sa-form-label" htmlFor="filter-whatsapp-send-phone">Recipient Phone</label>
             <input
+              id="filter-whatsapp-send-phone"
               type="tel"
               className="sa-input"
               value={sendPhone}
@@ -452,15 +453,16 @@ export function WhatsAppTab() {
             />
           </div>
           <div>
-            <label className="sa-form-label">Type</label>
-            <select className="sa-select" value={sendType} onChange={e => setSendType(e.target.value as "retailer" | "supplier")}>
+            <label className="sa-form-label" htmlFor="filter-whatsapp-send-type">Type</label>
+            <select id="filter-whatsapp-send-type" className="sa-select" value={sendType} onChange={e => setSendType(e.target.value as "retailer" | "supplier")}>
               <option value="retailer">Retailer</option>
               <option value="supplier">Supplier</option>
             </select>
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <label className="sa-form-label">Message</label>
+            <label className="sa-form-label" htmlFor="filter-whatsapp-send-message">Message</label>
             <input
+              id="filter-whatsapp-send-message"
               type="text"
               className="sa-input sa-w-full"
               value={sendMessage}
@@ -523,7 +525,8 @@ export function WhatsAppTab() {
             </div>
           </div>
           <div className="sa-flex sa-gap-8 sa-mt-8">
-            <select className="sa-select" value={broadcastType} onChange={e => setBroadcastType(e.target.value as "retailer" | "supplier")}>
+            <label htmlFor="filter-whatsapp-broadcast-type" className="sa-sr-only">Broadcast recipient type</label>
+            <select id="filter-whatsapp-broadcast-type" className="sa-select" value={broadcastType} onChange={e => setBroadcastType(e.target.value as "retailer" | "supplier")}>
               <option value="retailer">Retailer</option>
               <option value="supplier">Supplier</option>
             </select>
@@ -550,19 +553,22 @@ export function WhatsAppTab() {
 
       {/* Filters */}
       <div className="sa-flex sa-gap-8 sa-mb-12" style={{ flexWrap: "wrap" }}>
-        <select className="sa-select sa-input--sm" value={filterSender} onChange={e => { setFilterSender(e.target.value); setOffset(0); }}>
+        <label htmlFor="filter-whatsapp-sender" className="sa-sr-only">Sender type</label>
+        <select id="filter-whatsapp-sender" className="sa-select sa-input--sm" value={filterSender} onChange={e => { setFilterSender(e.target.value); setOffset(0); }}>
           <option value="">All Senders</option>
           <option value="pos">POS</option>
           <option value="superadmin">SuperAdmin</option>
         </select>
-        <select className="sa-select sa-input--sm" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}>
+        <label htmlFor="filter-whatsapp-status" className="sa-sr-only">Delivery status</label>
+        <select id="filter-whatsapp-status" className="sa-select sa-input--sm" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}>
           <option value="">All Statuses</option>
           <option value="sent">Sent</option>
           <option value="delivered">Delivered</option>
           <option value="read">Read</option>
           <option value="failed">Failed</option>
         </select>
-        <select className="sa-select sa-input--sm" value={filterContext} onChange={e => { setFilterContext(e.target.value); setOffset(0); }}>
+        <label htmlFor="filter-whatsapp-context" className="sa-sr-only">Context type</label>
+        <select id="filter-whatsapp-context" className="sa-select sa-input--sm" value={filterContext} onChange={e => { setFilterContext(e.target.value); setOffset(0); }}>
           <option value="">All Types</option>
           <option value="bill_receipt">Bill Receipt</option>
           <option value="order_update">Order Update</option>

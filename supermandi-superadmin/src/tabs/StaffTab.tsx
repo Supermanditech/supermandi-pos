@@ -52,7 +52,9 @@ export function StaffTab({
       </div>
 
       <div className="sa-flex sa-gap-8 sa-mb-16">
+        <label htmlFor="filter-staff-store" className="sa-sr-only">Store</label>
         <select
+          id="filter-staff-store"
           value={staffStoreId}
           onChange={(e) => { setStaffStoreId(e.target.value); setStaffList([]); }}
           className="sa-select sa-radius-6"

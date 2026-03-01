@@ -125,12 +125,14 @@ export function InvoicesTab() {
 
       {/* Filters */}
       <div className="sa-flex sa-gap-8 sa-flex-wrap sa-mb-16">
-        <select value={modelFilter} onChange={(e) => { setModelFilter(e.target.value as any); setOffset(0); }} className="sa-select">
+        <label htmlFor="filter-invoices-model" className="sa-sr-only">Invoice model</label>
+        <select id="filter-invoices-model" value={modelFilter} onChange={(e) => { setModelFilter(e.target.value as any); setOffset(0); }} className="sa-select">
           <option value="">All Models</option>
           <option value="buy_resell">Buy-Resell</option>
           <option value="platform_fee">Platform Fee</option>
         </select>
-        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value as any); setOffset(0); }} className="sa-select">
+        <label htmlFor="filter-invoices-type" className="sa-sr-only">Invoice type</label>
+        <select id="filter-invoices-type" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value as any); setOffset(0); }} className="sa-select">
           <option value="">All Types</option>
           <option value="purchase">Purchase</option>
           <option value="sale">Sale</option>
@@ -138,7 +140,8 @@ export function InvoicesTab() {
           <option value="credit_note">Credit Note</option>
           <option value="debit_note">Debit Note</option>
         </select>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); setOffset(0); }} className="sa-select">
+        <label htmlFor="filter-invoices-status" className="sa-sr-only">Invoice status</label>
+        <select id="filter-invoices-status" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); setOffset(0); }} className="sa-select">
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="issued">Issued</option>
@@ -170,7 +173,7 @@ export function InvoicesTab() {
                 const st = STATUS_STYLES[inv.status] || STATUS_STYLES.draft;
                 return (
                   <tr key={inv.id}>
-                    <td className="sa-fw-600 sa-text-sm sa-text-brand" style={{ cursor: "pointer" }} onClick={() => openDetail(inv.id)}>{inv.invoiceNumber}</td>
+                    <td className="sa-fw-600 sa-text-sm sa-text-brand" style={{ cursor: "pointer" }} tabIndex={0} role="button" onClick={() => openDetail(inv.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(inv.id); } }}>{inv.invoiceNumber}</td>
                     <td className="sa-text-sm">{formatDateTime(inv.invoiceDate)}</td>
                     <td className="sa-text-xs">{inv.invoiceModel === "buy_resell" ? "Buy-Resell" : "Platform Fee"}</td>
                     <td className="sa-text-xs" style={{ textTransform: "capitalize" }}>{inv.invoiceType.replace("_", " ")}</td>
@@ -210,8 +213,8 @@ export function InvoicesTab() {
 
       {/* Detail Modal */}
       {(detail || detailLoading) && (
-        <div className="sa-modal-overlay" onClick={() => !detailLoading && setDetail(null)}>
-          <div className="sa-modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="sa-modal-overlay" onClick={() => !detailLoading && setDetail(null)} onKeyDown={(e) => { if (e.key === "Escape") setDetail(null); }}>
+          <div className="sa-modal-lg" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             {detailLoading && <div className="muted sa-text-center sa-p-24">Loading invoice...</div>}
             {detail && (
               <>

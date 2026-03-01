@@ -72,7 +72,9 @@ export function AuditTab({
             {auditLogsLoading ? "Loading..." : "Refresh"}
           </button>
 
+          <label htmlFor="filter-audit-action" className="sa-sr-only">Action</label>
           <select
+            id="filter-audit-action"
             value={auditLogsFilter.action || ""}
             onChange={(e) => {
               setAuditLogsFilter(prev => ({ ...prev, action: e.target.value || undefined }));
@@ -89,7 +91,9 @@ export function AuditTab({
             <option value="login">Login</option>
           </select>
 
+          <label htmlFor="filter-audit-resource" className="sa-sr-only">Resource type</label>
           <select
+            id="filter-audit-resource"
             value={auditLogsFilter.resource_type || ""}
             onChange={(e) => {
               setAuditLogsFilter(prev => ({ ...prev, resource_type: e.target.value || undefined }));
@@ -106,7 +110,9 @@ export function AuditTab({
           </select>
 
           {/* #186.10: Date range filter */}
+          <label htmlFor="filter-audit-from" className="sa-sr-only">From date</label>
           <input
+            id="filter-audit-from"
             type="date"
             value={auditLogsFilter.from_date || ""}
             onChange={(e) => {
@@ -117,7 +123,9 @@ export function AuditTab({
             title="From date"
           />
           <span className="muted">to</span>
+          <label htmlFor="filter-audit-to" className="sa-sr-only">To date</label>
           <input
+            id="filter-audit-to"
             type="date"
             value={auditLogsFilter.to_date || ""}
             onChange={(e) => {

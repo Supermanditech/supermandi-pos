@@ -62,7 +62,14 @@ export function GrnAlertsTab({
                 <tr key={a.id}>
                   <td className="sa-text-sm">{a.store_name || a.store_id.slice(0, 8)}</td>
                   <td className="sa-text-sm">{a.order_number || a.purchase_order_id.slice(0, 8)}</td>
-                  <td className="sa-fw-600 sa-nowrap" style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{a.product_name}</td>
+                  <td
+                    className="sa-fw-600 sa-nowrap"
+                    style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", cursor: "default" }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Product: ${a.product_name}`}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); } }}
+                  >{a.product_name}</td>
                   <td>{a.ordered_qty}</td>
                   <td className="sa-fw-600">{a.total_received_qty}</td>
                   <td className="sa-text-danger sa-fw-600">+{a.excess_qty}</td>
@@ -93,7 +100,7 @@ export function GrnAlertsTab({
 
       {grnAlertsTotal > 50 && (
         <div className="sa-flex-center sa-gap-8 sa-mt-12">
-          <button className="sa-btn-sm" disabled={grnAlertsOffset === 0} onClick={() => setGrnAlertsOffset(Math.max(0, grnAlertsOffset - 50))}>Previous</button>
+          <button className="btn btnSm" disabled={grnAlertsOffset === 0} onClick={() => setGrnAlertsOffset(Math.max(0, grnAlertsOffset - 50))}>Previous</button>
           <span className="muted sa-text-sm">{grnAlertsOffset + 1}–{Math.min(grnAlertsOffset + 50, grnAlertsTotal)} of {grnAlertsTotal}</span>
           <button className="btn btnSm" disabled={grnAlertsOffset + 50 >= grnAlertsTotal} onClick={() => setGrnAlertsOffset(grnAlertsOffset + 50)}>Next</button>
         </div>

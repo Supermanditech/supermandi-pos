@@ -53,14 +53,14 @@ async function apiFetch(url: string, options?: RequestInit) {
   return res.json();
 }
 
-function formatTime(iso: string | null): string {
+function formatTimestamp(iso: string | null): string {
   if (!iso) return '-';
   const d = new Date(iso);
   const now = new Date();
   const diff = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff === 0) return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 0) return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
   if (diff === 1) return 'Yesterday';
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' });
 }
 
 export function SupportQueueTab() {
@@ -206,9 +206,9 @@ export function SupportQueueTab() {
             ))}
           </div>
 
-          <div className="sa-flex sa-gap-16" style={{ height: 'calc(100vh - 240px)' }}>
+          <div className="sa-flex sa-gap-16 sa-support-layout" style={{ height: 'calc(100vh - 240px)' }}>
             {/* Conversation List */}
-            <div className="sa-scroll-y" style={{ width: 300, borderRight: '1px solid var(--color-border)' }}>
+            <div className="sa-scroll-y sa-support-convlist" style={{ width: 300, borderRight: '1px solid var(--color-border)' }}>
               {loading ? (
                 <div className="sa-p-24 sa-text-muted sa-text-center">Loading...</div>
               ) : conversations.length === 0 ? (
@@ -219,12 +219,15 @@ export function SupportQueueTab() {
                 <div
                   key={conv.id}
                   onClick={() => selectConversation(conv.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectConversation(conv.id); } }}
+                  tabIndex={0}
+                  role="button"
                   className={`sa-p-12 sa-border-b ${selectedConvId === conv.id ? 'sa-row-highlight' : ''}`}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="sa-flex-between">
                     <span className="sa-fw-500 sa-text-md">{conv.title || 'Support Chat'}</span>
-                    <span className="sa-text-xs sa-text-muted">{formatTime(conv.lastMessageAt)}</span>
+                    <span className="sa-text-xs sa-text-muted">{formatTimestamp(conv.lastMessageAt)}</span>
                   </div>
                   <div className="sa-text-sm sa-text-muted sa-mt-4 sa-nowrap" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {conv.lastMessagePreview || 'No messages'}
@@ -269,7 +272,7 @@ export function SupportQueueTab() {
                             }}>
                               <div className="sa-text-xs" style={{ opacity: 0.7, marginBottom: 2 }}>{msg.senderType}</div>
                               <div className="sa-text-md">{msg.content}</div>
-                              <div className="sa-msg-time sa-text-right">{formatTime(msg.createdAt)}</div>
+                              <div className="sa-msg-time sa-text-right">{formatTimestamp(msg.createdAt)}</div>
                             </div>
                           </div>
                         )}
@@ -280,6 +283,8 @@ export function SupportQueueTab() {
                   {/* Reply */}
                   <div className="sa-flex sa-gap-8 sa-py-8 sa-border-t">
                     <input
+                      id="filter-support-reply"
+                      aria-label="Reply message"
                       value={replyText}
                       onChange={e => setReplyText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendReply())}

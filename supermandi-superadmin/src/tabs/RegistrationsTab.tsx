@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { RegistrationEvent } from "../api/registrationEvents";
 import { sendEnrollmentCodeToStore } from "../api/registrationEvents";
 import { EnrollmentResultModal, type EnrollmentResult } from "../components/ConfirmDialog";
+import { formatDateTime } from "../lib/formatters";
 
 interface RegistrationsTabProps {
   regEvents: RegistrationEvent[];
@@ -52,7 +53,9 @@ export function RegistrationsTab({
             {regEventsLoading ? "Loading..." : "Refresh"}
           </button>
 
+          <label htmlFor="filter-registrations-source" className="sa-sr-only">Source</label>
           <select
+            id="filter-registrations-source"
             value={regEventsSourceFilter}
             onChange={(e) => { setRegEventsSourceFilter(e.target.value); setRegEventsPage(() => 0); }}
             className="sa-select"
@@ -64,7 +67,9 @@ export function RegistrationsTab({
             <option value="ADMIN">Admin</option>
           </select>
 
+          <label htmlFor="filter-registrations-outcome" className="sa-sr-only">Outcome</label>
           <select
+            id="filter-registrations-outcome"
             value={regEventsOutcomeFilter}
             onChange={(e) => { setRegEventsOutcomeFilter(e.target.value); setRegEventsPage(() => 0); }}
             className="sa-select"
@@ -113,7 +118,7 @@ export function RegistrationsTab({
             {regEvents.map((evt) => (
               <tr key={evt.id}>
                 <td className="mono sa-text-xs sa-nowrap">
-                  {new Date(evt.createdAt).toLocaleString()}
+                  {formatDateTime(evt.createdAt)}
                 </td>
                 <td>
                   <span className={evt.source === "PORTAL" ? "sa-badge-info" : evt.source === "POS_MOBILE" ? "sa-badge-ok" : "sa-badge-muted"}>

@@ -239,7 +239,9 @@ html.dark .brand-mark-dark {
   outline-offset: 2px;
 }
 /* T-222: Screen-reader-only utility */
-.sr-only {
+/* STG-380: sa-sr-only alias for filter label accessibility */
+.sr-only,
+.sa-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;

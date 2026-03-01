@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchRefunds, approveRefund, rejectRefund, type RefundRequest, type RefundStatus } from "../api/refunds";
 // R7.SA.007: Confirmation dialog before money-movement actions
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
+import { formatDateTime } from "../lib/formatters";
 
 function formatCurrency(minor: number): string {
   return "\u20B9" + (minor / 100).toFixed(2);
@@ -92,10 +93,7 @@ export function RefundsTab() {
     }
   };
 
-  const formatDate = (iso: string) => {
-    try { return new Date(iso).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
-    catch { return iso; }
-  };
+  const formatDate = (iso: string) => formatDateTime(iso);
 
   return (
     <div className="sa-p-24">
@@ -109,7 +107,9 @@ export function RefundsTab() {
           </p>
         </div>
         <div className="sa-flex sa-gap-8">
+          <label htmlFor="filter-refunds-status" className="sa-sr-only">Refund status</label>
           <select
+            id="filter-refunds-status"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value as RefundStatus | ""); setOffset(0); }}
             className="sa-select"

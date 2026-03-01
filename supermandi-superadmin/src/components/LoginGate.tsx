@@ -145,6 +145,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
                 name="otp"
                 ref={otpRef}
                 type="text"
+                inputMode="numeric"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
                 placeholder="Enter 6-digit code"

@@ -26,6 +26,13 @@ export function formatDateTime(value: string | Date): string {
   });
 }
 
+/** Format time only: "4:30 PM" */
+export function formatTime(value: string | Date): string {
+  const d = typeof value === 'string' ? new Date(value) : value;
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+}
+
 // ── Currency Formatters ─────────────────────────────────────────────────────
 
 const currencyFmt = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });

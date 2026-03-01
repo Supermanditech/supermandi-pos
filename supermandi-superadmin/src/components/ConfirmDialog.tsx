@@ -1,5 +1,6 @@
 // STBT-186.1: Generic confirmation dialog for destructive actions
 // Replaces all alert()/window.confirm() with proper modals
+import { formatDateTime } from '../lib/formatters';
 
 export interface ConfirmDialogConfig {
   title: string;
@@ -74,7 +75,7 @@ export function EnrollmentResultModal({ result, onClose }: EnrollmentResultModal
             </button>
           </div>
           <div className="sa-enrollment-meta">
-            <div>Expires: {new Date(result.expiresAt).toLocaleString()}</div>
+            <div>Expires: {formatDateTime(result.expiresAt)}</div>
             <div>SMS: {result.smsSent ? 'Sent' : 'Skipped'}</div>
             <div>Email: {result.emailSent ? 'Sent' : 'Skipped'}</div>
           </div>

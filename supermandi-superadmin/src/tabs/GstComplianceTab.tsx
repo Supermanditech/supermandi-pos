@@ -77,11 +77,14 @@ export function GstComplianceTab() {
           <p className="sa-text-md sa-text-muted sa-mt-4" style={{ margin: 0 }}>Monthly GST summary, filing status, and GSTR-1 export</p>
         </div>
         <div className="sa-flex sa-gap-8">
+          <label htmlFor="filter-gst-month" className="sa-sr-only">Month</label>
           <input
+            id="filter-gst-month"
             type="month"
             className="sa-input"
+            aria-label="Select month"
             value={month}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={(e) => { setMonth(e.target.value); setSelectedStore(null); setStoreSummary(null); }}
           />
           <button className="sa-btn-ghost-sm" onClick={loadOverview}>
             Refresh
@@ -185,11 +188,11 @@ export function GstComplianceTab() {
 
       {/* Store detail modal */}
       {selectedStore && (
-        <div className="sa-modal-overlay" onClick={() => { setSelectedStore(null); setStoreSummary(null); }}>
-          <div className="sa-modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="sa-modal-overlay" onClick={() => { setSelectedStore(null); setStoreSummary(null); }} onKeyDown={(e) => { if (e.key === "Escape") { setSelectedStore(null); setStoreSummary(null); } }}>
+          <div className="sa-modal-lg" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="sa-flex-between sa-mb-16">
               <h3 className="sa-modal-title" style={{ margin: 0 }}>GST Detail — {month}</h3>
-              <button onClick={() => { setSelectedStore(null); setStoreSummary(null); }} className="sa-btn-text" style={{ fontSize: "1.25rem" }}>&times;</button>
+              <button onClick={() => { setSelectedStore(null); setStoreSummary(null); }} className="sa-btn-text" style={{ fontSize: "1.25rem" }} aria-label="Close">&times;</button>
             </div>
             {detailLoading ? (
               <div className="sa-p-24 sa-text-center sa-text-muted">Loading...</div>

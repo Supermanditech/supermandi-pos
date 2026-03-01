@@ -170,7 +170,7 @@
 
 .sidebarBrandSubtitle {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--color-text-secondary);
   line-height: 1.2;
 }
 
@@ -754,6 +754,7 @@ html.dark .badgeInfo { background: #1e3a5f; border-color: #1e40af; color: #93c5f
 html.dark .sa-text-success { color: #4ade80; }
 html.dark .sa-text-warning { color: #fbbf24; }
 html.dark .sa-text-error { color: #f87171; }
+html.dark .sa-text-danger { color: #f87171; }
 html.dark .sa-text-info { color: #93c5fd; }
 html.dark .sa-text-green { color: #34d399; }
 html.dark .sa-text-amber { color: #fcd34d; }
@@ -1341,7 +1342,6 @@ html.dark .sa-activation-code { color: #4ade80; }
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
   padding: 24px;
 }
 
@@ -1502,5 +1502,18 @@ html.dark .sa-activation-code { color: #4ade80; }
   /* T-221: Reduce mainContent padding on mobile */
   .mainContent {
     padding: 8px;
+  }
+
+  /* STG-389/STG-391: Support queue conversation list collapses to full width on mobile */
+  .sa-support-layout {
+    flex-direction: column;
+    height: auto !important;
+  }
+  .sa-support-convlist {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 200px;
   }
 }

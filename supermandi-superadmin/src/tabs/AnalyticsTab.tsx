@@ -10,7 +10,7 @@ import type {
   DuesResponse
 } from "../api/analytics";
 import { isDeviceOnline } from "../ui/status";
-import { formatDateTime, formatCurrency } from "../lib/formatters";
+import { formatDateTime, formatDate, formatCurrency } from "../lib/formatters";
 
 interface AnalyticsTabProps {
   analyticsStoreId: string;
@@ -69,20 +69,21 @@ export function AnalyticsTab({
       <div className="tableWrap" style={{ paddingTop: 0 }}>
         <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <div className="control">
-            <label>Store ID (optional)</label>
+            <label htmlFor="filter-analytics-store">Store ID (optional)</label>
             <input
+              id="filter-analytics-store"
               value={analyticsStoreId}
               onChange={(e) => setAnalyticsStoreId(e.target.value)}
               placeholder="UUID or store code"
             />
           </div>
           <div className="control">
-            <label>From</label>
-            <input type="date" value={analyticsFrom} onChange={(e) => setAnalyticsFrom(e.target.value)} />
+            <label htmlFor="filter-analytics-from">From</label>
+            <input id="filter-analytics-from" type="date" value={analyticsFrom} onChange={(e) => setAnalyticsFrom(e.target.value)} />
           </div>
           <div className="control">
-            <label>To</label>
-            <input type="date" value={analyticsTo} onChange={(e) => setAnalyticsTo(e.target.value)} />
+            <label htmlFor="filter-analytics-to">To</label>
+            <input id="filter-analytics-to" type="date" value={analyticsTo} onChange={(e) => setAnalyticsTo(e.target.value)} />
           </div>
           <div className="control">
             <label>&nbsp;</label>
@@ -292,8 +293,8 @@ export function AnalyticsTab({
           <div className="sa-mt-12">
             <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
               <div className="control">
-                <label>Group By</label>
-                <select value={productsGroupBy} onChange={(e) => setProductsGroupBy(e.target.value)} className="selectSmall">
+                <label htmlFor="filter-analytics-groupby">Group By</label>
+                <select id="filter-analytics-groupby" value={productsGroupBy} onChange={(e) => setProductsGroupBy(e.target.value)} className="selectSmall">
                   <option value="day">Day</option>
                   <option value="hour">Hour</option>
                   <option value="category">Category</option>
@@ -584,7 +585,7 @@ export function AnalyticsTab({
                         <td className="mono">{d.sale_id.slice(0, 8)}</td>
                         <td>{d.customer_name ?? "-"}</td>
                         <td className="mono">{formatCurrency(d.amount_minor)}</td>
-                        <td className="mono">{new Date(d.created_at).toLocaleDateString()}</td>
+                        <td className="mono">{formatDate(d.created_at)}</td>
                         <td className="mono">{d.age_days}</td>
                       </tr>
                     ))

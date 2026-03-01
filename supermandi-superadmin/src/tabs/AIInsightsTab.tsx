@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getAuthHeaders, fetchWithTimeout } from '../api/authToken';
 // UIUX-SA-006: Use parseError for sanitized error messages instead of generic 'API error: {status}'
 import { parseError } from '../api/errorSanitizer';
+import { formatDateTime } from '../lib/formatters';
 
 // AI-INSIGHTS-HARDCODED-ENDPOINTS: Use VITE_API_BASE_URL so dev proxy and prod base paths work
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
@@ -122,7 +123,9 @@ export function AIInsightsTab() {
 
       {view !== 'jobs' && (
         <div className="sa-flex sa-gap-8 sa-mb-16">
+          <label htmlFor="filter-aiinsights-store" className="sa-sr-only">Store ID</label>
           <input
+            id="filter-aiinsights-store"
             value={storeId}
             onChange={e => setStoreId(e.target.value)}
             placeholder="Enter Store ID..."
@@ -170,7 +173,7 @@ export function AIInsightsTab() {
                       {a.description}
                     </td>
                     <td className="sa-td sa-text-sm sa-text-muted">
-                      {new Date(a.detectedAt).toLocaleString('en-IN')}
+                      {formatDateTime(a.detectedAt)}
                     </td>
                     <td className="sa-td sa-text-center">
                       <span className={a.isReviewed ? 'sa-dot sa-dot--success' : 'sa-dot sa-dot--warning'} />
@@ -200,7 +203,7 @@ export function AIInsightsTab() {
                 <div className="sa-flex-between">
                   <span className="sa-fw-500 sa-text-md">{a.title}</span>
                   <span className="sa-text-xs sa-text-muted">
-                    {new Date(a.createdAt).toLocaleString('en-IN')}
+                    {formatDateTime(a.createdAt)}
                   </span>
                 </div>
                 <div className="sa-text-sm sa-text-muted sa-mt-4">{a.message}</div>

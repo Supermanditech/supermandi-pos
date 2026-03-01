@@ -289,11 +289,13 @@ export function StoresTab({
       {selectedStoreIds.size > 0 && (
         <div className="sa-flex sa-gap-8 sa-py-8 sa-px-12 sa-radius-6" style={{ background: "var(--color-primary-light)", margin: "0 16px 8px" }}>
           <span className="sa-text-md sa-fw-500">{selectedStoreIds.size} store(s) selected</span>
-          <select value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} className="sa-select sa-input--sm">
+          <label htmlFor="filter-stores-bulk-flag" className="sa-sr-only">Feature flag</label>
+          <select id="filter-stores-bulk-flag" value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} className="sa-select sa-input--sm">
             <option value="">Select flag...</option>
             {featureFlags.map((f) => <option key={f.flag_key} value={f.flag_key}>{f.flag_key}</option>)}
           </select>
-          <select value={bulkFlagAction} onChange={(e) => setBulkFlagAction(e.target.value as "enable" | "disable")} className="sa-select sa-input--sm">
+          <label htmlFor="filter-stores-bulk-action" className="sa-sr-only">Flag action</label>
+          <select id="filter-stores-bulk-action" value={bulkFlagAction} onChange={(e) => setBulkFlagAction(e.target.value as "enable" | "disable")} className="sa-select sa-input--sm">
             <option value="enable">Enable</option>
             <option value="disable">Disable</option>
           </select>
@@ -609,8 +611,9 @@ export function StoresTab({
             />
           </div>
           <div className="control">
-            <label>Tier</label>
+            <label htmlFor="filter-stores-barcode-tier">Tier</label>
             <select
+              id="filter-stores-barcode-tier"
               value={barcodeSheetTier}
               onChange={(e) => setBarcodeSheetTier(e.target.value as "tier1" | "tier2")}
               className="selectSmall"

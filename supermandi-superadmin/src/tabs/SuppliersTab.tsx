@@ -32,7 +32,7 @@ class ModalErrorBoundary extends Component<
     return this.props.children;
   }
 }
-import { formatDateTime } from "../lib/formatters";
+import { formatDateTime, formatDate } from "../lib/formatters";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 
 interface SuppliersTabProps {
@@ -393,7 +393,7 @@ export function SuppliersTab({
                     {bc.phone && <div className="sa-text-sm sa-text-muted">Phone: {bc.phone}</div>}
                   </div>
                   <div className="sa-text-right sa-text-xs sa-text-muted">
-                    Changed: {new Date(bc.updatedAt).toLocaleDateString()}
+                    Changed: {formatDate(bc.updatedAt)}
                   </div>
                 </div>
 
@@ -443,8 +443,9 @@ export function SuppliersTab({
       <div className="tableWrap" style={{ paddingTop: 0 }}>
         <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           <div className="control">
-            <label>Search</label>
+            <label htmlFor="filter-suppliers-search">Search</label>
             <input
+              id="filter-suppliers-search"
               value={supplierSearch}
               onChange={(e) => setSupplierSearch(e.target.value)}
               placeholder="GSTIN or business name..."
