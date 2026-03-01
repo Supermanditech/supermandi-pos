@@ -284,15 +284,17 @@ export default function KycPage() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs — STG-366: Added tablist/tab semantics */}
       <div className="card mb-6 p-0">
-        <div className="flex border-b border-slate-200">
+        <div className="flex border-b border-slate-200" role="tablist" aria-label="KYC sections">
           {[
             { key: 'documents', label: 'KYC Documents' },
             { key: 'bank', label: 'Bank Verification' },
           ].map((tab) => (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={activeTab === tab.key}
               onClick={() => setActiveTab(tab.key as typeof activeTab)}
               className={`px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === tab.key

@@ -4,7 +4,7 @@
 // User arrives here from the reset link in their email, or manually enters token
 // POST /api/v1/supplier/auth/reset-password with { email, token, newPassword }
 
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
@@ -38,6 +38,25 @@ function ResetPasswordSkeleton() {
   );
 }
 
+// STG-357: Password strength checklist (parity with forgot-password page)
+function PasswordChecklist({ password }: { password: string }) {
+  const checks = [
+    { label: 'At least 8 characters', pass: password.length >= 8 },
+    { label: 'One uppercase letter', pass: /[A-Z]/.test(password) },
+    { label: 'One lowercase letter', pass: /[a-z]/.test(password) },
+    { label: 'One digit', pass: /\d/.test(password) },
+  ];
+  return (
+    <ul className="list-none p-0 mt-1 text-xs space-y-0.5">
+      {checks.map((c) => (
+        <li key={c.label} className={`flex items-center gap-1 ${c.pass ? 'text-green-600' : 'text-slate-400'}`}>
+          <span>{c.pass ? '\u2713' : '\u2022'}</span> {c.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ResetPasswordInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -50,6 +69,9 @@ function ResetPasswordInner() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // STG-357: Show/hide password toggles
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   // UNMAPPED.040: Redirect countdown on success
   const [countdown, setCountdown] = useState(5);
   const countdownRef = useRef<ReturnType<typeof setInterval>>();
@@ -180,7 +202,7 @@ function ResetPasswordInner() {
           >
             Sign In{countdown > 0 ? ` (${countdown}s)` : ''}
           </button>
-          <p className="text-slate-400 text-xs mt-3">
+          <p className="text-slate-400 text-xs mt-3" aria-live="polite">
             Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
           </p>
         </div>
@@ -198,7 +220,7 @@ function ResetPasswordInner() {
       </p>
 
       {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div role="alert" className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
           {error}
         </div>
       )}
@@ -240,32 +262,57 @@ function ResetPasswordInner() {
           <label htmlFor="newPassword" className="label">
             New Password
           </label>
-          <input
-            type="password"
-            id="newPassword"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="input"
-            placeholder="Enter new password"
-            disabled={isLoading}
-            autoFocus={!!email && !!token}
-          />
-          <p className="text-xs text-slate-500 mt-1">Min 8 characters, 1 uppercase, 1 lowercase, 1 digit</p>
+          <div className="relative">
+            <input
+              type={showNewPw ? 'text' : 'password'}
+              id="newPassword"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="input pr-12"
+              placeholder="Enter new password"
+              disabled={isLoading}
+              autoFocus={!!email && !!token}
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPw(!showNewPw)}
+              aria-pressed={showNewPw}
+              aria-label={showNewPw ? 'Hide new password' : 'Show new password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium"
+            >
+              {showNewPw ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <PasswordChecklist password={newPassword} />
         </div>
 
         <div>
           <label htmlFor="confirmPassword" className="label">
             Confirm Password
           </label>
-          <input
-            type="password"
-            id="confirmPassword"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="input"
-            placeholder="Confirm new password"
-            disabled={isLoading}
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPw ? 'text' : 'password'}
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="input pr-12"
+              placeholder="Confirm new password"
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPw(!showConfirmPw)}
+              aria-pressed={showConfirmPw}
+              aria-label={showConfirmPw ? 'Hide confirm password' : 'Show confirm password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium"
+            >
+              {showConfirmPw ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {confirmPassword && newPassword !== confirmPassword && (
+            <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
+          )}
         </div>
 
         <button

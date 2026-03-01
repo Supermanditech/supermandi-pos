@@ -216,9 +216,9 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — STG-371: Added tablist/tab semantics */}
       <div className="card mb-6 p-0">
-        <div className="flex border-b border-slate-200">
+        <div className="flex border-b border-slate-200" role="tablist" aria-label="Profile sections">
           {[
             { key: 'profile', label: 'Contact Details' },
             { key: 'bank', label: 'Bank Details' },
@@ -226,6 +226,8 @@ export default function ProfilePage() {
           ].map((tab) => (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={activeTab === tab.key}
               onClick={() => setActiveTab(tab.key as typeof activeTab)}
               className={`px-6 py-4 text-sm font-medium transition-colors ${
                 activeTab === tab.key

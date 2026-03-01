@@ -847,6 +847,7 @@ function RegisterPage() {
 
           <form onSubmit={handleVerifyOtp} className="space-y-6">
             <div>
+              <label htmlFor="otp" className="sr-only">Verification code</label>
               <input
                 type="text"
                 id="otp"
