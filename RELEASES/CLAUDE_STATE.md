@@ -3078,7 +3078,7 @@ Claude MUST NOT start this phase until:
 
 Current armed target:
 
-1. deploy SHA: 132eb8ff
+1. deploy SHA: 07cec20b
 2. next finding start: STG-410
 
 ### 15.2 Source of Truth Order
@@ -3184,7 +3184,7 @@ Until then, Claude must not claim production-grade live verification completion.
 ## PART 16: Pre-Deploy Parity Gate (Mandatory Before Staging Deploy)
 
 Claude MUST NOT deploy to GCP staging until this gate passes for the target SHA.
-Current target: 132eb8ff
+Current target: 07cec20b (Gate 1 CLEARED 2026-03-02, deploy authorized)
 
 ### 16.1 Purpose
 
@@ -3236,7 +3236,7 @@ For every parity check, Claude must record:
 
 Only after this gate passes may Claude proceed to:
 
-1. staging deploy of 132eb8ff
+1. staging deploy of 07cec20b
 2. post-deploy mega live verification
 
 ---

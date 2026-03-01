@@ -1,7 +1,7 @@
 {
-  "version": "76.0",
-  "lastUpdated": "2026-03-01T22:00:00Z",
-  "currentPhase": "PRE_DEPLOY_PARITY_GATE_REQUIRED: staging deploy blocked until SHA 132eb8ff passes build, URL, Firebase, GCP, migration, table, and runtime parity checks. Post-deploy mega live verification remains armed after deploy.",
+  "version": "77.0",
+  "lastUpdated": "2026-03-02T01:00:00Z",
+  "currentPhase": "STAGING_DEPLOY_GATE_3_PENDING: Gate 1 pre-deploy authorization CLEARED (OP-1 GitHub Secrets resolved, OP-2 DNS resolved, OP-3 Firebase Console resolved). Deploy target 07cec20b authorized. Staging deploy pending operator go signal. Post-deploy: capture revisions → prove GIT_SHA → migrations 168..171 dry-run/apply → smoke gates → then unlock post-deploy mega live verification.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -211,7 +211,7 @@
     "totalScreens": 118,
     "totalClean": 24,
     "activePlatform": null,
-    "activeInstruction": "Before any staging deploy, Claude must complete the pre-deploy parity gate for SHA 132eb8ff. No deploy is allowed until parity truth is proven and recorded.",
+    "activeInstruction": "Gate 1 CLEARED. Deploy target is 07cec20b (2 non-app-code commits after 132eb8ff: state files + dead CI build-arg removal). Staging deploy authorized. After deploy: capture serving revisions → prove GIT_SHA = 07cec20b → migrations 168..171 dry-run/apply/status → smoke gates → then unlock post-deploy mega live verification.",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -2715,12 +2715,19 @@
     }
   },
   "preDeployParityGate": {
-    "status": "ARMED_BLOCKING_STAGING_DEPLOY",
-    "targetSha": "132eb8ff",
-    "deployBlockedUntilAllChecksPass": true,
+    "status": "PASSED_GATE_1_CLEARED",
+    "targetSha": "07cec20b",
+    "deployBlockedUntilAllChecksPass": false,
+    "gate1Resolution": {
+      "clearedAt": "2026-03-02T01:00:00Z",
+      "OP1_GitHubSecrets": "RESOLVED — dead Firebase build-args removed from deploy.yml (commit 07cec20b). Only GCP_WIF_PROVIDER + GCP_SA_EMAIL needed, both exist.",
+      "OP2_DNS": "RESOLVED — Hostinger A record staging → 34.54.26.145 confirmed by operator.",
+      "OP3_FirebaseConsole": "RESOLVED — Identity Toolkit REST API confirmed phone auth enabled, staging.supermandi.tech in authorized domains, SMS region restricted to India.",
+      "shaProgression": "132eb8ff (app code) → 0e161261 (state files) → 07cec20b (dead CI removal). No app behavior changes."
+    },
     "sourceOfTruthOrder": [
-      "origin_main_sha_132eb8ff",
-      "canonical_repo_source_at_sha_132eb8ff",
+      "origin_main_sha_07cec20b",
+      "canonical_repo_source_at_sha_07cec20b",
       "deploy_scripts_and_ci_config",
       "gcp_runtime_and_secret_mapping_truth",
       "firebase_and_identity_platform_runtime_truth"
@@ -2797,6 +2804,6 @@
       "parity_verdict_pass_or_blocked",
       "operator_action_if_blocked"
     ],
-    "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_132eb8ff_THEN_POST_DEPLOY_MEGA_LIVE_VERIFICATION"
+    "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_07cec20b_THEN_GATE_3_POST_DEPLOY_VERIFICATION"
   }
 }

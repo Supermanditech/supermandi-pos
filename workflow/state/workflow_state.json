@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-01T21:00:00Z",
+  "updatedAt": "2026-03-02T01:00:00Z",
   "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
@@ -2086,12 +2086,19 @@
     "mustReportNonProductionSafeBehavior": true
   },
   "preDeployParityGate": {
-    "status": "ARMED_BLOCKING_STAGING_DEPLOY",
-    "targetSha": "132eb8ff",
-    "deployBlockedUntilAllChecksPass": true,
+    "status": "PASSED_GATE_1_CLEARED",
+    "targetSha": "07cec20b",
+    "deployBlockedUntilAllChecksPass": false,
+    "gate1Resolution": {
+      "clearedAt": "2026-03-02T01:00:00Z",
+      "OP1_GitHubSecrets": "RESOLVED",
+      "OP2_DNS": "RESOLVED",
+      "OP3_FirebaseConsole": "RESOLVED",
+      "shaProgression": "132eb8ff → 0e161261 → 07cec20b"
+    },
     "sourceOfTruthOrder": [
-      "origin_main_sha_132eb8ff",
-      "canonical_repo_source_at_sha_132eb8ff",
+      "origin_main_sha_07cec20b",
+      "canonical_repo_source_at_sha_07cec20b",
       "deploy_scripts_and_ci_config",
       "gcp_runtime_and_secret_mapping_truth",
       "firebase_and_identity_platform_runtime_truth"
@@ -2121,6 +2128,6 @@
       "any_missing_whatsapp_production_path_check",
       "any_ambiguous_build_target_or_artifact_scope"
     ],
-    "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_132eb8ff_THEN_POST_DEPLOY_MEGA_LIVE_VERIFICATION"
+    "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_07cec20b_THEN_GATE_3_POST_DEPLOY_VERIFICATION"
   }
 }
