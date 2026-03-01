@@ -1940,10 +1940,11 @@ export default function App() {
 
   // ISSUE-MICRO-086: Timer effect removed — countdown managed by EnrollmentCountdown component
 
+  // STG-379: Reset page on ANY filter change, including date range
   useEffect(() => {
     setPage(0);
     setDevicePage(0); // ISSUE-MICRO-023: Reset device page on filter change
-  }, [deviceIdFilter, storeIdFilter, eventTypeFilter]);
+  }, [deviceIdFilter, storeIdFilter, eventTypeFilter, eventDateFrom, eventDateTo]);
 
   // ISSUE-MICRO-023 + ISSUE-MICRO-058: Debounce device refresh on filter change (300ms)
   useEffect(() => {

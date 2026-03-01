@@ -138,7 +138,8 @@ export function CreditProvidersTab() {
       )}
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }} className="sa-mb-20">
+      {/* STG-389: Responsive grid — auto-fit wraps on narrow viewports */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }} className="sa-mb-20">
         <div className="sa-stat-card sa-bg-success-soft" style={{ borderColor: 'var(--color-success)' }}>
           <div className="sa-stat-label sa-text-success">Total Disbursed</div>
           <div className="sa-stat-value--sm sa-fw-700">{fmt(totalDisbursed)}</div>
