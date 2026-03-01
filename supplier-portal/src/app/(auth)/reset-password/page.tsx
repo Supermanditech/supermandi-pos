@@ -4,7 +4,7 @@
 // User arrives here from the reset link in their email, or manually enters token
 // POST /api/v1/supplier/auth/reset-password with { email, token, newPassword }
 
-import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
