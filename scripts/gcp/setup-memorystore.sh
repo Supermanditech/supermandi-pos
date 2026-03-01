@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-PROJECT="${GCP_PROJECT:-supermandi-pos}"
+PROJECT="${GCP_PROJECT:-supermandi-backend}"
 REGION="${GCP_REGION:-asia-south1}"
 INSTANCE_NAME="supermandi-redis"
 REDIS_VERSION="REDIS_7_0"

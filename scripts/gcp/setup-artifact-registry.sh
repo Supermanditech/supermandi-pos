@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-PROJECT="${GCP_PROJECT:-supermandi-pos}"
+PROJECT="${GCP_PROJECT:-supermandi-backend}"
 REGION="${GCP_REGION:-asia-south1}"
 REPO_NAME="supermandi"
 

@@ -28,7 +28,7 @@ $ErrorActionPreference = "Stop"
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-$GCP_PROJECT = $env:GCP_PROJECT ?? "supermandi-pos"
+$GCP_PROJECT = $env:GCP_PROJECT ?? "supermandi-backend"
 $GCP_REGION = $env:GCP_REGION ?? "asia-south1"
 $ARTIFACT_REGISTRY = "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/supermandi"
 
