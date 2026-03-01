@@ -122,7 +122,7 @@ export default function MenuScreen() {
           deviceLabel: uiStatus.deviceId ?? null,
         });
       } catch (e) {
-        console.error("[MenuScreen] opStatus fetch failed:", e);
+        if (__DEV__) console.error("[MenuScreen] opStatus fetch failed:", e);
       }
     })();
   }, []);
@@ -164,7 +164,7 @@ export default function MenuScreen() {
       setYesterdaySummary(yesterdayData);
     } catch (_e: unknown) {
     const e = asError(_e);
-      console.error("[MenuScreen] dailySummary fetch failed:", e);
+      if (__DEV__) console.error("[MenuScreen] dailySummary fetch failed:", e);
       setSummaryError(e.message || "Failed to load summary");
     } finally {
       setSummaryLoading(false);
@@ -202,7 +202,7 @@ export default function MenuScreen() {
         })(),
       ]);
     } catch (e) {
-      console.error("[MenuScreen] refresh failed:", e);
+      if (__DEV__) console.error("[MenuScreen] refresh failed:", e);
     } finally {
       setRefreshing(false);
     }
@@ -221,7 +221,7 @@ export default function MenuScreen() {
       }
     } catch (_e: unknown) {
     const e = asError(_e);
-      console.error("[MenuScreen] sync failed:", e);
+      if (__DEV__) console.error("[MenuScreen] sync failed:", e);
       Alert.alert(t('menu.syncFailed', { defaultValue: "Sync Failed" }), e.message || "Please try again.");
     } finally {
       setSyncing(false);
@@ -355,7 +355,7 @@ export default function MenuScreen() {
         })
       );
     } catch (error) {
-      console.error('[MenuScreen] Switch store failed:', error);
+      if (__DEV__) console.error('[MenuScreen] Switch store failed:', error);
       Alert.alert(t('common.error'), t('errors.unknownError'));
     }
   };
