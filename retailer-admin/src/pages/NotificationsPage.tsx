@@ -35,11 +35,11 @@ export default function NotificationsPage() {
     setLoading(true);
     try {
       const res = await authFetch(`/api/v1/retailer-admin/notifications?limit=${limit}&offset=${offset}`, accessToken);
-      if (res.ok) {
-        const data = await safeJson<{ data?: any[]; pagination?: { total?: number } }>(res, { data: [], pagination: { total: 0 } });
-        setNotifications(data?.data || []);
-        setTotal(data?.pagination?.total || 0);
-      }
+      if (res.status === 401) return;
+      if (!res.ok) throw new Error(`Failed to load notifications: ${res.status}`);
+      const data = await safeJson<{ data?: any[]; pagination?: { total?: number } }>(res, { data: [], pagination: { total: 0 } });
+      setNotifications(data?.data || []);
+      setTotal(data?.pagination?.total || 0);
     } catch (err) {
       logger.error('Failed to fetch notifications:', err);
       setError('Failed to load notifications. Please try again.');
@@ -136,7 +136,10 @@ export default function NotificationsPage() {
           {notifications.map((n) => (
             <div
               key={n.id}
+              role="button"
+              tabIndex={0}
               onClick={() => !n.isRead && markAsRead(n.id)}
+              onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !n.isRead) { e.preventDefault(); markAsRead(n.id); } }}
               className={`notif-card${!n.isRead ? ' notif-card--unread' : ''}`}
             >
               <div className="notif-card-icon">{getIcon(n.type)}</div>

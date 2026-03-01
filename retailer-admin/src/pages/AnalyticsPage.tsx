@@ -71,6 +71,7 @@ export default function AnalyticsPage() {
             value={from}
             onChange={e => setFrom(e.target.value)}
             className="form-input anly-date-input"
+            aria-label="Analytics start date"
           />
           <span className="text-muted">to</span>
           <input
@@ -78,6 +79,7 @@ export default function AnalyticsPage() {
             value={to}
             onChange={e => setTo(e.target.value)}
             className="form-input anly-date-input"
+            aria-label="Analytics end date"
           />
         </div>
       </div>

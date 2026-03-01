@@ -883,7 +883,7 @@ export default function ProductsPage() {
                     className="prod-mode-label"
                     style={{
                       border: `2px solid ${formData.mode === 'PACKAGED' ? 'var(--primary)' : 'var(--border)'}`,
-                      background: formData.mode === 'PACKAGED' ? 'var(--primary-light)' : 'white',
+                      background: formData.mode === 'PACKAGED' ? 'var(--primary-light)' : 'var(--surface)',
                     }}
                     onClick={() => handleModeChange('PACKAGED')}
                   >
@@ -905,7 +905,7 @@ export default function ProductsPage() {
                     className="prod-mode-label"
                     style={{
                       border: `2px solid ${formData.mode === 'LOOSE_BULK' ? 'var(--primary)' : 'var(--border)'}`,
-                      background: formData.mode === 'LOOSE_BULK' ? 'var(--primary-light)' : 'white',
+                      background: formData.mode === 'LOOSE_BULK' ? 'var(--primary-light)' : 'var(--surface)',
                     }}
                     onClick={() => handleModeChange('LOOSE_BULK')}
                   >
@@ -939,8 +939,9 @@ export default function ProductsPage() {
                 {/* Row 1: Name (wide) + Brand (narrow) */}
                 <div className="prod-grid-2-1">
                   <div className="form-group">
-                    <label className="form-label">Product Name *</label>
+                    <label className="form-label" htmlFor="prod-name">Product Name *</label>
                     <input
+                      id="prod-name"
                       type="text"
                       name="name"
                       className="form-input"
@@ -952,8 +953,9 @@ export default function ProductsPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Brand</label>
+                    <label className="form-label" htmlFor="prod-brand">Brand</label>
                     <input
+                      id="prod-brand"
                       type="text"
                       name="brand"
                       className="form-input"
@@ -967,8 +969,9 @@ export default function ProductsPage() {
                 {/* Row 2: Alias (medium) + Category (medium) + Barcode (narrow, if packaged) */}
                 <div style={{ display: 'grid', gridTemplateColumns: formData.mode === 'PACKAGED' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '0.75rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Alias / Local Name</label>
+                    <label className="form-label" htmlFor="prod-alias">Alias / Local Name</label>
                     <input
+                      id="prod-alias"
                       type="text"
                       name="alias"
                       className="form-input"
@@ -980,8 +983,9 @@ export default function ProductsPage() {
 
                   {/* RCAT-CAT-002: Category dropdown */}
                   <div className="form-group">
-                    <label className="form-label">Category</label>
+                    <label className="form-label" htmlFor="prod-categoryId">Category</label>
                     <select
+                      id="prod-categoryId"
                       className="form-input"
                       value={formData.categoryId}
                       onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
@@ -996,8 +1000,9 @@ export default function ProductsPage() {
 
                   {formData.mode === 'PACKAGED' && (
                     <div className="form-group">
-                      <label className="form-label">Barcode (GTIN/EAN)</label>
+                      <label className="form-label" htmlFor="prod-barcode">Barcode (GTIN/EAN)</label>
                       <input
+                        id="prod-barcode"
                         type="text"
                         name="barcode"
                         className="form-input prod-barcode-input"
@@ -1019,8 +1024,9 @@ export default function ProductsPage() {
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: formData.mode === 'PACKAGED' ? '1fr 1fr 1fr' : formData.mode === 'LOOSE_BULK' ? '1fr 1fr 1fr' : '1fr', gap: '0.75rem', alignItems: 'start' }}>
                   <div className="form-group">
-                    <label className="form-label">Unit *</label>
+                    <label className="form-label" htmlFor="prod-unit">Unit *</label>
                     <select
+                      id="prod-unit"
                       name="unit"
                       className="form-input"
                       value={formData.unit}
@@ -1040,8 +1046,9 @@ export default function ProductsPage() {
                   {formData.mode === 'PACKAGED' && (
                     <>
                       <div className="form-group">
-                        <label className="form-label">Pack Size</label>
+                        <label className="form-label" htmlFor="prod-packSize">Pack Size</label>
                         <input
+                          id="prod-packSize"
                           type="number"
                           name="packSize"
                           className="form-input"
@@ -1055,8 +1062,9 @@ export default function ProductsPage() {
 
                       {/* Pack Unit - RCAT-PROD-002: Custom editable option */}
                       <div className="form-group">
-                        <label className="form-label">Pack Unit</label>
+                        <label className="form-label" htmlFor="prod-packUnit">Pack Unit</label>
                         <select
+                          id="prod-packUnit"
                           name="packUnit"
                           className="form-input"
                           value={['g', 'kg', 'ml', 'l', 'pcs', 'pack', ''].includes(formData.packUnit) ? formData.packUnit : 'OTHER'}
@@ -1096,8 +1104,9 @@ export default function ProductsPage() {
                   {formData.mode === 'LOOSE_BULK' && (
                     <>
                       <div className="form-group">
-                        <label className="form-label">Sold By *</label>
+                        <label className="form-label" htmlFor="prod-soldBy">Sold By *</label>
                         <select
+                          id="prod-soldBy"
                           name="soldBy"
                           className="form-input"
                           value={formData.soldBy}
@@ -1111,8 +1120,9 @@ export default function ProductsPage() {
                       </div>
 
                       <div className="form-group">
-                        <label className="form-label">Rate Unit *</label>
+                        <label className="form-label" htmlFor="prod-rateUnit">Rate Unit *</label>
                         <select
+                          id="prod-rateUnit"
                           name="rateUnit"
                           className="form-input"
                           value={formData.rateUnit}
@@ -1146,8 +1156,9 @@ export default function ProductsPage() {
                 </h4>
                 <div className="prod-grid-3">
                   <div className="form-group">
-                    <label className="form-label">Purchase (₹) *</label>
+                    <label className="form-label" htmlFor="prod-purchasePrice">Purchase (₹) *</label>
                     <input
+                      id="prod-purchasePrice"
                       type="number"
                       name="purchasePrice"
                       className="form-input"
@@ -1162,8 +1173,9 @@ export default function ProductsPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Sell (₹) *</label>
+                    <label className="form-label" htmlFor="prod-sellPrice">Sell (₹) *</label>
                     <input
+                      id="prod-sellPrice"
                       type="number"
                       name="sellPrice"
                       className="form-input"
@@ -1177,8 +1189,9 @@ export default function ProductsPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">MRP (₹)</label>
+                    <label className="form-label" htmlFor="prod-mrp">MRP (₹)</label>
                     <input
+                      id="prod-mrp"
                       type="number"
                       name="mrp"
                       className="form-input"
@@ -1201,8 +1214,9 @@ export default function ProductsPage() {
                 {/* Row 1: Two small qty fields */}
                 <div className="prod-grid-2">
                   <div className="form-group">
-                    <label className="form-label">Opening Stock</label>
+                    <label className="form-label" htmlFor="prod-openingStockQty">Opening Stock</label>
                     <input
+                      id="prod-openingStockQty"
                       type="number"
                       name="openingStockQty"
                       className={`form-input${editingProduct ? ' prod-disabled-stock' : ''}`}
@@ -1221,8 +1235,9 @@ export default function ProductsPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Low Stock Alert</label>
+                    <label className="form-label" htmlFor="prod-lowStockAlertQty">Low Stock Alert</label>
                     <input
+                      id="prod-lowStockAlertQty"
                       type="number"
                       name="lowStockAlertQty"
                       className="form-input"
@@ -1238,13 +1253,14 @@ export default function ProductsPage() {
                 {/* Row 2: Supplier full width */}
                 {/* RCAT-SUP-003: Supplier dropdown */}
                 <div className="form-group">
-                  <label className="form-label">
+                  <label className="form-label" htmlFor="prod-supplierId">
                     Supplier (optional)
                     <span className="prod-supplier-badge">
                       Verified only
                     </span>
                   </label>
                   <select
+                    id="prod-supplierId"
                     name="supplierId"
                     className="form-input"
                     value={formData.supplierId}
@@ -1263,11 +1279,11 @@ export default function ProductsPage() {
                       display: 'block',
                       marginTop: '4px',
                       fontSize: '0.75rem',
-                      color: '#dc2626',
-                      backgroundColor: '#fef2f2',
+                      color: 'var(--action-danger-text)',
+                      backgroundColor: 'var(--action-danger-bg)',
                       padding: '4px 8px',
                       borderRadius: '4px',
-                      border: '1px solid #fecaca'
+                      border: '1px solid var(--action-danger-text)'
                     }}>
                       Failed to load suppliers. You can still add products without a supplier.
                     </span>
@@ -1277,8 +1293,8 @@ export default function ProductsPage() {
                       display: 'block',
                       marginTop: '4px',
                       fontSize: '0.75rem',
-                      color: '#64748b',
-                      backgroundColor: '#f1f5f9',
+                      color: 'var(--text-muted)',
+                      backgroundColor: 'var(--bg-alt)',
                       padding: '4px 8px',
                       borderRadius: '4px'
                     }}>
@@ -1301,8 +1317,9 @@ export default function ProductsPage() {
                 </h4>
                 <div className="prod-grid-2">
                   <div className="form-group">
-                    <label className="form-label">GST %</label>
+                    <label className="form-label" htmlFor="prod-gstPercent">GST %</label>
                     <select
+                      id="prod-gstPercent"
                       name="gstPercent"
                       className="form-input"
                       value={formData.gstPercent}
@@ -1318,8 +1335,9 @@ export default function ProductsPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">HSN Code</label>
+                    <label className="form-label" htmlFor="prod-hsn">HSN Code</label>
                     <input
+                      id="prod-hsn"
                       type="text"
                       name="hsn"
                       className="form-input prod-barcode-input"
@@ -1334,8 +1352,9 @@ export default function ProductsPage() {
 
               {/* ═══ Notes (Optional) ═══ */}
               <div className="form-group prod-form-mb">
-                <label className="form-label">Internal Notes</label>
+                <label className="form-label" htmlFor="prod-notes">Internal Notes</label>
                 <textarea
+                  id="prod-notes"
                   name="notes"
                   className="form-input prod-textarea"
                   placeholder="Any internal notes about this product..."
@@ -1498,6 +1517,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
             placeholder="Search by name or barcode..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Search products by name or barcode"
             style={{ maxWidth: '400px' }}
           />
         </div>
@@ -1511,9 +1531,12 @@ Loose Rice,, , 45, 40, , KG, 25`}
             <div
               className="card"
               style={{ maxWidth: '400px', margin: '1rem' }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-product-title"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="card-title">Delete Product?</h3>
+              <h3 id="delete-product-title" className="card-title">Delete Product?</h3>
               <p className="text-sm-muted" style={{ marginBottom: '1rem' }}>
                 Are you sure you want to delete this product? This will remove it from your inventory.
               </p>
@@ -1525,8 +1548,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                   Cancel
                 </button>
                 <button
-                  className="btn"
-                  style={{ background: '#dc2626', color: 'white' }}
+                  className="btn btn-danger"
                   onClick={() => handleDelete(deleteConfirm)}
                 >
                   Delete Product
@@ -1620,7 +1642,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                         {product.mode === 'LOOSE_BULK' && (
                           <button
                             className="btn"
-                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', background: '#e0f2fe', color: '#0369a1' }}
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', background: 'var(--action-info-bg)', color: 'var(--action-info-text)' }}
                             onClick={() => setVariantProduct({ id: product.id, name: product.name })}
                           >
                             Variants
@@ -1635,7 +1657,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                         </button>
                         <button
                           className="btn"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', background: '#fee2e2', color: '#991b1b' }}
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', background: 'var(--action-danger-bg)', color: 'var(--action-danger-text)' }}
                           onClick={() => setDeleteConfirm(product.id)}
                         >
                           Delete

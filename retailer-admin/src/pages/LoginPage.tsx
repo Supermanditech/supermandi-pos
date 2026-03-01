@@ -645,7 +645,7 @@ export default function LoginPage() {
               <div>
                 {stores.length === 0 ? (
                   <div className="login-state-section">
-                    <div className="login-warning-icon">!</div>
+                    <div className="login-warning-icon" aria-hidden="true">!</div>
                     <h3 className="login-state-heading login-state-heading--warning">No Store Assigned</h3>
                     <p className="login-state-description">
                       Your account is not associated with any store. Please contact support at{' '}
@@ -683,7 +683,7 @@ export default function LoginPage() {
             {/* AUTH-UX-LOGIN-001: Account Not Found State - Professional messaging */}
             {step === 'not_onboarded' && (
               <div className="login-state-section">
-                <div className="login-warning-icon">!</div>
+                <div className="login-warning-icon" aria-hidden="true">!</div>
                 <h3 className="login-state-heading">Account not found</h3>
                 <p className="login-state-description">
                   This phone number is not associated with an active account. Please complete registration to continue.

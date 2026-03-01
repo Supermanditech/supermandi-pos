@@ -157,8 +157,9 @@ export default function ReconciliationPage() {
         {/* Date Range Picker */}
         <div className="recon-date-range">
           <div className="flex-row btn-icon">
-            <label className="form-label-inline">From:</label>
+            <label className="form-label-inline" htmlFor="recon-from-date">From:</label>
             <input
+              id="recon-from-date"
               type="date"
               value={fromDate}
               max={toDate || undefined}
@@ -167,8 +168,9 @@ export default function ReconciliationPage() {
             />
           </div>
           <div className="flex-row btn-icon">
-            <label className="form-label-inline">To:</label>
+            <label className="form-label-inline" htmlFor="recon-to-date">To:</label>
             <input
+              id="recon-to-date"
               type="date"
               value={toDate}
               min={fromDate || undefined}

@@ -259,7 +259,7 @@ export default function DeviceActivationPage() {
       {/* Success Message */}
       {success && (
         <div className="pay-alert-success">
-          <span className="pay-alert-icon">&#10003;</span>
+          <span className="pay-alert-icon" aria-hidden="true">&#10003;</span>
           {success}
         </div>
       )}
@@ -267,7 +267,7 @@ export default function DeviceActivationPage() {
       {/* Error Message */}
       {error && (
         <div className="pay-alert-error">
-          <span className="pay-alert-icon">&#10007;</span>
+          <span className="pay-alert-icon" aria-hidden="true">&#10007;</span>
           {error}
         </div>
       )}
@@ -275,15 +275,16 @@ export default function DeviceActivationPage() {
       {/* Activation Form */}
       <section className="card dact-section dact-section--mb">
         <h2 className="pay-section-title">
-          <span className="pay-section-icon">&#128241;</span>
+          <span className="pay-section-icon" aria-hidden="true">&#128241;</span>
           Activate New Device
         </h2>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label className="pay-bank-label">
+          <label className="pay-bank-label" htmlFor="activation-code">
             Activation Code
           </label>
           <input
+            id="activation-code"
             className={`form-input dact-code-input${error ? ' dact-code-input--error' : ''}`}
             type="text"
             value={activationCode}
@@ -322,7 +323,7 @@ export default function DeviceActivationPage() {
       <section className="card dact-section">
         <div className="flex-between grid-mb">
           <h2 className="pay-section-title">
-            <span className="pay-section-icon">&#128279;</span>
+            <span className="pay-section-icon" aria-hidden="true">&#128279;</span>
             Connected Devices
           </h2>
           <button
@@ -350,7 +351,7 @@ export default function DeviceActivationPage() {
               <div
                 key={device.id}
                 className="dact-device-card"
-                style={{ border: `1px solid ${device.isActive ? 'var(--border)' : '#fca5a5'}` }}
+                style={{ border: `1px solid ${device.isActive ? 'var(--border)' : 'var(--device-revoked-border)'}` }}
               >
                 <div>
                   <div className="dact-device-name">
@@ -380,11 +381,8 @@ export default function DeviceActivationPage() {
                   <button
                     onClick={() => handleToggleDevice(device.id, device.isActive)}
                     disabled={deactivatingDeviceId === device.id}
-                    className={device.isActive ? 'btn btn-danger-light btn-xs' : 'btn btn-xs'}
+                    className={device.isActive ? 'btn btn-danger-light btn-xs' : 'btn btn-success-light btn-xs'}
                     style={{
-                      background: device.isActive ? undefined : '#dcfce7',
-                      color: device.isActive ? undefined : '#166534',
-                      border: device.isActive ? undefined : '1px solid #86efac',
                       opacity: deactivatingDeviceId === device.id ? 0.6 : 1,
                     }}
                   >

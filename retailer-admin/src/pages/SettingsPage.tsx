@@ -313,14 +313,14 @@ export default function SettingsPage() {
       {/* Success/Error Messages */}
       {saveSuccess && (
         <div className="set-alert-success">
-          <span className="set-alert-icon">✅</span>
+          <span className="set-alert-icon" aria-hidden="true">✅</span>
           Settings saved successfully!
         </div>
       )}
 
       {saveError && (
         <div className="set-alert-error">
-          <span className="set-alert-icon">❌</span>
+          <span className="set-alert-icon" aria-hidden="true">❌</span>
           {saveError}
         </div>
       )}
@@ -330,14 +330,15 @@ export default function SettingsPage() {
         {/* Payment Settings */}
         <section className="card set-section">
           <h2 className="set-section-title">
-            <span className="set-section-icon">💳</span>
+            <span className="set-section-icon" aria-hidden="true">💳</span>
             Payment Settings
           </h2>
 
           <div className="set-grid">
             <div>
-              <label className="set-label">UPI VPA (Virtual Payment Address)</label>
+              <label className="set-label" htmlFor="set-upi-vpa">UPI VPA (Virtual Payment Address)</label>
               <input
+                id="set-upi-vpa"
                 type="text"
                 className={`form-input set-input${errors.upiVpa ? ' set-input--error' : ''}`}
                 value={settings.upiVpa}
@@ -357,14 +358,15 @@ export default function SettingsPage() {
         {/* Tax Settings */}
         <section className="card set-section">
           <h2 className="set-section-title">
-            <span className="set-section-icon">📊</span>
+            <span className="set-section-icon" aria-hidden="true">📊</span>
             Tax Settings
           </h2>
 
           <div className="set-grid-2">
             <div>
-              <label className="set-label">GST Rate (%)</label>
+              <label className="set-label" htmlFor="set-tax-rate">GST Rate (%)</label>
               <input
+                id="set-tax-rate"
                 type="number"
                 className={`form-input set-input${errors.taxRate ? ' set-input--error' : ''}`}
                 value={settings.taxRate}
@@ -379,8 +381,9 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="set-label">GST Number (GSTIN)</label>
+              <label className="set-label" htmlFor="set-gst-number">GST Number (GSTIN)</label>
               <input
+                id="set-gst-number"
                 type="text"
                 className={`form-input set-input set-input--upper${errors.gstNumber ? ' set-input--error' : ''}`}
                 value={settings.gstNumber}
@@ -398,14 +401,15 @@ export default function SettingsPage() {
         {/* Store Information */}
         <section className="card set-section">
           <h2 className="set-section-title">
-            <span className="set-section-icon">🏪</span>
+            <span className="set-section-icon" aria-hidden="true">🏪</span>
             Store Information
           </h2>
 
           <div className="set-grid-2">
             <div>
-              <label className="set-label">Store Name</label>
+              <label className="set-label" htmlFor="set-store-name">Store Name</label>
               <input
+                id="set-store-name"
                 type="text"
                 className="form-input set-input"
                 value={settings.storeName}
@@ -414,8 +418,9 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="set-label">Phone Number</label>
+              <label className="set-label" htmlFor="set-phone">Phone Number</label>
               <input
+                id="set-phone"
                 type="tel"
                 className={`form-input set-input${errors.phone ? ' set-input--error' : ''}`}
                 value={settings.phone}
@@ -429,8 +434,9 @@ export default function SettingsPage() {
             </div>
 
             <div className="set-full-col">
-              <label className="set-label">Address</label>
+              <label className="set-label" htmlFor="set-address">Address</label>
               <textarea
+                id="set-address"
                 className="form-input set-input set-textarea"
                 value={settings.address}
                 onChange={(e) => handleChange('address', e.target.value)}
@@ -443,14 +449,15 @@ export default function SettingsPage() {
         {/* Operating Hours & Receipt */}
         <section className="card set-section">
           <h2 className="set-section-title">
-            <span className="set-section-icon">⚙️</span>
+            <span className="set-section-icon" aria-hidden="true">⚙️</span>
             Preferences
           </h2>
 
           <div className="set-grid-pref">
             <div>
-              <label className="set-label">Opening Time</label>
+              <label className="set-label" htmlFor="set-open-time">Opening Time</label>
               <input
+                id="set-open-time"
                 type="time"
                 className="form-input set-input"
                 value={settings.operatingHours.open}
@@ -459,8 +466,9 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="set-label">Closing Time</label>
+              <label className="set-label" htmlFor="set-close-time">Closing Time</label>
               <input
+                id="set-close-time"
                 type="time"
                 className="form-input set-input"
                 value={settings.operatingHours.close}
@@ -469,8 +477,9 @@ export default function SettingsPage() {
             </div>
 
             <div className="set-full-col">
-              <label className="set-label">Receipt Footer Message</label>
+              <label className="set-label" htmlFor="set-receipt-footer">Receipt Footer Message</label>
               <textarea
+                id="set-receipt-footer"
                 className="form-input set-input set-textarea"
                 value={settings.receiptFooter}
                 onChange={(e) => handleChange('receiptFooter', e.target.value)}
@@ -488,14 +497,15 @@ export default function SettingsPage() {
         {/* T-156: Receipt Customization */}
         <section className="card set-section">
           <h2 className="set-section-title">
-            <span className="set-section-icon">🧾</span>
+            <span className="set-section-icon" aria-hidden="true">🧾</span>
             Receipt Customization
           </h2>
 
           <div className="set-grid-2">
             <div>
-              <label className="set-label">Receipt GSTIN</label>
+              <label className="set-label" htmlFor="set-receipt-gstin">Receipt GSTIN</label>
               <input
+                id="set-receipt-gstin"
                 type="text"
                 className="form-input set-input set-input--upper"
                 value={settings.receiptGstin}
@@ -524,8 +534,9 @@ export default function SettingsPage() {
             </div>
 
             <div className="set-full-col">
-              <label className="set-label">Custom Receipt Footer</label>
+              <label className="set-label" htmlFor="set-custom-footer">Custom Receipt Footer</label>
               <textarea
+                id="set-custom-footer"
                 className="form-input set-input set-textarea"
                 value={settings.receiptCustomFooter}
                 onChange={(e) => handleChange('receiptCustomFooter', e.target.value)}
@@ -543,7 +554,7 @@ export default function SettingsPage() {
         {/* T-004: Change Password */}
         <section className="card set-section">
           <h2 className="set-section-title">
-            <span className="set-section-icon">🔒</span>
+            <span className="set-section-icon" aria-hidden="true">🔒</span>
             Change Password
           </h2>
 
@@ -557,8 +568,9 @@ export default function SettingsPage() {
 
           <div className="set-password-grid">
             <div>
-              <label className="set-label">Current Password</label>
+              <label className="set-label" htmlFor="set-current-password">Current Password</label>
               <input
+                id="set-current-password"
                 type="password"
                 className="form-input set-input"
                 value={currentPassword}
@@ -567,8 +579,9 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="set-label">New Password</label>
+              <label className="set-label" htmlFor="set-new-password">New Password</label>
               <input
+                id="set-new-password"
                 type="password"
                 className="form-input set-input"
                 value={newPassword}
@@ -577,8 +590,9 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="set-label">Confirm New Password</label>
+              <label className="set-label" htmlFor="set-confirm-password">Confirm New Password</label>
               <input
+                id="set-confirm-password"
                 type="password"
                 className="form-input set-input"
                 value={confirmPassword}

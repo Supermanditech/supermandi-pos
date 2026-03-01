@@ -168,7 +168,10 @@ export default function ChatPage() {
             conversations.map(conv => (
               <div
                 key={conv.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => selectConversation(conv.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectConversation(conv.id); } }}
                 className={`chat-convo-item${selectedId === conv.id ? ' chat-convo-item--active' : ''}`}
               >
                 <div className="chat-convo-header">

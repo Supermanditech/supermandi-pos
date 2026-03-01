@@ -2,7 +2,7 @@
 // Extracted from ProtectedLayout session warning + logout confirm modals
 // CSS classes defined in index.css (.modal-overlay, .modal-card, etc.)
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -13,6 +13,9 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children, actions }: ModalProps) {
+  // STG-321: Ref for focus trap
+  const modalRef = useRef<HTMLDivElement>(null);
+
   // #184.25: Escape key dismisses modal
   useEffect(() => {
     if (!isOpen) return;
@@ -23,12 +26,28 @@ export default function Modal({ isOpen, onClose, title, children, actions }: Mod
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // STG-321: Move focus into modal on open, restore on close
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    modalRef.current?.focus();
+    return () => { previousFocus?.focus(); };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3 className="modal-title">{title}</h3>
+      <div
+        ref={modalRef}
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="modal-title" className="modal-title">{title}</h3>
         {children}
         {actions && <div>{actions}</div>}
       </div>

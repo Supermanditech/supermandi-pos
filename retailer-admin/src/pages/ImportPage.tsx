@@ -327,8 +327,8 @@ export default function ImportPage() {
               key={s}
               className="imp-step"
               style={{
-                background: step === s ? 'var(--primary)' : i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? '#22c55e' : 'var(--border)',
-                color: step === s || i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? 'white' : 'var(--text-muted)',
+                background: step === s ? 'var(--primary)' : i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? 'var(--step-completed-bg)' : 'var(--border)',
+                color: step === s || i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? 'var(--step-completed-text)' : 'var(--text-muted)',
               }}
             >
               {s}
@@ -482,7 +482,7 @@ export default function ImportPage() {
                   </thead>
                   <tbody>
                     {validation.previewRows.map((row) => (
-                      <tr key={row.row} style={{ background: row.valid ? undefined : '#fef2f2' }}>
+                      <tr key={row.row} style={{ background: row.valid ? undefined : 'var(--row-error-bg)' }}>
                         <td>{row.row}</td>
                         <td>{row.name}</td>
                         <td className="cell-mono">{row.barcode || <em className="text-muted">auto</em>}</td>

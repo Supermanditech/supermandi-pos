@@ -204,7 +204,7 @@ export default function PaymentsPage() {
       {/* Success Message */}
       {saveSuccess && (
         <div className="pay-alert-success">
-          <span className="pay-alert-icon">&#10003;</span>
+          <span className="pay-alert-icon" aria-hidden="true">&#10003;</span>
           <div>
             <div className="pay-alert-bold">Payment settings saved successfully!</div>
             {statusTransitioned && (
@@ -219,7 +219,7 @@ export default function PaymentsPage() {
       {/* Error Message */}
       {saveError && (
         <div className="pay-alert-error">
-          <span className="pay-alert-icon">&#10007;</span>
+          <span className="pay-alert-icon" aria-hidden="true">&#10007;</span>
           {saveError}
         </div>
       )}
@@ -229,7 +229,7 @@ export default function PaymentsPage() {
         {/* UPI Settings */}
         <section className="card pay-section">
           <h2 className="pay-section-title">
-            <span className="pay-section-icon">&#128179;</span>
+            <span className="pay-section-icon" aria-hidden="true">&#128179;</span>
             UPI Payment
           </h2>
 
@@ -251,7 +251,7 @@ export default function PaymentsPage() {
         {/* Bank Account Settings (Optional) */}
         <section className="card pay-section">
           <h2 className="pay-section-title">
-            <span className="pay-section-icon">&#127974;</span>
+            <span className="pay-section-icon" aria-hidden="true">&#127974;</span>
             Bank Account (Optional)
           </h2>
 

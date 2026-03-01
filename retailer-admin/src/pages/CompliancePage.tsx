@@ -291,7 +291,7 @@ export default function CompliancePage() {
               <tbody>
                 {documents.map((doc) => (
                   <tr key={doc.id}>
-                    <td className="cell-bold">{doc.type}</td>
+                    <td className="cell-bold">{documentTypes.find(dt => dt.value === doc.type)?.label || doc.type}</td>
                     <td className="cell-mono cell-sm">{doc.fileName}</td>
                     <td className="text-sm-muted">
                       {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}

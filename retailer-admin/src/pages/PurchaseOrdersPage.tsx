@@ -63,14 +63,19 @@ function fmtDate(d: string): string {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  draft:             { bg: '#f3f4f6', color: '#6b7280' },
-  submitted:         { bg: '#fef3c7', color: '#92400e' },
-  confirmed:         { bg: '#dbeafe', color: '#1e40af' },
-  shipped:           { bg: '#e0e7ff', color: '#3730a3' },
-  partial_received:  { bg: '#fef9c3', color: '#854d0e' },
-  delivered:         { bg: '#dcfce7', color: '#166534' },
-  cancelled:         { bg: '#fee2e2', color: '#991b1b' },
+  pending:           { bg: 'var(--badge-draft-bg)',     color: 'var(--badge-draft-text)' },
+  draft:             { bg: 'var(--badge-draft-bg)',     color: 'var(--badge-draft-text)' },
+  submitted:         { bg: 'var(--badge-submitted-bg)', color: 'var(--badge-submitted-text)' },
+  confirmed:         { bg: 'var(--badge-confirmed-bg)', color: 'var(--badge-confirmed-text)' },
+  shipped:           { bg: 'var(--badge-shipped-bg)',   color: 'var(--badge-shipped-text)' },
+  partial_received:  { bg: 'var(--badge-partial-bg)',   color: 'var(--badge-partial-text)' },
+  delivered:         { bg: 'var(--badge-delivered-bg)', color: 'var(--badge-delivered-text)' },
+  cancelled:         { bg: 'var(--badge-cancelled-bg)', color: 'var(--badge-cancelled-text)' },
 };
+
+function fmtStatus(s: string): string {
+  return s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
 
 export default function PurchaseOrdersPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
@@ -157,6 +162,7 @@ export default function PurchaseOrdersPage() {
             className="form-input po-filter-select"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }}
+            aria-label="Filter purchase orders by status"
           >
             <option value="">All Statuses</option>
             <option value="draft">Draft</option>
@@ -173,6 +179,7 @@ export default function PurchaseOrdersPage() {
             placeholder="Search by supplier name..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setOffset(0); }}
+            aria-label="Search purchase orders by supplier name"
           />
           <span className="text-sm-muted">
             {total} order{total !== 1 ? 's' : ''}
@@ -229,7 +236,7 @@ export default function PurchaseOrdersPage() {
                       <td className="cell-mono-right-bold">{fmt(po.totalMinor)}</td>
                       <td>
                         <span className="badge" style={{ background: sc.bg, color: sc.color }}>
-                          {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
+                          {fmtStatus(po.status)}
                         </span>
                       </td>
                       <td className="cell-right">{po.itemsCount}</td>
@@ -295,7 +302,7 @@ export default function PurchaseOrdersPage() {
           <div className="po-detail-content">
             <div className="po-detail-grid">
               <div><strong>Supplier:</strong> {selectedPO.supplierName}</div>
-              <div><strong>Status:</strong> {selectedPO.status.charAt(0).toUpperCase() + selectedPO.status.slice(1)}</div>
+              <div><strong>Status:</strong> {fmtStatus(selectedPO.status)}</div>
               <div><strong>Order Date:</strong> {fmtDate(selectedPO.orderDate)}</div>
               <div><strong>Expected:</strong> {selectedPO.expectedDeliveryDate ? fmtDate(selectedPO.expectedDeliveryDate) : '-'}</div>
               <div><strong>Total:</strong> {fmt(selectedPO.totalMinor)}</div>
@@ -314,7 +321,7 @@ export default function PurchaseOrdersPage() {
               <button
                 onClick={() => {
                   const expected = selectedPO.expectedDeliveryDate ? new Date(selectedPO.expectedDeliveryDate).toLocaleDateString('en-IN') : 'N/A';
-                  const status = selectedPO.status.charAt(0).toUpperCase() + selectedPO.status.slice(1);
+                  const status = fmtStatus(selectedPO.status);
                   const msg = `Follow-up on PO #${selectedPO.poNumber}. Status: ${status}. Expected delivery: ${expected}.`;
                   const phone = selectedPO.supplierPhone!.replace(/\D/g, '');
                   if (phone.length < 10) return;

@@ -305,13 +305,19 @@ export default function DashboardPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => { if (searchResults) setShowSearchResults(true); }}
+                onKeyDown={(e) => { if (e.key === 'Escape') setShowSearchResults(false); }}
                 className="dash-search-input"
+                role="combobox"
+                aria-expanded={showSearchResults && !!(searchLoading || searchResults)}
+                aria-haspopup="listbox"
+                aria-autocomplete="list"
+                aria-label="Search product, supplier, or barcode"
               />
             </div>
 
             {/* Search Results Dropdown */}
             {showSearchResults && (searchLoading || searchResults) && (
-              <div className="dash-results-dropdown">
+              <div className="dash-results-dropdown" role="listbox" aria-label="Search results">
                 {searchLoading && (
                   <div className="dash-results-loading">
                     Searching...
@@ -329,7 +335,10 @@ export default function DashboardPage() {
                         {searchResults.products.map((p) => (
                           <div
                             key={p.id}
+                            role="option"
+                            tabIndex={0}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(p.name)}`); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(p.name)}`); } }}
                             className="dash-result-row"
                           >
                             <div>
@@ -361,7 +370,10 @@ export default function DashboardPage() {
                         {searchResults.suppliers.map((s) => (
                           <div
                             key={s.id}
+                            role="option"
+                            tabIndex={0}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/suppliers`); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSearchResults(false); navigate(`/s/${storeCode}/suppliers`); } }}
                             className="dash-result-row"
                           >
                             <div>
@@ -391,7 +403,10 @@ export default function DashboardPage() {
                         {searchResults.barcodes.map((b) => (
                           <div
                             key={b.storeProductId}
+                            role="option"
+                            tabIndex={0}
                             onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(b.barcode)}`); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(b.barcode)}`); } }}
                             className="dash-result-row"
                           >
                             <div>
@@ -428,7 +443,7 @@ export default function DashboardPage() {
         {/* Total Products */}
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-icon dash-metric-icon--products">📦</span>
+            <span className="dash-metric-icon dash-metric-icon--products" aria-hidden="true">📦</span>
             <span className="dash-metric-label">Total Products</span>
           </div>
           <div className="dash-metric-value">
@@ -439,7 +454,7 @@ export default function DashboardPage() {
         {/* Total Stock Qty */}
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-icon dash-metric-icon--stock">📋</span>
+            <span className="dash-metric-icon dash-metric-icon--stock" aria-hidden="true">📋</span>
             <span className="dash-metric-label">Total Stock Qty</span>
           </div>
           <div className="dash-metric-value">
@@ -450,7 +465,7 @@ export default function DashboardPage() {
         {/* Total Purchase Value */}
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-icon dash-metric-icon--purchase">💰</span>
+            <span className="dash-metric-icon dash-metric-icon--purchase" aria-hidden="true">💰</span>
             <span className="dash-metric-label">Total Purchase Value</span>
           </div>
           <div className="dash-metric-value">
@@ -461,7 +476,7 @@ export default function DashboardPage() {
         {/* Total Sell Revenue */}
         <div className="dash-metric-card">
           <div className="dash-metric-header">
-            <span className="dash-metric-icon dash-metric-icon--revenue">📈</span>
+            <span className="dash-metric-icon dash-metric-icon--revenue" aria-hidden="true">📈</span>
             <span className="dash-metric-label">Total Sell Revenue</span>
           </div>
           <div className="dash-metric-value dash-metric-value--green">
@@ -474,7 +489,7 @@ export default function DashboardPage() {
       <div className="dash-daily-card">
         <div className="dash-daily-header">
           <h2 className="dash-daily-title">
-            <span className="dash-daily-icon">📊</span>
+            <span className="dash-daily-icon" aria-hidden="true">📊</span>
             Today's Sales Summary
           </h2>
           {dailySummary && (
@@ -574,31 +589,33 @@ export default function DashboardPage() {
               onClick={() => setShowAddProductMenu(!showAddProductMenu)}
               className="dash-action-btn dash-action-btn--add"
             >
-              <span className="dash-action-icon">📦</span>
+              <span className="dash-action-icon" aria-hidden="true">📦</span>
               Add Products (Without Supplier)
-              <span className="dash-action-arrow">▼</span>
+              <span className="dash-action-arrow" aria-hidden="true">▼</span>
             </button>
 
             {showAddProductMenu && (
-              <div className="dash-dropdown-menu">
+              <div className="dash-dropdown-menu" role="menu">
                 <button
+                  role="menuitem"
                   onClick={() => {
                     setShowAddProductMenu(false);
                     navigate(`/s/${storeCode}/import`);
                   }}
                   className="dash-dropdown-item"
                 >
-                  <span className="dash-dropdown-icon">📄</span>
+                  <span className="dash-dropdown-icon" aria-hidden="true">📄</span>
                   CSV Upload
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => {
                     setShowAddProductMenu(false);
                     navigate(`/s/${storeCode}/products?action=create`);
                   }}
                   className="dash-dropdown-item"
                 >
-                  <span className="dash-dropdown-icon">✏️</span>
+                  <span className="dash-dropdown-icon" aria-hidden="true">✏️</span>
                   Web Form
                 </button>
               </div>
@@ -610,7 +627,7 @@ export default function DashboardPage() {
             onClick={() => navigate(`/s/${storeCode}/suppliers?action=create`)}
             className="dash-action-btn dash-action-btn--supplier"
           >
-            <span className="dash-action-icon">🏪</span>
+            <span className="dash-action-icon" aria-hidden="true">🏪</span>
             Add Supplier (Market Supplier)
           </button>
 
@@ -643,7 +660,7 @@ export default function DashboardPage() {
               URL.revokeObjectURL(url);
             }}
           >
-            <span className="dash-action-icon">📊</span>
+            <span className="dash-action-icon" aria-hidden="true">📊</span>
             Export
           </button>
         </div>
@@ -734,7 +751,10 @@ export default function DashboardPage() {
                   </button>
                 </div>
                 <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => navigate(`/s/${storeCode}/products?category=${category.id}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/s/${storeCode}/products?category=${category.id}`); } }}
                 >
                   <div className="dash-cat-row">
                     <span className="dash-cat-icon">
@@ -771,15 +791,16 @@ export default function DashboardPage() {
       {/* RCAT-CAT-002: Category Rename Modal */}
       {editingCategory && (
         <div className="dash-modal-overlay" onClick={() => { if (!catEditSaving) { setEditingCategory(null); setCatEditError(null); } }}>
-          <div className="dash-modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="dash-modal-title">
+          <div className="dash-modal-card" role="dialog" aria-modal="true" aria-labelledby="cat-rename-title" onClick={(e) => e.stopPropagation()}>
+            <h3 id="cat-rename-title" className="dash-modal-title">
               Rename Category (Store Override)
             </h3>
             <div className="dash-modal-field">
-              <label className="dash-modal-label">
+              <label className="dash-modal-label" htmlFor="cat-rename-en">
                 English Name
               </label>
               <input
+                id="cat-rename-en"
                 type="text"
                 value={catEditNameEn}
                 onChange={(e) => setCatEditNameEn(e.target.value)}
@@ -787,10 +808,11 @@ export default function DashboardPage() {
               />
             </div>
             <div className="dash-modal-field" style={{ marginBottom: '1rem' }}>
-              <label className="dash-modal-label">
+              <label className="dash-modal-label" htmlFor="cat-rename-hi">
                 Hindi Name
               </label>
               <input
+                id="cat-rename-hi"
                 type="text"
                 value={catEditNameHi}
                 onChange={(e) => setCatEditNameHi(e.target.value)}

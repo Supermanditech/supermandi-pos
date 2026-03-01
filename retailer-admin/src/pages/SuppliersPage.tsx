@@ -197,9 +197,9 @@ const SECTION_CONFIGS: SectionConfig[] = [
     title: 'Verified',
     icon: '🔒',
     description: 'Approved by SuperMandi - View Only',
-    bgColor: '#dcfce7',
-    borderColor: '#86efac',
-    textColor: '#166534',
+    bgColor: 'var(--status-verified-bg)',
+    borderColor: 'var(--status-verified-border)',
+    textColor: 'var(--status-verified-text)',
     isEditable: false,
   },
   {
@@ -207,9 +207,9 @@ const SECTION_CONFIGS: SectionConfig[] = [
     title: 'Pending Approval',
     icon: '⏳',
     description: 'Awaiting SuperAdmin verification - View Only',
-    bgColor: '#fef3c7',
-    borderColor: '#fcd34d',
-    textColor: '#92400e',
+    bgColor: 'var(--status-pending-bg)',
+    borderColor: 'var(--status-pending-border)',
+    textColor: 'var(--status-pending-text)',
     isEditable: false,
   },
   {
@@ -217,9 +217,9 @@ const SECTION_CONFIGS: SectionConfig[] = [
     title: 'Local Suppliers',
     icon: '✏️',
     description: 'Store-only suppliers - Editable',
-    bgColor: '#f3f4f6',
-    borderColor: '#d1d5db',
-    textColor: '#374151',
+    bgColor: 'var(--status-local-bg)',
+    borderColor: 'var(--status-local-border)',
+    textColor: 'var(--status-local-text)',
     isEditable: true,
   },
 ];
@@ -554,7 +554,7 @@ export default function SuppliersPage() {
 
   // Form section tabs
   const FormSectionTabs = () => (
-    <div className="sup-form-tabs">
+    <div className="sup-form-tabs" role="tablist" aria-label="Supplier form sections">
       {[
         { key: 'identity', label: 'A. Identity', icon: '🏢' },
         { key: 'contact', label: 'B. Contact', icon: '📞' },
@@ -564,10 +564,12 @@ export default function SuppliersPage() {
         <button
           key={key}
           type="button"
+          role="tab"
+          aria-selected={activeSection === key}
           onClick={() => setActiveSection(key as FormSection)}
           className={`sup-form-tab${activeSection === key ? ' sup-form-tab--active' : ''}`}
         >
-          {icon} {label}
+          <span aria-hidden="true">{icon}</span> {label}
         </button>
       ))}
     </div>
@@ -1117,6 +1119,7 @@ export default function SuppliersPage() {
             placeholder="Search by name, phone, or GSTIN..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Search suppliers by name, phone, or GSTIN"
             style={{ width: '100%', paddingRight: isSearching ? '90px' : undefined }}
           />
           {isSearching && (
@@ -1134,9 +1137,12 @@ export default function SuppliersPage() {
           >
             <div
               className="card sup-modal-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="remove-supplier-title"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="card-title">Remove Supplier?</h3>
+              <h3 id="remove-supplier-title" className="card-title">Remove Supplier?</h3>
               <p className="sup-modal-body">
                 Are you sure you want to remove this supplier from your store? This action can be undone by adding the supplier again.
               </p>
@@ -1178,7 +1184,7 @@ export default function SuppliersPage() {
               </div>
 
               <div className="sup-locked-info" style={{
-                background: lockedSupplierModal.status === 'verified' ? '#dcfce7' : '#fef3c7',
+                background: lockedSupplierModal.status === 'verified' ? 'var(--status-verified-bg)' : 'var(--status-pending-bg)',
               }}>
                 <strong className="sup-locked-name">
                   {lockedSupplierModal.supplier.name}

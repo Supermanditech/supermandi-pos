@@ -507,7 +507,7 @@ export default function RegisterPage() {
                     <div className="reg-progress-inner">
                       <div className={`reg-progress-circle ${progressStep > i ? 'reg-progress-circle--completed' : progressStep === i ? 'reg-progress-circle--active' : 'reg-progress-circle--pending'}`}>
                         {progressStep > i ? (
-                          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         ) : i + 1}
@@ -900,7 +900,7 @@ export default function RegisterPage() {
           {step === 'success' && (
             <div className="reg-card">
               <div className="reg-success-center">
-                <div className="reg-success-icon">
+                <div className="reg-success-icon" aria-hidden="true">
                   &#10003;
                 </div>
 

@@ -77,13 +77,13 @@ function fmtDate(d: string): string {
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-const statusColors: Record<string, string> = {
-  draft: "#6b7280",
-  issued: "#2563eb",
-  paid: "#16a34a",
-  overdue: "#dc2626",
-  cancelled: "#9ca3af",
-  void: "#9ca3af",
+const statusColors: Record<string, { bg: string; text: string }> = {
+  draft:     { bg: 'var(--badge-draft-bg)',     text: 'var(--badge-draft-text)' },
+  issued:    { bg: 'var(--badge-issued-bg)',    text: 'var(--badge-issued-text)' },
+  paid:      { bg: 'var(--badge-paid-bg)',      text: 'var(--badge-paid-text)' },
+  overdue:   { bg: 'var(--badge-overdue-bg)',   text: 'var(--badge-overdue-text)' },
+  cancelled: { bg: 'var(--badge-cancelled-bg)', text: 'var(--badge-cancelled-text)' },
+  void:      { bg: 'var(--badge-void-bg)',      text: 'var(--badge-void-text)' },
 };
 
 export default function InvoicesPage() {
@@ -176,7 +176,8 @@ export default function InvoicesPage() {
       {/* Filters */}
       <div className="po-filter-bar">
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setOffset(0); }}
-          className="form-input po-filter-select">
+          className="form-input po-filter-select"
+          aria-label="Filter invoices by status">
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="issued">Issued</option>
@@ -229,7 +230,7 @@ export default function InvoicesPage() {
                     {fmt(inv.balanceDueMinor)}
                   </td>
                   <td>
-                    <span className="badge" style={{ color: "#fff", background: statusColors[inv.status] || "#6b7280" }}>
+                    <span className="badge" style={{ color: (statusColors[inv.status] || statusColors.draft).text, background: (statusColors[inv.status] || statusColors.draft).bg }}>
                       {inv.status.toUpperCase()}
                     </span>
                   </td>
@@ -270,6 +271,9 @@ export default function InvoicesPage() {
           onKeyDown={e => { if (e.key === 'Escape') { setDetail(null); setDetailError(null); } }}
           tabIndex={-1} ref={(el) => { if (el) el.focus(); }}>
           <div className="card inv-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invoice-detail-title"
             onClick={e => e.stopPropagation()}>
             {detailLoading && <div className="po-modal-loading">Loading...</div>}
             {detailError && !detailLoading && (
@@ -282,7 +286,7 @@ export default function InvoicesPage() {
             {detail && (
               <>
                 <div className="inv-modal-header">
-                  <h3 className="inv-modal-title">{detail.invoiceNumber}</h3>
+                  <h3 id="invoice-detail-title" className="inv-modal-title">{detail.invoiceNumber}</h3>
                   <button aria-label="Close invoice detail" onClick={() => setDetail(null)}
                     className="inv-modal-close">X</button>
                 </div>
