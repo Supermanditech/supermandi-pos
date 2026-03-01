@@ -92,7 +92,7 @@ export default function OrderDetailScreen({
       setOrder(orderData);
       setEvents(eventsData);
     } catch (err) {
-      console.error("[OrderDetailScreen] Failed to load order:", err);
+      if (__DEV__) console.error("[OrderDetailScreen] Failed to load order:", err);
       setError("Failed to load order details");
     } finally {
       setLoading(false);
@@ -160,7 +160,7 @@ export default function OrderDetailScreen({
               const eventsData = await orderApi.getOrderEvents(storeId, orderId);
               setEvents(eventsData);
             } catch (err) {
-              console.error("[OrderDetailScreen] Failed to cancel:", err);
+              if (__DEV__) console.error("[OrderDetailScreen] Failed to cancel:", err);
               Alert.alert("Error", "Failed to cancel order. Please try again.");
             } finally {
               setCancelling(false);
@@ -199,7 +199,7 @@ export default function OrderDetailScreen({
       setTrackingEditing(false);
       Alert.alert("Success", "Tracking number updated");
     } catch (err) {
-      console.error("[OrderDetailScreen] Failed to update tracking:", err);
+      if (__DEV__) console.error("[OrderDetailScreen] Failed to update tracking:", err);
       Alert.alert("Error", "Failed to update tracking number");
     } finally {
       setTrackingSaving(false);
@@ -237,7 +237,7 @@ export default function OrderDetailScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -261,7 +261,7 @@ export default function OrderDetailScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -278,7 +278,7 @@ export default function OrderDetailScreen({
             color={colors.error}
           />
           <Text style={styles.errorText}>{error || "Order not found"}</Text>
-          <Pressable style={styles.retryButton} onPress={loadOrder}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={loadOrder}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -297,7 +297,7 @@ export default function OrderDetailScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -383,6 +383,7 @@ export default function OrderDetailScreen({
                     editable={!trackingSaving}
                   />
                   <Pressable
+                    accessibilityRole="button"
                     style={styles.trackingSaveButton}
                     onPress={handleSaveTracking}
                     disabled={trackingSaving}
@@ -394,6 +395,7 @@ export default function OrderDetailScreen({
                     )}
                   </Pressable>
                   <Pressable
+                    accessibilityRole="button"
                     style={styles.trackingCancelButton}
                     onPress={() => {
                       setTrackingEditing(false);
@@ -406,6 +408,7 @@ export default function OrderDetailScreen({
                 </View>
               ) : (
                 <Pressable
+                  accessibilityRole="button"
                   style={styles.trackingDisplayRow}
                   onPress={() => setTrackingEditing(true)}
                 >
@@ -475,6 +478,7 @@ export default function OrderDetailScreen({
       <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.md }]}>
         {isCancellable && (
           <Pressable
+            accessibilityRole="button"
             style={styles.cancelButton}
             onPress={handleCancel}
             disabled={cancelling}
@@ -494,7 +498,7 @@ export default function OrderDetailScreen({
           </Pressable>
         )}
 
-        <Pressable style={styles.whatsappButton} onPress={handleWhatsAppSupplier}>
+        <Pressable accessibilityRole="button" style={styles.whatsappButton} onPress={handleWhatsAppSupplier}>
           <MaterialCommunityIcons
             name="whatsapp"
             size={18}
@@ -503,7 +507,7 @@ export default function OrderDetailScreen({
         </Pressable>
 
         {isReceivable && onNavigateToGRN && (
-          <Pressable style={styles.receiveButton} onPress={handleReceive}>
+          <Pressable accessibilityRole="button" style={styles.receiveButton} onPress={handleReceive}>
             <MaterialCommunityIcons
               name="package-down"
               size={18}

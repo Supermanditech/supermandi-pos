@@ -237,6 +237,7 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
 
     return (
       <Pressable
+        accessibilityRole="button"
         key={item.id}
         style={styles.item}
         onPress={() => {
@@ -404,7 +405,7 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={onBack}>
+        <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>UI Showcase (QA)</Text>
@@ -416,6 +417,7 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>QA Actions</Text>
           <Pressable
+            accessibilityRole="button"
             style={[styles.actionButton, seeding && styles.actionButtonDisabled]}
             onPress={handleSeedDemoData}
             disabled={seeding}

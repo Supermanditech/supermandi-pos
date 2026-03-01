@@ -108,7 +108,7 @@ export default function BarcodeSheetScreen() {
           setActiveTier(savedTier);
         }
       } catch (e) {
-        console.warn("[BarcodeSheet] Failed to load saved tier:", e);
+        if (__DEV__) console.warn("[BarcodeSheet] Failed to load saved tier:", e);
       }
       const settings = await loadPrintSettings();
       setPrintSettings(settings);
@@ -202,7 +202,7 @@ export default function BarcodeSheetScreen() {
     try {
       await AsyncStorage.setItem(BARCODE_TIER_KEY, tier);
     } catch (e) {
-      console.warn("[BarcodeSheet] Failed to save tier preference:", e);
+      if (__DEV__) console.warn("[BarcodeSheet] Failed to save tier preference:", e);
     }
     setLoading(true);
     setError(null);
@@ -341,6 +341,7 @@ export default function BarcodeSheetScreen() {
           <Text style={styles.sectionTitle}>Generate Sheets</Text>
           {/* T-169: Settings gear button */}
           <Pressable
+            accessibilityRole="button"
             style={styles.settingsButton}
             onPress={() => setShowSettingsModal(true)}
             accessibilityLabel="Print settings"
@@ -350,6 +351,7 @@ export default function BarcodeSheetScreen() {
         </View>
         <View style={styles.tierGrid}>
           <Pressable
+            accessibilityRole="button"
             style={[styles.tierCard, activeTier === "TIER_1" && styles.tierCardActive]}
             onPress={() => handleGenerate("TIER_1")}
           >
@@ -358,6 +360,7 @@ export default function BarcodeSheetScreen() {
             <Text style={styles.tierSubtitle}>Standard barcode labels</Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
             style={[styles.tierCard, activeTier === "TIER_2" && styles.tierCardActive]}
             onPress={() => handleGenerate("TIER_2")}
           >
@@ -381,6 +384,7 @@ export default function BarcodeSheetScreen() {
               const isActive = selectedCategory === cat;
               return (
                 <Pressable
+                  accessibilityRole="button"
                   key={cat}
                   style={[styles.categoryChip, isActive && styles.categoryChipActive]}
                   onPress={() => {
@@ -403,6 +407,7 @@ export default function BarcodeSheetScreen() {
         <View style={styles.section}>
           <View style={styles.customModeRow}>
             <Pressable
+              accessibilityRole="switch"
               style={[styles.customModeToggle, customMode && styles.customModeToggleActive]}
               onPress={() => {
                 setCustomMode((prev) => !prev);
@@ -447,16 +452,16 @@ export default function BarcodeSheetScreen() {
                   autoCapitalize="none"
                 />
                 {searchQuery.length > 0 && (
-                  <Pressable onPress={() => setSearchQuery("")}>
+                  <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")}>
                     <MaterialCommunityIcons name="close-circle" size={16} color={colors.textTertiary} />
                   </Pressable>
                 )}
               </View>
               <View style={styles.selectionActions}>
-                <Pressable style={styles.selectionBtn} onPress={handleSelectAll}>
+                <Pressable accessibilityRole="button" style={styles.selectionBtn} onPress={handleSelectAll}>
                   <Text style={styles.selectionBtnText}>Select All</Text>
                 </Pressable>
-                <Pressable style={styles.selectionBtn} onPress={handleDeselectAll}>
+                <Pressable accessibilityRole="button" style={styles.selectionBtn} onPress={handleDeselectAll}>
                   <Text style={styles.selectionBtnText}>Deselect All</Text>
                 </Pressable>
               </View>
@@ -474,6 +479,7 @@ export default function BarcodeSheetScreen() {
                     return (
                       <View key={item.barcode} style={styles.productRow}>
                         <Pressable
+                          accessibilityRole="checkbox"
                           style={styles.productCheckArea}
                           onPress={() => toggleSelection(item.barcode)}
                         >
@@ -504,6 +510,7 @@ export default function BarcodeSheetScreen() {
                         {isSelected && (
                           <View style={styles.copiesStepper}>
                             <Pressable
+                              accessibilityRole="button"
                               style={styles.stepperBtn}
                               onPress={() => updateCopies(item.barcode, -1)}
                               disabled={copies <= 1}
@@ -516,6 +523,7 @@ export default function BarcodeSheetScreen() {
                             </Pressable>
                             <Text style={styles.stepperValue}>{copies}</Text>
                             <Pressable
+                              accessibilityRole="button"
                               style={styles.stepperBtn}
                               onPress={() => updateCopies(item.barcode, 1)}
                               disabled={copies >= 50}
@@ -570,6 +578,7 @@ export default function BarcodeSheetScreen() {
                   const isDeselectable = customMode;
                   return (
                     <Pressable
+                      accessibilityRole="button"
                       key={`${item.barcode}-${idx}`}
                       style={[
                         styles.previewCell,
@@ -614,6 +623,7 @@ export default function BarcodeSheetScreen() {
               {finalItems.length > PAGE_SIZE && (
                 <View style={styles.paginationRow}>
                   <Pressable
+                    accessibilityRole="button"
                     style={[styles.paginationBtn, previewPage === 0 && styles.paginationBtnDisabled]}
                     onPress={() => setPreviewPage((p) => Math.max(0, p - 1))}
                     disabled={previewPage === 0}
@@ -632,6 +642,7 @@ export default function BarcodeSheetScreen() {
                     {previewPage + 1} / {totalPages}
                   </Text>
                   <Pressable
+                    accessibilityRole="button"
                     style={[styles.paginationBtn, previewPage >= totalPages - 1 && styles.paginationBtnDisabled]}
                     onPress={() => setPreviewPage((p) => Math.min(totalPages - 1, p + 1))}
                     disabled={previewPage >= totalPages - 1}
@@ -671,7 +682,7 @@ export default function BarcodeSheetScreen() {
                   "Add products by scanning barcodes in the SELL tab. Once added, you can generate barcode sheets here."
                 )}
               </Text>
-              <Pressable style={styles.addProductsButton} onPress={handleAddProducts}>
+              <Pressable accessibilityRole="button" style={styles.addProductsButton} onPress={handleAddProducts}>
                 <MaterialCommunityIcons name="plus" size={16} color={colors.textInverse} />
                 <Text style={styles.addProductsText}>
                   {t("barcodeSheet.addProducts", "Add Products")}
@@ -693,6 +704,7 @@ export default function BarcodeSheetScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Actions</Text>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, styles.downloadButton, actionDisabled && styles.actionButtonDisabled]}
           onPress={handleDownload}
           disabled={actionDisabled}
@@ -703,6 +715,7 @@ export default function BarcodeSheetScreen() {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, styles.whatsAppButton, actionDisabled && styles.actionButtonDisabled]}
           onPress={handleWhatsApp}
           disabled={actionDisabled}
@@ -772,7 +785,7 @@ function PrintSettingsModal({
         <View style={modalStyles.card}>
           <View style={modalStyles.header}>
             <Text style={modalStyles.title}>Print Settings</Text>
-            <Pressable onPress={onClose}>
+            <Pressable accessibilityRole="button" onPress={onClose}>
               <MaterialCommunityIcons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -783,6 +796,7 @@ function PrintSettingsModal({
             <View style={modalStyles.chipRow}>
               {paperSizes.map((ps) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={ps}
                   style={[modalStyles.chip, paperSize === ps && modalStyles.chipActive]}
                   onPress={() => setPaperSize(ps)}
@@ -801,6 +815,7 @@ function PrintSettingsModal({
             <View style={modalStyles.chipRow}>
               {labelSizes.map((ls) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={ls}
                   style={[modalStyles.chip, labelSize === ls && modalStyles.chipActive]}
                   onPress={() => setLabelSize(ls)}
@@ -826,6 +841,7 @@ function PrintSettingsModal({
 
           {/* Save */}
           <Pressable
+            accessibilityRole="button"
             style={modalStyles.saveButton}
             onPress={() => onSave({ paperSize, labelSize, labelsPerRow })}
           >

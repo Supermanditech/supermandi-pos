@@ -560,6 +560,7 @@ function CartItemRow({
 
   const rowBody = (
     <Pressable
+      accessibilityRole="button"
       style={[
         styles.cartItemRowContent,
         isCompactRow && styles.cartItemRowContentCompact,
@@ -592,6 +593,7 @@ function CartItemRow({
           ) : null}
         </View>
         <Pressable
+          accessibilityRole="button"
           style={[styles.removeItemButton, removeDisabled && styles.removeItemButtonDisabled]}
           onPress={handleRemove}
           disabled={removeDisabled}
@@ -636,6 +638,7 @@ function CartItemRow({
           ]}
         >
           <Pressable
+            accessibilityRole="button"
             style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
             onPress={handleQtyDecrease}
             disabled={controlsDisabled}
@@ -648,6 +651,7 @@ function CartItemRow({
             {item.quantity}
           </Animated.Text>
           <Pressable
+            accessibilityRole="button"
             style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
             onPress={handleQtyIncrease}
             disabled={controlsDisabled}
@@ -1001,7 +1005,7 @@ export default function SellScanScreen({
           setApiCategories(cats.map(fmcgCategoryToItem));
         }
       } catch (error) {
-        console.warn("[CAT-004] Failed to fetch categories:", error);
+        if (__DEV__) console.warn("[CAT-004] Failed to fetch categories:", error);
         // Fallback to DEMO_CATEGORIES handled by category dropdown
       } finally {
         if (!cancelled) {
@@ -1041,7 +1045,7 @@ export default function SellScanScreen({
           setCategoryProductsHasMore(response.pagination.hasMore);
         }
       } catch (error) {
-        console.warn("[CAT-004] Failed to fetch category products:", error);
+        if (__DEV__) console.warn("[CAT-004] Failed to fetch category products:", error);
       } finally {
         if (!cancelled) {
           setCategoryProductsLoading(false);
@@ -1601,7 +1605,7 @@ export default function SellScanScreen({
     const scanned = !globalProductId ? barcode : undefined;
 
     if (!globalProductId && !scanned) {
-      console.warn("Missing product identifier for store price update", { itemId: item.id });
+      if (__DEV__) console.warn("Missing product identifier for store price update", { itemId: item.id });
       return false;
     }
 
@@ -1632,7 +1636,7 @@ export default function SellScanScreen({
       logger.debug("SellPrice", `saved_default:${logSku}`);
       return true;
     } catch (error) {
-      console.warn("Failed to save store price", error);
+      if (__DEV__) console.warn("Failed to save store price", error);
       return false;
     }
   }, []);
@@ -1694,7 +1698,7 @@ export default function SellScanScreen({
     if (!catalogHasMore && !reset) return;
     // GO-LIVE-170: Prevent infinite pagination loops
     if (!reset && catalogPage >= MAX_PAGINATION_PAGE) {
-      console.warn(`[GO-LIVE-170] Catalog pagination hit limit (${MAX_PAGINATION_PAGE})`);
+      if (__DEV__) console.warn(`[GO-LIVE-170] Catalog pagination hit limit (${MAX_PAGINATION_PAGE})`);
       return;
     }
 
@@ -1753,7 +1757,7 @@ export default function SellScanScreen({
     if (!addHasMore && !reset) return;
     // GO-LIVE-170: Prevent infinite pagination loops
     if (!reset && addPage >= MAX_PAGINATION_PAGE) {
-      console.warn(`[GO-LIVE-170] Add results pagination hit limit (${MAX_PAGINATION_PAGE})`);
+      if (__DEV__) console.warn(`[GO-LIVE-170] Add results pagination hit limit (${MAX_PAGINATION_PAGE})`);
       return;
     }
 
@@ -2092,7 +2096,7 @@ export default function SellScanScreen({
       showToast("Product updated");
     } catch (_e: unknown) {
       const e = asError(_e);
-      console.error("[SellScanScreen] Product edit failed:", e);
+      if (__DEV__) console.error("[SellScanScreen] Product edit failed:", e);
       // RET-POS-SYNC-009: Handle 409 conflict (server has newer data from Dashboard)
       // R6.POS.007: Use CaughtError.status directly (asError already types it)
       if (e.status === 409) {
@@ -2176,7 +2180,7 @@ export default function SellScanScreen({
           }
         }).catch((err: any) => {
           // RET-POS-SYNC-009: Log sync failures for debugging (non-blocking for cart UX)
-          console.warn("[SellScanScreen] Cart editor sync failed:", err?.status, err?.message || err);
+          if (__DEV__) console.warn("[SellScanScreen] Cart editor sync failed:", err?.status, err?.message || err);
         });
       }
     }
@@ -2387,6 +2391,7 @@ export default function SellScanScreen({
 
     return (
       <Pressable
+        accessibilityRole="button"
         style={[styles.skuCard, storeActive === false && styles.skuCardDisabled]}
         onPressIn={() => {
           detailPressRef.current = false;
@@ -2439,6 +2444,7 @@ export default function SellScanScreen({
 
     return (
       <Pressable
+        accessibilityRole="button"
         style={[styles.skuCardFirstRow, storeActive === false && styles.skuCardDisabled]}
         onPressIn={() => {
           detailPressRef.current = false;
@@ -2469,6 +2475,7 @@ export default function SellScanScreen({
 
   const renderCategoryPill = () => (
     <Pressable
+      accessibilityRole="button"
       style={styles.categoryPillCard}
       onPress={() => setCategoryRailExpanded(true)}
       accessibilityLabel="Expand categories"
@@ -2499,6 +2506,7 @@ export default function SellScanScreen({
     return (
       <View>
         <Pressable
+          accessibilityRole="button"
           style={styles.addRow}
           onPressIn={() => {
             detailPressRef.current = false;
@@ -2550,6 +2558,7 @@ export default function SellScanScreen({
             <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {productSubstitutes.map((sub) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={sub.productId}
                   style={styles.substituteCard}
                   onPress={() => handleAddSubstitute(sub)}
@@ -2646,6 +2655,7 @@ export default function SellScanScreen({
         />
         {addQuery ? (
           <Pressable
+            accessibilityRole="button"
             onPressIn={() => markAddInteraction()}
             onPress={() => setAddQuery("")}
             hitSlop={8}
@@ -2660,6 +2670,7 @@ export default function SellScanScreen({
         ) : null}
       </View>
       <Pressable
+        accessibilityRole="button"
         style={[
           styles.scanSegment,
           variant === "expanded" && styles.scanSegmentExpanded,
@@ -2722,6 +2733,7 @@ export default function SellScanScreen({
           />
           {manualBarcode.length > 0 && (
             <Pressable
+              accessibilityRole="button"
               onPress={handleManualBarcodeSubmit}
               hitSlop={8}
               style={styles.manualBarcodeSubmit}
@@ -2745,6 +2757,7 @@ export default function SellScanScreen({
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <Pressable
+                accessibilityRole="button"
                 style={styles.autocompleteSuggestion}
                 onPress={() => handleAutocompleteTap(item)}
               >
@@ -2769,6 +2782,7 @@ export default function SellScanScreen({
           >
             {searchHistoryTerms.map((term) => (
               <Pressable
+                accessibilityRole="button"
                 key={term}
                 style={styles.searchHistoryChip}
                 onPress={() => handleSearchHistoryTap(term)}
@@ -2778,6 +2792,7 @@ export default function SellScanScreen({
               </Pressable>
             ))}
             <Pressable
+              accessibilityRole="button"
               style={styles.searchHistoryClear}
               onPress={handleClearSearchHistory}
             >
@@ -2900,7 +2915,7 @@ export default function SellScanScreen({
         setVoiceSheetState("error");
       }
     } catch (error) {
-      console.error("[VOICE-001] Voice command failed:", error);
+      if (__DEV__) console.error("[VOICE-001] Voice command failed:", error);
       setVoiceErrorMessage(
         error instanceof Error ? error.message : "Voice command failed"
       );
@@ -3101,6 +3116,7 @@ export default function SellScanScreen({
       {searchHeader}
       {addExpanded ? (
         <Pressable
+          accessibilityRole="button"
           style={styles.searchDismissOverlay}
           onPress={() => collapseAddExpanded(true)}
           accessibilityLabel="Close search"
@@ -3136,6 +3152,7 @@ export default function SellScanScreen({
                 Category: {displayCategories.find((c) => c.id === selectedCategory)?.label ?? selectedCategory}
               </Text>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setSelectedCategory("all")}
                 hitSlop={8}
                 accessibilityLabel="Clear category filter"
@@ -3187,6 +3204,7 @@ export default function SellScanScreen({
 
       {itemCount > 0 ? (
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.cartBar,
             flashActive && styles.cartBarFlash,
@@ -3219,7 +3237,7 @@ export default function SellScanScreen({
                 {lastAddMessage ?? cartHint}
               </Text>
               {undoVisible && !locked ? (
-                <Pressable onPress={handleUndo} hitSlop={8}>
+                <Pressable accessibilityRole="button" onPress={handleUndo} hitSlop={8}>
                   <ButtonText style={styles.cartBarUndo}>{t("common.undo", "Undo")}</ButtonText>
                 </Pressable>
               ) : null}
@@ -3239,7 +3257,7 @@ export default function SellScanScreen({
         onRequestClose={closeCart}
       >
         <View style={styles.cartOverlay}>
-          <Pressable style={styles.cartOverlayTap} onPress={closeCart} />
+          <Pressable accessibilityRole="button" style={styles.cartOverlayTap} onPress={closeCart} />
           <Animated.View
             style={[
               styles.cartSheet,
@@ -3256,6 +3274,7 @@ export default function SellScanScreen({
             <View style={[styles.cartHeader, isSmallScreen && styles.cartHeaderCompact]}>
               <View style={styles.cartHeaderLeft}>
                 <Pressable
+                  accessibilityRole="button"
                   style={styles.backButton}
                   onPress={closeCart}
                   hitSlop={12}
@@ -3273,6 +3292,7 @@ export default function SellScanScreen({
               </View>
               {items.length > 0 ? (
                 <Pressable
+                  accessibilityRole="button"
                   style={styles.clearCartButton}
                   onPress={() => {
                     // GO-LIVE-249: Confirmation with undo option
@@ -3345,6 +3365,7 @@ export default function SellScanScreen({
                 <View style={styles.discountControls}>
                   <View style={styles.discountToggle}>
                     <Pressable
+                      accessibilityRole="button"
                       style={[
                         styles.discountChip,
                         discountType === "percentage" && styles.discountChipActive
@@ -3365,6 +3386,7 @@ export default function SellScanScreen({
                       </Text>
                     </Pressable>
                     <Pressable
+                      accessibilityRole="button"
                       style={[
                         styles.discountChip,
                         discountType === "fixed" && styles.discountChipActive
@@ -3417,6 +3439,7 @@ export default function SellScanScreen({
               </View>
 
               <Pressable
+                accessibilityRole="button"
                 style={[styles.totalCta, isSmallScreen && styles.totalCtaCompact, !canPay && styles.ctaDisabled]}
                 onPress={handleCheckout}
                 disabled={!canPay}
@@ -3439,6 +3462,7 @@ export default function SellScanScreen({
       >
         <View style={styles.onboardingOverlay}>
           <Pressable
+            accessibilityRole="button"
             style={styles.onboardingOverlayTap}
             onPress={() => closeSellOnboarding()}
             disabled={sellOnboardingBusy}
@@ -3512,6 +3536,7 @@ export default function SellScanScreen({
 
             <View style={styles.onboardingActions}>
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.onboardingButton,
                   styles.onboardingButtonGhost,
@@ -3523,6 +3548,7 @@ export default function SellScanScreen({
                 <Text style={styles.onboardingButtonText}>Cancel</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.onboardingButton,
                   styles.onboardingButtonPrimary,
@@ -3550,6 +3576,7 @@ export default function SellScanScreen({
       >
         <View style={styles.onboardingOverlay}>
           <Pressable
+            accessibilityRole="button"
             style={styles.onboardingOverlayTap}
             onPress={closeDetail}
             disabled={editProductBusy}
@@ -3607,6 +3634,7 @@ export default function SellScanScreen({
 
             <View style={styles.onboardingActions}>
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.onboardingButton,
                   styles.onboardingButtonGhost,
@@ -3618,6 +3646,7 @@ export default function SellScanScreen({
                 <Text style={styles.onboardingButtonText}>Cancel</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.onboardingButton,
                   styles.onboardingButtonPrimary,
@@ -3644,7 +3673,7 @@ export default function SellScanScreen({
         onRequestClose={closeEditor}
       >
         <View style={styles.editOverlay}>
-          <Pressable style={styles.editOverlayTap} onPress={closeEditor} />
+          <Pressable accessibilityRole="button" style={styles.editOverlayTap} onPress={closeEditor} />
           <View
             style={[styles.editSheet, { paddingBottom: 16 + insets.bottom }]}
             testID="sell-lineitem-editor"
@@ -3748,6 +3777,7 @@ export default function SellScanScreen({
                         />
                         <View style={styles.editDiscountTypeToggle}>
                           <Pressable
+                            accessibilityRole="button"
                             style={[
                               styles.editDiscountTypeBtn,
                               editorDiscountType === "percentage" && styles.editDiscountTypeBtnActive
@@ -3764,6 +3794,7 @@ export default function SellScanScreen({
                             ]}>%</Text>
                           </Pressable>
                           <Pressable
+                            accessibilityRole="button"
                             style={[
                               styles.editDiscountTypeBtn,
                               editorDiscountType === "fixed" && styles.editDiscountTypeBtnActive
@@ -3785,6 +3816,7 @@ export default function SellScanScreen({
                     <View style={styles.editFieldCompact}>
                       <Text style={styles.editLabel}>Quick</Text>
                       <Pressable
+                        accessibilityRole="button"
                         style={[
                           styles.editFreeBtn,
                           editorDiscountType === "percentage" && editorDiscountValue === "100" && styles.editFreeBtnActive
@@ -3810,12 +3842,14 @@ export default function SellScanScreen({
 
                 <View style={styles.editActions}>
                   <Pressable
+                    accessibilityRole="button"
                     style={[styles.editButton, styles.editButtonGhost]}
                     onPress={closeEditor}
                   >
                     <Text style={styles.editButtonText}>Cancel</Text>
                   </Pressable>
                   <Pressable
+                    accessibilityRole="button"
                     style={[styles.editButton, styles.editButtonPrimary, editorDisabled && styles.editButtonDisabled]}
                     onPress={handleEditorSave}
                     disabled={editorDisabled}
@@ -3824,6 +3858,7 @@ export default function SellScanScreen({
                   </Pressable>
                 </View>
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.editRemoveButton, editorDisabled && styles.editRemoveButtonDisabled]}
                   onPress={handleEditorRemove}
                   disabled={editorDisabled}
@@ -3843,6 +3878,7 @@ export default function SellScanScreen({
         <View style={[styles.voiceRecordingPanel, itemCount > 0 && styles.voiceRecordingPanelWithCart]}>
           {/* Cancel button */}
           <Pressable
+            accessibilityRole="button"
             style={styles.voiceCancelButton}
             onPress={cancelVoiceRecording}
             hitSlop={8}
@@ -3861,6 +3897,7 @@ export default function SellScanScreen({
 
           {/* Stop/Submit button */}
           <Pressable
+            accessibilityRole="button"
             style={styles.voiceStopButton}
             onPress={stopAndSubmitVoice}
             accessibilityLabel="Stop and submit"
@@ -3871,6 +3908,7 @@ export default function SellScanScreen({
       ) : voiceEnabled ? (
         // Normal FAB (only shown when voice feature is enabled)
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.voiceFab,
             itemCount > 0 && styles.voiceFabWithCart,
@@ -3903,7 +3941,7 @@ export default function SellScanScreen({
         onRequestClose={handleBulkQtyClose}
       >
         <View style={styles.onboardingOverlay}>
-          <Pressable style={styles.onboardingOverlayTap} onPress={handleBulkQtyClose} />
+          <Pressable accessibilityRole="button" style={styles.onboardingOverlayTap} onPress={handleBulkQtyClose} />
           <View style={styles.onboardingSheet}>
             <View style={styles.onboardingHandle} />
             <View style={styles.onboardingHeader}>
@@ -3932,12 +3970,14 @@ export default function SellScanScreen({
             ) : null}
             <View style={styles.onboardingActions}>
               <Pressable
+                accessibilityRole="button"
                 style={[styles.onboardingButton, styles.onboardingButtonGhost]}
                 onPress={handleBulkQtyClose}
               >
                 <Text style={styles.onboardingButtonText}>Cancel</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.onboardingButton,
                   styles.onboardingButtonPrimary,

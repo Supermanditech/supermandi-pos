@@ -1,12 +1,12 @@
 // PendingReorderCard - V3.0.9 compliant
 // Card showing pending reorder with selection checkbox
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import type { PendingReorder } from "../../services/api/reorderApi";
 import { isCriticallyLow, getEstimatedTotal } from "../../services/api/reorderApi";
@@ -35,6 +35,9 @@ export function PendingReorderCard({
   onEdit,
 }: PendingReorderCardProps) {
   const { t } = useTranslation();
+  const tc = useThemeColors();
+  const styles = useMemo(() => createStyles(tc), [tc]);
+
   const isCritical = isCriticallyLow(item);
   const estimatedTotal = getEstimatedTotal(item);
 
@@ -58,7 +61,7 @@ export function PendingReorderCard({
             <MaterialCommunityIcons
               name="check"
               size={16}
-              color={theme.colors.textInverse}
+              color={tc.textInverse}
             />
           )}
         </View>
@@ -76,7 +79,7 @@ export function PendingReorderCard({
               <MaterialCommunityIcons
                 name="alert"
                 size={12}
-                color={theme.colors.error}
+                color={tc.error}
               />
               <Text style={styles.criticalText}>{t("reorder.critical")}</Text>
             </View>
@@ -100,7 +103,7 @@ export function PendingReorderCard({
             <MaterialCommunityIcons
               name="arrow-right"
               size={16}
-              color={theme.colors.textTertiary}
+              color={tc.textTertiary}
             />
           </View>
           <View style={styles.stockItem}>
@@ -111,7 +114,7 @@ export function PendingReorderCard({
             <MaterialCommunityIcons
               name="arrow-right"
               size={16}
-              color={theme.colors.textTertiary}
+              color={tc.textTertiary}
             />
           </View>
           <View style={styles.stockItem}>
@@ -152,7 +155,7 @@ export function PendingReorderCard({
             <MaterialCommunityIcons
               name="credit-card-outline"
               size={14}
-              color={theme.colors.textTertiary}
+              color={tc.textTertiary}
             />
             <Text style={styles.paymentTermsText}>
               {t("reorder.paymentTerms")}: {item.paymentTerms}
@@ -183,7 +186,7 @@ export function PendingReorderCard({
                 <MaterialCommunityIcons
                   name="pencil"
                   size={18}
-                  color={theme.colors.primary}
+                  color={tc.primary}
                 />
               </Pressable>
             )}
@@ -195,7 +198,7 @@ export function PendingReorderCard({
               <MaterialCommunityIcons
                 name="close-circle-outline"
                 size={18}
-                color={theme.colors.error}
+                color={tc.error}
               />
             </Pressable>
           </View>
@@ -209,161 +212,163 @@ export function PendingReorderCard({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  containerSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  containerCritical: {
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.error,
-  },
-  checkboxContainer: {
-    marginRight: theme.spacing.md,
-    justifyContent: "flex-start",
-    paddingTop: 2,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  content: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  productName: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginRight: theme.spacing.sm,
-  },
-  criticalBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.errorSoft,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
-    gap: 2,
-  },
-  criticalText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.error,
-  },
-  barcode: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.sm,
-  },
-  stockRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: theme.borderRadius.sm,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  stockItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  stockArrow: {
-    paddingHorizontal: 4,
-  },
-  stockLabel: {
-    fontSize: 10,
-    color: theme.colors.textTertiary,
-  },
-  stockValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  stockValueCritical: {
-    color: theme.colors.error,
-  },
-  suggestionRow: {
-    flexDirection: "row",
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.xs,
-  },
-  paymentTermsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: theme.spacing.sm,
-  },
-  paymentTermsText: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  suggestionItem: {
-    flex: 1,
-  },
-  suggestionLabel: {
-    fontSize: 10,
-    color: theme.colors.textTertiary,
-  },
-  suggestionValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  supplierName: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.primary,
-  },
-  footerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  totalSection: {
-    flex: 1,
-  },
-  totalLabel: {
-    fontSize: 10,
-    color: theme.colors.textTertiary,
-  },
-  totalValue: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  actionsSection: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  actionButton: {
-    padding: theme.spacing.xs,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    containerSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.accentSoft,
+    },
+    containerCritical: {
+      borderLeftWidth: 4,
+      borderLeftColor: colors.error,
+    },
+    checkboxContainer: {
+      marginRight: theme.spacing.md,
+      justifyContent: "flex-start",
+      paddingTop: 2,
+    },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: theme.borderRadius.sm,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkboxSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    content: {
+      flex: 1,
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      marginBottom: 4,
+    },
+    productName: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginRight: theme.spacing.sm,
+    },
+    criticalBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.errorSoft,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: theme.borderRadius.sm,
+      gap: 2,
+    },
+    criticalText: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.error,
+    },
+    barcode: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: theme.spacing.sm,
+    },
+    stockRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: theme.borderRadius.sm,
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+      marginBottom: theme.spacing.sm,
+    },
+    stockItem: {
+      alignItems: "center",
+      flex: 1,
+    },
+    stockArrow: {
+      paddingHorizontal: 4,
+    },
+    stockLabel: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
+    stockValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    stockValueCritical: {
+      color: colors.error,
+    },
+    suggestionRow: {
+      flexDirection: "row",
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.xs,
+    },
+    paymentTermsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginBottom: theme.spacing.sm,
+    },
+    paymentTermsText: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    suggestionItem: {
+      flex: 1,
+    },
+    suggestionLabel: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
+    suggestionValue: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    supplierName: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: colors.primary,
+    },
+    footerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    totalSection: {
+      flex: 1,
+    },
+    totalLabel: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
+    totalValue: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    actionsSection: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+    },
+    actionButton: {
+      padding: theme.spacing.xs,
+    },
+  });
+}
 
 export default PendingReorderCard;

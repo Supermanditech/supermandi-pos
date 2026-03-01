@@ -58,12 +58,13 @@ function SupplierPicker({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <Pressable accessibilityRole="button" style={styles.modalOverlay} onPress={onClose}>
         <View style={[styles.pickerSheet, { paddingBottom: 16 + insets.bottom }]}>
           <View style={styles.pickerHandle} />
           <Text style={styles.pickerTitle}>Select Supplier</Text>
 
           <Pressable
+            accessibilityRole="button"
             style={[styles.pickerOption, !selectedSupplier && styles.pickerOptionSelected]}
             onPress={() => {
               onSelect(null);
@@ -86,6 +87,7 @@ function SupplierPicker({
           ) : (
             suppliers.map((supplier) => (
               <Pressable
+                accessibilityRole="button"
                 key={supplier.id}
                 style={[
                   styles.pickerOption,
@@ -226,7 +228,7 @@ function InwardItemRow({
           <Text style={styles.itemTotalValue}>{lineTotal}</Text>
         </View>
 
-        <Pressable style={styles.removeButton} onPress={onRemove}>
+        <Pressable accessibilityRole="button" style={styles.removeButton} onPress={onRemove}>
           <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
         </Pressable>
       </View>
@@ -276,13 +278,13 @@ export default function InwardScreen({
     (async () => {
       try {
         const apiSuppliers = await getSuppliers();
-        console.log("[InwardScreen] Suppliers fetched:", apiSuppliers?.length ?? 0);
+        if (__DEV__) console.log("[InwardScreen] Suppliers fetched:", apiSuppliers?.length ?? 0);
         if (mounted && Array.isArray(apiSuppliers)) {
           // Map API Supplier to InwardSupplier format
           setSuppliers(apiSuppliers.map(s => ({ id: s.id, name: s.name })));
         }
       } catch (error) {
-        console.error("[InwardScreen] Failed to fetch suppliers:", error);
+        if (__DEV__) console.error("[InwardScreen] Failed to fetch suppliers:", error);
       } finally {
         if (mounted) {
           setSuppliersLoading(false);
@@ -314,7 +316,7 @@ export default function InwardScreen({
       const response = await getCatalog(storeId, { q: query, limit: 20 });
       setSearchResults(response.data);
     } catch (error) {
-      console.error("Search failed:", error);
+      if (__DEV__) console.error("Search failed:", error);
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -395,7 +397,7 @@ export default function InwardScreen({
       }
     } catch (error) {
       // R6.POS.001: Block submission on stock check failure — no bypass allowed
-      console.warn("[InwardScreen] Stock check failed:", error);
+      if (__DEV__) console.warn("[InwardScreen] Stock check failed:", error);
       setSubmitting(false);
       Alert.alert(
         "Stock Check Failed",
@@ -449,7 +451,7 @@ export default function InwardScreen({
     const price = item.bestPrice > 0 ? formatMoney(item.bestPrice, "INR") : "--";
 
     return (
-      <Pressable style={styles.searchRow} onPress={() => handleAddProduct(item)}>
+      <Pressable accessibilityRole="button" style={styles.searchRow} onPress={() => handleAddProduct(item)}>
         <MaterialCommunityIcons name="package-variant" size={18} color={colors.primary} />
         <View style={styles.searchRowInfo}>
           <Text style={styles.searchRowName} numberOfLines={1}>
@@ -470,7 +472,7 @@ export default function InwardScreen({
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <View style={styles.headerRow}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
@@ -479,7 +481,7 @@ export default function InwardScreen({
         </View>
 
         {/* Supplier Selector */}
-        <Pressable style={styles.supplierSelector} onPress={() => setShowSupplierPicker(true)}>
+        <Pressable accessibilityRole="button" style={styles.supplierSelector} onPress={() => setShowSupplierPicker(true)}>
           <MaterialCommunityIcons name="truck-delivery" size={18} color={colors.primary} />
           <Text style={styles.supplierText} numberOfLines={1}>
             {selectedSupplier?.name ?? "Select supplier (optional)"}
@@ -503,13 +505,14 @@ export default function InwardScreen({
             returnKeyType="search"
           />
           {searchQuery ? (
-            <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")} hitSlop={8}>
               <MaterialCommunityIcons name="close-circle" size={18} color={colors.textSecondary} />
             </Pressable>
           ) : null}
         </View>
 
         <Pressable
+          accessibilityRole="button"
           style={[styles.scanButton, scanDisabled && styles.buttonDisabled]}
           onPress={onOpenScanner}
           disabled={scanDisabled}
@@ -521,7 +524,7 @@ export default function InwardScreen({
       {/* Search Results Dropdown */}
       {showSearch && (
         <>
-          <Pressable style={styles.searchOverlay} onPress={() => setShowSearch(false)} />
+          <Pressable accessibilityRole="button" style={styles.searchOverlay} onPress={() => setShowSearch(false)} />
           <View style={styles.searchDropdown}>
             {searchLoading ? (
               <View style={styles.searchLoading}>
@@ -572,7 +575,7 @@ export default function InwardScreen({
           items.length > 0 ? (
             <View style={styles.cartHeader}>
               <Text style={styles.cartTitle}>Items ({items.length})</Text>
-              <Pressable onPress={clearCart}>
+              <Pressable accessibilityRole="button" onPress={clearCart}>
                 <Text style={styles.clearText}>Clear all</Text>
               </Pressable>
             </View>
@@ -603,6 +606,7 @@ export default function InwardScreen({
         </View>
 
         <Pressable
+          accessibilityRole="button"
           style={[styles.submitButton, !canSubmit && styles.buttonDisabled]}
           onPress={handleSubmit}
           disabled={!canSubmit}

@@ -335,6 +335,7 @@ export default function BillDetailScreen() {
     <View style={styles.footer}>
       <View style={styles.actions}>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, styles.actionSecondary, printing && styles.actionButtonDisabled]}
           onPress={handlePrint}
           disabled={printing}
@@ -343,6 +344,7 @@ export default function BillDetailScreen() {
           <Text style={styles.actionText}>{printing ? "..." : "Print"}</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, styles.actionWhatsApp, whatsapping && styles.actionButtonDisabled]}
           onPress={handleWhatsApp}
           disabled={whatsapping}
@@ -351,6 +353,7 @@ export default function BillDetailScreen() {
           <Text style={styles.actionTextPrimary}>{whatsapping ? "..." : "WhatsApp"}</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, styles.actionPrimary, sharing && styles.actionButtonDisabled]}
           onPress={handleShare}
           disabled={sharing}

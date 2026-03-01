@@ -349,11 +349,11 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable style={styles.backButton} onPress={onBack}>
+        <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>Sales Statement</Text>
-        <Pressable style={styles.refreshButton} onPress={() => loadData(true)}>
+        <Pressable accessibilityRole="button" style={styles.refreshButton} onPress={() => loadData(true)}>
           <MaterialCommunityIcons name="refresh" size={22} color={colors.textSecondary} />
         </Pressable>
       </View>
@@ -385,7 +385,7 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
         <View style={styles.centerContent}>
           <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => loadData()}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => loadData()}>
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
@@ -397,7 +397,7 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
             Sales transactions will appear here after you make sales.
           </Text>
           {onNavigateToSell && (
-            <Pressable style={styles.ctaButton} onPress={onNavigateToSell}>
+            <Pressable accessibilityRole="button" style={styles.ctaButton} onPress={onNavigateToSell}>
               <MaterialCommunityIcons name="cart-outline" size={18} color={colors.textInverse} />
               <Text style={styles.ctaButtonText}>Make Your First Sale</Text>
             </Pressable>

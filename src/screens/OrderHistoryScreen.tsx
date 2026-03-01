@@ -242,7 +242,7 @@ export default function OrderHistoryScreen({
         setPage(pageNum);
         setHasMore(pageNum < response.pagination.totalPages);
       } catch (err) {
-        console.error("[OrderHistoryScreen] Failed to load orders:", err);
+        if (__DEV__) console.error("[OrderHistoryScreen] Failed to load orders:", err);
         setError("Failed to load orders");
       } finally {
         setLoading(false);
@@ -328,7 +328,7 @@ export default function OrderHistoryScreen({
             color={colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => loadOrders()}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => loadOrders()}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -347,7 +347,7 @@ export default function OrderHistoryScreen({
         }
       >
         {filter === "all" && onNavigateToBuy && (
-          <Pressable style={styles.ctaButton} onPress={onNavigateToBuy}>
+          <Pressable accessibilityRole="button" style={styles.ctaButton} onPress={onNavigateToBuy}>
             <MaterialCommunityIcons name="cart-plus" size={18} color={colors.textInverse} />
             <Text style={styles.ctaButtonText}>Create First Order</Text>
           </Pressable>
@@ -361,7 +361,7 @@ export default function OrderHistoryScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -461,6 +461,7 @@ function FilterChip({ label, selected, onPress, icon }: FilterChipProps) {
 
   return (
     <Pressable
+      accessibilityRole="button"
       style={[styles.filterChip, selected && styles.filterChipSelected]}
       onPress={onPress}
     >

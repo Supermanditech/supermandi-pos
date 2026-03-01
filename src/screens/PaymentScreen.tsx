@@ -231,7 +231,7 @@ const PaymentScreen = () => {
         // GO-LIVE-124: Save pending payment before clearing for potential recovery
         if (paymentId && saleId) {
           pendingPaymentRef.current = { paymentId, saleId };
-          console.log(`[Payment] GO-LIVE-124: Saved pending payment ${paymentId} for network recovery`);
+          if (__DEV__) console.log(`[Payment] GO-LIVE-124: Saved pending payment ${paymentId} for network recovery`);
         }
         // SA-P1-006: Fall back to first allowed method (not hardcoded CASH)
         const fallback = allowedMethods.includes("CASH") ? "CASH" : allowedMethods.includes("DUE") ? "DUE" : allowedMethods[0] ?? "CASH";
@@ -243,7 +243,7 @@ const PaymentScreen = () => {
       // GO-LIVE-124: Check pending payment status when coming back online
       if (online && wasOffline && pendingPaymentRef.current) {
         const pending = pendingPaymentRef.current;
-        console.log(`[Payment] GO-LIVE-124: Network recovered, checking pending payment ${pending.paymentId}`);
+        if (__DEV__) console.log(`[Payment] GO-LIVE-124: Network recovered, checking pending payment ${pending.paymentId}`);
         // Note: User can manually check by refreshing or re-selecting UPI mode
         // The pending payment info is logged for debugging
         pendingPaymentRef.current = null;
@@ -367,7 +367,7 @@ const PaymentScreen = () => {
         }
       } catch (stockError) {
         // GO-LIVE-233: Log warning but don't block sale if stock check fails
-        console.warn("[PaymentScreen] GO-LIVE-233: Stock validation failed, proceeding:", stockError);
+        if (__DEV__) console.warn("[PaymentScreen] GO-LIVE-233: Stock validation failed, proceeding:", stockError);
       }
     })().then(() => {
       if (cancelled) return;
@@ -421,7 +421,7 @@ const PaymentScreen = () => {
       if (cancelled) return;
       // GO-LIVE-233: Handle user cancellation from stock warning
       if (error instanceof Error && error.message === "User cancelled due to low stock") {
-        console.log("[PaymentScreen] GO-LIVE-233: User cancelled sale due to low stock");
+        if (__DEV__) console.log("[PaymentScreen] GO-LIVE-233: User cancelled sale due to low stock");
         return;
       }
       if (error instanceof ApiError) {
@@ -598,7 +598,7 @@ const PaymentScreen = () => {
       if (!finalized.current && saleId) {
         // Cancel the sale to prevent stock loss
         void cancelSale({ saleId }).catch((error) => {
-          console.error("Failed to cancel sale on cleanup:", error);
+          if (__DEV__) console.error("Failed to cancel sale on cleanup:", error);
         });
 
         if (billRef) {
@@ -650,7 +650,7 @@ const PaymentScreen = () => {
           [...savedIdsSet].every((id) => currentIdsSet.has(id));
 
         if (matches && savedState.confirmed) {
-          console.log("[Payment] GO-LIVE-234: Restored partial sale confirmation from storage");
+          if (__DEV__) console.log("[Payment] GO-LIVE-234: Restored partial sale confirmation from storage");
           partialSaleConfirmedRef.current = true;
         }
       }
@@ -752,11 +752,11 @@ const PaymentScreen = () => {
 
       // Log stock deduction (for debugging/audit trail)
       const stockLogs = buildStockDeductionLogs(saleItems, saleId);
-      stockLogs.forEach((entry) => console.log(entry));
+      if (__DEV__) stockLogs.forEach((entry) => console.log(entry));
 
       // Warn if inventory deduction failed (payment still succeeded)
       if (!result.inventoryDeducted) {
-        console.warn(`[Payment] Inventory not deducted for sale ${saleId} - will reconcile later`);
+        if (__DEV__) console.warn(`[Payment] Inventory not deducted for sale ${saleId} - will reconcile later`);
       }
 
       if (isPartialSale) {

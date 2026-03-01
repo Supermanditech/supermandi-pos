@@ -1,11 +1,11 @@
 // CatalogProductCard - V3.0.9 compliant
 // Product card for BUY screen catalog grid
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import type { CatalogProduct } from "../../services/api/catalogApi";
 import {
@@ -32,6 +32,9 @@ export function CatalogProductCard({
   onPress,
   cartQuantity = 0,
 }: CatalogProductCardProps) {
+  const tc = useThemeColors();
+  const styles = useMemo(() => createStyles(tc), [tc]);
+
   const isOutOfStock = product.stockStatus === "out_of_stock";
 
   // TR-PEND-006: Use localized display names for Hindi UX parity
@@ -46,10 +49,10 @@ export function CatalogProductCard({
   // T-142: Determine stock color based on actual quantity
   const stockQtyColor =
     totalAvailableQty <= 0
-      ? theme.colors.error
+      ? tc.error
       : totalAvailableQty < 10
-        ? theme.colors.warning
-        : theme.colors.success;
+        ? tc.warning
+        : tc.success;
 
   // T-141: Always show MOQ with unit
   const moqValue = product.minMoq || 1;
@@ -79,7 +82,7 @@ export function CatalogProductCard({
             <Image source={{ uri: product.imageUrl }} style={styles.productImage} />
           ) : (
             <View style={styles.productImageFallback}>
-              <MaterialCommunityIcons name="package-variant" size={22} color={theme.colors.textTertiary} />
+              <MaterialCommunityIcons name="package-variant" size={22} color={tc.textTertiary} />
             </View>
           )}
           <View style={styles.imageRowInfo}>
@@ -117,7 +120,7 @@ export function CatalogProductCard({
             <MaterialCommunityIcons
               name="store"
               size={12}
-              color={theme.colors.textTertiary}
+              color={tc.textTertiary}
             />
             <Text style={styles.supplierCount}>
               {product.supplierCount}
@@ -138,130 +141,132 @@ export function CatalogProductCard({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    marginHorizontal: theme.spacing.xs,
-    marginVertical: theme.spacing.xs,
-    ...theme.shadows.sm,
-    overflow: "hidden",
-  },
-  cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  cardOutOfStock: {
-    opacity: 0.6,
-  },
-  cartBadge: {
-    position: "absolute",
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.full,
-    minWidth: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.xs,
-    zIndex: 1,
-  },
-  cartBadgeText: {
-    color: theme.colors.textInverse,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  content: {
-    padding: theme.spacing.md,
-  },
-  // T-139: Image row layout
-  imageRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  imageRowInfo: {
-    flex: 1,
-  },
-  productImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-  },
-  productImageFallback: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-    backgroundColor: theme.colors.backgroundTertiary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  name: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    lineHeight: 20,
-    marginBottom: theme.spacing.xs,
-  },
-  brand: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.sm,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    marginBottom: theme.spacing.sm,
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  unit: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    marginLeft: 2,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  stockBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
-  },
-  stockDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
-  },
-  stockText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  supplierInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  supplierCount: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  moq: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: theme.spacing.xs,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      marginHorizontal: theme.spacing.xs,
+      marginVertical: theme.spacing.xs,
+      ...theme.shadows.sm,
+      overflow: "hidden",
+    },
+    cardPressed: {
+      opacity: 0.9,
+      transform: [{ scale: 0.98 }],
+    },
+    cardOutOfStock: {
+      opacity: 0.6,
+    },
+    cartBadge: {
+      position: "absolute",
+      top: theme.spacing.sm,
+      right: theme.spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.full,
+      minWidth: 24,
+      height: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.xs,
+      zIndex: 1,
+    },
+    cartBadgeText: {
+      color: colors.textInverse,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    content: {
+      padding: theme.spacing.md,
+    },
+    // T-139: Image row layout
+    imageRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.xs,
+    },
+    imageRowInfo: {
+      flex: 1,
+    },
+    productImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 6,
+    },
+    productImageFallback: {
+      width: 48,
+      height: 48,
+      borderRadius: 6,
+      backgroundColor: colors.backgroundTertiary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    name: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      lineHeight: 20,
+      marginBottom: theme.spacing.xs,
+    },
+    brand: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginBottom: theme.spacing.sm,
+    },
+    priceRow: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      marginBottom: theme.spacing.sm,
+    },
+    price: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    unit: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginLeft: 2,
+    },
+    metaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    stockBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: theme.borderRadius.full,
+    },
+    stockDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginRight: 4,
+    },
+    stockText: {
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    supplierInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    supplierCount: {
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+    moq: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: theme.spacing.xs,
+    },
+  });
+}
 
 export default CatalogProductCard;

@@ -190,7 +190,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
   // Render customer card
   const renderCustomerCard = useCallback(
     ({ item }: { item: Customer }) => (
-      <Pressable style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
+      <Pressable accessibilityRole="button" style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
         <View style={styles.customerAvatar}>
           <Text style={styles.customerAvatarText}>
             {(item.name || "?").charAt(0).toUpperCase()}
@@ -591,14 +591,14 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
           returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <Pressable onPress={() => handleSearch("")} hitSlop={8}>
+          <Pressable accessibilityRole="button" onPress={() => handleSearch("")} hitSlop={8}>
             <MaterialCommunityIcons name="close-circle" size={18} color={colors.textTertiary} />
           </Pressable>
         )}
       </View>
 
       {/* Add button */}
-      <Pressable style={styles.addButton} onPress={handleOpenAddModal}>
+      <Pressable accessibilityRole="button" style={styles.addButton} onPress={handleOpenAddModal}>
         <MaterialCommunityIcons name="account-plus-outline" size={18} color={colors.primary} />
         <Text style={styles.addButtonText}>Add Customer</Text>
       </Pressable>
@@ -641,11 +641,11 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.modalCloseButton} onPress={handleCloseDetail}>
+            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseDetail}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Customer Profile</Text>
-            <Pressable style={styles.modalEditButton} onPress={handleOpenEditModal}>
+            <Pressable accessibilityRole="button" style={styles.modalEditButton} onPress={handleOpenEditModal}>
               <MaterialCommunityIcons name="pencil-outline" size={20} color={colors.primary} />
             </Pressable>
           </View>
@@ -668,6 +668,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                   <Text style={styles.profilePhone}>{selectedCustomer.phone}</Text>
                   {selectedCustomer.phone && selectedCustomer.phone.replace(/\D/g, "").length >= 10 && (
                   <Pressable
+                    accessibilityRole="link"
                     style={styles.whatsappIconButton}
                     onPress={() => {
                       const name = selectedCustomer.name || "Customer";
@@ -736,7 +737,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.modalCloseButton} onPress={() => setShowAddModal(false)}>
+            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowAddModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Add Customer</Text>
@@ -787,6 +788,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             />
 
             <Pressable
+              accessibilityRole="button"
               style={[styles.submitButton, formSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmitAdd}
               disabled={formSubmitting}
@@ -810,7 +812,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.modalCloseButton} onPress={() => setShowEditModal(false)}>
+            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowEditModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Edit Customer</Text>
@@ -857,6 +859,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             />
 
             <Pressable
+              accessibilityRole="button"
               style={[styles.submitButton, formSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmitEdit}
               disabled={formSubmitting}

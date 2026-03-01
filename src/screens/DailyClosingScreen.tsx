@@ -212,6 +212,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
       {/* Tab switcher */}
       <View style={styles.tabRow}>
         <Pressable
+          accessibilityRole="button"
           style={[styles.tab, activeTab === "SUMMARY" && styles.tabActive]}
           onPress={() => setActiveTab("SUMMARY")}
         >
@@ -220,6 +221,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.tab, activeTab === "HISTORY" && styles.tabActive]}
           onPress={() => setActiveTab("HISTORY")}
         >
@@ -245,7 +247,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
         >
           {/* Date picker */}
           <View style={styles.datePicker}>
-            <Pressable style={styles.dateArrow} onPress={() => handleDateChange("prev")}>
+            <Pressable accessibilityRole="button" style={styles.dateArrow} onPress={() => handleDateChange("prev")}>
               <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
             </Pressable>
             <View style={styles.dateDisplay}>
@@ -253,6 +255,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
               {isToday && <Text style={styles.dateTodayBadge}>Today</Text>}
             </View>
             <Pressable
+              accessibilityRole="button"
               style={[styles.dateArrow, isToday && styles.dateArrowDisabled]}
               onPress={() => handleDateChange("next")}
               disabled={isToday}
@@ -401,6 +404,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
               {/* Close day button */}
               <Pressable
+                accessibilityRole="button"
                 style={[styles.closeDayButton, closing && styles.closeDayButtonDisabled]}
                 onPress={handleCloseDay}
                 disabled={closing || !hasValidCashInput}

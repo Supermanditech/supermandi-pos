@@ -535,7 +535,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       const balanceLabel = isOwes ? "Owes" : isCredit ? "Advance" : "Settled";
 
       return (
-        <Pressable style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
+        <Pressable accessibilityRole="button" style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
           <View style={styles.customerInfo}>
             <View style={styles.customerAvatar}>
               <Text style={styles.customerAvatarText}>
@@ -627,7 +627,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
           returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <Pressable onPress={() => handleSearch("")} hitSlop={8}>
+          <Pressable accessibilityRole="button" onPress={() => handleSearch("")} hitSlop={8}>
             <MaterialCommunityIcons name="close-circle" size={18} color={colors.textTertiary} />
           </Pressable>
         )}
@@ -635,11 +635,11 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
 
       {/* Action buttons */}
       <View style={styles.actionRow}>
-        <Pressable style={styles.actionButton} onPress={handleOpenCreditModal}>
+        <Pressable accessibilityRole="button" style={styles.actionButton} onPress={handleOpenCreditModal}>
           <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.error} />
           <Text style={[styles.actionButtonText, { color: colors.error }]}>Add Credit</Text>
         </Pressable>
-        <Pressable style={styles.actionButton} onPress={handleOpenPaymentModal}>
+        <Pressable accessibilityRole="button" style={styles.actionButton} onPress={handleOpenPaymentModal}>
           <MaterialCommunityIcons name="cash-check" size={18} color={colors.success} />
           <Text style={[styles.actionButtonText, { color: colors.success }]}>Record Payment</Text>
         </Pressable>
@@ -683,7 +683,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.modalCloseButton} onPress={handleCloseLedger}>
+            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseLedger}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>
@@ -750,7 +750,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.modalCloseButton} onPress={() => setShowCreditModal(false)}>
+            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowCreditModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Add Credit</Text>
@@ -800,6 +800,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             />
 
             <Pressable
+              accessibilityRole="button"
               style={[styles.submitButton, styles.submitButtonCredit, creditSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmitCredit}
               disabled={creditSubmitting}
@@ -825,7 +826,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.modalCloseButton} onPress={() => setShowPaymentModal(false)}>
+            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowPaymentModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Record Payment</Text>
@@ -857,6 +858,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <Text style={styles.formLabel}>Payment Method *</Text>
             <View style={styles.paymentMethodRow}>
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.paymentMethodOption,
                   paymentMethod === "CASH" && styles.paymentMethodActive,
@@ -878,6 +880,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                 </Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.paymentMethodOption,
                   paymentMethod === "UPI" && styles.paymentMethodActive,
@@ -901,6 +904,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             </View>
 
             <Pressable
+              accessibilityRole="button"
               style={[styles.submitButton, styles.submitButtonPayment, paymentSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmitPayment}
               disabled={paymentSubmitting}

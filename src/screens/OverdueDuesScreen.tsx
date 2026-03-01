@@ -298,7 +298,7 @@ export default function OverdueDuesScreen({
       setDues(sorted);
     } catch (_e: unknown) {
     const e = asError(_e);
-      console.error("[OverdueDuesScreen] Failed to load overdue dues:", e);
+      if (__DEV__) console.error("[OverdueDuesScreen] Failed to load overdue dues:", e);
       setError(e?.message || "Failed to load overdue dues");
     } finally {
       setLoading(false);
@@ -346,7 +346,7 @@ export default function OverdueDuesScreen({
           [due.id]: new Date().toISOString(),
         }));
       } catch (e) {
-        console.error("[OverdueDuesScreen] Share failed:", e);
+        if (__DEV__) console.error("[OverdueDuesScreen] Share failed:", e);
         // Fallback to share API
         try {
           await Share.share({ message });
@@ -460,6 +460,7 @@ export default function OverdueDuesScreen({
           {/* Action buttons */}
           <View style={styles.cardActions}>
             <Pressable
+              accessibilityRole="button"
               style={styles.reminderButton}
               onPress={() => handleSendReminder(item)}
             >
@@ -471,6 +472,7 @@ export default function OverdueDuesScreen({
               <Text style={styles.reminderButtonText}>Send Reminder</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={styles.paymentButton}
               onPress={() => handleRecordPayment(item)}
             >
@@ -513,7 +515,7 @@ export default function OverdueDuesScreen({
             color={colors.error}
           />
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => { setLoading(true); void loadDues(); }}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => { setLoading(true); void loadDues(); }}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>

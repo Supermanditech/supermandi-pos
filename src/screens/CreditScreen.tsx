@@ -117,7 +117,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
       setActiveApplication(offersRes.activeApplication);
       setApplications(applicationsRes.applications);
     } catch (error) {
-      console.error("[CreditScreen] Failed to load data:", error);
+      if (__DEV__) console.error("[CreditScreen] Failed to load data:", error);
       Alert.alert(
         t("credit.errorTitle", "Error"),
         t("credit.loadError", "Failed to load credit information. Please try again.")
@@ -364,6 +364,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
           )}
 
           <Pressable
+            accessibilityRole="button"
             style={[
               styles.applyButton,
               activeApplication && styles.applyButtonDisabled,
@@ -528,7 +529,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
@@ -550,7 +551,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -642,6 +643,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
       {/* Tabs */}
       <View style={styles.tabs}>
         <Pressable
+          accessibilityRole="button"
           style={[styles.tab, activeTab === "offers" && styles.tabActive]}
           onPress={() => setActiveTab("offers")}
         >
@@ -650,6 +652,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.tab, activeTab === "loans" && styles.tabActive]}
           onPress={() => setActiveTab("loans")}
         >
@@ -658,6 +661,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.tab, activeTab === "history" && styles.tabActive]}
           onPress={() => setActiveTab("history")}
         >
@@ -754,7 +758,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
       >
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.closeButton} onPress={handleCloseApplyModal}>
+            <Pressable accessibilityRole="button" style={styles.closeButton} onPress={handleCloseApplyModal}>
               <MaterialCommunityIcons
                 name="close"
                 size={24}
@@ -804,6 +808,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
                 )}
 
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.submitButton, applyModal.loading && styles.submitButtonDisabled]}
                   onPress={handleSubmitApplication}
                   disabled={applyModal.loading}
@@ -879,6 +884,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
                 )}
 
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.submitButton, applyModal.loading && styles.submitButtonDisabled]}
                   onPress={handleSubmitKyc}
                   disabled={applyModal.loading}
@@ -910,7 +916,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
                     "Your credit will be disbursed within 24 hours. You will receive a confirmation SMS."
                   )}
                 </Text>
-                <Pressable style={styles.doneButton} onPress={handleCloseApplyModal}>
+                <Pressable accessibilityRole="button" style={styles.doneButton} onPress={handleCloseApplyModal}>
                   <Text style={styles.doneButtonText}>{t("credit.done", "Done")}</Text>
                 </Pressable>
               </View>

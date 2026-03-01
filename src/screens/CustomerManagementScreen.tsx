@@ -535,7 +535,7 @@ export default function CustomerManagementScreen({
   // Render customer card
   const renderCustomerItem = useCallback(
     ({ item }: { item: Customer }) => (
-      <Pressable style={styles.customerCard} onPress={() => handleOpenDetail(item)}>
+      <Pressable accessibilityRole="button" style={styles.customerCard} onPress={() => handleOpenDetail(item)}>
         <View style={styles.customerAvatar}>
           <Text style={styles.customerAvatarText}>
             {(item.name || "?").charAt(0).toUpperCase()}
@@ -587,7 +587,7 @@ export default function CustomerManagementScreen({
           returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery("")}>
+          <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")}>
             <MaterialCommunityIcons
               name="close-circle"
               size={18}
@@ -632,6 +632,7 @@ export default function CustomerManagementScreen({
 
       {/* FAB: Add Customer */}
       <Pressable
+        accessibilityRole="button"
         style={styles.fab}
         onPress={() => setAddVisible(true)}
       >
@@ -653,7 +654,7 @@ export default function CustomerManagementScreen({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.modalCloseButton} onPress={handleCloseDetail}>
+            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseDetail}>
               <MaterialCommunityIcons
                 name="close"
                 size={24}
@@ -662,7 +663,7 @@ export default function CustomerManagementScreen({
             </Pressable>
             <Text style={styles.modalTitle}>Customer Detail</Text>
             {selectedCustomer && !editMode && (
-              <Pressable style={styles.editButton} onPress={handleEditMode}>
+              <Pressable accessibilityRole="button" style={styles.editButton} onPress={handleEditMode}>
                 <MaterialCommunityIcons
                   name="pencil-outline"
                   size={20}
@@ -672,6 +673,7 @@ export default function CustomerManagementScreen({
             )}
             {editMode && (
               <Pressable
+                accessibilityRole="button"
                 style={styles.saveButton}
                 onPress={handleSaveEdit}
                 disabled={saving}
@@ -754,6 +756,7 @@ export default function CustomerManagementScreen({
                 {/* Call button */}
                 {!editMode && (
                   <Pressable
+                    accessibilityRole="button"
                     style={styles.callButton}
                     onPress={() => handleCall(selectedCustomer.phone)}
                   >
@@ -833,6 +836,7 @@ export default function CustomerManagementScreen({
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable
+              accessibilityRole="button"
               style={styles.modalCloseButton}
               onPress={() => setAddVisible(false)}
             >
@@ -896,6 +900,7 @@ export default function CustomerManagementScreen({
             {/* POS-031: Credit limit field removed — not sent to API */}
 
             <Pressable
+              accessibilityRole="button"
               style={[
                 styles.addButton,
                 (!addName.trim() || !addPhone.trim() || addSaving) &&

@@ -13,7 +13,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { SupplierRow } from "./SupplierRow";
 import type { CatalogProduct, CatalogSupplier } from "../../services/api/catalogApi";
@@ -44,6 +44,9 @@ export function ProductDetailModal({
 }: ProductDetailModalProps) {
   // T-127: Close modal on Android hardware back button
   useModalBackHandler(visible, onClose);
+
+  const tc = useThemeColors();
+  const styles = useMemo(() => createStyles(tc), [tc]);
 
   const insets = useSafeAreaInsets();
   const [expandedSupplierId, setExpandedSupplierId] = useState<string | null>(null);
@@ -121,10 +124,10 @@ export function ProductDetailModal({
   );
   const stockColor =
     totalAvailableQty <= 0
-      ? theme.colors.error
+      ? tc.error
       : totalAvailableQty < 10
-        ? theme.colors.warning
-        : theme.colors.success;
+        ? tc.warning
+        : tc.success;
 
   return (
     <Modal
@@ -140,7 +143,7 @@ export function ProductDetailModal({
             <MaterialCommunityIcons
               name="close"
               size={24}
-              color={theme.colors.textPrimary}
+              color={tc.textPrimary}
             />
           </Pressable>
           <Text style={styles.headerTitle}>Product Details</Text>
@@ -150,7 +153,7 @@ export function ProductDetailModal({
                 <MaterialCommunityIcons
                   name="cart"
                   size={20}
-                  color={theme.colors.primary}
+                  color={tc.primary}
                 />
                 <View style={styles.cartBadge}>
                   <Text style={styles.cartBadgeText}>{totalCartQuantity}</Text>
@@ -188,7 +191,7 @@ export function ProductDetailModal({
                   <MaterialCommunityIcons
                     name="tag"
                     size={12}
-                    color={theme.colors.textTertiary}
+                    color={tc.textTertiary}
                   />
                   <Text style={styles.metaChipText}>{product.category}</Text>
                 </View>
@@ -199,7 +202,7 @@ export function ProductDetailModal({
                   <MaterialCommunityIcons
                     name="barcode"
                     size={12}
-                    color={theme.colors.textTertiary}
+                    color={tc.textTertiary}
                   />
                   <Text style={styles.metaChipText}>{product.primaryBarcode}</Text>
                 </View>
@@ -210,7 +213,7 @@ export function ProductDetailModal({
                   <MaterialCommunityIcons
                     name="scale"
                     size={12}
-                    color={theme.colors.textTertiary}
+                    color={tc.textTertiary}
                   />
                   <Text style={styles.metaChipText}>{product.unit}</Text>
                 </View>
@@ -264,7 +267,7 @@ export function ProductDetailModal({
                   <MaterialCommunityIcons
                     name="truck-remove-outline"
                     size={32}
-                    color={theme.colors.textTertiary}
+                    color={tc.textTertiary}
                   />
                   <Text style={styles.noSuppliersText}>No suppliers available</Text>
                 </View>
@@ -296,7 +299,7 @@ export function ProductDetailModal({
                 <MaterialCommunityIcons
                   name="cart"
                   size={20}
-                  color={theme.colors.textInverse}
+                  color={tc.textInverse}
                 />
                 <Text style={styles.viewCartCount}>
                   {totalCartQuantity} items in cart
@@ -306,7 +309,7 @@ export function ProductDetailModal({
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={20}
-                color={theme.colors.textInverse}
+                color={tc.textInverse}
               />
             </Pressable>
           </View>
@@ -320,200 +323,202 @@ export function ProductDetailModal({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  headerRight: {
-    width: 40,
-    alignItems: "flex-end",
-  },
-  cartButton: {
-    position: "relative",
-    padding: theme.spacing.xs,
-  },
-  cartBadge: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    backgroundColor: theme.colors.error,
-    borderRadius: theme.borderRadius.full,
-    minWidth: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  cartBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: theme.colors.textInverse,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-  },
-  productInfo: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  productName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  productBrand: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  productDescription: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-    lineHeight: 20,
-    marginBottom: theme.spacing.md,
-  },
-  productMeta: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.sm,
-    gap: 4,
-  },
-  metaChipText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statLabel: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  stockBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
-    gap: 4,
-  },
-  stockDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  stockBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  suppliersSection: {
-    marginBottom: theme.spacing.md,
-  },
-  sectionHeader: {
-    marginBottom: theme.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: 2,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-  },
-  suppliersList: {
-    gap: theme.spacing.sm,
-  },
-  noSuppliersContainer: {
-    alignItems: "center",
-    paddingVertical: theme.spacing.xl,
-    gap: theme.spacing.sm,
-  },
-  noSuppliersText: {
-    fontSize: 14,
-    color: theme.colors.textTertiary,
-  },
-  footer: {
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-  },
-  viewCartButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-  },
-  viewCartLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  viewCartCount: {
-    fontSize: 14,
-    color: theme.colors.textInverse,
-  },
-  viewCartText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    closeButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    headerRight: {
+      width: 40,
+      alignItems: "flex-end",
+    },
+    cartButton: {
+      position: "relative",
+      padding: theme.spacing.xs,
+    },
+    cartBadge: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      backgroundColor: colors.error,
+      borderRadius: theme.borderRadius.full,
+      minWidth: 16,
+      height: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 4,
+    },
+    cartBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.textInverse,
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      padding: theme.spacing.md,
+    },
+    productInfo: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+    },
+    productName: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    productBrand: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: theme.spacing.sm,
+    },
+    productDescription: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      lineHeight: 20,
+      marginBottom: theme.spacing.md,
+    },
+    productMeta: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    metaChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.backgroundSecondary,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: theme.borderRadius.sm,
+      gap: 4,
+    },
+    metaChipText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    statsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      paddingTop: theme.spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    statItem: {
+      alignItems: "center",
+    },
+    statLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: 4,
+    },
+    statValue: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    stockBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: theme.borderRadius.full,
+      gap: 4,
+    },
+    stockDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    stockBadgeText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    suppliersSection: {
+      marginBottom: theme.spacing.md,
+    },
+    sectionHeader: {
+      marginBottom: theme.spacing.md,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    sectionSubtitle: {
+      fontSize: 13,
+      color: colors.textTertiary,
+    },
+    suppliersList: {
+      gap: theme.spacing.sm,
+    },
+    noSuppliersContainer: {
+      alignItems: "center",
+      paddingVertical: theme.spacing.xl,
+      gap: theme.spacing.sm,
+    },
+    noSuppliersText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+    },
+    footer: {
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingHorizontal: theme.spacing.md,
+      paddingTop: theme.spacing.md,
+    },
+    viewCartButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.primary,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.lg,
+    },
+    viewCartLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+    },
+    viewCartCount: {
+      fontSize: 14,
+      color: colors.textInverse,
+    },
+    viewCartText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  });
+}
 
 export default ProductDetailModal;

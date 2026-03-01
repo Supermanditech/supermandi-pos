@@ -100,7 +100,7 @@ export default function GRNScreen({
       });
       setReceiveQuantities(initialQuantities);
     } catch (err) {
-      console.error("[GRNScreen] Failed to load order:", err);
+      if (__DEV__) console.error("[GRNScreen] Failed to load order:", err);
       setError("Failed to load order details");
     } finally {
       setLoading(false);
@@ -368,7 +368,7 @@ export default function GRNScreen({
           successButtons
         );
       } catch (err) {
-        console.error("[GRNScreen] Failed to receive:", err);
+        if (__DEV__) console.error("[GRNScreen] Failed to receive:", err);
         Alert.alert(
           "Error",
           "Failed to receive goods. Please try again."
@@ -410,6 +410,7 @@ export default function GRNScreen({
         {/* GO-LIVE-248: Bulk selection checkbox */}
         {bulkMode && (
           <Pressable
+            accessibilityRole="checkbox"
             style={styles.bulkCheckbox}
             onPress={() => handleToggleItemSelection(item.id)}
           >
@@ -442,7 +443,7 @@ export default function GRNScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -466,7 +467,7 @@ export default function GRNScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -483,7 +484,7 @@ export default function GRNScreen({
             color={colors.error}
           />
           <Text style={styles.errorText}>{error || "Order not found"}</Text>
-          <Pressable style={styles.retryButton} onPress={loadOrder}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={loadOrder}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -496,7 +497,7 @@ export default function GRNScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -539,7 +540,7 @@ export default function GRNScreen({
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery("")}>
+            <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")}>
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
@@ -553,6 +554,7 @@ export default function GRNScreen({
         <View style={styles.quickActions}>
           {/* GO-LIVE-248: Bulk mode toggle */}
           <Pressable
+            accessibilityRole="button"
             style={[styles.quickAction, bulkMode && styles.quickActionActive]}
             onPress={handleToggleBulkMode}
           >
@@ -565,7 +567,7 @@ export default function GRNScreen({
               {bulkMode ? "Done" : "Bulk"}
             </Text>
           </Pressable>
-          <Pressable style={styles.quickAction} onPress={handleReceiveAll}>
+          <Pressable accessibilityRole="button" style={styles.quickAction} onPress={handleReceiveAll}>
             <MaterialCommunityIcons
               name="check-all"
               size={16}
@@ -573,7 +575,7 @@ export default function GRNScreen({
             />
             <Text style={styles.quickActionText}>All</Text>
           </Pressable>
-          <Pressable style={styles.quickAction} onPress={handleClearAll}>
+          <Pressable accessibilityRole="button" style={styles.quickAction} onPress={handleClearAll}>
             <MaterialCommunityIcons
               name="refresh"
               size={16}
@@ -588,10 +590,10 @@ export default function GRNScreen({
         {/* GO-LIVE-248: Bulk selection bar */}
         {bulkMode && (
           <View style={styles.bulkSelectionBar}>
-            <Pressable style={styles.bulkSelectButton} onPress={handleSelectAll}>
+            <Pressable accessibilityRole="button" style={styles.bulkSelectButton} onPress={handleSelectAll}>
               <Text style={styles.bulkSelectButtonText}>Select All Pending</Text>
             </Pressable>
-            <Pressable style={styles.bulkSelectButton} onPress={handleDeselectAll}>
+            <Pressable accessibilityRole="button" style={styles.bulkSelectButton} onPress={handleDeselectAll}>
               <Text style={styles.bulkSelectButtonText}>Deselect All</Text>
             </Pressable>
             <Text style={styles.bulkSelectedCount}>
@@ -632,24 +634,28 @@ export default function GRNScreen({
           <Text style={styles.bulkActionTitle}>Set receive quantity:</Text>
           <View style={styles.bulkActionButtons}>
             <Pressable
+              accessibilityRole="button"
               style={styles.bulkActionButton}
               onPress={handleBulkSetRemaining}
             >
               <Text style={styles.bulkActionButtonText}>100%</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={styles.bulkActionButton}
               onPress={() => handleBulkSetPercent(50)}
             >
               <Text style={styles.bulkActionButtonText}>50%</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={styles.bulkActionButton}
               onPress={() => handleBulkSetPercent(25)}
             >
               <Text style={styles.bulkActionButtonText}>25%</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={[styles.bulkActionButton, styles.bulkActionButtonClear]}
               onPress={handleBulkClear}
             >
@@ -679,6 +685,7 @@ export default function GRNScreen({
 
         {/* Submit Button */}
         <Pressable
+          accessibilityRole="button"
           style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
           onPress={handleSubmit}
           disabled={!canSubmit}

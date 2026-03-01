@@ -268,7 +268,7 @@ export default function PurchaseScreen({
             }
           }
         } catch (err) {
-          console.warn("[PurchaseScreen] T-148: Supplier lookup failed, falling back to manual:", err);
+          if (__DEV__) console.warn("[PurchaseScreen] T-148: Supplier lookup failed, falling back to manual:", err);
         }
         // Not found in supplier catalog — fall through to manual entry
         setScanResolving(false);
@@ -339,7 +339,7 @@ export default function PurchaseScreen({
       setCatalogPage(page);
       setCatalogHasMore(res.pagination.hasMore);
     } catch (err) {
-      console.error("fetchCatalog error:", err);
+      if (__DEV__) console.error("fetchCatalog error:", err);
       setCatalogError("Failed to load catalog");
     } finally {
       setCatalogLoading(false);
@@ -393,7 +393,7 @@ export default function PurchaseScreen({
         }
       }
     } catch (err) {
-      console.error("buyBarcodeSearch error:", err);
+      if (__DEV__) console.error("buyBarcodeSearch error:", err);
     }
   }, [liveSuppliersReady, purchaseCart]);
 
@@ -649,6 +649,8 @@ export default function PurchaseScreen({
             <Pressable
               style={[styles.expandedSegment, styles.segmentActive]}
               onPress={() => onOpenScanner?.()}
+              accessibilityLabel="Open scanner for quick purchase"
+              accessibilityRole="button"
             >
               <Animated.Text
                 style={[styles.expandedSegmentText, { opacity: fadeAnim }]}
@@ -693,6 +695,8 @@ export default function PurchaseScreen({
                     // Focus after state update causes TextInput to render
                     setTimeout(() => searchInputRef.current?.focus(), 50);
                   }}
+                  accessibilityLabel="Tap to search products"
+                  accessibilityRole="button"
                 >
                   <Animated.Text
                     style={[styles.rotatingHintExpanded, { opacity: fadeAnim }]}
@@ -763,6 +767,8 @@ export default function PurchaseScreen({
               <Pressable
                 style={styles.supplierToggle}
                 onPress={() => setShowSupplierFields(!showSupplierFields)}
+                accessibilityLabel={showSupplierFields ? "Hide supplier details" : "Show supplier details"}
+                accessibilityRole="button"
               >
                 <MaterialCommunityIcons
                   name={showSupplierFields ? "chevron-up" : "chevron-down"}
@@ -859,7 +865,7 @@ export default function PurchaseScreen({
                       {liveSuppliersBlocker || "Supplier Products API not available"}
                     </Text>
                   </View>
-                  <Pressable style={styles.retryButton} onPress={retryLiveSuppliers}>
+                  <Pressable style={styles.retryButton} onPress={retryLiveSuppliers} accessibilityLabel="Retry checking live suppliers" accessibilityRole="button">
                     <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
                     <Text style={styles.retryButtonText}>Retry</Text>
                   </Pressable>
@@ -873,7 +879,7 @@ export default function PurchaseScreen({
             <View style={styles.emptyStateContainer}>
               <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} />
               <Text style={styles.emptyStateTitle}>{catalogError}</Text>
-              <Pressable style={styles.retryButton} onPress={() => fetchCatalog(searchQuery, 1)}>
+              <Pressable style={styles.retryButton} onPress={() => fetchCatalog(searchQuery, 1)} accessibilityLabel="Retry loading catalog" accessibilityRole="button">
                 <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
                 <Text style={styles.retryButtonText}>Retry</Text>
               </Pressable>

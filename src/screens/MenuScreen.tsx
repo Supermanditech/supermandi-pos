@@ -516,7 +516,7 @@ export default function MenuScreen() {
       </View>
 
       {/* POS-002 + GL-RJ-009: Daily Summary Card - Enhanced with error handling and refresh */}
-      <Pressable style={styles.summaryCard} onPress={goToSalesStatement}>
+      <Pressable style={styles.summaryCard} onPress={goToSalesStatement} accessibilityRole="button" accessibilityLabel="View today's sales details">
         <View style={styles.statusHeader}>
           <MaterialCommunityIcons name="chart-bar" size={16} color={tc.primary} />
           <Text style={styles.statusHeaderText}>{t('menu.todaysSales', { defaultValue: "Today's Sales" })}</Text>
@@ -525,6 +525,8 @@ export default function MenuScreen() {
             onPress={(e) => { e.stopPropagation(); void loadDailySummary(); }}
             style={styles.summaryRefresh}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Refresh daily summary"
           >
             <MaterialCommunityIcons
               name={summaryLoading ? "loading" : "refresh"}
@@ -541,7 +543,7 @@ export default function MenuScreen() {
           <View style={styles.summaryErrorContainer}>
             <MaterialCommunityIcons name="alert-circle-outline" size={24} color={tc.error} />
             <Text style={styles.summaryErrorText}>{summaryError}</Text>
-            <Pressable style={styles.summaryRetryButton} onPress={loadDailySummary}>
+            <Pressable style={styles.summaryRetryButton} onPress={loadDailySummary} accessibilityRole="button" accessibilityLabel="Retry loading daily summary">
               <Text style={styles.summaryRetryText}>{t('common.retry', { defaultValue: 'Retry' })}</Text>
             </Pressable>
           </View>
@@ -598,7 +600,7 @@ export default function MenuScreen() {
         )}
       </Pressable>
 
-      <Pressable style={styles.menuItem} onPress={goToBills}>
+      <Pressable style={styles.menuItem} onPress={goToBills} accessibilityRole="button" accessibilityLabel="Sales History">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name="receipt" size={20} color={tc.primary} />
         </View>
@@ -610,22 +612,22 @@ export default function MenuScreen() {
       </Pressable>
 
       <View style={styles.billActions}>
-        <Pressable style={styles.billAction} onPress={goToBills}>
+        <Pressable style={styles.billAction} onPress={goToBills} accessibilityRole="button" accessibilityLabel="Reprint bill">
           <MaterialCommunityIcons name="printer-outline" size={18} color={tc.primary} />
           <Text style={styles.billActionText}>{t('menu.reprint')}</Text>
         </Pressable>
-        <Pressable style={styles.billAction} onPress={goToBills}>
+        <Pressable style={styles.billAction} onPress={goToBills} accessibilityRole="button" accessibilityLabel="Download bill">
           <MaterialCommunityIcons name="download" size={18} color={tc.primary} />
           <Text style={styles.billActionText}>{t('menu.download')}</Text>
         </Pressable>
-        <Pressable style={styles.billAction} onPress={goToBills}>
+        <Pressable style={styles.billAction} onPress={goToBills} accessibilityRole="button" accessibilityLabel="Share bill">
           <MaterialCommunityIcons name="share-variant" size={18} color={tc.primary} />
           <Text style={styles.billActionText}>{t('menu.share')}</Text>
         </Pressable>
       </View>
 
       {/* T-194: Return/Refund Processing */}
-      <Pressable style={styles.menuItem} onPress={goToReturn}>
+      <Pressable style={styles.menuItem} onPress={goToReturn} accessibilityRole="button" accessibilityLabel="Return and Refund">
         <View style={[styles.menuIcon, styles.menuIconDanger]}>
           <MaterialCommunityIcons name={"rotate-left" as any} size={20} color={tc.error} />
         </View>
@@ -637,7 +639,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* POS-PRINT-002: Printer status indicator */}
-      <Pressable style={styles.printerStatusRow} onPress={handleTestPrint}>
+      <Pressable style={styles.printerStatusRow} onPress={handleTestPrint} accessibilityRole="button" accessibilityLabel="Test printer connection">
         <MaterialCommunityIcons
           name={printerStatus.connected ? "printer-check" : "printer-alert"}
           size={16}
@@ -649,7 +651,7 @@ export default function MenuScreen() {
         <Text style={styles.printerTestLink}>{t('menu.testPrint', 'Test')}</Text>
       </Pressable>
 
-      <Pressable style={styles.menuItem} onPress={() => navigation.navigate("BarcodeSheet")}>
+      <Pressable style={styles.menuItem} onPress={() => navigation.navigate("BarcodeSheet")} accessibilityRole="button" accessibilityLabel="Barcode Sheets">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"barcode" as any} size={20} color={tc.primary} />
         </View>
@@ -669,7 +671,7 @@ export default function MenuScreen() {
 
           {buyEnabled && (
             <>
-              <Pressable style={styles.menuItem} onPress={goToOrders}>
+              <Pressable style={styles.menuItem} onPress={goToOrders} accessibilityRole="button" accessibilityLabel="Purchase Orders">
                 <View style={styles.menuIcon}>
                   <MaterialCommunityIcons name={"clipboard-list" as any} size={20} color={tc.primary} />
                 </View>
@@ -681,7 +683,7 @@ export default function MenuScreen() {
               </Pressable>
 
               {/* AUD-POS-NAV-002: Wire BuyScreen to navigation */}
-              <Pressable style={styles.menuItem} onPress={() => navigation.navigate("Buy")}>
+              <Pressable style={styles.menuItem} onPress={() => navigation.navigate("Buy")} accessibilityRole="button" accessibilityLabel="Product Catalog">
                 <View style={styles.menuIcon}>
                   <MaterialCommunityIcons name={"storefront-outline" as any} size={20} color={tc.primary} />
                 </View>
@@ -693,7 +695,7 @@ export default function MenuScreen() {
               </Pressable>
 
               {/* SM-020: BNPL Dues Screen */}
-              <Pressable style={styles.menuItem} onPress={goToBnplDues}>
+              <Pressable style={styles.menuItem} onPress={goToBnplDues} accessibilityRole="button" accessibilityLabel="BNPL Dues">
                 <View style={[styles.menuIcon, styles.menuIconBnpl]}>
                   <MaterialCommunityIcons name={"clock-outline" as any} size={20} color={tc.accent} />
                 </View>
@@ -708,7 +710,7 @@ export default function MenuScreen() {
 
           {reorderEnabled && (
             <>
-              <Pressable style={styles.menuItem} onPress={goToReorderSettings}>
+              <Pressable style={styles.menuItem} onPress={goToReorderSettings} accessibilityRole="button" accessibilityLabel="Reorder Settings">
                 <View style={styles.menuIcon}>
                   <MaterialCommunityIcons name={"cog" as any} size={20} color={tc.primary} />
                 </View>
@@ -719,7 +721,7 @@ export default function MenuScreen() {
                 <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
               </Pressable>
 
-              <Pressable style={styles.menuItem} onPress={goToReorderPolicies}>
+              <Pressable style={styles.menuItem} onPress={goToReorderPolicies} accessibilityRole="button" accessibilityLabel="Reorder Policies">
                 <View style={styles.menuIcon}>
                   <MaterialCommunityIcons name={"format-list-checks" as any} size={20} color={tc.primary} />
                 </View>
@@ -740,7 +742,7 @@ export default function MenuScreen() {
         <Text style={styles.sectionTitle}>{t('menu.stockManagement')}</Text>
       </View>
 
-      <Pressable style={styles.menuItem} onPress={goToInward}>
+      <Pressable style={styles.menuItem} onPress={goToInward} accessibilityRole="button" accessibilityLabel="Stock Inward">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"package-down" as any} size={20} color={tc.primary} />
         </View>
@@ -752,7 +754,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* T-198: Opening Stock Ledger */}
-      <Pressable style={styles.menuItem} onPress={goToOpeningStock}>
+      <Pressable style={styles.menuItem} onPress={goToOpeningStock} accessibilityRole="button" accessibilityLabel="Opening Stock">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"package-variant-plus" as any} size={20} color={tc.primary} />
         </View>
@@ -768,7 +770,7 @@ export default function MenuScreen() {
         <Text style={styles.sectionTitle}>Customers & Credit</Text>
       </View>
 
-      <Pressable style={styles.menuItem} onPress={goToKhata}>
+      <Pressable style={styles.menuItem} onPress={goToKhata} accessibilityRole="button" accessibilityLabel="Khata Credit Book">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"book-open-variant" as any} size={20} color={tc.primary} />
         </View>
@@ -779,7 +781,7 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
-      <Pressable style={styles.menuItem} onPress={goToCustomerList}>
+      <Pressable style={styles.menuItem} onPress={goToCustomerList} accessibilityRole="button" accessibilityLabel="Customers">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"account-group-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -791,7 +793,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* T-196: Customer Management */}
-      <Pressable style={styles.menuItem} onPress={goToCustomerManagement}>
+      <Pressable style={styles.menuItem} onPress={goToCustomerManagement} accessibilityRole="button" accessibilityLabel="Customer Management">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"account-details-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -803,7 +805,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* T-193: Overdue Dues Collection */}
-      <Pressable style={styles.menuItem} onPress={goToOverdueDues}>
+      <Pressable style={styles.menuItem} onPress={goToOverdueDues} accessibilityRole="button" accessibilityLabel="Overdue Dues">
         <View style={[styles.menuIcon, styles.menuIconDanger]}>
           <MaterialCommunityIcons name={"alert-circle-outline" as any} size={20} color={tc.error} />
         </View>
@@ -819,7 +821,7 @@ export default function MenuScreen() {
         <Text style={styles.sectionTitle}>AI & Intelligence</Text>
       </View>
 
-      <Pressable style={styles.menuItem} onPress={goToAIInsights}>
+      <Pressable style={styles.menuItem} onPress={goToAIInsights} accessibilityRole="button" accessibilityLabel="AI Insights">
         <View style={[styles.menuIcon, styles.menuIconAi]}>
           <MaterialCommunityIcons name={"brain" as any} size={20} color={tc.primary} />
         </View>
@@ -831,7 +833,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* T-288: Bulk Purchase Credit */}
-      <Pressable style={styles.menuItem} onPress={goToBulkPurchaseCredit}>
+      <Pressable style={styles.menuItem} onPress={goToBulkPurchaseCredit} accessibilityRole="button" accessibilityLabel="Bulk Purchase Credit">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"cash-multiple" as any} size={20} color={tc.primary} />
         </View>
@@ -847,7 +849,7 @@ export default function MenuScreen() {
         <Text style={styles.sectionTitle}>Messages</Text>
       </View>
 
-      <Pressable style={styles.menuItem} onPress={goToChat}>
+      <Pressable style={styles.menuItem} onPress={goToChat} accessibilityRole="button" accessibilityLabel="Chat">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"chat-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -860,6 +862,8 @@ export default function MenuScreen() {
 
       <Pressable
         style={styles.menuItem}
+        accessibilityRole="button"
+        accessibilityLabel="WhatsApp Support"
         onPress={() => {
           const supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE;
           if (!supportPhone) {
@@ -891,7 +895,7 @@ export default function MenuScreen() {
         <Text style={styles.sectionTitle}>{t('menu.reports')}</Text>
       </View>
 
-      <Pressable style={styles.menuItem} onPress={goToPurchaseHistory}>
+      <Pressable style={styles.menuItem} onPress={goToPurchaseHistory} accessibilityRole="button" accessibilityLabel="Purchase History">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"history" as any} size={20} color={tc.primary} />
         </View>
@@ -902,7 +906,7 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
-      <Pressable style={styles.menuItem} onPress={goToSalesStatement}>
+      <Pressable style={styles.menuItem} onPress={goToSalesStatement} accessibilityRole="button" accessibilityLabel="Sales Statement">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"chart-line" as any} size={20} color={tc.primary} />
         </View>
@@ -913,7 +917,7 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
-      <Pressable style={styles.menuItem} onPress={goToStockStatement}>
+      <Pressable style={styles.menuItem} onPress={goToStockStatement} accessibilityRole="button" accessibilityLabel="Stock Statement">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"package-variant" as any} size={20} color={tc.primary} />
         </View>
@@ -925,7 +929,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* T-199: Daily Report */}
-      <Pressable style={styles.menuItem} onPress={goToDailyReport}>
+      <Pressable style={styles.menuItem} onPress={goToDailyReport} accessibilityRole="button" accessibilityLabel="Daily Report">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"file-chart-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -941,7 +945,7 @@ export default function MenuScreen() {
         <Text style={styles.sectionTitle}>Operations</Text>
       </View>
 
-      <Pressable style={styles.menuItem} onPress={goToDailyClosing}>
+      <Pressable style={styles.menuItem} onPress={goToDailyClosing} accessibilityRole="button" accessibilityLabel="Daily Closing">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"clipboard-check-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -952,7 +956,7 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
-      <Pressable style={styles.menuItem} onPress={goToShift}>
+      <Pressable style={styles.menuItem} onPress={goToShift} accessibilityRole="button" accessibilityLabel="Shift Management">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"clock-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -968,7 +972,7 @@ export default function MenuScreen() {
         <Text style={styles.sectionTitle}>{t('menu.settings')}</Text>
       </View>
 
-      <Pressable style={styles.menuItem} onPress={toggleLanguage}>
+      <Pressable style={styles.menuItem} onPress={toggleLanguage} accessibilityRole="button" accessibilityLabel="Toggle language">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"translate" as any} size={20} color={tc.primary} />
         </View>
@@ -992,7 +996,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* LIVE.POS.THEME.RUNTIME_TOGGLE_PARITY.001: Theme toggle */}
-      <Pressable style={styles.menuItem} onPress={toggleTheme}>
+      <Pressable style={styles.menuItem} onPress={toggleTheme} accessibilityRole="button" accessibilityLabel="Toggle theme">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons
             name={themeMode === 'dark' ? "weather-night" as any : "white-balance-sunny" as any}
@@ -1020,7 +1024,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* SA-P1-001: Switch Staff */}
-      <Pressable style={styles.menuItem} onPress={handleSwitchStaff}>
+      <Pressable style={styles.menuItem} onPress={handleSwitchStaff} accessibilityRole="button" accessibilityLabel="Switch Staff">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"account-switch" as any} size={20} color={tc.primary} />
         </View>
@@ -1034,7 +1038,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* T-195: Printer Settings */}
-      <Pressable style={styles.menuItem} onPress={goToPrinterSettings}>
+      <Pressable style={styles.menuItem} onPress={goToPrinterSettings} accessibilityRole="button" accessibilityLabel="Printer Settings">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"printer-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -1046,7 +1050,7 @@ export default function MenuScreen() {
       </Pressable>
 
       {/* HELP-001: Help & Support */}
-      <Pressable style={styles.menuItem} onPress={goToHelp}>
+      <Pressable style={styles.menuItem} onPress={goToHelp} accessibilityRole="button" accessibilityLabel="Help and Support">
         <View style={styles.menuIcon}>
           <MaterialCommunityIcons name={"help-circle-outline" as any} size={20} color={tc.primary} />
         </View>
@@ -1057,7 +1061,7 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
-      <Pressable style={styles.menuItem} onPress={handleSwitchStore}>
+      <Pressable style={styles.menuItem} onPress={handleSwitchStore} accessibilityRole="button" accessibilityLabel="Switch Store">
         <View style={[styles.menuIcon, styles.menuIconDanger]}>
           <MaterialCommunityIcons name={"swap-horizontal" as any} size={20} color={tc.error} />
         </View>
@@ -1075,7 +1079,7 @@ export default function MenuScreen() {
             <Text style={styles.sectionTitle}>{t('menu.developerQa')}</Text>
           </View>
 
-          <Pressable style={styles.menuItem} onPress={goToUiShowcase}>
+          <Pressable style={styles.menuItem} onPress={goToUiShowcase} accessibilityRole="button" accessibilityLabel="UI Showcase">
             <View style={[styles.menuIcon, styles.menuIconQa]}>
               <MaterialCommunityIcons name={"layers-outline" as any} size={20} color={tc.warning} />
             </View>

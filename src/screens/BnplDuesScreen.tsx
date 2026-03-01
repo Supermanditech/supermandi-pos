@@ -127,7 +127,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         bnplEnabled: response.bnplEnabled,
       });
     } catch (error) {
-      console.error("[BnplDuesScreen] Failed to load data:", error);
+      if (__DEV__) console.error("[BnplDuesScreen] Failed to load data:", error);
       Alert.alert(t("common.error"), t("common.tryAgain"));
     } finally {
       setLoading(false);
@@ -233,9 +233,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     const error = asError(_error);
         // GO-LIVE-192: Check if error was due to abort (user closed modal)
         if (error?.message === "Payment polling cancelled") {
-          console.log("[BnplDuesScreen] Polling cancelled by user");
+          if (__DEV__) console.log("[BnplDuesScreen] Polling cancelled by user");
         } else {
-          console.warn("[BnplDuesScreen] Auto-polling stopped:", error);
+          if (__DEV__) console.warn("[BnplDuesScreen] Auto-polling stopped:", error);
         }
         // FIX-034: Only clear ref if we're still the active controller
         if (pollingAbortControllerRef.current === myController) {
@@ -309,7 +309,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           );
         }
       } catch (error) {
-        console.error("[BnplDuesScreen] Payment failed:", error);
+        if (__DEV__) console.error("[BnplDuesScreen] Payment failed:", error);
         Alert.alert("Payment Failed", "Failed to initiate payment. Please try again.");
         setPaymentModal((prev) => ({ ...prev, paying: false }));
       }
@@ -344,7 +344,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         },
       ]);
     } catch (error) {
-      console.error("[BnplDuesScreen] Confirm payment failed:", error);
+      if (__DEV__) console.error("[BnplDuesScreen] Confirm payment failed:", error);
       Alert.alert("Confirmation Failed", "Failed to confirm payment. Please try again.");
       setPaymentModal((prev) => ({ ...prev, paying: false }));
     }
@@ -415,7 +415,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       );
     } catch (error) {
       // AUDIT-POS-003: Show error alert on failure — not false success
-      console.error("[BnplDuesScreen] Dispute submission failed:", error);
+      if (__DEV__) console.error("[BnplDuesScreen] Dispute submission failed:", error);
       Alert.alert("Dispute Failed", "Could not submit your dispute. Please try again.", [
         {
           text: "Retry",
@@ -510,6 +510,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           {/* GO-LIVE-240: Actions row with Pay and Dispute buttons */}
           <View style={styles.actionButtonsRow}>
             <Pressable
+              accessibilityRole="button"
               style={[styles.payButton, drawdown.isOverdue && styles.payButtonOverdue]}
               onPress={() => handlePayDrawdown(drawdown)}
             >
@@ -521,6 +522,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               <Text style={styles.payButtonText}>Pay Now</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={styles.disputeButton}
               onPress={() => handleOpenDispute(drawdown)}
             >
@@ -544,7 +546,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
@@ -567,7 +569,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -656,7 +658,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       >
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.closeButton} onPress={handleClosePaymentModal}>
+            <Pressable accessibilityRole="button" style={styles.closeButton} onPress={handleClosePaymentModal}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Pay BNPL Due</Text>
@@ -701,6 +703,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                 <View style={styles.modeSelection}>
                   <Text style={styles.modeLabel}>Select Payment Mode</Text>
                   <Pressable
+                    accessibilityRole="button"
                     style={styles.modeButton}
                     onPress={() => handleSelectPaymentMode("UPI")}
                     disabled={paymentModal.paying}
@@ -718,6 +721,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                     />
                   </Pressable>
                   <Pressable
+                    accessibilityRole="button"
                     style={styles.modeButton}
                     onPress={() => handleSelectPaymentMode("CASH")}
                     disabled={paymentModal.paying}
@@ -775,6 +779,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                         autoCapitalize="characters"
                       />
                       <Pressable
+                        accessibilityRole="button"
                         style={[
                           styles.confirmButton,
                           (!paymentModal.utrInput || paymentModal.paying) &&
@@ -801,6 +806,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
 
                   {paymentModal.upiDeepLink && (
                     <Pressable
+                      accessibilityRole="button"
                       style={styles.reopenUpiButton}
                       onPress={() => {
                         if (paymentModal.upiDeepLink) {
@@ -839,7 +845,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       >
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
-            <Pressable style={styles.closeButton} onPress={handleCloseDisputeModal}>
+            <Pressable accessibilityRole="button" style={styles.closeButton} onPress={handleCloseDisputeModal}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Dispute Charge</Text>
@@ -870,6 +876,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                 { id: "other", label: "Other" },
               ].map((reason) => (
                 <Pressable
+                  accessibilityRole="radio"
                   key={reason.id}
                   style={[
                     styles.disputeReasonOption,
@@ -900,6 +907,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
 
               {/* Submit button */}
               <Pressable
+                accessibilityRole="button"
                 style={[styles.disputeSubmitButton, !disputeModal.reason && styles.buttonDisabled]}
                 onPress={handleSubmitDispute}
                 disabled={!disputeModal.reason || disputeModal.submitting}

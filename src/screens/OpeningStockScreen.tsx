@@ -106,7 +106,7 @@ export default function OpeningStockScreen({
       setSearchResults(results);
     } catch (_e: unknown) {
     const e = asError(_e);
-      console.error("[OpeningStockScreen] Search failed:", e);
+      if (__DEV__) console.error("[OpeningStockScreen] Search failed:", e);
       Alert.alert("Search Failed", e?.message || "Could not search products.");
     } finally {
       setSearching(false);
@@ -258,7 +258,7 @@ export default function OpeningStockScreen({
               setSuccess(true);
             } catch (_e: unknown) {
     const e = asError(_e);
-              console.error("[OpeningStockScreen] Submit failed:", e);
+              if (__DEV__) console.error("[OpeningStockScreen] Submit failed:", e);
               Alert.alert(
                 "Submission Failed",
                 e?.message || "Could not initialize opening stock."
@@ -523,7 +523,7 @@ export default function OpeningStockScreen({
             <Text style={styles.successSubtitle}>
               Stock initialized for {processedCount} product(s)
             </Text>
-            <Pressable style={styles.resetButton} onPress={handleReset}>
+            <Pressable accessibilityRole="button" style={styles.resetButton} onPress={handleReset}>
               <Text style={styles.resetButtonText}>Add More Products</Text>
             </Pressable>
           </View>
@@ -576,6 +576,7 @@ export default function OpeningStockScreen({
           <View style={styles.searchResults}>
             {searchResults.map((product) => (
               <Pressable
+                accessibilityRole="button"
                 key={product.id}
                 style={styles.searchResultItem}
                 onPress={() => handleAddProduct(product)}
@@ -642,6 +643,7 @@ export default function OpeningStockScreen({
                 maxLength={6}
               />
               <Pressable
+                accessibilityRole="button"
                 style={styles.removeButton}
                 onPress={() => handleRemoveEntry(item.productId)}
               >
@@ -671,6 +673,7 @@ export default function OpeningStockScreen({
               )}
 
               <Pressable
+                accessibilityRole="button"
                 style={[
                   styles.submitButton,
                   (validEntries.length === 0 || submitting) &&

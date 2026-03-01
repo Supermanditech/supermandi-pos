@@ -68,7 +68,7 @@ export default function ReorderSettingsScreen({
       const data = await reorderApi.getReorderSettings(storeId);
       setSettings(data);
     } catch (err) {
-      console.error("[ReorderSettingsScreen] Failed to load settings:", err);
+      if (__DEV__) console.error("[ReorderSettingsScreen] Failed to load settings:", err);
       setError("Failed to load reorder settings");
     } finally {
       setLoading(false);
@@ -97,7 +97,7 @@ export default function ReorderSettingsScreen({
         });
         setSettings(updated);
       } catch (err) {
-        console.error("[ReorderSettingsScreen] Failed to update:", err);
+        if (__DEV__) console.error("[ReorderSettingsScreen] Failed to update:", err);
         // Revert on error
         setSettings((prev) =>
           prev ? { ...prev, reorderEnabled: !value } : prev
@@ -127,7 +127,7 @@ export default function ReorderSettingsScreen({
         });
         setSettings(updated);
       } catch (err) {
-        console.error("[ReorderSettingsScreen] Failed to update:", err);
+        if (__DEV__) console.error("[ReorderSettingsScreen] Failed to update:", err);
         // Revert on error
         setSettings((prev) =>
           prev ? { ...prev, requireApproval: !value } : prev
@@ -146,7 +146,7 @@ export default function ReorderSettingsScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -170,7 +170,7 @@ export default function ReorderSettingsScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -187,7 +187,7 @@ export default function ReorderSettingsScreen({
             color={colors.error}
           />
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={loadSettings}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={loadSettings}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -200,7 +200,7 @@ export default function ReorderSettingsScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -306,6 +306,7 @@ export default function ReorderSettingsScreen({
           <Text style={styles.sectionTitle}>Product Policies</Text>
 
           <Pressable
+            accessibilityRole="link"
             style={styles.linkRow}
             onPress={onNavigateToPolicies}
           >

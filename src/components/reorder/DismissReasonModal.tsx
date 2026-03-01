@@ -1,7 +1,7 @@
 // DismissReasonModal - V3.0.9 compliant
 // Modal for entering dismiss reason
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -15,7 +15,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import type { PendingReorder } from "../../services/api/reorderApi";
 // T-127: Modal back handler for Android hardware back button
 import { useModalBackHandler } from "../../hooks/useModalBackHandler";
@@ -58,6 +58,9 @@ export function DismissReasonModal({
   // T-127: Close modal on Android hardware back button
   useModalBackHandler(visible, onClose);
 
+  const tc = useThemeColors();
+  const styles = useMemo(() => createStyles(tc), [tc]);
+
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
@@ -89,7 +92,7 @@ export function DismissReasonModal({
       await onDismiss(item.id, finalReason);
       onClose();
     } catch (err) {
-      console.error("[DismissReasonModal] Failed to dismiss:", err);
+      if (__DEV__) console.error("[DismissReasonModal] Failed to dismiss:", err);
       setError(t("reorder.dismissFailed"));
     } finally {
       setSubmitting(false);
@@ -118,7 +121,7 @@ export function DismissReasonModal({
             <MaterialCommunityIcons
               name="close"
               size={24}
-              color={theme.colors.textPrimary}
+              color={tc.textPrimary}
             />
           </Pressable>
           <Text style={styles.headerTitle}>{t("reorder.dismissTitle")}</Text>
@@ -185,7 +188,7 @@ export function DismissReasonModal({
               <TextInput
                 style={styles.customReasonInput}
                 placeholder={t("reorder.dismissPlaceholder")}
-                placeholderTextColor={theme.colors.textTertiary}
+                placeholderTextColor={tc.textTertiary}
                 value={customReason}
                 onChangeText={setCustomReason}
                 multiline
@@ -204,7 +207,7 @@ export function DismissReasonModal({
               <MaterialCommunityIcons
                 name="alert-circle"
                 size={16}
-                color={theme.colors.error}
+                color={tc.error}
               />
               <Text style={styles.errorText}>{error}</Text>
             </View>
@@ -230,13 +233,13 @@ export function DismissReasonModal({
             disabled={!isValid || submitting}
           >
             {submitting ? (
-              <ActivityIndicator size="small" color={theme.colors.textInverse} />
+              <ActivityIndicator size="small" color={tc.textInverse} />
             ) : (
               <>
                 <MaterialCommunityIcons
                   name="close-circle"
                   size={18}
-                  color={theme.colors.textInverse}
+                  color={tc.textInverse}
                 />
                 <Text style={styles.dismissButtonText}>{t("reorder.dismissButton")}</Text>
               </>
@@ -252,161 +255,163 @@ export function DismissReasonModal({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  headerRight: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    padding: theme.spacing.md,
-  },
-  productInfo: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  productMeta: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
-  reasonsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-  },
-  reasonChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  reasonChipSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  reasonChipText: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-  },
-  reasonChipTextSelected: {
-    color: theme.colors.textInverse,
-    fontWeight: "500",
-  },
-  customReasonContainer: {
-    marginTop: theme.spacing.md,
-  },
-  customReasonInput: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-  charCount: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    textAlign: "right",
-    marginTop: 4,
-  },
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.errorSoft,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  errorText: {
-    fontSize: 13,
-    color: theme.colors.error,
-    flex: 1,
-  },
-  footer: {
-    flexDirection: "row",
-    gap: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  cancelButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-  },
-  dismissButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    backgroundColor: theme.colors.error,
-    gap: theme.spacing.xs,
-  },
-  dismissButtonDisabled: {
-    opacity: 0.5,
-  },
-  dismissButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    closeButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    headerRight: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+      padding: theme.spacing.md,
+    },
+    productInfo: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.lg,
+    },
+    productName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    productMeta: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: theme.spacing.md,
+    },
+    reasonsContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.sm,
+    },
+    reasonChip: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    reasonChipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    reasonChipText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    reasonChipTextSelected: {
+      color: colors.textInverse,
+      fontWeight: "500",
+    },
+    customReasonContainer: {
+      marginTop: theme.spacing.md,
+    },
+    customReasonInput: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.md,
+      fontSize: 14,
+      color: colors.textPrimary,
+      minHeight: 100,
+      textAlignVertical: "top",
+    },
+    charCount: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      textAlign: "right",
+      marginTop: 4,
+    },
+    errorContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.errorSoft,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.sm,
+      marginTop: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    errorText: {
+      fontSize: 13,
+      color: colors.error,
+      flex: 1,
+    },
+    footer: {
+      flexDirection: "row",
+      gap: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingTop: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    cancelButton: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cancelButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    dismissButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: colors.error,
+      gap: theme.spacing.xs,
+    },
+    dismissButtonDisabled: {
+      opacity: 0.5,
+    },
+    dismissButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  });
+}
 
 export default DismissReasonModal;

@@ -589,6 +589,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
       {/* Tab switcher */}
       <View style={styles.tabRow}>
         <Pressable
+          accessibilityRole="button"
           style={[styles.tab, activeTab === "CURRENT" && styles.tabActive]}
           onPress={() => setActiveTab("CURRENT")}
         >
@@ -597,6 +598,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.tab, activeTab === "HISTORY" && styles.tabActive]}
           onPress={() => setActiveTab("HISTORY")}
         >
@@ -780,6 +782,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                 />
 
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.endShiftButton, (ending || !hasValidClosingCash) && styles.endShiftButtonDisabled]}
                   onPress={handleEndShift}
                   disabled={ending || !hasValidClosingCash}
@@ -820,6 +823,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                 </View>
 
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.startShiftButton, starting && styles.startShiftButtonDisabled]}
                   onPress={handleStartShift}
                   disabled={starting}

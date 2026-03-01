@@ -14,7 +14,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { QuantityPicker } from "../buy/QuantityPicker";
 import type { PendingReorder } from "../../services/api/reorderApi";
@@ -56,6 +56,9 @@ export function EditReorderModal({
 }: EditReorderModalProps) {
   // T-127: Close modal on Android hardware back button
   useModalBackHandler(visible, onClose);
+
+  const tc = useThemeColors();
+  const styles = useMemo(() => createStyles(tc), [tc]);
 
   const insets = useSafeAreaInsets();
 
@@ -106,7 +109,7 @@ export function EditReorderModal({
         setSelectedSupplier(suppliers[0]);
       }
     } catch (err) {
-      console.error("[EditReorderModal] Failed to load suppliers:", err);
+      if (__DEV__) console.error("[EditReorderModal] Failed to load suppliers:", err);
       setError("Failed to load suppliers");
 
       // Create a placeholder supplier from current data
@@ -170,7 +173,7 @@ export function EditReorderModal({
       });
       onClose();
     } catch (err) {
-      console.error("[EditReorderModal] Failed to save:", err);
+      if (__DEV__) console.error("[EditReorderModal] Failed to save:", err);
       setError("Failed to save changes. Please try again.");
     } finally {
       setSaving(false);
@@ -198,7 +201,7 @@ export function EditReorderModal({
             <MaterialCommunityIcons
               name="close"
               size={24}
-              color={theme.colors.textPrimary}
+              color={tc.textPrimary}
             />
           </Pressable>
           <Text style={styles.headerTitle}>Edit Reorder</Text>
@@ -258,7 +261,7 @@ export function EditReorderModal({
 
             {loadingSuppliers ? (
               <View style={styles.loadingSuppliers}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <ActivityIndicator size="small" color={tc.primary} />
                 <Text style={styles.loadingText}>Loading suppliers...</Text>
               </View>
             ) : availableSuppliers.length === 0 ? (
@@ -266,7 +269,7 @@ export function EditReorderModal({
                 <MaterialCommunityIcons
                   name="store-off"
                   size={24}
-                  color={theme.colors.textTertiary}
+                  color={tc.textTertiary}
                 />
                 <Text style={styles.noSuppliersText}>
                   No other suppliers available
@@ -324,7 +327,7 @@ export function EditReorderModal({
                               <MaterialCommunityIcons
                                 name="star"
                                 size={10}
-                                color={theme.colors.warning}
+                                color={tc.warning}
                               />
                             </View>
                           )}
@@ -361,7 +364,7 @@ export function EditReorderModal({
               </View>
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Quantity</Text>
-                <Text style={styles.priceValue}>× {quantity}</Text>
+                <Text style={styles.priceValue}>{"\u00D7"} {quantity}</Text>
               </View>
               <View style={styles.priceDivider} />
               <View style={styles.priceRow}>
@@ -397,7 +400,7 @@ export function EditReorderModal({
               <MaterialCommunityIcons
                 name="alert-circle"
                 size={16}
-                color={theme.colors.error}
+                color={tc.error}
               />
               <Text style={styles.errorText}>{error}</Text>
             </View>
@@ -423,13 +426,13 @@ export function EditReorderModal({
             disabled={!hasChanges || saving}
           >
             {saving ? (
-              <ActivityIndicator size="small" color={theme.colors.textInverse} />
+              <ActivityIndicator size="small" color={tc.textInverse} />
             ) : (
               <>
                 <MaterialCommunityIcons
                   name="check"
                   size={18}
-                  color={theme.colors.textInverse}
+                  color={tc.textInverse}
                 />
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </>
@@ -445,324 +448,326 @@ export function EditReorderModal({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  headerRight: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-  },
-  productCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  productName: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  barcode: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.md,
-  },
-  stockInfo: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  stockItem: {
-    alignItems: "center",
-  },
-  stockLabel: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginBottom: 2,
-  },
-  stockValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  section: {
-    marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  quantityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.md,
-  },
-  quantityInfo: {
-    flex: 1,
-  },
-  quantityInfoLabel: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-  },
-  loadingSuppliers: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-  },
-  noSuppliers: {
-    alignItems: "center",
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-  },
-  noSuppliersText: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
-    marginTop: theme.spacing.sm,
-  },
-  currentSupplierText: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  supplierList: {
-    gap: theme.spacing.sm,
-  },
-  supplierOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-  },
-  supplierOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  supplierRadio: {
-    marginRight: theme.spacing.md,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioOuterSelected: {
-    borderColor: theme.colors.primary,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: theme.colors.primary,
-  },
-  supplierInfo: {
-    flex: 1,
-  },
-  supplierNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    marginBottom: 4,
-  },
-  supplierName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
-    flexShrink: 1,
-  },
-  supplierNameSelected: {
-    color: theme.colors.primary,
-  },
-  originalBadge: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
-  },
-  originalBadgeText: {
-    fontSize: 10,
-    color: theme.colors.textTertiary,
-  },
-  preferredBadge: {
-    backgroundColor: theme.colors.warningSoft,
-    padding: 4,
-    borderRadius: theme.borderRadius.sm,
-  },
-  supplierMeta: {
-    flexDirection: "row",
-    gap: theme.spacing.md,
-  },
-  supplierPrice: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  supplierStock: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  supplierMoq: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  priceImpactCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.sm,
-  },
-  priceLabel: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-  },
-  priceValue: {
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-  },
-  priceDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.sm,
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  differenceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  differenceLabel: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  differenceValue: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  differenceIncrease: {
-    color: theme.colors.error,
-  },
-  differenceSavings: {
-    color: theme.colors.success,
-  },
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.errorSoft,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  errorText: {
-    fontSize: 13,
-    color: theme.colors.error,
-    flex: 1,
-  },
-  footer: {
-    flexDirection: "row",
-    gap: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  cancelButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-  },
-  saveButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    backgroundColor: theme.colors.primary,
-    gap: theme.spacing.xs,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    closeButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    headerRight: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      padding: theme.spacing.md,
+    },
+    productCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+    },
+    productName: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    barcode: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginBottom: theme.spacing.md,
+    },
+    stockInfo: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      paddingTop: theme.spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    stockItem: {
+      alignItems: "center",
+    },
+    stockLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: 2,
+    },
+    stockValue: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    section: {
+      marginBottom: theme.spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: theme.spacing.sm,
+    },
+    quantityRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.md,
+    },
+    quantityInfo: {
+      flex: 1,
+    },
+    quantityInfoLabel: {
+      fontSize: 13,
+      color: colors.textTertiary,
+    },
+    loadingSuppliers: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.spacing.lg,
+      gap: theme.spacing.sm,
+    },
+    loadingText: {
+      fontSize: 13,
+      color: colors.textTertiary,
+    },
+    noSuppliers: {
+      alignItems: "center",
+      padding: theme.spacing.lg,
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+    },
+    noSuppliersText: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: theme.spacing.sm,
+    },
+    currentSupplierText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: theme.spacing.xs,
+    },
+    supplierList: {
+      gap: theme.spacing.sm,
+    },
+    supplierOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: theme.spacing.md,
+    },
+    supplierOptionSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.accentSoft,
+    },
+    supplierRadio: {
+      marginRight: theme.spacing.md,
+    },
+    radioOuter: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioOuterSelected: {
+      borderColor: colors.primary,
+    },
+    radioInner: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.primary,
+    },
+    supplierInfo: {
+      flex: 1,
+    },
+    supplierNameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+      marginBottom: 4,
+    },
+    supplierName: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textPrimary,
+      flexShrink: 1,
+    },
+    supplierNameSelected: {
+      color: colors.primary,
+    },
+    originalBadge: {
+      backgroundColor: colors.backgroundSecondary,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: theme.borderRadius.sm,
+    },
+    originalBadgeText: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
+    preferredBadge: {
+      backgroundColor: colors.warningSoft,
+      padding: 4,
+      borderRadius: theme.borderRadius.sm,
+    },
+    supplierMeta: {
+      flexDirection: "row",
+      gap: theme.spacing.md,
+    },
+    supplierPrice: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    supplierStock: {
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+    supplierMoq: {
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+    priceImpactCard: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+    },
+    priceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.sm,
+    },
+    priceLabel: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    priceValue: {
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    priceDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: theme.spacing.sm,
+    },
+    totalLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    totalValue: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    differenceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: theme.spacing.sm,
+      paddingTop: theme.spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    differenceLabel: {
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+    differenceValue: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    differenceIncrease: {
+      color: colors.error,
+    },
+    differenceSavings: {
+      color: colors.success,
+    },
+    errorContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.errorSoft,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    errorText: {
+      fontSize: 13,
+      color: colors.error,
+      flex: 1,
+    },
+    footer: {
+      flexDirection: "row",
+      gap: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingTop: theme.spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    cancelButton: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cancelButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    saveButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: colors.primary,
+      gap: theme.spacing.xs,
+    },
+    saveButtonDisabled: {
+      opacity: 0.5,
+    },
+    saveButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+  });
+}
 
 export default EditReorderModal;

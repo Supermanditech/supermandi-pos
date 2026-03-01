@@ -352,6 +352,9 @@ export default function PaymentSetupScreen() {
             onPress={handleSave}
             disabled={saving || isOffline}
             testID="payment-save-button"
+            accessibilityLabel={saving ? "Saving payment settings" : "Save and continue"}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving || isOffline }}
           >
             {saving ? (
               <ActivityIndicator color={colors.surface} size="small" />
@@ -365,6 +368,9 @@ export default function PaymentSetupScreen() {
             onPress={handleSkip}
             disabled={saving}
             testID="payment-skip-button"
+            accessibilityLabel="Skip payment setup for now"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving }}
           >
             <Text style={styles.skipButtonText}>Skip for Now</Text>
           </Pressable>

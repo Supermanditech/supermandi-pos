@@ -257,7 +257,7 @@ export default function DailyReportScreen({
       if (e?.message?.includes("404") || e?.status === 404) {
         setReport(null);
       } else {
-        console.error("[DailyReportScreen] Failed to load report:", e);
+        if (__DEV__) console.error("[DailyReportScreen] Failed to load report:", e);
         setError(e?.message || "Failed to load daily report");
       }
     } finally {
@@ -297,7 +297,7 @@ export default function DailyReportScreen({
       await printerService.printReport(content);
     } catch (_e: unknown) {
     const e = asError(_e);
-      console.error("[DailyReportScreen] Print failed:", e);
+      if (__DEV__) console.error("[DailyReportScreen] Print failed:", e);
       Alert.alert(
         "Print Failed",
         e?.message || "Could not print the report."
@@ -323,7 +323,7 @@ export default function DailyReportScreen({
     const e = asError(_e);
       // User might cancel share - not an error
       if (!e?.message?.includes("cancel")) {
-        console.error("[DailyReportScreen] Share failed:", e);
+        if (__DEV__) console.error("[DailyReportScreen] Share failed:", e);
         Alert.alert(
           "Share Failed",
           e?.message || "Could not share the report."
@@ -550,7 +550,7 @@ export default function DailyReportScreen({
 
       {/* Date picker row */}
       <View style={styles.datePicker}>
-        <Pressable style={styles.dateArrow} onPress={handlePrevDay}>
+        <Pressable accessibilityRole="button" style={styles.dateArrow} onPress={handlePrevDay}>
           <MaterialCommunityIcons
             name="chevron-left"
             size={28}
@@ -562,6 +562,7 @@ export default function DailyReportScreen({
           {isToday && <Text style={styles.dateBadge}>Today</Text>}
         </View>
         <Pressable
+          accessibilityRole="button"
           style={[styles.dateArrow, isToday && styles.dateArrowDisabled]}
           onPress={handleNextDay}
           disabled={isToday}
@@ -592,6 +593,7 @@ export default function DailyReportScreen({
           />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable
+            accessibilityRole="button"
             style={styles.retryButton}
             onPress={() => loadReport(selectedDate)}
           >
@@ -739,6 +741,7 @@ export default function DailyReportScreen({
           {/* Action buttons */}
           <View style={styles.actions}>
             <Pressable
+              accessibilityRole="button"
               style={[styles.actionButton, styles.printButton]}
               onPress={handlePrint}
               disabled={printing}
@@ -760,6 +763,7 @@ export default function DailyReportScreen({
               )}
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={[styles.actionButton, styles.shareButton]}
               onPress={handleShare}
               disabled={sharing}

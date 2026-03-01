@@ -196,7 +196,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         void cacheCatalogCategories(storeId, cats);
       })
       .catch(async (err) => {
-        console.warn("[BuyScreen] Failed to load buy categories:", err);
+        if (__DEV__) console.warn("[BuyScreen] Failed to load buy categories:", err);
         // T-146: Fall back to cached categories
         const cached = await getCachedCategories(storeId);
         if (cached && cached.length > 0) {
@@ -243,7 +243,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           void cacheCatalogProducts(storeId, response.data);
         }
       } catch (err) {
-        console.error("[BuyScreen] Failed to load products:", err);
+        if (__DEV__) console.error("[BuyScreen] Failed to load products:", err);
 
         // T-146: Fall back to cached data when offline or API fails
         if (replace && pageNum === 1) {
@@ -308,7 +308,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       setHasMore(productsResult.pagination.hasMore);
       setError(null);
     } catch (err) {
-      console.error("[BuyScreen] Refresh failed:", err);
+      if (__DEV__) console.error("[BuyScreen] Refresh failed:", err);
       setError("Failed to refresh. Try again.");
     } finally {
       setRefreshing(false);
@@ -448,7 +448,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             : t('buy.noProductsAvailable')}
         </Text>
         {hasActiveFilters && (
-          <Pressable style={styles.clearButton} onPress={handleClearAllFilters}>
+          <Pressable accessibilityRole="button" style={styles.clearButton} onPress={handleClearAllFilters}>
             <Text style={styles.clearButtonText}>{t('buy.clearFilters')}</Text>
           </Pressable>
         )}
@@ -492,7 +492,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={handleClearSearch} style={styles.clearIcon}>
+            <Pressable accessibilityRole="button" onPress={handleClearSearch} style={styles.clearIcon}>
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
@@ -503,7 +503,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         </View>
 
         {onOpenScanner && (
-          <Pressable style={styles.scanButton} onPress={onOpenScanner}>
+          <Pressable accessibilityRole="button" style={styles.scanButton} onPress={onOpenScanner}>
             <MaterialCommunityIcons
               name="barcode-scan"
               size={24}
@@ -536,6 +536,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       {/* TICKET-003: Stock Status Filter */}
       <View style={styles.stockFilterContainer}>
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.stockChip,
             selectedStockStatus === "all" && styles.stockChipActive,
@@ -552,6 +553,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.stockChip,
             selectedStockStatus === "in_stock" && styles.stockChipActive,
@@ -568,6 +570,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.stockChip,
             selectedStockStatus === "low_stock" && styles.stockChipActive,
@@ -585,6 +588,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.stockChip,
             selectedStockStatus === "out_of_stock" && styles.stockChipActive,
@@ -618,6 +622,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           </Text>
           {!isOffline && (
             <Pressable
+              accessibilityRole="button"
               style={styles.offlineRefreshButton}
               onPress={handleRefresh}
             >
@@ -634,7 +639,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           {debouncedQuery && (
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>"{debouncedQuery}"</Text>
-              <Pressable onPress={handleClearSearch}>
+              <Pressable accessibilityRole="button" onPress={handleClearSearch}>
                 <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -642,7 +647,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           {selectedCategory && (
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>{selectedCategory}</Text>
-              <Pressable onPress={() => setSelectedCategory(null)}>
+              <Pressable accessibilityRole="button" onPress={() => setSelectedCategory(null)}>
                 <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -650,12 +655,12 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           {selectedStockStatus !== "all" && (
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>{selectedStockStatus.replace("_", " ")}</Text>
-              <Pressable onPress={() => setSelectedStockStatus("all")}>
+              <Pressable accessibilityRole="button" onPress={() => setSelectedStockStatus("all")}>
                 <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
           )}
-          <Pressable style={styles.clearAllButton} onPress={handleClearAllFilters}>
+          <Pressable accessibilityRole="button" style={styles.clearAllButton} onPress={handleClearAllFilters}>
             <Text style={styles.clearAllText}>{t('buy.clearAll', { defaultValue: 'Clear All' })}</Text>
           </Pressable>
         </View>
@@ -702,6 +707,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       {/* Floating Cart Button */}
       {cartItems.length > 0 && (
         <Pressable
+          accessibilityRole="button"
           style={[styles.cartFab, { bottom: insets.bottom + 16 }]}
           onPress={() => setCartModalVisible(true)}
         >

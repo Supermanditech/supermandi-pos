@@ -1,11 +1,11 @@
 // PolicyRow - V3.0.9 compliant
 // Row component for displaying a reorder policy
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import type { ReorderPolicy } from "../../services/api/reorderApi";
 
 // =============================================================================
@@ -29,6 +29,9 @@ export function PolicyRow({
   onToggleEnabled,
   disabled,
 }: PolicyRowProps) {
+  const tc = useThemeColors();
+  const styles = useMemo(() => createStyles(tc), [tc]);
+
   const stockStatus = getStockStatus(policy);
 
   return (
@@ -91,7 +94,7 @@ export function PolicyRow({
               <MaterialCommunityIcons
                 name="store"
                 size={12}
-                color={theme.colors.textTertiary}
+                color={tc.textTertiary}
               />
               <Text style={styles.supplierName} numberOfLines={1}>
                 {policy.preferredSupplierName}
@@ -104,7 +107,7 @@ export function PolicyRow({
         <MaterialCommunityIcons
           name="chevron-right"
           size={20}
-          color={theme.colors.textTertiary}
+          color={tc.textTertiary}
         />
       </Pressable>
 
@@ -114,11 +117,11 @@ export function PolicyRow({
           value={policy.isEnabled}
           onValueChange={(value) => onToggleEnabled(policy, value)}
           trackColor={{
-            false: theme.colors.borderDark,
-            true: theme.colors.primaryLight,
+            false: tc.borderDark,
+            true: tc.primaryLight,
           }}
           thumbColor={
-            policy.isEnabled ? theme.colors.primary : theme.colors.surface
+            policy.isEnabled ? tc.primary : tc.surface
           }
           disabled={disabled}
         />
@@ -138,8 +141,8 @@ export function PolicyRow({
             size={10}
             color={
               stockStatus === "critical"
-                ? theme.colors.error
-                : theme.colors.warning
+                ? tc.error
+                : tc.warning
             }
           />
         </View>
@@ -165,105 +168,107 @@ function getStockStatus(policy: ReorderPolicy): StockStatus {
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingRight: theme.spacing.md,
-  },
-  content: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    paddingLeft: theme.spacing.md,
-  },
-  productInfo: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: 2,
-  },
-  barcode: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  stockInfo: {
-    alignItems: "flex-end",
-    marginRight: theme.spacing.sm,
-  },
-  stockRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: theme.borderRadius.sm,
-    paddingVertical: 4,
-    paddingHorizontal: theme.spacing.sm,
-  },
-  stockItem: {
-    alignItems: "center",
-    minWidth: 36,
-  },
-  stockDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: theme.colors.border,
-    marginHorizontal: theme.spacing.xs,
-  },
-  stockLabel: {
-    fontSize: 9,
-    color: theme.colors.textTertiary,
-    textTransform: "uppercase",
-  },
-  stockValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  stockValueLow: {
-    color: theme.colors.warning,
-  },
-  stockValueCritical: {
-    color: theme.colors.error,
-  },
-  supplierRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    gap: 4,
-  },
-  supplierName: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    maxWidth: 100,
-  },
-  toggleContainer: {
-    paddingLeft: theme.spacing.sm,
-  },
-  statusBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: theme.colors.warningSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statusBadgeCritical: {
-    backgroundColor: theme.colors.errorSoft,
-  },
-  statusBadgeLow: {
-    backgroundColor: theme.colors.warningSoft,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingRight: theme.spacing.md,
+    },
+    content: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: theme.spacing.md,
+      paddingLeft: theme.spacing.md,
+    },
+    productInfo: {
+      flex: 1,
+      marginRight: theme.spacing.sm,
+    },
+    productName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    barcode: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    stockInfo: {
+      alignItems: "flex-end",
+      marginRight: theme.spacing.sm,
+    },
+    stockRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: theme.borderRadius.sm,
+      paddingVertical: 4,
+      paddingHorizontal: theme.spacing.sm,
+    },
+    stockItem: {
+      alignItems: "center",
+      minWidth: 36,
+    },
+    stockDivider: {
+      width: 1,
+      height: 20,
+      backgroundColor: colors.border,
+      marginHorizontal: theme.spacing.xs,
+    },
+    stockLabel: {
+      fontSize: 9,
+      color: colors.textTertiary,
+      textTransform: "uppercase",
+    },
+    stockValue: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    stockValueLow: {
+      color: colors.warning,
+    },
+    stockValueCritical: {
+      color: colors.error,
+    },
+    supplierRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 4,
+      gap: 4,
+    },
+    supplierName: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      maxWidth: 100,
+    },
+    toggleContainer: {
+      paddingLeft: theme.spacing.sm,
+    },
+    statusBadge: {
+      position: "absolute",
+      top: 8,
+      left: 8,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: colors.warningSoft,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    statusBadgeCritical: {
+      backgroundColor: colors.errorSoft,
+    },
+    statusBadgeLow: {
+      backgroundColor: colors.warningSoft,
+    },
+  });
+}
 
 export default PolicyRow;

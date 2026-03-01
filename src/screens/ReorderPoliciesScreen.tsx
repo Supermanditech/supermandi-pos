@@ -75,7 +75,7 @@ export default function ReorderPoliciesScreen({
         });
         setPolicies(response.data);
       } catch (err) {
-        console.error("[ReorderPoliciesScreen] Failed to load policies:", err);
+        if (__DEV__) console.error("[ReorderPoliciesScreen] Failed to load policies:", err);
         setError("Failed to load reorder policies");
       } finally {
         setLoading(false);
@@ -177,7 +177,7 @@ export default function ReorderPoliciesScreen({
           isEnabled: enabled,
         });
       } catch (err) {
-        console.error("[ReorderPoliciesScreen] Failed to toggle:", err);
+        if (__DEV__) console.error("[ReorderPoliciesScreen] Failed to toggle:", err);
         // Revert on error
         setPolicies((prev) =>
           prev.map((p) => (p.id === policy.id ? { ...p, isEnabled: !enabled } : p))
@@ -325,7 +325,7 @@ export default function ReorderPoliciesScreen({
             color={colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => loadPolicies()}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => loadPolicies()}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -368,7 +368,7 @@ export default function ReorderPoliciesScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -400,7 +400,7 @@ export default function ReorderPoliciesScreen({
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery("")}>
+            <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")}>
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
@@ -550,6 +550,7 @@ function FilterChip({ label, selected, onPress, count, warning }: FilterChipProp
 
   return (
     <Pressable
+      accessibilityRole="button"
       style={[
         styles.filterChip,
         selected && styles.filterChipSelected,

@@ -402,8 +402,11 @@ export default function EnrollDeviceScreen() {
       const debugParts: string[] = [];
       if (error instanceof ApiError && error.status) debugParts.push(`status: ${error.status}`);
       debugParts.push(`code: ${rawMessage || errorKey}`);
-      debugParts.push(`api: ${API_BASE_URL}`);
-      if (Updates.channel) debugParts.push(`channel: ${Updates.channel}`);
+      // STG-393: Guard API_BASE_URL from production error alerts
+      if (__DEV__) {
+        debugParts.push(`api: ${API_BASE_URL}`);
+        if (Updates.channel) debugParts.push(`channel: ${Updates.channel}`);
+      }
 
         Alert.alert("Activation Failed", `${message}\n\n${hint}\n\n(${debugParts.join(", ")})`);
       setEnrollError(`${message} ${hint}`);
@@ -512,7 +515,7 @@ export default function EnrollDeviceScreen() {
 
       {/* ENROLL-MISSING-ERROR-STATE-UI: Persistent inline error banner after API failure */}
       {enrollError ? (
-        <View style={styles.enrollErrorBanner} testID="enroll-error-banner">
+        <View style={styles.enrollErrorBanner} testID="enroll-error-banner" accessibilityRole="alert">
           <MaterialCommunityIcons name="alert-circle" size={16} color={tc.error} />
           <Text style={styles.enrollErrorText}>{enrollError}</Text>
         </View>
@@ -738,6 +741,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.background,
   },
   enrollErrorBanner: {
     flexDirection: 'row',

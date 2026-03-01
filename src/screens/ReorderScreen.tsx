@@ -205,7 +205,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
         });
         setPendingReorders(response.data);
       } catch (err) {
-        console.error("[ReorderScreen] Failed to load pending reorders:", err);
+        if (__DEV__) console.error("[ReorderScreen] Failed to load pending reorders:", err);
         setError("Failed to load pending reorders");
       } finally {
         setLoading(false);
@@ -379,7 +379,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
                 ]
               );
             } catch (err) {
-              console.error("[ReorderScreen] Failed to approve:", err);
+              if (__DEV__) console.error("[ReorderScreen] Failed to approve:", err);
               Alert.alert(t("reorder.errorTitle"), t("reorder.approveFailed"));
             } finally {
               setApproving(false);

@@ -162,7 +162,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
       setStep("SELECT");
     } catch (_e: unknown) {
     const e = asError(_e);
-      console.error("[ReturnScreen] Lookup failed:", e);
+      if (__DEV__) console.error("[ReturnScreen] Lookup failed:", e);
       setLookupError(e?.message || "Bill not found. Please check the number.");
     } finally {
       setLookupLoading(false);
@@ -223,7 +223,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
       setStep("SUCCESS");
     } catch (_e: unknown) {
     const e = asError(_e);
-      console.error("[ReturnScreen] Process return failed:", e);
+      if (__DEV__) console.error("[ReturnScreen] Process return failed:", e);
       Alert.alert(
         "Return Failed",
         e?.message || "Could not process the return. Please try again."
@@ -617,6 +617,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
               <Text style={styles.lookupError}>{lookupError}</Text>
             )}
             <Pressable
+              accessibilityRole="button"
               style={[
                 styles.lookupButton,
                 (!billRefInput.trim() || lookupLoading) &&
@@ -685,6 +686,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                 </View>
                 <View style={styles.qtyPicker}>
                   <Pressable
+                    accessibilityRole="button"
                     style={[
                       styles.qtyButton,
                       returnQty === 0 && styles.qtyButtonDisabled,
@@ -711,6 +713,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                     {returnQty}
                   </Text>
                   <Pressable
+                    accessibilityRole="button"
                     style={[
                       styles.qtyButton,
                       returnQty >= item.quantity && styles.qtyButtonDisabled,
@@ -737,6 +740,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
           <Text style={styles.sectionTitle}>Reason for Return</Text>
           {RETURN_REASONS.map((r) => (
             <Pressable
+              accessibilityRole="radio"
               key={r}
               style={[
                 styles.reasonOption,
@@ -764,6 +768,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
           <View style={styles.refundMethods}>
             {REFUND_METHODS.map((m) => (
               <Pressable
+                accessibilityRole="radio"
                 key={m.id}
                 style={[
                   styles.refundMethodCard,
@@ -819,6 +824,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
 
           {/* Process button */}
           <Pressable
+            accessibilityRole="button"
             style={[
               styles.processButton,
               !canProceedToConfirm && styles.buttonDisabled,
@@ -877,7 +883,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
             <Text style={styles.successNote}>
               Stock has been reversed server-side.
             </Text>
-            <Pressable style={styles.newReturnButton} onPress={handleNewReturn}>
+            <Pressable accessibilityRole="button" style={styles.newReturnButton} onPress={handleNewReturn}>
               <Text style={styles.newReturnButtonText}>
                 Process Another Return
               </Text>

@@ -202,6 +202,7 @@ function PurchaseCard({ purchase, onQuickReorder }: { purchase: GroupedPurchase;
       {/* T-241: Quick Reorder Button */}
       {onQuickReorder && (
         <Pressable
+          accessibilityRole="button"
           style={styles.quickReorderButton}
           onPress={() => onQuickReorder(purchase)}
         >
@@ -399,11 +400,11 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable style={styles.backButton} onPress={onBack}>
+        <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>Purchase History</Text>
-        <Pressable style={styles.refreshButton} onPress={() => loadData(true)}>
+        <Pressable accessibilityRole="button" style={styles.refreshButton} onPress={() => loadData(true)}>
           <MaterialCommunityIcons name="refresh" size={22} color={colors.textSecondary} />
         </Pressable>
       </View>
@@ -430,7 +431,7 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
         <View style={styles.centerContent}>
           <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => loadData()}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => loadData()}>
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
@@ -442,7 +443,7 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNa
             Stock inward transactions will appear here.
           </Text>
           {onNavigateToInward && (
-            <Pressable style={styles.ctaButton} onPress={onNavigateToInward}>
+            <Pressable accessibilityRole="button" style={styles.ctaButton} onPress={onNavigateToInward}>
               <MaterialCommunityIcons name="package-down" size={18} color={colors.textInverse} />
               <Text style={styles.ctaButtonText}>Add Stock Inward</Text>
             </Pressable>

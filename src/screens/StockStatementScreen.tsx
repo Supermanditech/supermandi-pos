@@ -359,11 +359,11 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable style={styles.backButton} onPress={onBack}>
+        <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>Stock Statement</Text>
-        <Pressable style={styles.refreshButton} onPress={() => loadData(true)}>
+        <Pressable accessibilityRole="button" style={styles.refreshButton} onPress={() => loadData(true)}>
           <MaterialCommunityIcons name="refresh" size={22} color={colors.textSecondary} />
         </Pressable>
       </View>
@@ -397,7 +397,7 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
         <View style={styles.centerContent}>
           <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => loadData()}>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => loadData()}>
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>

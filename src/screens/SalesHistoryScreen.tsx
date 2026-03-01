@@ -229,6 +229,7 @@ export default function SalesHistoryScreen() {
 
   const renderItem = ({ item }: { item: BillSummary }) => (
     <Pressable
+      accessibilityRole="button"
       style={styles.billRow}
       onPress={() => navigation.navigate("BillDetail", { saleId: item.saleId, billRef: item.billRef })}
     >
@@ -273,6 +274,7 @@ export default function SalesHistoryScreen() {
           description={t('history.noBillsHint', 'Bills will appear here after you make sales.')}
         >
           <Pressable
+            accessibilityRole="button"
             style={styles.ctaButton}
             onPress={() => (navigation as any).navigate("SellScan")}
           >

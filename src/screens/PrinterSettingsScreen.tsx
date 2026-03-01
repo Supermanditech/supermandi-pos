@@ -216,7 +216,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
           </Pressable>
         )}
@@ -237,6 +237,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
           </Text>
           <View style={styles.radioGroup}>
             <Pressable
+              accessibilityRole="radio"
               style={[styles.radioOption, printerPaperWidth === 58 && styles.radioOptionSelected]}
               onPress={() => setPrinterPaperWidth(58)}
             >
@@ -254,6 +255,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
             </Pressable>
 
             <Pressable
+              accessibilityRole="radio"
               style={[styles.radioOption, printerPaperWidth === 80 && styles.radioOptionSelected]}
               onPress={() => setPrinterPaperWidth(80)}
             >
@@ -302,6 +304,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
           </Text>
           <View style={styles.copiesRow}>
             <Pressable
+              accessibilityRole="button"
               style={[styles.copyButton, printerCopies <= 1 && styles.copyButtonDisabled]}
               onPress={() => setPrinterCopies(printerCopies - 1)}
               disabled={printerCopies <= 1}
@@ -314,6 +317,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
             </Pressable>
             <Text style={styles.copiesText}>{printerCopies}</Text>
             <Pressable
+              accessibilityRole="button"
               style={[styles.copyButton, printerCopies >= 3 && styles.copyButtonDisabled]}
               onPress={() => setPrinterCopies(printerCopies + 1)}
               disabled={printerCopies >= 3}
@@ -330,6 +334,7 @@ export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenP
         {/* Test Print Button */}
         <View style={styles.section}>
           <Pressable
+            accessibilityRole="button"
             style={[styles.testButton, testPrinting && styles.testButtonDisabled]}
             onPress={handleTestPrint}
             disabled={testPrinting}
