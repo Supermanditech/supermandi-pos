@@ -1467,6 +1467,10 @@ input, select, textarea {
 .login-otp-expiry--normal {
   color: var(--text-muted);
 }
+/* STG-287: Dark mode contrast fix — 4.5:1 on dark card bg #1e293b */
+html.dark .login-otp-expiry--normal {
+  color: #94a3b8;
+}
 
 /* LoginPage: Button spinner wrapper */
 .login-btn-spinner {

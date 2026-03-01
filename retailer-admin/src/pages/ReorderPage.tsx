@@ -197,10 +197,12 @@ export default function ReorderPage() {
       </div>
 
       {/* Tabs */}
-      <div className="reorder-tabs">
+      <div className="reorder-tabs" role="tablist" aria-label="Reorder sections">
         {(['suggestions', 'pending', 'settings'] as const).map((t) => (
           <button
             key={t}
+            role="tab"
+            aria-selected={activeTab === t}
             onClick={() => setActiveTab(t)}
             className={`reorder-tab${activeTab === t ? ' reorder-tab--active' : ''}`}
           >
@@ -343,13 +345,13 @@ export default function ReorderPage() {
                   <span>Notify on low stock</span>
                 </label>
                 <div>
-                  <label className="reorder-field-label">Auto-approve threshold (amount in ₹, leave blank to disable)</label>
-                  <input type="number" min={0} value={editAutoApproveThreshold} onChange={(e) => setEditAutoApproveThreshold(e.target.value)} placeholder="No auto-approve" className="reorder-field-input" disabled={settingsSaving} />
+                  <label className="reorder-field-label" htmlFor="reorder-auto-approve">Auto-approve threshold (amount in ₹, leave blank to disable)</label>
+                  <input id="reorder-auto-approve" type="number" min={0} value={editAutoApproveThreshold} onChange={(e) => setEditAutoApproveThreshold(e.target.value)} placeholder="No auto-approve" className="reorder-field-input" disabled={settingsSaving} />
                   <span className="reorder-field-hint">Orders below this value auto-approve</span>
                 </div>
                 <div>
-                  <label className="reorder-field-label">Default lead time (days)</label>
-                  <input type="number" min={1} max={90} value={editDefaultLeadDays} onChange={(e) => setEditDefaultLeadDays(Number(e.target.value))} className="reorder-field-input--sm" disabled={settingsSaving} />
+                  <label className="reorder-field-label" htmlFor="reorder-lead-days">Default lead time (days)</label>
+                  <input id="reorder-lead-days" type="number" min={1} max={90} value={editDefaultLeadDays} onChange={(e) => setEditDefaultLeadDays(Number(e.target.value))} className="reorder-field-input--sm" disabled={settingsSaving} />
                 </div>
                 <button onClick={saveSettings} disabled={settingsSaving} className="btn btn-primary" style={{ width: 'fit-content' }}>
                   {settingsSaving ? 'Saving...' : 'Save Settings'}

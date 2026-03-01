@@ -463,7 +463,7 @@ export default function ForgotPasswordPage() {
             {step === 'emailSent' && (
               <>
                 <div className="forgot-center-section">
-                  <div className="forgot-icon-circle forgot-icon-circle--email">
+                  <div className="forgot-icon-circle forgot-icon-circle--email" aria-hidden="true">
                     &#9993;
                   </div>
                   <h2 className="login-card-title">Check Your Email</h2>
@@ -609,7 +609,7 @@ export default function ForgotPasswordPage() {
             {/* Success */}
             {step === 'success' && (
               <div className="forgot-center-section">
-                <div className="forgot-icon-circle forgot-icon-circle--success">
+                <div className="forgot-icon-circle forgot-icon-circle--success" aria-hidden="true">
                   &#10003;
                 </div>
                 <h2 className="login-card-title">Password Reset Successful</h2>

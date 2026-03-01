@@ -420,9 +420,12 @@ export default function ProductQueuePage() {
         >
           <div
             className="card pq-edit-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-approve-product-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="card-title">Edit & Approve Product</h3>
+            <h3 id="edit-approve-product-title" className="card-title">Edit & Approve Product</h3>
 
             {/* Product Info */}
             <div className="pq-product-info">
@@ -441,8 +444,9 @@ export default function ProductQueuePage() {
 
             {/* Edit Form */}
             <div className="form-group form-group-mb">
-              <label className="form-label">Product Name (editable)</label>
+              <label className="form-label" htmlFor="pq-edited-name">Product Name (editable)</label>
               <input
+                id="pq-edited-name"
                 type="text"
                 name="editedName"
                 className="form-input"
@@ -452,8 +456,9 @@ export default function ProductQueuePage() {
             </div>
 
             <div className="form-group form-group-mb">
-              <label className="form-label">Category (optional override)</label>
+              <label className="form-label" htmlFor="pq-edited-category">Category (optional override)</label>
               <input
+                id="pq-edited-category"
                 type="text"
                 name="editedCategory"
                 className="form-input"
@@ -497,8 +502,9 @@ export default function ProductQueuePage() {
 
               {editForm.marginType === 'percent' ? (
                 <div className="form-group">
-                  <label className="form-label">Margin Percentage (%)</label>
+                  <label className="form-label" htmlFor="pq-margin-percent">Margin Percentage (%)</label>
                   <input
+                    id="pq-margin-percent"
                     type="number"
                     name="marginPercent"
                     className="form-input"
@@ -512,8 +518,9 @@ export default function ProductQueuePage() {
                 </div>
               ) : (
                 <div className="form-group">
-                  <label className="form-label">Fixed Margin (₹)</label>
+                  <label className="form-label" htmlFor="pq-fixed-margin">Fixed Margin (₹)</label>
                   <input
+                    id="pq-fixed-margin"
                     type="number"
                     name="superMandiMarginMinor"
                     className="form-input"
@@ -555,8 +562,9 @@ export default function ProductQueuePage() {
 
               {editForm.bnplEligible && (
                 <div className="form-group">
-                  <label className="form-label">Max Payment Days</label>
+                  <label className="form-label" htmlFor="pq-bnpl-max-days">Max Payment Days</label>
                   <select
+                    id="pq-bnpl-max-days"
                     name="bnplMaxDays"
                     className="form-input"
                     value={editForm.bnplMaxDays}
@@ -600,16 +608,20 @@ export default function ProductQueuePage() {
         >
           <div
             className="card modal-card-custom"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reject-product-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="card-title">Reject Product</h3>
+            <h3 id="reject-product-title" className="card-title">Reject Product</h3>
             <p className="modal-confirm-text">
               Are you sure you want to reject <strong>{selectedProduct.productName}</strong>?
             </p>
 
             <div className="form-group form-group-mb">
-              <label className="form-label">Reason (optional)</label>
+              <label className="form-label" htmlFor="reject-product-reason">Reason (optional)</label>
               <textarea
+                id="reject-product-reason"
                 className="form-input"
                 rows={3}
                 placeholder="Enter reason for rejection..."

@@ -238,6 +238,7 @@ export default function InventoryPage() {
               key={f}
               className={`btn ${filter === f ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilter(f)}
+              aria-pressed={filter === f}
             >
               {f === 'all' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
             </button>
@@ -247,8 +248,9 @@ export default function InventoryPage() {
         {/* RET-AUD-034: Date Range Filter */}
         <div className="flex-between-wrap grid-mb">
           <div className="flex-row btn-icon">
-            <label className="form-label-inline">From:</label>
+            <label className="form-label-inline" htmlFor="inv-start-date">From:</label>
             <input
+              id="inv-start-date"
               type="date"
               value={startDate}
               max={endDate || undefined}
@@ -257,8 +259,9 @@ export default function InventoryPage() {
             />
           </div>
           <div className="flex-row btn-icon">
-            <label className="form-label-inline">To:</label>
+            <label className="form-label-inline" htmlFor="inv-end-date">To:</label>
             <input
+              id="inv-end-date"
               type="date"
               value={endDate}
               min={startDate || undefined}

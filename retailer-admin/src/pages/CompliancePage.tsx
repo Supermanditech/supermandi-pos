@@ -219,8 +219,9 @@ export default function CompliancePage() {
             <form onSubmit={handleUpload}>
               <div className="grid grid-2 grid-mb">
                 <div className="form-group">
-                  <label className="form-label">Document Type *</label>
+                  <label className="form-label" htmlFor="compliance-doc-type">Document Type *</label>
                   <select
+                    id="compliance-doc-type"
                     className="form-input"
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
@@ -234,8 +235,9 @@ export default function CompliancePage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">File * (PDF, JPG, PNG - max {MAX_DOCUMENT_SIZE_LABEL})</label>
+                  <label className="form-label" htmlFor="compliance-doc-file">File * (PDF, JPG, PNG - max {MAX_DOCUMENT_SIZE_LABEL})</label>
                   <input
+                    id="compliance-doc-file"
                     type="file"
                     className="form-input"
                     accept=".pdf,.jpg,.jpeg,.png"

@@ -252,16 +252,20 @@ export default function SupplierQueuePage() {
         >
           <div
             className="card modal-card-custom"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reject-supplier-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="card-title">Reject Supplier</h3>
+            <h3 id="reject-supplier-title" className="card-title">Reject Supplier</h3>
             <p className="modal-confirm-text">
               Are you sure you want to reject <strong>{selectedSupplier.businessName}</strong>?
             </p>
 
             <div className="form-group form-group-mb">
-              <label className="form-label">Reason (optional)</label>
+              <label className="form-label" htmlFor="reject-supplier-reason">Reason (optional)</label>
               <textarea
+                id="reject-supplier-reason"
                 className="form-input"
                 rows={3}
                 placeholder="Enter reason for rejection..."

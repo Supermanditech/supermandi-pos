@@ -122,7 +122,7 @@ export default function ResetPasswordPage() {
           <div className="login-card-box">
             {step === 'missing-params' ? (
               <div className="forgot-center-section">
-                <div className="forgot-icon-circle forgot-icon-circle--error">
+                <div className="forgot-icon-circle forgot-icon-circle--error" aria-hidden="true">
                   !
                 </div>
                 <h2 className="login-card-title">Invalid Reset Link</h2>
@@ -141,7 +141,7 @@ export default function ResetPasswordPage() {
               </div>
             ) : step === 'success' ? (
               <div className="forgot-center-section">
-                <div className="forgot-icon-circle forgot-icon-circle--success">
+                <div className="forgot-icon-circle forgot-icon-circle--success" aria-hidden="true">
                   &#10003;
                 </div>
                 <h2 className="login-card-title">Password Reset Successful</h2>
@@ -206,7 +206,8 @@ export default function ResetPasswordPage() {
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
                         className="login-password-toggle"
-                        tabIndex={-1}
+                        aria-pressed={showNewPassword}
+                        aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
                       >
                         {showNewPassword ? 'Hide' : 'Show'}
                       </button>
@@ -230,7 +231,8 @@ export default function ResetPasswordPage() {
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="login-password-toggle"
-                        tabIndex={-1}
+                        aria-pressed={showConfirmPassword}
+                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                       >
                         {showConfirmPassword ? 'Hide' : 'Show'}
                       </button>

@@ -326,6 +326,7 @@ export default function ImportPage() {
             <div
               key={s}
               className="imp-step"
+              aria-current={step === s ? 'step' : undefined}
               style={{
                 background: step === s ? 'var(--primary)' : i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? 'var(--step-completed-bg)' : 'var(--border)',
                 color: step === s || i < ['upload', 'validate', 'review', 'commit', 'done'].indexOf(step) ? 'var(--step-completed-text)' : 'var(--text-muted)',

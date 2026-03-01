@@ -261,10 +261,11 @@ export default function PaymentsPage() {
 
           <div className="pay-bank-grid">
             <div>
-              <label className="pay-bank-label">
+              <label className="pay-bank-label" htmlFor="pay-bank-account">
                 Bank Account Number
               </label>
               <input
+                id="pay-bank-account"
                 type="text"
                 value={settings.bankAccount}
                 onChange={handleBankAccountChange}
@@ -274,10 +275,11 @@ export default function PaymentsPage() {
             </div>
 
             <div>
-              <label className="pay-bank-label">
+              <label className="pay-bank-label" htmlFor="pay-ifsc-code">
                 IFSC Code
               </label>
               <input
+                id="pay-ifsc-code"
                 type="text"
                 value={settings.ifscCode}
                 onChange={handleIfscChange}

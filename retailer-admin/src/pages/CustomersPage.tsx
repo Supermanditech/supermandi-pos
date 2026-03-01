@@ -210,6 +210,7 @@ export default function CustomersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="cust-search-input"
+              aria-label="Search customers by name or phone"
             />
           </div>
           <button onClick={() => fetchCustomers(search || undefined)} disabled={loading} className="btn btn-secondary btn-icon">

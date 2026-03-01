@@ -579,8 +579,9 @@ export default function SuppliersPage() {
   const IdentitySection = () => (
     <div className="sup-section-grid">
       <div className="form-group">
-        <label className="form-label">Supplier Type</label>
+        <label className="form-label" htmlFor="sup-supplier-type">Supplier Type</label>
         <select
+          id="sup-supplier-type"
           name="supplierType"
           className="form-input"
           value={formData.supplierType}
@@ -595,8 +596,9 @@ export default function SuppliersPage() {
 
       <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">Business Name (Legal) *</label>
+          <label className="form-label" htmlFor="sup-business-name">Business Name (Legal) *</label>
           <input
+            id="sup-business-name"
             type="text"
             name="businessName"
             className="form-input"
@@ -607,8 +609,9 @@ export default function SuppliersPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Trade Name / Shop Name</label>
+          <label className="form-label" htmlFor="sup-trade-name">Trade Name / Shop Name</label>
           <input
+            id="sup-trade-name"
             type="text"
             name="tradeName"
             className="form-input"
@@ -621,8 +624,9 @@ export default function SuppliersPage() {
 
       <div className="grid grid-3 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">GSTIN</label>
+          <label className="form-label" htmlFor="sup-gstin">GSTIN</label>
           <input
+            id="sup-gstin"
             type="text"
             name="gstin"
             className="form-input"
@@ -639,8 +643,9 @@ export default function SuppliersPage() {
           )}
         </div>
         <div className="form-group">
-          <label className="form-label">PAN</label>
+          <label className="form-label" htmlFor="sup-pan">PAN</label>
           <input
+            id="sup-pan"
             type="text"
             name="pan"
             className="form-input"
@@ -651,8 +656,9 @@ export default function SuppliersPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">FSSAI License</label>
+          <label className="form-label" htmlFor="sup-fssai">FSSAI License</label>
           <input
+            id="sup-fssai"
             type="text"
             name="fssai"
             className="form-input"
@@ -671,8 +677,9 @@ export default function SuppliersPage() {
     <div className="sup-section-grid">
       <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">Primary Phone *</label>
+          <label className="form-label" htmlFor="sup-primary-phone">Primary Phone *</label>
           <input
+            id="sup-primary-phone"
             type="tel"
             name="primaryPhone"
             className="form-input"
@@ -692,8 +699,9 @@ export default function SuppliersPage() {
           </label>
         </div>
         <div className="form-group">
-          <label className="form-label">Secondary Phone</label>
+          <label className="form-label" htmlFor="sup-secondary-phone">Secondary Phone</label>
           <input
+            id="sup-secondary-phone"
             type="tel"
             name="secondaryPhone"
             className="form-input"
@@ -705,8 +713,9 @@ export default function SuppliersPage() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Email</label>
+        <label className="form-label" htmlFor="sup-email">Email</label>
         <input
+          id="sup-email"
           type="email"
           name="email"
           className="form-input"
@@ -718,8 +727,9 @@ export default function SuppliersPage() {
 
       <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">Address Line 1</label>
+          <label className="form-label" htmlFor="sup-address-line1">Address Line 1</label>
           <input
+            id="sup-address-line1"
             type="text"
             name="addressLine1"
             className="form-input"
@@ -729,8 +739,9 @@ export default function SuppliersPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Address Line 2</label>
+          <label className="form-label" htmlFor="sup-address-line2">Address Line 2</label>
           <input
+            id="sup-address-line2"
             type="text"
             name="addressLine2"
             className="form-input"
@@ -743,8 +754,9 @@ export default function SuppliersPage() {
 
       <div className="grid grid-4 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">Area</label>
+          <label className="form-label" htmlFor="sup-area">Area</label>
           <input
+            id="sup-area"
             type="text"
             name="area"
             className="form-input"
@@ -754,8 +766,9 @@ export default function SuppliersPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">City</label>
+          <label className="form-label" htmlFor="sup-city">City</label>
           <input
+            id="sup-city"
             type="text"
             name="city"
             className="form-input"
@@ -765,8 +778,9 @@ export default function SuppliersPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">State</label>
+          <label className="form-label" htmlFor="sup-state">State</label>
           <input
+            id="sup-state"
             type="text"
             name="state"
             className="form-input"
@@ -776,8 +790,9 @@ export default function SuppliersPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Pincode</label>
+          <label className="form-label" htmlFor="sup-pincode">Pincode</label>
           <input
+            id="sup-pincode"
             type="text"
             name="pincode"
             className="form-input"
@@ -791,8 +806,9 @@ export default function SuppliersPage() {
 
       <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">Service Area</label>
+          <label className="form-label" htmlFor="sup-service-area">Service Area</label>
           <input
+            id="sup-service-area"
             type="text"
             name="serviceArea"
             className="form-input"
@@ -802,8 +818,9 @@ export default function SuppliersPage() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Delivery/Dispatch Point</label>
+          <label className="form-label" htmlFor="sup-dispatch-point">Delivery/Dispatch Point</label>
           <input
+            id="sup-dispatch-point"
             type="text"
             name="deliveryAddress"
             className="form-input"
@@ -821,8 +838,9 @@ export default function SuppliersPage() {
     <div className="sup-section-grid">
       <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">Payment Terms</label>
+          <label className="form-label" htmlFor="sup-payment-terms">Payment Terms</label>
           <select
+            id="sup-payment-terms"
             name="paymentTerms"
             className="form-input"
             value={formData.paymentTerms}
@@ -834,8 +852,9 @@ export default function SuppliersPage() {
           </select>
         </div>
         <div className="form-group">
-          <label className="form-label">Credit Days</label>
+          <label className="form-label" htmlFor="sup-credit-days">Credit Days</label>
           <input
+            id="sup-credit-days"
             type="number"
             name="creditDays"
             className="form-input"
@@ -850,9 +869,10 @@ export default function SuppliersPage() {
 
       <div className="grid grid-2 sup-grid-gap">
         <div className="form-group">
-          <label className="form-label">Min Order Value (₹)</label>
+          <label className="form-label" htmlFor="sup-min-order">Min Order Value (₹)</label>
           {/* GL-CRIT-0105: Added step and explicit min/max to prevent invalid values */}
           <input
+            id="sup-min-order"
             type="number"
             name="minOrderValue"
             className="form-input"
@@ -866,9 +886,10 @@ export default function SuppliersPage() {
           <small className="sup-small-hint">Minimum order amount in rupees (0 = no minimum)</small>
         </div>
         <div className="form-group">
-          <label className="form-label">Delivery Charges (₹)</label>
+          <label className="form-label" htmlFor="sup-delivery-charges">Delivery Charges (₹)</label>
           {/* GL-CRIT-0104: Changed to numeric input with "free above" option */}
           <input
+            id="sup-delivery-charges"
             type="number"
             name="deliveryCharges"
             className="form-input"
@@ -884,8 +905,9 @@ export default function SuppliersPage() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Delivery Schedule</label>
+        <label className="form-label" htmlFor="sup-delivery-schedule">Delivery Schedule</label>
         <input
+          id="sup-delivery-schedule"
           type="text"
           name="deliverySchedule"
           className="form-input"
@@ -932,8 +954,9 @@ export default function SuppliersPage() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Price Source</label>
+        <label className="form-label" htmlFor="sup-price-source">Price Source</label>
         <select
+          id="sup-price-source"
           name="priceSource"
           className="form-input"
           value={formData.priceSource}
@@ -952,8 +975,8 @@ export default function SuppliersPage() {
   const MetadataSection = () => (
     <div className="sup-section-grid">
       <div className="form-group">
-        <label className="form-label">Categories Supplied</label>
-        <div className="sup-cat-chips">
+        <label className="form-label" htmlFor="sup-categories">Categories Supplied</label>
+        <div id="sup-categories" className="sup-cat-chips">
           {SUPPLIER_CATEGORIES.map(category => (
             <label
               key={category}
@@ -975,8 +998,9 @@ export default function SuppliersPage() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Brands Supplied</label>
+        <label className="form-label" htmlFor="sup-brands">Brands Supplied</label>
         <input
+          id="sup-brands"
           type="text"
           name="brandsSupplied"
           className="form-input"
@@ -987,8 +1011,9 @@ export default function SuppliersPage() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Preferred Ordering Channel</label>
+        <label className="form-label" htmlFor="sup-ordering-channel">Preferred Ordering Channel</label>
         <select
+          id="sup-ordering-channel"
           name="orderingChannel"
           className="form-input"
           value={formData.orderingChannel}
@@ -1002,8 +1027,9 @@ export default function SuppliersPage() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Notes</label>
+        <label className="form-label" htmlFor="sup-notes">Notes</label>
         <textarea
+          id="sup-notes"
           name="notes"
           className="form-input"
           rows={3}
@@ -1172,13 +1198,16 @@ export default function SuppliersPage() {
           >
             <div
               className="card sup-modal-card--lg"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="locked-supplier-title"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="sup-locked-header">
                 <span className="sup-locked-icon">
                   {lockedSupplierModal.status === 'verified' ? '🔒' : '⏳'}
                 </span>
-                <h3 className="card-title" style={{ margin: 0 }}>
+                <h3 id="locked-supplier-title" className="card-title" style={{ margin: 0 }}>
                   {lockedSupplierModal.status === 'verified' ? 'Verified Supplier' : 'Pending Approval'}
                 </h3>
               </div>
@@ -1280,6 +1309,7 @@ export default function SuppliersPage() {
                   {/* Section Header - Collapsible */}
                   <button
                     onClick={() => toggleSection(config.key)}
+                    aria-expanded={!isCollapsed}
                     className="sup-section-header"
                     style={{ background: config.bgColor }}
                   >

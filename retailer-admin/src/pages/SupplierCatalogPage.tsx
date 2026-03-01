@@ -194,6 +194,7 @@ export default function SupplierCatalogPage() {
             placeholder="Search by product name or barcode..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Search supplier catalog by product name or barcode"
           />
         </div>
 
