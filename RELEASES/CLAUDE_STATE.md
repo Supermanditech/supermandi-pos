@@ -2724,8 +2724,11 @@ Claude must audit from fresh git truth and real product behavior expectations, o
 ### Canonical Baseline
 
 1. baseline SHA must be locked before this audit starts
-2. current canonical baseline for the next round is `main@940e0832`
-3. all new findings from this round append as `STG-287+`
+2. current canonical baseline for the active resumed round is `main@fd6f1b4b`
+3. authoritative findings already parked in tracker for this round:
+   - Retailer Web: `STG-287..347`
+   - Supplier Web: `STG-348..373`
+4. all fresh new findings from the resumed round append as `STG-374+`
 
 ### Fixed Platform Order
 
@@ -2808,9 +2811,58 @@ Claude must not exit a screen while any of the following remain unresolved for t
 ### Issue Handling
 
 1. preserve `STG-001..286` as frozen historical record
-2. all new findings from this audit append as `STG-287+`
-3. regressions against previously fixed STG items also get new STG IDs
-4. no silent rewriting of historical issues
+2. preserve already parked final-mega findings `STG-287..373` as active current-round truth
+3. all fresh new findings from the resumed audit append as `STG-392+`
+4. regressions against previously fixed STG items also get new STG IDs
+5. no silent rewriting of historical issues
+
+### Resumed Execution State
+
+1. Retailer Web audit: COMPLETE — parked in tracker (`STG-287..347`, 61 findings, 29/29 screens, 4 clean)
+2. Supplier Web audit: COMPLETE — parked in tracker (`STG-348..373`, 26 findings, 20/20 screens, 6 clean)
+3. SuperAdmin Web audit: COMPLETE — parked in tracker (`STG-374..391,409`, 19 findings, 25/25 screens, 4 clean)
+4. POS App audit: COMPLETE — parked in tracker (`STG-392..408`, 17 findings, 44/44 screens, 10 clean)
+5. All 4 platforms fully audited and reconciled. 123 total findings across 118 screens. 24 clean. Awaiting operator triage.
+
+### POS App Strict Mode
+
+POS App is the highest-risk platform in this final audit because it crosses:
+
+1. retailer workflows
+2. supplier/catalog workflows
+3. superadmin controls
+4. payments
+5. stock and inventory
+6. offline SQLite/outbox behavior
+7. scanners, printers, SSE, sync, WhatsApp, and device session logic
+
+For POS only, the following extra rules are mandatory:
+
+1. no POS screen may be marked `CLEAN` or `COMPLETED` until the full screen file is read
+2. all major action branches in that screen must be traced
+3. dependent stores, hooks, services, and API modules must be inspected where relevant
+4. cross-functional downstream impact must be checked where relevant:
+   - retailer impact
+   - supplier/catalog impact
+   - superadmin/control-plane impact
+   - stock/payment/reporting impact
+5. offline, sync, SSE, printer, scanner, device session, and staff auth implications must be checked where relevant
+6. if any screen contains mock, demo, stub, fallback, seed, fake, placeholder, hardcoded dev/test path, or non-production-only behavior, Claude must log it as a finding unless it is explicitly guarded, intentional, and production-safe
+7. any production-grade concern discovered in mocks or fake paths must be appended as a finding even if the path is not currently user-visible
+
+### POS Mock / Demo / Non-Production Detection Rule
+
+Claude must explicitly inspect and report any of the following if present in POS screens or their dependencies:
+
+1. mock data
+2. stub API paths
+3. demo mode
+4. fake success/fake fallback behavior
+5. hardcoded test IDs or seed assumptions that affect behavior
+6. bypass logic for offline/demo that would not be production-safe
+7. feature flags or dead branches that mask incomplete production logic
+
+If such behavior exists and is not clearly production-safe, it must be appended as a finding.
 
 ### Full Audit Completion Gate
 

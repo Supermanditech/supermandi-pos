@@ -2891,8 +2891,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 ## FINAL_MEGA_GO_LIVE_AUDIT — Retailer Web (STG-287..347)
 
 > **Audit baseline**: `main@940e0832` | **Platform**: Retailer Web (`retailer-admin/`)
+> **Source manifest**: 30 .tsx files in `src/pages/` (AllPagesPage excluded — DEV-only route)
 > **Screens audited**: 29/29 | **Findings**: 61 (0 P0, 0 P1, 9 P2, 52 P3)
-> **Clean screens**: 5 | **Blocked screens**: 0
+> **Clean screens**: 4 (HelpDashboardPage, HelpPage, NotFoundPage, ReconciliationPage) | **Blocked screens**: 0
 
 ### STG-287: Retailer Web — LoginPage — Dark mode contrast on OTP expiry text
 - **Platform**: Retailer Web
@@ -3326,8 +3327,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 ## FINAL_MEGA_GO_LIVE_AUDIT — Supplier Web (STG-348..373)
 
 > **Audit baseline**: `main@940e0832` | **Platform**: Supplier Web (`supplier-portal/`)
+> **Source manifest**: 20 `page.tsx` files in `src/app/`
 > **Screens audited**: 20/20 | **Findings**: 26 (0 P0, 0 P1, 3 P2, 23 P3)
-> **Clean screens**: 6 | **Blocked screens**: 0
+> **Clean screens**: 6 (pending-approval, bnpl-orders, dashboard, upload, help-public, root-page) | **Blocked screens**: 0
 
 ### STG-348: Supplier Web — Login — Error messages lack role="alert" / aria-live
 - **Platform**: Supplier Web
@@ -3508,6 +3510,289 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Platform**: Supplier Web
 - **Screen**: Help - Dashboard (`(dashboard)/help`)
 - **Finding**: Both `app/help/page.tsx` and `app/(dashboard)/help/page.tsx` resolve to `/supplier/help/`. Non-grouped route takes precedence in Next.js App Router, making dashboard help unreachable. Combined with middleware gap, this is effectively dead code.
+- **Severity**: P2
+- **Status**: FOUND
+
+## FINAL_MEGA_GO_LIVE_AUDIT — SuperAdmin Web (STG-374..391, STG-409)
+
+> **Audit baseline**: `main@940e0832` | **Platform**: SuperAdmin Web (`supermandi-superadmin/`)
+> **Source manifest**: 25 auditable units (23 tabs + LoginGate + App.tsx shell)
+> **Screens audited**: 25/25 | **Findings**: 19 (0 P0, 0 P1, 0 P2, 19 P3)
+> **Clean screens**: 4 (ApplicationsTab, DevicesTab, PaymentsTab, SettingsTab) | **Blocked screens**: 0
+
+### STG-374: SuperAdmin — LoginGate — Double min-height causes scrollbar
+- **Platform**: SuperAdmin Web
+- **Screen**: LoginGate (`/admin/` unauthenticated)
+- **Finding**: `.loginContainer` sets `min-height: 100vh` AND `body, #root` also set `min-height: 100vh`. Combined, the page can exceed viewport height by the body margin, producing a scrollbar on desktop.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-375: SuperAdmin — LoginGate — OTP input missing inputMode numeric
+- **Platform**: SuperAdmin Web
+- **Screen**: LoginGate (`/admin/` OTP step)
+- **Finding**: OTP `<input type="text">` lacks `inputMode="numeric"`. On mobile devices, the full keyboard is shown instead of the numeric keypad, degrading UX for a digits-only field.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-376: SuperAdmin — App Shell — Toast background invisible in dark mode
+- **Platform**: SuperAdmin Web
+- **Screen**: App Shell (global toast)
+- **Finding**: Toast container uses hardcoded `background: #0F172A` (dark navy). In dark mode where the page background is similarly dark, toast messages are invisible/unreadable.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-377: SuperAdmin — App Shell — Sidebar subtitle hardcoded color
+- **Platform**: SuperAdmin Web
+- **Screen**: App Shell (sidebar brand area)
+- **Finding**: `.sidebarBrandSubtitle` uses hardcoded `color: #94A3B8` instead of a CSS variable. In dark mode, this color lacks sufficient contrast against the sidebar background.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-378: SuperAdmin — App Shell — Sidebar brand logo missing dark mode swap
+- **Platform**: SuperAdmin Web
+- **Screen**: App Shell (sidebar brand area)
+- **Finding**: Sidebar brand logo `<img>` always loads the same image regardless of theme. No dark mode variant or CSS filter to maintain visibility against dark sidebar backgrounds.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-379: SuperAdmin — Events Tab — Date filter doesn't reset page
+- **Platform**: SuperAdmin Web
+- **Screen**: Events Tab (`#events`)
+- **Finding**: When changing the date range filter, the `page` state is not reset to 1. If the user is on page 5 and changes the date range, the API fetches page 5 of the new date range, which may return empty or fewer results.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-380: SuperAdmin — [SYSTEMIC] — Filter controls lack label-input a11y association
+- **Platform**: SuperAdmin Web
+- **Screen**: Multiple tabs (Events, Stores, Staff, Invoices, Refunds, GST, Suppliers, Analytics, Audit, Users, WhatsApp, and others)
+- **Finding**: Filter `<select>` and `<input>` elements lack `id` attributes and corresponding `<label htmlFor>` associations. Screen readers cannot associate visible labels with their controls. This is a portal-wide systemic pattern.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-381: SuperAdmin — [SYSTEMIC] — .sa-text-danger missing dark mode override
+- **Platform**: SuperAdmin Web
+- **Screen**: Multiple tabs using `.sa-text-danger` class
+- **Finding**: `.sa-text-danger` is defined in `:root` as `color: var(--color-error)` but has no `html.dark` override. `--color-error` resolves to `#DC2626` in both light and dark mode. While red-on-dark is readable, it differs from the pattern where other semantic text classes have explicit dark mode overrides.
+- **Severity**: P4
+- **Status**: FOUND
+
+### STG-382: SuperAdmin — GRN Alerts — Pagination button class inconsistency
+- **Platform**: SuperAdmin Web
+- **Screen**: GRN Alerts Tab (`#grn-alerts`)
+- **Finding**: Previous button uses `className="sa-btn-sm"` (line 96) while Next button uses `className="btn btnSm"` (line 98). Mixed class systems (sa-prefixed design system vs legacy classes) cause inconsistent button styling.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-383: SuperAdmin — Invoices — Clickable cell not keyboard accessible
+- **Platform**: SuperAdmin Web
+- **Screen**: Invoices Tab (`#invoices`)
+- **Finding**: Invoice number `<td>` elements have `cursor: pointer` and `onClick` handlers but lack `role="button"`, `tabIndex={0}`, and `onKeyDown` handlers. Keyboard-only users cannot activate the detail view.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-384: SuperAdmin — Invoices — Detail modal lacks Escape handler and focus trap
+- **Platform**: SuperAdmin Web
+- **Screen**: Invoices Tab (`#invoices`, detail modal)
+- **Finding**: Invoice detail modal overlay closes on backdrop click but does not close on Escape key press. No focus trap — Tab key can reach elements behind the modal.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-385: SuperAdmin — GST Compliance — Month input missing label
+- **Platform**: SuperAdmin Web
+- **Screen**: GST Compliance Tab (`#gst`)
+- **Finding**: The `<input type="month">` control has no associated `<label>` element. Screen readers announce it as an unlabeled input.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-386: SuperAdmin — GST Compliance — Detail modal close button lacks aria-label
+- **Platform**: SuperAdmin Web
+- **Screen**: GST Compliance Tab (`#gst`, detail modal)
+- **Finding**: Modal close button renders `&times;` (×) character with no `aria-label`. Screen readers announce "button times" instead of "button close".
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-387: SuperAdmin — [SYSTEMIC] — Local date formatting without IST timezone
+- **Platform**: SuperAdmin Web
+- **Screen**: Multiple tabs (RefundsTab, QualityDashboardTab, SupportQueueTab, AIInsightsTab, RegistrationsTab, SuppliersTab, UsersTab, AnalyticsTab)
+- **Finding**: Several tabs define local `formatDate`/`formatTime` helper functions using `toLocaleString("en-IN")` or `toLocaleDateString()` without specifying `timeZone: "Asia/Kolkata"`. The shared `formatDateTime` in `lib/formatters.ts` correctly uses `Asia/Kolkata`, but these local helpers use the browser's local timezone, causing date/time display inconsistencies for users outside IST.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-388: SuperAdmin — Monitoring — Dev ticket reference in production UI
+- **Platform**: SuperAdmin Web
+- **Screen**: Monitoring Tab (`#monitoring`)
+- **Finding**: Subtitle text displays "T-223: System Health Dashboard" — the `T-223:` prefix is an internal ticket reference that should not appear in production UI.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-389: SuperAdmin — Credit Providers — Summary grid doesn't collapse on mobile
+- **Platform**: SuperAdmin Web
+- **Screen**: Credit Providers Tab (`#credit-providers`)
+- **Finding**: Summary cards use `gridTemplateColumns: "repeat(5, 1fr)"` with hardcoded 5-column layout. On narrow viewports, cards compress to unreadable widths instead of wrapping. Should use `repeat(auto-fit, minmax(180px, 1fr))` or similar responsive pattern.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-390: SuperAdmin — Support Queue — Conversation list not keyboard accessible
+- **Platform**: SuperAdmin Web
+- **Screen**: Support Queue Tab (`#support`)
+- **Finding**: Conversation list items are `<div>` elements with `onClick` handlers but no `role="button"`, `tabIndex={0}`, or `onKeyDown` handlers. Keyboard-only users cannot navigate or select conversations.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-391: SuperAdmin — Support Queue — Conversation list fixed width on mobile
+- **Platform**: SuperAdmin Web
+- **Screen**: Support Queue Tab (`#support`)
+- **Finding**: Conversation sidebar uses `width: 300` (fixed pixels). On viewports narrower than ~600px, the sidebar and message panel cannot coexist, causing horizontal overflow. Should collapse to full-width with a toggle or use responsive breakpoints.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-409: SuperAdmin — Documents Tab — Modal lacks Escape handler and focus trap
+- **Platform**: SuperAdmin Web
+- **Screen**: Documents Tab (`#documents`, review modal)
+- **Finding**: Document review modal overlay closes on backdrop click but does not close on Escape key press. No focus trap — Tab key can reach elements behind the modal. Same pattern as STG-384 (Invoices modal).
+- **Severity**: P3
+- **Status**: FOUND
+
+---
+
+## FINAL_MEGA_GO_LIVE_AUDIT — POS App (STG-392..408)
+
+> **Audit baseline**: `main@fd6f1b4b` | **Platform**: POS App (`src/screens/`)
+> **Source manifest**: 44 .tsx files in `src/screens/`
+> **Screens audited**: 44/44 | **Findings**: 17 (0 P0, 0 P1, 2 P2, 15 P3)
+> **Clean screens**: 10 (SplashScreen, ForceUpdateScreen, DeviceBlockedScreen, StaffLoginScreen, PosRootLayout, BulkPurchaseCreditScreen, ChatListScreen, ChatConversationScreen, AIInsightsScreen, HelpScreen) | **Blocked screens**: 0
+
+### STG-392: POS — EnrollDeviceScreen — sessionCheckContainer missing backgroundColor
+- **Platform**: POS App
+- **Screen**: EnrollDeviceScreen (`src/screens/EnrollDeviceScreen.tsx`)
+- **Finding**: The `sessionCheckContainer` style (line ~425) has no `backgroundColor`, inheriting from the parent. When the screen transitions between the enrollment form and the session-check phase, the background can briefly flash to transparent before the parent's background applies, creating a visual flicker on slower devices.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-393: POS — EnrollDeviceScreen — API_BASE_URL exposed in production error Alert
+- **Platform**: POS App
+- **Screen**: EnrollDeviceScreen (`src/screens/EnrollDeviceScreen.tsx`)
+- **Finding**: Line ~299 constructs an error message that includes `API_BASE_URL` in the user-facing Alert when enrollment fails: `"Enrollment failed: ${err.message} (API: ${API_BASE_URL})"`. In production builds, this exposes the backend API host to end users. Should be guarded by `__DEV__` or removed from the user-facing message entirely.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-394: POS — EnrollDeviceScreen — Inline error banner lacks accessibilityRole="alert"
+- **Platform**: POS App
+- **Screen**: EnrollDeviceScreen (`src/screens/EnrollDeviceScreen.tsx`)
+- **Finding**: The inline error banner (rendered when `errorMsg` is set) uses a plain `<Text>` without `accessibilityRole="alert"` or `accessibilityLiveRegion="assertive"`. Screen readers will not announce the error automatically when it appears.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-395: POS — PaymentSetupScreen — Save/Skip buttons missing accessibility attributes
+- **Platform**: POS App
+- **Screen**: PaymentSetupScreen (`src/screens/PaymentSetupScreen.tsx`)
+- **Finding**: The "Save & Continue" Pressable (line ~350) and "Skip for Now" Pressable (line ~363) have `testID` but no `accessibilityRole="button"` or `accessibilityLabel`. Screen readers cannot identify these as actionable buttons.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-396: POS — SellScanScreen — Multiple interactive elements missing accessibilityRole
+- **Platform**: POS App
+- **Screen**: SellScanScreen (`src/screens/SellScanScreen.tsx`)
+- **Finding**: Multiple interactive Pressable elements throughout the 2900+ line screen (category chips, cart items, quantity steppers, product cards, action buttons in bottom bar) lack `accessibilityRole="button"` or appropriate accessibility labels. Only a small fraction of interactive elements have a11y attributes.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-397: POS — SellScanScreen — console.warn/error not guarded by __DEV__
+- **Platform**: POS App
+- **Screen**: SellScanScreen (`src/screens/SellScanScreen.tsx`)
+- **Finding**: 9 occurrences of unguarded `console.warn` / `console.error` at lines 1004, 1044, 1604, 1635, 1697, 1756, 2095, 2179, 2903. These will output diagnostic messages (including function names, error details) in production builds. Should be wrapped in `if (__DEV__)` guards.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-398: POS — PurchaseScreen — console.warn/error not guarded by __DEV__
+- **Platform**: POS App
+- **Screen**: PurchaseScreen (`src/screens/PurchaseScreen.tsx`)
+- **Finding**: 3 unguarded console statements at lines 271 (`console.warn` for supplier lookup fallback), 342 (`console.error` for fetchCatalog), 396 (`console.error` for buyBarcodeSearch). Production builds will log diagnostic messages with error details.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-399: POS — PurchaseScreen — Multiple Pressable elements missing accessibility attributes
+- **Platform**: POS App
+- **Screen**: PurchaseScreen (`src/screens/PurchaseScreen.tsx`)
+- **Finding**: Interactive elements including the Quick Purchase card, Live Suppliers card, supplier list items, catalog product cards, cart summary bar, and action buttons lack `accessibilityRole` and `accessibilityLabel` attributes. Only a small fraction of Pressable elements have a11y attributes.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-400: POS — CatalogProductCard + ProductDetailModal — Static theme.colors (dark mode regression)
+- **Platform**: POS App
+- **Screen**: PurchaseScreen child components
+- **Finding**: `src/components/buy/CatalogProductCard.tsx` (268 lines) and `src/components/buy/ProductDetailModal.tsx` (520 lines) use static `theme.colors` imports instead of the `useThemeColors()` hook pattern. All screen-level files use the dynamic hook, but these two child components will not respond to theme changes, creating a dark mode regression where product cards and the detail modal remain light-themed.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-401: POS — ReorderScreen — console.error not guarded by __DEV__
+- **Platform**: POS App
+- **Screen**: ReorderScreen (`src/screens/ReorderScreen.tsx`)
+- **Finding**: 2 unguarded `console.error` calls at lines 208 (load failure) and 382 (approve failure). Production builds will log diagnostic messages including error objects.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-402: POS — Reorder child components — Static theme.colors (dark mode regression)
+- **Platform**: POS App
+- **Screen**: ReorderScreen child components (`src/components/reorder/`)
+- **Finding**: All 5 reorder child components (`PendingReorderCard.tsx`, `DismissReasonModal.tsx`, `EditReorderModal.tsx`, `SupplierSelectModal.tsx`, `QuantityInput.tsx`) use static `theme.colors` instead of `useThemeColors()`. The parent ReorderScreen uses the dynamic hook correctly, but child components will not respond to theme changes — dark mode regression.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-403: POS — CreditScreen — console.error not guarded by __DEV__
+- **Platform**: POS App
+- **Screen**: CreditScreen (`src/screens/CreditScreen.tsx`)
+- **Finding**: 1 unguarded `console.error` at line 120 (data load failure). Production builds will log diagnostic messages including error objects.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-404: POS — CreditScreen — Multiple Pressable elements missing accessibility attributes
+- **Platform**: POS App
+- **Screen**: CreditScreen (`src/screens/CreditScreen.tsx`)
+- **Finding**: Interactive elements including tab selectors (Offers/Loans/History), credit offer cards, Apply button, KYC form inputs, and loan detail cards lack `accessibilityRole` and `accessibilityLabel` attributes. The 1474-line screen has extensive interactive UI but minimal a11y markup.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-405: POS — MenuScreen — console.error not guarded by __DEV__ (5 locations)
+- **Platform**: POS App
+- **Screen**: MenuScreen (`src/screens/MenuScreen.tsx`)
+- **Finding**: 5 unguarded `console.error` calls at lines 125 (opStatus fetch), 167 (dailySummary fetch), 205 (refresh), 224 (sync), 358 (store switch). Production builds will log diagnostic messages including error objects for routine operational failures.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-406: POS — MenuScreen — 30+ interactive elements missing accessibilityRole
+- **Platform**: POS App
+- **Screen**: MenuScreen (`src/screens/MenuScreen.tsx`)
+- **Finding**: The main hub screen has 30+ navigation items (Sell, Buy, Reorder, Credit, Stock, Reports, Settings, etc.), operational status cards, sync controls, language/theme toggles, and store switch button. Only 1 element has `accessibilityRole`. The vast majority of interactive Pressable elements lack both `accessibilityRole="button"` and `accessibilityLabel`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-407: POS — [SYSTEMIC] — Unguarded console statements across 14 additional screens
+- **Platform**: POS App
+- **Screen**: Multiple screens (batch pattern scan, Screens 13-43)
+- **Finding**: 14 screens beyond those individually tracked (STG-397/398/401/403/405) have unguarded `console.log` / `console.warn` / `console.error` calls that will output diagnostic information in production builds. Total: 43 occurrences across these screens:
+  - PaymentScreen.tsx: 8 (lines 234, 246, 370, 424, 601, 653, 755, 759)
+  - BnplDuesScreen.tsx: 6 (lines 130, 236, 238, 312, 347, 418)
+  - InwardScreen.tsx: 4 (lines 279, 285, 317, 398)
+  - DailyReportScreen.tsx: 3 (lines 260, 300, 326)
+  - BuyScreen.tsx: 3 (lines 199, 246, 311)
+  - OrderDetailScreen.tsx: 3 (lines 95, 163, 202)
+  - ReorderSettingsScreen.tsx: 3 (lines 71, 100, 130)
+  - GRNScreen.tsx: 2 (lines 103, 371)
+  - BarcodeSheetScreen.tsx: 2 (lines 111, 205)
+  - OpeningStockScreen.tsx: 2 (lines 109, 261)
+  - ReorderPoliciesScreen.tsx: 2 (lines 78, 180)
+  - OverdueDuesScreen.tsx: 2 (lines 301, 349)
+  - ReturnScreen.tsx: 2 (lines 165, 226)
+  - OrderHistoryScreen.tsx: 1 (line 245)
+- **Note**: SplashScreen lines 161/164/167 are intentionally unguarded per `REQ.AUDIT.W5.POS.SPLASH-INFRA-INIT-FAILURE-MASKING.001` (infra init failures logged in all environments). ForceUpdateScreen line 38 is a module-level build-time warning for missing App Store URL, also intentional.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-408: POS — [SYSTEMIC] — Missing accessibilityRole on interactive elements across 26+ screens
+- **Platform**: POS App
+- **Screen**: Multiple screens (batch pattern scan, all 43 screens)
+- **Finding**: 26+ POS screens have interactive `Pressable` elements with zero `accessibilityRole` attributes. Only 6 screens have any a11y attributes on interactive elements: PaymentScreen (3), BulkPurchaseCreditScreen (2), ChatListScreen (5), ChatConversationScreen (4), AIInsightsScreen (3), HelpScreen (9). The remaining screens — including critical flows like DailyReportScreen, InwardScreen, BuyScreen, OrderHistoryScreen, OrderDetailScreen, GRNScreen, ReturnScreen, BarcodeSheetScreen, OpeningStockScreen, ShiftScreen, StockStatementScreen, KhataScreen, SalesHistoryScreen, BillDetailScreen, SalesStatementScreen, DailyClosingScreen, PurchaseHistoryScreen, CustomerListScreen, CustomerManagementScreen, ReorderSettingsScreen, ReorderPoliciesScreen, PrinterSettingsScreen, OverdueDuesScreen, BnplDuesScreen, SuccessPrintScreenV2, UiShowcaseScreen — have zero `accessibilityRole` on any Pressable despite having multiple interactive elements. This makes the POS app largely inaccessible to screen reader users.
 - **Severity**: P2
 - **Status**: FOUND
 
