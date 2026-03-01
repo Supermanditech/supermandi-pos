@@ -3062,9 +3062,188 @@ This implementation phase may only advance from Wave A to later waves if:
 3. validation is published
 4. no hidden unrelated changes remain in the batch
 
+
+## PART 15: Post-Deploy Mega Live Verification (Mandatory After Staging Deploy)
+
+This phase is not another source-only audit.
+It is the final operator-assisted live staging verification after deploy, driven screen-by-screen with runtime evidence.
+
+### 15.1 Start Condition
+
+Claude MUST NOT start this phase until:
+
+1. the target SHA is deployed to staging
+2. Cloud Run revision truth is known
+3. operator/runtime testing context is available
+
+Current armed target:
+
+1. deploy SHA: 132eb8ff
+2. next finding start: STG-410
+
+### 15.2 Source of Truth Order
+
+Claude MUST use this order:
+
+1. live GCP staging behavior at deployed SHA
+2. operator runtime evidence (browser/device/log/screenshot)
+3. Cloud Run revision and runtime configuration truth
+4. canonical git source only after live reproduction
+
+Code-only assumptions are not sufficient in this phase.
+
+### 15.3 Lock Discipline
+
+Claude MUST use the same strict screen-lock approach as Retailer Web, but with runtime evidence:
+
+1. one platform at a time
+2. one screen at a time
+3. one active screen only
+4. no grouped screen execution
+5. no screen exit until:
+   - all meaningful user actions are executed or explicitly blocked
+   - all required layers are checked
+   - all findings are recorded or the screen is declared clean with evidence
+
+No sampling.
+No skipped screens.
+No partial closures.
+
+### 15.4 Required Screen Layers
+
+For every screen, Claude must verify:
+
+1. all user clicks/taps/inputs/submits/cancels/retries/refresh/back-forward paths
+2. business logic outcomes and guardrails
+3. UI
+4. UX
+5. navigation
+6. wiring
+7. API request/response behavior
+8. backend behavior
+9. DB table/data integrity symptoms
+10. migration number parity and runtime compatibility
+11. GCP runtime parity
+12. external infra and third-party dependency behavior
+13. accessibility
+14. responsive/mobile behavior
+
+### 15.5 Cross-Functional Verification
+
+Claude must not treat screens as isolated where cross-surface behavior exists.
+Required cross-functional checks include:
+
+1. retailer to superadmin approval flows
+2. supplier to superadmin approval flows
+3. retailer to POS enrollment and downstream usage
+4. support/chat visibility across surfaces
+5. payment, stock, reporting, shift, and daily-closing consistency
+6. password reset, session invalidation, and auth boundary behavior
+7. WhatsApp and other external integrations
+
+### 15.6 Production-Safety Finding Rule
+
+Claude MUST record findings for any of the following if discovered live:
+
+1. mock data
+2. demo paths
+3. stubbed behavior
+4. fake fallbacks
+5. hardcoded test paths or tokens
+6. non-production-safe third-party integration behavior
+7. missing GCP secret/runtime config
+
+These are not “nice to know” observations.
+They are production-safety findings.
+
+### 15.7 Evidence Rule
+
+Each live finding must include:
+
+1. staging URL or flow
+2. screen name
+3. reproduction steps
+4. expected vs actual
+5. runtime timestamp
+6. Cloud Run revision or runtime reference if relevant
+7. service/dependency reference if relevant
+
+### 15.8 Completion Gate
+
+This post-deploy mega live verification is complete only when:
+
+1. all four platforms are closed
+2. all screens are terminal
+3. all new findings are recorded
+4. operator runtime evidence is attached
+5. no screen or flow is left unaccounted for
+
+Until then, Claude must not claim production-grade live verification completion.
+
+
+## PART 16: Pre-Deploy Parity Gate (Mandatory Before Staging Deploy)
+
+Claude MUST NOT deploy to GCP staging until this gate passes for the target SHA.
+Current target: 132eb8ff
+
+### 16.1 Purpose
+
+This gate exists to stop avoidable staging regressions caused by wrong build targets, wrong URLs, stale Firebase config, hidden GCP runtime mismatches, or migration/schema parity mistakes.
+
+### 16.2 What Claude Must Prove Before Deploy
+
+Claude must verify and publish parity for all of the following:
+
+1. frontend build lock per surface
+2. frontend base URL and backend URL parity
+3. landing page WhatsApp icon presence and target behavior
+4. retailer, supplier, superadmin, and POS frontend env/runtime parity
+5. Firebase client and admin runtime parity
+6. GCP service URL and domain parity
+7. Cloud Run service mapping and deploy target parity
+8. Secret Manager and env-var parity
+9. migration inventory and apply-order parity
+10. table schema and constraint parity
+11. zero unintended backend/API drift in this batch
+12. third-party integration configuration parity
+13. deploy script / CI target parity
+14. rollback preconditions and operator checklist
+
+### 16.3 Deploy Forbidden Conditions
+
+Deploy is blocked if any of these remain unknown or unverified:
+
+1. URL target ambiguity
+2. secret or env mapping ambiguity
+3. migration/table parity ambiguity
+4. Firebase runtime dependency ambiguity
+5. third-party runtime dependency ambiguity
+6. WhatsApp production-path ambiguity
+7. build target or artifact-scope ambiguity
+
+### 16.4 Required Evidence
+
+For every parity check, Claude must record:
+
+1. file/config source reference
+2. target service or surface
+3. expected runtime target
+4. actual resolved target
+5. parity verdict: PASS or BLOCKED
+6. operator action if blocked
+
+### 16.5 Next Step After Pass
+
+Only after this gate passes may Claude proceed to:
+
+1. staging deploy of 132eb8ff
+2. post-deploy mega live verification
+
 ---
 
 **END OF CLAUDE STATE OPERATING SYSTEM**
 
 *This file is the single source of truth. All other rule files are historical reference only.*
 *Claude reads this file first, follows only this file, and updates CLAUDE_CURRENT_STATE.json as it works.*
+
+

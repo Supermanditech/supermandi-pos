@@ -1,7 +1,7 @@
 {
   "version": "76.0",
-  "lastUpdated": "2026-03-01T22:00:00.000Z",
-  "currentPhase": "DEPLOY_READY: STG-287..409 truth corrected (119 FIXED, 4 WONTFIX). Impacted-screen reiteration PASSED. All local commits pushed. Operator review allowed.",
+  "lastUpdated": "2026-03-01T22:00:00Z",
+  "currentPhase": "PRE_DEPLOY_PARITY_GATE_REQUIRED: staging deploy blocked until SHA 132eb8ff passes build, URL, Firebase, GCP, migration, table, and runtime parity checks. Post-deploy mega live verification remains armed after deploy.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -47,7 +47,12 @@
       "doNotRewrite": "STG-001..STG-286 entries are frozen — only append, never edit"
     },
     "migrations": {
-      "pending": ["168_fix_check_constraints.sql", "169_add_pending_mrp.sql", "170_credit_app_columns_and_constraint.sql", "171_fix_buy_payments_mode_constraint.sql"],
+      "pending": [
+        "168_fix_check_constraints.sql",
+        "169_add_pending_mrp.sql",
+        "170_credit_app_columns_and_constraint.sql",
+        "171_fix_buy_payments_mode_constraint.sql"
+      ],
       "safetyVerdict": "All 4 backward-compatible, idempotent, migration-first required",
       "lockRisk": "LOW (sub-second ACCESS EXCLUSIVE on small tables)"
     },
@@ -161,16 +166,52 @@
     "reconciledAt": "2026-03-01",
     "findingsRange": "STG-287..409",
     "findingsByPlatform": {
-      "retailerWeb": { "range": "STG-287..347", "count": 61, "screens": 29, "clean": 4, "p0": 0, "p1": 0, "p2": 9, "p3": 52 },
-      "supplierWeb": { "range": "STG-348..373", "count": 26, "screens": 20, "clean": 6, "p0": 0, "p1": 0, "p2": 3, "p3": 23 },
-      "superadminWeb": { "range": "STG-374..391,409", "count": 19, "screens": 25, "clean": 4, "p0": 0, "p1": 0, "p2": 0, "p3": 19 },
-      "posApp": { "range": "STG-392..408", "count": 17, "screens": 44, "clean": 10, "p0": 0, "p1": 0, "p2": 2, "p3": 15 }
+      "retailerWeb": {
+        "range": "STG-287..347",
+        "count": 61,
+        "screens": 29,
+        "clean": 4,
+        "p0": 0,
+        "p1": 0,
+        "p2": 9,
+        "p3": 52
+      },
+      "supplierWeb": {
+        "range": "STG-348..373",
+        "count": 26,
+        "screens": 20,
+        "clean": 6,
+        "p0": 0,
+        "p1": 0,
+        "p2": 3,
+        "p3": 23
+      },
+      "superadminWeb": {
+        "range": "STG-374..391,409",
+        "count": 19,
+        "screens": 25,
+        "clean": 4,
+        "p0": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 19
+      },
+      "posApp": {
+        "range": "STG-392..408",
+        "count": 17,
+        "screens": 44,
+        "clean": 10,
+        "p0": 0,
+        "p1": 0,
+        "p2": 2,
+        "p3": 15
+      }
     },
     "totalFindings": 123,
     "totalScreens": 118,
     "totalClean": 24,
     "activePlatform": null,
-    "activeInstruction": "All 123 findings resolved. 119 FIXED, 4 WONTFIX. Implementation complete. Impacted-screen reiteration PASSED (1 regression found+fixed). Operator review now allowed.",
+    "activeInstruction": "Before any staging deploy, Claude must complete the pre-deploy parity gate for SHA 132eb8ff. No deploy is allowed until parity truth is proven and recorded.",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -237,7 +278,7 @@
   "finalMegaImplementation": {
     "status": "ALL_FINDINGS_RESOLVED",
     "baselineSha": "cb967459",
-    "headSha": "7b46ffae",
+    "headSha": "132eb8ff",
     "scopeRange": "STG-287..409",
     "totalFindings": 123,
     "reconciliation": {
@@ -245,12 +286,44 @@
       "fixed": 119,
       "found": 0,
       "wontfix": 4,
-      "implementationCommits": ["703eec27", "417ac3a1", "f99dc3c6", "6fade9fb", "149f2b54", "fbb998a8", "9cea4407", "4d755133", "2b040854", "20ed2686"],
-      "batch1": { "commit": "fbb998a8", "items": 18, "scope": "retailer a11y/forms/dialogs", "wontfix": 1 },
-      "batch2": { "commit": "9cea4407", "items": 7, "scope": "retailer dark-mode/responsive/UX" },
-      "batch3": { "commit": "4d755133", "items": 5, "scope": "supplier a11y/parity" },
-      "batch4": { "commit": "2b040854", "items": 2, "scope": "superadmin events/responsive" },
-      "batch5": { "commit": "20ed2686", "items": 1, "scope": "POS console.error guarding" },
+      "implementationCommits": [
+        "703eec27",
+        "417ac3a1",
+        "f99dc3c6",
+        "6fade9fb",
+        "149f2b54",
+        "fbb998a8",
+        "9cea4407",
+        "4d755133",
+        "2b040854",
+        "20ed2686"
+      ],
+      "batch1": {
+        "commit": "fbb998a8",
+        "items": 18,
+        "scope": "retailer a11y/forms/dialogs",
+        "wontfix": 1
+      },
+      "batch2": {
+        "commit": "9cea4407",
+        "items": 7,
+        "scope": "retailer dark-mode/responsive/UX"
+      },
+      "batch3": {
+        "commit": "4d755133",
+        "items": 5,
+        "scope": "supplier a11y/parity"
+      },
+      "batch4": {
+        "commit": "2b040854",
+        "items": 2,
+        "scope": "superadmin events/responsive"
+      },
+      "batch5": {
+        "commit": "20ed2686",
+        "items": 1,
+        "scope": "POS console.error guarding"
+      },
       "stillOpen": {
         "retailerWeb": [],
         "supplierWeb": [],
@@ -2559,5 +2632,171 @@
       "truthDeclaration.productionDataTested=true"
     ],
     "enforcement": "ticket intake blocked until successful staging deploy evidence is available"
+  },
+  "postDeployMegaLiveVerification": {
+    "status": "ARMED_BLOCKED_ON_STAGING_DEPLOY",
+    "deployTargetSha": "132eb8ff",
+    "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
+    "nextFindingStartsAt": "STG-410",
+    "purpose": "Run the final operator-assisted go-live verification on live staging at micro level after deploy, with no screen exit until all required runtime and cross-functional checks are completed or blocked with evidence.",
+    "sourceOfTruthOrder": [
+      "live_gcp_staging_behavior_at_sha_132eb8ff",
+      "operator_runtime_evidence_browser_device_logs_screenshots",
+      "cloud_run_revision_and_runtime_configuration_truth",
+      "canonical_git_source_for_root_cause_after_live_reproduction"
+    ],
+    "deployRequiredBeforeStart": true,
+    "platformOrder": [
+      "Retailer Web",
+      "Supplier Web",
+      "SuperAdmin Web",
+      "POS App"
+    ],
+    "singlePlatformLock": true,
+    "singleScreenLock": true,
+    "singleActionFlowLock": true,
+    "screenExitBlockedUntil": [
+      "all_meaningful_user_actions_executed_or_explicitly_blocked",
+      "all_required_layers_checked",
+      "all_findings_appended_to_tracker_or_marked_no_issue",
+      "runtime_evidence_recorded",
+      "cross_function_effects_checked_where_relevant"
+    ],
+    "samplingForbidden": true,
+    "groupedScreenExecutionForbidden": true,
+    "requiredPerScreenRuntimeLayers": [
+      "user_clicks_taps_inputs_submits_cancels_retries_back_forward_refresh",
+      "business_logic_outcomes_and_guardrails",
+      "ui",
+      "ux",
+      "navigation",
+      "wiring",
+      "api_request_response_contracts",
+      "backend_behavior",
+      "db_table_data_integrity_symptoms",
+      "migration_number_parity_and_runtime_compatibility",
+      "gcp_runtime_parity",
+      "external_infra_and_third_party_dependencies",
+      "accessibility",
+      "responsive_mobile_behavior"
+    ],
+    "requiredCrossFunctionalChecks": [
+      "retailer_to_superadmin_approval_flows",
+      "supplier_to_superadmin_approval_flows",
+      "retailer_to_pos_enrollment_and_downstream_usage",
+      "support_chat_visibility_across_surfaces",
+      "payment_stock_report_shift_daily_closing_consistency",
+      "password_reset_session_invalidation_auth_boundary",
+      "whatsapp_and_other_external_integration_paths"
+    ],
+    "productionSafetyFindingsMustInclude": [
+      "mock_data_or_demo_paths",
+      "stubbed_or_placeholder_behavior",
+      "fake_fallbacks",
+      "hardcoded_test_routes_or_tokens",
+      "non_production_safe_third_party_integration_behavior",
+      "gcp_secret_or_runtime_config_gaps"
+    ],
+    "evidenceRequiredPerFinding": [
+      "staging_url_or_flow",
+      "screen_name",
+      "reproduction_steps",
+      "expected_vs_actual",
+      "runtime_timestamp",
+      "cloud_run_revision_or_runtime_reference_if_relevant",
+      "service_or_dependency_reference_if_relevant"
+    ],
+    "completionGate": {
+      "allPlatformsClosed": true,
+      "allScreensTerminal": true,
+      "allNewFindingsTracked": true,
+      "operatorRuntimeEvidenceAttached": true,
+      "noUnaccountedScreenOrFlow": true
+    }
+  },
+  "preDeployParityGate": {
+    "status": "ARMED_BLOCKING_STAGING_DEPLOY",
+    "targetSha": "132eb8ff",
+    "deployBlockedUntilAllChecksPass": true,
+    "sourceOfTruthOrder": [
+      "origin_main_sha_132eb8ff",
+      "canonical_repo_source_at_sha_132eb8ff",
+      "deploy_scripts_and_ci_config",
+      "gcp_runtime_and_secret_mapping_truth",
+      "firebase_and_identity_platform_runtime_truth"
+    ],
+    "requiredParityCategories": [
+      "frontend_build_lock_per_surface",
+      "frontend_base_url_and_backend_url_parity",
+      "landing_page_whatsapp_presence_and_target_linking",
+      "retailer_supplier_superadmin_pos_frontend_env_parity",
+      "firebase_client_and_admin_runtime_parity",
+      "gcp_service_url_and_domain_parity",
+      "cloud_run_service_mapping_and_revision_targeting",
+      "secret_manager_and_env_var_parity",
+      "migration_inventory_and_apply_order_parity",
+      "table_schema_and_constraint_parity",
+      "zero_unintended_backend_or_api_drift",
+      "third_party_integration_configuration_parity",
+      "deploy_script_and_ci_target_parity",
+      "rollback_preconditions_and_operator_checklist"
+    ],
+    "mandatoryChecks": {
+      "buildTargets": [
+        "retailer-admin build target and backend URL",
+        "supplier-portal build target and backend URL",
+        "superadmin build target and backend URL",
+        "POS app API/config target and production-safe flags",
+        "landing page target and WhatsApp CTA wiring"
+      ],
+      "whatsapp": [
+        "supermandi.tech landing page WhatsApp icon exists and target is correct",
+        "retailer frontend WhatsApp/external CTA paths are production-safe",
+        "supplier frontend WhatsApp/external CTA paths are production-safe",
+        "POS WhatsApp receipt/chat paths are production-safe",
+        "superadmin WhatsApp config surface maps to correct backend/runtime path"
+      ],
+      "firebase": [
+        "frontend Firebase config parity per surface",
+        "backend Firebase admin credential source parity",
+        "FIREBASE_ENABLED/FIREBASE_PROJECT_ID/runtime secret mapping",
+        "Identity Platform dependencies still consistent with deploy target"
+      ],
+      "gcp": [
+        "Cloud Run services and domains map to intended URLs",
+        "staging domain routing and API base path parity",
+        "service account / IAM prerequisites remain satisfied",
+        "no stale service URL or nip.io references remain in deploy path"
+      ],
+      "migrations": [
+        "inventory pending migrations 168..171 explicitly accounted for",
+        "migration-first ordering recorded if deployment needs them",
+        "affected tables/constraints verified against code expectations",
+        "no hidden schema drift between code and staging/prod expectations"
+      ],
+      "backendSafety": [
+        "no backend files changed in this batch unless explicitly intended",
+        "no accidental API contract drift",
+        "no hidden env-dependent runtime behavior introduced"
+      ]
+    },
+    "deployForbiddenIfAny": [
+      "any_unknown_url_target",
+      "any_unknown_secret_or_env_mapping",
+      "any_unverified_migration_or_table_parity",
+      "any_unverified_firebase_runtime_dependency",
+      "any_unverified_third_party_runtime_dependency",
+      "any_missing_whatsapp_production_path_check",
+      "any_ambiguous_build_target_or_artifact_scope"
+    ],
+    "evidenceRequired": [
+      "file_or_config_source_reference",
+      "target_service_or_surface",
+      "expected_runtime_target",
+      "actual_resolved_target",
+      "parity_verdict_pass_or_blocked",
+      "operator_action_if_blocked"
+    ],
+    "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_132eb8ff_THEN_POST_DEPLOY_MEGA_LIVE_VERIFICATION"
   }
 }
