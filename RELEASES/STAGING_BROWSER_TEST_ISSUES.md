@@ -2888,6 +2888,631 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+## FINAL_MEGA_GO_LIVE_AUDIT — Retailer Web (STG-287..347)
+
+> **Audit baseline**: `main@940e0832` | **Platform**: Retailer Web (`retailer-admin/`)
+> **Screens audited**: 29/29 | **Findings**: 61 (0 P0, 0 P1, 9 P2, 52 P3)
+> **Clean screens**: 5 | **Blocked screens**: 0
+
+### STG-287: Retailer Web — LoginPage — Dark mode contrast on OTP expiry text
+- **Platform**: Retailer Web
+- **Screen**: LoginPage (`/retailer/login`)
+- **Finding**: `.login-otp-expiry--normal` has no `html.dark` override. Color `#64748b` on dark card background `#1e293b` produces approximately 2.8:1 contrast ratio, failing WCAG AA 4.5:1 minimum.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-288: Retailer Web — LoginPage — Warning icon missing aria-hidden
+- **Platform**: Retailer Web
+- **Screen**: LoginPage (`/retailer/login`)
+- **Finding**: `.login-warning-icon` divs containing decorative characters lack `aria-hidden="true"`. Screen readers announce the raw character instead of skipping it.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-289: Retailer Web — RegisterPage — Success icon missing aria-hidden
+- **Platform**: Retailer Web
+- **Screen**: RegisterPage (`/retailer/register`)
+- **Finding**: Success checkmark in `.reg-success-icon` lacks `aria-hidden="true"`. Screen readers announce the raw character.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-290: Retailer Web — ForgotPasswordPage — Icon characters lack aria-hidden
+- **Platform**: Retailer Web
+- **Screen**: ForgotPasswordPage (`/retailer/forgot-password`)
+- **Finding**: Icon characters in `.forgot-icon-circle` lack `aria-hidden`. Systemic pattern.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-291: Retailer Web — ResetPasswordPage — Password toggle buttons lack aria-pressed/aria-label
+- **Platform**: Retailer Web
+- **Screen**: ResetPasswordPage (`/retailer/reset-password`)
+- **Finding**: Password toggle buttons have `tabIndex={-1}` without `aria-pressed`/`aria-label`. Differs from LoginPage and ForgotPasswordPage which have proper ARIA attributes.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-292: Retailer Web — ResetPasswordPage — Icon characters lack aria-hidden
+- **Platform**: Retailer Web
+- **Screen**: ResetPasswordPage (`/retailer/reset-password`)
+- **Finding**: Icon characters lack `aria-hidden`. Systemic pattern.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-293: Retailer Web — DashboardPage — Category rename modal lacks dialog semantics and label pairing
+- **Platform**: Retailer Web
+- **Screen**: DashboardPage (`/s/:sc`)
+- **Finding**: Category rename modal: labels lack `htmlFor`/`id` pairing, no `role="dialog"`, no `aria-modal="true"`, no focus trap.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-294: Retailer Web — DashboardPage — Search dropdown no ARIA roles, div onClick, no keyboard support
+- **Platform**: Retailer Web
+- **Screen**: DashboardPage (`/s/:sc`)
+- **Finding**: Search dropdown has no ARIA roles (`listbox`/`option`). Items are `div` with `onClick` only — no keyboard navigation.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-295: Retailer Web — DashboardPage — Add products dropdown lacks menu semantics
+- **Platform**: Retailer Web
+- **Screen**: DashboardPage (`/s/:sc`)
+- **Finding**: Add products dropdown has no `role="menu"` semantics. Uses native `<button>` elements which are focusable.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-296: Retailer Web — DashboardPage — Category cards body div onClick lacks role
+- **Platform**: Retailer Web
+- **Screen**: DashboardPage (`/s/:sc`)
+- **Finding**: Category cards body `div` with `onClick` lacks `role="button"` and keyboard handler.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-297: Retailer Web — DashboardPage — Search input lacks aria-label
+- **Platform**: Retailer Web
+- **Screen**: DashboardPage (`/s/:sc`)
+- **Finding**: Search input lacks `aria-label`. Only has `placeholder` text for labeling.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-298: Retailer Web — DashboardPage — Table overflow hidden instead of overflow-x auto
+- **Platform**: Retailer Web
+- **Screen**: DashboardPage (`/s/:sc`)
+- **Finding**: `.dash-inv-table-wrap` has `overflow: hidden` instead of `overflow-x: auto`. Table content clips on narrow screens.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-299: Retailer Web — DashboardPage — Supplier badge using hardcoded hex colors
+- **Platform**: Retailer Web
+- **Screen**: DashboardPage (`/s/:sc`)
+- **Finding**: Supplier badge inline hardcoded hex colors will not adapt in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-300: Retailer Web — ProductsPage — Product mode labels inline white background in dark mode
+- **Platform**: Retailer Web
+- **Screen**: ProductsPage (`/s/:sc/products`)
+- **Finding**: Product mode labels use inline `background: 'white'`. White background renders against dark card surfaces in dark mode.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-301: Retailer Web — ProductsPage — Action buttons hardcoded hex colors
+- **Platform**: Retailer Web
+- **Screen**: ProductsPage (`/s/:sc/products`)
+- **Finding**: 6 inline hardcoded hex colors on action buttons will not adapt in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-302: Retailer Web — ProductsPage — Supplier fetch error/empty hints hardcoded colors
+- **Platform**: Retailer Web
+- **Screen**: ProductsPage (`/s/:sc/products`)
+- **Finding**: Supplier fetch error/empty hints use inline hardcoded colors that will not adapt in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-303: Retailer Web — ProductsPage — ~20 form fields lack htmlFor/id pairing
+- **Platform**: Retailer Web
+- **Screen**: ProductsPage (`/s/:sc/products`)
+- **Finding**: Approximately 20 form fields have `<label>` elements without `htmlFor`/`id` pairing. Screen readers cannot associate labels with inputs.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-304: Retailer Web — ProductsPage — Delete confirmation modal lacks dialog semantics
+- **Platform**: Retailer Web
+- **Screen**: ProductsPage (`/s/:sc/products`)
+- **Finding**: Delete confirmation modal has no `role="dialog"`, no `aria-modal="true"`, no focus trap.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-305: Retailer Web — SupplierCatalogPage — Category filter/search/PDF button accessibility gaps
+- **Platform**: Retailer Web
+- **Screen**: SupplierCatalogPage (`/s/:sc/supplier-catalog`)
+- **Finding**: Category filter buttons lack `aria-pressed`; search input lacks `aria-label`; PDF button using emoji-only content lacks `aria-label`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-306: Retailer Web — SupplierCatalogPage — Table and form grids don't adapt to mobile
+- **Platform**: Retailer Web
+- **Screen**: SupplierCatalogPage (`/s/:sc/supplier-catalog`)
+- **Finding**: 8-column table and 3-column form grids do not adapt to mobile widths. Content overflows on narrow viewports.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-307: Retailer Web — ImportPage — Step indicator hardcoded colors
+- **Platform**: Retailer Web
+- **Screen**: ImportPage (`/s/:sc/import`)
+- **Finding**: Step indicator uses inline `#22c55e` for completed steps. Hardcoded colors will not adapt in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-308: Retailer Web — ImportPage — Step indicator lacks aria-current
+- **Platform**: Retailer Web
+- **Screen**: ImportPage (`/s/:sc/import`)
+- **Finding**: Step indicator lacks `aria-current="step"` for the active step.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-309: Retailer Web — InventoryPage — Filter buttons and date inputs accessibility gaps
+- **Platform**: Retailer Web
+- **Screen**: InventoryPage (`/s/:sc/inventory`)
+- **Finding**: Filter buttons lack `aria-pressed`; date inputs lack `htmlFor`/`id` pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-310: Retailer Web — SuppliersPage — SECTION_CONFIGS hardcoded hex in inline styles
+- **Platform**: Retailer Web
+- **Screen**: SuppliersPage (`/s/:sc/suppliers`)
+- **Finding**: `SECTION_CONFIGS` uses hardcoded hex colors in inline styles on section headers. Partially overridden by `html.dark` but not fully.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-311: Retailer Web — SuppliersPage — Category chip white background inline style
+- **Platform**: Retailer Web
+- **Screen**: SuppliersPage (`/s/:sc/suppliers`)
+- **Finding**: Category chip uses `background: 'white'` inline style. White renders on dark surfaces in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-312: Retailer Web — SuppliersPage — Form fields, modals, and search accessibility gaps
+- **Platform**: Retailer Web
+- **Screen**: SuppliersPage (`/s/:sc/suppliers`)
+- **Finding**: ~30 form fields lack `htmlFor`/`id` pairing; modals lack dialog semantics; section expand/collapse lacks `aria-expanded`; search lacks `aria-label`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-313: Retailer Web — CreditDashboardPage — Price value green hardcoded without dark override
+- **Platform**: Retailer Web
+- **Screen**: CreditDashboardPage (`/s/:sc/credit`)
+- **Finding**: `.scat-price-value--green` hardcodes `#059669` without a dark mode override.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-314: Retailer Web — CreditDashboardPage — Search input no aria-label
+- **Platform**: Retailer Web
+- **Screen**: CreditDashboardPage (`/s/:sc/credit`)
+- **Finding**: Search input relies only on `placeholder` text for labeling.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-315: Retailer Web — CompliancePage — Form labels lack htmlFor/id
+- **Platform**: Retailer Web
+- **Screen**: CompliancePage (`/s/:sc/compliance`)
+- **Finding**: Form fields lack `htmlFor`/`id` label pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-316: Retailer Web — CompliancePage — Raw doc type displayed without formatting
+- **Platform**: Retailer Web
+- **Screen**: CompliancePage (`/s/:sc/compliance`)
+- **Finding**: Raw document type value displayed to user without formatting to a user-friendly label.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-317: Retailer Web — CompliancePage — Missing POST handler for document upload
+- **Platform**: Retailer Web
+- **Screen**: CompliancePage (`/s/:sc/compliance`)
+- **Finding**: Upload UI exists but backend wiring for compliance document upload submission is absent.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-318: Retailer Web — SettingsPage — ~15 form labels lack htmlFor/id
+- **Platform**: Retailer Web
+- **Screen**: SettingsPage (`/s/:sc/settings`)
+- **Finding**: Approximately 15 form labels lack `htmlFor`/`id` pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-319: Retailer Web — PaymentsPage — Form labels lack htmlFor/id
+- **Platform**: Retailer Web
+- **Screen**: PaymentsPage (`/s/:sc/settings/payments`)
+- **Finding**: Form labels lack `htmlFor`/`id` pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-320: Retailer Web — DeviceActivationPage — Reactivate button hardcoded inline colors
+- **Platform**: Retailer Web
+- **Screen**: DeviceActivationPage (`/s/:sc/devices`)
+- **Finding**: Reactivate button uses hardcoded light-mode colors in inline styles that will not adapt in dark mode.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-321: Retailer Web — DeviceActivationPage — Shared Modal component missing dialog semantics
+- **Platform**: Retailer Web
+- **Screen**: DeviceActivationPage / Shared `Modal.tsx`
+- **Finding**: Shared `Modal` component has Escape key and overlay click dismiss but missing `role="dialog"`, `aria-modal="true"`, and focus trap. Systemic issue affecting all Modal usages.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-322: Retailer Web — DeviceActivationPage — Activation code label lacks htmlFor/id
+- **Platform**: Retailer Web
+- **Screen**: DeviceActivationPage (`/s/:sc/devices`)
+- **Finding**: Activation code label lacks `htmlFor`/`id` pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-323: Retailer Web — InvoicesPage — statusColors hardcoded hex in inline badge styles
+- **Platform**: Retailer Web
+- **Screen**: InvoicesPage (`/s/:sc/invoices`)
+- **Finding**: `statusColors` object applies hardcoded hex colors via inline styles on status badges. Bypasses CSS class + `html.dark` override pattern.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-324: Retailer Web — InvoicesPage — Invoice detail modal missing dialog semantics
+- **Platform**: Retailer Web
+- **Screen**: InvoicesPage (`/s/:sc/invoices`)
+- **Finding**: Invoice detail modal has Escape key handler but missing `role="dialog"`, `aria-modal="true"`, and focus trap.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-325: Retailer Web — CreditDashboardPage — statusBadge hardcoded light-mode pastel colors
+- **Platform**: Retailer Web
+- **Screen**: CreditDashboardPage (`/s/:sc/credit`)
+- **Finding**: `statusBadge()` function returns hardcoded light-mode pastel colors applied via inline styles. Will not adapt in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-326: Retailer Web — ChatPage — Fixed width conversation list unusable on mobile
+- **Platform**: Retailer Web
+- **Screen**: ChatPage (`/s/:sc/chat`)
+- **Finding**: `.chat-convo-list` has fixed `width: 320px`. Insufficient space for message panel on mobile. No responsive breakpoint.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-327: Retailer Web — ChatPage — Conversation list items div onClick without keyboard support
+- **Platform**: Retailer Web
+- **Screen**: ChatPage (`/s/:sc/chat`)
+- **Finding**: Conversation list items use `<div onClick>` without `role="button"`, `tabIndex`, or `onKeyDown` handler.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-328: Retailer Web — PurchaseOrdersPage — STATUS_COLORS hardcoded hex in inline badge styles
+- **Platform**: Retailer Web
+- **Screen**: PurchaseOrdersPage (`/s/:sc/purchase-orders`)
+- **Finding**: STATUS_COLORS hardcoded hex colors applied in inline badge styles. Will not adapt in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-329: Retailer Web — PurchaseOrdersPage — partial_received renders with visible underscore
+- **Platform**: Retailer Web
+- **Screen**: PurchaseOrdersPage (`/s/:sc/purchase-orders`)
+- **Finding**: `partial_received` status value renders as-is with visible underscore in user-facing badge instead of formatted label.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-330: Retailer Web — PurchaseOrdersPage — Fallback STATUS_COLORS.pending doesn't exist
+- **Platform**: Retailer Web
+- **Screen**: PurchaseOrdersPage (`/s/:sc/purchase-orders`)
+- **Finding**: Fallback `STATUS_COLORS.pending` references a key that does not exist in the STATUS_COLORS object.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-331: Retailer Web — PurchaseOrdersPage — Search input and status filter missing aria-labels
+- **Platform**: Retailer Web
+- **Screen**: PurchaseOrdersPage (`/s/:sc/purchase-orders`)
+- **Finding**: Search input and status filter dropdown missing `aria-label` attributes.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-332: Retailer Web — AnalyticsPage — Chart bar hardcoded colors with no dark overrides
+- **Platform**: Retailer Web
+- **Screen**: AnalyticsPage (`/s/:sc/analytics`)
+- **Finding**: Chart bar colors hardcoded with no dark mode overrides. Decorative/data-visualization — noted.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-333: Retailer Web — AnalyticsPage — Date inputs missing aria-labels
+- **Platform**: Retailer Web
+- **Screen**: AnalyticsPage (`/s/:sc/analytics`)
+- **Finding**: Date inputs missing `aria-label` attributes.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-334: Retailer Web — CustomersPage — Search input missing aria-label
+- **Platform**: Retailer Web
+- **Screen**: CustomersPage (`/s/:sc/customers`)
+- **Finding**: Search input missing `aria-label`. Relies on placeholder only.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-335: Retailer Web — CustomersPage — Fixed 220px search input width
+- **Platform**: Retailer Web
+- **Screen**: CustomersPage (`/s/:sc/customers`)
+- **Finding**: `.cust-search-input` has fixed 220px width. May overflow on narrow viewports.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-336: Retailer Web — ReorderPage — Tab buttons lack role/aria-selected
+- **Platform**: Retailer Web
+- **Screen**: ReorderPage (`/s/:sc/reorder`)
+- **Finding**: Tab buttons lack `role="tab"` / `role="tablist"` semantics and `aria-selected`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-337: Retailer Web — ReorderPage — Settings number inputs lack htmlFor/id
+- **Platform**: Retailer Web
+- **Screen**: ReorderPage (`/s/:sc/reorder`)
+- **Finding**: Settings number inputs lack `htmlFor`/`id` label pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-338: Retailer Web — NotificationsPage — Icon colors hardcoded in inline styles
+- **Platform**: Retailer Web
+- **Screen**: NotificationsPage (`/s/:sc/notifications`)
+- **Finding**: `getIcon()` uses inline hardcoded icon colors. Will not adapt in dark mode.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-339: Retailer Web — NotificationsPage — Non-OK HTTP response silently ignored
+- **Platform**: Retailer Web
+- **Screen**: NotificationsPage (`/s/:sc/notifications`)
+- **Finding**: Non-OK HTTP response silently ignored — no error state set. Empty state shown instead of error message.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-340: Retailer Web — NotificationsPage — Notification cards div onClick without keyboard support
+- **Platform**: Retailer Web
+- **Screen**: NotificationsPage (`/s/:sc/notifications`)
+- **Finding**: Notification cards use `<div onClick>` without `role="button"`, `tabIndex`, or `onKeyDown`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-341: Retailer Web — RetailerOnboardingPage — No responsive breakpoint on 2-column form (DEAD CODE)
+- **Platform**: Retailer Web
+- **Screen**: RetailerOnboardingPage (`/retailer/onboard`) — DEAD CODE, route redirects to RegisterPage
+- **Finding**: `.onb-grid-2` has no responsive breakpoint. 2-column form layout cramped on mobile. Dead code — route redirects to RegisterPage.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-342: Retailer Web — RetailerOnboardingPage — Resend OTP inline hardcoded colors (DEAD CODE)
+- **Platform**: Retailer Web
+- **Screen**: RetailerOnboardingPage (`/retailer/onboard`) — DEAD CODE
+- **Finding**: Resend OTP button uses inline hardcoded colors. Dead code — unreachable in production.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-343: Retailer Web — RetailerOnboardingPage — URL.createObjectURL no cleanup (DEAD CODE)
+- **Platform**: Retailer Web
+- **Screen**: RetailerOnboardingPage (`/retailer/onboard`) — DEAD CODE
+- **Finding**: `URL.createObjectURL(file)` creates blob URLs without cleanup via `URL.revokeObjectURL()`. Memory leak. Dead code — unreachable in production.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-344: Retailer Web — SupplierQueuePage — Reject modal lacks dialog semantics
+- **Platform**: Retailer Web
+- **Screen**: SupplierQueuePage (`/s/:sc/admin/suppliers`)
+- **Finding**: Reject modal lacks `role="dialog"`, `aria-modal="true"`, and focus trap.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-345: Retailer Web — SupplierQueuePage — Reject reason textarea label lacks htmlFor/id
+- **Platform**: Retailer Web
+- **Screen**: SupplierQueuePage (`/s/:sc/admin/suppliers`)
+- **Finding**: Reject reason textarea label lacks `htmlFor`/`id` pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-346: Retailer Web — ProductQueuePage — Both modals lack dialog semantics
+- **Platform**: Retailer Web
+- **Screen**: ProductQueuePage (`/s/:sc/admin/products`)
+- **Finding**: Edit & Approve modal and Reject modal both lack `role="dialog"`, `aria-modal="true"`, and focus trap.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-347: Retailer Web — ProductQueuePage — ~6 form fields missing htmlFor/id
+- **Platform**: Retailer Web
+- **Screen**: ProductQueuePage (`/s/:sc/admin/products`)
+- **Finding**: Approximately 6 form fields across both modals lack `htmlFor`/`id` pairing.
+- **Severity**: P3
+- **Status**: FOUND
+
+---
+
+## FINAL_MEGA_GO_LIVE_AUDIT — Supplier Web (STG-348..373)
+
+> **Audit baseline**: `main@940e0832` | **Platform**: Supplier Web (`supplier-portal/`)
+> **Screens audited**: 20/20 | **Findings**: 26 (0 P0, 0 P1, 3 P2, 23 P3)
+> **Clean screens**: 6 | **Blocked screens**: 0
+
+### STG-348: Supplier Web — Login — Error messages lack role="alert" / aria-live
+- **Platform**: Supplier Web
+- **Screen**: Login (`(auth)/login`)
+- **Finding**: Dynamic error `<div>` and Firebase warning have no ARIA announcement attributes for screen readers.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-349: Supplier Web — Login — Duplicate navigation links in password mode
+- **Platform**: Supplier Web
+- **Screen**: Login (`(auth)/login`)
+- **Finding**: Duplicate navigation links when switching between OTP and password login modes. UX inconsistency.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-350: Supplier Web — Login — Missing border-amber-200 dark mode override
+- **Platform**: Supplier Web
+- **Screen**: Login (`(auth)/login`)
+- **Finding**: Missing `border-amber-200` dark mode override in globals.css.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-351: Supplier Web — Register — OTP input field has no associated label
+- **Platform**: Supplier Web
+- **Screen**: Register (`register/`)
+- **Finding**: OTP input field has no associated label. Screen readers cannot identify field purpose.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-352: Supplier Web — Register — Dynamic error display lacks screen reader announcement
+- **Platform**: Supplier Web
+- **Screen**: Register (`register/`)
+- **Finding**: No `role="alert"` or `aria-live` on error elements.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-353: Supplier Web — Register — Type selector buttons lack radio group semantics
+- **Platform**: Supplier Web
+- **Screen**: Register (`register/`)
+- **Finding**: No `role="radiogroup"` / `role="radio"` for supplier type selection.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-354: Supplier Web — Forgot Password — Firebase unavailability gives silent dead-end
+- **Platform**: Supplier Web
+- **Screen**: Forgot Password (`(auth)/forgot-password`)
+- **Finding**: No warning banner for Firebase unavailability on OTP phone step, unlike Login/Register/Onboard pages which have `isFirebaseReady()` guard.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-355: Supplier Web — Forgot Password — OTP verify button not disabled when code expires
+- **Platform**: Supplier Web
+- **Screen**: Forgot Password (`(auth)/forgot-password`)
+- **Finding**: User can attempt verification after OTP expiry, leading to confusing error.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-356: Supplier Web — Forgot Password — Error displays and OTP expiry lack ARIA attributes
+- **Platform**: Supplier Web
+- **Screen**: Forgot Password (`(auth)/forgot-password`)
+- **Finding**: No `role="alert"` on errors, no `aria-live` on expiry timer.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-357: Supplier Web — Reset Password — Missing PasswordChecklist and show/hide toggles
+- **Platform**: Supplier Web
+- **Screen**: Reset Password (`(auth)/reset-password`)
+- **Finding**: Parity gap with Forgot Password page which has real-time checklist and `aria-pressed` show/hide toggles.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-358: Supplier Web — Reset Password — Error display and auto-redirect lack ARIA attributes
+- **Platform**: Supplier Web
+- **Screen**: Reset Password (`(auth)/reset-password`)
+- **Finding**: Error display lacks `role="alert"` and auto-redirect countdown lacks `aria-live`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-359: Supplier Web — Onboard — All ~15 form labels lack htmlFor/id association
+- **Platform**: Supplier Web
+- **Screen**: Onboard (`(auth)/onboard`)
+- **Finding**: Screen readers cannot programmatically link labels to inputs across the multi-step registration form.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-360: Supplier Web — Onboard — Error display and Firebase warning lack ARIA attributes
+- **Platform**: Supplier Web
+- **Screen**: Onboard (`(auth)/onboard`)
+- **Finding**: Same accessibility pattern as other auth pages. No `role="alert"` / `aria-live`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-361: Supplier Web — Onboard — No useUnsavedChanges guard on multi-step form
+- **Platform**: Supplier Web
+- **Screen**: Onboard (`(auth)/onboard`)
+- **Finding**: Accidental navigation loses all form data. Parity gap with Register page which has this guard.
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-362: Supplier Web — Products — Search input lacks associated label element
+- **Platform**: Supplier Web
+- **Screen**: Products (`(dashboard)/products`)
+- **Finding**: Only has placeholder text, insufficient for screen reader accessibility.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-363: Supplier Web — Products — Delete/unsaved modals lack dialog semantics
+- **Platform**: Supplier Web
+- **Screen**: Products (`(dashboard)/products`)
+- **Finding**: Modals lack `role="dialog"`, `aria-modal="true"`, and proper focus trap / body scroll lock.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-364: Supplier Web — Orders — Status filter buttons lack tablist semantics
+- **Platform**: Supplier Web
+- **Screen**: Orders (`(dashboard)/orders`)
+- **Finding**: Status filter buttons lack `role="tablist"` / `role="tab"` and arrow-key navigation. Parity gap with Products page.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-365: Supplier Web — Orders — Order detail modal lacks dialog semantics
+- **Platform**: Supplier Web
+- **Screen**: Orders (`(dashboard)/orders`)
+- **Finding**: Modal lacks `role="dialog"`, `aria-modal="true"`, and body scroll lock.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-366: Supplier Web — KYC — Tab buttons lack role="tab" and tablist semantics
+- **Platform**: Supplier Web
+- **Screen**: KYC (`(dashboard)/kyc`)
+- **Finding**: No keyboard arrow-key navigation between tabs.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-367: Supplier Web — Earnings — Payout detail modal lacks dialog semantics
+- **Platform**: Supplier Web
+- **Screen**: Earnings (`(dashboard)/earnings`)
+- **Finding**: Modal lacks `role="dialog"`, `aria-modal="true"`, and body scroll lock.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-368: Supplier Web — Invoices — Invoice detail modal lacks dialog semantics
+- **Platform**: Supplier Web
+- **Screen**: Invoices (`(dashboard)/invoices`)
+- **Finding**: Modal lacks `role="dialog"`, `aria-modal="true"`, and body scroll lock.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-369: Supplier Web — Notifications — Extra p-6 wrapper creates double-padding
+- **Platform**: Supplier Web
+- **Screen**: Notifications (`(dashboard)/notifications`)
+- **Finding**: Page wraps content in `<div className="p-6">` adding extra padding. All other dashboard pages let layout handle padding.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-370: Supplier Web — Chat — Missing Breadcrumb navigation
+- **Platform**: Supplier Web
+- **Screen**: Chat (`(dashboard)/chat`)
+- **Finding**: Only dashboard page without `<Breadcrumb items={...} />`.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-371: Supplier Web — Profile — Tab buttons lack tablist semantics
+- **Platform**: Supplier Web
+- **Screen**: Profile (`(dashboard)/profile`)
+- **Finding**: Contact/Bank/Password tab buttons lack `role="tab"` and parent lacks `role="tablist"`. Same pattern as KYC.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-372: Supplier Web — Profile — Password change lacks strength indicators
+- **Platform**: Supplier Web
+- **Screen**: Profile (`(dashboard)/profile`)
+- **Finding**: Validates only min 8 characters — no uppercase/lowercase/digit requirement. Parity gap with Forgot Password and Reset Password pages.
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-373: Supplier Web — Help Dashboard — Route conflict makes dashboard help unreachable
+- **Platform**: Supplier Web
+- **Screen**: Help - Dashboard (`(dashboard)/help`)
+- **Finding**: Both `app/help/page.tsx` and `app/(dashboard)/help/page.tsx` resolve to `/supplier/help/`. Non-grouped route takes precedence in Next.js App Router, making dashboard help unreachable. Combined with middleware gap, this is effectively dead code.
+- **Severity**: P2
+- **Status**: FOUND
+
+---
+
 ## Redeploy Checklist (run after all issues FIXED)
 
 - [ ] `pnpm -r typecheck` — 0 errors
