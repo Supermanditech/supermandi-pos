@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 
+// STG-354: Track client mount for Firebase readiness check (avoid SSR mismatch)
+
 type Step = 'choose' | 'phone' | 'otp' | 'newPassword' | 'success' | 'email' | 'emailSent' | 'emailReset';
 type Channel = 'otp' | 'email';
 
@@ -48,6 +50,9 @@ export default function ForgotPasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const recaptchaInitialized = useRef(false);
+  // STG-354: Track client mount for Firebase readiness warning
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Setup reCAPTCHA when on phone step
   useEffect(() => {
@@ -293,8 +298,16 @@ export default function ForgotPasswordPage() {
         <h2 className="text-2xl font-semibold text-slate-900 mb-2">Reset Password</h2>
         <p className="text-slate-600 text-sm mb-6">Enter your registered phone number to receive an OTP</p>
 
+        {/* STG-354: Firebase unavailability warning (parity with Register/Onboard) */}
+        {mounted && !isFirebaseReady() && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm" role="alert">
+            <strong>Phone Verification Unavailable</strong>
+            <p className="mt-1 text-xs">Firebase is not configured. Please try the email reset method or try again later.</p>
+          </div>
+        )}
+
         {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm" role="alert" aria-live="assertive">{error}</div>
         )}
 
         <form onSubmit={handleSendOtp} className="space-y-4">
@@ -354,7 +367,7 @@ export default function ForgotPasswordPage() {
         <p className="text-slate-600 text-sm mb-6">Enter the 6-digit code sent to {phone}</p>
 
         {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm" role="alert" aria-live="assertive">{error}</div>
         )}
 
         <form onSubmit={handleVerifyOtp} className="space-y-4">
@@ -374,24 +387,26 @@ export default function ForgotPasswordPage() {
           </div>
 
           {otpExpirySeconds > 0 && (
-            <p className={`text-xs text-center ${otpExpirySeconds <= 60 ? 'text-amber-600' : 'text-slate-500'}`}>
+            <p className={`text-xs text-center ${otpExpirySeconds <= 60 ? 'text-amber-600' : 'text-slate-500'}`} aria-live="polite">
               Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
             </p>
           )}
           {otpExpirySeconds === 0 && (
-            <p className="text-xs text-center text-red-600">Code expired. Please resend OTP.</p>
+            <p className="text-xs text-center text-red-600" role="alert" aria-live="assertive">Code expired. Please resend OTP.</p>
           )}
 
           <button
             type="submit"
             className="btn btn-primary w-full py-3"
-            disabled={isLoading || otp.length !== 6}
+            disabled={isLoading || otp.length !== 6 || otpExpirySeconds === 0}
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                 Verifying...
               </span>
+            ) : otpExpirySeconds === 0 ? (
+              'Code Expired'
             ) : (
               'Verify OTP'
             )}
@@ -429,7 +444,7 @@ export default function ForgotPasswordPage() {
         <p className="text-slate-600 text-sm mb-6">Phone verified. Enter your new password below.</p>
 
         {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm" role="alert" aria-live="assertive">{error}</div>
         )}
 
         <form onSubmit={handleOtpResetPassword} className="space-y-4">
@@ -490,7 +505,7 @@ export default function ForgotPasswordPage() {
         </p>
 
         {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm" role="alert" aria-live="assertive">{error}</div>
         )}
 
         <form onSubmit={handleEmailRequest} className="space-y-4">
@@ -605,7 +620,7 @@ export default function ForgotPasswordPage() {
         <p className="text-slate-600 text-sm mb-6">Enter the reset token from your email and choose a new password.</p>
 
         {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm" role="alert" aria-live="assertive">{error}</div>
         )}
 
         <form onSubmit={handleEmailReset} className="space-y-4">

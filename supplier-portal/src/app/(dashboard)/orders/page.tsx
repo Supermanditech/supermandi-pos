@@ -321,12 +321,14 @@ export default function OrdersPage() {
 
       {/* Status Filters */}
       <div className="card mb-6">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Order status filter">
           {['all', 'draft', 'submitted', 'confirmed', 'shipped', 'partial_received', 'delivered', 'cancelled'].map(
             (status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
+                role="tab"
+                aria-selected={statusFilter === status}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                   statusFilter === status
                     ? 'bg-primary-600 text-white'
@@ -504,6 +506,9 @@ export default function OrdersPage() {
         >
           <div
             className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Order details"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">

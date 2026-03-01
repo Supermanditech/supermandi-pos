@@ -39,7 +39,7 @@ export default function AuthLayout({
         <div className="max-w-[1152px] mx-auto px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
           <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <div className="flex items-center gap-4">
-            <a href="/supplier/help" className="text-slate-400 text-xs no-underline hover:underline">
+            <a href="/supplier/support" className="text-slate-400 text-xs no-underline hover:underline">
               Help
             </a>
             <BuildStamp />

@@ -4,7 +4,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 /**
  * HELP-001: Standalone layout for Help & Support page.
  * Matches auth layout style but with wider content area.
- * Accessible both pre-login and post-login (top-level route avoids route group collision).
+ * STG-373: Moved from app/help/ to app/support/ to resolve route conflict with (dashboard)/help/.
  * STG-223: Replaced inline styles with Tailwind classes + dark mode support
  */
 export default function HelpLayout({

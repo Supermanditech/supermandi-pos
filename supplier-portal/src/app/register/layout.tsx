@@ -34,7 +34,7 @@ export default function RegisterLayout({
         <div className="max-w-[720px] mx-auto px-4 py-4 text-[13px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
           <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
           <div className="flex items-center gap-4">
-            <a href="/supplier/help" className="text-slate-400 dark:text-slate-500 text-xs no-underline hover:underline">
+            <a href="/supplier/support" className="text-slate-400 dark:text-slate-500 text-xs no-underline hover:underline">
               Help
             </a>
             <BuildStamp />

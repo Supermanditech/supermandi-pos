@@ -49,7 +49,7 @@ export default function PendingApprovalPage() {
           </ul>
         </div>
 
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-5 text-left">
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-5 text-left" role="status" aria-live="polite">
           <p className="text-sm text-blue-800">
             <strong>Typical review time:</strong> 1-2 business days.
             For urgent requests, contact us at{' '}

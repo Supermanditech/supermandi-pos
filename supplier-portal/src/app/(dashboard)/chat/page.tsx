@@ -11,6 +11,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { MessageSquare, Send, Search, Headphones, Image, Paperclip } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
+// STG-370: Breadcrumb navigation (parity with other dashboard pages)
+import Breadcrumb from '@/components/Breadcrumb';
 // UIUX-SUP-006: Use centralized apiFetch (auth via HttpOnly cookies, 401 redirect, 30s timeout)
 import { apiFetch as globalApiFetch } from '@/lib/api';
 
@@ -159,7 +161,10 @@ function SupplierChatPage() {
 
   // R7.SUP.006: Use flex h-full layout to avoid calc(100vh - 64px) overflow
   return (
-    <div className="flex h-full bg-slate-50 dark:bg-gray-950 min-h-0">
+    <div className="flex flex-col h-full min-h-0">
+      {/* STG-370: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Chat' }]} />
+    <div className="flex flex-1 bg-slate-50 dark:bg-gray-950 min-h-0">
       {/* Left Panel: Conversation List */}
       <div className="w-80 border-r border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col min-h-0 flex-shrink-0">
         <div className="px-4 py-4 border-b border-slate-200 dark:border-gray-700">
@@ -354,6 +359,7 @@ function SupplierChatPage() {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

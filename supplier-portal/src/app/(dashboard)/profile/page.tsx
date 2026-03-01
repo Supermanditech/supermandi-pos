@@ -9,6 +9,25 @@ import { updateSupplierProfile, changePassword } from '@/lib/api';
 import Breadcrumb from '@/components/Breadcrumb';
 import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
 
+// STG-372: Password strength checklist (parity with forgot-password page)
+function PasswordChecklist({ password }: { password: string }) {
+  const checks = [
+    { label: 'At least 8 characters', pass: password.length >= 8 },
+    { label: 'One uppercase letter', pass: /[A-Z]/.test(password) },
+    { label: 'One lowercase letter', pass: /[a-z]/.test(password) },
+    { label: 'One digit', pass: /\d/.test(password) },
+  ];
+  return (
+    <ul className="list-none p-0 mt-1 text-xs space-y-0.5">
+      {checks.map((c) => (
+        <li key={c.label} className={`flex items-center gap-1 ${c.pass ? 'text-green-600' : 'text-slate-400'}`}>
+          <span>{c.pass ? '\u2713' : '\u2022'}</span> {c.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { supplier, refreshProfile, isLoading: authLoading } = useAuth();
@@ -31,6 +50,10 @@ export default function ProfilePage() {
     newPassword: '',
     confirmPassword: '',
   });
+  // STG-372: Show/hide password toggles
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
 
   // Bank details form state
   const [bankData, setBankData] = useState({
@@ -429,50 +452,87 @@ export default function ProfilePage() {
             </form>
           )}
 
-          {/* Password Tab */}
+          {/* Password Tab — STG-372: Added strength indicators + show/hide toggles */}
           {activeTab === 'password' && (
             <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
               <div>
                 <label className="label">Current Password</label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                  }
-                  className="input"
-                  placeholder="Enter current password"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showCurrentPw ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                    }
+                    className="input pr-12"
+                    placeholder="Enter current password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPw(!showCurrentPw)}
+                    aria-pressed={showCurrentPw}
+                    aria-label={showCurrentPw ? 'Hide current password' : 'Show current password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium"
+                  >
+                    {showCurrentPw ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="label">New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, newPassword: e.target.value })
-                  }
-                  className="input"
-                  placeholder="Minimum 8 characters"
-                  required
-                  minLength={8}
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPw ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, newPassword: e.target.value })
+                    }
+                    className="input pr-12"
+                    placeholder="Minimum 8 characters"
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPw(!showNewPw)}
+                    aria-pressed={showNewPw}
+                    aria-label={showNewPw ? 'Hide new password' : 'Show new password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium"
+                  >
+                    {showNewPw ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <PasswordChecklist password={passwordData.newPassword} />
               </div>
 
               <div>
                 <label className="label">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                  }
-                  className="input"
-                  placeholder="Re-enter new password"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPw ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                    }
+                    className="input pr-12"
+                    placeholder="Re-enter new password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPw(!showConfirmPw)}
+                    aria-pressed={showConfirmPw}
+                    aria-label={showConfirmPw ? 'Hide confirm password' : 'Show confirm password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-medium"
+                  >
+                    {showConfirmPw ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
+                  <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
+                )}
               </div>
 
               <div className="pt-4">

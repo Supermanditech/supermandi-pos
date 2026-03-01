@@ -3,10 +3,12 @@
 // REG-AUTH-302: Registration-First Onboarding for New Suppliers
 // Flow: Business Details → Phone OTP → KYC Documents → Success
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+// STG-361: Prevent accidental navigation losing multi-step form data
+import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
 // REQ.AUDIT.W4.CROSS.HARDCODED-FILE-SIZE-LIMIT.001
 import { MAX_KYC_DOCUMENT_SIZE_BYTES, MAX_KYC_DOCUMENT_SIZE_LABEL } from '@/lib/fileLimits';
 import {
@@ -92,6 +94,13 @@ export default function SupplierOnboardingPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // STG-361: Prevent accidental navigation losing multi-step onboard form data (parity with Register page)
+  const hasUnsavedData = useMemo(
+    () => (step === 'business' || step === 'phone' || step === 'otp' || step === 'kyc') && (businessName !== '' || ownerName !== '' || email !== '' || gstin !== ''),
+    [step, businessName, ownerName, email, gstin],
+  );
+  useUnsavedChanges(hasUnsavedData);
 
   // Setup reCAPTCHA when on phone step
   useEffect(() => {
@@ -389,7 +398,7 @@ export default function SupplierOnboardingPage() {
 
       {/* Firebase warning - only show after client mount */}
       {mounted && !isFirebaseReady() && (step === 'phone' || step === 'otp') && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm" role="alert">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1 text-xs">Please try again later.</p>
         </div>
@@ -397,7 +406,7 @@ export default function SupplierOnboardingPage() {
 
       {/* Error display */}
       {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -406,9 +415,10 @@ export default function SupplierOnboardingPage() {
       {step === 'business' && (
         <form onSubmit={handleBusinessSubmit} className="space-y-4">
           <div>
-            <label className="label">Business Name *</label>
+            <label htmlFor="onboard-businessName" className="label">Business Name *</label>
             <input
               type="text"
+              id="onboard-businessName"
               className="input"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
@@ -419,9 +429,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">Owner Name *</label>
+            <label htmlFor="onboard-ownerName" className="label">Owner Name *</label>
             <input
               type="text"
+              id="onboard-ownerName"
               className="input"
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
@@ -431,9 +442,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">GSTIN *</label>
+            <label htmlFor="onboard-gstin" className="label">GSTIN *</label>
             <input
               type="text"
+              id="onboard-gstin"
               className="input uppercase"
               value={gstin}
               onChange={(e) => setGstin(e.target.value.toUpperCase())}
@@ -445,9 +457,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">Email *</label>
+            <label htmlFor="onboard-email" className="label">Email *</label>
             <input
               type="email"
+              id="onboard-email"
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -457,9 +470,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">Phone Number *</label>
+            <label htmlFor="onboard-phone" className="label">Phone Number *</label>
             <input
               type="tel"
+              id="onboard-phone"
               className="input"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -469,9 +483,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">Address Line 1</label>
+            <label htmlFor="onboard-addressLine1" className="label">Address Line 1</label>
             <input
               type="text"
+              id="onboard-addressLine1"
               className="input"
               value={addressLine1}
               onChange={(e) => setAddressLine1(e.target.value)}
@@ -482,9 +497,10 @@ export default function SupplierOnboardingPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">City</label>
+              <label htmlFor="onboard-city" className="label">City</label>
               <input
                 type="text"
+                id="onboard-city"
                 className="input"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
@@ -493,9 +509,10 @@ export default function SupplierOnboardingPage() {
               />
             </div>
             <div>
-              <label className="label">Pincode</label>
+              <label htmlFor="onboard-pincode" className="label">Pincode</label>
               <input
                 type="text"
+                id="onboard-pincode"
                 className="input"
                 value={pincode}
                 onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -513,9 +530,10 @@ export default function SupplierOnboardingPage() {
             </summary>
             <div className="space-y-4 mt-4">
               <div>
-                <label className="label">Account Number</label>
+                <label htmlFor="onboard-bankAccountNumber" className="label">Account Number</label>
                 <input
                   type="text"
+                  id="onboard-bankAccountNumber"
                   className="input"
                   value={bankAccountNumber}
                   onChange={(e) => setBankAccountNumber(e.target.value)}
@@ -524,9 +542,10 @@ export default function SupplierOnboardingPage() {
                 />
               </div>
               <div>
-                <label className="label">IFSC Code</label>
+                <label htmlFor="onboard-bankIfsc" className="label">IFSC Code</label>
                 <input
                   type="text"
+                  id="onboard-bankIfsc"
                   className="input uppercase"
                   value={bankIfsc}
                   onChange={(e) => setBankIfsc(e.target.value.toUpperCase())}
@@ -536,9 +555,10 @@ export default function SupplierOnboardingPage() {
                 />
               </div>
               <div>
-                <label className="label">Account Holder Name</label>
+                <label htmlFor="onboard-bankAccountName" className="label">Account Holder Name</label>
                 <input
                   type="text"
+                  id="onboard-bankAccountName"
                   className="input"
                   value={bankAccountName}
                   onChange={(e) => setBankAccountName(e.target.value)}
@@ -547,9 +567,10 @@ export default function SupplierOnboardingPage() {
                 />
               </div>
               <div>
-                <label className="label">UPI VPA</label>
+                <label htmlFor="onboard-upiVpa" className="label">UPI VPA</label>
                 <input
                   type="text"
+                  id="onboard-upiVpa"
                   className="input lowercase"
                   value={upiVpa}
                   onChange={(e) => setUpiVpa(e.target.value.toLowerCase())}
@@ -592,9 +613,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">Phone Number</label>
+            <label htmlFor="onboard-phoneReadonly" className="label">Phone Number</label>
             <input
               type="tel"
+              id="onboard-phoneReadonly"
               className="input bg-slate-50"
               value={phone}
               readOnly
@@ -635,12 +657,13 @@ export default function SupplierOnboardingPage() {
       {step === 'otp' && (
         <form onSubmit={handleVerifyOtp} className="space-y-4">
           <div>
-            <label className="label">Enter OTP</label>
+            <label htmlFor="onboard-otp" className="label">Enter OTP</label>
             <p className="text-xs text-slate-500 mb-2">
               6-digit code sent to {phone}
             </p>
             <input
               type="text"
+              id="onboard-otp"
               className="input text-center text-xl tracking-widest"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -705,9 +728,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">PAN Card *</label>
+            <label htmlFor="onboard-panCard" className="label">PAN Card *</label>
             <input
               type="file"
+              id="onboard-panCard"
               className="input"
               accept="image/*,.pdf"
               onChange={handleFileChange(setPanFile)}
@@ -721,9 +745,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">GSTIN Certificate *</label>
+            <label htmlFor="onboard-gstinCert" className="label">GSTIN Certificate *</label>
             <input
               type="file"
+              id="onboard-gstinCert"
               className="input"
               accept="image/*,.pdf"
               onChange={handleFileChange(setGstinFile)}
@@ -737,9 +762,10 @@ export default function SupplierOnboardingPage() {
           </div>
 
           <div>
-            <label className="label">Address Proof *</label>
+            <label htmlFor="onboard-addressProof" className="label">Address Proof *</label>
             <input
               type="file"
+              id="onboard-addressProof"
               className="input"
               accept="image/*,.pdf"
               onChange={handleFileChange(setAddressProofFile)}

@@ -482,9 +482,10 @@ export default function ProductsPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label">Product Name *</label>
+                <label htmlFor="product-name" className="label">Product Name *</label>
                 <input
                   type="text"
+                  id="product-name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
@@ -496,8 +497,9 @@ export default function ProductsPage() {
 
               {/* GL-WF-057: Category dropdown instead of free-text */}
               <div>
-                <label className="label">Category</label>
+                <label htmlFor="product-category" className="label">Category</label>
                 <select
+                  id="product-category"
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
@@ -512,9 +514,10 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="label">Barcode (GTIN/EAN)</label>
+                <label htmlFor="product-barcode" className="label">Barcode (GTIN/EAN)</label>
                 <input
                   type="text"
+                  id="product-barcode"
                   name="barcode"
                   value={formData.barcode}
                   onChange={handleChange}
@@ -524,9 +527,10 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="label">Your SKU Code</label>
+                <label htmlFor="product-sku" className="label">Your SKU Code</label>
                 <input
                   type="text"
+                  id="product-sku"
                   name="supplierSku"
                   value={formData.supplierSku}
                   onChange={handleChange}
@@ -536,9 +540,10 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="label">Purchase Price (₹) *</label>
+                <label htmlFor="product-purchasePrice" className="label">Purchase Price (₹) *</label>
                 <input
                   type="number"
+                  id="product-purchasePrice"
                   name="purchasePrice"
                   value={(formData.purchasePrice / 100).toFixed(2)}
                   onChange={handleChange}
@@ -551,9 +556,10 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="label">MRP (₹)</label>
+                <label htmlFor="product-mrp" className="label">MRP (₹)</label>
                 <input
                   type="number"
+                  id="product-mrp"
                   name="mrp"
                   value={formData.mrp ? (formData.mrp / 100).toFixed(2) : ''}
                   onChange={handleChange}
@@ -565,9 +571,10 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="label">Minimum Order Quantity</label>
+                <label htmlFor="product-moq" className="label">Minimum Order Quantity</label>
                 <input
                   type="number"
+                  id="product-moq"
                   name="moq"
                   value={formData.moq}
                   onChange={handleChange}
@@ -578,8 +585,9 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="label">Unit</label>
+                <label htmlFor="product-unit" className="label">Unit</label>
                 <select
+                  id="product-unit"
                   name="unit"
                   value={formData.unit}
                   onChange={handleChange}
@@ -601,7 +609,7 @@ export default function ProductsPage() {
 
             {/* T-161: Product Image Upload */}
             <div>
-              <label className="label">Product Image</label>
+              <label htmlFor="product-image-input" className="label">Product Image</label>
               {imagePreview ? (
                 <div className="flex items-start gap-4">
                   <div className="relative">
@@ -709,8 +717,10 @@ export default function ProductsPage() {
       <div className="card mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
+            <label htmlFor="products-search" className="sr-only">Search products</label>
             <input
               type="text"
+              id="products-search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input"
@@ -931,6 +941,9 @@ export default function ProductsPage() {
         >
           <div
             className="card max-w-md w-full mx-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete product confirmation"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-2">Delete Product?</h3>
@@ -965,6 +978,9 @@ export default function ProductsPage() {
         >
           <div
             className="card max-w-md w-full mx-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Discard changes confirmation"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-2">Discard Changes?</h3>

@@ -340,7 +340,7 @@ export default function LoginPage() {
 
       {/* Firebase warning - only show after client mount */}
       {mounted && !isFirebaseReady() && step === 'phone' && authMode === 'otp' && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm" role="alert">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1">
             Login requires phone verification which is currently unavailable.
@@ -350,7 +350,7 @@ export default function LoginPage() {
 
       {/* Error display */}
       {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -426,7 +426,7 @@ export default function LoginPage() {
             />
             {/* REQ.AUTH.PARITY.LOGIN_FLOW: email validation on blur — parity with retailer */}
             {emailTouched && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && (
-              <p className="text-xs text-red-600 mt-1">Please enter a valid email address</p>
+              <p className="text-xs text-red-600 mt-1" role="alert">Please enter a valid email address</p>
             )}
           </div>
           <div>
@@ -521,12 +521,12 @@ export default function LoginPage() {
 
           {/* AUTH-OTP-001: OTP expiry countdown */}
           {otpExpirySeconds > 0 && (
-            <p className={`text-xs text-center ${otpExpirySeconds <= 60 ? 'text-red-600' : 'text-slate-500'}`}>
+            <p className={`text-xs text-center ${otpExpirySeconds <= 60 ? 'text-red-600' : 'text-slate-500'}`} aria-live="polite">
               Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
             </p>
           )}
           {otpExpirySeconds === 0 && step === 'otp' && (
-            <p className="text-xs text-center text-red-600">
+            <p className="text-xs text-center text-red-600" role="alert" aria-live="assertive">
               Code expired. Please resend OTP.
             </p>
           )}
@@ -608,7 +608,7 @@ export default function LoginPage() {
       {/* Incomplete Registration — Resume flow */}
       {step === 'incomplete' && (
         <div className="text-center py-4">
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 text-sm text-left">
+          <div className="bg-amber-50 border border-amber-200 dark:border-amber-700 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-4 py-3 rounded-lg mb-4 text-sm text-left">
             Your registration is incomplete. Please resume to complete your application.
           </div>
           <Link
@@ -634,7 +634,8 @@ export default function LoginPage() {
       )}
 
       {/* GO-LIVE-AUTH-FIX: Single register link at bottom - shown on phone/otp steps only */}
-      {(step === 'phone' || step === 'otp') && (
+      {/* STG-349: Exclude password mode — it has its own Forgot Password + Register links */}
+      {((step === 'phone' && authMode === 'otp') || step === 'otp') && (
         <div className="mt-6 text-center space-y-2">
           <p className="text-slate-600">
             Don't have an account?{' '}

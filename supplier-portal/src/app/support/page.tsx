@@ -1,6 +1,6 @@
 /**
  * HELP-001: Help & Support page for Supplier Portal.
- * Accessible at /supplier/help without authentication.
+ * STG-373: Moved from app/help/ to app/support/ — accessible at /supplier/support without auth.
  * All links use relative paths for GCP URL parity (staging + production).
  */
 

@@ -767,7 +767,7 @@ function RegisterPage() {
 
       {/* Firebase warning - only show after client mount */}
       {mounted && !isFirebaseReady() && step === 'phone' && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg text-sm" role="alert">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1">
             Registration requires phone verification which is currently unavailable.
@@ -778,7 +778,7 @@ function RegisterPage() {
 
       {/* Error display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg text-sm" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -1050,9 +1050,10 @@ function RegisterPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Phone (Verified)</label>
+                <label htmlFor="phoneVerified" className="block text-sm font-medium text-slate-700 mb-2">Phone (Verified)</label>
                 <input
                   type="text"
+                  id="phoneVerified"
                   value={phone}
                   className="input bg-slate-100 cursor-not-allowed"
                   disabled
@@ -1239,11 +1240,13 @@ function RegisterPage() {
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Authorized Signatory ID Proof *</h3>
             <p className="text-slate-600 text-sm mb-4">Select ID type and upload a clear copy</p>
 
-            <div className="flex flex-wrap gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-6" role="radiogroup" aria-label="ID proof type">
               {(['aadhaar', 'pan', 'driving_license'] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
+                  role="radio"
+                  aria-checked={idProofType === type}
                   className={`px-4 py-2 text-sm rounded-lg border-2 transition-colors ${
                     idProofType === type
                       ? 'bg-primary-50 border-primary-500 text-primary-700 font-medium'
@@ -1273,11 +1276,13 @@ function RegisterPage() {
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Business Proof *</h3>
             <p className="text-slate-600 text-sm mb-4">Select proof type and upload a clear copy</p>
 
-            <div className="flex flex-wrap gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-6" role="radiogroup" aria-label="Business proof type">
               {(['shop_license', 'msme', 'incorporation', 'trade_license'] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
+                  role="radio"
+                  aria-checked={businessProofType === type}
                   className={`px-4 py-2 text-sm rounded-lg border-2 transition-colors ${
                     businessProofType === type
                       ? 'bg-primary-50 border-primary-500 text-primary-700 font-medium'

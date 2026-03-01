@@ -119,10 +119,12 @@ export default function BnplOrdersPage() {
       )}
 
       {/* Filter */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4" role="tablist" aria-label="BNPL order status filter">
         {['', 'active', 'overdue', 'paid'].map(s => (
           <button
             key={s}
+            role="tab"
+            aria-selected={filterStatus === s}
             className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
               filterStatus === s
                 ? 'bg-primary-600 text-white border-primary-600'

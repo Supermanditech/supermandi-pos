@@ -199,6 +199,9 @@ export default function InvoicesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[5vh] z-50"
           onClick={() => setSelectedId(null)}>
           <div className="bg-white rounded-lg w-[90%] max-w-2xl max-h-[85vh] overflow-auto p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Invoice detail"
             onClick={e => e.stopPropagation()}>
             {detailLoading && (
               <div className="p-4 space-y-3 animate-pulse">

@@ -354,10 +354,12 @@ export default function EarningsPage() {
           onClick={() => setSelectedPayoutId(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Payout details"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-slate-800">Payout Details</h2>
@@ -494,7 +496,6 @@ export default function EarningsPage() {
                   Close
                 </button>
               </div>
-            </div>
           </div>
         </div>
       )}
