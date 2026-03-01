@@ -1,7 +1,7 @@
 {
-  "version": "75.0",
-  "lastUpdated": "2026-03-01T21:00:00.000Z",
-  "currentPhase": "IMPACTED_SCREEN_REITERATION_COMPLETE: All 20 touched files audited across 4 platforms. 1 regression found (unused import) and fixed in 7b46ffae. 0 open issues. Operator review now allowed.",
+  "version": "76.0",
+  "lastUpdated": "2026-03-01T22:00:00.000Z",
+  "currentPhase": "DEPLOY_READY: STG-287..409 truth corrected (119 FIXED, 4 WONTFIX). Impacted-screen reiteration PASSED. All local commits pushed. Operator review allowed.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -170,7 +170,7 @@
     "totalScreens": 118,
     "totalClean": 24,
     "activePlatform": null,
-    "activeInstruction": "All 123 findings resolved. 120 FIXED, 3 WONTFIX. Implementation complete. Impacted-screen reiteration PASSED (1 regression found+fixed). Operator review now allowed.",
+    "activeInstruction": "All 123 findings resolved. 119 FIXED, 4 WONTFIX. Implementation complete. Impacted-screen reiteration PASSED (1 regression found+fixed). Operator review now allowed.",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -242,9 +242,9 @@
     "totalFindings": 123,
     "reconciliation": {
       "date": "2026-03-01",
-      "fixed": 120,
+      "fixed": 119,
       "found": 0,
-      "wontfix": 3,
+      "wontfix": 4,
       "implementationCommits": ["703eec27", "417ac3a1", "f99dc3c6", "6fade9fb", "149f2b54", "fbb998a8", "9cea4407", "4d755133", "2b040854", "20ed2686"],
       "batch1": { "commit": "fbb998a8", "items": 18, "scope": "retailer a11y/forms/dialogs", "wontfix": 1 },
       "batch2": { "commit": "9cea4407", "items": 7, "scope": "retailer dark-mode/responsive/UX" },
