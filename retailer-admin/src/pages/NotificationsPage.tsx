@@ -75,11 +75,11 @@ export default function NotificationsPage() {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'order_status': return <Truck size={18} style={{ color: '#3b82f6' }} />;
-      case 'stock_alert': return <Package size={18} style={{ color: '#f97316' }} />;
-      case 'grn_mismatch': case 'grn_excess': return <AlertTriangle size={18} style={{ color: '#ef4444' }} />;
-      case 'payment_reminder': return <CreditCard size={18} style={{ color: '#8b5cf6' }} />;
-      default: return <Bell size={18} style={{ color: 'var(--text-muted)' }} />;
+      case 'order_status': return <Truck size={18} className="notif-icon-blue" />;
+      case 'stock_alert': return <Package size={18} className="notif-icon-orange" />;
+      case 'grn_mismatch': case 'grn_excess': return <AlertTriangle size={18} className="notif-icon-red" />;
+      case 'payment_reminder': return <CreditCard size={18} className="notif-icon-purple" />;
+      default: return <Bell size={18} className="notif-icon-muted" />;
     }
   };
 

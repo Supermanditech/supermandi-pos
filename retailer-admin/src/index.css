@@ -4351,6 +4351,17 @@ html.dark .pay-save-btn:hover { box-shadow: 0 6px 20px rgba(59,130,246,0.3); }
 .notif-pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
 .notif-page-info { padding: 0.375rem 0.75rem; font-size: 0.8125rem; color: var(--text-muted); }
 
+/* STG-338: Notification icon color classes with dark mode */
+.notif-icon-blue { color: #3b82f6; }
+.notif-icon-orange { color: #f97316; }
+.notif-icon-red { color: #ef4444; }
+.notif-icon-purple { color: #8b5cf6; }
+.notif-icon-muted { color: var(--text-muted); }
+html.dark .notif-icon-blue { color: #60a5fa; }
+html.dark .notif-icon-orange { color: #fb923c; }
+html.dark .notif-icon-red { color: #f87171; }
+html.dark .notif-icon-purple { color: #a78bfa; }
+
 html.dark .notif-error-retry { color: #f87171; }
 
 /* ======================================================
@@ -4406,6 +4417,10 @@ html.dark .scat-bnpl-badge { background: #1e3a5f; color: #93c5fd; }
 html.dark .scat-pricing { background: #1e293b; }
 html.dark .scat-margin { color: #4ade80; }
 html.dark .scat-info-box { background: #1e3a5f; color: #93c5fd; }
+/* STG-306: Responsive pricing grid on narrow viewports */
+@media (max-width: 360px) {
+  .scat-pricing { grid-template-columns: 1fr; }
+}
 html.dark .inline-error { color: #fca5a5; }
 
 /* Dark mode for info-box */
@@ -4488,10 +4503,25 @@ html.dark .alert-error-inline { background: #450a0a; color: #fca5a5; }
   padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.875rem;
 }
 
+/* STG-325: Credit status badge color variants with dark mode */
+.credit-badge-green { background: #dcfce7; color: #166534; }
+.credit-badge-amber { background: #fef3c7; color: #92400e; }
+.credit-badge-red { background: #fee2e2; color: #991b1b; }
+.credit-badge-blue { background: #dbeafe; color: #1e40af; }
+.credit-badge-muted { background: #f1f5f9; color: #475569; }
+
+/* STG-313: Dark mode override for green price value */
+html.dark .scat-price-value--green { color: #4ade80; }
+
 /* CreditDashboard dark mode */
 html.dark .credit-util-track { background: #334155; }
 html.dark .credit-overdue-warn { color: #f87171; }
 html.dark .credit-provider-card { background: #1e293b; }
+html.dark .credit-badge-green { background: #052e16; color: #86efac; }
+html.dark .credit-badge-amber { background: #422006; color: #fbbf24; }
+html.dark .credit-badge-red { background: #450a0a; color: #fca5a5; }
+html.dark .credit-badge-blue { background: #1e3a5f; color: #93c5fd; }
+html.dark .credit-badge-muted { background: #334155; color: #94a3b8; }
 
 /* ======================================================
    ReconciliationPage — CSS classes
@@ -4691,7 +4721,8 @@ html.dark .dact-activate-btn { box-shadow: 0 4px 14px rgba(34, 197, 94, 0.2); }
 .cust-search-icon {
   position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--text-muted);
 }
-.cust-search-input { padding-left: 28px; width: 220px; max-width: 100%; }
+/* STG-335: Responsive search input — max-width instead of fixed width */
+.cust-search-input { padding-left: 28px; width: 100%; max-width: 220px; }
 
 .cust-phone-cell { display: flex; align-items: center; gap: 0.375rem; }
 
@@ -5495,6 +5526,15 @@ html.dark .prod-disabled-stock { background-color: var(--surface); }
   padding: 0.2rem 0.5rem; border-radius: 4px;
   font-size: 0.65rem; font-weight: 600;
 }
+/* STG-299: Badge color variants for dark mode support */
+.badge-blue { background: #dbeafe; color: #1d4ed8; }
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-amber { background: #fef3c7; color: #92400e; }
+.badge-muted { background: var(--background); color: #64748b; }
+html.dark .badge-blue { background: #1e3a5f; color: #93c5fd; }
+html.dark .badge-green { background: #052e16; color: #86efac; }
+html.dark .badge-amber { background: #422006; color: #fbbf24; }
+html.dark .badge-muted { color: #94a3b8; }
 .dash-no-results { padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.875rem; }
 .dash-metrics-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

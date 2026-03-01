@@ -51,13 +51,13 @@ function fmtDate(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-function statusBadge(status: string): { color: string; bg: string; label: string } {
+function statusBadge(status: string): { className: string; label: string } {
   switch (status) {
-    case 'active': return { color: '#166534', bg: '#dcfce7', label: 'Active' };
-    case 'partial': return { color: '#92400e', bg: '#fef3c7', label: 'Partial' };
-    case 'overdue': return { color: '#991b1b', bg: '#fee2e2', label: 'Overdue' };
-    case 'paid': return { color: '#1e40af', bg: '#dbeafe', label: 'Paid' };
-    default: return { color: '#475569', bg: '#f1f5f9', label: status };
+    case 'active': return { className: 'credit-badge-green', label: 'Active' };
+    case 'partial': return { className: 'credit-badge-amber', label: 'Partial' };
+    case 'overdue': return { className: 'credit-badge-red', label: 'Overdue' };
+    case 'paid': return { className: 'credit-badge-blue', label: 'Paid' };
+    default: return { className: 'credit-badge-muted', label: status };
   }
 }
 
@@ -255,7 +255,7 @@ export default function CreditDashboardPage() {
                           <td className="cell-mono-right-bold" style={{ color: dd.outstandingMinor > 0 ? 'var(--danger)' : undefined }}>{fmt(dd.outstandingMinor)}</td>
                           <td>{fmtDate(dd.dueDate)}</td>
                           <td>
-                            <span className="credit-status-badge" style={{ background: badge.bg, color: badge.color }}>
+                            <span className={`credit-status-badge ${badge.className}`}>
                               {badge.label}
                             </span>
                           </td>

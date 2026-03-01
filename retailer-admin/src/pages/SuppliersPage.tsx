@@ -982,7 +982,7 @@ export default function SuppliersPage() {
               key={category}
               className="sup-cat-chip"
               style={{
-                background: formData.categoriesSupplied.includes(category) ? 'var(--primary)' : 'white',
+                background: formData.categoriesSupplied.includes(category) ? 'var(--primary)' : 'var(--surface)',
                 color: formData.categoriesSupplied.includes(category) ? 'white' : 'var(--text-primary)',
               }}
             >

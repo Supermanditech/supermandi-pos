@@ -383,10 +383,7 @@ export default function DashboardPage() {
                                 {s.gstin && <span className="dash-result-mono">{s.gstin}</span>}
                               </div>
                             </div>
-                            <span className="dash-result-badge" style={{
-                              background: s.isSupermandi ? '#dbeafe' : s.verificationStatus === 'verified' ? '#dcfce7' : 'var(--background)',
-                              color: s.isSupermandi ? '#1d4ed8' : s.verificationStatus === 'verified' ? '#166534' : '#64748b',
-                            }}>
+                            <span className={`dash-result-badge ${s.isSupermandi ? 'badge-blue' : s.verificationStatus === 'verified' ? 'badge-green' : 'badge-muted'}`}>
                               {s.isSupermandi ? 'SuperMandi' : s.verificationStatus}
                             </span>
                           </div>
@@ -413,10 +410,7 @@ export default function DashboardPage() {
                               <div className="dash-result-name">{b.productName}</div>
                               <div className="dash-result-meta dash-result-mono">{b.barcode}</div>
                             </div>
-                            <span className="dash-result-badge" style={{
-                              background: b.mode === 'PACKAGED' ? '#dbeafe' : '#fef3c7',
-                              color: b.mode === 'PACKAGED' ? '#1d4ed8' : '#92400e',
-                            }}>
+                            <span className={`dash-result-badge ${b.mode === 'PACKAGED' ? 'badge-blue' : 'badge-amber'}`}>
                               {b.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}
                             </span>
                           </div>
