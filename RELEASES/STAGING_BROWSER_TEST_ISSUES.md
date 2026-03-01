@@ -4155,6 +4155,121 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+## Post-Deploy Mega Live Verification (SHA aa898b65, run 22552048262)
+
+> Gate 3 PASSED 2026-03-01T20:47:59Z. Live verification started 2026-03-02.
+> Platform order: Retailer Web → Supplier Web → SuperAdmin Web → POS App.
+
+### STG-410: Retailer Web — NotFoundPage — Misleading link text on branded 404
+- **Platform**: Retailer Web
+- **Screen**: NotFoundPage (U6) — `/retailer/nonexistent`
+- **Finding**: "Go to Dashboard" link navigates to `/retailer/login` when user is unauthenticated. Link text misleads — it does not go to the dashboard, it goes to login. When authenticated with storeCode, link goes to `/s/:storeCode` which is correct.
+- **Repro**: Visit `https://staging.supermandi.tech/retailer/nonexistent` while logged out.
+- **Expected**: Link text says "Go to Login" or "Go to Home" when unauthenticated.
+- **Actual**: Link text says "Go to Dashboard" but navigates to `/retailer/login`.
+- **Timestamp**: 2026-03-02T03:30:00Z
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-411: Retailer Web — nginx — Static assets missing 3 of 5 security headers
+- **Platform**: Retailer Web
+- **Screen**: All screens (asset delivery)
+- **Finding**: `/retailer/assets/*` location block in `nginx-local-prod.conf` only re-adds `X-Content-Type-Options` and `X-Frame-Options` after the `add_header Cache-Control` directive. Due to nginx's `add_header` inheritance behavior, the server-level `Strict-Transport-Security`, `Content-Security-Policy`, and `Referrer-Policy` headers are NOT inherited. HTML responses at `/retailer/` DO include all 5 headers.
+- **Repro**: `curl -sI https://staging.supermandi.tech/retailer/assets/index-*.js | grep -i 'strict\|csp\|referrer'` — no matches.
+- **Expected**: All 5 security headers present on asset responses.
+- **Actual**: Only 2 of 5 present. HSTS, CSP, Referrer-Policy missing on static assets.
+- **Timestamp**: 2026-03-02T03:32:00Z
+- **Severity**: P3
+- **Status**: FOUND
+- **Note**: LOW impact — CSP/Referrer-Policy on JS/CSS assets is irrelevant (no HTML execution context). HSTS is delivered by the HTML document response.
+
+### STG-412: Retailer Web — NotFoundPage — No hover/focus styles on "Go to Dashboard" link
+- **Platform**: Retailer Web
+- **Screen**: NotFoundPage (U6)
+- **Finding**: `.not-found-link` class has no `:hover` or `:focus-visible` styles in `index.css`. Link has no visual feedback on interaction.
+- **Repro**: Visit `/retailer/nonexistent`, hover over the blue link — no style change.
+- **Expected**: Hover underline or color shift; focus-visible outline.
+- **Actual**: No hover/focus visual feedback.
+- **Timestamp**: 2026-03-02T03:35:00Z
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-413: Retailer Web — HelpPage — Heading hierarchy skips h2 (h1→h3)
+- **Platform**: Retailer Web
+- **Screen**: HelpPage (U5) — `/retailer/help`
+- **Finding**: `HelpPageContent.tsx` renders `<h1>` ("Need Help?") followed directly by `<h3>` elements ("Contact Us", "Quick Links", "Legal"). No `<h2>` in the hierarchy. Violates WCAG 1.3.1 heading structure.
+- **Repro**: Visit `https://staging.supermandi.tech/retailer/help`, inspect heading hierarchy.
+- **Expected**: h1 → h2 → h3 (or h1 → h2 with no h3).
+- **Actual**: h1 → h3 (skips h2).
+- **Timestamp**: 2026-03-02T03:40:00Z
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-414: Retailer Web — HelpPage — No hover/focus styles on quick links and legal links
+- **Platform**: Retailer Web
+- **Screen**: HelpPage (U5)
+- **Finding**: Links in HelpPageContent ("Retailer Portal", "POS App", "Supplier Portal", "Terms", "Privacy") use `<a>` tags with inline styles but no hover/focus visual feedback defined.
+- **Repro**: Visit `/retailer/help`, hover over quick links section.
+- **Expected**: Hover underline or color shift; focus-visible outline.
+- **Actual**: No hover/focus visual feedback on quick links.
+- **Timestamp**: 2026-03-02T03:42:00Z
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-415: WITHDRAWN — FALSE POSITIVE
+- **Original claim**: Firebase authorized domains may not include `staging.supermandi.tech`.
+- **Resolution**: Firebase Identity Toolkit REST API (`identitytoolkit.googleapis.com/v1/projects`) confirms `staging.supermandi.tech` IS in authorized domains. OP-3 was already cleared.
+- **Evidence**: `curl -s "https://identitytoolkit.googleapis.com/v1/projects?key=AIzaSyAF67YOn6DJC0UdHGMOYYeKLUem1EB68LM"` → `authorizedDomains` includes `staging.supermandi.tech`.
+- **Withdrawn at**: 2026-03-02T06:30:00Z
+- **Status**: WITHDRAWN
+
+### STG-416: Retailer Web — RegisterPage — submit-kyc returns 500 with raw PostgreSQL error for non-UUID input
+- **Platform**: Retailer Web
+- **Screen**: RegisterPage (U2) — `/retailer/register`
+- **Finding**: `POST /api/v1/retailer-admin/registration/submit-kyc` with non-UUID `applicationId` (e.g., `"fake"`) returns HTTP 500 with raw PostgreSQL error: `"invalid input syntax for type uuid: \"fake\""`. This leaks database internals to the client. Valid UUID format returns proper 404.
+- **Repro**: `curl -X POST https://staging.supermandi.tech/api/v1/retailer-admin/registration/submit-kyc -H "Content-Type: application/json" -d '{"applicationId":"fake","businessName":"Test",...}'`
+- **Expected**: 400 with "Invalid application ID format" or similar sanitized message.
+- **Actual**: 500 with raw PG error `invalid input syntax for type uuid`.
+- **Timestamp**: 2026-03-02T04:50:00Z
+- **Severity**: P2
+- **Status**: FOUND
+- **Note**: Frontend always sends valid UUIDs from sessionStorage. This is an API surface vulnerability, not a user-facing bug.
+
+### STG-417: Retailer Web — RegisterPage — Hardcoded production domain in help/support links
+- **Platform**: Retailer Web
+- **Screen**: RegisterPage (U2)
+- **Finding**: `RegisterPage.tsx` contains `href="https://supermandi.tech/privacy"` and `href="https://supermandi.tech/terms"` — hardcoded to production domain. On staging, these link to production, not staging.
+- **Repro**: Visit `https://staging.supermandi.tech/retailer/register`, inspect Terms/Privacy links.
+- **Expected**: Relative links (`/terms`, `/privacy`) or environment-aware URLs.
+- **Actual**: Hardcoded `https://supermandi.tech/...` pointing to production.
+- **Timestamp**: 2026-03-02T04:55:00Z
+- **Severity**: P3
+- **Status**: FOUND
+
+---
+
+### RETAILER WEB — AUTHENTICATED SCREENS BLOCK
+
+**Status**: `BLOCKED_ON_LIVE_AUTH_ACCESS`
+**Blocked screens**: A1–A22 (DashboardPage, OrdersPage, InventoryPage, CatalogPage, CustomersPage, AnalyticsPage, SettingsPage, ProfilePage, StaffPage, ReportsPage, NotificationsPage, SupportPage, BillingPage, StoreSettingsPage, DeviceManagementPage, HelpPageAuthenticated, AuditLogPage, ReorderPage, SupplierDirectoryPage, SupplierDetailPage, AccountPage, LimitedModeDashboard)
+**Blocked at**: 2026-03-02T06:45:00Z
+
+**Authentication paths exhausted**:
+1. Seed phone `+919999999999` → `REGISTER_REQUIRED` (seed-test-data.js not run on staging DB)
+2. Prelive phone `+919876543288` → `REGISTER_REQUIRED` (not seeded)
+3. Email/password `test@supermandi.tech` → `INVALID_CREDENTIALS` (no email accounts exist)
+4. Firebase phone OTP via REST → `CAPTCHA_CHECK_FAILED` (requires browser reCAPTCHA)
+5. Partial registration `+919876543210` → `VERIFY_PHONE` (cannot complete without Firebase browser SDK)
+
+**Unblock options** (operator picks one):
+- (a) Run `seed-test-data.js` against staging Cloud SQL → phone `9999999999` / password `020789`
+- (b) Operator logs in via browser, extracts `sm_auth` cookie, provides to Claude
+- (c) Operator provides any valid staging email + password
+
+**No code-only substitute attempted. No synthetic findings generated.**
+
+---
+
 ## Redeploy Checklist (run after all issues FIXED)
 
 - [ ] `pnpm -r typecheck` — 0 errors

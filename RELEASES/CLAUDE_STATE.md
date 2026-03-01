@@ -3089,8 +3089,10 @@ Current status: **ACTIVE** (Gate 3 PASSED)
 1. deploy SHA: aa898b65
 2. workflow run: 22552048262
 3. Gate 3: PASSED (2026-03-01T20:47:59Z)
-4. next finding start: STG-410
-5. active platform: Retailer Web
+4. next finding start: STG-418
+5. active platform: Supplier Web
+6. Retailer Web unauthenticated: COMPLETE (7 findings: STG-410..414, 416, 417; STG-415 withdrawn)
+7. Retailer Web authenticated (A1-A22): BLOCKED_ON_LIVE_AUTH_ACCESS (no seed data on staging, no credentials, no browser session)
 
 ### 15.2 Source of Truth Order
 

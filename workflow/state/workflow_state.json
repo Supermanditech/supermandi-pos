@@ -2044,7 +2044,21 @@
     "gate3Status": "PASSED",
     "gate3PassedAt": "2026-03-01T20:47:59Z",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
-    "nextFindingStartsAt": "STG-410",
+    "nextFindingStartsAt": "STG-418",
+    "activePlatform": "Supplier Web",
+    "retailerWebVerification": {
+      "unauthenticated": "COMPLETE",
+      "authenticated": "BLOCKED_ON_LIVE_AUTH_ACCESS",
+      "findings": ["STG-410","STG-411","STG-412","STG-413","STG-414","STG-416","STG-417"],
+      "withdrawn": ["STG-415"],
+      "blockedAt": "2026-03-02T06:45:00Z",
+      "blockerReasons": [
+        "seed-test-data.js not run on staging Cloud SQL",
+        "no email/password credentials on staging",
+        "Firebase phone OTP requires browser reCAPTCHA",
+        "no operator-supplied session cookie"
+      ]
+    },
     "singlePlatformLock": true,
     "singleScreenLock": true,
     "singleActionFlowLock": true,
