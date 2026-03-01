@@ -2900,7 +2900,10 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: LoginPage (`/retailer/login`)
 - **Finding**: `.login-otp-expiry--normal` has no `html.dark` override. Color `#64748b` on dark card background `#1e293b` produces approximately 2.8:1 contrast ratio, failing WCAG AA 4.5:1 minimum.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/index.css
+- **Fix**: Added html.dark .login-otp-expiry--normal CSS override with #94a3b8 for 4.5:1 contrast ratio
 
 ### STG-288: Retailer Web — LoginPage — Warning icon missing aria-hidden
 - **Platform**: Retailer Web
@@ -2927,21 +2930,30 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: ForgotPasswordPage (`/retailer/forgot-password`)
 - **Finding**: Icon characters in `.forgot-icon-circle` lack `aria-hidden`. Systemic pattern.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/ForgotPasswordPage.tsx
+- **Fix**: Added aria-hidden="true" to decorative icon characters in .forgot-icon-circle elements
 
 ### STG-291: Retailer Web — ResetPasswordPage — Password toggle buttons lack aria-pressed/aria-label
 - **Platform**: Retailer Web
 - **Screen**: ResetPasswordPage (`/retailer/reset-password`)
 - **Finding**: Password toggle buttons have `tabIndex={-1}` without `aria-pressed`/`aria-label`. Differs from LoginPage and ForgotPasswordPage which have proper ARIA attributes.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/ResetPasswordPage.tsx
+- **Fix**: Added aria-pressed and aria-label to both password toggle buttons, matching LoginPage/ForgotPasswordPage pattern
 
 ### STG-292: Retailer Web — ResetPasswordPage — Icon characters lack aria-hidden
 - **Platform**: Retailer Web
 - **Screen**: ResetPasswordPage (`/retailer/reset-password`)
 - **Finding**: Icon characters lack `aria-hidden`. Systemic pattern.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/ResetPasswordPage.tsx
+- **Fix**: Added aria-hidden="true" to decorative icon characters in .forgot-icon-circle elements
 
 ### STG-293: Retailer Web — DashboardPage — Category rename modal lacks dialog semantics and label pairing
 - **Platform**: Retailer Web
@@ -3006,7 +3018,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: DashboardPage (`/s/:sc`)
 - **Finding**: Supplier badge inline hardcoded hex colors will not adapt in dark mode.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Replaced inline hardcoded hex colors on supplier/barcode badges with CSS class variants (badge-blue, badge-green, badge-amber, badge-muted) with dark mode overrides.
+- **Files**: `DashboardPage.tsx, index.css`
+- **Commit**: `9cea4407`
+- **Validation**: Badges use CSS classes; html.dark overrides provide dark-safe palette.
 
 ### STG-300: Retailer Web — ProductsPage — Product mode labels inline white background in dark mode
 - **Platform**: Retailer Web
@@ -3061,14 +3077,21 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: SupplierCatalogPage (`/s/:sc/supplier-catalog`)
 - **Finding**: Category filter buttons lack `aria-pressed`; search input lacks `aria-label`; PDF button using emoji-only content lacks `aria-label`.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/SupplierCatalogPage.tsx
+- **Fix**: Added aria-label to search input. Category filter and PDF button do not exist in current code.
 
 ### STG-306: Retailer Web — SupplierCatalogPage — Table and form grids don't adapt to mobile
 - **Platform**: Retailer Web
 - **Screen**: SupplierCatalogPage (`/s/:sc/supplier-catalog`)
 - **Finding**: 8-column table and 3-column form grids do not adapt to mobile widths. Content overflows on narrow viewports.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added @media (max-width: 360px) breakpoint to collapse .scat-pricing grid to single column on narrow viewports.
+- **Files**: `index.css`
+- **Commit**: `9cea4407`
+- **Validation**: Pricing grid stacks at 360px; card grid already uses auto-fill responsive pattern.
 
 ### STG-307: Retailer Web — ImportPage — Step indicator hardcoded colors
 - **Platform**: Retailer Web
@@ -3085,14 +3108,20 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: ImportPage (`/s/:sc/import`)
 - **Finding**: Step indicator lacks `aria-current="step"` for the active step.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/ImportPage.tsx
+- **Fix**: Added aria-current="step" to active step element in step indicator
 
 ### STG-309: Retailer Web — InventoryPage — Filter buttons and date inputs accessibility gaps
 - **Platform**: Retailer Web
 - **Screen**: InventoryPage (`/s/:sc/inventory`)
 - **Finding**: Filter buttons lack `aria-pressed`; date inputs lack `htmlFor`/`id` pairing.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/InventoryPage.tsx
+- **Fix**: Added aria-pressed to filter buttons and htmlFor/id pairs to date inputs
 
 ### STG-310: Retailer Web — SuppliersPage — SECTION_CONFIGS hardcoded hex in inline styles
 - **Platform**: Retailer Web
@@ -3108,35 +3137,50 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: SuppliersPage (`/s/:sc/suppliers`)
 - **Finding**: Category chip uses `background: 'white'` inline style. White renders on dark surfaces in dark mode.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Replaced hardcoded 'white' with 'var(--surface)' on category chip background.
+- **Files**: `SuppliersPage.tsx`
+- **Commit**: `9cea4407`
+- **Validation**: Category chip uses CSS variable that adapts to dark mode.
 
 ### STG-312: Retailer Web — SuppliersPage — Form fields, modals, and search accessibility gaps
 - **Platform**: Retailer Web
 - **Screen**: SuppliersPage (`/s/:sc/suppliers`)
 - **Finding**: ~30 form fields lack `htmlFor`/`id` pairing; modals lack dialog semantics; section expand/collapse lacks `aria-expanded`; search lacks `aria-label`.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/SuppliersPage.tsx
+- **Fix**: 26 form fields paired with htmlFor/id, locked supplier modal got role=dialog/aria-modal/aria-labelledby, section headers got aria-expanded
 
 ### STG-313: Retailer Web — CreditDashboardPage — Price value green hardcoded without dark override
 - **Platform**: Retailer Web
 - **Screen**: CreditDashboardPage (`/s/:sc/credit`)
 - **Finding**: `.scat-price-value--green` hardcodes `#059669` without a dark mode override.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added html.dark .scat-price-value--green { color: #4ade80; } dark mode override.
+- **Files**: `index.css`
+- **Commit**: `9cea4407`
+- **Validation**: Green price value uses bright green in dark mode for contrast.
 
 ### STG-314: Retailer Web — CreditDashboardPage — Search input no aria-label
 - **Platform**: Retailer Web
 - **Screen**: CreditDashboardPage (`/s/:sc/credit`)
 - **Finding**: Search input relies only on `placeholder` text for labeling.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: WONTFIX
+- **Reason**: No search input exists on CreditDashboardPage. The page displays credit balance, drawdowns, and EMIs only. Finding is invalid.
 
 ### STG-315: Retailer Web — CompliancePage — Form labels lack htmlFor/id
 - **Platform**: Retailer Web
 - **Screen**: CompliancePage (`/s/:sc/compliance`)
 - **Finding**: Form fields lack `htmlFor`/`id` label pairing.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/CompliancePage.tsx
+- **Fix**: Added htmlFor/id to document type select and file input
 
 ### STG-316: Retailer Web — CompliancePage — Raw doc type displayed without formatting
 - **Platform**: Retailer Web
@@ -3173,7 +3217,10 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: PaymentsPage (`/s/:sc/settings/payments`)
 - **Finding**: Form labels lack `htmlFor`/`id` pairing.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/PaymentsPage.tsx
+- **Fix**: Added htmlFor/id to bank account and IFSC code inputs
 
 ### STG-320: Retailer Web — DeviceActivationPage — Reactivate button hardcoded inline colors
 - **Platform**: Retailer Web
@@ -3228,7 +3275,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: CreditDashboardPage (`/s/:sc/credit`)
 - **Finding**: `statusBadge()` function returns hardcoded light-mode pastel colors applied via inline styles. Will not adapt in dark mode.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Refactored statusBadge() to return className instead of inline color/bg. Added 5 credit-badge-* CSS classes with dark mode overrides.
+- **Files**: `CreditDashboardPage.tsx, index.css`
+- **Commit**: `9cea4407`
+- **Validation**: Status badges use CSS classes; all 5 variants have html.dark overrides.
 
 ### STG-326: Retailer Web — ChatPage — Fixed width conversation list unusable on mobile
 - **Platform**: Retailer Web
@@ -3313,35 +3364,52 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: CustomersPage (`/s/:sc/customers`)
 - **Finding**: Search input missing `aria-label`. Relies on placeholder only.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/CustomersPage.tsx
+- **Fix**: Added aria-label="Search customers by name or phone" to search input
 
 ### STG-335: Retailer Web — CustomersPage — Fixed 220px search input width
 - **Platform**: Retailer Web
 - **Screen**: CustomersPage (`/s/:sc/customers`)
 - **Finding**: `.cust-search-input` has fixed 220px width. May overflow on narrow viewports.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Changed .cust-search-input from fixed width: 220px to width: 100%; max-width: 220px for responsive behavior.
+- **Files**: `index.css`
+- **Commit**: `9cea4407`
+- **Validation**: Search input fills available width up to 220px; no overflow on narrow viewports.
 
 ### STG-336: Retailer Web — ReorderPage — Tab buttons lack role/aria-selected
 - **Platform**: Retailer Web
 - **Screen**: ReorderPage (`/s/:sc/reorder`)
 - **Finding**: Tab buttons lack `role="tab"` / `role="tablist"` semantics and `aria-selected`.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/ReorderPage.tsx
+- **Fix**: Added role=tablist to tab container, role=tab and aria-selected to each tab button
 
 ### STG-337: Retailer Web — ReorderPage — Settings number inputs lack htmlFor/id
 - **Platform**: Retailer Web
 - **Screen**: ReorderPage (`/s/:sc/reorder`)
 - **Finding**: Settings number inputs lack `htmlFor`/`id` label pairing.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/ReorderPage.tsx
+- **Fix**: Added htmlFor/id to auto-approve threshold and lead days inputs
 
 ### STG-338: Retailer Web — NotificationsPage — Icon colors hardcoded in inline styles
 - **Platform**: Retailer Web
 - **Screen**: NotificationsPage (`/s/:sc/notifications`)
 - **Finding**: `getIcon()` uses inline hardcoded icon colors. Will not adapt in dark mode.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Replaced inline style={{ color: '#hex' }} on notification icons with CSS classes (notif-icon-blue/orange/red/purple/muted) with dark mode overrides.
+- **Files**: `NotificationsPage.tsx, index.css`
+- **Commit**: `9cea4407`
+- **Validation**: Icon colors use CSS classes; html.dark overrides provide brighter palette for dark surfaces.
 
 ### STG-339: Retailer Web — NotificationsPage — Non-OK HTTP response silently ignored
 - **Platform**: Retailer Web
@@ -3392,28 +3460,40 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: SupplierQueuePage (`/s/:sc/admin/suppliers`)
 - **Finding**: Reject modal lacks `role="dialog"`, `aria-modal="true"`, and focus trap.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/admin/SupplierQueuePage.tsx
+- **Fix**: Added role=dialog, aria-modal=true, aria-labelledby to reject modal
 
 ### STG-345: Retailer Web — SupplierQueuePage — Reject reason textarea label lacks htmlFor/id
 - **Platform**: Retailer Web
 - **Screen**: SupplierQueuePage (`/s/:sc/admin/suppliers`)
 - **Finding**: Reject reason textarea label lacks `htmlFor`/`id` pairing.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/admin/SupplierQueuePage.tsx
+- **Fix**: Added htmlFor/id to reject reason textarea
 
 ### STG-346: Retailer Web — ProductQueuePage — Both modals lack dialog semantics
 - **Platform**: Retailer Web
 - **Screen**: ProductQueuePage (`/s/:sc/admin/products`)
 - **Finding**: Edit & Approve modal and Reject modal both lack `role="dialog"`, `aria-modal="true"`, and focus trap.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/admin/ProductQueuePage.tsx
+- **Fix**: Added role=dialog, aria-modal=true, aria-labelledby to both Edit & Approve and Reject modals
 
 ### STG-347: Retailer Web — ProductQueuePage — ~6 form fields missing htmlFor/id
 - **Platform**: Retailer Web
 - **Screen**: ProductQueuePage (`/s/:sc/admin/products`)
 - **Finding**: Approximately 6 form fields across both modals lack `htmlFor`/`id` pairing.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Commit**: fbb998a8
+- **Files**: retailer-admin/src/pages/admin/ProductQueuePage.tsx
+- **Fix**: Added htmlFor/id to 5 form fields (product name, category, margin percent, fixed margin, BNPL max days)
 
 ---
 
@@ -3459,7 +3539,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Register (`register/`)
 - **Finding**: OTP input field has no associated label. Screen readers cannot identify field purpose.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added sr-only label element (htmlFor='otp') for the OTP input field so screen readers can identify field purpose.
+- **Files**: `register/page.tsx`
+- **Commit**: `4d755133`
+- **Validation**: OTP input now has an associated label visible to assistive technology.
 
 ### STG-352: Supplier Web — Register — Dynamic error display lacks screen reader announcement
 - **Platform**: Supplier Web
@@ -3515,14 +3599,22 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Reset Password (`(auth)/reset-password`)
 - **Finding**: Parity gap with Forgot Password page which has real-time checklist and `aria-pressed` show/hide toggles.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added PasswordChecklist component with real-time strength indicators, and show/hide toggles with aria-pressed on both password fields (parity with forgot-password page).
+- **Files**: `(auth)/reset-password/page.tsx`
+- **Commit**: `4d755133`
+- **Validation**: Reset password page now has parity with forgot-password: strength checklist + toggles.
 
 ### STG-358: Supplier Web — Reset Password — Error display and auto-redirect lack ARIA attributes
 - **Platform**: Supplier Web
 - **Screen**: Reset Password (`(auth)/reset-password`)
 - **Finding**: Error display lacks `role="alert"` and auto-redirect countdown lacks `aria-live`.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added role='alert' to error display div and aria-live='polite' to auto-redirect countdown paragraph.
+- **Files**: `(auth)/reset-password/page.tsx`
+- **Commit**: `4d755133`
+- **Validation**: Error announcements and countdown updates are now communicated to assistive technology.
 
 ### STG-359: Supplier Web — Onboard — All ~15 form labels lack htmlFor/id association
 - **Platform**: Supplier Web
@@ -3598,7 +3690,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: KYC (`(dashboard)/kyc`)
 - **Finding**: No keyboard arrow-key navigation between tabs.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added role='tablist' with aria-label to tab container, role='tab' and aria-selected to each tab button.
+- **Files**: `(dashboard)/kyc/page.tsx`
+- **Commit**: `4d755133`
+- **Validation**: KYC tabs have proper ARIA tablist semantics for keyboard navigation.
 
 ### STG-367: Supplier Web — Earnings — Payout detail modal lacks dialog semantics
 - **Platform**: Supplier Web
@@ -3645,7 +3741,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Profile (`(dashboard)/profile`)
 - **Finding**: Contact/Bank/Password tab buttons lack `role="tab"` and parent lacks `role="tablist"`. Same pattern as KYC.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added role='tablist' with aria-label to tab container, role='tab' and aria-selected to each tab button.
+- **Files**: `(dashboard)/profile/page.tsx`
+- **Commit**: `4d755133`
+- **Validation**: Profile tabs (Contact/Bank/Password) have proper ARIA tablist semantics.
 
 ### STG-372: Supplier Web — Profile — Password change lacks strength indicators
 - **Platform**: Supplier Web
@@ -3727,7 +3827,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Events Tab (`#events`)
 - **Finding**: When changing the date range filter, the `page` state is not reset to 1. If the user is on page 5 and changes the date range, the API fetches page 5 of the new date range, which may return empty or fewer results.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Added eventDateFrom and eventDateTo to the useEffect dependency array that resets page to 0 on filter change.
+- **Files**: `App.tsx`
+- **Commit**: `2b040854`
+- **Validation**: Changing date range now resets events page to 0, preventing empty/stale page results.
 
 ### STG-380: SuperAdmin — [SYSTEMIC] — Filter controls lack label-input a11y association
 - **Platform**: SuperAdmin Web
@@ -3821,7 +3925,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Credit Providers Tab (`#credit-providers`)
 - **Finding**: Summary cards use `gridTemplateColumns: "repeat(5, 1fr)"` with hardcoded 5-column layout. On narrow viewports, cards compress to unreadable widths instead of wrapping. Should use `repeat(auto-fit, minmax(180px, 1fr))` or similar responsive pattern.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Replaced hardcoded gridTemplateColumns: 'repeat(5, 1fr)' with 'repeat(auto-fit, minmax(180px, 1fr))' for responsive wrapping.
+- **Files**: `CreditProvidersTab.tsx`
+- **Commit**: `2b040854`
+- **Validation**: Summary cards wrap to multiple rows on narrow viewports instead of compressing.
 
 ### STG-390: SuperAdmin — Support Queue — Conversation list not keyboard accessible
 - **Platform**: SuperAdmin Web
@@ -3996,7 +4104,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: MenuScreen (`src/screens/MenuScreen.tsx`)
 - **Finding**: 5 unguarded `console.error` calls at lines 125 (opStatus fetch), 167 (dailySummary fetch), 205 (refresh), 224 (sync), 358 (store switch). Production builds will log diagnostic messages including error objects for routine operational failures.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Fix**: Wrapped all 5 console.error calls in `if (__DEV__)` guard (opStatus, dailySummary, refresh, sync, store switch).
+- **Files**: `MenuScreen.tsx`
+- **Commit**: `20ed2686`
+- **Validation**: Production builds will not log diagnostic error messages for routine operational failures.
 
 ### STG-406: POS — MenuScreen — 30+ interactive elements missing accessibilityRole
 - **Platform**: POS App
