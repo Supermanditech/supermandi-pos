@@ -1626,11 +1626,11 @@ When Claude changes ANY of these files, Claude MUST:
 ```
 Phase A: PRE-DEPLOY AUDIT (Claude validates, Operator reviews)
    ↓
-Phase B: DATABASE MIGRATION (Irreversible — backup required)
+Phase B: CLOUD SQL BACKUP (Irreversible migrations ahead — backup required)
    ↓
-Phase C: SERVICE DEPLOYMENT (Reversible — Cloud Run revisions)
+Phase C: SERVICE DEPLOYMENT (main-backend entrypoint auto-runs migrate-prod.js up on startup)
    ↓
-Phase D: POST-DEPLOY VERIFICATION (Automated + Operator)
+Phase D: POST-DEPLOY VERIFICATION (migration status + revision readiness + GIT_SHA + smoke)
    ↓
 Phase E: SIGN-OFF or ROLLBACK (Operator decision)
 ```
@@ -1710,25 +1710,31 @@ NEW MIGRATIONS SINCE LAST DEPLOY (141 → 159):
 ### B.2 Migration Safety Protocol
 
 ```
-STEP 1: Cloud SQL backup BEFORE any migration
+IMPORTANT: Migrations run AUTOMATICALLY on main-backend startup.
+Source: backend/scripts/docker-entrypoint.sh → node /app/scripts/migrate-prod.js up
+This happens BEFORE the Node.js server starts (entrypoint is sequential).
+
+STEP 1: Cloud SQL backup BEFORE deploying main-backend
    → gcloud sql backups create --instance=supermandi-staging
    → WAIT for backup to complete (do NOT proceed while running)
 
-STEP 2: Dry-run preview
-   → List all pending migrations
+STEP 2: Pre-deploy review (Claude validates before CI trigger)
+   → List all pending migrations (168..171 for this deploy)
    → Review for DROP/RENAME/ALTER TYPE (FORBIDDEN in mega-batch)
-   → Verify all are additive (CREATE TABLE, ADD COLUMN, CREATE INDEX)
+   → Verify all are additive (CREATE TABLE, ADD COLUMN, ADD CHECK)
 
-STEP 3: Execute migrations in order (141 → 159)
-   → Run sequentially (NOT in parallel)
-   → Verify each migration exits cleanly (no errors)
-   → Migration 149 (RLS) is the most critical — verify all 27 tables get policies
+STEP 3: Deploy main-backend (entrypoint auto-runs migrations)
+   → CI deploys main-backend Cloud Run revision
+   → Entrypoint waits for PostgreSQL readiness (up to 30 retries)
+   → Entrypoint runs migrate-prod.js up (sequential, all pending)
+   → Entrypoint starts Node.js server only after migration success
+   → If migration fails, container does NOT become ready (health check fails)
 
-STEP 4: Post-migration verification
-   → Verify new schemas exist: whatsapp, notifications, chat, ai
-   → Verify RLS policies active on 27 tables
-   → Verify new indexes exist (trigram, token_hash, wamid)
-   → Verify new tables: refunds, daily_closings, staff_shifts, etc.
+STEP 4: Post-startup verification
+   → Verify main-backend revision is READY (health check passes)
+   → Verify migration count/status reflects 168..171 applied
+   → Verify new constraints exist (CHECK on sales, credit_applications, etc.)
+   → Verify new columns exist (pending_mrp, updated_at, rejection_reason)
 ```
 
 ### B.3 Migration Rollback Plan
@@ -1753,9 +1759,11 @@ IF migration succeeds but data is wrong:
 ### C.1 Deployment Order (STRICT — No Parallel for First Deploy)
 
 ```
-TIER 1 (Database-dependent — deploy first):
+TIER 1 (Database-dependent — deploy first, entrypoint runs migrations):
   ① main-backend        ← All 10 microservices, connects to DB + Redis
-     → Health check: GET /health → 200
+     → Entrypoint: docker-entrypoint.sh → migrate-prod.js up → server.js
+     → Migrations 168..171 run automatically on startup
+     → Health check: GET /health → 200 (only passes after migrations + server start)
      → Version check: GET /version → { sha: "<deployed-SHA>" }
 
 TIER 2 (Routes to backend — deploy second):
@@ -3237,7 +3245,44 @@ For every parity check, Claude must record:
 Only after this gate passes may Claude proceed to:
 
 1. staging deploy of 07cec20b
-2. post-deploy mega live verification
+2. Gate 3 post-deploy verification (mandatory sequence below)
+3. post-deploy mega live verification (only after Gate 3 passes)
+
+### 16.6 Gate 3: Post-Deploy Verification Sequence (Mandatory Order)
+
+After staging deploy of 07cec20b completes:
+
+```
+STEP 1: Capture serving revisions
+   → gcloud run services describe <service> --region=asia-south1 --format='value(status.traffic[0].revisionName)'
+   → Record all 6 service revision names
+
+STEP 2: Verify main-backend revision readiness
+   → main-backend entrypoint runs migrate-prod.js up on startup (docker-entrypoint.sh)
+   → Revision must reach READY status (health check passes)
+   → If revision fails to become ready → migration failure → investigate logs → rollback
+
+STEP 3: Verify GIT_SHA parity
+   → curl staging-api/version → sha must = 07cec20b
+   → curl staging-api/health → status 200
+
+STEP 4: Verify migration status/count after startup
+   → Query Cloud SQL: SELECT * FROM migrations ORDER BY id DESC LIMIT 10
+   → Migrations 168, 169, 170, 171 must show as applied
+   → Verify new constraints, columns, and schema changes exist
+
+STEP 5: Run smoke gates
+   → All 11 D-series smoke tests (D-001..D-011) must pass
+   → All routing verification gates (D-012..D-028) must pass
+
+STEP 6: Unlock post-deploy mega live verification
+   → Only after Steps 1-5 pass may Gate 4 begin
+```
+
+**Migration truth**: Migrations are NOT a separate manual Phase B step. They run automatically
+inside main-backend's container entrypoint (`backend/scripts/docker-entrypoint.sh`).
+The entrypoint sequence is: wait for PostgreSQL → `node migrate-prod.js up` → `exec node server.js`.
+If migration fails, the container never starts, and the health check never passes.
 
 ---
 

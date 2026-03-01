@@ -1,7 +1,7 @@
 {
   "version": "77.0",
   "lastUpdated": "2026-03-02T01:00:00Z",
-  "currentPhase": "STAGING_DEPLOY_GATE_3_PENDING: Gate 1 pre-deploy authorization CLEARED (OP-1 GitHub Secrets resolved, OP-2 DNS resolved, OP-3 Firebase Console resolved). Deploy target 07cec20b authorized. Staging deploy pending operator go signal. Post-deploy: capture revisions → prove GIT_SHA → migrations 168..171 dry-run/apply → smoke gates → then unlock post-deploy mega live verification.",
+  "currentPhase": "STAGING_DEPLOY_GATE_3_PENDING: Gate 1 pre-deploy authorization CLEARED (OP-1/OP-2/OP-3 resolved). Deploy target 07cec20b authorized. Post-deploy sequence: capture serving revisions → verify main-backend revision readiness (entrypoint auto-runs migrate-prod.js up on startup) → verify GIT_SHA parity → verify migration status/count → smoke gates → then unlock post-deploy mega live verification.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -211,7 +211,7 @@
     "totalScreens": 118,
     "totalClean": 24,
     "activePlatform": null,
-    "activeInstruction": "Gate 1 CLEARED. Deploy target is 07cec20b (2 non-app-code commits after 132eb8ff: state files + dead CI build-arg removal). Staging deploy authorized. After deploy: capture serving revisions → prove GIT_SHA = 07cec20b → migrations 168..171 dry-run/apply/status → smoke gates → then unlock post-deploy mega live verification.",
+    "activeInstruction": "Gate 1 CLEARED. Deploy target is 07cec20b. Staging deploy authorized. After deploy: capture serving revisions → verify main-backend revision readiness (entrypoint runs migrate-prod.js up on startup) → verify GIT_SHA parity = 07cec20b → verify migration status/count after startup → run smoke gates → then unlock post-deploy mega live verification.",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -278,7 +278,7 @@
   "finalMegaImplementation": {
     "status": "ALL_FINDINGS_RESOLVED",
     "baselineSha": "cb967459",
-    "headSha": "132eb8ff",
+    "headSha": "07cec20b",
     "scopeRange": "STG-287..409",
     "totalFindings": 123,
     "reconciliation": {
@@ -2635,12 +2635,12 @@
   },
   "postDeployMegaLiveVerification": {
     "status": "ARMED_BLOCKED_ON_STAGING_DEPLOY",
-    "deployTargetSha": "132eb8ff",
+    "deployTargetSha": "07cec20b",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
     "nextFindingStartsAt": "STG-410",
     "purpose": "Run the final operator-assisted go-live verification on live staging at micro level after deploy, with no screen exit until all required runtime and cross-functional checks are completed or blocked with evidence.",
     "sourceOfTruthOrder": [
-      "live_gcp_staging_behavior_at_sha_132eb8ff",
+      "live_gcp_staging_behavior_at_sha_07cec20b",
       "operator_runtime_evidence_browser_device_logs_screenshots",
       "cloud_run_revision_and_runtime_configuration_truth",
       "canonical_git_source_for_root_cause_after_live_reproduction"

@@ -145,7 +145,7 @@
   "finalMegaImplementation": {
     "status": "ALL_FINDINGS_RESOLVED",
     "baselineSha": "cb967459",
-    "headSha": "132eb8ff",
+    "headSha": "07cec20b",
     "scopeRange": "STG-287..409",
     "totalFindings": 123,
     "reconciliation": {
@@ -2038,7 +2038,7 @@
   "lastUpdated": "2026-02-28T12:00:00Z",
   "postDeployMegaLiveVerification": {
     "status": "ARMED_BLOCKED_ON_STAGING_DEPLOY",
-    "deployTargetSha": "132eb8ff",
+    "deployTargetSha": "07cec20b",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
     "nextFindingStartsAt": "STG-410",
     "singlePlatformLock": true,
@@ -2053,7 +2053,7 @@
       "POS App"
     ],
     "sourceOfTruthOrder": [
-      "live_gcp_staging_behavior_at_sha_132eb8ff",
+      "live_gcp_staging_behavior_at_sha_07cec20b",
       "operator_runtime_evidence",
       "cloud_run_revision_and_runtime_configuration",
       "canonical_git_source_after_live_reproduction"
