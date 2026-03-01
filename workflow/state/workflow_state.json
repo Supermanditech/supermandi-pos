@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-01T14:00:00.000Z",
+  "updatedAt": "2026-03-01T15:00:00.000Z",
   "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
@@ -104,6 +104,34 @@
       "SuperAdmin Web",
       "POS App"
     ]
+  },
+  "finalMegaImplementation": {
+    "status": "TRIAGE_COMPLETE_THEN_WAVE_A_IMMEDIATE",
+    "baselineSha": "cb967459",
+    "scopeRange": "STG-287..409",
+    "totalFindings": 123,
+    "phaseOrder": [
+      "Phase 1: triage STG-287..409 into execution waves",
+      "Wave A: all P2 findings",
+      "Wave B: systemic findings",
+      "Wave C: platform-specific P3 findings",
+      "Wave D: impacted-screen and impacted-shared-component reiteration",
+      "Wave E: deploy-prep readiness review"
+    ],
+    "waveAContainsAllP2": true,
+    "noOperatorPauseAfterTriage": true,
+    "deadCodeP2Handling": "Dead-code P2 items must be isolated from live-path Wave A. Either remove/fix dead code or convert to explicit WONTFIX with evidence. Do not let dead-code P2 block live-path execution.",
+    "knownDeadCodeSubdecision": [
+      "STG-341"
+    ],
+    "knownTrackerTruthCorrection": "SuperAdmin final-mega header severity mix must be corrected to 2 P2, 16 P3, 1 P4 before or alongside Wave A.",
+    "doNotCommitScratchFiles": [
+      "_c1_diag.ps1",
+      "_c2_temp.ps1",
+      "_c3_browsers.ps1",
+      "_c4_net_ssd_final.ps1"
+    ],
+    "trackerUpdateRequired": true
   },
   "machineEnforcement": {
     "enabled": true,

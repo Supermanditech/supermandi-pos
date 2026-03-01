@@ -2822,7 +2822,7 @@ Claude must not exit a screen while any of the following remain unresolved for t
 2. Supplier Web audit: COMPLETE — parked in tracker (`STG-348..373`, 26 findings, 20/20 screens, 6 clean)
 3. SuperAdmin Web audit: COMPLETE — parked in tracker (`STG-374..391,409`, 19 findings, 25/25 screens, 4 clean)
 4. POS App audit: COMPLETE — parked in tracker (`STG-392..408`, 17 findings, 44/44 screens, 10 clean)
-5. All 4 platforms fully audited and reconciled. 123 total findings across 118 screens. 24 clean. Awaiting operator triage.
+5. All 4 platforms fully audited and reconciled. 123 total findings across 118 screens. 24 clean. No operator pause is required before implementation triage and Wave A.
 
 ### POS App Strict Mode
 
@@ -2898,6 +2898,169 @@ Sampling is forbidden for this wave.
 
 Impacted-only reiteration is not sufficient.
 This wave is a full screenwise, actionwise, layerwise audit from fresh git truth.
+
+---
+
+## 19.7 Final Mega Implementation Triage And Execution (Mandatory Next Task)
+
+> **Status**: ARMED | **Activation Rule**: Starts only after final mega go-live audit truth is reconciled in tracker, state, git, and origin
+
+### Purpose
+
+This phase converts the reconciled final mega audit findings into disciplined execution waves without losing source-of-truth control.
+
+Canonical implementation baseline:
+
+1. current implementation baseline is `main@cb967459`
+2. canonical tracker is `RELEASES/STAGING_BROWSER_TEST_ISSUES.md`
+3. active implementation scope is `STG-287..409`
+4. total active findings in scope: `123`
+
+### Phase Order
+
+Claude must execute this phase in the following order only:
+
+1. Phase 1: triage `STG-287..409` into execution waves
+2. Wave A: all `P2` findings
+3. Wave B: systemic findings
+4. Wave C: remaining platform-specific `P3` findings
+5. Wave D: impacted-screen and impacted-shared-component reiteration
+6. Wave E: deploy-prep readiness review
+
+Claude must not skip Phase 1 and must not start Wave B or Wave C before Wave A is complete or explicitly blocked.
+
+### Phase 1 Mandatory Outputs
+
+Before writing implementation code, Claude must publish:
+
+1. exact count by severity
+2. exact count by platform
+3. exact count by fix type:
+   - accessibility
+   - dark mode / theming
+   - responsive
+   - wiring / UX parity
+   - logging / production hygiene
+   - route / structural
+   - cross-platform / systemic
+4. exact Wave A scope (`all P2 findings`)
+5. exact Wave B scope (`systemic findings`)
+
+No implementation is valid until this triage output is produced.
+
+### No Operator Pause Rule
+
+After Phase 1 triage is produced, Claude must proceed directly into Wave A.
+
+Claude must not stop for operator confirmation between:
+
+1. Phase 1 triage completion
+2. Wave A start
+
+unless a real technical blocker is discovered.
+
+### Wave A Rule
+
+Wave A must contain all `P2` findings from `STG-287..409`.
+
+Wave A is highest priority because those findings have the strongest product-quality and behavior impact relative to the rest of the batch.
+
+Claude must not mix unrelated `P3` work into Wave A unless:
+
+1. the `P3` item is inseparable from the `P2` fix in the same file/primitive, and
+2. Claude declares the coupling explicitly
+
+### Dead-Code P2 Handling
+
+If a `P2` item is attached to unreachable or dead code, Claude must:
+
+1. isolate it from the live-path Wave A batches
+2. decide it explicitly as one of:
+   - remove/fix dead code
+   - convert to explicit `WONTFIX` with evidence
+3. not allow dead-code `P2` items to block live-path Wave A execution
+
+Current known example:
+
+1. `STG-341` must be handled as a dead-code subdecision, not as a live-path blocker.
+
+### Tracker Truth Correction Rule
+
+If Phase 1 triage reveals a mismatch between tracker platform headers and extracted issue truth, Claude must correct the tracker header in the first implementation/truth commit before or alongside Wave A.
+
+Current known example:
+
+1. SuperAdmin final-mega header severity mix must reflect:
+   - `2 P2`
+   - `16 P3`
+   - `1 P4`
+
+### Git Discipline
+
+Claude must follow all of the following during implementation:
+
+1. coherent commits only
+2. no unrelated files in a batch
+3. no mixed-platform commit unless the change is a true shared primitive
+4. do not touch or commit these scratch files:
+   - `_c1_diag.ps1`
+   - `_c2_temp.ps1`
+   - `_c3_browsers.ps1`
+   - `_c4_net_ssd_final.ps1`
+5. update `RELEASES/STAGING_BROWSER_TEST_ISSUES.md` as findings move from `FOUND` to `FIXED`
+6. every fixed issue must record:
+   - files changed
+   - commit SHA
+   - validation run
+
+### Shared-Impact Rule
+
+If a fix touches any of the following:
+
+1. shared component
+2. shared CSS/token/theme primitive
+3. shared hook
+4. shared store
+5. shared service/API module
+
+then Claude must recheck all impacted screens before calling that batch complete.
+
+### POS Extra Rule
+
+For any POS Wave A or later fix touching:
+
+1. payment
+2. stock/inventory
+3. shift/daily closing/reporting
+4. sync/offline/SQLite/outbox/SSE
+5. device session or staff auth
+6. scanner or printer
+7. WhatsApp
+8. BNPL / credit
+
+Claude must explicitly publish the cross-functional regression checks performed before marking the issue fixed.
+
+### Mock / Demo / Non-Production Rule
+
+If implementation discovers:
+
+1. mock data
+2. demo mode
+3. stub API path
+4. fake fallback behavior
+5. placeholder production logic
+6. hardcoded test-only path affecting runtime behavior
+
+and it is not clearly intentional, guarded, and production-safe, Claude must keep it as or convert it into a tracked finding.
+
+### Completion Gate
+
+This implementation phase may only advance from Wave A to later waves if:
+
+1. all Wave A `P2` findings are `FIXED` or explicitly `BLOCKED`
+2. tracker entries are updated
+3. validation is published
+4. no hidden unrelated changes remain in the batch
 
 ---
 

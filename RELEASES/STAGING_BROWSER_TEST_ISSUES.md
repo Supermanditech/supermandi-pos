@@ -2942,14 +2942,18 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: DashboardPage (`/s/:sc`)
 - **Finding**: Category rename modal: labels lack `htmlFor`/`id` pairing, no `role="dialog"`, no `aria-modal="true"`, no focus trap.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/pages/DashboardPage.tsx`
+- **Fix**: Added `role="dialog"`, `aria-modal="true"`, `aria-labelledby="cat-rename-title"` to modal card. Added `id` to title. Added `htmlFor`/`id` pairing to English Name and Hindi Name labels/inputs.
 
 ### STG-294: Retailer Web — DashboardPage — Search dropdown no ARIA roles, div onClick, no keyboard support
 - **Platform**: Retailer Web
 - **Screen**: DashboardPage (`/s/:sc`)
 - **Finding**: Search dropdown has no ARIA roles (`listbox`/`option`). Items are `div` with `onClick` only — no keyboard navigation.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/pages/DashboardPage.tsx`
+- **Fix**: Added `role="combobox"`, `aria-expanded`, `aria-haspopup="listbox"`, `aria-autocomplete="list"`, `aria-label` to search input. Added `role="listbox"` to dropdown container. Added `role="option"`, `tabIndex={0}`, `onKeyDown` (Enter/Space) to all 3 result item types. Added Escape key to close dropdown.
 
 ### STG-295: Retailer Web — DashboardPage — Add products dropdown lacks menu semantics
 - **Platform**: Retailer Web
@@ -2991,7 +2995,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: ProductsPage (`/s/:sc/products`)
 - **Finding**: Product mode labels use inline `background: 'white'`. White background renders against dark card surfaces in dark mode.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/pages/ProductsPage.tsx`
+- **Fix**: Replaced `'white'` with `'var(--surface)'` on both PACKAGED and LOOSE_BULK mode labels. Surface variable adapts in dark mode.
 
 ### STG-301: Retailer Web — ProductsPage — Action buttons hardcoded hex colors
 - **Platform**: Retailer Web
@@ -3012,7 +3018,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: ProductsPage (`/s/:sc/products`)
 - **Finding**: Approximately 20 form fields have `<label>` elements without `htmlFor`/`id` pairing. Screen readers cannot associate labels with inputs.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/pages/ProductsPage.tsx`
+- **Fix**: Added `htmlFor`/`id` pairing to all 19 form fields (name, brand, alias, categoryId, barcode, unit, packSize, packUnit, soldBy, rateUnit, purchasePrice, sellPrice, mrp, openingStockQty, lowStockAlertQty, supplierId, gstPercent, hsn, notes). IDs prefixed with `prod-`.
 
 ### STG-304: Retailer Web — ProductsPage — Delete confirmation modal lacks dialog semantics
 - **Platform**: Retailer Web
@@ -3061,7 +3069,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: SuppliersPage (`/s/:sc/suppliers`)
 - **Finding**: `SECTION_CONFIGS` uses hardcoded hex colors in inline styles on section headers. Partially overridden by `html.dark` but not fully.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/pages/SuppliersPage.tsx`, `retailer-admin/src/index.css`
+- **Fix**: Replaced 9 hardcoded hex values in SECTION_CONFIGS with CSS variables (`--status-verified-*`, `--status-pending-*`, `--status-local-*`). Added light and dark mode definitions in `:root` and `:root.dark`.
 
 ### STG-311: Retailer Web — SuppliersPage — Category chip white background inline style
 - **Platform**: Retailer Web
@@ -3131,14 +3141,18 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: DeviceActivationPage (`/s/:sc/devices`)
 - **Finding**: Reactivate button uses hardcoded light-mode colors in inline styles that will not adapt in dark mode.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/pages/DeviceActivationPage.tsx`, `retailer-admin/src/index.css`
+- **Fix**: Replaced inline `#dcfce7`/`#166534`/`#86efac` with new `btn-success-light` CSS class using `--status-verified-*` variables. Dark mode automatically handled via CSS variable overrides.
 
 ### STG-321: Retailer Web — DeviceActivationPage — Shared Modal component missing dialog semantics
 - **Platform**: Retailer Web
 - **Screen**: DeviceActivationPage / Shared `Modal.tsx`
 - **Finding**: Shared `Modal` component has Escape key and overlay click dismiss but missing `role="dialog"`, `aria-modal="true"`, and focus trap. Systemic issue affecting all Modal usages.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/components/Modal.tsx`
+- **Fix**: Added `role="dialog"`, `aria-modal="true"`, `aria-labelledby="modal-title"`, `tabIndex={-1}`, `id="modal-title"` on h3, ref-based focus management (focus moves to modal on open, restores previous focus on close). Systemic fix for all Modal usages.
 
 ### STG-322: Retailer Web — DeviceActivationPage — Activation code label lacks htmlFor/id
 - **Platform**: Retailer Web
@@ -3173,7 +3187,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: ChatPage (`/s/:sc/chat`)
 - **Finding**: `.chat-convo-list` has fixed `width: 320px`. Insufficient space for message panel on mobile. No responsive breakpoint.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/index.css`
+- **Fix**: Added `min-width: 240px`, `flex-shrink: 0` to `.chat-convo-list`. Added `@media (max-width: 640px)` breakpoint that makes sidebar full-width on mobile.
 
 ### STG-327: Retailer Web — ChatPage — Conversation list items div onClick without keyboard support
 - **Platform**: Retailer Web
@@ -3194,7 +3210,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: PurchaseOrdersPage (`/s/:sc/purchase-orders`)
 - **Finding**: `partial_received` status value renders as-is with visible underscore in user-facing badge instead of formatted label.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `retailer-admin/src/pages/PurchaseOrdersPage.tsx`
+- **Fix**: Added `fmtStatus()` helper that splits on underscores and capitalizes each word. Replaced all 3 inline formatting expressions (table badge, detail modal, WhatsApp message) with `fmtStatus()`. "partial_received" now displays as "Partial Received".
 
 ### STG-330: Retailer Web — PurchaseOrdersPage — Fallback STATUS_COLORS.pending doesn't exist
 - **Platform**: Retailer Web
@@ -3278,21 +3296,24 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: RetailerOnboardingPage (`/retailer/onboard`) — DEAD CODE, route redirects to RegisterPage
 - **Finding**: `.onb-grid-2` has no responsive breakpoint. 2-column form layout cramped on mobile. Dead code — route redirects to RegisterPage.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: WONTFIX
+- **Resolution**: Route `/retailer/onboard` redirects to `/retailer/register` via `<Navigate replace />` (App.tsx:286, AUDIT-RET-002). RetailerOnboardingPage is never loaded. Dead code — no production impact.
 
 ### STG-342: Retailer Web — RetailerOnboardingPage — Resend OTP inline hardcoded colors (DEAD CODE)
 - **Platform**: Retailer Web
 - **Screen**: RetailerOnboardingPage (`/retailer/onboard`) — DEAD CODE
 - **Finding**: Resend OTP button uses inline hardcoded colors. Dead code — unreachable in production.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: WONTFIX
+- **Resolution**: Same as STG-341. Dead code — route redirects, page never loads.
 
 ### STG-343: Retailer Web — RetailerOnboardingPage — URL.createObjectURL no cleanup (DEAD CODE)
 - **Platform**: Retailer Web
 - **Screen**: RetailerOnboardingPage (`/retailer/onboard`) — DEAD CODE
 - **Finding**: `URL.createObjectURL(file)` creates blob URLs without cleanup via `URL.revokeObjectURL()`. Memory leak. Dead code — unreachable in production.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: WONTFIX
+- **Resolution**: Same as STG-341. Dead code — route redirects, page never loads.
 
 ### STG-344: Retailer Web — SupplierQueuePage — Reject modal lacks dialog semantics
 - **Platform**: Retailer Web
@@ -3378,7 +3399,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Forgot Password (`(auth)/forgot-password`)
 - **Finding**: No warning banner for Firebase unavailability on OTP phone step, unlike Login/Register/Onboard pages which have `isFirebaseReady()` guard.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `supplier-portal/src/app/(auth)/forgot-password/page.tsx`
+- **Fix**: Added `mounted` state + Firebase unavailability warning banner on phone step (parity with Login/Register/Onboard). Shows "Phone Verification Unavailable" with suggestion to use email method when `isFirebaseReady()` returns false.
 
 ### STG-355: Supplier Web — Forgot Password — OTP verify button not disabled when code expires
 - **Platform**: Supplier Web
@@ -3427,7 +3450,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Onboard (`(auth)/onboard`)
 - **Finding**: Accidental navigation loses all form data. Parity gap with Register page which has this guard.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `supplier-portal/src/app/(auth)/onboard/page.tsx`
+- **Fix**: Added `useUnsavedChanges` hook from `@/hooks/useNavigationSafety`. `hasUnsavedData` computed from form fields (businessName, ownerName, email, gstin) across all pre-completion steps. Triggers `beforeunload` guard to prevent accidental navigation.
 
 ### STG-362: Supplier Web — Products — Search input lacks associated label element
 - **Platform**: Supplier Web
@@ -3511,13 +3536,15 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Help - Dashboard (`(dashboard)/help`)
 - **Finding**: Both `app/help/page.tsx` and `app/(dashboard)/help/page.tsx` resolve to `/supplier/help/`. Non-grouped route takes precedence in Next.js App Router, making dashboard help unreachable. Combined with middleware gap, this is effectively dead code.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `supplier-portal/src/app/help/` → `supplier-portal/src/app/support/` (page.tsx + layout.tsx renamed), `supplier-portal/src/app/(auth)/layout.tsx`, `supplier-portal/src/app/register/layout.tsx`
+- **Fix**: Moved pre-login help from `app/help/` to `app/support/` (`/supplier/support`), resolving the route conflict. Dashboard help at `(dashboard)/help/page.tsx` is now reachable at `/supplier/help`. Updated auth and register layout footer links from `/supplier/help` to `/supplier/support`.
 
 ## FINAL_MEGA_GO_LIVE_AUDIT — SuperAdmin Web (STG-374..391, STG-409)
 
 > **Audit baseline**: `main@940e0832` | **Platform**: SuperAdmin Web (`supermandi-superadmin/`)
 > **Source manifest**: 25 auditable units (23 tabs + LoginGate + App.tsx shell)
-> **Screens audited**: 25/25 | **Findings**: 19 (0 P0, 0 P1, 0 P2, 19 P3)
+> **Screens audited**: 25/25 | **Findings**: 19 (0 P0, 0 P1, 2 P2, 16 P3, 1 P4)
 > **Clean screens**: 4 (ApplicationsTab, DevicesTab, PaymentsTab, SettingsTab) | **Blocked screens**: 0
 
 ### STG-374: SuperAdmin — LoginGate — Double min-height causes scrollbar
@@ -3539,7 +3566,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: App Shell (global toast)
 - **Finding**: Toast container uses hardcoded `background: #0F172A` (dark navy). In dark mode where the page background is similarly dark, toast messages are invisible/unreadable.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `supermandi-superadmin/src/App.tsx`
+- **Fix**: Replaced `#0F172A` bg + `#FFFFFF` text with `var(--color-surface)`, `var(--color-text-primary)`, `var(--color-border)`. Toast adapts to theme.
 
 ### STG-377: SuperAdmin — App Shell — Sidebar subtitle hardcoded color
 - **Platform**: SuperAdmin Web
@@ -3567,14 +3596,18 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Multiple tabs (Events, Stores, Staff, Invoices, Refunds, GST, Suppliers, Analytics, Audit, Users, WhatsApp, and others)
 - **Finding**: Filter `<select>` and `<input>` elements lack `id` attributes and corresponding `<label htmlFor>` associations. Screen readers cannot associate visible labels with their controls. This is a portal-wide systemic pattern.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: 12 SuperAdmin tab files + `supermandi-superadmin/src/index.css` (`.sa-sr-only` utility)
+- **Fix**: Added `id` + `<label htmlFor>` or `aria-label` to 31 filter controls across StoresTab, StaffTab, InvoicesTab, RefundsTab, GstComplianceTab, SuppliersTab, AnalyticsTab, AuditTab, UsersTab, WhatsAppTab, SupportQueueTab, RegistrationsTab, AIInsightsTab. Added `.sa-sr-only` CSS utility for visually-hidden labels.
 
 ### STG-381: SuperAdmin — [SYSTEMIC] — .sa-text-danger missing dark mode override
 - **Platform**: SuperAdmin Web
 - **Screen**: Multiple tabs using `.sa-text-danger` class
 - **Finding**: `.sa-text-danger` is defined in `:root` as `color: var(--color-error)` but has no `html.dark` override. `--color-error` resolves to `#DC2626` in both light and dark mode. While red-on-dark is readable, it differs from the pattern where other semantic text classes have explicit dark mode overrides.
 - **Severity**: P4
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `supermandi-superadmin/src/App.css`
+- **Fix**: Added `html.dark .sa-text-danger { color: #f87171; }` alongside existing `html.dark .sa-text-error` override.
 
 ### STG-382: SuperAdmin — GRN Alerts — Pagination button class inconsistency
 - **Platform**: SuperAdmin Web
@@ -3616,7 +3649,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: Multiple tabs (RefundsTab, QualityDashboardTab, SupportQueueTab, AIInsightsTab, RegistrationsTab, SuppliersTab, UsersTab, AnalyticsTab)
 - **Finding**: Several tabs define local `formatDate`/`formatTime` helper functions using `toLocaleString("en-IN")` or `toLocaleDateString()` without specifying `timeZone: "Asia/Kolkata"`. The shared `formatDateTime` in `lib/formatters.ts` correctly uses `Asia/Kolkata`, but these local helpers use the browser's local timezone, causing date/time display inconsistencies for users outside IST.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `supermandi-superadmin/src/lib/formatters.ts` (added `formatTime`), `src/tabs/SupportQueueTab.tsx`, `src/tabs/RefundsTab.tsx`, `src/tabs/AIInsightsTab.tsx`, `src/tabs/MonitoringTab.tsx`, `src/tabs/RegistrationsTab.tsx`, `src/tabs/UsersTab.tsx`, `src/tabs/QualityDashboardTab.tsx`, `src/tabs/SuppliersTab.tsx`, `src/tabs/AnalyticsTab.tsx`, `src/components/ConfirmDialog.tsx`, `src/App.tsx`
+- **Fix**: Replaced 14 unguarded `toLocaleString`/`toLocaleDateString`/`toLocaleTimeString` calls across 11 files with shared `formatDateTime`/`formatDate` from `lib/formatters.ts` (all use `timeZone: 'Asia/Kolkata'`). Added `formatTime` export. SupportQueueTab relative-time helper retains logic but now passes `timeZone: 'Asia/Kolkata'`.
 
 ### STG-388: SuperAdmin — Monitoring — Dev ticket reference in production UI
 - **Platform**: SuperAdmin Web
@@ -3674,7 +3709,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Screen**: EnrollDeviceScreen (`src/screens/EnrollDeviceScreen.tsx`)
 - **Finding**: Line ~299 constructs an error message that includes `API_BASE_URL` in the user-facing Alert when enrollment fails: `"Enrollment failed: ${err.message} (API: ${API_BASE_URL})"`. In production builds, this exposes the backend API host to end users. Should be guarded by `__DEV__` or removed from the user-facing message entirely.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Fix**: Wrapped `API_BASE_URL` and `Updates.channel` debug parts in `__DEV__` guard so production error Alerts only show error code + status, not backend infrastructure URL.
 
 ### STG-394: POS — EnrollDeviceScreen — Inline error banner lacks accessibilityRole="alert"
 - **Platform**: POS App
@@ -3787,14 +3824,18 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
   - OrderHistoryScreen.tsx: 1 (line 245)
 - **Note**: SplashScreen lines 161/164/167 are intentionally unguarded per `REQ.AUDIT.W5.POS.SPLASH-INFRA-INIT-FAILURE-MASKING.001` (infra init failures logged in all environments). ForceUpdateScreen line 38 is a module-level build-time warning for missing App Store URL, also intentional.
 - **Severity**: P3
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: 14 POS screens: `PaymentScreen.tsx` (8), `BnplDuesScreen.tsx` (6), `InwardScreen.tsx` (4), `DailyReportScreen.tsx` (3), `BuyScreen.tsx` (3), `OrderDetailScreen.tsx` (3), `ReorderSettingsScreen.tsx` (3), `GRNScreen.tsx` (2), `BarcodeSheetScreen.tsx` (2), `OpeningStockScreen.tsx` (2), `ReorderPoliciesScreen.tsx` (2), `OverdueDuesScreen.tsx` (2), `ReturnScreen.tsx` (2), `OrderHistoryScreen.tsx` (1)
+- **Fix**: Wrapped 43 bare `console.log`/`console.warn`/`console.error` calls in `if (__DEV__)` guards. SplashScreen and ForceUpdateScreen intentional exceptions preserved.
 
 ### STG-408: POS — [SYSTEMIC] — Missing accessibilityRole on interactive elements across 26+ screens
 - **Platform**: POS App
 - **Screen**: Multiple screens (batch pattern scan, all 43 screens)
 - **Finding**: 26+ POS screens have interactive `Pressable` elements with zero `accessibilityRole` attributes. Only 6 screens have any a11y attributes on interactive elements: PaymentScreen (3), BulkPurchaseCreditScreen (2), ChatListScreen (5), ChatConversationScreen (4), AIInsightsScreen (3), HelpScreen (9). The remaining screens — including critical flows like DailyReportScreen, InwardScreen, BuyScreen, OrderHistoryScreen, OrderDetailScreen, GRNScreen, ReturnScreen, BarcodeSheetScreen, OpeningStockScreen, ShiftScreen, StockStatementScreen, KhataScreen, SalesHistoryScreen, BillDetailScreen, SalesStatementScreen, DailyClosingScreen, PurchaseHistoryScreen, CustomerListScreen, CustomerManagementScreen, ReorderSettingsScreen, ReorderPoliciesScreen, PrinterSettingsScreen, OverdueDuesScreen, BnplDuesScreen, SuccessPrintScreenV2, UiShowcaseScreen — have zero `accessibilityRole` on any Pressable despite having multiple interactive elements. This makes the POS app largely inaccessible to screen reader users.
 - **Severity**: P2
-- **Status**: FOUND
+- **Status**: FIXED
+- **Files**: 27 POS screens: `DailyReportScreen.tsx`, `InwardScreen.tsx`, `BuyScreen.tsx`, `OrderHistoryScreen.tsx`, `OrderDetailScreen.tsx`, `GRNScreen.tsx`, `ReturnScreen.tsx`, `BarcodeSheetScreen.tsx`, `OpeningStockScreen.tsx`, `ShiftScreen.tsx`, `StockStatementScreen.tsx`, `KhataScreen.tsx`, `SalesHistoryScreen.tsx`, `BillDetailScreen.tsx`, `SalesStatementScreen.tsx`, `DailyClosingScreen.tsx`, `PurchaseHistoryScreen.tsx`, `CustomerListScreen.tsx`, `CustomerManagementScreen.tsx`, `ReorderSettingsScreen.tsx`, `ReorderPoliciesScreen.tsx`, `PrinterSettingsScreen.tsx`, `OverdueDuesScreen.tsx`, `BnplDuesScreen.tsx`, `CreditScreen.tsx`, `UiShowcaseScreen.tsx`, `SellScanScreen.tsx`
+- **Fix**: Added `accessibilityRole` to 235 Pressable elements across 27 screens. Semantic roles: `button` (most), `checkbox` (selection toggles), `radio` (single-select groups), `switch` (mode toggles), `link` (external URL opens).
 
 ---
 

@@ -1,7 +1,7 @@
 {
-  "version": "72.0",
-  "lastUpdated": "2026-03-01T14:00:00.000Z",
-  "currentPhase": "FINAL_MEGA_GO_LIVE_AUDIT_COMPLETE_RECONCILED: All 4 platforms audited — Retailer STG-287..347 (61 findings, 29 screens), Supplier STG-348..373 (26 findings, 20 screens), SuperAdmin STG-374..391+409 (19 findings, 25 screens), POS App STG-392..408 (17 findings, 44 screens). Total: 123 findings across 118 screens on 4 platforms. Canonical baseline main@fd6f1b4b. Tracker + state + git reconciled. Deploy hold active until findings triaged.",
+  "version": "73.0",
+  "lastUpdated": "2026-03-01T15:00:00.000Z",
+  "currentPhase": "FINAL_MEGA_IMPLEMENTATION_IN_PROGRESS: Final mega audit reconciled at main@cb967459. Canonical implementation scope STG-287..409 (123 findings across 118 screens). Claude must complete Phase 1 triage, then proceed directly into Wave A = all live-path P2 findings without operator pause. Deploy hold remains active.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -232,6 +232,68 @@
       ],
       "mockDemoDetectionRequired": true,
       "mockDemoFindingRule": "Any mock, demo, stub, fake fallback, placeholder, hardcoded test path, or non-production-safe behavior must be appended as a finding unless explicitly intentional, guarded, and production-safe."
+    }
+  },
+  "finalMegaImplementation": {
+    "status": "TRIAGE_COMPLETE_THEN_WAVE_A_IMMEDIATE",
+    "baselineSha": "cb967459",
+    "scopeRange": "STG-287..409",
+    "totalFindings": 123,
+    "phaseOrder": [
+      "Phase 1: triage STG-287..409 into execution waves",
+      "Wave A: all P2 findings",
+      "Wave B: systemic findings",
+      "Wave C: platform-specific P3 findings",
+      "Wave D: impacted-screen and impacted-shared-component reiteration",
+      "Wave E: deploy-prep readiness review"
+    ],
+    "waveA": {
+      "rule": "Must contain all P2 findings before any broader P3 execution begins",
+      "mixingRule": "P3 work may join Wave A only when inseparable from a P2 fix in the same file or primitive and explicitly declared",
+      "noOperatorPauseAfterTriage": true,
+      "deadCodeP2Handling": "Dead-code P2 items must be isolated from live-path Wave A. Either remove/fix dead code or convert to explicit WONTFIX with evidence. Do not let dead-code P2 block live-path execution.",
+      "knownDeadCodeSubdecision": [
+        "STG-341"
+      ],
+      "knownTrackerTruthCorrection": "SuperAdmin final-mega header severity mix must be corrected to 2 P2, 16 P3, 1 P4 before or alongside Wave A."
+    },
+    "gitDiscipline": {
+      "coherentCommitsOnly": true,
+      "noUnrelatedFiles": true,
+      "noMixedPlatformCommitUnlessSharedPrimitive": true,
+      "doNotCommitScratchFiles": [
+        "_c1_diag.ps1",
+        "_c2_temp.ps1",
+        "_c3_browsers.ps1",
+        "_c4_net_ssd_final.ps1"
+      ],
+      "trackerUpdateRequired": true,
+      "perFixedIssueEvidence": [
+        "files_changed",
+        "commit_sha",
+        "validation_run"
+      ]
+    },
+    "sharedImpactRule": {
+      "recheckImpactedScreensIfTouched": [
+        "shared_component",
+        "shared_css_or_theme_primitive",
+        "shared_hook",
+        "shared_store",
+        "shared_service_or_api_module"
+      ]
+    },
+    "posExtraRule": {
+      "crossFunctionalRegressionChecksRequiredFor": [
+        "payment",
+        "stock_inventory",
+        "shift_daily_closing_reporting",
+        "sync_offline_sqlite_outbox_sse",
+        "device_session_or_staff_auth",
+        "scanner_or_printer",
+        "whatsapp",
+        "bnpl_credit"
+      ]
     }
   },
   "ticketStatus": {
