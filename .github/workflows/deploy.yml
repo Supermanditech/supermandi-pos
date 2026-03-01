@@ -123,13 +123,11 @@ jobs:
       - name: Build retailer-admin
         run: |
           # STAGING-FIX-007: Firebase config loaded from .env.production at build time (not Docker ARGs)
+          # Firebase build-args removed — Dockerfiles load from .env.production files, not ARGs
           docker build \
             -t "${{ env.AR_REPO }}/retailer-admin:${{ env.SHA }}" \
             -f retailer-admin/Dockerfile \
             --build-arg VITE_API_BASE_URL="" \
-            --build-arg VITE_FIREBASE_API_KEY="${{ secrets.VITE_FIREBASE_API_KEY }}" \
-            --build-arg VITE_FIREBASE_AUTH_DOMAIN="${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" \
-            --build-arg VITE_FIREBASE_PROJECT_ID="${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
             --build-arg VITE_GIT_SHA="${{ env.SHA }}" \
             --build-arg VITE_BUILD_TIME="${{ env.BUILD_TIME }}" \
             retailer-admin/
@@ -147,13 +145,11 @@ jobs:
 
       - name: Build superadmin
         run: |
+          # Superadmin does not use Firebase — no Firebase build-args needed
           docker build \
             -t "${{ env.AR_REPO }}/superadmin:${{ env.SHA }}" \
             -f supermandi-superadmin/Dockerfile \
             --build-arg VITE_API_BASE_URL="" \
-            --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}" \
-            --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}" \
-            --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}" \
             --build-arg VITE_GIT_SHA="${{ env.SHA }}" \
             --build-arg VITE_BUILD_TIME="${{ env.BUILD_TIME }}" \
             supermandi-superadmin/
