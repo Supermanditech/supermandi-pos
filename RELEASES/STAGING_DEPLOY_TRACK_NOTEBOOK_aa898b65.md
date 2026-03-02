@@ -617,4 +617,9 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 - **Status**: COMPLETE
 - **Commit**: `7f43284a` (24 files changed, 253 insertions, 104 deletions)
 - **All 29 findings FIXED**. All 4 typechecks clean.
-- **Production promotion**: BLOCKED — requires staging redeploy at `7f43284a` → impacted runtime recheck → verdict
+- **Staging redeploy**: COMPLETE — CI run `22598074150`, 7/7 jobs PASSED, 12/12 smoke gates
+- **Impacted runtime recheck**: 29/29 PASS (8 P2 + 21 P3)
+- **Serving revisions**: api-gateway-00101-fqd, main-backend-00121-h6q, retailer-admin-00101-vvg, supplier-portal-00094-8gw, superadmin-00094-4vz, landing-00094-lfg
+- **SHA parity**: CONFIRMED — `/version` returns `7f43284`
+- **Deploy verification**: API ✓, Token Refresh ✓, Portal E2E 23/30 (7 pre-existing a11y failures)
+- **Production promotion**: ELIGIBLE — awaiting CTO go-live decision

@@ -1,7 +1,7 @@
 {
   "version": "95.0",
   "lastUpdated": "2026-03-04T08:00:00Z",
-  "currentPhase": "CONSOLIDATED_FIX_WAVE_COMPLETE: All 29 sign-off findings STG-436..464 FIXED at commit 7f43284a (24 files, 253+/104-). All 4 typechecks clean. Next: staging redeploy at 7f43284a, then impacted runtime recheck, then production-go-live verdict.",
+  "currentPhase": "STAGING_REDEPLOYED_AND_RUNTIME_VERIFIED: SHA 7f43284a deployed to staging (6/6 services, 12/12 smoke gates, 29/29 impacted checks PASS). Production promotion eligible. Awaiting CTO go-live decision.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -540,7 +540,7 @@
       ]
     },
     "liveSignoffSummary": {
-      "status": "COMPLETE — ALL 29 FINDINGS FIXED at 7f43284a",
+      "status": "COMPLETE — ALL 29 FINDINGS FIXED, DEPLOYED, AND RUNTIME-VERIFIED at 7f43284a",
       "completedAt": "2026-03-04T06:00:00Z",
       "totalScreensAudited": 120,
       "totalFlowsAudited": 7,
@@ -555,7 +555,36 @@
         "superadminWeb": { "screens": 25, "findings": 2, "p2": 0, "p3": 2 },
         "crossFunctionMatrix": { "flows": 7, "findings": 0 }
       },
-      "nextPhase": "Staging redeploy at 7f43284a, then impacted runtime recheck, then production-go-live verdict",
+      "nextPhase": "Production promotion eligible. CTO go-live decision pending.",
+      "stagingRedeploy": {
+        "status": "COMPLETE",
+        "deployedAt": "2026-03-03T22:12:00Z",
+        "ciRunId": 22598074150,
+        "pipelineJobs": "7/7 PASSED",
+        "smokeGates": "12/12 PASSED",
+        "servingRevisions": {
+          "api-gateway": "api-gateway-00101-fqd",
+          "main-backend": "main-backend-00121-h6q",
+          "retailer-admin": "retailer-admin-00101-vvg",
+          "supplier-portal": "supplier-portal-00094-8gw",
+          "superadmin": "superadmin-00094-4vz",
+          "landing": "landing-00094-lfg"
+        },
+        "shaParity": "CONFIRMED — /version returns 7f43284"
+      },
+      "impactedRuntimeRecheck": {
+        "status": "COMPLETE — 29/29 PASS",
+        "p2Checks": "8/8 PASS",
+        "p3Checks": "21/21 PASS",
+        "deployVerification": {
+          "apiAssetVerification": "PASSED",
+          "tokenRefreshTest": "PASSED",
+          "e2eBrowserTests": "23/30 PASSED — 7 failures are PRE-EXISTING accessibility tests (heading hierarchy, color contrast), NOT caused by fix wave",
+          "portalVerification": "ALL PASSED",
+          "stagingSmoke": "ALL PASSED"
+        },
+        "verdict": "PRODUCTION-READY"
+      },
       "consolidatedFixWave": {
         "status": "COMPLETE",
         "completedAt": "2026-03-04T08:00:00Z",
