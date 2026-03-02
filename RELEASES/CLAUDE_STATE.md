@@ -3100,6 +3100,7 @@ Current status: **ACTIVE** (Gate 3 PASSED)
 12. POS App authenticated: COMPLETE. STG-431 FIXED (commit 91929249, deployed f080d982).
 13. **ENGINEERING FINDINGS CLOSED — 0 open findings from STG-410..435.**
 14. **POS App LIVE SIGN-OFF: FULLY REITERATED UNDER STRICT LOCK** — 44/44 screens individually audited, 20 findings (8 P2, 12 P3): STG-436..455. 28 screens clean, 16 with findings. STG-436..445 re-confirmed, STG-446..455 newly discovered in strict re-signoff + reiteration.
+15. **Retailer Web LIVE SIGN-OFF: SIGNED OFF UNDER STRICT LOCK** — 28/28 production screens individually audited, 5 findings (0 P2, 5 P3): STG-456..460. 24 screens clean, 4 with findings. AllPagesPage excluded from canonical count (dev-only: `import.meta.env.DEV` gate at App.tsx:341).
 
 ### 15.2 Source of Truth Order
 
@@ -3326,8 +3327,8 @@ FINAL OPERATOR-ASSISTED LIVE SIGNOFF IN PROGRESS (2026-03-03T12:00:00Z)
 Engineering findings STG-410..435 are closed and runtime-verified.
 Live sign-off in progress — platform order:
   1. POS App — FULLY REITERATED UNDER STRICT LOCK (44/44 screens, 20 findings STG-436..455: 8 P2, 12 P3)
-  2. Retailer Web — ACTIVE (Platform 2/5)
-  3. Supplier Web — PENDING
+  2. Retailer Web — SIGNED OFF UNDER STRICT LOCK (28/28 production screens, 5 findings STG-456..460: 0 P2, 5 P3, 24 clean, 4 with findings. AllPagesPage excluded — dev-only via import.meta.env.DEV gate)
+  3. Supplier Web — ACTIVE (Platform 3/5)
   4. SuperAdmin Web — PENDING
   5. Cross-Function Matrix — PENDING
 

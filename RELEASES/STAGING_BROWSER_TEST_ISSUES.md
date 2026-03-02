@@ -5140,3 +5140,75 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 **STG-446..454**: 9 newly discovered in strict re-signoff
 **STG-455**: 1 newly discovered in strict reiteration
 **Platform status**: POS App FULLY REITERATED UNDER STRICT LOCK
+
+---
+
+### STG-456: Retailer Web — RegisterPage Object URL memory leak in document preview
+- **Portal**: Retailer Web (`staging.supermandi.tech/retailer/`)
+- **Page**: RegisterPage (`/retailer/register`) — Step 4 (KYC Documents)
+- **File**: `retailer-admin/src/pages/RegisterPage.tsx:431`
+- **Issue**: `URL.createObjectURL(file)` at line 431 creates blob URLs for image previews (PAN card, Aadhaar front/back, shop photo) but never calls `URL.revokeObjectURL()`. When a user replaces a file, the old blob URL is abandoned. On unmount (navigating away or completing registration), all blob URLs leak. Each leaked URL holds the entire file blob in memory until the tab is closed.
+- **Impact**: Memory leak proportional to number of file replacements. Typical registration uploads 4 files → 4 blob URLs retained. Replacing files multiplies this. Minor for single registration flow, but could accumulate if user navigates back and forth.
+- **Severity**: P3 (LOW) — memory leak only, no data loss or functional impact
+- **Status**: FOUND
+- **Discovery**: Retailer Web strict live sign-off (2026-03-03)
+
+### STG-457: Retailer Web — RegisterPage "drag and drop" text with no drop handler
+- **Portal**: Retailer Web (`staging.supermandi.tech/retailer/`)
+- **Page**: RegisterPage (`/retailer/register`) — Step 4 (KYC Documents)
+- **File**: `retailer-admin/src/pages/RegisterPage.tsx:860`
+- **Issue**: Upload boxes display hint text "or drag and drop" (line 860) but the file input is a standard hidden `<input type="file">` wrapped in a `<label>`. There are no `onDrop`, `onDragOver`, or `onDragEnter` handlers on the upload area. Dragging a file onto the upload box does nothing — the browser's default behavior takes over (opens the file in a new tab or downloads it).
+- **Impact**: UX misleading text. User sees "drag and drop" but the feature doesn't exist. No data loss or functional impact.
+- **Severity**: P3 (LOW) — cosmetic/UX text mismatch, no functional impact
+- **Status**: FOUND
+- **Discovery**: Retailer Web strict live sign-off (2026-03-03)
+
+### STG-458: Retailer Web — ForgotPasswordPage missing idToken expiry guard on OTP channel
+- **Portal**: Retailer Web (`staging.supermandi.tech/retailer/`)
+- **Page**: ForgotPasswordPage (`/retailer/forgot-password`) — OTP channel reset flow
+- **File**: `retailer-admin/src/pages/ForgotPasswordPage.tsx:164-215`
+- **Issue**: `handleOtpResetPassword()` sends Firebase `idToken` to the backend without checking token age. RegisterPage has a 50-minute expiry guard (`idTokenObtainedAt` ref at lines 122-124, checked at lines 307-313 before API call). ForgotPasswordPage lacks this equivalent. If a user completes phone OTP verification, leaves the tab open for >60 minutes (Firebase token default expiry), then submits the new password, the backend will receive an expired token and return 401 — but the frontend shows a generic error instead of prompting re-verification.
+- **Impact**: Edge case: stale token after long idle on forgot-password page. Backend correctly rejects expired token, but user gets unhelpful error message. No security risk (backend enforces expiry), but poor UX on the error path.
+- **Severity**: P3 (LOW) — edge case UX degradation, no security bypass
+- **Status**: FOUND
+- **Discovery**: Retailer Web strict live sign-off (2026-03-03)
+
+### STG-459: Retailer Web — DashboardPage totalStockQty.toLocaleString not null-safe
+- **Portal**: Retailer Web (`staging.supermandi.tech/retailer/`)
+- **Page**: DashboardPage (`/s/:storeCode`) — Inventory summary section
+- **File**: `retailer-admin/src/pages/DashboardPage.tsx:455`
+- **Issue**: `inventoryTotals.totalStockQty.toLocaleString('en-IN')` calls `.toLocaleString()` directly on the value from the API response. Other metrics on the same dashboard use `formatCurrencyWhole()` which null-guards internally. If the API returns `null` or `undefined` for `totalStockQty` (e.g., new store with no inventory data), this line throws `TypeError: Cannot read properties of null (reading 'toLocaleString')`.
+- **Impact**: Dashboard crash on inventory section for stores with no inventory data. Other dashboard sections (revenue, orders) render correctly because they use the null-safe formatter.
+- **Severity**: P3 (LOW) — only affects new/empty stores, other dashboard sections unaffected
+- **Status**: FOUND
+- **Discovery**: Retailer Web strict live sign-off (2026-03-03)
+
+### STG-460: Retailer Web — DeviceActivationPage unguarded data.device_id.substring
+- **Portal**: Retailer Web (`staging.supermandi.tech/retailer/`)
+- **Page**: DeviceActivationPage (`/s/:storeCode/device-activation`) — Activation success handler
+- **File**: `retailer-admin/src/pages/DeviceActivationPage.tsx:150`
+- **Issue**: On successful activation, `data.device_id.substring(0, 8)` is called to display a truncated device ID in the success message. There is no null guard. If the API returns `{ success: true }` without a `device_id` field (e.g., a backend contract change or edge case), this throws `TypeError: Cannot read properties of undefined (reading 'substring')`.
+- **Impact**: Activation succeeds on the backend but the success toast/message crashes the UI. Device is activated but user sees an error. Requires page refresh to see the updated device list.
+- **Severity**: P3 (LOW) — success path crash only if API contract changes, activation itself succeeds
+- **Status**: FOUND
+- **Discovery**: Retailer Web strict live sign-off (2026-03-03)
+
+---
+
+## Retailer Web Live Sign-Off Summary (Strict Lock)
+
+> **Sign-off date**: 2026-03-03 | **Method**: Individual screen-by-screen across 16 runtime layers
+> **Canonical screen count**: 28 production screens (AllPagesPage excluded — dev-only via `import.meta.env.DEV` gate at App.tsx:341)
+
+| ID | Sev | Screen | Title | Status |
+|----|-----|--------|-------|--------|
+| STG-456 | P3 | RegisterPage | Object URL memory leak in document preview | FOUND |
+| STG-457 | P3 | RegisterPage | "drag and drop" text with no drop handler | FOUND |
+| STG-458 | P3 | ForgotPasswordPage | Missing idToken expiry guard on OTP channel | FOUND |
+| STG-459 | P3 | DashboardPage | totalStockQty.toLocaleString not null-safe | FOUND |
+| STG-460 | P3 | DeviceActivationPage | Unguarded data.device_id.substring on success | FOUND |
+
+**Totals**: 5 findings (0 P0, 0 P1, 0 P2, 5 P3)
+**28/28 production screens individually audited**: 24 CLEAN, 4 with findings
+**AllPagesPage**: Excluded from canonical count — route gated by `import.meta.env.DEV` (App.tsx:341, comment P2-RD-002), not reachable in production/staging builds
+**Platform status**: Retailer Web SIGNED OFF UNDER STRICT LOCK

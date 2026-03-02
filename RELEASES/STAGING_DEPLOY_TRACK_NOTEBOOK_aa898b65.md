@@ -607,8 +607,8 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 
 ### Final Operator-Assisted Live Sign-Off Progress
 - **POS App**: FULLY REITERATED UNDER STRICT LOCK (44/44 screens individually audited, 20 findings STG-436..455: 8 P2, 12 P3, 28 clean, 16 with findings)
-- **Retailer Web**: PENDING (Platform 2/5 — next)
-- **Supplier Web**: PENDING
+- **Retailer Web**: SIGNED OFF UNDER STRICT LOCK (28/28 production screens individually audited, 5 findings STG-456..460: 0 P2, 5 P3, 24 clean, 4 with findings. AllPagesPage excluded — dev-only via `import.meta.env.DEV` gate)
+- **Supplier Web**: ACTIVE (Platform 3/5 — next)
 - **SuperAdmin Web**: PENDING
 - **Cross-Function Matrix**: PENDING
 - **Production promotion**: BLOCKED until all platforms signed off

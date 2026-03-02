@@ -1,7 +1,7 @@
 {
-  "version": "94.0",
-  "lastUpdated": "2026-03-03T18:00:00Z",
-  "currentPhase": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF_ACTIVE: POS App fully reiterated under strict lock (44/44 screens, 20 findings STG-436..455: 8 P2, 12 P3, 28 clean, 16 with findings). Moving to Platform 2/5: Retailer Web. Staging deployed at f080d982. No fixes or redeploys in this session; all findings collected as STG-436+.",
+  "version": "95.0",
+  "lastUpdated": "2026-03-03T23:30:00Z",
+  "currentPhase": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF_ACTIVE: POS App FULLY REITERATED (44/44, 20 findings STG-436..455). Retailer Web SIGNED OFF (28/28 production screens, 5 findings STG-456..460, all P3). Moving to Platform 3/5: Supplier Web. Staging deployed at f080d982.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -210,8 +210,8 @@
     "totalFindings": 123,
     "totalScreens": 118,
     "totalClean": 24,
-    "activePlatform": "Retailer Web",
-    "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF continues. POS App is SIGNED OFF (44/44 screens, 10 findings). Now on Platform 2/5: Retailer Web. One screen at a time, no grouped execution, no sampling, no fixes. Exercise each meaningful user action and all required layers per screen. Record every new finding as STG-446+ with runtime evidence.",
+    "activePlatform": "Supplier Web",
+    "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF continues. POS App FULLY REITERATED (44/44, 20 findings). Retailer Web SIGNED OFF (28/28 production screens, 5 findings). Now on Platform 3/5: Supplier Web. One screen at a time, no grouped execution, no sampling, no fixes. Exercise each meaningful user action and all required layers per screen. Record every new finding as STG-461+ with runtime evidence.",
     "posAppStatus": {
       "unauthenticated": "COMPLETE",
       "unauthenticatedFindings": 2,
@@ -438,6 +438,39 @@
         { "id": "STG-455", "sev": "P3", "screen": "OpeningStockScreen", "title": "Progress interval not cleaned on API error", "origin": "reiteration" }
       ],
       "nextFindingStartsAt": "STG-456"
+    },
+    "retailerWebLiveSignoff": {
+      "status": "SIGNED_OFF_UNDER_STRICT_LOCK",
+      "completedAt": "2026-03-03T23:30:00Z",
+      "method": "Individual screen-by-screen across 16 runtime layers (strict lock discipline)",
+      "canonicalScreenCount": 28,
+      "excludedScreens": [
+        { "name": "AllPagesPage", "reason": "Dev-only: route gated by import.meta.env.DEV at App.tsx:341 (comment P2-RD-002), not reachable in production/staging builds" }
+      ],
+      "screensReviewed": 28,
+      "screensClean": 24,
+      "screensWithFindings": 4,
+      "totalFindings": 5,
+      "p0": 0,
+      "p1": 0,
+      "p2": 0,
+      "p3": 5,
+      "findingRange": "STG-456..460",
+      "findingIds": [
+        "STG-456",
+        "STG-457",
+        "STG-458",
+        "STG-459",
+        "STG-460"
+      ],
+      "findingsSummary": [
+        { "id": "STG-456", "sev": "P3", "screen": "RegisterPage", "title": "Object URL memory leak in document preview" },
+        { "id": "STG-457", "sev": "P3", "screen": "RegisterPage", "title": "Drag and drop text with no drop handler" },
+        { "id": "STG-458", "sev": "P3", "screen": "ForgotPasswordPage", "title": "Missing idToken expiry guard on OTP channel" },
+        { "id": "STG-459", "sev": "P3", "screen": "DashboardPage", "title": "totalStockQty.toLocaleString not null-safe" },
+        { "id": "STG-460", "sev": "P3", "screen": "DeviceActivationPage", "title": "Unguarded data.device_id.substring on success" }
+      ],
+      "nextFindingStartsAt": "STG-461"
     }
   },
   "finalMegaImplementation": {
