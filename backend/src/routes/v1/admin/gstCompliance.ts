@@ -74,10 +74,10 @@ adminGstComplianceRouter.get(
 
       const inv = invoiceData.rows[0];
 
-      // State-wise breakdown
+      // State-wise breakdown (extract state code from first 2 digits of buyer GSTIN)
       const stateBreakdown = await pool.query(`
         SELECT
-          COALESCE(buyer_state, seller_state, 'Unknown') AS state,
+          COALESCE(LEFT(buyer_gstin, 2), LEFT(seller_gstin, 2), 'Unknown') AS state,
           COUNT(*)::int AS invoices,
           COALESCE(SUM(taxable_amount_minor), 0)::bigint AS taxable,
           COALESCE(SUM(cgst_minor), 0)::bigint AS cgst,
@@ -88,26 +88,26 @@ adminGstComplianceRouter.get(
           AND EXTRACT(MONTH FROM invoice_date) = $2
           AND EXTRACT(YEAR FROM invoice_date) = $3
           AND status != 'cancelled'
-        GROUP BY COALESCE(buyer_state, seller_state, 'Unknown')
+        GROUP BY COALESCE(LEFT(buyer_gstin, 2), LEFT(seller_gstin, 2), 'Unknown')
         ORDER BY taxable DESC
       `, [storeId, month, year]);
 
-      // Supplier-wise breakdown
+      // Supplier-wise breakdown (seller_id = supplier when seller_type = 'supplier')
       const supplierBreakdown = await pool.query(`
         SELECT
-          i.supplier_id,
-          COALESCE(sp.business_name, sp.primary_contact_name, 'Unknown') AS supplier_name,
+          i.seller_id AS supplier_id,
+          COALESCE(i.seller_name, sp.business_name, sp.primary_contact_name, 'Unknown') AS supplier_name,
           COUNT(*)::int AS invoices,
           COALESCE(SUM(i.taxable_amount_minor), 0)::bigint AS taxable,
           COALESCE(SUM(i.cgst_minor + i.sgst_minor + i.igst_minor), 0)::bigint AS tax
         FROM invoicing.invoices i
-        LEFT JOIN supplier.suppliers sp ON sp.id = i.supplier_id
-        WHERE i.seller_id = $1::uuid
+        LEFT JOIN supplier.suppliers sp ON sp.id = i.seller_id
+        WHERE i.buyer_id = $1::uuid
           AND EXTRACT(MONTH FROM i.invoice_date) = $2
           AND EXTRACT(YEAR FROM i.invoice_date) = $3
           AND i.status != 'cancelled'
-          AND i.supplier_id IS NOT NULL
-        GROUP BY i.supplier_id, sp.business_name, sp.primary_contact_name
+          AND i.seller_type = 'supplier'
+        GROUP BY i.seller_id, i.seller_name, sp.business_name, sp.primary_contact_name
         ORDER BY taxable DESC
       `, [storeId, month, year]);
 
@@ -173,11 +173,10 @@ adminGstComplianceRouter.get(
       const invoices = await pool.query(`
         SELECT
           i.invoice_number, i.invoice_date, i.invoice_type,
-          i.buyer_name, i.buyer_gstin, i.buyer_state,
-          i.seller_name, i.seller_gstin, i.seller_state,
+          i.buyer_name, i.buyer_gstin, LEFT(i.buyer_gstin, 2) AS buyer_state,
+          i.seller_name, i.seller_gstin, LEFT(i.seller_gstin, 2) AS seller_state,
           i.taxable_amount_minor, i.cgst_minor, i.sgst_minor, i.igst_minor,
-          i.total_amount_minor,
-          i.hsn_summary
+          i.total_amount_minor
         FROM invoicing.invoices i
         WHERE i.seller_id = $1::uuid
           AND EXTRACT(MONTH FROM i.invoice_date) = $2
@@ -234,15 +233,8 @@ adminGstComplianceRouter.get(
             entry.csamt = '0.00';
             return acc;
           }, []),
-        // HSN Summary
-        hsn: {
-          data: invoices.rows
-            .flatMap((inv) => {
-              try {
-                return Array.isArray(inv.hsn_summary) ? inv.hsn_summary : JSON.parse(inv.hsn_summary || '[]');
-              } catch { return []; }
-            }),
-        },
+        // HSN Summary (not yet populated — invoices table has no hsn_summary column)
+        hsn: { data: [] },
       };
 
       // Set headers for JSON download
