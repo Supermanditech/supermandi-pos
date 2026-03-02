@@ -1,7 +1,7 @@
 {
-  "version": "91.0",
-  "lastUpdated": "2026-03-03T05:00:00Z",
-  "currentPhase": "FINAL_READINESS: All 4 platforms auth-verified COMPLETE. All live-discovery findings FIXED and runtime-verified. Staging deployed at f080d982. No open findings. Production promotion eligible.",
+  "version": "92.0",
+  "lastUpdated": "2026-03-03T05:30:00Z",
+  "currentPhase": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF_ACTIVE: Staging deployed at f080d982. Engineering findings STG-410..435 are closed, but one final operator-assisted live GCP staging sign-off must run screen-locked, portal-wise, and cross-functionally before production promotion is considered. No fixes or redeploys are allowed in this session; all new findings must be collected first as STG-436+.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -210,8 +210,8 @@
     "totalFindings": 123,
     "totalScreens": 118,
     "totalClean": 24,
-    "activePlatform": null,
-    "activeInstruction": "FINAL_READINESS. All 4 platforms auth-verified. All live-discovery findings FIXED, deployed at f080d982, runtime-verified. 0 open findings. Production promotion eligible.",
+    "activePlatform": "POS App",
+    "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF is active. Run one platform at a time, one screen at a time, starting with POS App. No grouped execution, no sampling, no fixes, and no redeploys in this session. Exercise each meaningful user action and all required layers per screen. If operator input is needed (OTP, browser session, device action), request that exact input and continue the same locked screen immediately. Record every new finding as STG-436+ with runtime evidence. After all platforms and the cross-function matrix are covered, decide whether a final fix session is required or production promotion can proceed.",
     "posAppStatus": {
       "unauthenticated": "COMPLETE",
       "unauthenticatedFindings": 2,

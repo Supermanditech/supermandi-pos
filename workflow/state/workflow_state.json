@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "updatedAt": "2026-03-03T05:00:00Z",
-  "workflowMode": "FINAL_READINESS",
+  "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -2064,7 +2064,7 @@
     "gate3PassedAt": "2026-03-01T20:47:59Z",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
     "nextFindingStartsAt": "STG-436",
-    "activePlatform": null,
+    "activePlatform": "POS App",
     "posAppVerification": {
       "unauthenticated": "COMPLETE",
       "authenticated": "COMPLETE_MAX_RUNTIME_DEPTH",
@@ -2117,6 +2117,37 @@
     "singleActionFlowLock": true,
     "samplingForbidden": true,
     "groupedScreenExecutionForbidden": true,
+    "finalOperatorAssistedLiveSignoff": {
+      "status": "ACTIVE",
+      "rule": "Run one platform at a time, one screen at a time, starting with POS App. No grouped execution, no sampling, no fixes, and no redeploys during this sign-off session. Exercise each meaningful user action and all required runtime layers per screen. Ask the operator for exact OTP, browser, email, session, or device input when needed and continue the same locked screen immediately.",
+      "platformOrder": [
+        "POS App",
+        "Retailer Web",
+        "Supplier Web",
+        "SuperAdmin Web",
+        "Cross-Function Matrix"
+      ],
+      "requiredLayersPerScreen": [
+        "user_action_flow",
+        "business_logic",
+        "ui",
+        "ux",
+        "navigation",
+        "wiring",
+        "validation",
+        "loading_empty_error_states",
+        "api_behavior",
+        "backend_behavior",
+        "db_data_integrity_symptoms",
+        "migration_runtime_parity_symptoms",
+        "gcp_runtime_parity",
+        "external_dependency_behavior",
+        "accessibility",
+        "responsive_behavior"
+      ],
+      "findingPolicy": "Record every issue, even minor, as STG-436+ with runtime evidence. Do not fix in this session. Implement separately in a new session only after the full sign-off pass is complete.",
+      "exitCriteria": "No microlevel screen, function, or cross-function path may remain untested unless explicitly blocked with operator/runtime evidence."
+    },
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
