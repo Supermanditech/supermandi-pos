@@ -115,9 +115,10 @@ adminRefundsRouter.get('/refunds', async (req: Request, res: Response) => {
       params
     );
 
+    // STG-424 FIX: Column names corrected — sale_id (not order_id), refund_amount (not refund_amount_minor)
     const result = await pool.query(
-      `SELECT r.id, r.store_id, r.order_id, r.payment_id,
-              r.refund_amount_minor AS "refundAmount",
+      `SELECT r.id, r.store_id, r.sale_id, r.payment_id,
+              r.refund_amount AS "refundAmount",
               r.reason, r.status, r.razorpay_refund_id,
               r.processed_at, r.failure_reason, r.created_at,
               s.name AS store_name
@@ -135,7 +136,7 @@ adminRefundsRouter.get('/refunds', async (req: Request, res: Response) => {
         id: r.id,
         storeId: r.store_id,
         storeName: r.store_name,
-        orderId: r.order_id,
+        orderId: r.sale_id,
         paymentId: r.payment_id,
         refundAmount: r.refundAmount,
         reason: r.reason,
@@ -168,8 +169,9 @@ adminRefundsRouter.post('/refunds/:id/approve', async (req: Request, res: Respon
 
   try {
     // Fetch refund details including Razorpay payment ID
+    // STG-424 FIX: refund_amount (not refund_amount_minor) — matches migration 152 schema
     const refundResult = await pool.query(
-      `SELECT id, razorpay_payment_id, refund_amount_minor
+      `SELECT id, razorpay_payment_id, refund_amount
        FROM orders.refund_requests
        WHERE id = $1::uuid AND status = 'initiated'`,
       [req.params.id]
@@ -189,7 +191,7 @@ adminRefundsRouter.post('/refunds/:id/approve', async (req: Request, res: Respon
 
     // T-259: Initiate Razorpay refund if payment ID is available
     if (refund.razorpay_payment_id) {
-      initiateRazorpayRefund(pool, refund.id, refund.razorpay_payment_id, refund.refund_amount_minor).catch((err) => {
+      initiateRazorpayRefund(pool, refund.id, refund.razorpay_payment_id, refund.refund_amount).catch((err) => {
         log.error('[T-259] Admin refund Razorpay initiation failed:', err);
       });
     }

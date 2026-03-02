@@ -51,18 +51,22 @@ adminGstComplianceRouter.get(
       }
 
       // Generate fresh summary from invoice data
+      // STG-426 FIX: Corrected column names to match migration 134 schema:
+      // taxable_amount→taxable_amount_minor, cgst_amount→cgst_minor, sgst_amount→sgst_minor,
+      // igst_amount→igst_minor, total_amount→total_amount_minor, store_id→seller_id.
+      // cess column does not exist in the schema — hardcoded to 0.
       const invoiceData = await pool.query(`
         SELECT
           COUNT(*)::int AS total_invoices,
-          COALESCE(SUM(taxable_amount), 0)::bigint AS total_taxable,
-          COALESCE(SUM(cgst_amount), 0)::bigint AS cgst_collected,
-          COALESCE(SUM(sgst_amount), 0)::bigint AS sgst_collected,
-          COALESCE(SUM(igst_amount), 0)::bigint AS igst_collected,
-          COALESCE(SUM(cess_amount), 0)::bigint AS cess_collected,
-          COALESCE(SUM(cgst_amount + sgst_amount + igst_amount + COALESCE(cess_amount, 0)), 0)::bigint AS total_tax,
-          COALESCE(SUM(total_amount), 0)::bigint AS total_invoice_amount
+          COALESCE(SUM(taxable_amount_minor), 0)::bigint AS total_taxable,
+          COALESCE(SUM(cgst_minor), 0)::bigint AS cgst_collected,
+          COALESCE(SUM(sgst_minor), 0)::bigint AS sgst_collected,
+          COALESCE(SUM(igst_minor), 0)::bigint AS igst_collected,
+          0::bigint AS cess_collected,
+          COALESCE(SUM(cgst_minor + sgst_minor + igst_minor), 0)::bigint AS total_tax,
+          COALESCE(SUM(total_amount_minor), 0)::bigint AS total_invoice_amount
         FROM invoicing.invoices
-        WHERE store_id = $1
+        WHERE seller_id = $1::uuid
           AND EXTRACT(MONTH FROM invoice_date) = $2
           AND EXTRACT(YEAR FROM invoice_date) = $3
           AND status != 'cancelled'
@@ -75,12 +79,12 @@ adminGstComplianceRouter.get(
         SELECT
           COALESCE(buyer_state, seller_state, 'Unknown') AS state,
           COUNT(*)::int AS invoices,
-          COALESCE(SUM(taxable_amount), 0)::bigint AS taxable,
-          COALESCE(SUM(cgst_amount), 0)::bigint AS cgst,
-          COALESCE(SUM(sgst_amount), 0)::bigint AS sgst,
-          COALESCE(SUM(igst_amount), 0)::bigint AS igst
+          COALESCE(SUM(taxable_amount_minor), 0)::bigint AS taxable,
+          COALESCE(SUM(cgst_minor), 0)::bigint AS cgst,
+          COALESCE(SUM(sgst_minor), 0)::bigint AS sgst,
+          COALESCE(SUM(igst_minor), 0)::bigint AS igst
         FROM invoicing.invoices
-        WHERE store_id = $1
+        WHERE seller_id = $1::uuid
           AND EXTRACT(MONTH FROM invoice_date) = $2
           AND EXTRACT(YEAR FROM invoice_date) = $3
           AND status != 'cancelled'
@@ -94,11 +98,11 @@ adminGstComplianceRouter.get(
           i.supplier_id,
           COALESCE(sp.business_name, sp.primary_contact_name, 'Unknown') AS supplier_name,
           COUNT(*)::int AS invoices,
-          COALESCE(SUM(i.taxable_amount), 0)::bigint AS taxable,
-          COALESCE(SUM(i.cgst_amount + i.sgst_amount + i.igst_amount), 0)::bigint AS tax
+          COALESCE(SUM(i.taxable_amount_minor), 0)::bigint AS taxable,
+          COALESCE(SUM(i.cgst_minor + i.sgst_minor + i.igst_minor), 0)::bigint AS tax
         FROM invoicing.invoices i
         LEFT JOIN supplier.suppliers sp ON sp.id = i.supplier_id
-        WHERE i.store_id = $1
+        WHERE i.seller_id = $1::uuid
           AND EXTRACT(MONTH FROM i.invoice_date) = $2
           AND EXTRACT(YEAR FROM i.invoice_date) = $3
           AND i.status != 'cancelled'
@@ -165,16 +169,17 @@ adminGstComplianceRouter.get(
 
     try {
       // Get all invoices for the period with full details
+      // STG-426 FIX: Corrected column names to match migration 134 schema
       const invoices = await pool.query(`
         SELECT
           i.invoice_number, i.invoice_date, i.invoice_type,
           i.buyer_name, i.buyer_gstin, i.buyer_state,
           i.seller_name, i.seller_gstin, i.seller_state,
-          i.taxable_amount, i.cgst_amount, i.sgst_amount, i.igst_amount,
-          i.cess_amount, i.total_amount,
+          i.taxable_amount_minor, i.cgst_minor, i.sgst_minor, i.igst_minor,
+          i.total_amount_minor,
           i.hsn_summary
         FROM invoicing.invoices i
-        WHERE i.store_id = $1
+        WHERE i.seller_id = $1::uuid
           AND EXTRACT(MONTH FROM i.invoice_date) = $2
           AND EXTRACT(YEAR FROM i.invoice_date) = $3
           AND i.status != 'cancelled'
@@ -195,18 +200,18 @@ adminGstComplianceRouter.get(
             inv: [{
               inum: inv.invoice_number,
               idt: formatDateDDMMYYYY(inv.invoice_date),
-              val: (inv.total_amount / 100).toFixed(2),
+              val: (inv.total_amount_minor / 100).toFixed(2),
               pos: getStateCode(inv.buyer_state),
               rchrg: 'N',
               inv_typ: 'R',
               itms: [{
                 num: 1,
                 itm_det: {
-                  txval: (inv.taxable_amount / 100).toFixed(2),
-                  camt: (inv.cgst_amount / 100).toFixed(2),
-                  samt: (inv.sgst_amount / 100).toFixed(2),
-                  iamt: (inv.igst_amount / 100).toFixed(2),
-                  csamt: ((inv.cess_amount || 0) / 100).toFixed(2),
+                  txval: (inv.taxable_amount_minor / 100).toFixed(2),
+                  camt: (inv.cgst_minor / 100).toFixed(2),
+                  samt: (inv.sgst_minor / 100).toFixed(2),
+                  iamt: (inv.igst_minor / 100).toFixed(2),
+                  csamt: '0.00',
                 },
               }],
             }],
@@ -222,11 +227,11 @@ adminGstComplianceRouter.get(
               acc.push(entry);
             }
             // LIVE.R4.D9.001: NaN guard on float accumulation
-            entry.txval = ((parseFloat(entry.txval) || 0) + (inv.taxable_amount || 0) / 100).toFixed(2);
-            entry.camt = ((parseFloat(entry.camt) || 0) + (inv.cgst_amount || 0) / 100).toFixed(2);
-            entry.samt = ((parseFloat(entry.samt) || 0) + (inv.sgst_amount || 0) / 100).toFixed(2);
-            entry.iamt = ((parseFloat(entry.iamt) || 0) + (inv.igst_amount || 0) / 100).toFixed(2);
-            entry.csamt = ((parseFloat(entry.csamt) || 0) + (inv.cess_amount || 0) / 100).toFixed(2);
+            entry.txval = ((parseFloat(entry.txval) || 0) + (inv.taxable_amount_minor || 0) / 100).toFixed(2);
+            entry.camt = ((parseFloat(entry.camt) || 0) + (inv.cgst_minor || 0) / 100).toFixed(2);
+            entry.samt = ((parseFloat(entry.samt) || 0) + (inv.sgst_minor || 0) / 100).toFixed(2);
+            entry.iamt = ((parseFloat(entry.iamt) || 0) + (inv.igst_minor || 0) / 100).toFixed(2);
+            entry.csamt = '0.00';
             return acc;
           }, []),
         // HSN Summary

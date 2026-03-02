@@ -99,7 +99,9 @@ export async function withStoreContext<T>(
   const client = await p.connect();
   try {
     await client.query("BEGIN");
-    await client.query("SET LOCAL app.current_store_id = $1", [storeId]);
+    // STG-429 FIX: SET LOCAL doesn't accept $n bind parameters via extended query protocol.
+    // Use set_config() which is a regular SQL function that accepts bind parameters.
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
     const result = await fn(client);
     await client.query("COMMIT");
     return result;

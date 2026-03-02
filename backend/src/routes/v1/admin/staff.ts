@@ -25,10 +25,12 @@ adminStaffRouter.get(
     const { active } = req.query; // ?active=true|false
 
     // XPORT-002: Add store_id to subqueries for store isolation
+    // STG-425 FIX: sales.store_id and purchases.store_id are TEXT (ensureSchema.ts),
+    // but platform.store_staff.store_id is UUID. Cast to TEXT for comparison.
     let query = `
       SELECT s.id, s.name, s.phone, s.role, s.is_active, s.created_at,
-        (SELECT COUNT(*)::int FROM sales WHERE staff_id = s.id AND store_id = s.store_id) AS sales_count,
-        (SELECT COUNT(*)::int FROM purchases WHERE staff_id = s.id AND store_id = s.store_id) AS stock_in_count
+        (SELECT COUNT(*)::int FROM sales WHERE staff_id = s.id AND store_id = s.store_id::text) AS sales_count,
+        (SELECT COUNT(*)::int FROM purchases WHERE staff_id = s.id AND store_id = s.store_id::text) AS stock_in_count
       FROM platform.store_staff s
       WHERE s.store_id = $1::uuid
     `;

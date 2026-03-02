@@ -183,7 +183,9 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     }
 
     // Set RLS store context now that we know the store_id from enrollment
-    await client.query("SET LOCAL app.current_store_id = $1", [enrollment.store_id]);
+    // STG-429 FIX: SET LOCAL doesn't accept $n bind parameters via extended query protocol.
+    // Use set_config() which is a regular SQL function that accepts bind parameters.
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [enrollment.store_id]);
 
     // GO-LIVE: Fetch store name, code, and max_devices for enrollment response
     // FINDING-027: Get configurable max_devices per store

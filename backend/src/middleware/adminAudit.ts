@@ -9,6 +9,10 @@ import { log } from "../lib/logger";
 // Sensitive fields to redact from request body
 const SENSITIVE_FIELDS = ['password', 'pin', 'token', 'secret', 'apiKey'];
 
+// STG-430 FIX: Validate UUID format before inserting into admin.audit_log.actor_user_id (UUID column).
+// Email OTP sessions set x-user-id to email strings which are not valid UUIDs.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Sanitize request body by removing sensitive fields
  */
@@ -298,7 +302,10 @@ export function adminAuditMiddleware() {
     const { action, resourceType, resourceId, storeId } = extractActionInfo(req);
 
     // Get actor info from request
-    const actorUserId = req.headers['x-user-id'] as string | undefined;
+    // STG-430 FIX: Validate UUID before passing to audit INSERT — email OTP sessions
+    // have non-UUID actor IDs (e.g., "supermanditech@gmail.com") which cause PG 22P02.
+    const rawActorId = (req.headers['x-user-id'] as string | undefined) || req.adminId;
+    const actorUserId = rawActorId && UUID_RE.test(rawActorId) ? rawActorId : null;
     const actorIp =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
       req.socket.remoteAddress;

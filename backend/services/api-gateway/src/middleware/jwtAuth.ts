@@ -243,6 +243,18 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
 
     // Validate required claims
     if (!decoded.sub || !decoded.actorId || !decoded.actorType) {
+      // STG-427 FIX: Admin email OTP JWTs have {email, role, type} but not
+      // {sub, actorId, actorType}. Allow admin JWTs to pass through to chat
+      // and other JWT-required routes with appropriate gateway headers.
+      const adminPayload = decoded as unknown as Record<string, unknown>;
+      if (adminPayload.type === 'admin' && typeof adminPayload.email === 'string') {
+        req.headers['x-user-id'] = adminPayload.email;
+        req.headers['x-actor-id'] = adminPayload.email;
+        req.headers['x-actor-type'] = 'admin';
+        req.headers['x-permissions'] = JSON.stringify([]);
+        return next();
+      }
+
       res.status(401).json({
         error: {
           code: 'INVALID_TOKEN',
