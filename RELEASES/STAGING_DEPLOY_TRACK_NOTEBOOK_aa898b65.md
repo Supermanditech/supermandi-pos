@@ -609,6 +609,6 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 - **POS App**: FULLY REITERATED UNDER STRICT LOCK (44/44 screens individually audited, 20 findings STG-436..455: 8 P2, 12 P3, 28 clean, 16 with findings)
 - **Retailer Web**: SIGNED OFF UNDER STRICT LOCK (28/28 production screens individually audited, 5 findings STG-456..460: 0 P2, 5 P3, 24 clean, 4 with findings. AllPagesPage excluded — dev-only via `import.meta.env.DEV` gate)
 - **Supplier Web**: SIGNED OFF UNDER STRICT LOCK (23/23 screens individually audited, 2 findings STG-461..462: 0 P2, 2 P3, 21 clean, 2 with findings)
-- **SuperAdmin Web**: ACTIVE (Platform 4/5 — next)
-- **Cross-Function Matrix**: PENDING
-- **Production promotion**: BLOCKED until all platforms signed off
+- **SuperAdmin Web**: SIGNED OFF UNDER STRICT LOCK (25/25 screens individually audited, 2 findings STG-463..464: 0 P2, 2 P3, 23 clean, 2 with findings)
+- **Cross-Function Matrix**: ACTIVE (Platform 5/5)
+- **Production promotion**: BLOCKED until Cross-Function Matrix signed off

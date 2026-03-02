@@ -5254,3 +5254,46 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 **Totals**: 2 findings (0 P0, 0 P1, 0 P2, 2 P3)
 **23/23 screens individually audited**: 21 CLEAN, 2 with findings
 **Platform status**: Supplier Web SIGNED OFF UNDER STRICT LOCK
+
+---
+
+## SuperAdmin Web — Live Sign-Off Findings (Platform 4/5)
+
+> **Method**: Individual screen-by-screen audit across 16 runtime layers under strict lock discipline
+> **Date**: 2026-03-04
+> **Screens audited**: 25/25 (1 unauthenticated LoginGate + 23 authenticated tabs + 1 ErrorBoundary)
+
+### STG-463: SuperAdmin Web — LoginGate resend OTP countdown starts before API success
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/`)
+- **Page**: LoginGate (unauthenticated email OTP screen)
+- **File**: `supermandi-superadmin/src/components/LoginGate.tsx:180`
+- **Symptom**: Clicking "Resend OTP" immediately starts a 60-second countdown timer via `setCountdown(60)` BEFORE the `handleSendOtp` API call completes. If the API call fails, the user sees a running countdown but no OTP was sent.
+- **Expected**: Countdown should only start after successful API response (same pattern as initial send at line 48, which correctly sets countdown inside the success path of `handleSendOtp`).
+- **Runtime Evidence**: Code path: `onClick={(e) => { setCountdown(60); handleSendOtp(e as any); }}` — setCountdown fires synchronously before async handleSendOtp resolves.
+- **Severity**: P3 (LOW) — UX annoyance only, user can wait for countdown to expire and retry. No security impact (server OTP generation is independent).
+- **Status**: FOUND
+- **Discovery**: SuperAdmin Web strict live sign-off (2026-03-04)
+
+### STG-464: SuperAdmin Web — EventsTab Next page button never disabled on last page
+- **Portal**: SuperAdmin (`staging.supermandi.tech/admin/`)
+- **Page**: Events tab (`#events`)
+- **File**: `supermandi-superadmin/src/tabs/EventsTab.tsx:87-94`
+- **Symptom**: The "Next" pagination button has no `disabled` prop. While `Math.min(maxPage, p + 1)` prevents page overflow, the button remains visually clickable on the last page. Compare to "Prev" button at line 84 which correctly has `disabled={page === 0}`.
+- **Expected**: Next button should have `disabled={page >= maxPage}` for consistent UX parity with Prev button.
+- **Runtime Evidence**: Code: `<button className="tab" onClick={() => { const maxPage = ...; setPage((p) => Math.min(maxPage, p + 1)); }}>Next</button>` — no disabled prop present.
+- **Severity**: P3 (LOW) — cosmetic/UX only, no functional breakage (Math.min prevents overflow)
+- **Status**: FOUND
+- **Discovery**: SuperAdmin Web strict live sign-off (2026-03-04)
+
+---
+
+### SuperAdmin Web Live Sign-Off Summary Table
+
+| ID | Sev | Screen | Title | Status |
+|----|-----|--------|-------|--------|
+| STG-463 | P3 | LoginGate | Resend OTP countdown starts before API success | FOUND |
+| STG-464 | P3 | EventsTab | Next page button never disabled on last page | FOUND |
+
+**Totals**: 2 findings (0 P0, 0 P1, 0 P2, 2 P3)
+**25/25 screens individually audited**: 23 CLEAN, 2 with findings
+**Platform status**: SuperAdmin Web SIGNED OFF UNDER STRICT LOCK

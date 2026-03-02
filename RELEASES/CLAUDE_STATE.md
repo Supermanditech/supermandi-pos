@@ -3329,8 +3329,8 @@ Live sign-off in progress — platform order:
   1. POS App — FULLY REITERATED UNDER STRICT LOCK (44/44 screens, 20 findings STG-436..455: 8 P2, 12 P3)
   2. Retailer Web — SIGNED OFF UNDER STRICT LOCK (28/28 production screens, 5 findings STG-456..460: 0 P2, 5 P3, 24 clean, 4 with findings. AllPagesPage excluded — dev-only via import.meta.env.DEV gate)
   3. Supplier Web — SIGNED OFF UNDER STRICT LOCK (23/23 screens, 2 findings STG-461..462: 0 P2, 2 P3, 21 clean, 2 with findings)
-  4. SuperAdmin Web — ACTIVE (Platform 4/5)
-  5. Cross-Function Matrix — PENDING
+  4. SuperAdmin Web — SIGNED OFF UNDER STRICT LOCK (25/25 screens, 2 findings STG-463..464: 0 P2, 2 P3, 23 clean, 2 with findings)
+  5. Cross-Function Matrix — ACTIVE (Platform 5/5)
 
 Lock discipline:
 - one platform at a time

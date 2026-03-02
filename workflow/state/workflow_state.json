@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-03T18:00:00Z",
+  "updatedAt": "2026-03-04T05:00:00Z",
   "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
@@ -2148,7 +2148,12 @@
         "STG-426",
         "STG-427"
       ],
-      "completedAt": "2026-03-02T10:45:00Z"
+      "completedAt": "2026-03-02T10:45:00Z",
+      "liveSignoff": "SIGNED_OFF_UNDER_STRICT_LOCK",
+      "liveSignoffFindings": ["STG-463", "STG-464"],
+      "liveSignoffScreens": 25,
+      "liveSignoffClean": 23,
+      "liveSignoffCompletedAt": "2026-03-04T05:00:00Z"
     },
     "supplierWebVerification": {
       "unauthenticated": "COMPLETE",
