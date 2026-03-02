@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-02T02:20:00Z",
-  "workflowMode": "POST_DEPLOY_MEGA_LIVE_VERIFICATION",
+  "updatedAt": "2026-03-02T08:15:00Z",
+  "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -125,7 +125,7 @@
         "p3": 15
       }
     },
-    "activePlatform": "Retailer Web",
+    "activePlatform": "Supplier Web",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
