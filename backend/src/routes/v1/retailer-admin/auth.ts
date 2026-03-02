@@ -1298,7 +1298,7 @@ router.post("/auth/forgot-password/email-request", authRateLimiter, async (req: 
 
     // STG-055: Actually send the password reset email (was previously missing)
     try {
-      await sendPasswordResetEmail(emailNormalized, resetToken);
+      await sendPasswordResetEmail(emailNormalized, resetToken, undefined, 'retailer');
     } catch (emailErr) {
       log.error(`[RetailerAuth] STG-055: Failed to send password reset email to ${emailNormalized}:`, emailErr);
       // Still return success to prevent email enumeration

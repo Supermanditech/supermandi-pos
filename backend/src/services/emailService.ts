@@ -448,15 +448,17 @@ export async function sendVerificationEmail(
 // =============================================================================
 
 /**
- * Send password reset email to supplier
+ * Send password reset email
  * @param to - Recipient email
  * @param resetToken - The reset token (plain text, will be included in link)
- * @param businessName - Supplier business name for personalization
+ * @param businessName - Business name for personalization
+ * @param portalType - STG-433: Which portal the reset link should point to
  */
 export async function sendPasswordResetEmail(
   to: string,
   resetToken: string,
-  businessName?: string
+  businessName?: string,
+  portalType: 'retailer' | 'supplier' = 'supplier',
 ): Promise<SendEmailResult> {
   const config = getEmailConfig();
 
@@ -471,8 +473,10 @@ export async function sendPasswordResetEmail(
     };
   }
 
-  // Build reset URL - use frontend URL or fallback
-  const frontendUrl = process.env.SUPPLIER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supermandi.tech/supplier';
+  // STG-433: Build portal-specific reset URL
+  const frontendUrl = portalType === 'retailer'
+    ? (process.env.RETAILER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supermandi.tech/retailer')
+    : (process.env.SUPPLIER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supermandi.tech/supplier');
   const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
   const subject = 'Reset your SuperMandi password';
@@ -496,7 +500,7 @@ export async function sendPasswordResetEmail(
   <div class="container">
     <div class="header">SuperMandi Password Reset</div>
     <p>${greeting},</p>
-    <p>A password reset was requested for your SuperMandi supplier account.</p>
+    <p>A password reset was requested for your SuperMandi ${portalType} account.</p>
     <p>Click the button below to reset your password:</p>
     <a href="${resetUrl}" class="button">Reset Password</a>
     <p>Or copy this link: ${resetUrl}</p>
@@ -510,7 +514,7 @@ export async function sendPasswordResetEmail(
 
   const text = `${greeting},
 
-A password reset was requested for your SuperMandi supplier account.
+A password reset was requested for your SuperMandi ${portalType} account.
 
 Click here to reset your password: ${resetUrl}
 

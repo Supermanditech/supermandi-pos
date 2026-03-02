@@ -899,7 +899,7 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
     let emailError: string | undefined;
     if (isEmailServiceEnabled()) {
       try {
-        const emailResult = await sendPasswordResetEmail(email, resetToken, supplier.business_name);
+        const emailResult = await sendPasswordResetEmail(email, resetToken, supplier.business_name, 'supplier');
         emailSent = emailResult.sent;
         if (!emailResult.sent) {
           emailError = emailResult.errorCode;
@@ -976,10 +976,10 @@ router.post("/auth/reset-password", async (req: Request, res: Response, next: Ne
 
     const supplier = result.rows[0];
 
-    // Check if reset token exists
+    // STG-434: Improved message — if user landed here via wrong portal link, guide them
     if (!supplier.password_reset_token) {
       res.status(400).json({
-        error: { code: 'INVALID_TOKEN', message: 'No password reset was requested for this account' }
+        error: { code: 'INVALID_TOKEN', message: 'No password reset was requested for this supplier account. If you are a retailer, please use the Retailer portal to reset your password.' }
       });
       return;
     }

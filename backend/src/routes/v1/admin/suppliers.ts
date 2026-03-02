@@ -1901,7 +1901,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
 
     if (isEmailServiceEnabled()) {
       try {
-        const emailResult = await sendPasswordResetEmail(supplier.primary_email, resetToken, supplier.business_name);
+        const emailResult = await sendPasswordResetEmail(supplier.primary_email, resetToken, supplier.business_name, 'supplier');
         emailSent = emailResult.sent;
         if (emailResult.sent) {
           log.info(`[GO-LIVE-145] Password reset email sent to ${supplier.primary_email} (triggered by ${adminEmail})`);

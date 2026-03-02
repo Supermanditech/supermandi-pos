@@ -67,12 +67,30 @@ export function setChatSocketManager(mgr: typeof noopSocketManager) {
   socketManager = mgr;
 }
 
+// STG-435: Map gateway actor types to chat participant types
+// Gateway sets: store (retailer JWT), supplier, platform (admin)
+// Chat CHECK constraint allows: retailer, supplier, admin, support
+const ACTOR_TYPE_TO_CHAT_TYPE: Record<string, string> = {
+  store: 'retailer',
+  platform: 'admin',
+  retailer: 'retailer',
+  supplier: 'supplier',
+  admin: 'admin',
+  support: 'support',
+};
+
 // Helper: extract user from gateway headers
 function getUser(req: any): { userId: string; userType: string } {
   const userId = req.headers['x-user-id'] || req.headers['x-actor-id'];
   const userType = req.headers['x-actor-type'] || 'retailer';
   if (!userId) throw new Error('Authentication required');
-  return { userId: String(userId), userType: String(userType).toLowerCase() };
+  const userIdStr = String(userId);
+  // STG-431: Chat tables use UUID columns — reject non-UUID user IDs (e.g. admin email strings)
+  if (!isValidUUID(userIdStr)) {
+    throw new Error('Authentication required');
+  }
+  const rawType = String(userType).toLowerCase();
+  return { userId: userIdStr, userType: ACTOR_TYPE_TO_CHAT_TYPE[rawType] || 'retailer' };
 }
 
 // =============================================================================

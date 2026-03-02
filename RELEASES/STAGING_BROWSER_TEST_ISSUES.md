@@ -4736,6 +4736,24 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+### STG-431: Chat service — admin email x-user-id cast to UUID fails
+
+- **Platform**: POS App / SuperAdmin (chat routes)
+- **Screen**: Chat (any admin-initiated chat interaction)
+- **Route**: `POST /api/v1/chat/conversations/support`, `POST /api/v1/chat/conversations/direct`, etc.
+- **Repro**: Any admin email OTP session hitting chat endpoints. Gateway sets `x-user-id: email-otp-supermanditech@gmail.com` for email OTP sessions. Chat routes pass this to `conversation_participants.user_id UUID NOT NULL` column.
+- **Expected**: Graceful rejection or UUID-only user ID
+- **Actual**: PG error 22P02 (invalid input syntax for UUID)
+- **Impact**: Admin email OTP sessions cannot use chat. No data corruption.
+- **Timestamp**: 2026-03-02T18:00:00Z
+- **Severity**: P2 (MEDIUM) — chat non-functional for admin email sessions
+- **Root cause**: `backend/src/routes/v1/chat.ts` `getUser()` passes raw `x-user-id` header to DB without UUID validation. Email OTP sessions set this to `email-otp-<email>`, which is not a valid UUID.
+- **Fix**: Added UUID validation in `getUser()` — non-UUID user IDs now get rejected with 401 before reaching the DB.
+- **Files changed**: `backend/src/routes/v1/chat.ts`
+- **Status**: FIXED
+
+---
+
 ### STG-433: Retailer — Password reset email links to wrong portal
 
 - **Platform**: Retailer Web
@@ -4747,8 +4765,10 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Impact**: Retailer users clicking the reset link land on the supplier portal, which cannot process their token (different auth table). Password reset is broken for retailer users who follow the email link.
 - **Timestamp**: 2026-03-03T00:15:00Z
 - **Severity**: P3 (MEDIUM) — functional but wrong portal link, workaround via direct URL construction
-- **Root cause**: `backend/src/routes/v1/retailer-admin/auth.ts` forgot-password email-request handler uses `/supplier/reset-password` URL in the email template instead of `/retailer/reset-password`
-- **Status**: FOUND
+- **Root cause**: `backend/src/services/emailService.ts` `sendPasswordResetEmail()` always used `SUPPLIER_PORTAL_URL` regardless of caller portal type.
+- **Fix**: Added `portalType` parameter (`'retailer'` | `'supplier'`). Retailer caller passes `'retailer'`, supplier callers pass `'supplier'`. URL now uses `RETAILER_PORTAL_URL` for retailer resets. Email body text also portal-aware.
+- **Files changed**: `backend/src/services/emailService.ts`, `backend/src/routes/v1/retailer-admin/auth.ts`, `backend/src/routes/v1/supplier/auth.ts`, `backend/src/routes/v1/admin/suppliers.ts`
+- **Status**: FIXED
 
 ---
 
@@ -4763,8 +4783,10 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Impact**: Confused retailer users who followed the email link. No data corruption, but poor UX.
 - **Timestamp**: 2026-03-03T00:20:00Z
 - **Severity**: P3 (LOW) — downstream of STG-433, only occurs when retailer token hits supplier portal
-- **Root cause**: Supplier reset endpoint queries `supplier.suppliers` table. Retailer user doesn't exist there, so it returns "not requested" instead of a portal-mismatch error.
-- **Status**: FOUND
+- **Root cause**: Supplier reset endpoint queries `supplier.suppliers` table. When user has no pending reset on supplier side, returns generic "not requested" without portal guidance.
+- **Fix**: Improved error message to include portal hint: "If you are a retailer, please use the Retailer portal to reset your password."
+- **Files changed**: `backend/src/routes/v1/supplier/auth.ts`
+- **Status**: FIXED
 
 ---
 
@@ -4779,8 +4801,10 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Impact**: Retailer users cannot create support conversations. Existing conversations (if any) are readable but new support threads fail.
 - **Timestamp**: 2026-03-03T00:45:00Z
 - **Severity**: P2 (MEDIUM) — support chat creation is non-functional for retailer users
-- **Root cause**: `backend/src/routes/v1/chat.ts` — the support conversation creation inserts a participant with user_type derived from the JWT actor_type. The `conversation_participants` table CHECK constraint on `user_type` doesn't include the value being inserted (likely 'store' or 'user' instead of the expected enum value).
-- **Status**: FOUND
+- **Root cause**: `backend/src/routes/v1/chat.ts` `getUser()` passes raw `x-actor-type` (e.g. `'store'`) to `conversation_participants.user_type` CHECK constraint which only allows `'retailer','supplier','admin','support'`. Gateway sets `actorType: 'store'` for retailer JWTs and `'platform'` for admin sessions.
+- **Fix**: Added `ACTOR_TYPE_TO_CHAT_TYPE` mapping in `getUser()`: `store→retailer`, `platform→admin`. Also added UUID validation for STG-431.
+- **Files changed**: `backend/src/routes/v1/chat.ts`
+- **Status**: FIXED
 
 ---
 
@@ -4798,7 +4822,7 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 | ID | Sev | Platform | Title | Status |
 |----|-----|----------|-------|--------|
-| STG-431 | P2 | POS/SuperAdmin | Chat service casts admin email x-user-id to UUID — 22P02 | FOUND |
-| STG-433 | P3 | Retailer Web | Password reset email links to /supplier/reset-password | FOUND |
-| STG-434 | P3 | Supplier Web | Supplier reset page wrong error for retailer tokens | FOUND |
-| STG-435 | P2 | Retailer Web | Chat support POST 500 — user_type check constraint | FOUND |
+| STG-431 | P2 | POS/SuperAdmin | Chat service casts admin email x-user-id to UUID — 22P02 | FIXED |
+| STG-433 | P3 | Retailer Web | Password reset email links to /supplier/reset-password | FIXED |
+| STG-434 | P3 | Supplier Web | Supplier reset page wrong error for retailer tokens | FIXED |
+| STG-435 | P2 | Retailer Web | Chat support POST 500 — user_type check constraint | FIXED |
