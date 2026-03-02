@@ -18,7 +18,9 @@ const CREDIT_ENABLED = process.env.CREDIT_ENABLED === "true";
 // BUG-001: Scope gate to /credit/* paths only.
 // Previously this was a blanket .use() that blocked ALL POS routes
 // mounted after posCreditRouter in index.ts (dues, staff, tokens, translations).
-posCreditRouter.use("/credit", (_req: Request, res: Response, next) => {
+// STG-428 FIX: Run requireDeviceToken BEFORE feature flag check so unauthenticated
+// requests get 401 (DEVICE_UNAUTHORIZED) instead of leaking feature availability (403).
+posCreditRouter.use("/credit", requireDeviceToken, (_req: Request, res: Response, next) => {
   if (!CREDIT_ENABLED) {
     return res.status(403).json({
       success: false,

@@ -4232,7 +4232,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: 500 with raw PG error `invalid input syntax for type uuid`.
 - **Timestamp**: 2026-03-02T04:50:00Z
 - **Severity**: P2
-- **Status**: FOUND
+- **Fix**: Added UUID format validation before query — returns 400 INVALID_FORMAT for non-UUID input.
+- **Commit**: Wave L2
+- **Status**: FIXED
 - **Note**: Frontend always sends valid UUIDs from sessionStorage. This is an API surface vulnerability, not a user-facing bug.
 
 ### STG-417: Retailer Web — RegisterPage — Hardcoded production domain in help/support links
@@ -4303,7 +4305,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: 500 with raw PG error `invalid input syntax for type uuid`.
 - **Timestamp**: 2026-03-02T09:35:00Z
 - **Severity**: P2
-- **Status**: FOUND
+- **Fix**: Added UUID format validation before query (same as STG-416).
+- **Commit**: Wave L2
+- **Status**: FIXED
 
 ### STG-421: Supplier Web — Middleware — Defense-in-depth: prerender cache bypasses edge middleware redirect (RECLASSIFIED)
 - **Platform**: Supplier Web
@@ -4322,8 +4326,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Reclassification**: Original "P2 middleware auth bypass" → Actual behavior is Option 4 ("only static shell renders, no protected data exposed").
 - **Timestamp**: 2026-03-02T09:44:00Z (found), 2026-03-02T10:15:00Z (reclassified)
 - **Severity**: ~~P2~~ → **P3 (LOW)** — defense-in-depth hardening gap, not a data/auth boundary break
-- **Status**: RECLASSIFIED
-- **Recommended fix**: Add `export const dynamic = 'force-dynamic'` to `(dashboard)/layout.tsx` to disable prerender cache on protected routes.
+- **Fix**: Created `(dashboard)/template.tsx` Server Component that reads `headers()` to force dynamic rendering, preventing prerender cache from bypassing middleware.
+- **Commit**: Wave L2
+- **Status**: FIXED
 
 ---
 
@@ -4494,6 +4499,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Status**: FOUND
 - **Root cause** (CORRECTED 2026-03-02T13:00Z from Cloud Run logs): Column name mismatches in `refunds.ts:118-130`. Query references `r.order_id` (doesn't exist — should be `r.sale_id`) and `r.refund_amount_minor` (should be `refund_amount`). Schema defined in migration 152.
 - **PG error**: Not separately logged (caught by generic handler), but column `order_id` does not exist on `orders.refund_requests` table.
+- **Fix**: Corrected column names: `order_id`→`sale_id`, `refund_amount_minor`→`refund_amount` per migration 152 schema.
+- **Commit**: `a8ecbd96`
+- **Status**: FIXED
 
 ---
 
@@ -4511,6 +4519,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Status**: FOUND
 - **Root cause** (CORRECTED 2026-03-02T13:00Z from Cloud Run logs): PG error `42883` (operator type mismatch) at position 259 in `staff.ts:28-34`. Staff list query has subquery `SELECT COUNT(*) FROM purchases WHERE staff_id = s.id AND store_id = s.store_id` — `purchases.store_id` is `TEXT` but `platform.store_staff.store_id` is `UUID`. PostgreSQL has no `text = uuid` operator. Same issue in `sales` subquery.
 - **PG error**: `{"code":"42883","hint":"No operator matches the given name and argument types.","position":"259"}`
+- **Fix**: Added `::text` cast on `s.store_id` in staff subqueries — `sales`/`purchases` tables have TEXT store_id (ensureSchema.ts), `platform.store_staff` has UUID.
+- **Commit**: `a8ecbd96`
+- **Status**: FIXED
 
 ---
 
@@ -4528,6 +4539,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Status**: FOUND
 - **Root cause** (CORRECTED 2026-03-02T13:00Z from Cloud Run logs): PG error `42703` (missing column) at position 83 in `gstCompliance.ts:54-69`. GST summary query references `taxable_amount` (doesn't exist — actual column: `taxable_amount_minor`), plus 5+ other column name mismatches: `cgst_amount`→`cgst_minor`, `sgst_amount`→`sgst_minor`, `igst_amount`→`igst_minor`, `total_amount`→`total_amount_minor`, `cess_amount` (doesn't exist), `store_id` (doesn't exist — table uses `seller_id`).
 - **PG error**: `{"code":"42703","position":"83","routine":"errorMissingColumn"}`
+- **Fix**: Corrected all invoice column names to match migration 134 schema (6+ columns + store_id→seller_id) in 4 queries + GSTR-1 export formatter.
+- **Commit**: `a8ecbd96`
+- **Status**: FIXED
 
 ---
 
@@ -4545,6 +4559,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Root cause**: The `/api/v1/chat/*` routes use a different auth middleware (expects JWT with `sub`, `actorId`, `actorType` claims). The admin email OTP JWT only has `email`, `role`, `type` claims. The admin auth middleware sets `x-user-id`, `x-actor-id`, `x-actor-type` headers for proxied requests, but the chat service validates the JWT directly instead of trusting proxy headers.
 - **Status**: FOUND
 - **Recommended fix**: Either (a) make chat service accept admin proxy headers, or (b) ensure admin auth middleware transforms the request so chat service accepts it.
+- **Fix**: Gateway jwtAuthMiddleware now recognizes admin email OTP JWTs (type='admin') and sets appropriate x-user-id/x-actor-type headers instead of rejecting for missing claims.
+- **Commit**: `a8ecbd96`
+- **Status**: FIXED
 
 ---
 
@@ -4622,7 +4639,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Timestamp**: 2026-03-02T12:15:00Z
 - **Severity**: P4 (LOW) — minor info leak, defense-in-depth gap
 - **Root cause**: Credit feature middleware runs before device auth middleware in the route chain. Feature check should run after auth.
-- **Status**: FOUND
+- **Fix**: Added `requireDeviceToken` to the credit router-level middleware, before the feature flag check.
+- **Commit**: Wave L2
+- **Status**: FIXED
 
 ---
 
@@ -4644,7 +4663,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
   - **Enrollment code IS found**: The enrollment query (`WHERE e.enrollment_code_hash = $1`) at line 167 SUCCEEDS (finds the code). The failure occurs at line 186 when setting RLS context.
 - **PG error from Cloud Run logs**: `{"code":"42601","position":"34","file":"scan.l","routine":"scanner_yyerror"}`
 - **Fix**: Replace `await client.query("SET LOCAL app.current_store_id = $1", [enrollment.store_id])` with `await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [enrollment.store_id])` — `set_config()` is a regular SQL function that accepts bind parameters. Same fix needed in `db/client.ts:102`.
-- **Status**: FOUND — HARD BLOCKER (code fix required, NOT migration fix)
+- **Fix**: Replaced `SET LOCAL app.current_store_id = $1` with `SELECT set_config('app.current_store_id', $1::text, true)` in enroll.ts:186 and db/client.ts:102.
+- **Commit**: `a8ecbd96`
+- **Status**: FIXED
 
 ---
 
@@ -4658,16 +4679,17 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Severity**: P2 (MEDIUM) — audit trail broken, no data loss but compliance gap
 - **Status**: FOUND
 - **Root cause**: `adminAuth.ts:147` sets `x-user-id = session.sessionId` → for email OTP sessions, sessionId = `email-otp-<email>` (from adminSessionService.ts:244). Audit INSERT casts this as UUID column.
-- **Fix**: Either (a) generate a deterministic UUID for email OTP sessions, or (b) change audit table actor_id column to TEXT, or (c) validate/skip UUID cast in audit INSERT.
+- **Fix**: Added UUID format validation in adminAudit.ts — non-UUID actor IDs (email strings) are set to null before INSERT, preventing PG 22P02 cast error.
+- **Commit**: `a8ecbd96`
+- **Status**: FIXED
 
 ---
 
 ### POS Authenticated Verification — BLOCKED
 
-**Status**: BLOCKED_ON_CODE_FIX
-**Reason**: POS enrollment returns 500 on all codes — `SET LOCAL app.current_store_id = $1` syntax error (STG-429). Code fix required: replace with `SELECT set_config(...)`.
+**Status**: BLOCKED_ON_REDEPLOY
+**Reason**: STG-429 code fix committed (`a8ecbd96`). Enrollment SET LOCAL → set_config() fixed in enroll.ts:186 and db/client.ts:102. Requires redeploy to staging to unblock.
 **Previous (wrong) reason**: ~~Migration 166 not run~~ (CORRECTED: all 171 migrations ARE applied).
-**Resolution**: Fix `SET LOCAL` → `set_config()` in `enroll.ts:186` and `db/client.ts:102`, redeploy.
 
 **Blocked screens**: EnrollDevice (enrollment itself), PaymentSetup, DeviceBlocked, ForceUpdate, StaffLogin, PosRootLayout, and all 35+ secondary screens.
 

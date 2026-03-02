@@ -731,6 +731,14 @@ router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Re
       return;
     }
 
+    // STG-416 FIX: Validate UUID format before query to prevent raw PG 22P02 error leaking to client
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applicationId)) {
+      res.status(400).json({
+        error: { code: "INVALID_FORMAT", message: "Invalid application ID format" }
+      });
+      return;
+    }
+
     const pool = getPool();
     if (!pool) {
       res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
