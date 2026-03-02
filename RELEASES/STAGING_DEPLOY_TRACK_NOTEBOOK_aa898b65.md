@@ -610,5 +610,6 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 - **Retailer Web**: SIGNED OFF UNDER STRICT LOCK (28/28 production screens individually audited, 5 findings STG-456..460: 0 P2, 5 P3, 24 clean, 4 with findings. AllPagesPage excluded — dev-only via `import.meta.env.DEV` gate)
 - **Supplier Web**: SIGNED OFF UNDER STRICT LOCK (23/23 screens individually audited, 2 findings STG-461..462: 0 P2, 2 P3, 21 clean, 2 with findings)
 - **SuperAdmin Web**: SIGNED OFF UNDER STRICT LOCK (25/25 screens individually audited, 2 findings STG-463..464: 0 P2, 2 P3, 23 clean, 2 with findings)
-- **Cross-Function Matrix**: ACTIVE (Platform 5/5)
-- **Production promotion**: BLOCKED until Cross-Function Matrix signed off
+- **Cross-Function Matrix**: SIGNED OFF UNDER STRICT LOCK (7/7 flows individually traced, 0 findings, all flows CLEAN)
+- **LIVE SIGNOFF COMPLETE**: 120 screens + 7 flows, 29 findings (8 P2, 21 P3). STG-436..464.
+- **Production promotion**: BLOCKED — 29 sign-off findings require consolidated fix wave → staging redeploy → impacted recheck → verdict

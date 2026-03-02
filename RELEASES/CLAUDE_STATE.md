@@ -3330,19 +3330,13 @@ Live sign-off in progress — platform order:
   2. Retailer Web — SIGNED OFF UNDER STRICT LOCK (28/28 production screens, 5 findings STG-456..460: 0 P2, 5 P3, 24 clean, 4 with findings. AllPagesPage excluded — dev-only via import.meta.env.DEV gate)
   3. Supplier Web — SIGNED OFF UNDER STRICT LOCK (23/23 screens, 2 findings STG-461..462: 0 P2, 2 P3, 21 clean, 2 with findings)
   4. SuperAdmin Web — SIGNED OFF UNDER STRICT LOCK (25/25 screens, 2 findings STG-463..464: 0 P2, 2 P3, 23 clean, 2 with findings)
-  5. Cross-Function Matrix — ACTIVE (Platform 5/5)
+  5. Cross-Function Matrix — SIGNED OFF UNDER STRICT LOCK (7/7 flows, 0 findings, all flows CLEAN)
 
-Lock discipline:
-- one platform at a time
-- one screen at a time
-- no grouped execution
-- no sampling
-- no fixes or redeploys during this session
-- every meaningful user action and every runtime layer must be exercised
-- any new issue, even minor, must be recorded as STG-446+
-- if OTP, browser session, email, or device input is required, operator provides it and Claude continues the same locked screen immediately
+FINAL OPERATOR-ASSISTED LIVE SIGNOFF: COMPLETE
+Total: 120 screens + 7 cross-functional flows audited, 29 findings STG-436..464 (8 P2, 21 P3)
 
-Only after this final live sign-off pass is complete with no remaining untested microlevel flows may production promotion be considered.
+Next phase: Consolidated fix wave for STG-436..464 (P2 first → web P3 → POS P3),
+then staging redeploy, impacted runtime recheck, production-go-live verdict.
 ```
 
 ---
