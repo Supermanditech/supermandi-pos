@@ -3086,19 +3086,19 @@ Claude MUST NOT start this phase until:
 
 Current status: **ACTIVE** (Gate 3 PASSED)
 
-1. deploy SHA: aa898b65
-2. workflow run: 22552048262
+1. initial deploy SHA: aa898b65 → current deployed SHA: f080d982 (post-fix-wave redeploy)
+2. workflow runs: 22552048262 (initial), 22582450100 (fix wave), 22583773065 (hotfix)
 3. Gate 3: PASSED (2026-03-01T20:47:59Z)
 4. next finding start: STG-436
 5. active platform: none (all platforms COMPLETE)
 6. Retailer Web unauthenticated: COMPLETE (7 findings: STG-410..414, 416, 417; STG-415 withdrawn)
-7. Retailer Web authenticated (A1-A22): COMPLETE (25+ endpoints, 3 new findings: STG-433, STG-434, STG-435)
+7. Retailer Web authenticated (A1-A22): COMPLETE (25+ endpoints, 3 findings FIXED: STG-433, STG-434, STG-435)
 8. Supplier Web unauthenticated: COMPLETE (4 findings: STG-418..421)
-9. Supplier Web authenticated (A1-A12): COMPLETE (12+ endpoints, 0 new findings)
+9. Supplier Web authenticated (A1-A12): COMPLETE (12+ endpoints, 0 findings)
 10. SuperAdmin Web: FULLY COMPLETE — unauth (2 findings: STG-422, 423) + auth (4 findings: STG-424..427)
 11. POS App unauthenticated: COMPLETE — findings: STG-428, STG-429 (fixed and rechecked)
-12. POS App authenticated: COMPLETE to maximum runtime depth. STG-431 remains open P2.
-13. **ALL 4 PLATFORMS VERIFIED** — 4 open findings remain: STG-431(P2), STG-433(P3), STG-434(P3), STG-435(P2)
+12. POS App authenticated: COMPLETE. STG-431 FIXED (commit 91929249, deployed f080d982).
+13. **ALL 4 PLATFORMS VERIFIED — 0 open findings. All live-discovery findings FIXED and runtime-verified.**
 
 ### 15.2 Source of Truth Order
 
@@ -3297,12 +3297,12 @@ If migration fails, the container never starts, and the health check never passe
 
 ---
 
-## §19.2 Live-Findings Fix Wave (STG-410..430)
+## §19.2 Live-Findings Fix Waves (STG-410..435)
 
-**Status**: CODE_COMPLETE_AWAITING_REDEPLOY
+**Status**: ALL_FIXED_DEPLOYED_AND_RUNTIME_VERIFIED
 **Baseline**: `main@1063dee0` (post-migration-recovery)
-**HEAD**: `main@3edbc17a` (all 3 waves pushed)
-**Date**: 2026-03-02
+**Deployed SHA**: `main@f080d982` (all waves + hotfix deployed)
+**Date**: 2026-03-03
 
 ### Wave Summary
 
@@ -3311,33 +3311,29 @@ If migration fails, the container never starts, and the health check never passe
 | L1 | `a8ecbd96` | stop-the-line runtime 500s | STG-429,430,424,425,426,427 | FIXED |
 | L2 | `efecd9a4` | medium/runtime correctness | STG-416,420,421,428 | FIXED |
 | L3 | `3edbc17a` | low-severity UI/UX/hardening | STG-410,412,413,414,417,418,419,422 | FIXED |
+| CW2 | `91929249` + `f080d982` | consolidated fix wave 2 | STG-431,433,434,435 | FIXED + RUNTIME-VERIFIED |
 | — | — | WONTFIX | STG-411, STG-423 | WONTFIX |
 | — | — | WITHDRAWN | STG-415 | WITHDRAWN |
 
-**Totals**: 19 FIXED, 2 WONTFIX, 1 WITHDRAWN
+**Totals**: 23 FIXED, 2 WONTFIX, 1 WITHDRAWN, 0 OPEN
 
-### Current Phase: CONSOLIDATED_FIX_WAVE
+### Current Phase: FINAL_READINESS
 
 ```
-LIVE DISCOVERY COMPLETE (2026-03-03T01:30:00Z)
+ALL LIVE-DISCOVERY FINDINGS CLOSED (2026-03-03T05:00:00Z)
 
 All 4 platforms fully verified:
-- Retailer Web: auth COMPLETE (25+ endpoints, 3 findings: STG-433, STG-434, STG-435)
-- Supplier Web: auth COMPLETE (12+ endpoints, 0 findings)
-- SuperAdmin Web: auth COMPLETE (6 findings, all fixed except STG-431)
-- POS App: auth COMPLETE (35 endpoints, STG-431 open)
+- Retailer Web: auth COMPLETE — all findings FIXED
+- Supplier Web: auth COMPLETE — all findings FIXED
+- SuperAdmin Web: auth COMPLETE — all findings FIXED
+- POS App: auth COMPLETE — all findings FIXED (including STG-431)
 
-Open findings (4):
-- STG-431 (P2): Chat service casts admin email x-user-id to UUID — 22P02
-- STG-433 (P3): Retailer password reset email links to /supplier/reset-password
-- STG-434 (P3): Supplier reset page wrong error for retailer tokens
-- STG-435 (P2): Chat support POST 500 — user_type check constraint
+Open findings: 0
+Deployed SHA: f080d982
+Deploy runs: 22582450100 (fix wave), 22583773065 (hotfix) — both SUCCESS
 
-Execution plan:
-1. Fix all 4 in one consolidated wave
-2. Single staging redeploy
-3. Impacted runtime recheck (chat, reset email, support conversation)
-4. Final readiness verdict
+Staging is production-grade ready.
+Production promotion eligible pending operator sign-off.
 ```
 
 ---

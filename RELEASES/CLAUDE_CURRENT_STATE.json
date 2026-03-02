@@ -1,7 +1,7 @@
 {
-  "version": "90.0",
-  "lastUpdated": "2026-03-03T02:00:00Z",
-  "currentPhase": "CONSOLIDATED_FIX_WAVE: All 4 platforms fully verified (Retailer auth COMPLETE, Supplier auth COMPLETE, SuperAdmin COMPLETE, POS COMPLETE). 4 open findings: STG-431(P2), STG-433(P3), STG-434(P3), STG-435(P2). Fix all 4 in one wave, redeploy once, recheck impacted flows, then final readiness verdict.",
+  "version": "91.0",
+  "lastUpdated": "2026-03-03T05:00:00Z",
+  "currentPhase": "FINAL_READINESS: All 4 platforms auth-verified COMPLETE. All live-discovery findings FIXED and runtime-verified. Staging deployed at f080d982. No open findings. Production promotion eligible.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -211,7 +211,7 @@
     "totalScreens": 118,
     "totalClean": 24,
     "activePlatform": null,
-    "activeInstruction": "LIVE_DISCOVERY_COMPLETE. All 4 platforms fully verified. Consolidated fix wave in progress for STG-431, STG-433, STG-434, STG-435. After fixes: single redeploy → impacted recheck → final readiness verdict.",
+    "activeInstruction": "FINAL_READINESS. All 4 platforms auth-verified. All live-discovery findings FIXED, deployed at f080d982, runtime-verified. 0 open findings. Production promotion eligible.",
     "posAppStatus": {
       "unauthenticated": "COMPLETE",
       "unauthenticatedFindings": 2,
@@ -268,8 +268,8 @@
       "completedAt": "2026-03-03T01:00:00Z",
       "authMethod": "Email+password login via admin user creation + devToken password reset + Cloud SQL store_users INSERT",
       "endpointsTested": 25,
-      "runtime500s": 1,
-      "runtime500Details": "STG-435: POST /conversations/support → user_type check constraint"
+      "runtime500s": 0,
+      "runtime500Details": "STG-435: FIXED — ACTOR_TYPE_TO_CHAT_TYPE mapping added (store→retailer, platform→admin). Runtime-verified 200 on staging."
     },
     "platformOrder": [
       "Retailer Web",
@@ -2986,21 +2986,29 @@
     }
   },
   "consolidatedFixWave2": {
-    "status": "CODE_COMPLETE",
+    "status": "DEPLOYED_AND_RUNTIME_VERIFIED",
     "issueRange": "STG-431,433,434,435",
-    "commit": "91929249",
+    "commits": ["91929249", "f080d982"],
     "date": "2026-03-03",
+    "deployedSha": "f080d982",
+    "deployRun": "22583773065",
+    "deployResult": "SUCCESS (all 7 jobs passed)",
     "summary": {
       "total": 4,
-      "fixed": 4
+      "fixed": 4,
+      "runtimeVerified": 4,
+      "open": 0
     },
     "fixes": [
-      {"id": "STG-431", "severity": "P2", "fix": "Chat getUser() UUID validation — rejects non-UUID x-user-id with 401", "file": "backend/src/routes/v1/chat.ts"},
-      {"id": "STG-433", "severity": "P3", "fix": "sendPasswordResetEmail() portal-aware — portalType param, RETAILER_PORTAL_URL for retailer", "files": ["backend/src/services/emailService.ts", "backend/src/routes/v1/retailer-admin/auth.ts", "backend/src/routes/v1/supplier/auth.ts", "backend/src/routes/v1/admin/suppliers.ts"]},
-      {"id": "STG-434", "severity": "P3", "fix": "Supplier reset endpoint improved error — hints Retailer portal for mismatched users", "file": "backend/src/routes/v1/supplier/auth.ts"},
-      {"id": "STG-435", "severity": "P2", "fix": "Chat getUser() ACTOR_TYPE_TO_CHAT_TYPE mapping: store→retailer, platform→admin", "file": "backend/src/routes/v1/chat.ts"}
+      {"id": "STG-431", "severity": "P2", "fix": "Chat getUser() UUID validation — rejects non-UUID x-user-id with 401", "file": "backend/src/routes/v1/chat.ts", "runtimeVerified": true},
+      {"id": "STG-433", "severity": "P3", "fix": "sendPasswordResetEmail() portal-aware — RETAILER_ADMIN_URL env var for retailer portal URL", "files": ["backend/src/services/emailService.ts", "backend/src/routes/v1/retailer-admin/auth.ts", "backend/src/routes/v1/supplier/auth.ts", "backend/src/routes/v1/admin/suppliers.ts"], "runtimeVerified": true, "evidence": "Operator inbox confirmed /retailer/reset-password URL in email"},
+      {"id": "STG-434", "severity": "P3", "fix": "Supplier reset endpoint improved error — hints Retailer portal for mismatched users", "file": "backend/src/routes/v1/supplier/auth.ts", "runtimeVerified": true},
+      {"id": "STG-435", "severity": "P2", "fix": "Chat getUser() ACTOR_TYPE_TO_CHAT_TYPE mapping: store→retailer, platform→admin", "file": "backend/src/routes/v1/chat.ts", "runtimeVerified": true, "evidence": "GET /conversations 200, POST /conversations/support 200 on staging"}
     ],
-    "servicesRequiringRedeploy": ["main-backend"],
-    "nextPhase": "STAGING_REDEPLOY_THEN_IMPACTED_RECHECK"
+    "hotfix": {
+      "reason": "STG-433 first deploy used RETAILER_PORTAL_URL (wrong env var). Hotfix f080d982 corrected to RETAILER_ADMIN_URL.",
+      "commit": "f080d982",
+      "secondDeployRun": "22583773065"
+    }
   }
 }

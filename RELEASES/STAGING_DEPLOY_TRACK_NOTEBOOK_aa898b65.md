@@ -583,3 +583,25 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 - **Issue**: `actions/checkout@v4` with `fetch-depth: 1` cannot resolve short commit SHAs passed via `workflow_dispatch` input
 - **Fix**: Change gate job checkout to `fetch-depth: 0` or add a step to resolve short SHA to full SHA before checkout
 - **Status**: Deferred — log as backlog item after staging verification complete
+
+---
+
+## REDEPLOY HISTORY (post aa898b65)
+
+### Redeploy 1: Consolidated Fix Wave 2 (STG-431,433,434,435)
+- **Deployed SHA**: `f080d982` (on `main`)
+- **Deploy method**: `gh workflow run deploy.yml --ref main` (no SHA param — uses HEAD of main)
+- **Deploy run 1**: `22582450100` — commit `91929249` (fix wave) — SUCCESS, all 7 jobs
+- **Deploy run 2**: `22583773065` — commit `f080d982` (hotfix: RETAILER_ADMIN_URL env var) — SUCCESS, all 7 jobs
+- **Hotfix reason**: First deploy used wrong env var `RETAILER_PORTAL_URL` (unset). Corrected to `RETAILER_ADMIN_URL` which is set by deploy.yml.
+- **Runtime verification**: All 4 findings confirmed FIXED on staging
+  - STG-431: Chat UUID validation — non-UUID rejected
+  - STG-433: Password reset email confirmed `/retailer/reset-password` URL (operator inbox evidence)
+  - STG-434: Supplier reset error hints Retailer portal
+  - STG-435: Chat conversations list 200, support creation 200
+
+### Current Staging State
+- **Deployed SHA**: `f080d982`
+- **All services running at this SHA**: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
+- **Open findings**: 0
+- **Production promotion**: ELIGIBLE
