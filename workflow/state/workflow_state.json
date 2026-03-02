@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-02T08:15:00Z",
-  "workflowMode": "LIVE_FIX",
+  "updatedAt": "2026-03-02T17:00:00Z",
+  "workflowMode": "REDEPLOY_AND_IMPACTED_RUNTIME_RECHECK",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -145,7 +145,7 @@
   "finalMegaImplementation": {
     "status": "ALL_FINDINGS_RESOLVED",
     "baselineSha": "cb967459",
-    "headSha": "aa898b65",
+    "headSha": "3edbc17a",
     "scopeRange": "STG-287..409",
     "totalFindings": 123,
     "reconciliation": {
@@ -229,6 +229,21 @@
       "_c3_browsers.ps1",
       "_c4_net_ssd_final.ps1"
     ]
+  },
+  "liveFindingsFixWave": {
+    "status": "CODE_COMPLETE_AWAITING_REDEPLOY",
+    "issueRange": "STG-410..430",
+    "baselineSha": "1063dee0",
+    "headSha": "3edbc17a",
+    "completedAt": "2026-03-02T16:30:00Z",
+    "fixed": 19,
+    "wontfix": 2,
+    "withdrawn": 1,
+    "waveL1Commit": "a8ecbd96",
+    "waveL2Commit": "efecd9a4",
+    "waveL3Commit": "3edbc17a",
+    "servicesRequiringRedeploy": ["main-backend", "api-gateway", "retailer-admin", "supplier-portal"],
+    "nextPhase": "REDEPLOY_AND_IMPACTED_RUNTIME_RECHECK"
   },
   "impactedScreenReiteration": {
     "status": "PASSED",

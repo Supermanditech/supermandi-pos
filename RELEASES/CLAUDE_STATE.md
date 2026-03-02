@@ -3273,7 +3273,7 @@ STEP 2: Verify main-backend revision readiness
    → If revision fails to become ready → migration failure → investigate logs → rollback
 
 STEP 3: Verify GIT_SHA parity
-   → curl staging-api/version → sha must = aa898b65
+   → curl staging-api/version → sha must = 3edbc17a
    → curl staging-api/health → status 200
 
 STEP 4: Verify migration status/count after startup
@@ -3293,6 +3293,43 @@ STEP 6: Unlock post-deploy mega live verification
 inside main-backend's container entrypoint (`backend/scripts/docker-entrypoint.sh`).
 The entrypoint sequence is: wait for PostgreSQL → `node migrate-prod.js up` → `exec node server.js`.
 If migration fails, the container never starts, and the health check never passes.
+
+---
+
+## §19.2 Live-Findings Fix Wave (STG-410..430)
+
+**Status**: CODE_COMPLETE_AWAITING_REDEPLOY
+**Baseline**: `main@1063dee0` (post-migration-recovery)
+**HEAD**: `main@3edbc17a` (all 3 waves pushed)
+**Date**: 2026-03-02
+
+### Wave Summary
+
+| Wave | Commit | Severity | Items | Status |
+|------|--------|----------|-------|--------|
+| L1 | `a8ecbd96` | stop-the-line runtime 500s | STG-429,430,424,425,426,427 | FIXED |
+| L2 | `efecd9a4` | medium/runtime correctness | STG-416,420,421,428 | FIXED |
+| L3 | `3edbc17a` | low-severity UI/UX/hardening | STG-410,412,413,414,417,418,419,422 | FIXED |
+| — | — | WONTFIX | STG-411, STG-423 | WONTFIX |
+| — | — | WITHDRAWN | STG-415 | WITHDRAWN |
+
+**Totals**: 19 FIXED, 2 WONTFIX, 1 WITHDRAWN
+
+### Next Phase: REDEPLOY_AND_IMPACTED_RUNTIME_RECHECK
+
+```
+1. Redeploy 4 services: main-backend, api-gateway, retailer-admin, supplier-portal
+2. Verify deployed SHA = 3edbc17a
+3. Run impacted runtime rechecks:
+   - STG-429: POS enroll (set_config replaces SET LOCAL)
+   - STG-430: admin audit log INSERT (non-UUID actor)
+   - STG-424: refund list/approve (correct column names)
+   - STG-425: staff list counts (UUID::text cast)
+   - STG-426: GST compliance (correct column names)
+   - STG-427: admin JWT on /api/v1/chat/* (gateway passthrough)
+4. Only resume broader verification after impacted checks pass
+5. POS authenticated verification is first unblock target
+```
 
 ---
 
