@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-03T12:00:00Z",
+  "updatedAt": "2026-03-03T18:00:00Z",
   "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
@@ -142,15 +142,21 @@
       "operatorReviewAllowed": true
     },
     "posAppLiveSignoff": {
-      "status": "SIGNED_OFF",
-      "completedAt": "2026-03-03T12:00:00Z",
+      "status": "INDIVIDUALLY_SIGNED_OFF_UNDER_STRICT_LOCK",
+      "completedAt": "2026-03-03T18:00:00Z",
+      "method": "Individual screen-by-screen strict re-signoff (prior grouped closure rejected)",
       "screensReviewed": 44,
-      "screensClean": 34,
-      "totalFindings": 10,
-      "p2": 3,
-      "p3": 7,
-      "findingRange": "STG-436..445",
-      "nextFindingStartsAt": "STG-446"
+      "screensClean": 29,
+      "screensWithFindings": 15,
+      "totalFindings": 19,
+      "p2": 8,
+      "p3": 11,
+      "reconfirmedRange": "STG-436..445",
+      "reconfirmedCount": 10,
+      "newlyDiscoveredRange": "STG-446..454",
+      "newlyDiscoveredCount": 9,
+      "findingRange": "STG-436..454",
+      "nextFindingStartsAt": "STG-455"
     }
   },
   "finalMegaImplementation": {

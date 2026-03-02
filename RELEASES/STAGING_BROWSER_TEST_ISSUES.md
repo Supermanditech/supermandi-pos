@@ -4993,23 +4993,136 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Severity**: P3 (LOW) --- display inconsistency, not a functional or financial error
 - **Status**: FOUND
 
+### STG-446 --- KhataScreen: Debounce timer not cleaned on unmount (P3)
+
+- **Platform**: POS App
+- **Screen**: KhataScreen
+- **File**: `src/screens/KhataScreen.tsx`
+- **Issue**: Search debounce uses `setTimeout` without storing the timer ID for cleanup on unmount. If user navigates away during the debounce window, the callback fires on an unmounted component.
+- **Impact**: Minor --- React state update on unmounted component warning. No crash, no data corruption.
+- **Severity**: P3 (LOW) --- cosmetic console warning, not user-visible
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-447 --- OverdueDuesScreen: Severity color identical for two tiers (P3)
+
+- **Platform**: POS App
+- **Screen**: OverdueDuesScreen
+- **File**: `src/screens/OverdueDuesScreen.tsx`
+- **Issue**: Two overdue severity tiers use the same color, making them visually indistinguishable. The color differentiation intended to signal escalating overdue severity is lost.
+- **Impact**: Cosmetic --- overdue severity bands look the same. Operator cannot visually distinguish moderate vs severe overdue at a glance.
+- **Severity**: P3 (LOW) --- visual distinction missing, not a functional gap
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-448 --- BulkPurchaseCreditScreen: API contract mismatch with backend (P2)
+
+- **Platform**: POS App
+- **Screen**: BulkPurchaseCreditScreen
+- **File**: `src/screens/BulkPurchaseCreditScreen.tsx`
+- **Issue**: Local `CreditOffer` type fields do not match backend API response shape. Fields like `interestRate`, `processingFee`, and `tenureMonths` may not align with backend `credit_offers` table/endpoint response. Currently masked by `CREDIT_ENABLED=false` feature gate.
+- **Impact**: When credit feature is enabled, this screen will likely fail to render offers correctly. Blocked by feature gate today --- becomes a P1 when credit is enabled.
+- **Severity**: P2 (MEDIUM) --- latent contract mismatch behind feature gate
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-449 --- CustomerListScreen: Debounce timer not cleaned on unmount (P3)
+
+- **Platform**: POS App
+- **Screen**: CustomerListScreen
+- **File**: `src/screens/CustomerListScreen.tsx`
+- **Issue**: Same pattern as STG-446. Search debounce `setTimeout` without cleanup on unmount. Callback fires on unmounted component if user navigates away during debounce window.
+- **Impact**: Minor --- React state update on unmounted component warning. No crash, no data corruption.
+- **Severity**: P3 (LOW) --- cosmetic console warning, not user-visible
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-450 --- DailyReportScreen: Missing empty state for no-data dates (P2)
+
+- **Platform**: POS App
+- **Screen**: DailyReportScreen
+- **File**: `src/screens/DailyReportScreen.tsx`
+- **Issue**: When API returns 404 for a date with no report data, state is set to `report=null, error=null`. No render branch handles this condition --- screen shows neither report content, nor loading, nor error. User sees blank content area with no guidance.
+- **Impact**: Functional UX gap. User picks a date with no sales data and sees nothing --- no "No data for this date" message, no suggestion to pick another date.
+- **Severity**: P2 (MEDIUM) --- missing UX state for a common user scenario
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-451 --- PrinterSettingsScreen: Settings stored but never consumed (P2)
+
+- **Platform**: POS App
+- **Screen**: PrinterSettingsScreen
+- **File**: `src/screens/PrinterSettingsScreen.tsx`, `src/services/printerService.ts`
+- **Issue**: PrinterSettingsScreen allows user to configure paper width, print density, and header/footer text. These settings are saved to Zustand/AsyncStorage. However, `printerService.ts` hardcodes 80mm paper width and auto-selects print parameters, never reading the stored settings.
+- **Impact**: User-configured printer settings have no effect on actual print output. Settings screen gives false sense of control.
+- **Severity**: P2 (MEDIUM) --- settings UI is disconnected from print runtime
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-452 --- ChatConversationScreen: currentUserId never passed, own messages render as other (P2)
+
+- **Platform**: POS App
+- **Screen**: ChatConversationScreen
+- **File**: `src/screens/ChatConversationScreen.tsx`
+- **Issue**: `currentUserId` prop defaults to empty string `''` and is never set from the navigation params or session store. All messages render as "other" (left-aligned) because `msg.senderId !== currentUserId` is always true.
+- **Impact**: Chat conversation displays all messages as received (left side), never as sent (right side). User cannot distinguish their own messages from support responses.
+- **Severity**: P2 (MEDIUM) --- broken chat message alignment
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-453 --- ChatConversationScreen: __new_support__ sentinel not handled (P2)
+
+- **Platform**: POS App
+- **Screen**: ChatConversationScreen
+- **File**: `src/screens/ChatConversationScreen.tsx`
+- **Issue**: ChatListScreen navigates to ChatConversation with `conversationId: "__new_support__"` for new support threads. ChatConversationScreen passes this sentinel directly to the API `GET /conversations/__new_support__/messages`, which returns 404 (no such conversation). The screen should detect this sentinel and create a new conversation first.
+- **Impact**: New support chat thread fails to load messages. User sees error state instead of empty new conversation.
+- **Severity**: P2 (MEDIUM) --- new support chat creation broken
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
+### STG-454 --- HelpScreen: Missing useSafeAreaInsets for top padding (P3)
+
+- **Platform**: POS App
+- **Screen**: HelpScreen
+- **File**: `src/screens/HelpScreen.tsx`
+- **Issue**: Screen does not use `useSafeAreaInsets()` for top padding. On notched devices (iPhone X+, Android punch-hole), content renders under the status bar/notch area.
+- **Impact**: Content partially obscured by device notch/status bar on modern devices. Functional but visually broken on notched devices.
+- **Severity**: P3 (LOW) --- cosmetic overlap on notched devices only
+- **Status**: FOUND
+- **Discovery**: POS strict re-signoff (2026-03-03)
+
 ---
 
-## POS App Live Sign-Off Summary
+## POS App Live Sign-Off Summary (Strict Re-Signoff)
+
+> **Re-signoff date**: 2026-03-03 | **Method**: Individual screen-by-screen across 16 runtime layers
+> **Reason**: Prior sign-off grouped screens 21-44; strict lock discipline required individual verification
 
 | ID | Sev | Screen | Title | Status |
 |----|-----|--------|-------|--------|
-| STG-436 | P3 | EnrollDevice | Dead invariant check (fetchUiStatus non-strict never throws) | FOUND |
-| STG-437 | P3 | EnrollDevice | PAYMENT_PROMPTED_KEY not store-scoped | FOUND |
-| STG-438 | P3 | PaymentSetup | 401 handler missing navigation escape | FOUND |
-| STG-439 | P2 | PosRootLayout | Camera timeout text says 5s, actual is 45s | FOUND |
-| STG-440 | P3 | MenuScreen | Sync button unreachable (server pendingOutbox always 0) | FOUND |
-| STG-441 | P2 | SellScanScreen | Items with priceResolutionError can reach checkout | FOUND |
-| STG-442 | P3 | SellScanScreen | Cart-level discount % input unclamped (>100% allowed) | FOUND |
-| STG-443 | P2 | PurchaseScreen | Partial order failure on multi-supplier --- no idempotency | FOUND |
-| STG-444 | P3 | PurchaseScreen | Quick Purchase stock-in error handler too generic | FOUND |
-| STG-445 | P3 | CreditScreen | Active Loan display inconsistency (remaining/next EMI) | FOUND |
+| STG-436 | P3 | EnrollDevice | Dead invariant check (fetchUiStatus non-strict never throws) | FOUND (re-confirmed) |
+| STG-437 | P3 | EnrollDevice | PAYMENT_PROMPTED_KEY not store-scoped | FOUND (re-confirmed) |
+| STG-438 | P3 | PaymentSetup | 401 handler missing navigation escape | FOUND (re-confirmed) |
+| STG-439 | P2 | PosRootLayout | Camera timeout text says 5s, actual is 45s | FOUND (re-confirmed) |
+| STG-440 | P3 | MenuScreen | Sync button unreachable (server pendingOutbox always 0) | FOUND (re-confirmed) |
+| STG-441 | P2 | SellScanScreen | Items with priceResolutionError can reach checkout | FOUND (re-confirmed) |
+| STG-442 | P3 | SellScanScreen | Cart-level discount % input unclamped (>100% allowed) | FOUND (re-confirmed) |
+| STG-443 | P2 | PurchaseScreen | Partial order failure on multi-supplier --- no idempotency | FOUND (re-confirmed) |
+| STG-444 | P3 | PurchaseScreen | Quick Purchase stock-in error handler too generic | FOUND (re-confirmed) |
+| STG-445 | P3 | CreditScreen | Active Loan display inconsistency (remaining/next EMI) | FOUND (re-confirmed) |
+| STG-446 | P3 | KhataScreen | Debounce timer not cleaned on unmount | FOUND (new) |
+| STG-447 | P3 | OverdueDuesScreen | Severity color identical for two tiers | FOUND (new) |
+| STG-448 | P2 | BulkPurchaseCredit | API contract mismatch with backend (behind feature gate) | FOUND (new) |
+| STG-449 | P3 | CustomerListScreen | Debounce timer not cleaned on unmount | FOUND (new) |
+| STG-450 | P2 | DailyReportScreen | Missing empty state for no-data dates | FOUND (new) |
+| STG-451 | P2 | PrinterSettings | Settings stored but never consumed by printerService | FOUND (new) |
+| STG-452 | P2 | ChatConversation | currentUserId never passed, own messages render as other | FOUND (new) |
+| STG-453 | P2 | ChatConversation | __new_support__ sentinel not handled, 404 on new thread | FOUND (new) |
+| STG-454 | P3 | HelpScreen | Missing useSafeAreaInsets for top padding on notched devices | FOUND (new) |
 
-**Totals**: 10 findings (3 P2, 7 P3), 0 P0, 0 P1
-**44/44 screens reviewed**: 34 CLEAN, 10 with findings
-**Platform status**: POS App SIGNED OFF
+**Totals**: 19 findings (8 P2, 11 P3), 0 P0, 0 P1
+**44/44 screens individually audited**: 29 CLEAN, 15 with findings
+**STG-436..445**: 10 re-confirmed from prior sign-off
+**STG-446..454**: 9 newly discovered in strict re-signoff
+**Platform status**: POS App INDIVIDUALLY SIGNED OFF UNDER STRICT LOCK
