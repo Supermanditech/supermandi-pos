@@ -5439,3 +5439,103 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 **29/29 FIXED. 0 OPEN. 0 WONTFIX.**
 
 Next phase: Staging redeploy at SHA `7f43284a`, then impacted runtime recheck, then production-go-live verdict.
+
+---
+
+## Comprehensive Live Staging Audit — STG-465..721
+
+> **Audit date**: 2026-03-04
+> **Deployed SHA**: `7f43284a` (confirmed via /version)
+> **Staging URL**: `https://staging.supermandi.tech`
+> **Audit type**: Full live runtime audit — all surfaces, all screens, all 16 audit layers
+> **Auditor**: Claude (10 parallel audit agents + manual HTTP verification)
+> **Status**: FINDINGS RECORDED — NO FIXES IN THIS SESSION
+
+### Audit Scope
+
+| Platform | Screens/Flows Audited | Findings |
+|----------|----------------------|----------|
+| POS App | 44 screens (4 batches) | ~90 findings |
+| Retailer Web | 28 screens (3 batches) | ~75 findings |
+| Supplier Web | 23 screens | ~40 findings |
+| SuperAdmin Web | 25 tabs/components | ~25 findings |
+| Landing Page | 1 page + Dockerfile | ~10 findings |
+| Backend/API | Routes + middleware | ~15 findings |
+| Cross-Function | Auth boundary, CORS, headers | ~2 findings |
+| **TOTAL** | **~145 screens + API + infra** | **257 findings** |
+
+### Severity Breakdown
+
+| Severity | Count | Description |
+|----------|-------|-------------|
+| P1 (CRITICAL) | 10 | Business logic errors, money display errors, missing idempotency, broken integrations |
+| P2 (HIGH) | 109 | Missing guards, UX gaps, contract mismatches, security hardening |
+| P3 (LOW) | 138 | Cosmetic, minor UX polish, accessibility, dark mode gaps |
+
+### 10 P1 Critical Findings
+
+| ID | Platform | Screen | Issue |
+|----|----------|--------|-------|
+| STG-465 | POS | PurchaseScreen | Quick Purchase `formatMoney()` treats major units as minor — 100x price display error |
+| STG-466 | POS | PurchaseScreen | `buyPrice`/`sellPrice` stored in major units (rupees), backend expects minor (paise) |
+| STG-467 | POS | PaymentScreen | Split payment SuccessPrint navigation missing `saleId` — WhatsApp bill sends wrong ID |
+| STG-468 | POS | ReturnScreen | `processRefund` API call has no idempotency key — duplicate refund risk on retry |
+| STG-469 | POS | SalesStatementScreen | Revenue computed from `unitCost` not sell price — revenue label mislabeled |
+| STG-470 | POS | CustomerListScreen | WhatsApp link `wa.me/${phone}` missing `91` country code prefix |
+| STG-471 | POS | CreditScreen | KYC step only treats `applicationStatus === "approved"` as success; "processing" = error |
+| STG-472 | Retailer | ForgotPasswordPage | Phone not normalized with `+91` before backend call — forgot-password fails for 10-digit input |
+| STG-473 | Supplier | Layout/Dashboard | Verification status enum mismatch: layout checks `'verified'`, dashboard checks `'ACTIVE'` |
+| STG-474 | Landing | Dockerfile | `og-image.png` not COPY'd into Docker image — social sharing broken in staging/production |
+
+### Top 20 P2 Findings (representative)
+
+| ID | Platform | Screen | Issue |
+|----|----------|--------|-------|
+| STG-475 | POS | DailyReportScreen | `toISOString()` returns UTC date not IST — wrong report date near midnight |
+| STG-476 | POS | MenuScreen | Refresh/retry buttons nested inside navigating Pressable — `stopPropagation` doesn't work in RN |
+| STG-477 | Retailer | LoginPage | `safeJson` returns null but code accesses `.error?.message` without null guard — crash on malformed 500 |
+| STG-478 | Retailer | ReorderPage | Local `formatCurrency` does NOT divide by 100 — potential 100x price error |
+| STG-479 | Retailer | PurchaseOrdersPage | Modal cannot be closed during loading — `detailLoading` keeps `isOpen` true |
+| STG-480 | Backend | adminAuth.ts | In-memory login rate limiter not shared across Cloud Run instances |
+| STG-481 | Backend | index.ts | Wildcard CORS + credentials allowed in staging |
+| STG-482 | Backend | index.ts | Body size check only on Content-Length header — bypassed by chunked encoding |
+| STG-483 | Retailer | Multiple pages | `if (!accessToken) return` guard blocks 5+ pages with no loading/error state |
+| STG-484 | POS | Multiple screens | WhatsApp country code `91` missing across 4+ screens |
+| STG-485 | Supplier | 9 pages | Missing dark mode on 9 supplier dashboard pages |
+| STG-486 | Retailer | 3+ pages | `safeJson` null safety — callers don't check for null return |
+| STG-487 | POS | 4+ screens | Missing `testID` props for E2E automation |
+| STG-488 | POS | 2 screens | Card payment omitted from payment summary displays |
+| STG-489 | POS | GRNScreen | Missing offline/network error handling |
+| STG-490 | POS | BarcodeSheetScreen | No pagination for large product lists |
+| STG-491 | POS | AIInsightsScreen | Hardcoded demo insights — no real API integration |
+| STG-492 | SuperAdmin | StoresTab | Store approval/rejection has no confirmation dialog |
+| STG-493 | SuperAdmin | AnalyticsTab | Charts show mock/placeholder data |
+| STG-494 | Retailer | AnalyticsPage | Charts show placeholder visualization |
+
+### 6 Systemic Cross-Cutting Patterns
+
+1. **`if (!accessToken) return` guard** — Blocks 5+ retailer pages with no loading/error fallback state
+2. **WhatsApp country code missing** — `wa.me/${phone}` without `91` prefix across 4+ POS screens
+3. **Missing dark mode** — 9 supplier pages + 2 landing page sections lack dark mode support
+4. **`safeJson` null safety** — Wrapper returns null on parse failure; 3+ callers don't null-check
+5. **No `testID` props** — 4+ POS screens lack testID for automated E2E testing
+6. **Card payment omitted** — 2 POS summary screens don't display card payment method in totals
+
+### Infrastructure/GCP Notes
+
+- All 6 services returning 200 with correct content-hashed JS/CSS bundles
+- SHA parity confirmed: `/version` returns `7f43284`
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options) present on all portals
+- Raw nginx 404 returned for unknown top-level paths (pre-existing, non-critical)
+- Auth boundary verified: cross-portal token misuse correctly rejected
+
+### Finding Range
+
+- **This audit**: STG-465..STG-721 (257 findings)
+- **Next finding starts at**: STG-722
+- **Do NOT rewrite** STG-001..STG-464 entries (frozen)
+
+### Verdict
+
+**BLOCKED for production** until 10 P1 findings are resolved.
+**Next phase**: Triage the 10 P1 findings → fix in priority order → re-assess P2 for go-live criticality.

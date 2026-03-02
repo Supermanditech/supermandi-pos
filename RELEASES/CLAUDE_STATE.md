@@ -3353,6 +3353,51 @@ VERDICT: PRODUCTION-READY — Awaiting CTO go-live decision.
 
 ---
 
+## §19.3 Comprehensive Live Staging Audit (STG-465..721)
+
+**Status**: FINDINGS_RECORDED_NO_FIXES
+**Audit Date**: 2026-03-04
+**Deployed SHA**: `7f43284a` (confirmed via /version)
+**Audit Method**: Full live runtime audit — 10 parallel audit agents + manual HTTP verification
+
+### Results
+
+```
+TOTAL FINDINGS: 257 (STG-465..STG-721)
+  P1 (CRITICAL):  10 — business logic errors, money display, missing idempotency
+  P2 (HIGH):     109 — missing guards, UX gaps, contract mismatches, security
+  P3 (LOW):      138 — cosmetic, minor UX, accessibility, dark mode gaps
+
+PLATFORMS AUDITED:
+  POS App:       44 screens → ~90 findings
+  Retailer Web:  28 screens → ~75 findings
+  Supplier Web:  23 screens → ~40 findings
+  SuperAdmin:    25 screens → ~25 findings
+  Landing:        1 page    → ~10 findings
+  Backend/API:   all routes → ~15 findings
+  Cross-function: auth/cors → ~2 findings
+
+P1 CRITICAL (must fix before production):
+  STG-465: POS PurchaseScreen — 100x price display error (formatMoney major/minor)
+  STG-466: POS PurchaseScreen — buyPrice/sellPrice units mismatch with backend
+  STG-467: POS PaymentScreen — split payment missing saleId in SuccessPrint
+  STG-468: POS ReturnScreen — processRefund no idempotency key
+  STG-469: POS SalesStatementScreen — revenue from unitCost not sell price
+  STG-470: POS CustomerListScreen — WhatsApp link missing 91 country code
+  STG-471: POS CreditScreen — KYC "processing" treated as error
+  STG-472: Retailer ForgotPasswordPage — phone not +91 normalized
+  STG-473: Supplier Layout/Dashboard — verification enum mismatch
+  STG-474: Landing Dockerfile — og-image.png not copied
+
+INFRASTRUCTURE: ALL CLEAN (6 services 200, SHA parity, security headers present)
+
+VERDICT: BLOCKED for production until 10 P1 resolved.
+NEXT: Triage 10 P1 → fix → re-assess P2 → production decision.
+NEXT FINDING STARTS AT: STG-722
+```
+
+---
+
 **END OF CLAUDE STATE OPERATING SYSTEM**
 
 *This file is the single source of truth. All other rule files are historical reference only.*
