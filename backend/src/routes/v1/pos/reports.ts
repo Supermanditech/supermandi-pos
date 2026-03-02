@@ -55,7 +55,7 @@ posReportsRouter.get(
       // Top selling products — STG-156: IST timezone
       const topProductsResult = await pool.query(
         `SELECT
-          si.product_name as name,
+          si.name as name,
           SUM(si.quantity)::text as quantity_sold,
           SUM(si.line_total_minor)::text as revenue_minor
         FROM sale_items si
@@ -63,7 +63,7 @@ posReportsRouter.get(
         WHERE s.store_id = $1
           AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
           AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
-        GROUP BY si.product_name
+        GROUP BY si.name
         ORDER BY SUM(si.quantity) DESC
         LIMIT 10`,
         [storeId, date]
