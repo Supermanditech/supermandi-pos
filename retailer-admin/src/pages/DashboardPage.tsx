@@ -452,7 +452,7 @@ export default function DashboardPage() {
             <span className="dash-metric-label">Total Stock Qty</span>
           </div>
           <div className="dash-metric-value">
-            {inventoryLoading ? <span className="dash-shimmer dash-shimmer--sm" /> : inventoryTotals.totalStockQty.toLocaleString('en-IN')}
+            {inventoryLoading ? <span className="dash-shimmer dash-shimmer--sm" /> : (inventoryTotals.totalStockQty ?? 0).toLocaleString('en-IN')}
           </div>
         </div>
 

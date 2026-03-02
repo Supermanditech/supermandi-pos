@@ -10,6 +10,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useThemeColors } from '../theme';
 import * as chatApi from '../services/api/chatApi';
+// STG-452: Get device ID for chat message ownership
+import { getDeviceIdFromSession, getDeviceStoreId } from '../services/deviceSession';
 
 interface Props {
   conversationId: string;
@@ -21,11 +23,51 @@ interface Props {
 }
 
 export default function ChatConversationScreen({
-  conversationId, conversationTitle, conversationType,
-  currentUserId, currentUserName, onBack,
+  conversationId: initialConversationId, conversationTitle, conversationType,
+  currentUserId: propUserId, currentUserName, onBack,
 }: Props) {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+
+  // STG-452: Resolve currentUserId from device session if not provided
+  const [currentUserId, setCurrentUserId] = useState(propUserId);
+  // STG-453: Track real conversation ID (may differ from prop if __new_support__)
+  const [activeConvId, setActiveConvId] = useState(
+    initialConversationId === '__new_support__' ? '' : initialConversationId
+  );
+  const [creatingConv, setCreatingConv] = useState(initialConversationId === '__new_support__');
+
+  // STG-452: Load device ID on mount if currentUserId is empty
+  useEffect(() => {
+    if (!propUserId) {
+      getDeviceIdFromSession().then(id => { if (id) setCurrentUserId(id); });
+    }
+  }, [propUserId]);
+
+  // STG-453: Create support conversation when sentinel is passed
+  useEffect(() => {
+    if (initialConversationId !== '__new_support__') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const storeId = await getDeviceStoreId();
+        const result = await chatApi.createSupportConversation(
+          currentUserName || 'POS User',
+          storeId || undefined,
+        );
+        if (!cancelled) {
+          setActiveConvId(result.conversation.id);
+          setCreatingConv(false);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to create support conversation');
+          setCreatingConv(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [initialConversationId, currentUserName]);
 
   // UIUX-POS-004: Android hardware back button support
   useEffect(() => {
@@ -48,9 +90,10 @@ export default function ChatConversationScreen({
   const appStateRef = useRef(AppState.currentState);
 
   const fetchMessages = useCallback(async (isPolling = false) => {
+    if (!activeConvId) return; // STG-453: Wait until real conversation ID is resolved
     if (!isPolling) setError(null);
     try {
-      const result = await chatApi.getMessages(conversationId);
+      const result = await chatApi.getMessages(activeConvId);
       const newMessages = result.messages || [];
       // Only update state if message list actually changed (prevents scroll jump)
       setMessages(prev => {
@@ -60,14 +103,14 @@ export default function ChatConversationScreen({
       // Mark as read only once on mount, not every poll
       if (!hasMarkedRead.current) {
         hasMarkedRead.current = true;
-        chatApi.markAsRead(conversationId).catch(() => {});
+        chatApi.markAsRead(activeConvId).catch(() => {});
       }
     } catch (err: unknown) {
       if (!isPolling) setError(err instanceof Error ? err.message : 'Failed to load messages');
     } finally {
       setLoading(false);
     }
-  }, [conversationId]);
+  }, [activeConvId]);
 
   useEffect(() => {
     fetchMessages();
@@ -86,11 +129,11 @@ export default function ChatConversationScreen({
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || !activeConvId) return;
 
     setSending(true);
     try {
-      const result = await chatApi.sendMessage(conversationId, trimmed, currentUserName);
+      const result = await chatApi.sendMessage(activeConvId, trimmed, currentUserName);
       setText(''); // POS-038: Only clear on success to avoid losing typed text
       setMessages(prev => [result.message, ...prev]);
     } catch (err: unknown) {
@@ -98,7 +141,7 @@ export default function ChatConversationScreen({
     } finally {
       setSending(false);
     }
-  }, [text, sending, conversationId, currentUserName]);
+  }, [text, sending, activeConvId, currentUserName]);
 
   function formatTime(iso: string): string {
     const d = new Date(iso);
@@ -268,7 +311,7 @@ export default function ChatConversationScreen({
       )}
 
       {/* Messages */}
-      {loading ? (
+      {(loading || creatingConv) ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>

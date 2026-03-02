@@ -1415,7 +1415,7 @@ export default function PosRootLayout() {
                 <Text style={styles.cameraHint}>Align the barcode/QR inside the frame.</Text>
                 {showCameraTimeoutNote ? (
                   <Text style={styles.cameraTimeoutHint}>
-                    Auto-closes after 5s of inactivity.
+                    Auto-closes after 45s of inactivity.
                   </Text>
                 ) : null}
               </View>

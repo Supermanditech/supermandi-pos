@@ -16,6 +16,7 @@ import {
   Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { typography, spacing, theme, useThemeColors } from "../theme";
 
 interface HelpScreenProps {
@@ -38,6 +39,8 @@ function openUrl(url: string, fallbackMsg: string) {
 
 export default function HelpScreen({ onBack }: HelpScreenProps) {
   const colors = useThemeColors();
+  // STG-454: Safe area insets for notched devices
+  const insets = useSafeAreaInsets();
 
   const handleEmailPress = () => {
     openUrl(
@@ -151,7 +154,7 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >

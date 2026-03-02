@@ -398,10 +398,15 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
         app.tenureMonths
       );
 
-      // Calculate next EMI date (simple: 1 month from disbursement or today)
+      // STG-445: Compute elapsed months for accurate remaining/next EMI
       const disbursedDate = app.disbursedAt ? new Date(app.disbursedAt) : new Date();
+      const monthsElapsed = app.disbursedAt
+        ? Math.max(1, Math.ceil((Date.now() - disbursedDate.getTime()) / (30.44 * 24 * 60 * 60 * 1000)))
+        : 0;
+      const emisPaid = Math.min(monthsElapsed, app.tenureMonths);
+      const emisRemaining = Math.max(0, app.tenureMonths - emisPaid);
       const nextEmiDate = new Date(disbursedDate);
-      nextEmiDate.setMonth(nextEmiDate.getMonth() + 1);
+      nextEmiDate.setMonth(nextEmiDate.getMonth() + emisPaid + 1);
 
       return (
         <View key={app.id} style={styles.loanCard}>
@@ -454,7 +459,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
                 {t("credit.remaining", "Remaining")}
               </Text>
               <Text style={styles.loanDetailValue}>
-                {app.tenureMonths} {t("credit.emis", "EMIs")}
+                {emisRemaining} {t("credit.emis", "EMIs")}
               </Text>
             </View>
             <View style={styles.loanDetailItem}>
@@ -467,12 +472,8 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
             </View>
           </View>
 
-          {/* UIUX-POS-011: Compute progress from disbursement date instead of hardcoding */}
+          {/* STG-445: Reuse hoisted emisPaid/emisRemaining */}
           {(() => {
-            const monthsElapsed = app.disbursedAt
-              ? Math.max(1, Math.ceil((Date.now() - new Date(app.disbursedAt).getTime()) / (30.44 * 24 * 60 * 60 * 1000)))
-              : 0;
-            const emisPaid = Math.min(monthsElapsed, app.tenureMonths);
             const pct = app.tenureMonths > 0 ? Math.round((emisPaid / app.tenureMonths) * 100) : 0;
             return (
               <View style={styles.loanProgress}>

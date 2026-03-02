@@ -602,6 +602,21 @@ export default function DailyReportScreen({
         </View>
       )}
 
+      {/* STG-450: Empty state when no data for selected date (404 → report=null, error=null) */}
+      {!loading && !error && !report && (
+        <View style={styles.centerContent}>
+          <MaterialCommunityIcons
+            name="calendar-blank-outline"
+            size={48}
+            color={colors.textTertiary}
+          />
+          <Text style={styles.errorText}>No report data for this date</Text>
+          <Text style={[styles.loadingText, { marginTop: 4 }]}>
+            Try selecting a date when the store was open.
+          </Text>
+        </View>
+      )}
+
       {/* Report content */}
       {!loading && !error && report && (
         <ScrollView

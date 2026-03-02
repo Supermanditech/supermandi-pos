@@ -157,7 +157,8 @@ function getAppVersion(): string {
 // expo-updates disabled for development
 const Updates = { channel: null as string | null };
 
-const PAYMENT_PROMPTED_KEY = "supermandi.payment_setup_prompted";
+// STG-437: Store-scoped key to prevent cross-store persistence
+const getPaymentPromptedKey = (storeId: string) => `supermandi.payment_setup_prompted.${storeId}`;
 
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();
@@ -322,29 +323,13 @@ export default function EnrollDeviceScreen() {
       // SCREENS-CONSOLE-LOG-IN-PROD: guard diagnostic logs from release builds
       if (__DEV__) console.log(`[Activate] Success: token saved (len=${res.deviceToken?.length ?? 0})`);
 
-      // Go-Live invariant check
-      try {
-        if (__DEV__) console.log("[Activate] Running invariant check: calling ui-status...");
-        const uiStatus = await fetchUiStatus();
-        if (uiStatus.storeActive === false) {
-          if (__DEV__) console.log("[Activate] Store is inactive");
-        } else {
-          if (__DEV__) console.log("[Activate] Invariant check PASSED");
-        }
-      } catch (invariantError) {
-        if (__DEV__) console.error("[Activate] INVARIANT CHECK FAILED:", invariantError);
-        const is401 = invariantError instanceof ApiError &&
-          (invariantError.status === 401 || invariantError.message === "DEVICE_SESSION_MISSING" || invariantError.message === "device_unauthorized");
-        if (is401) {
-          await clearDeviceSession();
-          Alert.alert(
-            "Activation Failed",
-            "Token was saved but is not valid. Please try again. If this persists, contact support.",
-            [{ text: "OK" }]
-          );
-          return;
-        }
-        if (__DEV__) console.warn("[Activate] Non-critical invariant check error:", invariantError);
+      // STG-436: Post-enrollment invariant check (fetchUiStatus is non-strict, never throws)
+      if (__DEV__) console.log("[Activate] Running invariant check: calling ui-status...");
+      const uiStatus = await fetchUiStatus();
+      if (uiStatus.storeActive === false) {
+        if (__DEV__) console.log("[Activate] Store is inactive");
+      } else {
+        if (__DEV__) console.log("[Activate] Invariant check PASSED");
       }
 
       // Persist store info
@@ -372,7 +357,7 @@ export default function EnrollDeviceScreen() {
 
       // #329-332: Route to PaymentSetup if no UPI VPA set (prompted once)
       const needsPaymentSetup = !res.upiVpa;
-      const alreadyPrompted = await AsyncStorage.getItem(PAYMENT_PROMPTED_KEY);
+      const alreadyPrompted = await AsyncStorage.getItem(getPaymentPromptedKey(res.storeId));
       if (needsPaymentSetup && !alreadyPrompted) {
         navigation.replace("PaymentSetup");
       } else {

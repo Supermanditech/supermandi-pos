@@ -232,6 +232,8 @@ export default function OpeningStockScreen({
             setSubmitting(true);
             setProgress(`Processing 0/${validEntries.length}...`);
 
+            // STG-455: Hoist interval so it's accessible in finally block
+            let progressInterval: ReturnType<typeof setInterval> | null = null;
             try {
               const items: OpeningStockSubmitItem[] = validEntries.map(
                 (e) => ({
@@ -241,7 +243,7 @@ export default function OpeningStockScreen({
               );
 
               // Simulate progress updates
-              const progressInterval = setInterval(() => {
+              progressInterval = setInterval(() => {
                 setProgress((prev) => {
                   if (!prev) return null;
                   const match = prev.match(/(\d+)/);
@@ -253,7 +255,6 @@ export default function OpeningStockScreen({
 
               const result = await submitOpeningStock(items);
 
-              clearInterval(progressInterval);
               setProcessedCount(result.processedCount);
               setSuccess(true);
             } catch (_e: unknown) {
@@ -264,6 +265,8 @@ export default function OpeningStockScreen({
                 e?.message || "Could not initialize opening stock."
               );
             } finally {
+              // STG-455: Always clear progress interval, even on error
+              if (progressInterval) clearInterval(progressInterval);
               setSubmitting(false);
               setProgress(null);
             }

@@ -483,8 +483,10 @@ export default function PurchaseScreen({
       setWalkInSupplierName("");
       setWalkInSupplierGstin("");
       setShowSupplierFields(false);
-    } catch (error) {
-      Alert.alert("Error", "Failed to submit. Try again.");
+    } catch (error: any) {
+      // STG-444: Surface specific error type instead of generic message
+      const msg = error?.message || "Failed to submit. Try again.";
+      Alert.alert("Error", msg);
     } finally {
       setSubmitting(false);
     }
@@ -965,25 +967,45 @@ export default function PurchaseScreen({
                               setPlacingOrder(true);
                               try {
                                 const supplierGroups = purchaseCart.getItemsBySupplier();
-                                const results: string[] = [];
+                                // STG-443: Track partial success for multi-supplier orders
+                                const succeeded: string[] = [];
+                                const failed: { supplier: string; error: string }[] = [];
                                 for (const group of supplierGroups) {
-                                  const order = await createOrder(storeId, {
-                                    supplierId: group.supplierId,
-                                    orderType: "manual",
-                                    items: group.items.map((ci) => ({
-                                      supplierProductId: ci.supplierProductId,
-                                      quantity: ci.quantity,
-                                      unitPrice: ci.unitPrice,
-                                    })),
-                                  });
-                                  results.push(`${group.supplierName}: ${order.orderNumber}`);
+                                  try {
+                                    const order = await createOrder(storeId, {
+                                      supplierId: group.supplierId,
+                                      orderType: "manual",
+                                      items: group.items.map((ci) => ({
+                                        supplierProductId: ci.supplierProductId,
+                                        quantity: ci.quantity,
+                                        unitPrice: ci.unitPrice,
+                                      })),
+                                    });
+                                    succeeded.push(`${group.supplierName}: ${order.orderNumber}`);
+                                    // Remove succeeded supplier items from cart immediately
+                                    for (const ci of group.items) {
+                                      purchaseCart.removeItem(ci.supplierProductId);
+                                    }
+                                  } catch (err: any) {
+                                    failed.push({ supplier: group.supplierName, error: err?.message || "Unknown error" });
+                                  }
                                 }
-                                purchaseCart.clear();
-                                Alert.alert(
-                                  "Orders Placed",
-                                  `${results.length} order(s) created successfully:\n\n${results.join("\n")}`,
-                                  [{ text: "OK" }]
-                                );
+                                if (failed.length === 0) {
+                                  purchaseCart.clear();
+                                  Alert.alert(
+                                    "Orders Placed",
+                                    `${succeeded.length} order(s) created successfully:\n\n${succeeded.join("\n")}`,
+                                    [{ text: "OK" }]
+                                  );
+                                } else if (succeeded.length > 0) {
+                                  Alert.alert(
+                                    "Partial Success",
+                                    `${succeeded.length} order(s) placed:\n${succeeded.join("\n")}\n\n${failed.length} failed:\n${failed.map(f => `${f.supplier}: ${f.error}`).join("\n")}\n\nFailed items remain in cart for retry.`,
+                                    [{ text: "OK" }]
+                                  );
+                                } else {
+                                  Alert.alert("Order Failed", failed.map(f => `${f.supplier}: ${f.error}`).join("\n"));
+                                }
                               } catch (err: any) {
                                 const msg = err?.message || "Failed to place order";
                                 Alert.alert("Order Failed", msg);

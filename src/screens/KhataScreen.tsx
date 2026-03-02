@@ -90,6 +90,13 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     void fetchCustomers();
   }, []);
 
+  // STG-446: Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (error) {
       Alert.alert("Error", error);

@@ -3,6 +3,8 @@ import { Platform } from "react-native";
 import { eventLogger } from './eventLogger';
 import { logPosEvent } from "./cloudEventLogger";
 import { asError } from "../utils/errorUtils";
+// STG-451: Read user-configured printer settings
+import { useSettingsStore } from "../stores/settingsStore";
 
 export interface PrintJob {
   id: string;
@@ -105,9 +107,11 @@ class PrinterService {
 
   /**
    * Convert plain text receipt content to printable HTML.
-   * Formats for 58mm/80mm thermal receipt width.
+   * STG-451: Reads paper width from user settings (58mm or 80mm).
    */
   private textToReceiptHtml(content: string): string {
+    const paperWidth = useSettingsStore.getState().printerPaperWidth;
+    const bodyWidth = paperWidth === 58 ? 50 : 72; // mm, accounting for margins
     const escaped = content
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -118,14 +122,14 @@ class PrinterService {
 <head>
 <meta charset="utf-8">
 <style>
-  @page { margin: 4mm; size: 80mm auto; }
+  @page { margin: 4mm; size: ${paperWidth}mm auto; }
   body {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 12px;
+    font-size: ${paperWidth === 58 ? 10 : 12}px;
     line-height: 1.4;
     margin: 0;
     padding: 0;
-    width: 72mm;
+    width: ${bodyWidth}mm;
   }
   pre {
     white-space: pre-wrap;
@@ -165,7 +169,11 @@ class PrinterService {
     this.printInProgress = true;
     try {
       const html = this.textToReceiptHtml(content);
-      await Print.printAsync({ html });
+      // STG-451: Respect user-configured copies setting
+      const copies = useSettingsStore.getState().printerCopies;
+      for (let i = 0; i < copies; i++) {
+        await Print.printAsync({ html });
+      }
 
       await eventLogger.log('PRINT_RECEIPT', {
         contentLength: content.length,

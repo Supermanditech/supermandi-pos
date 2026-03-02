@@ -428,6 +428,11 @@ export default function RegisterPage() {
     }
 
     // Set uploading state with preview
+    // STG-456: Revoke old blob URL before creating new one to prevent memory leak
+    setDocuments(prev => {
+      if (prev[docType]?.preview) URL.revokeObjectURL(prev[docType].preview!);
+      return prev;
+    });
     const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
     setDocuments(prev => ({
       ...prev,
@@ -857,7 +862,7 @@ export default function RegisterPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
                           <p className="reg-pending-text">Click to upload</p>
-                          <p className="reg-pending-hint">or drag and drop</p>
+                          <p className="reg-pending-hint">PNG, JPG up to {MAX_DOCUMENT_SIZE_LABEL}</p>
                         </div>
                       )}
                     </label>

@@ -28,15 +28,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { updatePaymentSettings } from "../services/api/enrollApi";
 import { ApiError } from "../services/api/apiClient";
 import { theme, typography, spacing, useThemeColors } from "../theme";
+// STG-437: Store-scoped payment prompt key
+import { getDeviceStoreId } from "../services/deviceSession";
 
 type RootStackParamList = {
   PaymentSetup: undefined;
   SellScan: undefined;
+  EnrollDevice: undefined;
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "PaymentSetup">;
 
-const PAYMENT_PROMPTED_KEY = "supermandi.payment_setup_prompted";
+// STG-437: Store-scoped key to prevent cross-store persistence
+const getPaymentPromptedKey = (storeId: string) => `supermandi.payment_setup_prompted.${storeId}`;
 
 // Validation patterns (match backend)
 const VPA_REGEX = /^[a-zA-Z0-9._-]{3,}@[a-zA-Z0-9]{2,}$/;
@@ -114,12 +118,16 @@ export default function PaymentSetupScreen() {
         bankIfsc: ifsc.trim().toUpperCase() || undefined,
       });
 
-      await AsyncStorage.setItem(PAYMENT_PROMPTED_KEY, "1");
+      const storeId = await getDeviceStoreId();
+      if (storeId) await AsyncStorage.setItem(getPaymentPromptedKey(storeId), "1");
       navigation.replace("SellScan");
     } catch (err) {
       // PAYMENT-SETUP-AUTH-ERROR-HANDLING: detect 401 and guide re-enrollment
+      // STG-438: Navigate to EnrollDevice on dismiss so user isn't trapped
       if (err instanceof ApiError && (err.status === 401 || err.message === "device_unauthorized")) {
-        Alert.alert("Session Expired", "Your device session has expired. Please re-enroll this device to continue.");
+        Alert.alert("Session Expired", "Your device session has expired. Please re-enroll this device to continue.", [
+          { text: "OK", onPress: () => navigation.replace("EnrollDevice") },
+        ]);
         return;
       }
       const msg =
@@ -133,7 +141,8 @@ export default function PaymentSetupScreen() {
   }
 
   async function handleSkip() {
-    await AsyncStorage.setItem(PAYMENT_PROMPTED_KEY, "1");
+    const storeId = await getDeviceStoreId();
+    if (storeId) await AsyncStorage.setItem(getPaymentPromptedKey(storeId), "1");
     navigation.replace("SellScan");
   }
 

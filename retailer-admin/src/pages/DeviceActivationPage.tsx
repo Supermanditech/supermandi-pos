@@ -147,7 +147,7 @@ export default function DeviceActivationPage() {
       const data = await safeJson(response);
 
       if (response.ok && data.success) {
-        setSuccess(`Device activated successfully! Device ID: ${data.device_id.substring(0, 8)}...`);
+        setSuccess(`Device activated successfully!${data.device_id ? ` Device ID: ${data.device_id.substring(0, 8)}...` : ''}`);
         setActivationCode('');
         // Reload devices list
         loadDevices();

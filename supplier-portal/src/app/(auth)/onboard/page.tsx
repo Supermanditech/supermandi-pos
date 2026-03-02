@@ -77,6 +77,8 @@ export default function SupplierOnboardingPage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  // STG-462: OTP expiry countdown (Firebase OTP expires in 5 min)
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const recaptchaInitialized = useRef(false);
 
   // Application state
@@ -128,6 +130,14 @@ export default function SupplierOnboardingPage() {
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // STG-462: OTP expiry countdown
+  useEffect(() => {
+    if (otpExpirySeconds > 0) {
+      const timer = setTimeout(() => setOtpExpirySeconds(otpExpirySeconds - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpExpirySeconds]);
 
   // Check GSTIN and create/resume application
   const handleBusinessSubmit = async (e: React.FormEvent) => {
@@ -230,6 +240,7 @@ export default function SupplierOnboardingPage() {
       await sendOtp(phone);
       setStep('otp');
       setResendCooldown(60);
+      setOtpExpirySeconds(300); // STG-462: 5 min expiry
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP.');
     } finally {
@@ -283,6 +294,7 @@ export default function SupplierOnboardingPage() {
 
       await sendOtp(phone);
       setResendCooldown(60);
+      setOtpExpirySeconds(300); // STG-462: Reset 5 min expiry
       toast.success('OTP sent!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
@@ -717,6 +729,18 @@ export default function SupplierOnboardingPage() {
               {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
             </button>
           </div>
+
+          {/* STG-462: OTP expiry countdown */}
+          {otpExpirySeconds > 0 && (
+            <p className="text-center text-xs text-slate-400 mt-2">
+              OTP expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
+            </p>
+          )}
+          {otpExpirySeconds === 0 && step === 'otp' && (
+            <p className="text-center text-xs text-red-500 mt-2">
+              OTP has expired. Please request a new one.
+            </p>
+          )}
         </form>
       )}
 

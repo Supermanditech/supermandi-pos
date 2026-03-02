@@ -118,7 +118,7 @@ export default function MenuScreen() {
           storeCode: uiStatus.storeCode ?? null, // STORECODE-003
           storeActive: uiStatus.storeActive ?? null,
           deviceActive: uiStatus.deviceActive ?? null,
-          pendingOutboxCount: uiStatus.pendingOutboxCount ?? 0,
+          pendingOutboxCount: await pendingOutboxCount(),
           deviceLabel: uiStatus.deviceId ?? null,
         });
       } catch (e) {
@@ -196,7 +196,7 @@ export default function MenuScreen() {
             storeCode: uiStatus.storeCode ?? null,
             storeActive: uiStatus.storeActive ?? null,
             deviceActive: uiStatus.deviceActive ?? null,
-            pendingOutboxCount: uiStatus.pendingOutboxCount ?? 0,
+            pendingOutboxCount: await pendingOutboxCount(),
             deviceLabel: uiStatus.deviceId ?? null,
           });
         })(),

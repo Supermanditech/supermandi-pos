@@ -1267,7 +1267,9 @@ export default function SellScanScreen({
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const uniqueSkuCount = items.length;
   const cartTitle = cartMode === "PURCHASE" ? "Purchase Cart" : "Sell Cart";
-  const canPay = itemCount > 0 && storeActive !== false && !locked;
+  // STG-441: Block checkout if any item has unresolved price error (price=0 with priceResolutionError)
+  const hasUnresolvedPriceError = items.some(i => i.priceResolutionError && i.priceMinor === 0);
+  const canPay = itemCount > 0 && storeActive !== false && !locked && !hasUnresolvedPriceError;
   const canOpenCart = itemCount > 0;
   const canEditCart = storeActive !== false && !locked;
   const editorDisabled = !canEditCart;
@@ -2281,7 +2283,9 @@ export default function SellScanScreen({
       discountApplyTimerRef.current = setTimeout(() => {
         discountApplyTimerRef.current = null;
         const parsed = parseDiscountInput(value);
-        const nextValue = type === "fixed" ? Math.round(parsed * 100) : parsed;
+        // STG-442: Clamp percentage discount to 0-100
+        const clamped = type === "percentage" ? Math.min(parsed, 100) : parsed;
+        const nextValue = type === "fixed" ? Math.round(clamped * 100) : clamped;
         if (nextValue <= 0) {
           if (discount) {
             removeDiscount();

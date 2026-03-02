@@ -90,6 +90,7 @@ export function EventsTab({
               const maxPage = Math.max(0, Math.ceil(filteredEvents.length / pageSize) - 1);
               setPage((p) => Math.min(maxPage, p + 1));
             }}
+            disabled={page >= Math.max(0, Math.ceil(filteredEvents.length / pageSize) - 1)}
           >
             Next
           </button>

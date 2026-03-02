@@ -177,7 +177,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
               <button
                 type="button"
                 className="loginLink"
-                onClick={(e) => { setCountdown(60); handleSendOtp(e as any); }}
+                onClick={(e) => { handleSendOtp(e as any); }}
                 disabled={loading || countdown > 0}
               >
                 {countdown > 0 ? `Resend in ${countdown}s` : "Resend OTP"}

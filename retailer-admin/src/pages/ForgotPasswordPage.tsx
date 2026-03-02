@@ -51,6 +51,8 @@ export default function ForgotPasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const recaptchaInitialized = useRef(false);
+  // STG-458: Track when idToken was obtained for expiry guard
+  const idTokenObtainedAt = useRef<number>(0);
   // R7.RET.007: Track the active AbortController for any in-flight fetch
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -152,6 +154,7 @@ export default function ForgotPasswordPage() {
     try {
       const token = await verifyOtp(otp);
       setIdToken(token);
+      idTokenObtainedAt.current = Date.now(); // STG-458
       setStep('newPassword');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OTP verification failed. Please try again.');
@@ -164,6 +167,14 @@ export default function ForgotPasswordPage() {
   const handleOtpResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // STG-458: Guard against expired Firebase idToken (50 min max)
+    const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
+    if (idTokenObtainedAt.current && Date.now() - idTokenObtainedAt.current > TOKEN_MAX_AGE_MS) {
+      setError('Your verification has expired. Please start over.');
+      setStep('phone');
+      return;
+    }
 
     if (newPassword.length < 8) {
       setError('Password must be at least 8 characters');

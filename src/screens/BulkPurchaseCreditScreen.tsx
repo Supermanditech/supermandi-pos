@@ -9,15 +9,16 @@ import { theme, useThemeColors } from '../theme';
 // UIUX-POS-009: Use apiClient instead of raw fetch (handles auth refresh, rate limiting, error handling)
 import { apiClient } from '../services/api/apiClient';
 
+// STG-448: Aligned with backend GET /api/v1/pos/credit/offers response shape
 interface CreditOffer {
   id: string;
-  providerName: string;
-  productType: string;
-  maxAmount: number;
-  interestRate: number;
-  tenureDays: number;
+  source: string;
+  amountMinor: number;
+  tenureMonths: number;
+  interestRateAnnual: number;
+  emiMinor: number;
+  validUntil: string | null;
   status: string;
-  appliedAt: string | null;
 }
 
 interface Props {
@@ -131,7 +132,7 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
       <View style={styles.cardHeader}>
         <View style={styles.providerBadge}>
           <MaterialCommunityIcons name="bank-outline" size={16} color={colors.primary} />
-          <Text style={styles.providerName}>{item.providerName}</Text>
+          <Text style={styles.providerName}>{item.source.replace(/_/g, ' ')}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusBg(item.status) }]}>
           <Text style={[styles.statusText, { color: statusFg(item.status) }]}>{item.status}</Text>
@@ -141,19 +142,19 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
       <View style={styles.cardBody}>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Max Amount</Text>
-          <Text style={styles.infoValue}>{'\u20B9'}{(item.maxAmount / 100).toLocaleString('en-IN')}</Text>
+          <Text style={styles.infoValue}>{'\u20B9'}{(item.amountMinor / 100).toLocaleString('en-IN')}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Interest Rate</Text>
-          <Text style={styles.infoValue}>{item.interestRate}% p.a.</Text>
+          <Text style={styles.infoValue}>{item.interestRateAnnual}% p.a.</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Tenure</Text>
-          <Text style={styles.infoValue}>{item.tenureDays} days</Text>
+          <Text style={styles.infoValue}>{item.tenureMonths} months</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Type</Text>
-          <Text style={styles.infoValue}>{item.productType.replace(/_/g, ' ')}</Text>
+          <Text style={styles.infoLabel}>EMI</Text>
+          <Text style={styles.infoValue}>{'\u20B9'}{(item.emiMinor / 100).toLocaleString('en-IN')}/mo</Text>
         </View>
       </View>
 
@@ -170,8 +171,8 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
         </Pressable>
       )}
 
-      {item.status === 'applied' && item.appliedAt && (
-        <Text style={styles.appliedText}>Applied on {new Date(item.appliedAt).toLocaleDateString('en-IN')}</Text>
+      {item.status === 'applied' && (
+        <Text style={styles.appliedText}>Application submitted</Text>
       )}
     </View>
   );
