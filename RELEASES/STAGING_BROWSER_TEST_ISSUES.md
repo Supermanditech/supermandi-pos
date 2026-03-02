@@ -4492,7 +4492,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Timestamp**: 2026-03-02T10:40:00Z
 - **Severity**: P2 (MEDIUM) — backend service error on authenticated admin endpoint
 - **Status**: FOUND
-- **Root cause**: Likely missing table, column, or query error in refunds service.
+- **Root cause** (CORRECTED 2026-03-02T13:00Z from Cloud Run logs): Column name mismatches in `refunds.ts:118-130`. Query references `r.order_id` (doesn't exist — should be `r.sale_id`) and `r.refund_amount_minor` (should be `refund_amount`). Schema defined in migration 152.
+- **PG error**: Not separately logged (caught by generic handler), but column `order_id` does not exist on `orders.refund_requests` table.
 
 ---
 
@@ -4508,7 +4509,8 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Timestamp**: 2026-03-02T10:40:00Z
 - **Severity**: P2 (MEDIUM) — backend service error on authenticated admin endpoint
 - **Status**: FOUND
-- **Root cause**: Likely missing staff table, column, or query error.
+- **Root cause** (CORRECTED 2026-03-02T13:00Z from Cloud Run logs): PG error `42883` (operator type mismatch) at position 259 in `staff.ts:28-34`. Staff list query has subquery `SELECT COUNT(*) FROM purchases WHERE staff_id = s.id AND store_id = s.store_id` — `purchases.store_id` is `TEXT` but `platform.store_staff.store_id` is `UUID`. PostgreSQL has no `text = uuid` operator. Same issue in `sales` subquery.
+- **PG error**: `{"code":"42883","hint":"No operator matches the given name and argument types.","position":"259"}`
 
 ---
 
@@ -4522,9 +4524,10 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: `500 {"error":"Failed to generate GST summary"}`
 - **Impact**: Per-store GST drill-down broken. Stores overview (`/gst/stores-overview`) works fine.
 - **Timestamp**: 2026-03-02T10:40:00Z
-- **Severity**: P3 (LOW) — overview still works, detail view broken. Likely data-dependent.
+- **Severity**: P3 (LOW) — overview still works, detail view broken.
 - **Status**: FOUND
-- **Root cause**: Query error when computing per-store GST summary (possibly missing invoice/transaction data).
+- **Root cause** (CORRECTED 2026-03-02T13:00Z from Cloud Run logs): PG error `42703` (missing column) at position 83 in `gstCompliance.ts:54-69`. GST summary query references `taxable_amount` (doesn't exist — actual column: `taxable_amount_minor`), plus 5+ other column name mismatches: `cgst_amount`→`cgst_minor`, `sgst_amount`→`sgst_minor`, `igst_amount`→`igst_minor`, `total_amount`→`total_amount_minor`, `cess_amount` (doesn't exist), `store_id` (doesn't exist — table uses `seller_id`).
+- **PG error**: `{"code":"42703","position":"83","routine":"errorMissingColumn"}`
 
 ---
 
@@ -4623,7 +4626,7 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
-### STG-429: POS App — Device enrollment 500 error — migration 166 not run on staging (P1 CRITICAL)
+### STG-429: POS App — Device enrollment 500 error — SET LOCAL syntax error (P1 CRITICAL)
 
 - **Platform**: POS App (API)
 - **Screen**: EnrollDevice
@@ -4634,35 +4637,37 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Tested codes**: SM-DEMO01, SM-DEMO02, DEMO001 (all demo multi-use), SM-F3JBDD (freshly created via admin API) — ALL return 500
 - **Timestamp**: 2026-03-02T12:45:00Z
 - **Severity**: **P1 (CRITICAL)** — POS device enrollment is 100% non-functional. No device can enroll. All POS functionality beyond Splash is unreachable.
-- **Root cause**: Deployed code at `aa898b65` queries `WHERE e.enrollment_code_hash = $1` (enroll.ts:167), but migration 166 (`166_add_enrollment_code_hash.sql`) which adds the `enrollment_code_hash` column was NOT run on staging. Only migrations 141-159 were executed.
-- **Evidence**: Admin enrollment APIs work (query by `code` column). POS enrollment fails (queries by missing `enrollment_code_hash` column).
-- **Fix**: Run pending migrations 160-171 on staging Cloud SQL (12 migrations). Migration 166 is critical.
-- **Status**: FOUND — HARD BLOCKER
+- **Root cause** (CORRECTED 2026-03-02T13:00Z from Cloud Run logs):
+  - **Previous (WRONG) diagnosis**: Migration 166 not applied, `enrollment_code_hash` column missing.
+  - **Actual diagnosis**: PG error `42601` (syntax_error) at position 34 in `enroll.ts:186`. The statement `SET LOCAL app.current_store_id = $1` fails because PostgreSQL's SET command does not accept `$n` bind parameters via the extended query protocol. Position 34 = `$` in the SET LOCAL statement.
+  - **Migration 166 IS applied**: Cloud Run startup logs confirm only 4 pending migrations (168-171) at deploy time. Migrations 001-167 were already applied from the first deploy (e63dba14).
+  - **Enrollment code IS found**: The enrollment query (`WHERE e.enrollment_code_hash = $1`) at line 167 SUCCEEDS (finds the code). The failure occurs at line 186 when setting RLS context.
+- **PG error from Cloud Run logs**: `{"code":"42601","position":"34","file":"scan.l","routine":"scanner_yyerror"}`
+- **Fix**: Replace `await client.query("SET LOCAL app.current_store_id = $1", [enrollment.store_id])` with `await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [enrollment.store_id])` — `set_config()` is a regular SQL function that accepts bind parameters. Same fix needed in `db/client.ts:102`.
+- **Status**: FOUND — HARD BLOCKER (code fix required, NOT migration fix)
 
-**12 pending migrations not run on staging:**
+---
 
-| # | File | Impact |
-|---|------|--------|
-| 160 | concurrency constraints | Data integrity |
-| 161 | RLS gap coverage | Security |
-| 162 | wave3 schema integrity | Schema |
-| 163 | type normalization | Schema |
-| 164 | full RLS coverage | Security |
-| 165 | onboarding schema hardening | Onboarding |
-| **166** | **enrollment_code_hash** | **POS enrollment broken** |
-| 167 | WhatsApp CTA config | WhatsApp |
-| 168 | fix check constraints | STG-099/149 |
-| 169 | add pending_mrp | Supplier products |
-| 170 | credit app columns | Credit apps |
-| 171 | buy payments mode constraint | Buy payments |
+### STG-430: Backend — AdminAudit systemic UUID cast error on every admin endpoint
+
+- **Platform**: Backend (all admin endpoints)
+- **Screen**: All SuperAdmin tabs
+- **Finding**: Every authenticated admin API call produces `[ERROR] [AdminAudit] Failed to write audit log: {"code":"22P02","routine":"string_to_uuid"}`. Email OTP sessions set actor ID to `email-otp-supermanditech@gmail.com` which is not a valid UUID. The audit log INSERT casts this as UUID → fails.
+- **Impact**: Admin audit trail is completely broken for email OTP sessions. Main requests still succeed (error is caught and logged). No audit history recorded.
+- **Timestamp**: 2026-03-02T13:00:00Z (from Cloud Run logs analysis)
+- **Severity**: P2 (MEDIUM) — audit trail broken, no data loss but compliance gap
+- **Status**: FOUND
+- **Root cause**: `adminAuth.ts:147` sets `x-user-id = session.sessionId` → for email OTP sessions, sessionId = `email-otp-<email>` (from adminSessionService.ts:244). Audit INSERT casts this as UUID column.
+- **Fix**: Either (a) generate a deterministic UUID for email OTP sessions, or (b) change audit table actor_id column to TEXT, or (c) validate/skip UUID cast in audit INSERT.
 
 ---
 
 ### POS Authenticated Verification — BLOCKED
 
-**Status**: BLOCKED_ON_MIGRATION
-**Reason**: POS enrollment returns 500 on all codes — migration 166 (`enrollment_code_hash`) not run on staging. Without device token, all authenticated POS endpoints return 401.
-**Resolution**: Run pending migrations 160-171 on staging Cloud SQL.
+**Status**: BLOCKED_ON_CODE_FIX
+**Reason**: POS enrollment returns 500 on all codes — `SET LOCAL app.current_store_id = $1` syntax error (STG-429). Code fix required: replace with `SELECT set_config(...)`.
+**Previous (wrong) reason**: ~~Migration 166 not run~~ (CORRECTED: all 171 migrations ARE applied).
+**Resolution**: Fix `SET LOCAL` → `set_config()` in `enroll.ts:186` and `db/client.ts:102`, redeploy.
 
 **Blocked screens**: EnrollDevice (enrollment itself), PaymentSetup, DeviceBlocked, ForceUpdate, StaffLogin, PosRootLayout, and all 35+ secondary screens.
 

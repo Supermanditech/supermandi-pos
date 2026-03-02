@@ -568,6 +568,12 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 ### Post-deploy live verification: UNLOCKED
 - Next findings start at STG-410+
 
+### Gate 3 Migration Verification — VINDICATED (2026-03-02T13:30Z)
+- Cloud Run startup logs confirm: "4 pending migration(s) to apply" (168-171)
+- Migrations 001-167 were already applied from first deploy (e63dba14)
+- STG-429 initially diagnosed as "migration 166 not run" — CORRECTED to "SET LOCAL $1 syntax error (PG 42601)"
+- Gate 3 "Migrations 168..171 (4/4 applied)" is CONFIRMED CORRECT
+
 ---
 
 ## CI FOLLOW-UP (non-blocking)
