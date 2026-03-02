@@ -3089,13 +3089,15 @@ Current status: **ACTIVE** (Gate 3 PASSED)
 1. deploy SHA: aa898b65
 2. workflow run: 22552048262
 3. Gate 3: PASSED (2026-03-01T20:47:59Z)
-4. next finding start: STG-428
+4. next finding start: STG-430
 5. active platform: POS App
 6. Retailer Web unauthenticated: COMPLETE (7 findings: STG-410..414, 416, 417; STG-415 withdrawn)
 7. Retailer Web authenticated (A1-A22): BLOCKED_ON_LIVE_AUTH_ACCESS
 8. Supplier Web unauthenticated: COMPLETE (4 findings: STG-418..421)
 9. Supplier Web authenticated (A1-A12): BLOCKED_ON_LIVE_AUTH_ACCESS (same auth access blocker)
 10. SuperAdmin Web: FULLY COMPLETE — unauth (2 findings: STG-422, 423) + auth (4 findings: STG-424..427). Auth via CTO-provided email OTP. 23 tabs verified, 3 backend 500s (refunds, staff, GST detail), 1 auth mismatch (support queue).
+11. POS App unauthenticated: COMPLETE — 31 endpoints tested, 28 correct 401, 2 credit/bnpl 403 (feature leak), 1 rate-limited. 2 findings: STG-428 (P4 credit feature leak), STG-429 (P1 CRITICAL enrollment 500 — migration 166 not run).
+12. POS App authenticated: BLOCKED_ON_MIGRATION — migration 166 (`enrollment_code_hash`) not run on staging DB. All enrollment codes return 500. 12 pending migrations (160-171) not executed.
 
 ### 15.2 Source of Truth Order
 

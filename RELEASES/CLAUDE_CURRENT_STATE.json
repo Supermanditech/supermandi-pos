@@ -1,7 +1,7 @@
 {
-  "version": "81.0",
-  "lastUpdated": "2026-03-02T10:50:00Z",
-  "currentPhase": "POST_DEPLOY_MEGA_LIVE_VERIFICATION_ACTIVE: 3/4 platforms done. Retailer Web: unauth COMPLETE (7 findings), auth BLOCKED. Supplier Web: unauth COMPLETE (4 findings), auth BLOCKED. SuperAdmin Web: FULLY COMPLETE (6 findings: STG-422..427). Active platform: POS App. Next findings: STG-428+.",
+  "version": "82.0",
+  "lastUpdated": "2026-03-02T13:00:00Z",
+  "currentPhase": "POST_DEPLOY_MEGA_LIVE_VERIFICATION_ACTIVE: 4/4 platforms started. Retailer Web: unauth COMPLETE (7 findings), auth BLOCKED. Supplier Web: unauth COMPLETE (4 findings), auth BLOCKED. SuperAdmin Web: FULLY COMPLETE (6 findings: STG-422..427). POS App: unauth COMPLETE (2 findings: STG-428..429), auth BLOCKED_ON_MIGRATION (enrollment 500 — migration 166 not run). Next findings: STG-430+.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -211,7 +211,27 @@
     "totalScreens": 118,
     "totalClean": 24,
     "activePlatform": "POS App",
-    "activeInstruction": "Retailer Web: unauth COMPLETE (7 findings), auth BLOCKED. Supplier Web: unauth COMPLETE (4 findings), auth BLOCKED. SuperAdmin Web: COMPLETE (6 findings: STG-422..427, unauth + auth both verified). Now: POS App. Next findings: STG-428+.",
+    "activeInstruction": "Retailer Web: unauth COMPLETE (7 findings), auth BLOCKED. Supplier Web: unauth COMPLETE (4 findings), auth BLOCKED. SuperAdmin Web: COMPLETE (6 findings: STG-422..427). POS App: unauth COMPLETE (2 findings: STG-428..429), auth BLOCKED_ON_MIGRATION. Next findings: STG-430+.",
+    "posAppStatus": {
+      "unauthenticated": "COMPLETE",
+      "unauthenticatedFindings": 2,
+      "findingIds": ["STG-428", "STG-429"],
+      "authenticated": "BLOCKED_ON_MIGRATION",
+      "blockerReason": "Migration 166 (enrollment_code_hash) not run on staging — POS enrollment returns 500 on all codes",
+      "pendingMigrations": "160-171 (12 total, migration 166 critical for POS enrollment)",
+      "endpointsTested": 31,
+      "endpointsCorrectAuth": 28,
+      "endpointsAnomaly": 3,
+      "completedAt": null,
+      "manifest": {
+        "totalScreens": 42,
+        "authGateScreens": 5,
+        "mainTabs": 5,
+        "secondaryScreens": 32,
+        "apiEndpoints": 31,
+        "offlineTables": 4
+      }
+    },
     "superAdminWebStatus": {
       "unauthenticated": "COMPLETE",
       "unauthenticatedScreens": 1,

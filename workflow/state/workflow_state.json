@@ -2044,8 +2044,20 @@
     "gate3Status": "PASSED",
     "gate3PassedAt": "2026-03-01T20:47:59Z",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
-    "nextFindingStartsAt": "STG-428",
+    "nextFindingStartsAt": "STG-430",
     "activePlatform": "POS App",
+    "posAppVerification": {
+      "unauthenticated": "COMPLETE",
+      "authenticated": "BLOCKED_ON_MIGRATION",
+      "findings": ["STG-428","STG-429"],
+      "blockerReason": "Migration 166 (enrollment_code_hash) not run on staging — POS enrollment returns 500",
+      "pendingMigrations": "160-171 (12 total)",
+      "endpointsTested": 31,
+      "endpointsCorrectAuth": 28,
+      "endpointsAnomaly": 3,
+      "startedAt": "2026-03-02T12:00:00Z",
+      "blockedAt": "2026-03-02T12:45:00Z"
+    },
     "superAdminWebVerification": {
       "unauthenticated": "COMPLETE",
       "authenticated": "COMPLETE",

@@ -4545,6 +4545,129 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+## POS App — Live Verification
+
+**Platform**: POS App (Expo/React Native)
+**Verification method**: Backend API endpoint testing via CLI (app requires device/emulator for screen rendering)
+**Staging base**: `https://staging.supermandi.tech`
+**Auth model**: `x-device-token` header (device enrollment, not user login)
+
+### POS U1: Unauthenticated API Surface
+
+**Test**: All 31 POS API endpoints called without `x-device-token` header.
+
+| # | Method | Endpoint | Status | Expected | Result |
+|---|--------|----------|--------|----------|--------|
+| 1 | GET | /api/v1/pos/status | 401 | 401 | PASS |
+| 2 | GET | /api/v1/pos/status/strict | 401 | 401 | PASS |
+| 3 | GET | /api/v1/pos/store-products | 401 | 401 | PASS |
+| 4 | GET | /api/v1/pos/store-products/barcode/1234567890 | 401 | 401 | PASS |
+| 5 | GET | /api/v1/pos/inventory | 401 | 401 | PASS |
+| 6 | GET | /api/v1/pos/daily-summary | 401 | 401 | PASS |
+| 7 | GET | /api/v1/pos/catalog | 401 | 401 | PASS |
+| 8 | GET | /api/v1/pos/categories | 401 | 401 | PASS |
+| 9 | GET | /api/v1/pos/categories/fmcg | 401 | 401 | PASS |
+| 10 | GET | /api/v1/pos/suppliers | 401 | 401 | PASS |
+| 11 | GET | /api/v1/pos/orders | 401 | 401 | PASS |
+| 12 | GET | /api/v1/pos/reorder/policies | 401 | 401 | PASS |
+| 13 | GET | /api/v1/pos/chat/conversations | 401 | 401 | PASS |
+| 14 | GET | /api/v1/pos/ai/alerts | 401 | 401 | PASS |
+| 15 | GET | /api/v1/pos/ai/trending | 401 | 401 | PASS |
+| 16 | GET | /api/v1/pos/ai/slow-movers | 401 | 401 | PASS |
+| 17 | GET | /api/v1/pos/credit/offers | **403** | 401 | **FINDING** |
+| 18 | GET | /api/v1/pos/search/sell?q=test | 401 | 401 | PASS |
+| 19 | POST | /api/v1/pos/sales | 401 | 401 | PASS |
+| 20 | POST | /api/v1/pos/sync | 401 | 401 | PASS |
+| 21 | POST | /api/v1/pos/stock-in | 401 | 401 | PASS |
+| 22 | POST | /api/v1/pos/orders | 401 | 401 | PASS |
+| 23 | POST | /api/v1/pos/chat/messages | 401 | 401 | PASS |
+| 24 | POST | /api/v1/pos/chat/conversations/direct | 401 | 401 | PASS |
+| 25 | POST | /api/v1/pos/chat/conversations/support | 401 | 401 | PASS |
+| 26 | POST | /api/v1/pos/collections | 401 | 401 | PASS |
+| 27 | POST | /api/v1/pos/staff/login | 401 | 401 | PASS |
+| 28 | POST | /api/v1/pos/reorder/dismiss | 401 | 401 | PASS |
+| 29 | POST | /api/v1/pos/inventory/validate | 401 | 401 | PASS |
+| 30 | POST | /api/v1/pos/credit/apply | **403** | 401 | **FINDING** |
+| 31 | POST | /api/v1/pos/bnpl/active | 429 | 401 | Rate-limited (from scan burst) |
+
+**401 error body**: `{"error":{"code":"DEVICE_UNAUTHORIZED","message":"Device not authorized. Please enroll the device."}}`
+**403 error body (credit)**: `{"success":false,"error":"credit_feature_disabled","message":"Credit feature is not available..."}`
+
+**Summary**: 28/31 correct 401 auth enforcement. 2 endpoints leak feature availability before auth. 1 rate-limited from burst.
+
+### POS U2: Enrollment Endpoint (Unauthenticated — by design)
+
+| Test | Body | Status | Response |
+|------|------|--------|----------|
+| Empty body | `{}` | 400 | `CODE_REQUIRED` |
+| Code only | `{"code":"INVALID"}` | 400 | `LABEL_REQUIRED` |
+| Invalid code + full meta | `{"code":"INVALID123","deviceMeta":{...}}` | 400 | `ENROLLMENT_CODE_INVALID` |
+
+**Enrollment endpoint is properly unauthenticated** (entry point for device registration). Input validation runs in correct order: code → label → deviceType → code lookup.
+
+---
+
+### STG-428: POS App — Credit/BNPL feature flag check runs before device auth
+
+- **Platform**: POS App (API)
+- **Screen**: N/A (pre-auth API behavior)
+- **Routes**: `GET /api/v1/pos/credit/offers`, `POST /api/v1/pos/credit/apply`
+- **Repro**: `curl -s https://staging.supermandi.tech/api/v1/pos/credit/offers` (no auth header)
+- **Expected**: `401 DEVICE_UNAUTHORIZED` (same as other endpoints)
+- **Actual**: `403 {"success":false,"error":"credit_feature_disabled","message":"Credit feature is not available..."}`
+- **Impact**: Unauthenticated callers can discover which features are disabled/enabled on the platform. No data exposed, no auth bypass.
+- **Timestamp**: 2026-03-02T12:15:00Z
+- **Severity**: P4 (LOW) — minor info leak, defense-in-depth gap
+- **Root cause**: Credit feature middleware runs before device auth middleware in the route chain. Feature check should run after auth.
+- **Status**: FOUND
+
+---
+
+### STG-429: POS App — Device enrollment 500 error — migration 166 not run on staging (P1 CRITICAL)
+
+- **Platform**: POS App (API)
+- **Screen**: EnrollDevice
+- **Route**: `POST /api/v1/pos/enroll`
+- **Repro**: `curl -s -X POST https://staging.supermandi.tech/api/v1/pos/enroll -H "Content-Type: application/json" -d '{"code":"SM-DEMO01","deviceMeta":{"label":"test","deviceType":"RETAILER_PHONE","manufacturer":"Test","model":"Test","printingMode":"NONE"}}'`
+- **Expected**: `200` with `{ deviceId, storeId, deviceToken, ... }`
+- **Actual**: `500 {"error":{"code":"ENROLLMENT_FAILED","message":"Enrollment failed. Please try again."}}`
+- **Tested codes**: SM-DEMO01, SM-DEMO02, DEMO001 (all demo multi-use), SM-F3JBDD (freshly created via admin API) — ALL return 500
+- **Timestamp**: 2026-03-02T12:45:00Z
+- **Severity**: **P1 (CRITICAL)** — POS device enrollment is 100% non-functional. No device can enroll. All POS functionality beyond Splash is unreachable.
+- **Root cause**: Deployed code at `aa898b65` queries `WHERE e.enrollment_code_hash = $1` (enroll.ts:167), but migration 166 (`166_add_enrollment_code_hash.sql`) which adds the `enrollment_code_hash` column was NOT run on staging. Only migrations 141-159 were executed.
+- **Evidence**: Admin enrollment APIs work (query by `code` column). POS enrollment fails (queries by missing `enrollment_code_hash` column).
+- **Fix**: Run pending migrations 160-171 on staging Cloud SQL (12 migrations). Migration 166 is critical.
+- **Status**: FOUND — HARD BLOCKER
+
+**12 pending migrations not run on staging:**
+
+| # | File | Impact |
+|---|------|--------|
+| 160 | concurrency constraints | Data integrity |
+| 161 | RLS gap coverage | Security |
+| 162 | wave3 schema integrity | Schema |
+| 163 | type normalization | Schema |
+| 164 | full RLS coverage | Security |
+| 165 | onboarding schema hardening | Onboarding |
+| **166** | **enrollment_code_hash** | **POS enrollment broken** |
+| 167 | WhatsApp CTA config | WhatsApp |
+| 168 | fix check constraints | STG-099/149 |
+| 169 | add pending_mrp | Supplier products |
+| 170 | credit app columns | Credit apps |
+| 171 | buy payments mode constraint | Buy payments |
+
+---
+
+### POS Authenticated Verification — BLOCKED
+
+**Status**: BLOCKED_ON_MIGRATION
+**Reason**: POS enrollment returns 500 on all codes — migration 166 (`enrollment_code_hash`) not run on staging. Without device token, all authenticated POS endpoints return 401.
+**Resolution**: Run pending migrations 160-171 on staging Cloud SQL.
+
+**Blocked screens**: EnrollDevice (enrollment itself), PaymentSetup, DeviceBlocked, ForceUpdate, StaffLogin, PosRootLayout, and all 35+ secondary screens.
+
+---
+
 ## Redeploy Checklist (run after all issues FIXED)
 
 - [ ] `pnpm -r typecheck` — 0 errors
