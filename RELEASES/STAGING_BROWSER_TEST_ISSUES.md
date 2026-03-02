@@ -4270,6 +4270,281 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
+## Supplier Web — Post-Deploy Live Verification
+
+### STG-418: Supplier Web — NotFoundPage — Misleading "Back to Dashboard" link for unauthenticated users
+- **Platform**: Supplier Web
+- **Screen**: NotFoundPage — `/supplier/nonexistent/`
+- **Finding**: "Back to Dashboard" link resolves to `/supplier/dashboard/` via Next.js basePath. Unauthenticated users who click it get middleware redirect to `/supplier/login/` (when middleware works) or the dashboard skeleton (when cached). Link text is misleading.
+- **Repro**: `curl -s https://staging.supermandi.tech/supplier/nonexistent/ | grep "Back to Dashboard"` — present in HTML.
+- **Expected**: "Back to Login" or "Go to Home" for unauthenticated context.
+- **Actual**: "Back to Dashboard" regardless of auth state.
+- **Timestamp**: 2026-03-02T09:27:00Z
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-419: Supplier Web — SupportPage — Heading hierarchy skips h2 (h1→h3)
+- **Platform**: Supplier Web
+- **Screen**: SupportPage — `/supplier/support/`
+- **Finding**: `h1` ("Help & Support") followed by `h3` ("Contact Us", "Quick Links", "Legal"). Skips `h2`. Same pattern as Retailer STG-413. Violates WCAG 1.3.1.
+- **Repro**: Visit `https://staging.supermandi.tech/supplier/support/`, inspect heading hierarchy.
+- **Expected**: h1 → h2 (or h1 → h2 → h3).
+- **Actual**: h1 → h3 (skips h2).
+- **Timestamp**: 2026-03-02T09:30:00Z
+- **Severity**: P3
+- **Status**: FOUND
+
+### STG-420: Supplier Web — OnboardPage — submit-kyc returns 500 with raw PostgreSQL error for non-UUID input
+- **Platform**: Supplier Web
+- **Screen**: OnboardPage — `/supplier/onboard/`
+- **Finding**: `POST /api/v1/supplier/registration/submit-kyc` with non-UUID `applicationId` returns HTTP 500 with raw PG error: `"invalid input syntax for type uuid: \"fake\""`. Same root cause as Retailer STG-416 — shared backend endpoint lacks UUID format validation.
+- **Repro**: `curl -X POST https://staging.supermandi.tech/api/v1/supplier/registration/submit-kyc -H "Content-Type: application/json" -d '{"applicationId":"fake"}'` → HTTP 500 with raw PG error.
+- **Expected**: 400 with sanitized "Invalid application ID format".
+- **Actual**: 500 with raw PG error `invalid input syntax for type uuid`.
+- **Timestamp**: 2026-03-02T09:35:00Z
+- **Severity**: P2
+- **Status**: FOUND
+
+### STG-421: Supplier Web — Middleware — Defense-in-depth: prerender cache bypasses edge middleware redirect (RECLASSIFIED)
+- **Platform**: Supplier Web
+- **Screen**: All 12 authenticated dashboard routes
+- **Finding**: Next.js edge middleware at `middleware.ts` checks for `supplier_token` cookie and should redirect to `/supplier/login/` when absent. However, all protected routes (`/supplier/dashboard/`, `/supplier/products/`, `/supplier/orders/`, etc.) return HTTP 200 with full SSR HTML including dashboard layout skeleton, sidebar navigation structure, and loading states — even when no cookie is sent. The middleware redirect is not executing. Root cause: Next.js static prerender cache on standalone Cloud Run deployment serves cached HTML without running middleware.
+- **Repro**: `curl -s -o /dev/null -w "%{http_code}" https://staging.supermandi.tech/supplier/dashboard/` → `200` (expected `307` redirect to `/supplier/login/`). All 12 routes return identical ~16KB static HTML.
+- **Expected**: HTTP 307 redirect to `/supplier/login/?redirect=/supplier/dashboard/` when no auth cookie present.
+- **Actual**: HTTP 200 with prerendered static shell. Response headers: `x-nextjs-cache: HIT`, `x-nextjs-prerender: 1`, `cache-control: s-maxage=31536000`.
+- **Visible HTML body (scripts stripped)**: Only a centered loading spinner (`<div class="animate-spin..."></div>`). **Zero protected data, zero navigation, zero supplier info.**
+- **RSC payload**: Skeleton placeholder CSS classes (`animate-pulse bg-slate-200`). No data, names, or tokens.
+- **Client-side guard**: `auth.tsx:40 hasAuthCookie()` → `false` → `layout.tsx:64 router.push('/login')` → redirect fires within ~200-500ms of hydration.
+- **API protection**: All 6 tested backend endpoints (`/supplier/profile`, `/dashboard/stats`, `/products`, `/orders`, `/earnings`, `/invoices`) return **401 UNAUTHORIZED** unauthenticated.
+- **All 12 pages**: `'use client'` directives — zero server-side data fetching. Data loaded only via React Query after `isAuthenticated = true`.
+- **Root cause**: Next.js standalone prerender cache serves static HTML without executing edge middleware.
+- **Impact**: **No security impact.** No data exposed, no protected action performable. Cosmetic: user sees spinner for ~200ms before client-side redirect to login.
+- **Reclassification**: Original "P2 middleware auth bypass" → Actual behavior is Option 4 ("only static shell renders, no protected data exposed").
+- **Timestamp**: 2026-03-02T09:44:00Z (found), 2026-03-02T10:15:00Z (reclassified)
+- **Severity**: ~~P2~~ → **P3 (LOW)** — defense-in-depth hardening gap, not a data/auth boundary break
+- **Status**: RECLASSIFIED
+- **Recommended fix**: Add `export const dynamic = 'force-dynamic'` to `(dashboard)/layout.tsx` to disable prerender cache on protected routes.
+
+---
+
+### SUPPLIER WEB — AUTHENTICATED SCREENS BLOCK
+
+**Status**: `BLOCKED_ON_LIVE_AUTH_ACCESS`
+**Blocked screens**: A1–A12 (DashboardPage, ProductsPage, CSVUploadPage, OrdersPage, KYCPage, EarningsPage, InvoicesPage, NotificationsPage, ChatPage, BNPLOrdersPage, ProfilePage, HelpPage)
+**Blocked at**: 2026-03-02T09:50:00Z
+
+**Same auth access blockers as Retailer Web**:
+1. No seeded test accounts on staging (seed-test-data.js not run on staging Cloud SQL)
+2. No email/password credentials exist for any staging supplier user
+3. Firebase phone OTP requires browser reCAPTCHA — cannot trigger via CLI
+4. No operator-supplied session cookie available
+
+**Unblock options** (same as Retailer):
+- (a) Run `seed-test-data.js` against staging Cloud SQL
+- (b) Operator provides `supplier_token` or `sm_auth` cookie from browser session
+- (c) Operator provides valid staging supplier email + password
+
+**No code-only substitute attempted. No synthetic findings generated.**
+
+---
+
+## SuperAdmin Web — Unauthenticated Live Verification
+
+**Platform**: SuperAdmin Web (Vite + React SPA)
+**Base URL**: `https://staging.supermandi.tech/admin/`
+**Build SHA**: `aa898b6` (matches deploy target `aa898b65`)
+**Auth**: Email OTP → JWT session in localStorage (`supermandi_admin_session`)
+**Screens**: 1 unauthenticated (login), 23 authenticated tabs (hash-routing)
+
+### U1: Root Entry `/admin/` — CLEAN
+
+- **URL**: `https://staging.supermandi.tech/admin/`
+- **HTTP**: 200 OK, Content-Length: 2131 (static index.html), `cache-control: no-cache`
+- **Security Headers (5/5)**:
+  - `x-frame-options: DENY` ✓
+  - `x-content-type-options: nosniff` ✓
+  - `strict-transport-security: max-age=31536000; includeSubDomains` ✓
+  - `referrer-policy: strict-origin-when-cross-origin` ✓
+  - `content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src ...` ✓
+- **HTML body**: Standard Vite SPA entry — `<div id="root"></div>`, no protected data, no SSR content
+- **Assets**: JS bundle (558KB), CSS (37KB), favicon, manifest.json, sw.js — all load 200
+- **SPA fallback**: Non-existent paths (`/admin/nonexistent-path`, `/admin/nonexistent/deep/path`) correctly return index.html (200, 2131 bytes)
+- **Version endpoint**: `/admin/_version.json` → `{"commit":"aa898b6","buildTime":"2/3/2026 2:07:27 am","portal":"superadmin"}`
+- **PWA manifest**: Correct — name, icons, start_url, theme_color all valid
+- **Auth boundary**: SPA serves only empty `<div id="root"></div>` — zero protected content in server response. `LoginGate` client-side guard enforces auth before rendering any tab.
+- **No findings.**
+
+### Auth Endpoint Verification
+
+| Endpoint | Method | Test | Result | HTTP |
+|----------|--------|------|--------|------|
+| `/api/v1/admin/auth/send-email-otp` | POST | Fake email | `403 NOT_AUTHORIZED` | 403 |
+| `/api/v1/admin/auth/send-email-otp` | POST | Real admin email | `200 {"success":true}` | 200 |
+| `/api/v1/admin/auth/send-email-otp` | POST | Invalid format | `400 INVALID_EMAIL` | 400 |
+| `/api/v1/admin/auth/send-email-otp` | POST | SQL injection | `400 INVALID_EMAIL` | 400 |
+| `/api/v1/admin/auth/send-email-otp` | POST | Empty body | `408 REQUEST_TIMEOUT` | 408 |
+| `/api/v1/admin/auth/verify-email-otp` | POST | Fake creds | `400 OTP_NOT_FOUND` | 400 |
+| `/api/v1/admin/auth/login` | POST | Fake token | `401 UNAUTHORIZED` | 401 |
+| `/api/v1/admin/auth/status` | GET | — | `200 {"configured":true}` | 200 |
+| `/api/v1/admin/health` | GET | — | `200 {"status":"ok"}` | 200 |
+| `/api/v1/admin/auth/refresh` | POST | No auth | `401 UNAUTHORIZED` | 401 |
+
+### Protected API Endpoint Verification (all 401)
+
+| Endpoint | HTTP | Response |
+|----------|------|----------|
+| `/api/v1/admin/stores` | 401 | `UNAUTHORIZED — Admin authentication required` |
+| `/api/v1/admin/pos-events` | 401 | Same |
+| `/api/v1/admin/devices` | 401 | Same |
+| `/api/v1/admin/suppliers` | 401 | Same |
+| `/api/v1/admin/users` | 401 | Same |
+| `/api/v1/admin/analytics/overview` | 401 | Same |
+
+---
+
+### STG-422: SuperAdmin Web — Auth — Admin email enumeration on send-email-otp
+
+- **Platform**: SuperAdmin Web
+- **Screen**: Login (U1)
+- **Route**: `POST /api/v1/admin/auth/send-email-otp`
+- **Repro**: `curl -s -X POST https://staging.supermandi.tech/api/v1/admin/auth/send-email-otp -H "Content-Type: application/json" -d '{"email":"nonexistent@test.com"}'` → `403 NOT_AUTHORIZED "This email is not authorized for admin access"`. With real admin email → `200 {"success":true}`.
+- **Expected**: Anti-enumeration response — always `200` with generic "If this email is registered..." message (same pattern as Retailer and Supplier portals).
+- **Actual**: `403` for non-admin emails vs `200` for valid admin emails — allows admin email address enumeration.
+- **Impact**: Attacker can probe emails to discover admin accounts. Mitigated by: (a) admin pool is small/known internally, (b) rate limiting exists on login endpoint, (c) endpoint requires valid email format.
+- **Timestamp**: 2026-03-02T10:30:00Z
+- **Severity**: P3 (LOW) — defense-in-depth gap, not exploitable without further OTP bypass
+- **Status**: FOUND
+- **Recommended fix**: Return `200 {"success":true, "message":"If this email is authorized, a verification code has been sent."}` regardless of email authorization status.
+
+---
+
+### STG-423: SuperAdmin Web — Auth — Empty body on send-email-otp returns 408 instead of 400
+
+- **Platform**: SuperAdmin Web
+- **Screen**: Login (U1)
+- **Route**: `POST /api/v1/admin/auth/send-email-otp`
+- **Repro**: `curl -s -X POST https://staging.supermandi.tech/api/v1/admin/auth/send-email-otp -H "Content-Type: application/json" -d '{}'`
+- **Expected**: `400 {"error":{"code":"INVALID_EMAIL","message":"Valid email address is required"}}` (validation error).
+- **Actual**: `408 {"error":{"code":"REQUEST_TIMEOUT","message":"Request timeout"}}` — proxy to backend times out instead of returning validation error.
+- **Impact**: Poor error UX for malformed requests. No security impact.
+- **Timestamp**: 2026-03-02T10:30:00Z
+- **Severity**: P4 (INFO)
+- **Status**: FOUND
+- **Root cause**: Gateway proxies empty body to backend; backend may hang waiting for body data or fail silently.
+
+---
+
+### SUPERADMIN WEB — AUTHENTICATED TABS VERIFICATION (A1–A23)
+
+**Status**: `COMPLETE` — Auth unblocked via CTO-provided OTP, session JWT obtained.
+**Auth method**: Email OTP → `verify-email-otp` → JWT (`super_admin` role, 24hr expiry)
+**Verified at**: 2026-03-02T10:40:00Z
+
+#### Authenticated API Endpoint Results (All 23 Tabs)
+
+| Tab | Endpoint | HTTP | Result |
+|-----|----------|------|--------|
+| Stores | `GET /admin/stores` | 200 | 3 stores (production, prelive, demo) |
+| Events | `GET /admin/pos/events` | 200 | Empty (no POS events) |
+| Devices | `GET /admin/devices` | 200 | Empty (0 devices enrolled) |
+| **Staff** | `GET /admin/stores/{id}/staff` | **500** | **"Failed to list staff" — STG-425** |
+| GRN Alerts | `GET /admin/grn/alerts` | 200 | Empty (0 alerts) |
+| Invoices | `GET /admin/invoices` | 200 | Empty (0 invoices) |
+| GST Overview | `GET /admin/gst/stores-overview` | 200 | Works — filing deadline, totals |
+| **GST Detail** | `GET /admin/gst/summary/{storeId}` | **500** | **"Failed to generate GST summary" — STG-426** |
+| **Refunds** | `GET /admin/refunds` | **500** | **"Failed to fetch refunds" — STG-424** |
+| Monitoring | `GET /admin/monitoring/health` | 200 | All healthy (DB 41ms, Redis 25ms, 59MB heap) |
+| Quality | `GET /admin/quality/overview` | 200 | Comprehensive system metrics |
+| Credit Providers | `GET /admin/credit-providers` | 200 | 1 BNPL provider (SuperMandi internal) |
+| **Support** | `GET /chat/support/queue` | **401** | **Auth mismatch — STG-427** |
+| AI Insights | `GET /admin/ai/anomalies?storeId=X` | 200 | Empty (no anomalies) |
+| AI Health | `GET /admin/ai/health` | 200 | OpenAI GPT-4o-mini configured |
+| WhatsApp Status | `GET /admin/whatsapp/status` | 200 | Configured |
+| WhatsApp Stats | `GET /admin/whatsapp/stats` | 200 | All zeros (fresh staging) |
+| Applications | `GET /admin/applications` | 200 | Empty |
+| Registrations | `GET /admin/registration-events` | 200 | Empty |
+| Documents | `GET /admin/documents/pending` | 200 | 9 documents (real data) |
+| Suppliers | `GET /admin/pending-suppliers` | 200 | Empty |
+| Suppliers | `GET /admin/verified-suppliers` | 200 | 17 verified suppliers (real data) |
+| Pending Products | `GET /admin/products/pending` | 200 | Empty |
+| Bank Changes | `GET /admin/suppliers/bank-changes` | 200 | Empty |
+| Payments | Uses `/admin/pos/events` (filtered) | 200 | Same as Events |
+| Analytics | `GET /admin/analytics/overview` | 200 | Overview data (all zeros) |
+| Audit | `GET /admin/audit?limit=2` | 200 | 1057 logs returned |
+| Audit Stats | `GET /admin/audit/stats` | 200 | Summary data |
+| Users | `GET /admin/users` | 200 | Empty (0 admin users) |
+| Settings | `GET /admin/settings` | 200 | Version, features, DB status |
+| Settings Stats | `GET /admin/settings/stats` | 200 | 3 stores, 0 devices, 0 users |
+
+**Summary**: 23 tabs tested, **19 clean**, **4 findings** (3 × HTTP 500, 1 × auth mismatch)
+
+---
+
+### STG-424: SuperAdmin Web — Refunds — GET /admin/refunds returns 500
+
+- **Platform**: SuperAdmin Web
+- **Screen**: Refunds tab (#refunds)
+- **Route**: `GET /api/v1/admin/refunds`
+- **Repro**: `curl -s -H "Authorization: Bearer <session-jwt>" "https://staging.supermandi.tech/api/v1/admin/refunds"`
+- **Expected**: `200` with `{"refunds":[], "total":0}` (empty list for fresh staging)
+- **Actual**: `500 {"error":"Failed to fetch refunds"}`
+- **Impact**: Refunds tab will show error state. No refund data accessible on staging.
+- **Timestamp**: 2026-03-02T10:40:00Z
+- **Severity**: P2 (MEDIUM) — backend service error on authenticated admin endpoint
+- **Status**: FOUND
+- **Root cause**: Likely missing table, column, or query error in refunds service.
+
+---
+
+### STG-425: SuperAdmin Web — Staff — GET /admin/stores/{storeId}/staff returns 500
+
+- **Platform**: SuperAdmin Web
+- **Screen**: Staff tab (#staff)
+- **Route**: `GET /api/v1/admin/stores/e8fbccef-f4b9-4902-8561-2317ce10f0a2/staff`
+- **Repro**: `curl -s -H "Authorization: Bearer <session-jwt>" "https://staging.supermandi.tech/api/v1/admin/stores/e8fbccef-f4b9-4902-8561-2317ce10f0a2/staff"`
+- **Expected**: `200` with staff list or empty array
+- **Actual**: `500 {"error":"Failed to list staff"}`
+- **Impact**: Staff tab will show error state. Cannot view/manage store staff on staging.
+- **Timestamp**: 2026-03-02T10:40:00Z
+- **Severity**: P2 (MEDIUM) — backend service error on authenticated admin endpoint
+- **Status**: FOUND
+- **Root cause**: Likely missing staff table, column, or query error.
+
+---
+
+### STG-426: SuperAdmin Web — GST — GET /admin/gst/summary/{storeId} returns 500
+
+- **Platform**: SuperAdmin Web
+- **Screen**: GST Compliance tab (#gst-compliance)
+- **Route**: `GET /api/v1/admin/gst/summary/e8fbccef-f4b9-4902-8561-2317ce10f0a2`
+- **Repro**: `curl -s -H "Authorization: Bearer <session-jwt>" "https://staging.supermandi.tech/api/v1/admin/gst/summary/e8fbccef-f4b9-4902-8561-2317ce10f0a2"`
+- **Expected**: `200` with GST summary data for the store
+- **Actual**: `500 {"error":"Failed to generate GST summary"}`
+- **Impact**: Per-store GST drill-down broken. Stores overview (`/gst/stores-overview`) works fine.
+- **Timestamp**: 2026-03-02T10:40:00Z
+- **Severity**: P3 (LOW) — overview still works, detail view broken. Likely data-dependent.
+- **Status**: FOUND
+- **Root cause**: Query error when computing per-store GST summary (possibly missing invoice/transaction data).
+
+---
+
+### STG-427: SuperAdmin Web — Support — GET /chat/support/queue returns 401 auth mismatch
+
+- **Platform**: SuperAdmin Web
+- **Screen**: Support tab (#support)
+- **Route**: `GET /api/v1/chat/support/queue`
+- **Repro**: `curl -s -H "Authorization: Bearer <admin-session-jwt>" "https://staging.supermandi.tech/api/v1/chat/support/queue"`
+- **Expected**: `200` with support queue data
+- **Actual**: `401 {"error":{"code":"INVALID_TOKEN","message":"Token missing required claims (sub, actorId, actorType)."}}`
+- **Impact**: Support tab will show auth error. Cannot access support queue on staging with admin email OTP token.
+- **Timestamp**: 2026-03-02T10:40:00Z
+- **Severity**: P2 (MEDIUM) — functional breakage of Support tab
+- **Root cause**: The `/api/v1/chat/*` routes use a different auth middleware (expects JWT with `sub`, `actorId`, `actorType` claims). The admin email OTP JWT only has `email`, `role`, `type` claims. The admin auth middleware sets `x-user-id`, `x-actor-id`, `x-actor-type` headers for proxied requests, but the chat service validates the JWT directly instead of trusting proxy headers.
+- **Status**: FOUND
+- **Recommended fix**: Either (a) make chat service accept admin proxy headers, or (b) ensure admin auth middleware transforms the request so chat service accepts it.
+
+---
+
 ## Redeploy Checklist (run after all issues FIXED)
 
 - [ ] `pnpm -r typecheck` — 0 errors

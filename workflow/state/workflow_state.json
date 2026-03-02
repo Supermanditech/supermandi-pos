@@ -125,7 +125,7 @@
         "p3": 15
       }
     },
-    "activePlatform": "Supplier Web",
+    "activePlatform": "POS App",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -2044,8 +2044,20 @@
     "gate3Status": "PASSED",
     "gate3PassedAt": "2026-03-01T20:47:59Z",
     "trackerFile": "RELEASES/STAGING_BROWSER_TEST_ISSUES.md",
-    "nextFindingStartsAt": "STG-418",
-    "activePlatform": "Supplier Web",
+    "nextFindingStartsAt": "STG-428",
+    "activePlatform": "POS App",
+    "superAdminWebVerification": {
+      "unauthenticated": "COMPLETE",
+      "authenticated": "COMPLETE",
+      "findings": ["STG-422","STG-423","STG-424","STG-425","STG-426","STG-427"],
+      "completedAt": "2026-03-02T10:45:00Z"
+    },
+    "supplierWebVerification": {
+      "unauthenticated": "COMPLETE",
+      "authenticated": "BLOCKED_ON_LIVE_AUTH_ACCESS",
+      "findings": ["STG-418","STG-419","STG-420","STG-421"],
+      "blockedAt": "2026-03-02T09:50:00Z"
+    },
     "retailerWebVerification": {
       "unauthenticated": "COMPLETE",
       "authenticated": "BLOCKED_ON_LIVE_AUTH_ACCESS",
