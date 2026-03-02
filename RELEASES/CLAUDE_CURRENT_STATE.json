@@ -210,8 +210,8 @@
     "totalFindings": 123,
     "totalScreens": 118,
     "totalClean": 24,
-    "activePlatform": "Supplier Web",
-    "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF continues. POS App FULLY REITERATED (44/44, 20 findings). Retailer Web SIGNED OFF (28/28 production screens, 5 findings). Now on Platform 3/5: Supplier Web. One screen at a time, no grouped execution, no sampling, no fixes. Exercise each meaningful user action and all required layers per screen. Record every new finding as STG-461+ with runtime evidence.",
+    "activePlatform": "SuperAdmin Web",
+    "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF continues. POS App FULLY REITERATED (44/44, 20 findings). Retailer Web SIGNED OFF (28/28, 5 findings). Supplier Web SIGNED OFF (23/23, 2 findings). Now on Platform 4/5: SuperAdmin Web. One screen at a time, no grouped execution, no sampling, no fixes. Exercise each meaningful user action and all required layers per screen. Record every new finding as STG-463+ with runtime evidence.",
     "posAppStatus": {
       "unauthenticated": "COMPLETE",
       "unauthenticatedFindings": 2,
@@ -471,6 +471,30 @@
         { "id": "STG-460", "sev": "P3", "screen": "DeviceActivationPage", "title": "Unguarded data.device_id.substring on success" }
       ],
       "nextFindingStartsAt": "STG-461"
+    },
+    "supplierWebLiveSignoff": {
+      "status": "SIGNED_OFF_UNDER_STRICT_LOCK",
+      "completedAt": "2026-03-04T02:00:00Z",
+      "method": "Individual screen-by-screen across 16 runtime layers (strict lock discipline)",
+      "canonicalScreenCount": 23,
+      "screensReviewed": 23,
+      "screensClean": 21,
+      "screensWithFindings": 2,
+      "totalFindings": 2,
+      "p0": 0,
+      "p1": 0,
+      "p2": 0,
+      "p3": 2,
+      "findingRange": "STG-461..462",
+      "findingIds": [
+        "STG-461",
+        "STG-462"
+      ],
+      "findingsSummary": [
+        { "id": "STG-461", "sev": "P3", "screen": "RegisterPage", "title": "Drag and drop text with no onDrop handler" },
+        { "id": "STG-462", "sev": "P3", "screen": "OnboardPage", "title": "Missing OTP expiry countdown — parity gap" }
+      ],
+      "nextFindingStartsAt": "STG-463"
     }
   },
   "finalMegaImplementation": {
@@ -2871,7 +2895,12 @@
         "STG-421"
       ],
       "completedAt": "2026-03-03T01:30:00Z",
-      "authMethod": "Supplier email+password login via devToken"
+      "authMethod": "Supplier email+password login via devToken",
+      "liveSignoff": "SIGNED_OFF_UNDER_STRICT_LOCK",
+      "liveSignoffFindings": ["STG-461", "STG-462"],
+      "liveSignoffScreens": 23,
+      "liveSignoffClean": 21,
+      "liveSignoffCompletedAt": "2026-03-04T02:00:00Z"
     },
     "superAdminWebVerification": {
       "unauthenticated": "COMPLETE",

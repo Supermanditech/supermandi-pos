@@ -125,7 +125,7 @@
         "p3": 15
       }
     },
-    "activePlatform": "Retailer Web",
+    "activePlatform": "SuperAdmin Web",
     "platformOrder": [
       "Retailer Web",
       "Supplier Web",
@@ -173,6 +173,20 @@
       "p3": 5,
       "findingRange": "STG-456..460",
       "nextFindingStartsAt": "STG-461"
+    },
+    "supplierWebLiveSignoff": {
+      "status": "SIGNED_OFF_UNDER_STRICT_LOCK",
+      "completedAt": "2026-03-04T02:00:00Z",
+      "method": "Individual screen-by-screen across 16 runtime layers (strict lock discipline)",
+      "canonicalScreenCount": 23,
+      "screensReviewed": 23,
+      "screensClean": 21,
+      "screensWithFindings": 2,
+      "totalFindings": 2,
+      "p2": 0,
+      "p3": 2,
+      "findingRange": "STG-461..462",
+      "nextFindingStartsAt": "STG-463"
     }
   },
   "finalMegaImplementation": {
@@ -2148,7 +2162,12 @@
       "completedAt": "2026-03-03T01:30:00Z",
       "authMethod": "Supplier email+password login via devToken",
       "endpointsTested": 12,
-      "authenticatedFindings": 0
+      "authenticatedFindings": 0,
+      "liveSignoff": "SIGNED_OFF_UNDER_STRICT_LOCK",
+      "liveSignoffFindings": ["STG-461", "STG-462"],
+      "liveSignoffScreens": 23,
+      "liveSignoffClean": 21,
+      "liveSignoffCompletedAt": "2026-03-04T02:00:00Z"
     },
     "retailerWebVerification": {
       "unauthenticated": "COMPLETE",

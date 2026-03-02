@@ -5212,3 +5212,45 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 **28/28 production screens individually audited**: 24 CLEAN, 4 with findings
 **AllPagesPage**: Excluded from canonical count — route gated by `import.meta.env.DEV` (App.tsx:341, comment P2-RD-002), not reachable in production/staging builds
 **Platform status**: Retailer Web SIGNED OFF UNDER STRICT LOCK
+
+---
+
+## Supplier Web Live Sign-Off (Strict Lock)
+
+> **Sign-off date**: 2026-03-03 | **Method**: Individual screen-by-screen across 16 runtime layers
+> **Canonical screen count**: 23 screens (9 unauthenticated + 14 authenticated)
+
+### STG-461: Supplier Web — RegisterPage "or drag and drop" text with no onDrop/onDragOver handler
+- **Portal**: Supplier Web (`staging.supermandi.tech/supplier/`)
+- **Page**: RegisterPage (`/register`) — DocumentUploadField component
+- **File**: `supplier-portal/src/app/register/page.tsx` — DocumentUploadField inner component
+- **Issue**: The document upload area displays "or drag and drop" text alongside the file input, but the wrapping `<label>` element has no `onDrop` or `onDragOver` handlers. Dragging a file onto the area does nothing — only the hidden `<input type="file">` click path works. This is a UI text / behavior mismatch: the text promises drag-and-drop but the code doesn't implement it.
+- **Contrast**: `UploadPage` (CSV bulk import) and `ProductsPage` (image upload) both implement proper `handleDrop`, `onDragOver`, and `onDragLeave` handlers. RegisterPage's DocumentUploadField does not.
+- **Impact**: Users who attempt to drag-and-drop documents during registration will see no response. They must click to browse. Cosmetic/UX gap, not a data loss issue.
+- **Severity**: P3 (LOW) — functional workaround exists (click to browse), no data loss
+- **Status**: FOUND
+- **Discovery**: Supplier Web strict live sign-off (2026-03-03)
+
+### STG-462: Supplier Web — OnboardPage missing OTP expiry countdown
+- **Portal**: Supplier Web (`staging.supermandi.tech/supplier/`)
+- **Page**: OnboardPage (`/onboard`) — Phone verification step (step 2)
+- **File**: `supplier-portal/src/app/(auth)/onboard/page.tsx`
+- **Issue**: After sending a phone OTP, the page shows a "Resend OTP" button with a 30-second cooldown timer, but does not display an OTP expiry countdown. The Firebase OTP has a server-side expiry (typically 5 minutes), but the user is not informed when their OTP will expire. If they wait too long, the OTP silently expires and verification fails with a generic error.
+- **Contrast**: `RegisterPage` (step 2 phone verify) and `ForgotPasswordPage` both display OTP expiry countdowns. OnboardPage lacks this parity.
+- **Impact**: Users who delay entering their OTP get a confusing failure. They must request a new OTP. UX gap — not a security issue (server enforces expiry regardless).
+- **Severity**: P3 (LOW) — functional workaround (resend OTP), no security impact
+- **Status**: FOUND
+- **Discovery**: Supplier Web strict live sign-off (2026-03-03)
+
+---
+
+### Supplier Web Live Sign-Off Summary Table
+
+| ID | Sev | Screen | Title | Status |
+|----|-----|--------|-------|--------|
+| STG-461 | P3 | RegisterPage | "or drag and drop" text with no onDrop handler | FOUND |
+| STG-462 | P3 | OnboardPage | Missing OTP expiry countdown — parity gap | FOUND |
+
+**Totals**: 2 findings (0 P0, 0 P1, 0 P2, 2 P3)
+**23/23 screens individually audited**: 21 CLEAN, 2 with findings
+**Platform status**: Supplier Web SIGNED OFF UNDER STRICT LOCK
