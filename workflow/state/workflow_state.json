@@ -142,21 +142,22 @@
       "operatorReviewAllowed": true
     },
     "posAppLiveSignoff": {
-      "status": "INDIVIDUALLY_SIGNED_OFF_UNDER_STRICT_LOCK",
+      "status": "FULLY_REITERATED_UNDER_STRICT_LOCK",
       "completedAt": "2026-03-03T18:00:00Z",
-      "method": "Individual screen-by-screen strict re-signoff (prior grouped closure rejected)",
+      "reiteratedAt": "2026-03-03T22:00:00Z",
+      "method": "Individual screen-by-screen strict re-signoff + full reiteration",
       "screensReviewed": 44,
-      "screensClean": 29,
-      "screensWithFindings": 15,
-      "totalFindings": 19,
+      "screensClean": 28,
+      "screensWithFindings": 16,
+      "totalFindings": 20,
       "p2": 8,
-      "p3": 11,
+      "p3": 12,
       "reconfirmedRange": "STG-436..445",
       "reconfirmedCount": 10,
-      "newlyDiscoveredRange": "STG-446..454",
-      "newlyDiscoveredCount": 9,
-      "findingRange": "STG-436..454",
-      "nextFindingStartsAt": "STG-455"
+      "newlyDiscoveredRange": "STG-446..455",
+      "newlyDiscoveredCount": 10,
+      "findingRange": "STG-436..455",
+      "nextFindingStartsAt": "STG-456"
     }
   },
   "finalMegaImplementation": {

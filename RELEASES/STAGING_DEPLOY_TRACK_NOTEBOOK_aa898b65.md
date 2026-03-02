@@ -606,7 +606,7 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 - **Engineering findings (STG-410..435)**: 0 open — 23 FIXED, 2 WONTFIX, 1 WITHDRAWN
 
 ### Final Operator-Assisted Live Sign-Off Progress
-- **POS App**: INDIVIDUALLY SIGNED OFF UNDER STRICT LOCK (44/44 screens individually audited, 19 findings STG-436..454: 8 P2, 11 P3, 29 clean, 15 with findings)
+- **POS App**: FULLY REITERATED UNDER STRICT LOCK (44/44 screens individually audited, 20 findings STG-436..455: 8 P2, 12 P3, 28 clean, 16 with findings)
 - **Retailer Web**: PENDING (Platform 2/5 — next)
 - **Supplier Web**: PENDING
 - **SuperAdmin Web**: PENDING

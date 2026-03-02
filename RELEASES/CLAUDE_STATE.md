@@ -3099,7 +3099,7 @@ Current status: **ACTIVE** (Gate 3 PASSED)
 11. POS App unauthenticated: COMPLETE — findings: STG-428, STG-429 (fixed and rechecked)
 12. POS App authenticated: COMPLETE. STG-431 FIXED (commit 91929249, deployed f080d982).
 13. **ENGINEERING FINDINGS CLOSED — 0 open findings from STG-410..435.**
-14. **POS App LIVE SIGN-OFF: INDIVIDUALLY SIGNED OFF UNDER STRICT LOCK** — 44/44 screens individually audited, 19 findings (8 P2, 11 P3): STG-436..454. 29 screens clean, 15 with findings. STG-436..445 re-confirmed, STG-446..454 newly discovered in strict re-signoff.
+14. **POS App LIVE SIGN-OFF: FULLY REITERATED UNDER STRICT LOCK** — 44/44 screens individually audited, 20 findings (8 P2, 12 P3): STG-436..455. 28 screens clean, 16 with findings. STG-436..445 re-confirmed, STG-446..455 newly discovered in strict re-signoff + reiteration.
 
 ### 15.2 Source of Truth Order
 
@@ -3325,7 +3325,7 @@ FINAL OPERATOR-ASSISTED LIVE SIGNOFF IN PROGRESS (2026-03-03T12:00:00Z)
 
 Engineering findings STG-410..435 are closed and runtime-verified.
 Live sign-off in progress — platform order:
-  1. POS App — INDIVIDUALLY SIGNED OFF UNDER STRICT LOCK (44/44 screens, 19 findings STG-436..454: 8 P2, 11 P3)
+  1. POS App — FULLY REITERATED UNDER STRICT LOCK (44/44 screens, 20 findings STG-436..455: 8 P2, 12 P3)
   2. Retailer Web — ACTIVE (Platform 2/5)
   3. Supplier Web — PENDING
   4. SuperAdmin Web — PENDING

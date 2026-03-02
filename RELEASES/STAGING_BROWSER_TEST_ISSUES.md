@@ -5092,12 +5092,24 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Status**: FOUND
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
+### STG-455 --- OpeningStockScreen: Progress interval not cleaned on API error (P3)
+
+- **Platform**: POS App
+- **Screen**: OpeningStockScreen
+- **File**: `src/screens/OpeningStockScreen.tsx`
+- **Issue**: Lines 244-256: `const progressInterval = setInterval(...)` at line 244. `clearInterval(progressInterval)` at line 256 is placed AFTER `await submitOpeningStock(items)` at line 254. If the API call throws, execution jumps to catch (line 259), skipping `clearInterval`. The finally block (line 266-268) sets `progress=null` but never clears the interval. Result: orphaned interval continues updating state on a stale component.
+- **Impact**: Orphaned `setInterval` after API error. Progress bar keeps ticking after submission fails. Minor --- only triggers on API failure during opening stock submission.
+- **Severity**: P3 (LOW) --- interval leak on error path only, no data corruption
+- **Status**: FOUND
+- **Discovery**: POS strict reiteration (2026-03-03)
+
 ---
 
-## POS App Live Sign-Off Summary (Strict Re-Signoff)
+## POS App Live Sign-Off Summary (Strict Re-Signoff + Reiteration)
 
 > **Re-signoff date**: 2026-03-03 | **Method**: Individual screen-by-screen across 16 runtime layers
 > **Reason**: Prior sign-off grouped screens 21-44; strict lock discipline required individual verification
+> **Reiteration**: Full 44-screen reiteration completed same day; 1 new finding (STG-455) discovered
 
 | ID | Sev | Screen | Title | Status |
 |----|-----|--------|-------|--------|
@@ -5120,9 +5132,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 | STG-452 | P2 | ChatConversation | currentUserId never passed, own messages render as other | FOUND (new) |
 | STG-453 | P2 | ChatConversation | __new_support__ sentinel not handled, 404 on new thread | FOUND (new) |
 | STG-454 | P3 | HelpScreen | Missing useSafeAreaInsets for top padding on notched devices | FOUND (new) |
+| STG-455 | P3 | OpeningStockScreen | Progress interval not cleaned on API error | FOUND (reiteration) |
 
-**Totals**: 19 findings (8 P2, 11 P3), 0 P0, 0 P1
-**44/44 screens individually audited**: 29 CLEAN, 15 with findings
+**Totals**: 20 findings (8 P2, 12 P3), 0 P0, 0 P1
+**44/44 screens individually audited**: 28 CLEAN, 16 with findings
 **STG-436..445**: 10 re-confirmed from prior sign-off
 **STG-446..454**: 9 newly discovered in strict re-signoff
-**Platform status**: POS App INDIVIDUALLY SIGNED OFF UNDER STRICT LOCK
+**STG-455**: 1 newly discovered in strict reiteration
+**Platform status**: POS App FULLY REITERATED UNDER STRICT LOCK
