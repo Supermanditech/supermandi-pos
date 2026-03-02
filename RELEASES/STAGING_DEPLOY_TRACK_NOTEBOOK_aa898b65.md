@@ -612,4 +612,9 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 - **SuperAdmin Web**: SIGNED OFF UNDER STRICT LOCK (25/25 screens individually audited, 2 findings STG-463..464: 0 P2, 2 P3, 23 clean, 2 with findings)
 - **Cross-Function Matrix**: SIGNED OFF UNDER STRICT LOCK (7/7 flows individually traced, 0 findings, all flows CLEAN)
 - **LIVE SIGNOFF COMPLETE**: 120 screens + 7 flows, 29 findings (8 P2, 21 P3). STG-436..464.
-- **Production promotion**: BLOCKED — 29 sign-off findings require consolidated fix wave → staging redeploy → impacted recheck → verdict
+
+### Consolidated Fix Wave (STG-436..464)
+- **Status**: COMPLETE
+- **Commit**: `7f43284a` (24 files changed, 253 insertions, 104 deletions)
+- **All 29 findings FIXED**. All 4 typechecks clean.
+- **Production promotion**: BLOCKED — requires staging redeploy at `7f43284a` → impacted runtime recheck → verdict

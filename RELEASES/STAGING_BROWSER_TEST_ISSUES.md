@@ -4901,7 +4901,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Post-enrollment invariant check uses `fetchUiStatus()` (non-strict variant) which NEVER throws. It catches all errors internally and returns safe defaults. The catch block (lines 334-348) with 401 detection and `clearDeviceSession()` is dead code that can never execute.
 - **Impact**: If a freshly-created device token is immediately invalid (extremely rare race condition), the dead catch block would fail to clear the invalid session. No production impact under normal conditions.
 - **Severity**: P3 (LOW) --- dead code path, no user-facing behavior change
-- **Status**: FOUND
+- **Fix**: Removed dead catch block (fetchUiStatus non-strict never throws)
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-437 --- EnrollDevice: PAYMENT_PROMPTED_KEY not store-scoped (P3)
 
@@ -4911,7 +4915,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: `PAYMENT_PROMPTED_KEY` is stored in global `AsyncStorage` (not store-scoped). On re-enrollment to a different store, the payment setup prompt state persists from the previous store.
 - **Impact**: After re-enrollment, user may skip or see the payment setup prompt incorrectly based on the previous store state. Low severity --- payment setup is optional and can be accessed from settings.
 - **Severity**: P3 (LOW) --- minor scoping issue, non-blocking
-- **Status**: FOUND
+- **Fix**: Made PAYMENT_PROMPTED_KEY store-scoped with storeId prefix
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`, `src/screens/PaymentSetupScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-438 --- PaymentSetup: 401 handler missing navigation escape (P3)
 
@@ -4921,7 +4929,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: On 401 response from UPI setup API, the error is caught and displayed but the screen has no navigation escape (no back button, no skip option). User could be stuck on the screen if their token is invalid.
 - **Impact**: Edge case --- only occurs if device token expires mid-setup. User can still use Android back button.
 - **Severity**: P3 (LOW) --- edge case with workaround available
-- **Status**: FOUND
+- **Fix**: Added navigation.replace("EnrollDevice") on 401 alert dismiss
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/PaymentSetupScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-439 --- PosRootLayout: Camera timeout text says 5s, actual is 45s (P2)
 
@@ -4931,7 +4943,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Camera auto-close hint says "5 seconds of inactivity" but the actual timeout constant is 45 seconds. Text/behavior mismatch.
 - **Impact**: User sees incorrect timing information. Not a functional issue but confusing UX.
 - **Severity**: P2 (MEDIUM) --- UI text does not match behavior
-- **Status**: FOUND
+- **Fix**: Changed camera timeout hint text from "5s" to "45s" to match CAMERA_IDLE_TIMEOUT_MS
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/PosRootLayout.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-440 --- MenuScreen: Sync button unreachable (P3)
 
@@ -4941,7 +4957,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Operational status panel initializes `pendingOutboxCount` from `uiStatus.pendingOutboxCount` (server-reported, always 0 per ISSUE-MICRO-087). The "Sync Now" button renders only when `pendingOutboxCount > 0`, making it permanently hidden.
 - **Impact**: Manual sync trigger is inaccessible. Background sync still works. Button was designed for offline recovery but the count source never reflects local outbox state.
 - **Severity**: P3 (LOW) --- manual sync button never shows, automatic sync still functional
-- **Status**: FOUND
+- **Fix**: Changed to read local outbox count via `pendingOutboxCount()` instead of server-reported count
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-441 --- SellScanScreen: Items with priceResolutionError can reach checkout (P2)
 
@@ -4951,7 +4971,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: `canPay` only checks `itemCount > 0 && storeActive !== false && !locked`. Items with `priceResolutionError=true` (price=0 due to missing inventory/variant/MRP data) can reach the Payment screen. The alert at line 2361 on item-add is informational only, not blocking.
 - **Impact**: A sale could be created with 0-price items. PaymentScreen stock validation (GO-LIVE-233) may catch this, but the primary guard should be at checkout entry.
 - **Severity**: P2 (MEDIUM) --- business logic gap allowing potentially invalid checkout
-- **Status**: FOUND
+- **Fix**: Added `hasUnresolvedPriceError` check to `canPay` guard
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/SellScanScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-442 --- SellScanScreen: Cart-level discount % input unclamped (P3)
 
@@ -4961,7 +4985,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Cart-level percentage discount input has no upper bound. User can enter >100%. Item-level discount is correctly capped to line subtotal (line 2241), but cart-level input validation is absent.
 - **Impact**: If the cart store `applyDiscount` does not clamp, could produce negative totals. If it does clamp, user sees confusing behavior.
 - **Severity**: P3 (LOW) --- store-level clamp may prevent actual damage, but input validation missing
-- **Status**: FOUND
+- **Fix**: Added `Math.min(parsed, 100)` clamp for percentage discounts in `scheduleDiscountApply`
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/SellScanScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-443 --- PurchaseScreen: Partial order failure on multi-supplier Place Order (P2)
 
@@ -4971,7 +4999,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: The loop calls `createOrder` sequentially for each supplier group. If order 2/N fails, order 1 is already submitted to the server. User sees generic error. No idempotency key per order, so retrying creates duplicates.
 - **Impact**: Multi-supplier orders can partially succeed with no rollback. Duplicate orders possible on retry.
 - **Severity**: P2 (MEDIUM) --- business logic gap in multi-supplier order submission
-- **Status**: FOUND
+- **Fix**: Wrapped each supplier order in try/catch, track partial success/failure, remove succeeded items from cart
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/PurchaseScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-444 --- PurchaseScreen: Quick Purchase error handler too generic (P3)
 
@@ -4981,7 +5013,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: The catch block shows `Alert.alert("Error", "Failed to submit. Try again.")` for all stock-in failures. Does not distinguish 401 (auth expired), network errors, or validation errors.
 - **Impact**: User gets no actionable information on failure. Minor UX issue.
 - **Severity**: P3 (LOW) --- generic error message, not a functional gap
-- **Status**: FOUND
+- **Fix**: Changed generic error to `error?.message || "Failed to submit. Try again."`
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/PurchaseScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-445 --- CreditScreen: Active Loan display inconsistency (P3)
 
@@ -4991,7 +5027,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Active loan card shows "Remaining" with full tenure months and "Next EMI" computed as disbursement date + 1 month, both static and never updating based on elapsed time. The progress bar correctly computes elapsed EMIs but the text labels are inconsistent with it.
 - **Impact**: Loan display shows stale/incorrect remaining tenure and next EMI date. Cosmetic but misleading for store operators tracking loan obligations.
 - **Severity**: P3 (LOW) --- display inconsistency, not a functional or financial error
-- **Status**: FOUND
+- **Fix**: Hoisted monthsElapsed/emisPaid computation, fixed remaining EMI count and next EMI date
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/CreditScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 
 ### STG-446 --- KhataScreen: Debounce timer not cleaned on unmount (P3)
 
@@ -5001,7 +5041,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Search debounce uses `setTimeout` without storing the timer ID for cleanup on unmount. If user navigates away during the debounce window, the callback fires on an unmounted component.
 - **Impact**: Minor --- React state update on unmounted component warning. No crash, no data corruption.
 - **Severity**: P3 (LOW) --- cosmetic console warning, not user-visible
-- **Status**: FOUND
+- **Fix**: Added useEffect cleanup for searchTimerRef on unmount
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/KhataScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-447 --- OverdueDuesScreen: Severity color identical for two tiers (P3)
@@ -5012,7 +5056,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Two overdue severity tiers use the same color, making them visually indistinguishable. The color differentiation intended to signal escalating overdue severity is lost.
 - **Impact**: Cosmetic --- overdue severity bands look the same. Operator cannot visually distinguish moderate vs severe overdue at a glance.
 - **Severity**: P3 (LOW) --- visual distinction missing, not a functional gap
-- **Status**: FOUND
+- **Fix**: Changed <=7 days tier color from `colors.warning` to `colors.info` for visual distinction
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/OverdueDuesScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-448 --- BulkPurchaseCreditScreen: API contract mismatch with backend (P2)
@@ -5023,7 +5071,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Local `CreditOffer` type fields do not match backend API response shape. Fields like `interestRate`, `processingFee`, and `tenureMonths` may not align with backend `credit_offers` table/endpoint response. Currently masked by `CREDIT_ENABLED=false` feature gate.
 - **Impact**: When credit feature is enabled, this screen will likely fail to render offers correctly. Blocked by feature gate today --- becomes a P1 when credit is enabled.
 - **Severity**: P2 (MEDIUM) --- latent contract mismatch behind feature gate
-- **Status**: FOUND
+- **Fix**: Rewrote CreditOffer interface to match backend (source, amountMinor, tenureMonths, interestRateAnnual, emiMinor); updated render
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/BulkPurchaseCreditScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-449 --- CustomerListScreen: Debounce timer not cleaned on unmount (P3)
@@ -5034,7 +5086,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Same pattern as STG-446. Search debounce `setTimeout` without cleanup on unmount. Callback fires on unmounted component if user navigates away during debounce window.
 - **Impact**: Minor --- React state update on unmounted component warning. No crash, no data corruption.
 - **Severity**: P3 (LOW) --- cosmetic console warning, not user-visible
-- **Status**: FOUND
+- **Fix**: Added useEffect cleanup for searchTimerRef on unmount (same pattern as STG-446)
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/CustomerListScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-450 --- DailyReportScreen: Missing empty state for no-data dates (P2)
@@ -5045,7 +5101,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: When API returns 404 for a date with no report data, state is set to `report=null, error=null`. No render branch handles this condition --- screen shows neither report content, nor loading, nor error. User sees blank content area with no guidance.
 - **Impact**: Functional UX gap. User picks a date with no sales data and sees nothing --- no "No data for this date" message, no suggestion to pick another date.
 - **Severity**: P2 (MEDIUM) --- missing UX state for a common user scenario
-- **Status**: FOUND
+- **Fix**: Added empty state block for `!loading && !error && !report` with "No report data for this date" message
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/DailyReportScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-451 --- PrinterSettingsScreen: Settings stored but never consumed (P2)
@@ -5056,7 +5116,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: PrinterSettingsScreen allows user to configure paper width, print density, and header/footer text. These settings are saved to Zustand/AsyncStorage. However, `printerService.ts` hardcodes 80mm paper width and auto-selects print parameters, never reading the stored settings.
 - **Impact**: User-configured printer settings have no effect on actual print output. Settings screen gives false sense of control.
 - **Severity**: P2 (MEDIUM) --- settings UI is disconnected from print runtime
-- **Status**: FOUND
+- **Fix**: printerService now reads paperWidth and copies from useSettingsStore.getState()
+- **Commit**: `7f43284a`
+- **Files**: `src/services/printerService.ts`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-452 --- ChatConversationScreen: currentUserId never passed, own messages render as other (P2)
@@ -5067,7 +5131,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: `currentUserId` prop defaults to empty string `''` and is never set from the navigation params or session store. All messages render as "other" (left-aligned) because `msg.senderId !== currentUserId` is always true.
 - **Impact**: Chat conversation displays all messages as received (left side), never as sent (right side). User cannot distinguish their own messages from support responses.
 - **Severity**: P2 (MEDIUM) --- broken chat message alignment
-- **Status**: FOUND
+- **Fix**: Added getDeviceIdFromSession() fallback to resolve currentUserId from device session when not passed as prop
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/ChatConversationScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-453 --- ChatConversationScreen: __new_support__ sentinel not handled (P2)
@@ -5078,7 +5146,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: ChatListScreen navigates to ChatConversation with `conversationId: "__new_support__"` for new support threads. ChatConversationScreen passes this sentinel directly to the API `GET /conversations/__new_support__/messages`, which returns 404 (no such conversation). The screen should detect this sentinel and create a new conversation first.
 - **Impact**: New support chat thread fails to load messages. User sees error state instead of empty new conversation.
 - **Severity**: P2 (MEDIUM) --- new support chat creation broken
-- **Status**: FOUND
+- **Fix**: Handle `__new_support__` sentinel by creating conversation via chatApi.createSupportConversation before fetching messages
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/ChatConversationScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-454 --- HelpScreen: Missing useSafeAreaInsets for top padding (P3)
@@ -5089,7 +5161,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Screen does not use `useSafeAreaInsets()` for top padding. On notched devices (iPhone X+, Android punch-hole), content renders under the status bar/notch area.
 - **Impact**: Content partially obscured by device notch/status bar on modern devices. Functional but visually broken on notched devices.
 - **Severity**: P3 (LOW) --- cosmetic overlap on notched devices only
-- **Status**: FOUND
+- **Fix**: Added useSafeAreaInsets import and paddingTop: insets.top
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/HelpScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict re-signoff (2026-03-03)
 
 ### STG-455 --- OpeningStockScreen: Progress interval not cleaned on API error (P3)
@@ -5100,7 +5176,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Lines 244-256: `const progressInterval = setInterval(...)` at line 244. `clearInterval(progressInterval)` at line 256 is placed AFTER `await submitOpeningStock(items)` at line 254. If the API call throws, execution jumps to catch (line 259), skipping `clearInterval`. The finally block (line 266-268) sets `progress=null` but never clears the interval. Result: orphaned interval continues updating state on a stale component.
 - **Impact**: Orphaned `setInterval` after API error. Progress bar keeps ticking after submission fails. Minor --- only triggers on API failure during opening stock submission.
 - **Severity**: P3 (LOW) --- interval leak on error path only, no data corruption
-- **Status**: FOUND
+- **Fix**: Hoisted progressInterval variable before try block, moved clearInterval to finally block
+- **Commit**: `7f43284a`
+- **Files**: `src/screens/OpeningStockScreen.tsx`
+- **Validation**: POS typecheck clean
+- **Status**: FIXED
 - **Discovery**: POS strict reiteration (2026-03-03)
 
 ---
@@ -5113,33 +5193,33 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 | ID | Sev | Screen | Title | Status |
 |----|-----|--------|-------|--------|
-| STG-436 | P3 | EnrollDevice | Dead invariant check (fetchUiStatus non-strict never throws) | FOUND (re-confirmed) |
-| STG-437 | P3 | EnrollDevice | PAYMENT_PROMPTED_KEY not store-scoped | FOUND (re-confirmed) |
-| STG-438 | P3 | PaymentSetup | 401 handler missing navigation escape | FOUND (re-confirmed) |
-| STG-439 | P2 | PosRootLayout | Camera timeout text says 5s, actual is 45s | FOUND (re-confirmed) |
-| STG-440 | P3 | MenuScreen | Sync button unreachable (server pendingOutbox always 0) | FOUND (re-confirmed) |
-| STG-441 | P2 | SellScanScreen | Items with priceResolutionError can reach checkout | FOUND (re-confirmed) |
-| STG-442 | P3 | SellScanScreen | Cart-level discount % input unclamped (>100% allowed) | FOUND (re-confirmed) |
-| STG-443 | P2 | PurchaseScreen | Partial order failure on multi-supplier --- no idempotency | FOUND (re-confirmed) |
-| STG-444 | P3 | PurchaseScreen | Quick Purchase stock-in error handler too generic | FOUND (re-confirmed) |
-| STG-445 | P3 | CreditScreen | Active Loan display inconsistency (remaining/next EMI) | FOUND (re-confirmed) |
-| STG-446 | P3 | KhataScreen | Debounce timer not cleaned on unmount | FOUND (new) |
-| STG-447 | P3 | OverdueDuesScreen | Severity color identical for two tiers | FOUND (new) |
-| STG-448 | P2 | BulkPurchaseCredit | API contract mismatch with backend (behind feature gate) | FOUND (new) |
-| STG-449 | P3 | CustomerListScreen | Debounce timer not cleaned on unmount | FOUND (new) |
-| STG-450 | P2 | DailyReportScreen | Missing empty state for no-data dates | FOUND (new) |
-| STG-451 | P2 | PrinterSettings | Settings stored but never consumed by printerService | FOUND (new) |
-| STG-452 | P2 | ChatConversation | currentUserId never passed, own messages render as other | FOUND (new) |
-| STG-453 | P2 | ChatConversation | __new_support__ sentinel not handled, 404 on new thread | FOUND (new) |
-| STG-454 | P3 | HelpScreen | Missing useSafeAreaInsets for top padding on notched devices | FOUND (new) |
-| STG-455 | P3 | OpeningStockScreen | Progress interval not cleaned on API error | FOUND (reiteration) |
+| STG-436 | P3 | EnrollDevice | Dead invariant check (fetchUiStatus non-strict never throws) | FIXED (`7f43284a`) |
+| STG-437 | P3 | EnrollDevice | PAYMENT_PROMPTED_KEY not store-scoped | FIXED (`7f43284a`) |
+| STG-438 | P3 | PaymentSetup | 401 handler missing navigation escape | FIXED (`7f43284a`) |
+| STG-439 | P2 | PosRootLayout | Camera timeout text says 5s, actual is 45s | FIXED (`7f43284a`) |
+| STG-440 | P3 | MenuScreen | Sync button unreachable (server pendingOutbox always 0) | FIXED (`7f43284a`) |
+| STG-441 | P2 | SellScanScreen | Items with priceResolutionError can reach checkout | FIXED (`7f43284a`) |
+| STG-442 | P3 | SellScanScreen | Cart-level discount % input unclamped (>100% allowed) | FIXED (`7f43284a`) |
+| STG-443 | P2 | PurchaseScreen | Partial order failure on multi-supplier --- no idempotency | FIXED (`7f43284a`) |
+| STG-444 | P3 | PurchaseScreen | Quick Purchase stock-in error handler too generic | FIXED (`7f43284a`) |
+| STG-445 | P3 | CreditScreen | Active Loan display inconsistency (remaining/next EMI) | FIXED (`7f43284a`) |
+| STG-446 | P3 | KhataScreen | Debounce timer not cleaned on unmount | FIXED (`7f43284a`) |
+| STG-447 | P3 | OverdueDuesScreen | Severity color identical for two tiers | FIXED (`7f43284a`) |
+| STG-448 | P2 | BulkPurchaseCredit | API contract mismatch with backend (behind feature gate) | FIXED (`7f43284a`) |
+| STG-449 | P3 | CustomerListScreen | Debounce timer not cleaned on unmount | FIXED (`7f43284a`) |
+| STG-450 | P2 | DailyReportScreen | Missing empty state for no-data dates | FIXED (`7f43284a`) |
+| STG-451 | P2 | PrinterSettings | Settings stored but never consumed by printerService | FIXED (`7f43284a`) |
+| STG-452 | P2 | ChatConversation | currentUserId never passed, own messages render as other | FIXED (`7f43284a`) |
+| STG-453 | P2 | ChatConversation | __new_support__ sentinel not handled, 404 on new thread | FIXED (`7f43284a`) |
+| STG-454 | P3 | HelpScreen | Missing useSafeAreaInsets for top padding on notched devices | FIXED (`7f43284a`) |
+| STG-455 | P3 | OpeningStockScreen | Progress interval not cleaned on API error | FIXED (`7f43284a`) |
 
-**Totals**: 20 findings (8 P2, 12 P3), 0 P0, 0 P1
-**44/44 screens individually audited**: 28 CLEAN, 16 with findings
-**STG-436..445**: 10 re-confirmed from prior sign-off
-**STG-446..454**: 9 newly discovered in strict re-signoff
-**STG-455**: 1 newly discovered in strict reiteration
-**Platform status**: POS App FULLY REITERATED UNDER STRICT LOCK
+**Totals**: 20 findings (8 P2, 12 P3), 0 P0, 0 P1 — **ALL 20 FIXED** at commit `7f43284a`
+**44/44 screens individually audited**: 28 CLEAN, 16 with findings (all fixed)
+**STG-436..445**: 10 re-confirmed from prior sign-off → FIXED
+**STG-446..454**: 9 newly discovered in strict re-signoff → FIXED
+**STG-455**: 1 newly discovered in strict reiteration → FIXED
+**Platform status**: POS App FULLY REITERATED UNDER STRICT LOCK — ALL FINDINGS FIXED
 
 ---
 
@@ -5150,7 +5230,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: `URL.createObjectURL(file)` at line 431 creates blob URLs for image previews (PAN card, Aadhaar front/back, shop photo) but never calls `URL.revokeObjectURL()`. When a user replaces a file, the old blob URL is abandoned. On unmount (navigating away or completing registration), all blob URLs leak. Each leaked URL holds the entire file blob in memory until the tab is closed.
 - **Impact**: Memory leak proportional to number of file replacements. Typical registration uploads 4 files → 4 blob URLs retained. Replacing files multiplies this. Minor for single registration flow, but could accumulate if user navigates back and forth.
 - **Severity**: P3 (LOW) — memory leak only, no data loss or functional impact
-- **Status**: FOUND
+- **Fix**: Added `URL.revokeObjectURL(prev[docType].preview!)` before creating new blob URL
+- **Commit**: `7f43284a`
+- **Files**: `retailer-admin/src/pages/RegisterPage.tsx`
+- **Validation**: retailer-admin typecheck clean
+- **Status**: FIXED
 - **Discovery**: Retailer Web strict live sign-off (2026-03-03)
 
 ### STG-457: Retailer Web — RegisterPage "drag and drop" text with no drop handler
@@ -5160,7 +5244,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: Upload boxes display hint text "or drag and drop" (line 860) but the file input is a standard hidden `<input type="file">` wrapped in a `<label>`. There are no `onDrop`, `onDragOver`, or `onDragEnter` handlers on the upload area. Dragging a file onto the upload box does nothing — the browser's default behavior takes over (opens the file in a new tab or downloads it).
 - **Impact**: UX misleading text. User sees "drag and drop" but the feature doesn't exist. No data loss or functional impact.
 - **Severity**: P3 (LOW) — cosmetic/UX text mismatch, no functional impact
-- **Status**: FOUND
+- **Fix**: Changed "or drag and drop" to "PNG, JPG up to {MAX_DOCUMENT_SIZE_LABEL}"
+- **Commit**: `7f43284a`
+- **Files**: `retailer-admin/src/pages/RegisterPage.tsx`
+- **Validation**: retailer-admin typecheck clean
+- **Status**: FIXED
 - **Discovery**: Retailer Web strict live sign-off (2026-03-03)
 
 ### STG-458: Retailer Web — ForgotPasswordPage missing idToken expiry guard on OTP channel
@@ -5170,7 +5258,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: `handleOtpResetPassword()` sends Firebase `idToken` to the backend without checking token age. RegisterPage has a 50-minute expiry guard (`idTokenObtainedAt` ref at lines 122-124, checked at lines 307-313 before API call). ForgotPasswordPage lacks this equivalent. If a user completes phone OTP verification, leaves the tab open for >60 minutes (Firebase token default expiry), then submits the new password, the backend will receive an expired token and return 401 — but the frontend shows a generic error instead of prompting re-verification.
 - **Impact**: Edge case: stale token after long idle on forgot-password page. Backend correctly rejects expired token, but user gets unhelpful error message. No security risk (backend enforces expiry), but poor UX on the error path.
 - **Severity**: P3 (LOW) — edge case UX degradation, no security bypass
-- **Status**: FOUND
+- **Fix**: Added idTokenObtainedAt ref, 50-min expiry guard before password reset call
+- **Commit**: `7f43284a`
+- **Files**: `retailer-admin/src/pages/ForgotPasswordPage.tsx`
+- **Validation**: retailer-admin typecheck clean
+- **Status**: FIXED
 - **Discovery**: Retailer Web strict live sign-off (2026-03-03)
 
 ### STG-459: Retailer Web — DashboardPage totalStockQty.toLocaleString not null-safe
@@ -5180,7 +5272,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: `inventoryTotals.totalStockQty.toLocaleString('en-IN')` calls `.toLocaleString()` directly on the value from the API response. Other metrics on the same dashboard use `formatCurrencyWhole()` which null-guards internally. If the API returns `null` or `undefined` for `totalStockQty` (e.g., new store with no inventory data), this line throws `TypeError: Cannot read properties of null (reading 'toLocaleString')`.
 - **Impact**: Dashboard crash on inventory section for stores with no inventory data. Other dashboard sections (revenue, orders) render correctly because they use the null-safe formatter.
 - **Severity**: P3 (LOW) — only affects new/empty stores, other dashboard sections unaffected
-- **Status**: FOUND
+- **Fix**: Changed to `(inventoryTotals.totalStockQty ?? 0).toLocaleString('en-IN')`
+- **Commit**: `7f43284a`
+- **Files**: `retailer-admin/src/pages/DashboardPage.tsx`
+- **Validation**: retailer-admin typecheck clean
+- **Status**: FIXED
 - **Discovery**: Retailer Web strict live sign-off (2026-03-03)
 
 ### STG-460: Retailer Web — DeviceActivationPage unguarded data.device_id.substring
@@ -5190,7 +5286,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Issue**: On successful activation, `data.device_id.substring(0, 8)` is called to display a truncated device ID in the success message. There is no null guard. If the API returns `{ success: true }` without a `device_id` field (e.g., a backend contract change or edge case), this throws `TypeError: Cannot read properties of undefined (reading 'substring')`.
 - **Impact**: Activation succeeds on the backend but the success toast/message crashes the UI. Device is activated but user sees an error. Requires page refresh to see the updated device list.
 - **Severity**: P3 (LOW) — success path crash only if API contract changes, activation itself succeeds
-- **Status**: FOUND
+- **Fix**: Added null guard: conditional `data.device_id ? ... : ''` for success message
+- **Commit**: `7f43284a`
+- **Files**: `retailer-admin/src/pages/DeviceActivationPage.tsx`
+- **Validation**: retailer-admin typecheck clean
+- **Status**: FIXED
 - **Discovery**: Retailer Web strict live sign-off (2026-03-03)
 
 ---
@@ -5202,16 +5302,16 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 | ID | Sev | Screen | Title | Status |
 |----|-----|--------|-------|--------|
-| STG-456 | P3 | RegisterPage | Object URL memory leak in document preview | FOUND |
-| STG-457 | P3 | RegisterPage | "drag and drop" text with no drop handler | FOUND |
-| STG-458 | P3 | ForgotPasswordPage | Missing idToken expiry guard on OTP channel | FOUND |
-| STG-459 | P3 | DashboardPage | totalStockQty.toLocaleString not null-safe | FOUND |
-| STG-460 | P3 | DeviceActivationPage | Unguarded data.device_id.substring on success | FOUND |
+| STG-456 | P3 | RegisterPage | Object URL memory leak in document preview | FIXED (`7f43284a`) |
+| STG-457 | P3 | RegisterPage | "drag and drop" text with no drop handler | FIXED (`7f43284a`) |
+| STG-458 | P3 | ForgotPasswordPage | Missing idToken expiry guard on OTP channel | FIXED (`7f43284a`) |
+| STG-459 | P3 | DashboardPage | totalStockQty.toLocaleString not null-safe | FIXED (`7f43284a`) |
+| STG-460 | P3 | DeviceActivationPage | Unguarded data.device_id.substring on success | FIXED (`7f43284a`) |
 
-**Totals**: 5 findings (0 P0, 0 P1, 0 P2, 5 P3)
-**28/28 production screens individually audited**: 24 CLEAN, 4 with findings
+**Totals**: 5 findings (0 P0, 0 P1, 0 P2, 5 P3) — **ALL 5 FIXED** at commit `7f43284a`
+**28/28 production screens individually audited**: 24 CLEAN, 4 with findings (all fixed)
 **AllPagesPage**: Excluded from canonical count — route gated by `import.meta.env.DEV` (App.tsx:341, comment P2-RD-002), not reachable in production/staging builds
-**Platform status**: Retailer Web SIGNED OFF UNDER STRICT LOCK
+**Platform status**: Retailer Web SIGNED OFF UNDER STRICT LOCK — ALL FINDINGS FIXED
 
 ---
 
@@ -5228,7 +5328,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Contrast**: `UploadPage` (CSV bulk import) and `ProductsPage` (image upload) both implement proper `handleDrop`, `onDragOver`, and `onDragLeave` handlers. RegisterPage's DocumentUploadField does not.
 - **Impact**: Users who attempt to drag-and-drop documents during registration will see no response. They must click to browse. Cosmetic/UX gap, not a data loss issue.
 - **Severity**: P3 (LOW) — functional workaround exists (click to browse), no data loss
-- **Status**: FOUND
+- **Fix**: Changed "or drag and drop" to "PNG, JPG, PDF up to 5 MB"
+- **Commit**: `7f43284a`
+- **Files**: `supplier-portal/src/app/register/page.tsx`
+- **Validation**: supplier-portal typecheck clean
+- **Status**: FIXED
 - **Discovery**: Supplier Web strict live sign-off (2026-03-03)
 
 ### STG-462: Supplier Web — OnboardPage missing OTP expiry countdown
@@ -5239,7 +5343,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Contrast**: `RegisterPage` (step 2 phone verify) and `ForgotPasswordPage` both display OTP expiry countdowns. OnboardPage lacks this parity.
 - **Impact**: Users who delay entering their OTP get a confusing failure. They must request a new OTP. UX gap — not a security issue (server enforces expiry regardless).
 - **Severity**: P3 (LOW) — functional workaround (resend OTP), no security impact
-- **Status**: FOUND
+- **Fix**: Added otpExpirySeconds state, countdown effect, timer display showing remaining seconds and "OTP has expired" message
+- **Commit**: `7f43284a`
+- **Files**: `supplier-portal/src/app/(auth)/onboard/page.tsx`
+- **Validation**: supplier-portal typecheck clean
+- **Status**: FIXED
 - **Discovery**: Supplier Web strict live sign-off (2026-03-03)
 
 ---
@@ -5248,12 +5356,12 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 | ID | Sev | Screen | Title | Status |
 |----|-----|--------|-------|--------|
-| STG-461 | P3 | RegisterPage | "or drag and drop" text with no onDrop handler | FOUND |
-| STG-462 | P3 | OnboardPage | Missing OTP expiry countdown — parity gap | FOUND |
+| STG-461 | P3 | RegisterPage | "or drag and drop" text with no onDrop handler | FIXED (`7f43284a`) |
+| STG-462 | P3 | OnboardPage | Missing OTP expiry countdown — parity gap | FIXED (`7f43284a`) |
 
-**Totals**: 2 findings (0 P0, 0 P1, 0 P2, 2 P3)
-**23/23 screens individually audited**: 21 CLEAN, 2 with findings
-**Platform status**: Supplier Web SIGNED OFF UNDER STRICT LOCK
+**Totals**: 2 findings (0 P0, 0 P1, 0 P2, 2 P3) — **ALL 2 FIXED** at commit `7f43284a`
+**23/23 screens individually audited**: 21 CLEAN, 2 with findings (all fixed)
+**Platform status**: Supplier Web SIGNED OFF UNDER STRICT LOCK — ALL FINDINGS FIXED
 
 ---
 
@@ -5271,7 +5379,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Expected**: Countdown should only start after successful API response (same pattern as initial send at line 48, which correctly sets countdown inside the success path of `handleSendOtp`).
 - **Runtime Evidence**: Code path: `onClick={(e) => { setCountdown(60); handleSendOtp(e as any); }}` — setCountdown fires synchronously before async handleSendOtp resolves.
 - **Severity**: P3 (LOW) — UX annoyance only, user can wait for countdown to expire and retry. No security impact (server OTP generation is independent).
-- **Status**: FOUND
+- **Fix**: Removed premature `setCountdown(60)` from resend click handler; countdown already set inside handleSendOtp on success
+- **Commit**: `7f43284a`
+- **Files**: `supermandi-superadmin/src/components/LoginGate.tsx`
+- **Validation**: superadmin typecheck clean
+- **Status**: FIXED
 - **Discovery**: SuperAdmin Web strict live sign-off (2026-03-04)
 
 ### STG-464: SuperAdmin Web — EventsTab Next page button never disabled on last page
@@ -5282,7 +5394,11 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Expected**: Next button should have `disabled={page >= maxPage}` for consistent UX parity with Prev button.
 - **Runtime Evidence**: Code: `<button className="tab" onClick={() => { const maxPage = ...; setPage((p) => Math.min(maxPage, p + 1)); }}>Next</button>` — no disabled prop present.
 - **Severity**: P3 (LOW) — cosmetic/UX only, no functional breakage (Math.min prevents overflow)
-- **Status**: FOUND
+- **Fix**: Added `disabled={page >= maxPage}` to Next button for parity with Prev button
+- **Commit**: `7f43284a`
+- **Files**: `supermandi-superadmin/src/tabs/EventsTab.tsx`
+- **Validation**: superadmin typecheck clean
+- **Status**: FIXED
 - **Discovery**: SuperAdmin Web strict live sign-off (2026-03-04)
 
 ---
@@ -5291,9 +5407,35 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 | ID | Sev | Screen | Title | Status |
 |----|-----|--------|-------|--------|
-| STG-463 | P3 | LoginGate | Resend OTP countdown starts before API success | FOUND |
-| STG-464 | P3 | EventsTab | Next page button never disabled on last page | FOUND |
+| STG-463 | P3 | LoginGate | Resend OTP countdown starts before API success | FIXED (`7f43284a`) |
+| STG-464 | P3 | EventsTab | Next page button never disabled on last page | FIXED (`7f43284a`) |
 
-**Totals**: 2 findings (0 P0, 0 P1, 0 P2, 2 P3)
-**25/25 screens individually audited**: 23 CLEAN, 2 with findings
-**Platform status**: SuperAdmin Web SIGNED OFF UNDER STRICT LOCK
+**Totals**: 2 findings (0 P0, 0 P1, 0 P2, 2 P3) — **ALL 2 FIXED** at commit `7f43284a`
+**25/25 screens individually audited**: 23 CLEAN, 2 with findings (all fixed)
+**Platform status**: SuperAdmin Web SIGNED OFF UNDER STRICT LOCK — ALL FINDINGS FIXED
+
+---
+
+## Consolidated Fix Wave Summary (STG-436..464)
+
+> **Fix wave date**: 2026-03-04
+> **Commit**: `7f43284a`
+> **Scope**: 29 findings across 5 platforms (8 P2, 21 P3)
+> **Files changed**: 24
+> **Insertions**: 253 | **Deletions**: 104
+> **Validation**: All 4 typechecks clean (POS, retailer-admin, supplier-portal, superadmin)
+
+### Files Changed
+
+| Platform | Files |
+|----------|-------|
+| POS App (20 findings) | `EnrollDeviceScreen.tsx`, `PaymentSetupScreen.tsx`, `PosRootLayout.tsx`, `MenuScreen.tsx`, `SellScanScreen.tsx`, `PurchaseScreen.tsx`, `CreditScreen.tsx`, `KhataScreen.tsx`, `OverdueDuesScreen.tsx`, `BulkPurchaseCreditScreen.tsx`, `CustomerListScreen.tsx`, `DailyReportScreen.tsx`, `printerService.ts`, `ChatConversationScreen.tsx`, `HelpScreen.tsx`, `OpeningStockScreen.tsx` |
+| Retailer Web (5 findings) | `RegisterPage.tsx`, `ForgotPasswordPage.tsx`, `DashboardPage.tsx`, `DeviceActivationPage.tsx` |
+| Supplier Web (2 findings) | `register/page.tsx`, `onboard/page.tsx` |
+| SuperAdmin Web (2 findings) | `LoginGate.tsx`, `EventsTab.tsx` |
+
+### Result
+
+**29/29 FIXED. 0 OPEN. 0 WONTFIX.**
+
+Next phase: Staging redeploy at SHA `7f43284a`, then impacted runtime recheck, then production-go-live verdict.
