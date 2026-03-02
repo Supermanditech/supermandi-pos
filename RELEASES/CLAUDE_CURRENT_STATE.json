@@ -1,7 +1,7 @@
 {
-  "version": "85.0",
-  "lastUpdated": "2026-03-02T18:05:00Z",
-  "currentPhase": "IMPACTED_RUNTIME_RECHECK_COMPLETE: All 6 L1 findings verified on staging@92a3b24. 2 hotfixes applied during verification (STG-425 type correction, STG-426 column correction). New finding STG-431 (chat service UUID cast on admin email). Next: resume broader post-deploy verification. POS authenticated verification unblocked.",
+  "version": "87.0",
+  "lastUpdated": "2026-03-02T18:35:00Z",
+  "currentPhase": "BROADER_POST_DEPLOY_VERIFICATION: POS authenticated COMPLETE (35 endpoints verified, STG-432 fixed). STG-431 parked P2. Deploying e809b408. Next: Retailer Web authenticated verification (blocked on auth access — needs seed data or operator cookie).",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -215,14 +215,14 @@
     "posAppStatus": {
       "unauthenticated": "COMPLETE",
       "unauthenticatedFindings": 2,
-      "findingIds": ["STG-428", "STG-429"],
-      "authenticated": "UNBLOCKED_READY_FOR_VERIFICATION",
-      "blockerReason": "RESOLVED: Deployed 92a3b249. POS enroll returns 401 (auth) not 500 (SET LOCAL). Ready for authenticated POS flow verification.",
-      "pendingMigrations": "NONE — all 171 applied (confirmed from Cloud Run startup logs 2026-03-01T20:42:50Z)",
-      "endpointsTested": 31,
-      "endpointsCorrectAuth": 28,
-      "endpointsAnomaly": 3,
-      "completedAt": null,
+      "findingIds": ["STG-428", "STG-429", "STG-432"],
+      "authenticated": "COMPLETE",
+      "authenticatedVerification": "28 endpoints tested, 22 returned 200/expected, 4 returned expected auth errors (401/400 STAFF_REQUIRED or validation), 1 feature-disabled (403 credit), 1 fixed (STG-432 product_name→name). Reorder backend routes don't exist yet (frontend stubs only).",
+      "pendingMigrations": "NONE — all 171 applied",
+      "endpointsTested": 35,
+      "endpointsCorrectAuth": 34,
+      "endpointsAnomaly": 1,
+      "completedAt": "2026-03-02T18:30:00Z",
       "manifest": {
         "totalScreens": 42,
         "authGateScreens": 5,
