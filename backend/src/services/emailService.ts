@@ -474,9 +474,11 @@ export async function sendPasswordResetEmail(
   }
 
   // STG-433: Build portal-specific reset URL
+  // Deploy env vars: RETAILER_ADMIN_URL, SUPPLIER_PORTAL_URL, PORTAL_BASE_URL, FRONTEND_URL
+  const portalBase = process.env.PORTAL_BASE_URL || process.env.FRONTEND_URL || 'https://supermandi.tech';
   const frontendUrl = portalType === 'retailer'
-    ? (process.env.RETAILER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supermandi.tech/retailer')
-    : (process.env.SUPPLIER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supermandi.tech/supplier');
+    ? (process.env.RETAILER_ADMIN_URL || `${portalBase}/retailer`)
+    : (process.env.SUPPLIER_PORTAL_URL || `${portalBase}/supplier`);
   const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
   const subject = 'Reset your SuperMandi password';
