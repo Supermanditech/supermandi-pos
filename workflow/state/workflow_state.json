@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-02T17:00:00Z",
-  "workflowMode": "REDEPLOY_AND_IMPACTED_RUNTIME_RECHECK",
+  "updatedAt": "2026-03-02T18:05:00Z",
+  "workflowMode": "IMPACTED_RECHECK_PASSED_BROADER_VERIFICATION_READY",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -231,10 +231,10 @@
     ]
   },
   "liveFindingsFixWave": {
-    "status": "CODE_COMPLETE_AWAITING_REDEPLOY",
-    "issueRange": "STG-410..430",
+    "status": "DEPLOYED_AND_VERIFIED",
+    "issueRange": "STG-410..431",
     "baselineSha": "1063dee0",
-    "headSha": "3edbc17a",
+    "headSha": "92a3b249",
     "completedAt": "2026-03-02T16:30:00Z",
     "fixed": 19,
     "wontfix": 2,

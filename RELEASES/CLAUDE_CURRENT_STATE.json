@@ -1,7 +1,7 @@
 {
-  "version": "84.0",
-  "lastUpdated": "2026-03-02T17:00:00Z",
-  "currentPhase": "LIVE_FINDINGS_FIX_WAVE_COMPLETE: All 3 waves (L1/L2/L3) implemented. 19 FIXED, 2 WONTFIX, 1 WITHDRAWN. Code pushed to origin/main@3edbc17a. Next: REDEPLOY_AND_IMPACTED_RUNTIME_RECHECK. POS first recheck target after redeploy. Broader audit paused until impacted checks pass.",
+  "version": "85.0",
+  "lastUpdated": "2026-03-02T18:05:00Z",
+  "currentPhase": "IMPACTED_RUNTIME_RECHECK_COMPLETE: All 6 L1 findings verified on staging@92a3b24. 2 hotfixes applied during verification (STG-425 type correction, STG-426 column correction). New finding STG-431 (chat service UUID cast on admin email). Next: resume broader post-deploy verification. POS authenticated verification unblocked.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -216,8 +216,8 @@
       "unauthenticated": "COMPLETE",
       "unauthenticatedFindings": 2,
       "findingIds": ["STG-428", "STG-429"],
-      "authenticated": "BLOCKED_ON_REDEPLOY",
-      "blockerReason": "Code fix applied (a8ecbd96: SET LOCAL → set_config). Awaiting redeploy of main-backend + api-gateway to staging.",
+      "authenticated": "UNBLOCKED_READY_FOR_VERIFICATION",
+      "blockerReason": "RESOLVED: Deployed 92a3b249. POS enroll returns 401 (auth) not 500 (SET LOCAL). Ready for authenticated POS flow verification.",
       "pendingMigrations": "NONE — all 171 applied (confirmed from Cloud Run startup logs 2026-03-01T20:42:50Z)",
       "endpointsTested": 31,
       "endpointsCorrectAuth": 28,
@@ -2894,10 +2894,10 @@
     "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_aa898b65_THEN_GATE_3_POST_DEPLOY_VERIFICATION"
   },
   "liveFindingsFixWave": {
-    "status": "CODE_COMPLETE_AWAITING_REDEPLOY",
+    "status": "DEPLOYED_AND_VERIFIED",
     "issueRange": "STG-410..430",
     "baselineSha": "1063dee0",
-    "headSha": "3edbc17a",
+    "headSha": "92a3b249",
     "completedAt": "2026-03-02T16:30:00Z",
     "summary": {
       "total": 21,
@@ -2966,13 +2966,26 @@
       { "stg": "STG-426", "check": "GST compliance endpoints — correct column names", "service": "main-backend" },
       { "stg": "STG-427", "check": "admin JWT passthrough on /api/v1/chat/* routes", "service": "api-gateway" }
     ],
-    "nextPhase": "REDEPLOY_AND_IMPACTED_RUNTIME_RECHECK",
-    "nextPhaseRules": [
-      "Redeploy 4 services to staging",
-      "Verify deployed SHA matches 3edbc17a",
-      "Run impacted runtime rechecks for L1 wave (6 items)",
-      "Only resume broader verification after impacted checks pass",
-      "POS authenticated verification is first unblock target"
-    ]
+    "nextPhase": "BROADER_POST_DEPLOY_VERIFICATION",
+    "runtimeVerification": {
+      "status": "PASSED",
+      "verifiedAt": "2026-03-02T18:03:00Z",
+      "deployedSha": "92a3b249",
+      "results": {
+        "STG-429": "PASS — POS enroll returns 401 (auth rejection), not 500",
+        "STG-430": "PASS — Admin audit: 200 generic msg, no PG 22P02",
+        "STG-424": "PASS — Refunds: 200 with empty data, correct columns",
+        "STG-425": "PASS — Staff list: 200, required hotfix (sales.store_id is UUID not TEXT)",
+        "STG-426": "PASS — GST summary: 200, required hotfix (buyer_state/seller_state/supplier_id don't exist)",
+        "STG-427": "PASS (gateway) — Admin JWT passes through. NEW: chat service fails on email→UUID cast (STG-431)"
+      },
+      "hotfixesApplied": [
+        {"commit": "796f6544", "fix": "STG-425: Remove ::text cast from sales.store_id (is UUID from migration 018, not TEXT)"},
+        {"commit": "92a3b249", "fix": "STG-426: Fix non-existent columns (buyer_state→LEFT(buyer_gstin,2), supplier_id→seller_id, hsn_summary→removed)"}
+      ],
+      "newFindings": [
+        {"id": "STG-431", "severity": "P2", "title": "Chat service casts admin email (x-user-id) to UUID — fails with 22P02", "service": "main-backend", "file": "backend/src/routes/v1/chat.ts"}
+      ]
+    }
   }
 }
