@@ -3089,15 +3089,16 @@ Current status: **ACTIVE** (Gate 3 PASSED)
 1. deploy SHA: aa898b65
 2. workflow run: 22552048262
 3. Gate 3: PASSED (2026-03-01T20:47:59Z)
-4. next finding start: STG-430
-5. active platform: POS App
+4. next finding start: STG-436
+5. active platform: none (all platforms COMPLETE)
 6. Retailer Web unauthenticated: COMPLETE (7 findings: STG-410..414, 416, 417; STG-415 withdrawn)
-7. Retailer Web authenticated (A1-A22): BLOCKED_ON_LIVE_AUTH_ACCESS
+7. Retailer Web authenticated (A1-A22): COMPLETE (25+ endpoints, 3 new findings: STG-433, STG-434, STG-435)
 8. Supplier Web unauthenticated: COMPLETE (4 findings: STG-418..421)
-9. Supplier Web authenticated (A1-A12): BLOCKED_ON_LIVE_AUTH_ACCESS (same auth access blocker)
-10. SuperAdmin Web: FULLY COMPLETE — unauth (2 findings: STG-422, 423) + auth (4 findings: STG-424..427). Auth via CTO-provided email OTP. 23 tabs verified, 3 backend 500s (refunds, staff, GST detail), 1 auth mismatch (support queue).
-11. POS App unauthenticated: COMPLETE — 31 endpoints tested, 28 correct 401, 2 credit/bnpl 403 (feature leak), 1 rate-limited. 2 findings: STG-428 (P4 credit feature leak), STG-429 (P1 CRITICAL enrollment 500 — migration 166 not run).
-12. POS App authenticated: BLOCKED_ON_MIGRATION — migration 166 (`enrollment_code_hash`) not run on staging DB. All enrollment codes return 500. 12 pending migrations (160-171) not executed.
+9. Supplier Web authenticated (A1-A12): COMPLETE (12+ endpoints, 0 new findings)
+10. SuperAdmin Web: FULLY COMPLETE — unauth (2 findings: STG-422, 423) + auth (4 findings: STG-424..427)
+11. POS App unauthenticated: COMPLETE — findings: STG-428, STG-429 (fixed and rechecked)
+12. POS App authenticated: COMPLETE to maximum runtime depth. STG-431 remains open P2.
+13. **ALL 4 PLATFORMS VERIFIED** — 4 open findings remain: STG-431(P2), STG-433(P3), STG-434(P3), STG-435(P2)
 
 ### 15.2 Source of Truth Order
 
@@ -3315,20 +3316,28 @@ If migration fails, the container never starts, and the health check never passe
 
 **Totals**: 19 FIXED, 2 WONTFIX, 1 WITHDRAWN
 
-### Next Phase: REDEPLOY_AND_IMPACTED_RUNTIME_RECHECK
+### Current Phase: CONSOLIDATED_FIX_WAVE
 
 ```
-1. Redeploy 4 services: main-backend, api-gateway, retailer-admin, supplier-portal
-2. Verify deployed SHA = 3edbc17a
-3. Run impacted runtime rechecks:
-   - STG-429: POS enroll (set_config replaces SET LOCAL)
-   - STG-430: admin audit log INSERT (non-UUID actor)
-   - STG-424: refund list/approve (correct column names)
-   - STG-425: staff list counts (UUID::text cast)
-   - STG-426: GST compliance (correct column names)
-   - STG-427: admin JWT on /api/v1/chat/* (gateway passthrough)
-4. Only resume broader verification after impacted checks pass
-5. POS authenticated verification is first unblock target
+LIVE DISCOVERY COMPLETE (2026-03-03T01:30:00Z)
+
+All 4 platforms fully verified:
+- Retailer Web: auth COMPLETE (25+ endpoints, 3 findings: STG-433, STG-434, STG-435)
+- Supplier Web: auth COMPLETE (12+ endpoints, 0 findings)
+- SuperAdmin Web: auth COMPLETE (6 findings, all fixed except STG-431)
+- POS App: auth COMPLETE (35 endpoints, STG-431 open)
+
+Open findings (4):
+- STG-431 (P2): Chat service casts admin email x-user-id to UUID — 22P02
+- STG-433 (P3): Retailer password reset email links to /supplier/reset-password
+- STG-434 (P3): Supplier reset page wrong error for retailer tokens
+- STG-435 (P2): Chat support POST 500 — user_type check constraint
+
+Execution plan:
+1. Fix all 4 in one consolidated wave
+2. Single staging redeploy
+3. Impacted runtime recheck (chat, reset email, support conversation)
+4. Final readiness verdict
 ```
 
 ---
@@ -3337,5 +3346,3 @@ If migration fails, the container never starts, and the health check never passe
 
 *This file is the single source of truth. All other rule files are historical reference only.*
 *Claude reads this file first, follows only this file, and updates CLAUDE_CURRENT_STATE.json as it works.*
-
-

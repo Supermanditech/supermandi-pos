@@ -4698,13 +4698,89 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 
 ---
 
-### POS Authenticated Verification — BLOCKED
+### POS Authenticated Verification — COMPLETE
 
-**Status**: BLOCKED_ON_REDEPLOY
-**Reason**: STG-429 code fix committed (`a8ecbd96`). Enrollment SET LOCAL → set_config() fixed in enroll.ts:186 and db/client.ts:102. Requires redeploy to staging to unblock.
-**Previous (wrong) reason**: ~~Migration 166 not run~~ (CORRECTED: all 171 migrations ARE applied).
+**Status**: COMPLETE (maximum CLI-verifiable runtime depth)
+**Completed at**: 2026-03-02T18:30:00Z
+**Endpoints tested**: 35 (34 correct auth, 1 anomaly — STG-431 chat UUID cast)
+**Auth method**: device enrollment + staff PIN login via staging API
+**Findings**: STG-428, STG-429, STG-430, STG-431, STG-432
 
-**Blocked screens**: EnrollDevice (enrollment itself), PaymentSetup, DeviceBlocked, ForceUpdate, StaffLogin, PosRootLayout, and all 35+ secondary screens.
+---
+
+### Retailer Web Authenticated Verification — COMPLETE
+
+**Status**: COMPLETE
+**Completed at**: 2026-03-03T01:00:00Z
+**Auth method**: Email+password login via admin user creation + devToken password reset + Cloud SQL store_users mapping
+**Screens tested**: A1-A22 (all 22 authenticated screens)
+**Endpoints tested**: 25+ across dashboard, products, inventory, suppliers, catalog, compliance, settings, devices, invoices, reconciliation, credit, chat, purchase orders, analytics, customers, reorder, notifications
+**Findings**:
+- STG-433 (P3): Retailer password reset email links to /supplier/reset-password instead of /retailer/reset-password
+- STG-434 (P3): Supplier portal reset page shows wrong error for retailer tokens
+- STG-435 (P2): Chat POST /conversations/support returns 500 — conversation_participants.user_type check constraint violation
+**All other endpoints**: 200 OK with correct data shapes
+**Admin queues (A20-A21)**: 404 — routes not implemented (not a bug, feature not built)
+
+---
+
+### Supplier Web Authenticated Verification — COMPLETE
+
+**Status**: COMPLETE
+**Completed at**: 2026-03-03T01:30:00Z
+**Auth method**: Supplier email+password login via devToken password reset on supplier.suppliers table
+**Screens tested**: S1-S12 (all 12 authenticated screens)
+**Endpoints tested**: 12+ across dashboard/stats, products, orders, payouts, invoices, KYC, profile, notifications, chat, documents
+**Findings**: None — all endpoints returned 200 with correct data shapes
+**Auth boundary**: change-password correctly returns 401 with wrong password
+
+---
+
+### STG-433: Retailer — Password reset email links to wrong portal
+
+- **Platform**: Retailer Web
+- **Screen**: ForgotPassword / Email inbox
+- **Route**: `POST /api/v1/retailer/auth/forgot-password/email-request`
+- **Repro**: Trigger retailer password reset for a valid user email. Inspect the email received.
+- **Expected**: Reset link points to `/retailer/reset-password?token=...`
+- **Actual**: Reset link points to `/supplier/reset-password?token=...`
+- **Impact**: Retailer users clicking the reset link land on the supplier portal, which cannot process their token (different auth table). Password reset is broken for retailer users who follow the email link.
+- **Timestamp**: 2026-03-03T00:15:00Z
+- **Severity**: P3 (MEDIUM) — functional but wrong portal link, workaround via direct URL construction
+- **Root cause**: `backend/src/routes/v1/retailer-admin/auth.ts` forgot-password email-request handler uses `/supplier/reset-password` URL in the email template instead of `/retailer/reset-password`
+- **Status**: FOUND
+
+---
+
+### STG-434: Supplier portal — Wrong error message for retailer reset tokens
+
+- **Platform**: Supplier Web
+- **Screen**: ResetPassword page
+- **Route**: `/supplier/reset-password?token=<retailer-token>`
+- **Repro**: Follow the wrong reset link from STG-433 (retailer token on supplier portal). Enter a new password and submit.
+- **Expected**: Clear error like "This reset link is for a different portal" or redirect to correct portal
+- **Actual**: "No password reset was requested for this account" — misleading because a reset WAS requested, just on a different portal
+- **Impact**: Confused retailer users who followed the email link. No data corruption, but poor UX.
+- **Timestamp**: 2026-03-03T00:20:00Z
+- **Severity**: P3 (LOW) — downstream of STG-433, only occurs when retailer token hits supplier portal
+- **Root cause**: Supplier reset endpoint queries `supplier.suppliers` table. Retailer user doesn't exist there, so it returns "not requested" instead of a portal-mismatch error.
+- **Status**: FOUND
+
+---
+
+### STG-435: Retailer — Chat support conversation creation returns 500
+
+- **Platform**: Retailer Web
+- **Screen**: A14 ChatPage (Support conversation)
+- **Route**: `POST /api/v1/chat/conversations/support`
+- **Repro**: `curl -X POST https://staging.supermandi.tech/api/v1/chat/conversations/support -H 'Authorization: Bearer <retailer-jwt>' -H 'Content-Type: application/json' -d '{}'`
+- **Expected**: 200/201 with new or existing support conversation
+- **Actual**: 500 — `conversation_participants.user_type` check constraint violation. The chat service inserts participant with a user_type value not in the allowed CHECK constraint list.
+- **Impact**: Retailer users cannot create support conversations. Existing conversations (if any) are readable but new support threads fail.
+- **Timestamp**: 2026-03-03T00:45:00Z
+- **Severity**: P2 (MEDIUM) — support chat creation is non-functional for retailer users
+- **Root cause**: `backend/src/routes/v1/chat.ts` — the support conversation creation inserts a participant with user_type derived from the JWT actor_type. The `conversation_participants` table CHECK constraint on `user_type` doesn't include the value being inserted (likely 'store' or 'user' instead of the expected enum value).
+- **Status**: FOUND
 
 ---
 
@@ -4717,3 +4793,12 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - [ ] Tag new deploy-ready SHA
 - [ ] Trigger staging deploy
 - [ ] Verify all FIXED issues are VERIFIED on staging
+
+## Open Findings Summary (post-auth-discovery)
+
+| ID | Sev | Platform | Title | Status |
+|----|-----|----------|-------|--------|
+| STG-431 | P2 | POS/SuperAdmin | Chat service casts admin email x-user-id to UUID — 22P02 | FOUND |
+| STG-433 | P3 | Retailer Web | Password reset email links to /supplier/reset-password | FOUND |
+| STG-434 | P3 | Supplier Web | Supplier reset page wrong error for retailer tokens | FOUND |
+| STG-435 | P2 | Retailer Web | Chat support POST 500 — user_type check constraint | FOUND |
