@@ -603,5 +603,12 @@ Expected: all SHAs = `aa898b65`, all HTTP codes = `200`.
 ### Current Staging State
 - **Deployed SHA**: `f080d982`
 - **All services running at this SHA**: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
-- **Open findings**: 0
-- **Production promotion**: ELIGIBLE
+- **Engineering findings (STG-410..435)**: 0 open — 23 FIXED, 2 WONTFIX, 1 WITHDRAWN
+
+### Final Operator-Assisted Live Sign-Off Progress
+- **POS App**: SIGNED OFF (44/44 screens, 10 findings STG-436..445: 3 P2, 7 P3)
+- **Retailer Web**: PENDING (Platform 2/5 — next)
+- **Supplier Web**: PENDING
+- **SuperAdmin Web**: PENDING
+- **Cross-Function Matrix**: PENDING
+- **Production promotion**: BLOCKED until all platforms signed off

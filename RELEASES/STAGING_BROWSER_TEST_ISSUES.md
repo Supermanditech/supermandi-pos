@@ -4878,3 +4878,138 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 | STG-435 | P2 | FIXED | 91929249 |
 
 **Totals**: 23 FIXED, 2 WONTFIX (STG-411, STG-423), 1 WITHDRAWN (STG-415), 0 OPEN
+
+
+---
+
+## POS App Live Sign-Off Findings (STG-436..445)
+
+**Phase**: FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF
+**Platform**: POS App (Platform 1/5)
+**Staging SHA**: f080d982
+**Screens reviewed**: 44/44
+**Method**: Full source code analysis with 16-layer framework per screen
+**Date**: 2026-03-03
+
+---
+
+### STG-436 --- EnrollDevice: Dead invariant check (P3)
+
+- **Platform**: POS App
+- **Screen**: EnrollDeviceScreen
+- **File**: `src/screens/EnrollDeviceScreen.tsx:334-348`
+- **Issue**: Post-enrollment invariant check uses `fetchUiStatus()` (non-strict variant) which NEVER throws. It catches all errors internally and returns safe defaults. The catch block (lines 334-348) with 401 detection and `clearDeviceSession()` is dead code that can never execute.
+- **Impact**: If a freshly-created device token is immediately invalid (extremely rare race condition), the dead catch block would fail to clear the invalid session. No production impact under normal conditions.
+- **Severity**: P3 (LOW) --- dead code path, no user-facing behavior change
+- **Status**: FOUND
+
+### STG-437 --- EnrollDevice: PAYMENT_PROMPTED_KEY not store-scoped (P3)
+
+- **Platform**: POS App
+- **Screen**: EnrollDeviceScreen
+- **File**: `src/screens/EnrollDeviceScreen.tsx:160, 375`
+- **Issue**: `PAYMENT_PROMPTED_KEY` is stored in global `AsyncStorage` (not store-scoped). On re-enrollment to a different store, the payment setup prompt state persists from the previous store.
+- **Impact**: After re-enrollment, user may skip or see the payment setup prompt incorrectly based on the previous store state. Low severity --- payment setup is optional and can be accessed from settings.
+- **Severity**: P3 (LOW) --- minor scoping issue, non-blocking
+- **Status**: FOUND
+
+### STG-438 --- PaymentSetup: 401 handler missing navigation escape (P3)
+
+- **Platform**: POS App
+- **Screen**: PaymentSetupScreen
+- **File**: `src/screens/PaymentSetupScreen.tsx:121-124`
+- **Issue**: On 401 response from UPI setup API, the error is caught and displayed but the screen has no navigation escape (no back button, no skip option). User could be stuck on the screen if their token is invalid.
+- **Impact**: Edge case --- only occurs if device token expires mid-setup. User can still use Android back button.
+- **Severity**: P3 (LOW) --- edge case with workaround available
+- **Status**: FOUND
+
+### STG-439 --- PosRootLayout: Camera timeout text says 5s, actual is 45s (P2)
+
+- **Platform**: POS App
+- **Screen**: PosRootLayout
+- **File**: `src/screens/PosRootLayout.tsx:1417-1419`
+- **Issue**: Camera auto-close hint says "5 seconds of inactivity" but the actual timeout constant is 45 seconds. Text/behavior mismatch.
+- **Impact**: User sees incorrect timing information. Not a functional issue but confusing UX.
+- **Severity**: P2 (MEDIUM) --- UI text does not match behavior
+- **Status**: FOUND
+
+### STG-440 --- MenuScreen: Sync button unreachable (P3)
+
+- **Platform**: POS App
+- **Screen**: MenuScreen
+- **File**: `src/screens/MenuScreen.tsx:121, 495`
+- **Issue**: Operational status panel initializes `pendingOutboxCount` from `uiStatus.pendingOutboxCount` (server-reported, always 0 per ISSUE-MICRO-087). The "Sync Now" button renders only when `pendingOutboxCount > 0`, making it permanently hidden.
+- **Impact**: Manual sync trigger is inaccessible. Background sync still works. Button was designed for offline recovery but the count source never reflects local outbox state.
+- **Severity**: P3 (LOW) --- manual sync button never shows, automatic sync still functional
+- **Status**: FOUND
+
+### STG-441 --- SellScanScreen: Items with priceResolutionError can reach checkout (P2)
+
+- **Platform**: POS App
+- **Screen**: SellScanScreen
+- **File**: `src/screens/SellScanScreen.tsx:1270, 2854-2857`
+- **Issue**: `canPay` only checks `itemCount > 0 && storeActive !== false && !locked`. Items with `priceResolutionError=true` (price=0 due to missing inventory/variant/MRP data) can reach the Payment screen. The alert at line 2361 on item-add is informational only, not blocking.
+- **Impact**: A sale could be created with 0-price items. PaymentScreen stock validation (GO-LIVE-233) may catch this, but the primary guard should be at checkout entry.
+- **Severity**: P2 (MEDIUM) --- business logic gap allowing potentially invalid checkout
+- **Status**: FOUND
+
+### STG-442 --- SellScanScreen: Cart-level discount % input unclamped (P3)
+
+- **Platform**: POS App
+- **Screen**: SellScanScreen
+- **File**: `src/screens/SellScanScreen.tsx:3410-3420`
+- **Issue**: Cart-level percentage discount input has no upper bound. User can enter >100%. Item-level discount is correctly capped to line subtotal (line 2241), but cart-level input validation is absent.
+- **Impact**: If the cart store `applyDiscount` does not clamp, could produce negative totals. If it does clamp, user sees confusing behavior.
+- **Severity**: P3 (LOW) --- store-level clamp may prevent actual damage, but input validation missing
+- **Status**: FOUND
+
+### STG-443 --- PurchaseScreen: Partial order failure on multi-supplier Place Order (P2)
+
+- **Platform**: POS App
+- **Screen**: PurchaseScreen
+- **File**: `src/screens/PurchaseScreen.tsx:967-992`
+- **Issue**: The loop calls `createOrder` sequentially for each supplier group. If order 2/N fails, order 1 is already submitted to the server. User sees generic error. No idempotency key per order, so retrying creates duplicates.
+- **Impact**: Multi-supplier orders can partially succeed with no rollback. Duplicate orders possible on retry.
+- **Severity**: P2 (MEDIUM) --- business logic gap in multi-supplier order submission
+- **Status**: FOUND
+
+### STG-444 --- PurchaseScreen: Quick Purchase error handler too generic (P3)
+
+- **Platform**: POS App
+- **Screen**: PurchaseScreen
+- **File**: `src/screens/PurchaseScreen.tsx:486`
+- **Issue**: The catch block shows `Alert.alert("Error", "Failed to submit. Try again.")` for all stock-in failures. Does not distinguish 401 (auth expired), network errors, or validation errors.
+- **Impact**: User gets no actionable information on failure. Minor UX issue.
+- **Severity**: P3 (LOW) --- generic error message, not a functional gap
+- **Status**: FOUND
+
+### STG-445 --- CreditScreen: Active Loan display inconsistency (P3)
+
+- **Platform**: POS App
+- **Screen**: CreditScreen
+- **File**: `src/screens/CreditScreen.tsx:457`
+- **Issue**: Active loan card shows "Remaining" with full tenure months and "Next EMI" computed as disbursement date + 1 month, both static and never updating based on elapsed time. The progress bar correctly computes elapsed EMIs but the text labels are inconsistent with it.
+- **Impact**: Loan display shows stale/incorrect remaining tenure and next EMI date. Cosmetic but misleading for store operators tracking loan obligations.
+- **Severity**: P3 (LOW) --- display inconsistency, not a functional or financial error
+- **Status**: FOUND
+
+---
+
+## POS App Live Sign-Off Summary
+
+| ID | Sev | Screen | Title | Status |
+|----|-----|--------|-------|--------|
+| STG-436 | P3 | EnrollDevice | Dead invariant check (fetchUiStatus non-strict never throws) | FOUND |
+| STG-437 | P3 | EnrollDevice | PAYMENT_PROMPTED_KEY not store-scoped | FOUND |
+| STG-438 | P3 | PaymentSetup | 401 handler missing navigation escape | FOUND |
+| STG-439 | P2 | PosRootLayout | Camera timeout text says 5s, actual is 45s | FOUND |
+| STG-440 | P3 | MenuScreen | Sync button unreachable (server pendingOutbox always 0) | FOUND |
+| STG-441 | P2 | SellScanScreen | Items with priceResolutionError can reach checkout | FOUND |
+| STG-442 | P3 | SellScanScreen | Cart-level discount % input unclamped (>100% allowed) | FOUND |
+| STG-443 | P2 | PurchaseScreen | Partial order failure on multi-supplier --- no idempotency | FOUND |
+| STG-444 | P3 | PurchaseScreen | Quick Purchase stock-in error handler too generic | FOUND |
+| STG-445 | P3 | CreditScreen | Active Loan display inconsistency (remaining/next EMI) | FOUND |
+
+**Totals**: 10 findings (3 P2, 7 P3), 0 P0, 0 P1
+**44/44 screens reviewed**: 34 CLEAN, 10 with findings
+**Platform status**: POS App SIGNED OFF

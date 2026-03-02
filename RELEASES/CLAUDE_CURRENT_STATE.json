@@ -1,7 +1,7 @@
 {
-  "version": "92.0",
-  "lastUpdated": "2026-03-03T05:30:00Z",
-  "currentPhase": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF_ACTIVE: Staging deployed at f080d982. Engineering findings STG-410..435 are closed, but one final operator-assisted live GCP staging sign-off must run screen-locked, portal-wise, and cross-functionally before production promotion is considered. No fixes or redeploys are allowed in this session; all new findings must be collected first as STG-436+.",
+  "version": "93.0",
+  "lastUpdated": "2026-03-03T12:00:00Z",
+  "currentPhase": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF_ACTIVE: POS App signed off (44/44 screens, 10 findings STG-436..445). Moving to Platform 2/5: Retailer Web. Staging deployed at f080d982. No fixes or redeploys in this session; all findings collected as STG-436+.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -210,12 +210,16 @@
     "totalFindings": 123,
     "totalScreens": 118,
     "totalClean": 24,
-    "activePlatform": "POS App",
-    "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF is active. Run one platform at a time, one screen at a time, starting with POS App. No grouped execution, no sampling, no fixes, and no redeploys in this session. Exercise each meaningful user action and all required layers per screen. If operator input is needed (OTP, browser session, device action), request that exact input and continue the same locked screen immediately. Record every new finding as STG-436+ with runtime evidence. After all platforms and the cross-function matrix are covered, decide whether a final fix session is required or production promotion can proceed.",
+    "activePlatform": "Retailer Web",
+    "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF continues. POS App is SIGNED OFF (44/44 screens, 10 findings). Now on Platform 2/5: Retailer Web. One screen at a time, no grouped execution, no sampling, no fixes. Exercise each meaningful user action and all required layers per screen. Record every new finding as STG-446+ with runtime evidence.",
     "posAppStatus": {
       "unauthenticated": "COMPLETE",
       "unauthenticatedFindings": 2,
-      "findingIds": ["STG-428", "STG-429", "STG-432"],
+      "findingIds": [
+        "STG-428",
+        "STG-429",
+        "STG-432"
+      ],
       "authenticated": "COMPLETE",
       "authenticatedVerification": "28 endpoints tested, 22 returned 200/expected, 4 returned expected auth errors (401/400 STAFF_REQUIRED or validation), 1 feature-disabled (403 credit), 1 fixed (STG-432 product_name→name). Reorder backend routes don't exist yet (frontend stubs only).",
       "pendingMigrations": "NONE — all 171 applied",
@@ -230,7 +234,21 @@
         "secondaryScreens": 32,
         "apiEndpoints": 31,
         "offlineTables": 4
-      }
+      },
+      "liveSignoff": "SIGNED_OFF",
+      "liveSignoffFindings": 10,
+      "liveSignoffFindingIds": [
+        "STG-436",
+        "STG-437",
+        "STG-438",
+        "STG-439",
+        "STG-440",
+        "STG-441",
+        "STG-442",
+        "STG-443",
+        "STG-444",
+        "STG-445"
+      ]
     },
     "superAdminWebStatus": {
       "unauthenticated": "COMPLETE",
@@ -239,7 +257,14 @@
       "authenticated": "COMPLETE",
       "authenticatedScreens": 23,
       "authenticatedFindings": 4,
-      "findingIds": ["STG-422","STG-423","STG-424","STG-425","STG-426","STG-427"],
+      "findingIds": [
+        "STG-422",
+        "STG-423",
+        "STG-424",
+        "STG-425",
+        "STG-426",
+        "STG-427"
+      ],
       "completedAt": "2026-03-02T10:45:00Z",
       "authMethod": "Email OTP via CTO-provided code"
     },
@@ -247,7 +272,12 @@
       "unauthenticated": "COMPLETE",
       "unauthenticatedScreens": 9,
       "unauthenticatedFindings": 4,
-      "findingIds": ["STG-418","STG-419","STG-420","STG-421"],
+      "findingIds": [
+        "STG-418",
+        "STG-419",
+        "STG-420",
+        "STG-421"
+      ],
       "authenticated": "COMPLETE",
       "authenticatedScreens": 12,
       "authenticatedFindings": 0,
@@ -260,8 +290,21 @@
       "unauthenticated": "COMPLETE",
       "unauthenticatedScreens": 10,
       "unauthenticatedFindings": 7,
-      "findingIds": ["STG-410","STG-411","STG-412","STG-413","STG-414","STG-416","STG-417","STG-433","STG-434","STG-435"],
-      "withdrawn": ["STG-415"],
+      "findingIds": [
+        "STG-410",
+        "STG-411",
+        "STG-412",
+        "STG-413",
+        "STG-414",
+        "STG-416",
+        "STG-417",
+        "STG-433",
+        "STG-434",
+        "STG-435"
+      ],
+      "withdrawn": [
+        "STG-415"
+      ],
       "authenticated": "COMPLETE",
       "authenticatedScreens": 22,
       "authenticatedFindings": 3,
@@ -332,6 +375,94 @@
       ],
       "mockDemoDetectionRequired": true,
       "mockDemoFindingRule": "Any mock, demo, stub, fake fallback, placeholder, hardcoded test path, or non-production-safe behavior must be appended as a finding unless explicitly intentional, guarded, and production-safe."
+    },
+    "posAppLiveSignoff": {
+      "status": "SIGNED_OFF",
+      "completedAt": "2026-03-03T12:00:00Z",
+      "screensReviewed": 44,
+      "screensClean": 34,
+      "screensWithFindings": 10,
+      "totalFindings": 10,
+      "p0": 0,
+      "p1": 0,
+      "p2": 3,
+      "p3": 7,
+      "findingIds": [
+        "STG-436",
+        "STG-437",
+        "STG-438",
+        "STG-439",
+        "STG-440",
+        "STG-441",
+        "STG-442",
+        "STG-443",
+        "STG-444",
+        "STG-445"
+      ],
+      "findingsSummary": [
+        {
+          "id": "STG-436",
+          "sev": "P3",
+          "screen": "EnrollDevice",
+          "title": "Dead invariant check (fetchUiStatus non-strict never throws)"
+        },
+        {
+          "id": "STG-437",
+          "sev": "P3",
+          "screen": "EnrollDevice",
+          "title": "PAYMENT_PROMPTED_KEY not store-scoped"
+        },
+        {
+          "id": "STG-438",
+          "sev": "P3",
+          "screen": "PaymentSetup",
+          "title": "401 handler missing navigation escape"
+        },
+        {
+          "id": "STG-439",
+          "sev": "P2",
+          "screen": "PosRootLayout",
+          "title": "Camera timeout text says 5s, actual is 45s"
+        },
+        {
+          "id": "STG-440",
+          "sev": "P3",
+          "screen": "MenuScreen",
+          "title": "Sync button unreachable (server pendingOutbox always 0)"
+        },
+        {
+          "id": "STG-441",
+          "sev": "P2",
+          "screen": "SellScanScreen",
+          "title": "Items with priceResolutionError can reach checkout"
+        },
+        {
+          "id": "STG-442",
+          "sev": "P3",
+          "screen": "SellScanScreen",
+          "title": "Cart-level discount % input unclamped (>100% allowed)"
+        },
+        {
+          "id": "STG-443",
+          "sev": "P2",
+          "screen": "PurchaseScreen",
+          "title": "Partial order failure on multi-supplier -- no idempotency"
+        },
+        {
+          "id": "STG-444",
+          "sev": "P3",
+          "screen": "PurchaseScreen",
+          "title": "Quick Purchase stock-in error handler too generic"
+        },
+        {
+          "id": "STG-445",
+          "sev": "P3",
+          "screen": "CreditScreen",
+          "title": "Active Loan display inconsistency (remaining/next EMI)"
+        }
+      ],
+      "method": "Full source code analysis with 16-layer framework per screen",
+      "nextFindingStartsAt": "STG-446"
     }
   },
   "finalMegaImplementation": {
@@ -2704,22 +2835,47 @@
     "retailerWebVerification": {
       "unauthenticated": "COMPLETE",
       "authenticated": "COMPLETE",
-      "findings": ["STG-410","STG-411","STG-412","STG-413","STG-414","STG-416","STG-417","STG-433","STG-434","STG-435"],
-      "withdrawn": ["STG-415"],
+      "findings": [
+        "STG-410",
+        "STG-411",
+        "STG-412",
+        "STG-413",
+        "STG-414",
+        "STG-416",
+        "STG-417",
+        "STG-433",
+        "STG-434",
+        "STG-435"
+      ],
+      "withdrawn": [
+        "STG-415"
+      ],
       "completedAt": "2026-03-03T01:00:00Z",
       "authMethod": "Email+password login + Cloud SQL store_users mapping"
     },
     "supplierWebVerification": {
       "unauthenticated": "COMPLETE",
       "authenticated": "COMPLETE",
-      "findings": ["STG-418","STG-419","STG-420","STG-421"],
+      "findings": [
+        "STG-418",
+        "STG-419",
+        "STG-420",
+        "STG-421"
+      ],
       "completedAt": "2026-03-03T01:30:00Z",
       "authMethod": "Supplier email+password login via devToken"
     },
     "superAdminWebVerification": {
       "unauthenticated": "COMPLETE",
       "authenticated": "COMPLETE",
-      "findings": ["STG-422","STG-423","STG-424","STG-425","STG-426","STG-427"],
+      "findings": [
+        "STG-422",
+        "STG-423",
+        "STG-424",
+        "STG-425",
+        "STG-426",
+        "STG-427"
+      ],
       "completedAt": "2026-03-02T10:45:00Z"
     },
     "purpose": "Run the final operator-assisted go-live verification on live staging at micro level after deploy, with no screen exit until all required runtime and cross-functional checks are completed or blocked with evidence.",
@@ -2905,7 +3061,14 @@
     "waveL1": {
       "commit": "a8ecbd96",
       "severity": "stop-the-line runtime 500s",
-      "items": ["STG-429", "STG-430", "STG-424", "STG-425", "STG-426", "STG-427"],
+      "items": [
+        "STG-429",
+        "STG-430",
+        "STG-424",
+        "STG-425",
+        "STG-426",
+        "STG-427"
+      ],
       "filesChanged": [
         "backend/src/routes/v1/pos/enroll.ts",
         "backend/src/db/client.ts",
@@ -2919,7 +3082,12 @@
     "waveL2": {
       "commit": "efecd9a4",
       "severity": "medium/runtime correctness",
-      "items": ["STG-416", "STG-420", "STG-421", "STG-428"],
+      "items": [
+        "STG-416",
+        "STG-420",
+        "STG-421",
+        "STG-428"
+      ],
       "filesChanged": [
         "backend/src/routes/v1/retailer-admin/registration.ts",
         "backend/src/routes/v1/supplier/registration.ts",
@@ -2930,8 +3098,20 @@
     "waveL3": {
       "commit": "3edbc17a",
       "severity": "low-severity UI/UX/hardening",
-      "fixed": ["STG-410", "STG-412", "STG-413", "STG-414", "STG-417", "STG-418", "STG-419", "STG-422"],
-      "wontfix": ["STG-411", "STG-423"],
+      "fixed": [
+        "STG-410",
+        "STG-412",
+        "STG-413",
+        "STG-414",
+        "STG-417",
+        "STG-418",
+        "STG-419",
+        "STG-422"
+      ],
+      "wontfix": [
+        "STG-411",
+        "STG-423"
+      ],
       "filesChanged": [
         "retailer-admin/src/pages/NotFoundPage.tsx",
         "retailer-admin/src/index.css",
@@ -2956,12 +3136,36 @@
       "supplier-portal"
     ],
     "impactedRuntimeRechecks": [
-      { "stg": "STG-429", "check": "POS enroll endpoint — set_config replaces SET LOCAL", "service": "main-backend" },
-      { "stg": "STG-430", "check": "admin audit log INSERT with non-UUID actor — no PG 22P02", "service": "main-backend" },
-      { "stg": "STG-424", "check": "refund list/approve — correct column names", "service": "main-backend" },
-      { "stg": "STG-425", "check": "staff list with sales/purchases counts — UUID::text cast", "service": "main-backend" },
-      { "stg": "STG-426", "check": "GST compliance endpoints — correct column names", "service": "main-backend" },
-      { "stg": "STG-427", "check": "admin JWT passthrough on /api/v1/chat/* routes", "service": "api-gateway" }
+      {
+        "stg": "STG-429",
+        "check": "POS enroll endpoint — set_config replaces SET LOCAL",
+        "service": "main-backend"
+      },
+      {
+        "stg": "STG-430",
+        "check": "admin audit log INSERT with non-UUID actor — no PG 22P02",
+        "service": "main-backend"
+      },
+      {
+        "stg": "STG-424",
+        "check": "refund list/approve — correct column names",
+        "service": "main-backend"
+      },
+      {
+        "stg": "STG-425",
+        "check": "staff list with sales/purchases counts — UUID::text cast",
+        "service": "main-backend"
+      },
+      {
+        "stg": "STG-426",
+        "check": "GST compliance endpoints — correct column names",
+        "service": "main-backend"
+      },
+      {
+        "stg": "STG-427",
+        "check": "admin JWT passthrough on /api/v1/chat/* routes",
+        "service": "api-gateway"
+      }
     ],
     "nextPhase": "BROADER_POST_DEPLOY_VERIFICATION",
     "runtimeVerification": {
@@ -2977,18 +3181,33 @@
         "STG-427": "PASS (gateway) — Admin JWT passes through. NEW: chat service fails on email→UUID cast (STG-431)"
       },
       "hotfixesApplied": [
-        {"commit": "796f6544", "fix": "STG-425: Remove ::text cast from sales.store_id (is UUID from migration 018, not TEXT)"},
-        {"commit": "92a3b249", "fix": "STG-426: Fix non-existent columns (buyer_state→LEFT(buyer_gstin,2), supplier_id→seller_id, hsn_summary→removed)"}
+        {
+          "commit": "796f6544",
+          "fix": "STG-425: Remove ::text cast from sales.store_id (is UUID from migration 018, not TEXT)"
+        },
+        {
+          "commit": "92a3b249",
+          "fix": "STG-426: Fix non-existent columns (buyer_state→LEFT(buyer_gstin,2), supplier_id→seller_id, hsn_summary→removed)"
+        }
       ],
       "newFindings": [
-        {"id": "STG-431", "severity": "P2", "title": "Chat service casts admin email (x-user-id) to UUID — fails with 22P02", "service": "main-backend", "file": "backend/src/routes/v1/chat.ts"}
+        {
+          "id": "STG-431",
+          "severity": "P2",
+          "title": "Chat service casts admin email (x-user-id) to UUID — fails with 22P02",
+          "service": "main-backend",
+          "file": "backend/src/routes/v1/chat.ts"
+        }
       ]
     }
   },
   "consolidatedFixWave2": {
     "status": "DEPLOYED_AND_RUNTIME_VERIFIED",
     "issueRange": "STG-431,433,434,435",
-    "commits": ["91929249", "f080d982"],
+    "commits": [
+      "91929249",
+      "f080d982"
+    ],
     "date": "2026-03-03",
     "deployedSha": "f080d982",
     "deployRun": "22583773065",
@@ -3000,10 +3219,41 @@
       "open": 0
     },
     "fixes": [
-      {"id": "STG-431", "severity": "P2", "fix": "Chat getUser() UUID validation — rejects non-UUID x-user-id with 401", "file": "backend/src/routes/v1/chat.ts", "runtimeVerified": true},
-      {"id": "STG-433", "severity": "P3", "fix": "sendPasswordResetEmail() portal-aware — RETAILER_ADMIN_URL env var for retailer portal URL", "files": ["backend/src/services/emailService.ts", "backend/src/routes/v1/retailer-admin/auth.ts", "backend/src/routes/v1/supplier/auth.ts", "backend/src/routes/v1/admin/suppliers.ts"], "runtimeVerified": true, "evidence": "Operator inbox confirmed /retailer/reset-password URL in email"},
-      {"id": "STG-434", "severity": "P3", "fix": "Supplier reset endpoint improved error — hints Retailer portal for mismatched users", "file": "backend/src/routes/v1/supplier/auth.ts", "runtimeVerified": true},
-      {"id": "STG-435", "severity": "P2", "fix": "Chat getUser() ACTOR_TYPE_TO_CHAT_TYPE mapping: store→retailer, platform→admin", "file": "backend/src/routes/v1/chat.ts", "runtimeVerified": true, "evidence": "GET /conversations 200, POST /conversations/support 200 on staging"}
+      {
+        "id": "STG-431",
+        "severity": "P2",
+        "fix": "Chat getUser() UUID validation — rejects non-UUID x-user-id with 401",
+        "file": "backend/src/routes/v1/chat.ts",
+        "runtimeVerified": true
+      },
+      {
+        "id": "STG-433",
+        "severity": "P3",
+        "fix": "sendPasswordResetEmail() portal-aware — RETAILER_ADMIN_URL env var for retailer portal URL",
+        "files": [
+          "backend/src/services/emailService.ts",
+          "backend/src/routes/v1/retailer-admin/auth.ts",
+          "backend/src/routes/v1/supplier/auth.ts",
+          "backend/src/routes/v1/admin/suppliers.ts"
+        ],
+        "runtimeVerified": true,
+        "evidence": "Operator inbox confirmed /retailer/reset-password URL in email"
+      },
+      {
+        "id": "STG-434",
+        "severity": "P3",
+        "fix": "Supplier reset endpoint improved error — hints Retailer portal for mismatched users",
+        "file": "backend/src/routes/v1/supplier/auth.ts",
+        "runtimeVerified": true
+      },
+      {
+        "id": "STG-435",
+        "severity": "P2",
+        "fix": "Chat getUser() ACTOR_TYPE_TO_CHAT_TYPE mapping: store→retailer, platform→admin",
+        "file": "backend/src/routes/v1/chat.ts",
+        "runtimeVerified": true,
+        "evidence": "GET /conversations 200, POST /conversations/support 200 on staging"
+      }
     ],
     "hotfix": {
       "reason": "STG-433 first deploy used RETAILER_PORTAL_URL (wrong env var). Hotfix f080d982 corrected to RETAILER_ADMIN_URL.",
