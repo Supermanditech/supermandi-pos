@@ -2984,5 +2984,23 @@
         {"id": "STG-431", "severity": "P2", "title": "Chat service casts admin email (x-user-id) to UUID — fails with 22P02", "service": "main-backend", "file": "backend/src/routes/v1/chat.ts"}
       ]
     }
+  },
+  "consolidatedFixWave2": {
+    "status": "CODE_COMPLETE",
+    "issueRange": "STG-431,433,434,435",
+    "commit": "91929249",
+    "date": "2026-03-03",
+    "summary": {
+      "total": 4,
+      "fixed": 4
+    },
+    "fixes": [
+      {"id": "STG-431", "severity": "P2", "fix": "Chat getUser() UUID validation — rejects non-UUID x-user-id with 401", "file": "backend/src/routes/v1/chat.ts"},
+      {"id": "STG-433", "severity": "P3", "fix": "sendPasswordResetEmail() portal-aware — portalType param, RETAILER_PORTAL_URL for retailer", "files": ["backend/src/services/emailService.ts", "backend/src/routes/v1/retailer-admin/auth.ts", "backend/src/routes/v1/supplier/auth.ts", "backend/src/routes/v1/admin/suppliers.ts"]},
+      {"id": "STG-434", "severity": "P3", "fix": "Supplier reset endpoint improved error — hints Retailer portal for mismatched users", "file": "backend/src/routes/v1/supplier/auth.ts"},
+      {"id": "STG-435", "severity": "P2", "fix": "Chat getUser() ACTOR_TYPE_TO_CHAT_TYPE mapping: store→retailer, platform→admin", "file": "backend/src/routes/v1/chat.ts"}
+    ],
+    "servicesRequiringRedeploy": ["main-backend"],
+    "nextPhase": "STAGING_REDEPLOY_THEN_IMPACTED_RECHECK"
   }
 }
