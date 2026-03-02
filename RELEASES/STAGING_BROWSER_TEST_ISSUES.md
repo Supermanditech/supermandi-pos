@@ -4169,7 +4169,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: Link text says "Go to Dashboard" but navigates to `/retailer/login`.
 - **Timestamp**: 2026-03-02T03:30:00Z
 - **Severity**: P3
-- **Status**: FOUND
+- **Fix**: Link text now conditionally shows "Go to Login" when unauthenticated (no storeCode).
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ### STG-411: Retailer Web — nginx — Static assets missing 3 of 5 security headers
 - **Platform**: Retailer Web
@@ -4180,8 +4182,7 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: Only 2 of 5 present. HSTS, CSP, Referrer-Policy missing on static assets.
 - **Timestamp**: 2026-03-02T03:32:00Z
 - **Severity**: P3
-- **Status**: FOUND
-- **Note**: LOW impact — CSP/Referrer-Policy on JS/CSS assets is irrelevant (no HTML execution context). HSTS is delivered by the HTML document response.
+- **Status**: WONTFIX — LOW impact: CSP/Referrer-Policy on JS/CSS assets is irrelevant (no HTML execution context). HSTS is delivered by the HTML document response. nginx `add_header` inheritance is by design.
 
 ### STG-412: Retailer Web — NotFoundPage — No hover/focus styles on "Go to Dashboard" link
 - **Platform**: Retailer Web
@@ -4192,7 +4193,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: No hover/focus visual feedback.
 - **Timestamp**: 2026-03-02T03:35:00Z
 - **Severity**: P3
-- **Status**: FOUND
+- **Fix**: Added :hover and :focus-visible styles to .not-found-link class.
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ### STG-413: Retailer Web — HelpPage — Heading hierarchy skips h2 (h1→h3)
 - **Platform**: Retailer Web
@@ -4203,7 +4206,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: h1 → h3 (skips h2).
 - **Timestamp**: 2026-03-02T03:40:00Z
 - **Severity**: P3
-- **Status**: FOUND
+- **Fix**: Changed h3 → h2 for "Contact Us", "Quick Links", "Legal" section headings.
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ### STG-414: Retailer Web — HelpPage — No hover/focus styles on quick links and legal links
 - **Platform**: Retailer Web
@@ -4214,7 +4219,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: No hover/focus visual feedback on quick links.
 - **Timestamp**: 2026-03-02T03:42:00Z
 - **Severity**: P3
-- **Status**: FOUND
+- **Fix**: Added :hover (underline) and :focus-visible (outline) to .help-email-link and .help-link classes.
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ### STG-415: WITHDRAWN — FALSE POSITIVE
 - **Original claim**: Firebase authorized domains may not include `staging.supermandi.tech`.
@@ -4246,7 +4253,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: Hardcoded `https://supermandi.tech/...` pointing to production.
 - **Timestamp**: 2026-03-02T04:55:00Z
 - **Severity**: P3
-- **Status**: FOUND
+- **Fix**: Changed hardcoded `https://supermandi.tech/terms` and `/privacy` to relative `/terms` and `/privacy`.
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ---
 
@@ -4283,7 +4292,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: "Back to Dashboard" regardless of auth state.
 - **Timestamp**: 2026-03-02T09:27:00Z
 - **Severity**: P3
-- **Status**: FOUND
+- **Fix**: Changed link href from `/dashboard` to `/login` and text from "Back to Dashboard" to "Go to Login".
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ### STG-419: Supplier Web — SupportPage — Heading hierarchy skips h2 (h1→h3)
 - **Platform**: Supplier Web
@@ -4294,7 +4305,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Actual**: h1 → h3 (skips h2).
 - **Timestamp**: 2026-03-02T09:30:00Z
 - **Severity**: P3
-- **Status**: FOUND
+- **Fix**: Changed h3 → h2 for "Contact Us", "Quick Links", "Legal" section headings.
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ### STG-420: Supplier Web — OnboardPage — submit-kyc returns 500 with raw PostgreSQL error for non-UUID input
 - **Platform**: Supplier Web
@@ -4418,8 +4431,9 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Impact**: Attacker can probe emails to discover admin accounts. Mitigated by: (a) admin pool is small/known internally, (b) rate limiting exists on login endpoint, (c) endpoint requires valid email format.
 - **Timestamp**: 2026-03-02T10:30:00Z
 - **Severity**: P3 (LOW) — defense-in-depth gap, not exploitable without further OTP bypass
-- **Status**: FOUND
-- **Recommended fix**: Return `200 {"success":true, "message":"If this email is authorized, a verification code has been sent."}` regardless of email authorization status.
+- **Fix**: Non-admin emails now get generic 200 success response (same as admin emails), preventing enumeration.
+- **Commit**: Wave L3
+- **Status**: FIXED
 
 ---
 
@@ -4434,8 +4448,7 @@ Found during the post-implementation reiteration audit of the 185-ticket wave.
 - **Impact**: Poor error UX for malformed requests. No security impact.
 - **Timestamp**: 2026-03-02T10:30:00Z
 - **Severity**: P4 (INFO)
-- **Status**: FOUND
-- **Root cause**: Gateway proxies empty body to backend; backend may hang waiting for body data or fail silently.
+- **Status**: WONTFIX — Backend code correctly returns 400 for invalid email. The 408 occurs at the gateway proxy layer for truly empty bodies (no Content-Type). Edge case with no security impact.
 
 ---
 

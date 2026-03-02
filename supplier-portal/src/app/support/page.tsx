@@ -14,7 +14,7 @@ export default function HelpPage() {
 
       {/* Contact Section */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
-        <h3 className="font-semibold text-slate-900 text-sm mb-3">Contact Us</h3>
+        <h2 className="font-semibold text-slate-900 text-sm mb-3">Contact Us</h2>
         <p className="text-sm mb-1">
           <a href={`mailto:${SUPPORT_EMAIL}`} className="text-blue-600 font-medium hover:text-blue-700">
             {SUPPORT_EMAIL}
@@ -25,7 +25,7 @@ export default function HelpPage() {
 
       {/* Quick Links */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
-        <h3 className="font-semibold text-slate-900 text-sm mb-3">Quick Links</h3>
+        <h2 className="font-semibold text-slate-900 text-sm mb-3">Quick Links</h2>
         <ul className="space-y-2 text-sm">
           <li>
             <span className="text-slate-500 text-xs mr-2">Supplier Portal:</span>
@@ -44,7 +44,7 @@ export default function HelpPage() {
 
       {/* Legal */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
-        <h3 className="font-semibold text-slate-900 text-sm mb-3">Legal</h3>
+        <h2 className="font-semibold text-slate-900 text-sm mb-3">Legal</h2>
         <ul className="space-y-2 text-sm">
           <li><a href="/terms" className="text-blue-600 font-medium hover:text-blue-700">Terms of Service</a></li>
           <li><a href="/privacy" className="text-blue-600 font-medium hover:text-blue-700">Privacy Policy</a></li>

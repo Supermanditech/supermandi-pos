@@ -2544,6 +2544,8 @@ html.dark .login-otp-expiry--normal {
   text-decoration: none;
   font-size: 0.9375rem;
 }
+.help-email-link:hover { text-decoration: underline; }
+.help-email-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 
 .help-response-time {
   color: #94a3b8;
@@ -2566,6 +2568,8 @@ html.dark .login-otp-expiry--normal {
   font-size: 0.875rem;
   font-weight: 500;
 }
+.help-link:hover { text-decoration: underline; }
+.help-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 
 .help-link-label {
   color: #64748b;
@@ -3173,7 +3177,10 @@ html.dark .login-otp-expiry--normal {
   text-decoration: none;
   font-weight: 500;
   font-size: 14px;
+  transition: background 0.15s;
 }
+.not-found-link:hover { background: #1d4ed8; }
+.not-found-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 
 /* NotFoundPage: Dark mode */
 html.dark .not-found-code {

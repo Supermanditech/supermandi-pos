@@ -13,7 +13,7 @@ export default function NotFoundPage() {
         The page you're looking for doesn't exist or has been moved.
       </p>
       <Link to={dashboardPath} className="not-found-link">
-        Back to Dashboard
+        {storeCode ? 'Back to Dashboard' : 'Go to Login'}
       </Link>
     </div>
   );

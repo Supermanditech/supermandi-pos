@@ -15,7 +15,7 @@ export default function HelpPageContent() {
 
       {/* Contact Section */}
       <div className="help-card">
-        <h3 className="help-card-title">Contact Us</h3>
+        <h2 className="help-card-title">Contact Us</h2>
         <p className="help-no-margin">
           <a href={`mailto:${SUPPORT_EMAIL}`} className="help-email-link">
             {SUPPORT_EMAIL}
@@ -26,7 +26,7 @@ export default function HelpPageContent() {
 
       {/* Quick Links */}
       <div className="help-card">
-        <h3 className="help-card-title">Quick Links</h3>
+        <h2 className="help-card-title">Quick Links</h2>
         <ul className="help-link-list">
           <li>
             <span className="help-link-label">Retailer Portal:</span>
@@ -45,7 +45,7 @@ export default function HelpPageContent() {
 
       {/* Legal */}
       <div className="help-card">
-        <h3 className="help-card-title">Legal</h3>
+        <h2 className="help-card-title">Legal</h2>
         <ul className="help-link-list">
           <li>
             <a href="/terms" className="help-link">Terms of Service</a>

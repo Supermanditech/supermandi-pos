@@ -156,10 +156,14 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
   const normalizedEmail = email.toLowerCase().trim();
 
   // Check allowlist
+  // STG-422 FIX: Return generic success for non-admin emails to prevent email enumeration.
+  // Attacker cannot distinguish admin vs non-admin emails from the response.
   if (!isEmailAllowed(normalizedEmail)) {
     log.warn(`[GO-LIVE-LOGIN-004] Unauthorized admin login attempt: ${normalizedEmail}`);
-    return res.status(403).json({
-      error: { code: "NOT_AUTHORIZED", message: "This email is not authorized for admin access" }
+    return res.json({
+      success: true,
+      message: "If this email is authorized, a verification code has been sent.",
+      expiresIn: OTP_EXPIRY_MS / 1000,
     });
   }
 

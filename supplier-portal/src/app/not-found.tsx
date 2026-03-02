@@ -9,8 +9,8 @@ export default function NotFound() {
       <p className="text-sm text-slate-500 max-w-md mb-6">
         The page you're looking for doesn't exist or has been moved.
       </p>
-      <Link href="/dashboard" className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
-        Back to Dashboard
+      <Link href="/login" className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+        Go to Login
       </Link>
     </div>
   );

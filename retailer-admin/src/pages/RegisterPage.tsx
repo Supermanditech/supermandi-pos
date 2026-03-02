@@ -753,8 +753,8 @@ export default function RegisterPage() {
                     className="reg-checkbox" />
                   <span>
                     I confirm that all the details provided are correct and accurate. I agree to the{' '}
-                    <a href="https://supermandi.tech/terms" target="_blank" rel="noopener noreferrer" className="reg-terms-link">Terms of Service</a> and{' '}
-                    <a href="https://supermandi.tech/privacy" target="_blank" rel="noopener noreferrer" className="reg-terms-link">Privacy Policy</a>. <span className="reg-required-star">*</span>
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="reg-terms-link">Terms of Service</a> and{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="reg-terms-link">Privacy Policy</a>. <span className="reg-required-star">*</span>
                   </span>
                 </label>
                 {fieldErrors.agreement && <div className="reg-field-error">{fieldErrors.agreement}</div>}
