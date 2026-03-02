@@ -1,7 +1,7 @@
 {
-  "version": "87.0",
-  "lastUpdated": "2026-03-02T18:35:00Z",
-  "currentPhase": "BROADER_POST_DEPLOY_VERIFICATION: POS authenticated COMPLETE (35 endpoints verified, STG-432 fixed). STG-431 parked P2. Deploying e809b408. Next: Retailer Web authenticated verification (blocked on auth access — needs seed data or operator cookie).",
+  "version": "88.0",
+  "lastUpdated": "2026-03-02T19:00:00Z",
+  "currentPhase": "BROADER_POST_DEPLOY_VERIFICATION_COMPLETE: POS authenticated COMPLETE (35 endpoints). Retailer Web: pages load, auth barrier 401 correct, registration works, authenticated BLOCKED on Firebase OTP. Supplier Web: same pattern — pages load, auth barrier correct, BLOCKED on Firebase OTP. SuperAdmin was already COMPLETE. New: STG-431 (P2 parked), STG-432 (FIXED). All platforms at maximum CLI-verifiable depth.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -251,8 +251,10 @@
       "authenticated": "BLOCKED_ON_LIVE_AUTH_ACCESS",
       "authenticatedScreens": 12,
       "blockedAt": "2026-03-02T09:50:00Z",
+      "apiAuthBarrierVerified": true,
+      "apiAuthBarrierResult": "3/3 authenticated endpoints return 401 (not 500). 2/2 public registration endpoints work correctly. Portal root loads at 200, sub-pages 308 (Next.js redirect).",
       "blockerReasons": [
-        "same as Retailer — no seed data on staging, no credentials, no browser session"
+        "Firebase phone OTP requires browser — cannot trigger via CLI"
       ]
     },
     "retailerWebStatus": {
@@ -264,16 +266,15 @@
       "authenticated": "BLOCKED_ON_LIVE_AUTH_ACCESS",
       "authenticatedScreens": 22,
       "blockedAt": "2026-03-02T06:45:00Z",
+      "apiAuthBarrierVerified": true,
+      "apiAuthBarrierResult": "6/6 authenticated endpoints return 401 (not 500). 3/3 public registration endpoints work correctly. Portal pages load at 200.",
       "blockerReasons": [
-        "seed-test-data.js not run on staging Cloud SQL — no test accounts exist",
-        "no email/password credentials exist for any staging user",
         "Firebase phone OTP requires browser reCAPTCHA — cannot trigger via CLI",
         "no operator-supplied session cookie or JWT token available"
       ],
       "unblockOptions": [
-        "run seed-test-data.js against staging Cloud SQL",
         "operator provides sm_auth cookie from browser session",
-        "operator provides valid staging email + password"
+        "operator logs in via browser and provides JWT"
       ]
     },
     "platformOrder": [
