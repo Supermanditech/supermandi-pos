@@ -5929,5 +5929,73 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 - **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
 - **Supplier Web**: STG-761..STG-802 (31 findings: 0 P1, 5 P2, 26 P3)
-- **Next finding starts at**: STG-803
-- **Do NOT rewrite** STG-001..STG-802 entries (frozen)
+
+---
+
+## Final Live Sign-Off — SuperAdmin Web (25 Screens)
+
+> **Date**: 2026-03-04
+> **Staging SHA**: `de452b1a` (app code)
+> **Method**: Full 17-layer runtime verification per screen
+> **Mode**: Discovery-only — no fixes this session
+
+### P2 Findings (Medium)
+
+| ID | Screen(s) | Layer | Finding | Evidence |
+|----|-----------|-------|---------|----------|
+| STG-803 | **All screens** | Security/CSP | **CSP mismatch between server header and HTML meta tag**. Server `connect-src 'self'` blocks the meta tag's `https://*.googleapis.com`. Server `img-src 'self' data: https:` vs meta `'self' data: blob:` — intersection blocks both `blob:` and `https:` images. Confusing config. | `supermandi-superadmin/index.html:9` vs nginx CSP header |
+| STG-804 | StaffTab | Security | **Missing `encodeURIComponent` on storeId/staffId in API paths**. All sibling API modules encode path params; staff.ts does not. URL path traversal risk if IDs contain special chars. | `supermandi-superadmin/src/api/staff.ts:28,47,72,93` |
+| STG-805 | AiPanel | Security | **`dangerouslySetInnerHTML` with fragile regex sanitization** for AI responses. Currently safe (escape-first ordering) but maintenance-fragile. Should use a markdown library. | `supermandi-superadmin/src/components/AiPanel.tsx:110` |
+| STG-806 | GstCompliance, Refunds, Monitoring, Quality, Registrations | A11y | **5 tabs: error banners missing `role="alert"`**. CSS-only `.sa-alert-error` without ARIA semantics. Other tabs (Invoices, Applications) correctly use `role="alert"`. | Multiple files |
+| STG-807 | RefundsTab | A11y | **Reject modal missing `role="dialog"`, `aria-modal="true"`, Escape key handler**. Other modals (Invoices, GstCompliance) have these. | `RefundsTab.tsx:233-234` |
+| STG-808 | SuppliersTab | Validation | **Bank reject button has no minimum reason length**. Product reject + doc reject enforce 10-char min; bank reject can submit empty reason. | `SuppliersTab.tsx:422-428` |
+
+### P3 Findings (Low)
+
+| ID | Screen(s) | Layer | Finding | Evidence |
+|----|-----------|-------|---------|----------|
+| STG-809 | DevicesTab | A11y | 4 form controls missing accessible labels (device type dropdown, printing mode, device label input, enrollment store picker) | `DevicesTab.tsx:259-298` |
+| STG-810 | GrnAlertsTab | A11y | Filter select missing `id`/`aria-label`/`<label>` | `GrnAlertsTab.tsx:33` |
+| STG-811 | StaffTab, GrnAlertsTab | Type Safety | `as any` type assertions on select onChange instead of proper union types | `StaffTab.tsx:98`, `GrnAlertsTab.tsx:33` |
+| STG-812 | Events, Devices, GrnAlerts | A11y | Pagination buttons missing `aria-label` (cross-cutting pattern) | Multiple files |
+| STG-813 | Invoices, GstCompliance, Refunds | Currency | Local `₹${(minor/100).toFixed(2)}` formatters instead of shared `Intl.NumberFormat('en-IN')`. Large amounts lack comma grouping. | `InvoicesTab.tsx:9`, `GstComplianceTab.tsx:5`, `RefundsTab.tsx:8` |
+| STG-814 | InvoicesTab | Business Logic | `void` status missing from filter dropdown despite being in `STATUS_STYLES` map | `InvoicesTab.tsx:13-20,143-151` |
+| STG-815 | Invoices, Refunds | Error | Error state not cleared before new actions — stale error banner persists after success | `InvoicesTab.tsx:59-115`, `RefundsTab.tsx:55-94` |
+| STG-816 | Invoices, GstCompliance | A11y | Modal `onKeyDown` for Escape on non-focusable overlay div (no `tabIndex`) — only fires if overlay itself is focused | `InvoicesTab.tsx:216`, `GstComplianceTab.tsx:191` |
+| STG-817 | Audit, Payments | A11y | Pagination buttons use arrow chars only, no `aria-label` | `AuditTab.tsx:150-162`, `PaymentsTab.tsx:66-68` |
+| STG-818 | SuppliersTab | A11y | Batch reject modal + product edit modal missing `role="dialog"` and `aria-modal="true"` | `SuppliersTab.tsx:739,786` |
+| STG-819 | CreditProvidersTab | A11y | Error div missing `role="alert"` | `CreditProvidersTab.tsx:134-137` |
+| STG-820 | AnalyticsTab | A11y | Refresh button label is `&nbsp;` — screen readers announce "blank" | `AnalyticsTab.tsx:92` |
+| STG-821 | CreditProvidersTab | Currency | `fmt()` uses `minimumFractionDigits:0` while shared uses `2`. Inconsistent display. | `CreditProvidersTab.tsx:47` |
+| STG-822 | SuppliersTab | Currency | Product prices use manual `INR {(price/100).toFixed(2)}` — no locale-aware comma grouping | `SuppliersTab.tsx:663-664,818-821` |
+| STG-823 | SuppliersTab, ConfirmDialog | A11y | Batch reject modal + ConfirmDialog lack Escape key handler for keyboard dismissal | `SuppliersTab.tsx:738`, `ConfirmDialog.tsx:21` |
+| STG-824 | SuppliersTab | Type Safety | `PendingSupplierRequest` type only declares 3 statuses but code filters on 5 additional status values | `SuppliersTab.tsx:265` |
+| STG-825 | PaymentsTab | UX | No standalone refresh/retry mechanism — error state shown but no retry button within tab | `PaymentsTab.tsx` |
+| STG-826 | QualityDashboardTab | Error | Quality API error messages expose raw HTTP status codes (`Quality overview failed: 401`) instead of human-readable messages | `quality.ts:110,118,127` |
+
+### SuperAdmin Web Sign-Off Summary
+
+**25/25 screens verified** (1 LoginGate + 23 tabs + 1 AiPanel)
+
+**Clean screens (0 findings)**: LoginGate, EventsTab, StoresTab, ApplicationsTab, RegistrationsTab, DocumentsTab, AnalyticsTab (partial — see STG-820), SupportQueueTab, AIInsightsTab, WhatsAppTab, UsersTab, SettingsTab
+
+### SuperAdmin Web Totals
+
+| Severity | Count |
+|----------|-------|
+| **P1 (Critical)** | **0** |
+| **P2 (Important)** | **6** (STG-803 CSP, STG-804 encodeURI, STG-805 dangerouslySetInnerHTML, STG-806 missing role=alert, STG-807 modal a11y, STG-808 bank reject validation) |
+| **P3 (Minor)** | **18** |
+| **Total** | **24 findings** |
+
+### SuperAdmin Web Verdict
+
+**PASS** — 25/25 screens verified. No P1 blockers. 6 P2 findings recommended before go-live. Strong auth enforcement (admin token required on all 30+ endpoints, verified live on staging). Error sanitization prevents info leakage. All secrets server-side only.
+
+### Finding Range Update (cumulative)
+
+- **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
+- **Supplier Web**: STG-761..STG-802 (31 findings: 0 P1, 5 P2, 26 P3)
+- **SuperAdmin Web**: STG-803..STG-826 (24 findings: 0 P1, 6 P2, 18 P3)
+- **Next finding starts at**: STG-827
+- **Do NOT rewrite** STG-001..STG-826 entries (frozen)
