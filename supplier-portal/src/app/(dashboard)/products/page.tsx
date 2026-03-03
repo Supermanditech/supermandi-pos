@@ -455,8 +455,8 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Products</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Products</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
             Manage your product catalog. Products pending approval will be
             reviewed by SuperMandi.
           </p>
@@ -466,8 +466,8 @@ export default function ProductsPage() {
         <button
           onClick={() => showForm ? handleCancel() : setShowForm(true)}
           className="btn btn-primary"
-          disabled={!showForm && (isError || supplier?.verificationStatus !== 'ACTIVE')}
-          title={isError ? 'Products failed to load' : supplier?.verificationStatus !== 'ACTIVE' ? 'Supplier verification required' : undefined}
+          disabled={!showForm && (isError || supplier?.verificationStatus !== 'verified')}
+          title={isError ? 'Products failed to load' : supplier?.verificationStatus !== 'verified' ? 'Supplier verification required' : undefined}
         >
           {showForm ? 'Cancel' : '+ Add Product'}
         </button>
@@ -789,23 +789,23 @@ export default function ProductsPage() {
         ) : filteredProducts && filteredProducts.length > 0 ? (
           <table className="w-full">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+              <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   Product
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   SKU / Barcode
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   Price
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   MOQ
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   Status
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   Actions
                 </th>
               </tr>
@@ -814,11 +814,11 @@ export default function ProductsPage() {
               {filteredProducts.map((product) => (
                 <tr key={product.id} className="border-b border-slate-100">
                   <td className="py-3 px-4">
-                    <div className="font-medium text-slate-800">
+                    <div className="font-medium text-slate-800 dark:text-slate-100">
                       {product.name}
                     </div>
                     {product.category && (
-                      <div className="text-sm text-slate-500">
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
                         {product.category}
                       </div>
                     )}
@@ -906,8 +906,8 @@ export default function ProductsPage() {
 
       {/* GL-WF-063: Pagination Controls */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border border-slate-200 rounded-lg">
-          <div className="text-sm text-slate-600">
+        <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+          <div className="text-sm text-slate-600 dark:text-slate-300">
             Showing {((currentPage - 1) * pageSize) + 1} to{' '}
             {Math.min(currentPage * pageSize, pagination.total)} of {pagination.total} products
           </div>

@@ -457,16 +457,17 @@ export default function PurchaseScreen({
 
     setSubmitting(true);
     try {
+      // STG-466: Convert user-entered major units (rupees) to minor units (paise) for backend
       const payload: StockInPayload = {
         items: quickItems.map((item) => ({
           barcode: item.barcode,
           productName: item.productName,
           quantity: item.quantity,
-          buyPrice: item.buyPrice,
-          sellPrice: item.sellPrice,
+          buyPrice: Math.round(item.buyPrice * 100),
+          sellPrice: Math.round(item.sellPrice * 100),
           isNewProduct: item.isNew,
         })),
-        totalAmount: quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0),
+        totalAmount: Math.round(quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0) * 100),
         // SA-P0-004: Include optional supplier info for walk-in purchases
         ...(walkInSupplierName.trim() ? { supplierName: walkInSupplierName.trim() } : {}),
         ...(walkInSupplierGstin.trim() ? { supplierGstin: walkInSupplierGstin.trim() } : {}),
@@ -516,7 +517,8 @@ export default function PurchaseScreen({
     // UIUX-POS-013: proceedWithSubmit must be in deps to avoid stale closure
   }, [stockInReady, stockInBlocker, retryStockIn, proceedWithSubmit]);
 
-  const quickTotal = quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0);
+  // STG-465: Convert major→minor (×100) for formatMoney which expects paise
+  const quickTotal = Math.round(quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0) * 100);
 
   // POS-BUY-001: Legacy addToCart/cartTotal/cartQty removed — replaced by purchaseCartStore
 

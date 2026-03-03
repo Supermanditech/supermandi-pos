@@ -27,8 +27,7 @@ import EmptyState from "../components/ui/EmptyState";
 // =============================================================================
 
 function getTodayString(): string {
-  const d = new Date();
-  return d.toISOString().split("T")[0]; // YYYY-MM-DD
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
 function formatDateDDMMYYYY(dateStr: string): string {
@@ -116,7 +115,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (d > today) return prev;
-      return d.toISOString().split("T")[0];
+      return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
     });
   }, []);
 
@@ -318,6 +317,17 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                     {formatMoney(summary.salesByPaymentType.dueMinor)}
                   </Text>
                 </View>
+                {summary.salesByPaymentType.cardMinor > 0 && (
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryRowIcon}>
+                      <MaterialCommunityIcons name="credit-card-outline" size={16} color={colors.accent} />
+                      <Text style={styles.summaryLabel}>Card</Text>
+                    </View>
+                    <Text style={styles.summaryValue}>
+                      {formatMoney(summary.salesByPaymentType.cardMinor)}
+                    </Text>
+                  </View>
+                )}
 
                 {summary.refundsMinor > 0 && (
                   <>
@@ -350,6 +360,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 <View style={styles.cashInputRow}>
                   <Text style={styles.cashInputPrefix}>₹</Text>
                   <TextInput
+                    testID="daily-closing-cash-input"
                     style={styles.cashInput}
                     placeholder="0.00"
                     placeholderTextColor={colors.textTertiary}
@@ -404,6 +415,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
               {/* Close day button */}
               <Pressable
+                testID="daily-closing-submit-btn"
                 accessibilityRole="button"
                 style={[styles.closeDayButton, closing && styles.closeDayButtonDisabled]}
                 onPress={handleCloseDay}

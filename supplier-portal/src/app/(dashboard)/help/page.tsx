@@ -50,28 +50,28 @@ export default function DashboardHelpPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Help & Support' }]} />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Help & Support</h1>
-        <p className="text-slate-500 mt-1">Find answers to common questions or contact our support team.</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Help & Support</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Find answers to common questions or contact our support team.</p>
       </div>
 
       {/* Contact Section */}
       <div className="card mb-6">
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Contact Us</h2>
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Contact Us</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+          <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
             <Mail className="text-primary-600 flex-shrink-0" size={20} />
             <div>
-              <p className="text-sm font-medium text-slate-700">Email Support</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Email Support</p>
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary-600 hover:text-primary-700 text-sm">
                 {SUPPORT_EMAIL}
               </a>
               <p className="text-xs text-slate-400 mt-0.5">We typically respond within 24 hours</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+          <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
             <MessageSquare className="text-primary-600 flex-shrink-0" size={20} />
             <div>
-              <p className="text-sm font-medium text-slate-700">Live Chat</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Live Chat</p>
               <p className="text-sm text-slate-500">Use the Chat feature in the sidebar</p>
               <p className="text-xs text-slate-400 mt-0.5">Available during business hours</p>
             </div>
@@ -81,14 +81,14 @@ export default function DashboardHelpPage() {
 
       {/* FAQ Section */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Frequently Asked Questions</h2>
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Frequently Asked Questions</h2>
         <div className="space-y-4">
           {FAQ_ITEMS.map((item, index) => (
-            <div key={index} className="border border-slate-200 rounded-lg p-4">
+            <div key={index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <item.icon className="text-primary-600 flex-shrink-0 mt-0.5" size={18} />
                 <div>
-                  <h3 className="font-medium text-slate-800 text-sm">{item.question}</h3>
+                  <h3 className="font-medium text-slate-800 dark:text-slate-100 text-sm">{item.question}</h3>
                   <p className="text-sm text-slate-500 mt-1">{item.answer}</p>
                 </div>
               </div>

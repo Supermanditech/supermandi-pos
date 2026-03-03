@@ -93,7 +93,7 @@ export function SettingsTab({
         <div className="sa-flex sa-gap-8 sa-mb-12">
           <button onClick={refreshSettings} disabled={settingsLoading}>{settingsLoading ? "Loading..." : "Refresh"}</button>
         </div>
-        {settingsError && <div className="errorText sa-mb-8">{settingsError} <button onClick={refreshSettings} className="sa-btn-ghost-sm" style={{ marginLeft: 8 }}>Retry</button></div>}
+        {settingsError && <div className="errorText sa-mb-8" role="alert">{settingsError} <button onClick={refreshSettings} className="sa-btn-ghost-sm" style={{ marginLeft: 8 }}>Retry</button></div>}
         <div className="sa-grid-auto" style={{ gap: 16 }}>
           <div className="sa-stat-card sa-bg-surface-alt">
             <h4 className="sa-section-title">System Information</h4>
@@ -130,7 +130,7 @@ export function SettingsTab({
           <h3 className="sa-text-lg sa-fw-700 sa-mb-12">Feature Kill Switch</h3>
           <div className="muted sa-mb-12">Disable features globally. POS respects changes on next ui-status fetch.</div>
           <button onClick={refreshFeatureFlags} disabled={featureFlagsLoading} className="sa-mb-12">{featureFlagsLoading ? "Loading..." : "Refresh Flags"}</button>
-          {featureFlagsError && <div className="banner sa-mb-8">{featureFlagsError}</div>}
+          {featureFlagsError && <div className="banner sa-mb-8" role="alert">{featureFlagsError}</div>}
           <div className="tableWrap">
             <table className="table">
               <thead>
@@ -168,6 +168,7 @@ export function SettingsTab({
               value={selectedStoreId}
               onChange={(e) => handleStoreSelect(e.target.value)}
               className="sa-select" style={{ minWidth: 260 }}
+              aria-label="Select store for feature flag overrides"
             >
               <option value="">-- Select a store --</option>
               {storeDirectory.map((s) => (
@@ -180,7 +181,7 @@ export function SettingsTab({
               </button>
             )}
           </div>
-          {storeFlagsError && <div className="banner sa-mb-8">{storeFlagsError}</div>}
+          {storeFlagsError && <div className="banner sa-mb-8" role="alert">{storeFlagsError}</div>}
           {selectedStoreId && storeFlags.length > 0 && (
             <div className="tableWrap">
               <table className="table">

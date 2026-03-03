@@ -163,7 +163,7 @@ export function AuditTab({
           </div>
         </div>
 
-        {auditLogsError && <div className="errorText sa-mb-8">{auditLogsError}</div>}
+        {auditLogsError && <div className="errorText sa-mb-8" role="alert">{auditLogsError}</div>}
 
         <table className="table">
           <thead>

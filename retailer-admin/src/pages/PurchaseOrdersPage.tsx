@@ -94,6 +94,7 @@ export default function PurchaseOrdersPage() {
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     if (!accessToken) return;
@@ -126,8 +127,15 @@ export default function PurchaseOrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
+  const closeDetailModal = () => {
+    setDetailModalOpen(false);
+    setSelectedPO(null);
+    setDetailError(null);
+  };
+
   const openDetail = async (orderId: string) => {
     if (!accessToken) return;
+    setDetailModalOpen(true);
     setDetailLoading(true);
     setDetailError(null);
     try {
@@ -282,11 +290,11 @@ export default function PurchaseOrdersPage() {
 
       {/* Detail Modal */}
       <Modal
-        isOpen={!!selectedPO || detailLoading || !!detailError}
-        onClose={() => { setSelectedPO(null); setDetailError(null); }}
+        isOpen={detailModalOpen}
+        onClose={closeDetailModal}
         title={selectedPO ? `PO: ${selectedPO.poNumber}` : detailError ? 'Error' : 'Loading...'}
         actions={
-          <button onClick={() => { setSelectedPO(null); setDetailError(null); }} className="modal-btn modal-btn-primary">
+          <button onClick={closeDetailModal} className="modal-btn modal-btn-primary">
             Close
           </button>
         }

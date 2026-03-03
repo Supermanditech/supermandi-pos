@@ -47,7 +47,7 @@ export function GrnAlertsTab({
         </span>
       </div>
 
-      {grnAlertsError && <div className="banner sa-mb-12">{grnAlertsError}</div>}
+      {grnAlertsError && <div className="banner sa-mb-12" role="alert">{grnAlertsError}</div>}
 
       {grnAlerts.length > 0 && (
         <div className="tableWrap">

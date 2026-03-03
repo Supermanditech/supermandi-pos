@@ -12,7 +12,7 @@ export default function DashboardLoading() {
       {/* Stat cards skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+          <div key={i} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
             <Skeleton className="h-3" width="50%" />
             <Skeleton className="h-8" width="30%" />
           </div>

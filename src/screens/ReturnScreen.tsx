@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
+import { uuidv4 } from "../utils/uuid";
 import { BackHeader } from "../components/ui/BackHeader";
 import { apiClient } from "../services/api/apiClient";
 import { asError } from "../utils/errorUtils";
@@ -89,11 +90,13 @@ async function lookupSale(billRef: string): Promise<SaleLookup> {
   return response.sale;
 }
 
+// STG-468: Include idempotencyKey to prevent duplicate refunds on retry
 async function processRefund(data: {
   saleId: string;
   items: ReturnItem[];
   reason: ReturnReason;
   refundMethod: RefundMethod;
+  idempotencyKey: string;
 }): Promise<{ refundId: string; refundAmountMinor: number }> {
   const response = await apiClient.post<{
     refundId: string;
@@ -131,6 +134,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
   const [refundMethod, setRefundMethod] = useState<RefundMethod | null>(null);
 
   // Process state
+  // STG-468: Stable idempotency key generated once per return attempt
+  const [idempotencyKey, setIdempotencyKey] = useState(() => uuidv4());
   const [processing, setProcessing] = useState(false);
   const [refundResult, setRefundResult] = useState<{
     refundId: string;
@@ -218,6 +223,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
         })),
         reason,
         refundMethod,
+        idempotencyKey,
       });
       setRefundResult(result);
       setStep("SUCCESS");

@@ -64,9 +64,7 @@ export default function InvoicesPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('PDF download failed:', err);
-      // UIUX-SUP-013: Show user feedback on PDF download failure
+    } catch {
       toast.error('Failed to download PDF. Please try again.');
     }
   };
@@ -77,8 +75,8 @@ export default function InvoicesPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Invoices' }]} />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Invoices</h1>
-        <p className="text-slate-500 mt-1">View invoices for your sales and commissions.</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Invoices</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">View invoices for your sales and commissions.</p>
       </div>
 
       {/* Filters */}
@@ -86,7 +84,7 @@ export default function InvoicesPage() {
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+          className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-slate-200"
           aria-label="Filter by invoice status"
         >
           <option value="">All Statuses</option>
@@ -133,11 +131,11 @@ export default function InvoicesPage() {
 
       {/* Table */}
       {!isLoading && invoices.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
+                <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                   <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Invoice #</th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Date</th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Buyer</th>
@@ -198,7 +196,7 @@ export default function InvoicesPage() {
       {selectedId && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[5vh] z-50"
           onClick={() => setSelectedId(null)}>
-          <div className="bg-white rounded-lg w-[90%] max-w-2xl max-h-[85vh] overflow-auto p-6"
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-[90%] max-w-2xl max-h-[85vh] overflow-auto p-6"
             role="dialog"
             aria-modal="true"
             aria-label="Invoice detail"

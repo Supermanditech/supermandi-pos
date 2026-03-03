@@ -74,7 +74,7 @@ export function StaffTab({
         )}
       </div>
 
-      {staffError && <div className="banner sa-mb-12">{staffError}</div>}
+      {staffError && <div className="banner sa-mb-12" role="alert">{staffError}</div>}
       {staffSuccess && <div className="sa-alert-success sa-mb-12">{staffSuccess}</div>}
 
       {showAddStaff && (

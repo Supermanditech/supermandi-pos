@@ -304,8 +304,8 @@ export default function OrdersPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Orders' }]} />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Orders</h1>
-        <p className="text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Orders</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
           Manage incoming orders from retailers. Update order status to keep
           customers informed.
         </p>
@@ -747,7 +747,7 @@ export default function OrdersPage() {
             {/* SUP-POS-008: Order Timeline */}
             {orderEvents && orderEvents.length > 0 && (
               <div className="border border-slate-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-slate-800 mb-3">Order Timeline</h3>
+                <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-3">Order Timeline</h3>
                 <div className="space-y-3">
                   {orderEvents.map((event: OrderEvent) => (
                     <div key={event.id} className="flex items-start gap-3 text-sm">
@@ -768,7 +768,7 @@ export default function OrdersPage() {
             {/* GO-LIVE-029: Added shipment date fields */}
             {showShipmentForm && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'submitted') && (
               <div className="border border-slate-200 rounded-lg p-4 mb-6 bg-slate-50">
-                <h3 className="font-medium text-slate-800 mb-3">Add Shipment Details</h3>
+                <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-3">Add Shipment Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm text-slate-600 mb-1">Carrier</label>

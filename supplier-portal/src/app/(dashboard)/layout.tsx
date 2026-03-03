@@ -203,7 +203,7 @@ export default function DashboardLayout({
           <>
             <button
               onClick={() => setShowLogoutConfirm(false)}
-              className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-all"
+              className="px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
             >
               Cancel
             </button>
@@ -219,7 +219,7 @@ export default function DashboardLayout({
           </>
         }
       >
-        <p className="text-slate-600">
+        <p className="text-slate-600 dark:text-slate-300">
           Are you sure you want to logout? Any unsaved changes will be lost.
         </p>
       </Modal>
@@ -263,8 +263,8 @@ export default function DashboardLayout({
         {/* GL-WF-034: Email Verification Banner */}
         {/* SUP-006: Only show email verification banner when LimitedModeBanner is NOT showing (no duplicate banners) */}
         {supplier && !supplier.emailVerified && supplier.verificationStatus === 'verified' && (
-          <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
-            <p className="text-blue-800 text-sm">
+          <div className="bg-blue-50 dark:bg-blue-950 border-b border-blue-200 dark:border-blue-800 px-6 py-3 flex items-center justify-between">
+            <p className="text-blue-800 dark:text-blue-200 text-sm">
               <span className="font-medium">Email Not Verified:</span>{' '}
               Please verify your email to access all features.
             </p>
@@ -304,13 +304,13 @@ export default function DashboardLayout({
 
         {/* GO-LIVE: Show error message banner if email send failed */}
         {verificationMessage && verificationMessage.type === 'error' && !showVerificationModal && (
-          <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between">
-            <p className="text-red-800 text-sm">
+          <div className="bg-red-50 dark:bg-red-950 border-b border-red-200 dark:border-red-800 px-6 py-3 flex items-center justify-between">
+            <p className="text-red-800 dark:text-red-200 text-sm">
               <span className="font-medium">Error:</span> {verificationMessage.text}
             </p>
             <button
               onClick={() => setVerificationMessage(null)}
-              className="text-red-600 hover:text-red-800 text-sm"
+              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 text-sm"
             >
               Dismiss
             </button>
@@ -324,17 +324,17 @@ export default function DashboardLayout({
             onClick={() => setShowVerificationModal(false)}
           >
             <div
-              className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
                 Verify Your Email
               </h3>
-              <p className="text-slate-600 mb-2">
+              <p className="text-slate-600 dark:text-slate-300 mb-2">
                 Enter the 6-digit verification code sent to your email address.
               </p>
               {/* ISSUE-MICRO-099: Note about email delivery */}
-              <p className="text-slate-500 text-xs mb-4">
+              <p className="text-slate-500 dark:text-slate-400 text-xs mb-4">
                 If you don&apos;t see the email, please check your spam or junk folder.
               </p>
 
@@ -354,7 +354,7 @@ export default function DashboardLayout({
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="Enter 6-digit code"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-center text-2xl tracking-widest font-mono mb-4 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center text-2xl tracking-widest font-mono mb-4 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-slate-900 dark:text-slate-100"
               />
 
               <div className="flex gap-3 justify-end">
@@ -364,7 +364,7 @@ export default function DashboardLayout({
                     setVerificationCode('');
                     setVerificationMessage(null);
                   }}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-all"
+                  className="px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
                 >
                   Cancel
                 </button>
@@ -402,7 +402,7 @@ export default function DashboardLayout({
                 </button>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                 <button
                   onClick={async () => {
                     setVerificationLoading(true);

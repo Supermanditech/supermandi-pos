@@ -21,6 +21,7 @@ import * as orderApi from "../services/api/orderApi";
 import type { PurchaseOrderWithItems, PurchaseOrderItem } from "../services/api/orderApi";
 import { formatOrderNumber, getStatusLabel } from "../services/api/orderApi";
 import { getDeviceStoreId } from "../services/deviceSession";
+import { isOnline } from "../services/networkStatus";
 
 // =============================================================================
 // TYPES
@@ -101,7 +102,8 @@ export default function GRNScreen({
       setReceiveQuantities(initialQuantities);
     } catch (err) {
       if (__DEV__) console.error("[GRNScreen] Failed to load order:", err);
-      setError("Failed to load order details");
+      const online = await isOnline();
+      setError(online ? "Failed to load order details" : "No internet connection. Please check your network and try again.");
     } finally {
       setLoading(false);
     }
@@ -369,9 +371,10 @@ export default function GRNScreen({
         );
       } catch (err) {
         if (__DEV__) console.error("[GRNScreen] Failed to receive:", err);
+        const online = await isOnline();
         Alert.alert(
-          "Error",
-          "Failed to receive goods. Please try again."
+          online ? "Error" : "Offline",
+          online ? "Failed to receive goods. Please try again." : "No internet connection. Your changes were not saved. Please check your network and try again."
         );
       } finally {
         setSubmitting(false);
@@ -484,7 +487,7 @@ export default function GRNScreen({
             color={colors.error}
           />
           <Text style={styles.errorText}>{error || "Order not found"}</Text>
-          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={loadOrder}>
+          <Pressable testID="grn-retry-button" accessibilityRole="button" style={styles.retryButton} onPress={loadOrder}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -531,6 +534,7 @@ export default function GRNScreen({
             color={colors.textTertiary}
           />
           <TextInput
+            testID="grn-search-input"
             style={styles.searchInput}
             placeholder="Scan barcode or search..."
             placeholderTextColor={colors.textTertiary}
@@ -613,6 +617,8 @@ export default function GRNScreen({
           { paddingBottom: insets.bottom + 180 },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       />
 
       {/* Notes Input */}
@@ -685,6 +691,7 @@ export default function GRNScreen({
 
         {/* Submit Button */}
         <Pressable
+          testID="grn-submit-button"
           accessibilityRole="button"
           style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
           onPress={handleSubmit}

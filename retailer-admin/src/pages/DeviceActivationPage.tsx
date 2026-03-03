@@ -104,7 +104,7 @@ export default function DeviceActivationPage() {
       const response = await authFetch('/api/v1/retailer-admin/devices', accessToken);
       if (response.ok) {
         const data = await safeJson(response);
-        setDevices(data.devices || []);
+        setDevices(data?.devices || []);
       } else if (response.status === 401) {
         setError('Session expired. Please log in again.');
       } else {
@@ -146,14 +146,14 @@ export default function DeviceActivationPage() {
 
       const data = await safeJson(response);
 
-      if (response.ok && data.success) {
+      if (response.ok && data?.success) {
         setSuccess(`Device activated successfully!${data.device_id ? ` Device ID: ${data.device_id.substring(0, 8)}...` : ''}`);
         setActivationCode('');
         // Reload devices list
         loadDevices();
       } else {
         // Handle specific error codes
-        const errorCode = data.error?.code;
+        const errorCode = data?.error?.code;
         switch (errorCode) {
           case 'CODE_NOT_FOUND':
             setError('Activation code not found. Please check the code and try again.');
@@ -165,10 +165,10 @@ export default function DeviceActivationPage() {
             setError('This activation code has expired. Please generate a new code on the POS device.');
             break;
           case 'VALIDATION_ERROR':
-            setError(data.error?.message || 'Invalid activation code format.');
+            setError(data?.error?.message || 'Invalid activation code format.');
             break;
           default:
-            setError(data.error?.message || 'Failed to activate device. Please try again.');
+            setError(data?.error?.message || 'Failed to activate device. Please try again.');
         }
       }
     } catch (err: any) {

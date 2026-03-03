@@ -210,7 +210,11 @@ export default function LoginPage() {
       const data = await safeJson(response);
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Login failed');
+        throw new Error(data?.error?.message || 'Login failed');
+      }
+
+      if (!data) {
+        throw new Error('Unexpected server response. Please try again.');
       }
 
       const result = data as OtpLoginResponse;
@@ -264,6 +268,10 @@ export default function LoginPage() {
       });
       if (response.ok) {
         const result = await safeJson<any>(response);
+        if (!result) {
+          setError('Unexpected server response. Please try again.');
+          return;
+        }
         login(result.token, result.refreshToken || authData.refreshToken, authData.user, store);
       } else {
         setError('Failed to select store. Please try again.');
@@ -327,7 +335,11 @@ export default function LoginPage() {
 
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Login failed');
+        throw new Error(data?.error?.message || 'Login failed');
+      }
+
+      if (!data) {
+        throw new Error('Unexpected server response. Please try again.');
       }
 
       const result = data as OtpLoginResponse;

@@ -241,7 +241,7 @@ export default function ProductsPage() {
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await safeJson(response);
-      setProducts(data.data || []);
+      setProducts(data?.data || []);
     } catch (err) {
       // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -266,7 +266,7 @@ export default function ProductsPage() {
         return;
       }
       const data = await safeJson(response);
-      setSuppliers(data.data || []);
+      setSuppliers(data?.data || []);
     } catch (err) {
       // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -408,7 +408,7 @@ export default function ProductsPage() {
       if (response.status === 401) return;
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to delete product');
+        throw new Error(data?.error?.message || 'Failed to delete product');
       }
       setSuccess('Product deleted successfully!');
       setDeleteConfirm(null);
@@ -597,13 +597,13 @@ export default function ProductsPage() {
         throw new Error('This product was updated elsewhere. Please refresh and try again.');
       }
       if (response.status === 422) {
-        const errData = await safeJson(response) as { error?: { message?: string; details?: Record<string, string> } };
-        const details = errData.error?.details;
+        const errData = await safeJson(response) as { error?: { message?: string; details?: Record<string, string> } } | null;
+        const details = errData?.error?.details;
         if (details && Object.keys(details).length > 0) {
           const fieldErrors = Object.entries(details).map(([k, v]) => `${k}: ${v}`).join(', ');
           throw new Error(`Validation error: ${fieldErrors}`);
         }
-        throw new Error(errData.error?.message || 'Validation failed. Please check your input.');
+        throw new Error(errData?.error?.message || 'Validation failed. Please check your input.');
       }
 
       const data = await safeJson(response) as ProductCreateResponse;
@@ -686,9 +686,9 @@ export default function ProductsPage() {
       if (response.status === 401) return;
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to preview products');
+        throw new Error(data?.error?.message || 'Failed to preview products');
       }
-      const rows = data.data?.previewRows || [];
+      const rows = data?.data?.previewRows || [];
       setBulkPreview(rows.map((r: any) => ({
         name: r.name,
         barcode: r.barcode || null,
@@ -700,7 +700,7 @@ export default function ProductsPage() {
         stock: r.stock || 0,
         mode: r.mode as 'PACKAGED' | 'LOOSE_BULK',
       })));
-      if (data.data?.invalidCount > 0) {
+      if (data?.data?.invalidCount > 0) {
         setError(`${data.data.invalidCount} row(s) have errors. Fix them before importing.`);
       }
     } catch (err) {
@@ -730,12 +730,12 @@ export default function ProductsPage() {
       const data = await safeJson(response);
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to import products');
+        throw new Error(data?.error?.message || 'Failed to import products');
       }
 
-      const created = data.data?.created || 0;
+      const created = data?.data?.created || 0;
       // STG-214: Report partial failures from bulk paste
-      const errors = data.data?.errors || data.data?.categorizedWarnings || [];
+      const errors = data?.data?.errors || data?.data?.categorizedWarnings || [];
       if (errors.length > 0) {
         setSuccess(`Imported ${created} products. ${errors.length} row(s) failed — check the data and retry those rows.`);
       } else {

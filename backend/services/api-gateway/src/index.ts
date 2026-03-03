@@ -71,6 +71,10 @@ if (config.env !== 'development') {
 // Production: CORS_ALLOWED_ORIGINS="https://supermandi.tech,https://www.supermandi.tech"
 // Development: falls back to CORS_DEV_ORIGINS or standard local dev origins
 const corsEnvOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+// STG-481: Warn at startup if wildcard CORS is configured in a non-development environment
+if (corsEnvOrigins.includes('*') && config.env !== 'development') {
+  logger.warn('[CORS] Wildcard CORS_ALLOWED_ORIGINS detected in non-development env — restrict to actual staging/production domains before go-live');
+}
 const allowedOrigins: string[] = corsEnvOrigins.length > 0
   ? corsEnvOrigins
   : config.env !== 'development'
@@ -208,7 +212,10 @@ app.use((req, res, next) => {
 // This allows the proxy to re-serialize and forward the body to backend services
 // The proxy's onProxyReq handler will write req.body back to the proxy request
 // Note: Using 10mb as fallback since per-endpoint limit is checked above
+// STG-482: express.json limit enforces actual body parsing limit even when
+// Content-Length header is absent (e.g. chunked transfer encoding)
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Correlation ID (must be first for logging)
 app.use(correlationIdMiddleware);

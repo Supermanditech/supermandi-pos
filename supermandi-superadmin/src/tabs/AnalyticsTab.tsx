@@ -64,6 +64,9 @@ export function AnalyticsTab({
           <div className="cardTitle">Analytics</div>
           <div className="muted">POS + Consumer + Purchases (admin-only)</div>
         </div>
+        <span className="sa-badge-info sa-text-xs" style={{ padding: "3px 10px", borderRadius: 6, fontWeight: 600, whiteSpace: "nowrap" }}>
+          Live Data
+        </span>
       </div>
 
       <div className="tableWrap" style={{ paddingTop: 0 }}>
@@ -105,7 +108,7 @@ export function AnalyticsTab({
           ))}
         </div>
 
-        {analyticsError && <div className="banner sa-mt-12">{analyticsError}</div>}
+        {analyticsError && <div className="banner sa-mt-12" role="alert">{analyticsError}</div>}
 
         {/* UNMAPPED.041: Loading skeleton when data is null and loading */}
         {analyticsLoading && (

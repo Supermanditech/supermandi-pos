@@ -1299,10 +1299,12 @@ const PaymentScreen = () => {
           }
 
           // LIVE.POS.SPLIT_PAYMENT_NAV_REPLACE.001: Use replace to prevent back-to-repay
+          // STG-467: Include saleId for WhatsApp bill sharing (parity with non-split path)
           navigation.replace("SuccessPrint", {
             paymentMode: "CASH", // Split shows as CASH on receipt
             transactionId,
             billId: billRef || "",
+            saleId: saleId || undefined,
             saleItems: isPartialSale ? saleItems : undefined,
             saleTotalMinor: isPartialSale ? totalMinor : undefined,
             saleCurrency: isPartialSale ? currency : undefined,

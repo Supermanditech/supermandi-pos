@@ -63,7 +63,7 @@ function formatDisplayDate(dateStr: string): string {
 }
 
 function getYYYYMMDD(date: Date): string {
-  return date.toISOString().split("T")[0];
+  return date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
 /** Generate plain text report for thermal printer */
@@ -550,7 +550,7 @@ export default function DailyReportScreen({
 
       {/* Date picker row */}
       <View style={styles.datePicker}>
-        <Pressable accessibilityRole="button" style={styles.dateArrow} onPress={handlePrevDay}>
+        <Pressable testID="daily-report-prev-day" accessibilityRole="button" style={styles.dateArrow} onPress={handlePrevDay}>
           <MaterialCommunityIcons
             name="chevron-left"
             size={28}
@@ -756,6 +756,7 @@ export default function DailyReportScreen({
           {/* Action buttons */}
           <View style={styles.actions}>
             <Pressable
+              testID="daily-report-print-btn"
               accessibilityRole="button"
               style={[styles.actionButton, styles.printButton]}
               onPress={handlePrint}
@@ -778,6 +779,7 @@ export default function DailyReportScreen({
               )}
             </Pressable>
             <Pressable
+              testID="daily-report-share-btn"
               accessibilityRole="button"
               style={[styles.actionButton, styles.shareButton]}
               onPress={handleShare}

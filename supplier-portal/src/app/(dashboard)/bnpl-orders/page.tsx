@@ -88,7 +88,7 @@ export default function BnplOrdersPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'BNPL Orders' }]} />
 
       <div className="mt-4 mb-6">
-        <h1 className="text-xl font-bold text-slate-900">BNPL-Backed Orders</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">BNPL-Backed Orders</h1>
         <p className="text-sm text-slate-500 mt-1">
           Orders financed through credit providers — payment guaranteed
         </p>
@@ -97,22 +97,22 @@ export default function BnplOrdersPage() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500"><Banknote size={14} /> Total Financed</div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><Banknote size={14} /> Total Financed</div>
             <div className="text-lg font-bold mt-1">{formatCurrency(summary.totalFinancedMinor)}</div>
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500"><AlertTriangle size={14} /> Outstanding</div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><AlertTriangle size={14} /> Outstanding</div>
             <div className={`text-lg font-bold mt-1 ${summary.outstandingMinor > 0 ? 'text-red-600' : ''}`}>
               {formatCurrency(summary.outstandingMinor)}
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500"><CheckCircle2 size={14} /> Repaid</div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><CheckCircle2 size={14} /> Repaid</div>
             <div className="text-lg font-bold mt-1 text-green-600">{formatCurrency(summary.totalRepaidMinor)}</div>
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500"><Activity size={14} /> Active Orders</div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><Activity size={14} /> Active Orders</div>
             <div className="text-lg font-bold mt-1">{summary.activeOrders}</div>
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function BnplOrdersPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
         {isLoading ? (
           <div className="p-4 space-y-3 animate-pulse">
             {[...Array(5)].map((_, i) => (
@@ -166,20 +166,20 @@ export default function BnplOrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-slate-200 bg-slate-50">
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Store</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Provider</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Amount</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Outstanding</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Due Date</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Guaranteed</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Store</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Provider</th>
+                  <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Amount</th>
+                  <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Outstanding</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Due Date</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Guaranteed</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map(order => (
                   <tr key={order.drawdownId} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{order.storeName}</div>
+                      <div className="font-medium text-slate-900 dark:text-slate-100">{order.storeName}</div>
                       <div className="text-xs text-slate-400">{order.storeCode}</div>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{order.providerName}</td>
@@ -204,7 +204,7 @@ export default function BnplOrdersPage() {
             </table>
           </div>
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border border-slate-200 rounded-lg">
+            <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
               <span className="text-sm text-slate-600">
                 Page {currentPage} of {totalPages} ({total} orders)
               </span>

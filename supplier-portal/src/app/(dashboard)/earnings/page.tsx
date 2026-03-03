@@ -72,8 +72,8 @@ export default function EarningsPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Earnings' }]} />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Earnings & Payouts</h1>
-        <p className="text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Earnings & Payouts</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
           Track your earnings and view payout history.
         </p>
       </div>
@@ -123,22 +123,22 @@ export default function EarningsPage() {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="card">
-            <p className="text-sm text-slate-500">Total Revenue</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Total Revenue</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">
               {formatCurrency(summary.totalRevenuePaise)}
             </p>
           </div>
 
           <div className="card">
-            <p className="text-sm text-slate-500">Available Balance</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Available Balance</p>
             <p className="text-2xl font-bold text-green-600 mt-1">
               {formatCurrency(summary.availableBalancePaise)}
             </p>
           </div>
 
           <div className="card">
-            <p className="text-sm text-slate-500">Total Paid Out</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Total Paid Out</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">
               {formatCurrency(summary.totalPaidPaise)}
             </p>
             <p className="text-xs text-slate-400 mt-1">
@@ -147,7 +147,7 @@ export default function EarningsPage() {
           </div>
 
           <div className="card">
-            <p className="text-sm text-slate-500">Pending Payouts</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Pending Payouts</p>
             <p className="text-2xl font-bold text-yellow-600 mt-1">
               {formatCurrency(summary.totalPendingPaise + summary.totalProcessingPaise)}
             </p>
@@ -198,7 +198,7 @@ export default function EarningsPage() {
 
       {/* Payout History */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Payout History</h2>
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Payout History</h2>
 
         {payoutsLoading ? (
           <div className="flex justify-center py-8">
@@ -354,7 +354,7 @@ export default function EarningsPage() {
           onClick={() => setSelectedPayoutId(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
             role="dialog"
             aria-modal="true"
             aria-label="Payout details"
@@ -362,7 +362,7 @@ export default function EarningsPage() {
           >
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-slate-800">Payout Details</h2>
+                <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Payout Details</h2>
                 <button
                   onClick={() => setSelectedPayoutId(null)}
                   className="text-slate-400 hover:text-slate-600"

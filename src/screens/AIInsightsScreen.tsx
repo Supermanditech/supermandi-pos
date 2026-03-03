@@ -69,7 +69,14 @@ export default function AIInsightsScreen({ onBack }: Props) {
         }
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
+      const msg = err instanceof Error ? err.message : 'Failed to load';
+      if (msg.includes('404') || msg.includes('not found')) {
+        setError('AI Insights are not yet available for your store. This feature will be activated soon.');
+      } else if (msg.includes('network') || msg.includes('timeout') || msg.includes('fetch')) {
+        setError('Unable to connect. Please check your internet connection and try again.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -253,7 +260,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
+        <Pressable testID="ai-insights-back-btn" onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>AI Insights</Text>
@@ -264,6 +271,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
         {tabs.map(t => (
           <Pressable
             key={t.key}
+            testID={`ai-tab-${t.key}`}
             onPress={() => setTab(t.key)}
             style={[styles.tab, tab === t.key && styles.activeTab]}
             accessibilityLabel={t.label}
@@ -282,9 +290,10 @@ export default function AIInsightsScreen({ onBack }: Props) {
 
       {/* Error */}
       {error && (
-        <View style={styles.errorBar}>
+        <Pressable style={styles.errorBar} onPress={() => { setLoading(true); fetchData(); }} accessibilityRole="button" accessibilityLabel="Tap to retry">
           <Text style={styles.errorText}>{error}</Text>
-        </View>
+          <Text style={[styles.errorText, { fontWeight: '600', marginTop: 4 }]}>Tap to retry</Text>
+        </Pressable>
       )}
 
       {/* Content */}

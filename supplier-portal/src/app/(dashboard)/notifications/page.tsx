@@ -85,7 +85,7 @@ export default function NotificationsPage() {
 
       <div className="flex justify-between items-center mt-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Notifications</h1>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Notifications</h1>
           <p className="text-sm text-slate-500 mt-1">
             {total} total {unreadCount > 0 && `(${unreadCount} unread)`}
           </p>
@@ -111,7 +111,7 @@ export default function NotificationsPage() {
       {loading ? (
         <div className="space-y-3 p-4 animate-pulse">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex gap-3 p-3 bg-white rounded-lg border border-slate-100">
+            <div key={i} className="flex gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
               <div className="w-10 h-10 bg-slate-200 rounded-full flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 bg-slate-200 rounded w-3/4" />
@@ -144,13 +144,13 @@ export default function NotificationsPage() {
               key={n.id}
               onClick={() => !n.isRead && markAsRead(n.id)}
               className={`flex gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                n.isRead ? 'bg-white border-slate-200' : 'bg-green-50 border-green-200 hover:bg-green-100'
+                n.isRead ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900'
               }`}
             >
               <div className="flex-shrink-0 mt-0.5">{getIcon(n.type)}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">
-                  <h3 className={`text-sm ${n.isRead ? 'font-medium' : 'font-semibold'} text-slate-900`}>{n.title}</h3>
+                  <h3 className={`text-sm ${n.isRead ? 'font-medium' : 'font-semibold'} text-slate-900 dark:text-slate-100`}>{n.title}</h3>
                   <span className="text-xs text-slate-400 flex-shrink-0 ml-2">
                     {formatDateTime(n.createdAt)}
                   </span>

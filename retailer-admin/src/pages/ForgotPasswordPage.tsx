@@ -110,20 +110,25 @@ export default function ForgotPasswordPage() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
     try {
+      // STG-472: Normalize phone before backend call (backend stores +91 prefix)
+      let normalizedForBackend = cleanedPhone;
+      if (!normalizedForBackend.startsWith('+')) {
+        normalizedForBackend = normalizedForBackend.length === 10 ? `+91${normalizedForBackend}` : `+${normalizedForBackend}`;
+      }
       // Verify account exists
       const response = await fetch(
         `${API_GATEWAY_BASE}/api/v1/retailer-admin/auth/forgot-password/request`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: cleanedPhone }),
+          body: JSON.stringify({ phone: normalizedForBackend }),
           credentials: 'include',
           signal: controller.signal,
         }
       );
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || data.message || 'Account verification failed');
+        throw new Error(data?.error?.message || data?.message || 'Account verification failed');
       }
 
       // Send OTP via Firebase
@@ -215,7 +220,7 @@ export default function ForgotPasswordPage() {
       );
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || data.message || 'Password reset failed');
+        throw new Error(data?.error?.message || data?.message || 'Password reset failed');
       }
       setStep('success');
     } catch (err) {
@@ -313,7 +318,7 @@ export default function ForgotPasswordPage() {
       );
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || data.message || 'Password reset failed');
+        throw new Error(data?.error?.message || data?.message || 'Password reset failed');
       }
       setStep('success');
     } catch (err) {

@@ -259,8 +259,8 @@ export function SuppliersTab({
         </button>
       </div>
 
-      {suppliersError && <div className="banner" style={{ margin: "0 16px 12px" }}>{suppliersError}</div>}
-      {supplierActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{supplierActionError}</div>}
+      {suppliersError && <div className="banner" role="alert" style={{ margin: "0 16px 12px" }}>{suppliersError}</div>}
+      {supplierActionError && <div className="banner" role="alert" style={{ margin: "0 16px 12px" }}>{supplierActionError}</div>}
 
       {pendingSuppliers.filter(s => ["pending", "KYC_SUBMITTED", "PAYMENTS_SUBMITTED"].includes(s.status)).length === 0 ? (
         <div className="empty">
@@ -559,7 +559,7 @@ export function SuppliersTab({
         </div>
       </div>
 
-      {productActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{productActionError}</div>}
+      {productActionError && <div className="banner" role="alert" style={{ margin: "0 16px 12px" }}>{productActionError}</div>}
 
       {/* T-188: Batch action buttons — shown when products exist */}
       {pendingProducts.length > 0 && (
@@ -943,7 +943,7 @@ export function SuppliersTab({
                 </select>
               </div>
 
-              {editProductError && <div className="banner">{editProductError}</div>}
+              {editProductError && <div className="banner" role="alert">{editProductError}</div>}
               {editProductSuccess && <div className="muted" style={{ color: "var(--color-success)", marginTop: 8 }}>{editProductSuccess}</div>}
             </div>
 

@@ -253,11 +253,20 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
         applyModal.aadhaarLast4
       );
 
+      // STG-471: Handle "processing"/"pending" as valid intermediate states, not errors
       if (response.success && response.applicationStatus === "approved") {
         setApplyModal((prev) => ({
           ...prev,
           step: "success",
           loading: false,
+        }));
+      } else if (response.success && (response.applicationStatus === "processing" || response.applicationStatus === "pending")) {
+        setApplyModal((prev) => ({
+          ...prev,
+          step: "success",
+          loading: false,
+          // Show processing message instead of error
+          successMessage: t("credit.kycProcessing", "KYC verification is being processed. You will be notified once approved."),
         }));
       } else {
         setApplyModal((prev) => ({

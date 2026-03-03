@@ -61,8 +61,8 @@ function groupEntriesByDate(entries: LedgerEntry[]): DailySales[] {
 
   for (const entry of entries) {
     const date = new Date(entry.createdAt);
-    const dateKey = date.toISOString().split("T")[0];
-    // UIUX-POS-015: Compute totalValue from unitCost * abs(deltaQty)
+    const dateKey = date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    // STG-469: unitCost is cost price (paise), not sell price — label reflects this
     const entryValue = Math.abs(entry.deltaQty) * (entry.unitCost || 0);
 
     const existing = groups.get(dateKey);
@@ -276,10 +276,10 @@ function SalesDayCard({ day }: { day: DailySales }) {
       </View>
 
       <View style={styles.cardBody}>
-        {/* UIUX-POS-015: Show daily revenue */}
+        {/* STG-469: Label corrected — unitCost is cost price, not sell/revenue */}
         <View style={styles.cardStat}>
           <Text style={styles.cardStatValue}>{formatMoney(day.totalValue)}</Text>
-          <Text style={styles.cardStatLabel}>Revenue</Text>
+          <Text style={styles.cardStatLabel}>Cost Value</Text>
         </View>
         <View style={styles.cardStat}>
           <Text style={styles.cardStatValue}>{day.transactions}</Text>
@@ -358,11 +358,11 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
         </Pressable>
       </View>
 
-      {/* Summary Bar — UIUX-POS-015: Added total revenue */}
+      {/* Summary Bar — STG-469: Corrected label (unitCost = cost, not revenue) */}
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{formatMoney(totalRevenue)}</Text>
-          <Text style={styles.summaryLabel}>Revenue</Text>
+          <Text style={styles.summaryLabel}>Cost Value</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>

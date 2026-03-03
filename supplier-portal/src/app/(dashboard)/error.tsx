@@ -17,9 +17,9 @@ export default function DashboardError({ error, reset }: ErrorPageProps) {
 
   return (
     <div className="flex items-center justify-center min-h-[400px] p-8">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-6 text-center">
-        <h2 className="text-xl font-semibold text-slate-800 mb-2">Something went wrong</h2>
-        <p className="text-slate-600 mb-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 text-center">
+        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Something went wrong</h2>
+        <p className="text-slate-600 dark:text-slate-300 mb-4">
           An error occurred while loading this page. Please try again.
         </p>
         <button

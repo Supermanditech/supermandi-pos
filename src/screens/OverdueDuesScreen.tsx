@@ -324,9 +324,10 @@ export default function OverdueDuesScreen({
       const message = `Dear ${due.customerName}, you have an outstanding payment of ${amountStr} from ${dateStr}. Please pay at your earliest. - ${storeName}`;
 
       // Try WhatsApp first, fallback to Share
-      const phoneNumber = due.customerPhone.startsWith("+91")
-        ? due.customerPhone
-        : `+91${due.customerPhone.replace(/^0+/, "")}`;
+      let phone = due.customerPhone.replace(/\D/g, "");
+      if (phone.length === 10) phone = `91${phone}`;
+      if (!phone.startsWith("91")) phone = `91${phone}`;
+      const phoneNumber = `+${phone}`;
       const whatsappUrl = `whatsapp://send?phone=${encodeURIComponent(
         phoneNumber
       )}&text=${encodeURIComponent(message)}`;

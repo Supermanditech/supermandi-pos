@@ -139,7 +139,8 @@ export default function ImportPage() {
         throw new Error(data?.error?.message || 'Upload failed');
       }
       const uploadData = await safeJson(uploadResp) as any;
-      const newJobId = uploadData.data.jobId;
+      const newJobId = uploadData?.data?.jobId;
+      if (!newJobId) throw new Error('Upload succeeded but no job ID returned');
       setJobId(newJobId);
 
       // Step 2: Validate
@@ -165,7 +166,7 @@ export default function ImportPage() {
         throw new Error(errorDetails?.message || 'Validation failed. Please check your file format.');
       }
       const validateData = await safeJson(validateResp) as any;
-      setValidation(validateData.data);
+      setValidation(validateData?.data || null);
       setStep('review');
     } catch (err) {
       // IMPORT-TIMEOUT-NO-UI-FEEDBACK: detect timeout/network errors for specific messaging
@@ -277,17 +278,17 @@ export default function ImportPage() {
 
       if (resp.status === 202) {
         // Async commit started — poll for progress
-        setCommitProgress(data.data?.progress || { created: 0, total: 0 });
+        setCommitProgress(data?.data?.progress || { created: 0, total: 0 });
         startPolling(jobId);
         return; // keep isProcessing=true until polling completes
       }
 
       if (!resp.ok) {
-        throw new Error(data.error?.message || 'Commit failed');
+        throw new Error(data?.error?.message || 'Commit failed');
       }
 
       // Synchronous completion (e.g., already committed / idempotent)
-      setCommitResult(data.data);
+      setCommitResult(data?.data || null);
       setStep('done');
       setIsProcessing(false);
     } catch (err) {

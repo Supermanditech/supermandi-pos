@@ -195,7 +195,7 @@ export function StoresTab({
         </div>
 
         {createStoreError && (
-          <div className="banner sa-mt-12">{createStoreError}</div>
+          <div className="banner sa-mt-12" role="alert">{createStoreError}</div>
         )}
         {createStoreSuccess && (
           <div className="muted sa-mt-12">{createStoreSuccess}</div>
@@ -240,7 +240,7 @@ export function StoresTab({
           </div>
         </div>
 
-        {storeError && <div className="banner sa-mt-12">{storeError}</div>}
+        {storeError && <div className="banner sa-mt-12" role="alert">{storeError}</div>}
         {storeSuccess && <div className="muted sa-mt-12">{storeSuccess}</div>}
 
         {storeRecord && (
@@ -278,8 +278,8 @@ export function StoresTab({
         <div className="muted">Edit store names and status</div>
       </div>
 
-      {storeDirectoryError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeDirectoryError}</div>}
-      {storeNameError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
+      {storeDirectoryError && <div className="banner" role="alert" style={{ margin: "0 16px 12px" }}>{storeDirectoryError}</div>}
+      {storeNameError && <div className="banner" role="alert" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
       {/* #186.12: Loading indicator when refreshing with existing data */}
       {storeDirectoryLoading && storeDirectory.length > 0 && (
         <div className="muted sa-text-sm" style={{ margin: "0 16px 8px" }}>Refreshing stores...</div>
@@ -356,6 +356,7 @@ export function StoresTab({
                       }
                     }}
                     title="Select all"
+                    aria-label="Select all stores"
                   />
                 </th>
                 <th>Store ID</th>
@@ -377,6 +378,7 @@ export function StoresTab({
                           type="checkbox"
                           checked={selectedStoreIds.has(s.id)}
                           onChange={() => toggleStoreSelection(s.id)}
+                          aria-label={`Select store ${s.name ?? s.storeName ?? s.id}`}
                         />
                       </td>
                       <td className="mono">{s.id}</td>
@@ -558,6 +560,7 @@ export function StoresTab({
                                             onClick={() => handleRevokeEnrollment(e.code)}
                                             disabled={revokeLoading}
                                             className="sa-btn-text sa-text-danger" style={{ textDecoration: "underline", fontSize: 11 }}
+                                            aria-label={`Revoke enrollment code ${e.code}`}
                                           >
                                             revoke
                                           </button>
@@ -566,6 +569,7 @@ export function StoresTab({
                                               onClick={() => handleResendCode(e.code)}
                                               disabled={resendLoading}
                                               className="sa-btn-text" style={{ textDecoration: "underline", fontSize: 11 }}
+                                              aria-label={`Resend enrollment code ${e.code}`}
                                             >
                                               resend
                                             </button>
@@ -596,7 +600,7 @@ export function StoresTab({
         <div className="muted">Generate A4 PDF sheets with existing barcodes (Tier-1 / Tier-2).</div>
       </div>
 
-      {barcodeSheetError && <div className="banner" style={{ margin: "0 16px 12px" }}>{barcodeSheetError}</div>}
+      {barcodeSheetError && <div className="banner" role="alert" style={{ margin: "0 16px 12px" }}>{barcodeSheetError}</div>}
       {barcodeSheetSuccess && <div className="muted" style={{ margin: "0 16px 12px" }}>{barcodeSheetSuccess}</div>}
 
 

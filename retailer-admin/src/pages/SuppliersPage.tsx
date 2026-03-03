@@ -285,7 +285,7 @@ export default function SuppliersPage() {
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch suppliers');
       const data = await safeJson(response);
-      setSuppliers(data.data || []);
+      setSuppliers(data?.data || []);
     } catch (err) {
       logger.error('Error fetching suppliers:', err);
       setError('Failed to load suppliers. Please try again.');
@@ -486,14 +486,14 @@ export default function SuppliersPage() {
       const data = await safeJson(response);
 
       if (!response.ok) {
-        if (data.error?.code === 'CANNOT_EDIT_SUPERMANDI') {
+        if (data?.error?.code === 'CANNOT_EDIT_SUPERMANDI') {
           throw new Error('Cannot edit SuperMandi-verified suppliers');
         }
-        throw new Error(data.error?.message || `Failed to ${isEdit ? 'update' : 'create'} supplier`);
+        throw new Error(data?.error?.message || `Failed to ${isEdit ? 'update' : 'create'} supplier`);
       }
 
       // RCAT-SUP-FORM-001: Check for warnings about fields that couldn't be saved
-      if (data.warnings && data.warnings.length > 0) {
+      if (data?.warnings && data.warnings.length > 0) {
         const fieldNames = data.warnings.join(', ');
         setSuccess(`Supplier ${isEdit ? 'updated' : 'created'} (partial). Note: Some fields (${fieldNames}) could not be saved - database migration required.`);
       } else {
@@ -521,7 +521,7 @@ export default function SuppliersPage() {
       const data = await safeJson(response);
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to delete supplier');
+        throw new Error(data?.error?.message || 'Failed to delete supplier');
       }
 
       setSuccess('Supplier removed successfully!');

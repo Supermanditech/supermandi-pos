@@ -21,6 +21,9 @@ const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEV
 // instead of hardcoded constants so limits are env-tunable.
 // =============================================================================
 
+// NOTE: This rate limiter is per-instance only (in-memory Map). In a multi-instance
+// Cloud Run deployment each container tracks its own counters independently.
+// Acceptable for MVP; a shared store (e.g. Redis) would be needed for strict global limiting.
 const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
 const LOGIN_WINDOW_MS = config.rateLimitWindowMs;
 const MAX_LOGIN_ATTEMPTS = config.adminLoginRateLimitMax;

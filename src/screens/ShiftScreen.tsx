@@ -703,6 +703,17 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                         {formatMoney(currentShift.salesByPaymentType.dueMinor)}
                       </Text>
                     </View>
+                    {currentShift.salesByPaymentType.cardMinor > 0 && (
+                      <View style={styles.summaryRow}>
+                        <View style={styles.summaryRowIcon}>
+                          <MaterialCommunityIcons name="credit-card-outline" size={16} color={colors.accent} />
+                          <Text style={styles.summaryLabel}>Card</Text>
+                        </View>
+                        <Text style={styles.summaryValue}>
+                          {formatMoney(currentShift.salesByPaymentType.cardMinor)}
+                        </Text>
+                      </View>
+                    )}
                   </>
                 )}
 

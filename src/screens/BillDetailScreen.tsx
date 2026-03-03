@@ -30,7 +30,7 @@ export default function BillDetailScreen() {
   const { saleId, billRef } = route.params;
 
   const [snapshot, setSnapshot] = useState<BillSnapshot | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sharing, setSharing] = useState(false);
   const [printing, setPrinting] = useState(false);

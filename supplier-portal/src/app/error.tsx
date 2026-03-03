@@ -22,13 +22,13 @@ export default function Error({ error, reset }: ErrorPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8 text-center">
         <div className="text-red-500 text-6xl mb-4">⚠️</div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
           Something went wrong
         </h1>
-        <p className="text-slate-600 mb-6">
+        <p className="text-slate-600 dark:text-slate-300 mb-6">
           An unexpected error occurred. Please try again.
         </p>
 

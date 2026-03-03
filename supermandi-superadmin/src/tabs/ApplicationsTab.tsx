@@ -49,6 +49,7 @@ export function ApplicationsTab({
             className="selectSmall"
             value={appEntityFilter}
             onChange={(e) => setAppEntityFilter(e.target.value)}
+            aria-label="Filter applications by type"
           >
             <option value="">All Types</option>
             <option value="retailer">Retailer</option>
@@ -60,7 +61,7 @@ export function ApplicationsTab({
         </div>
       </div>
 
-      {applicationsError && <div className="banner sa-mb-12" style={{ margin: "0 16px" }}>{applicationsError}</div>}
+      {applicationsError && <div className="banner sa-mb-12" role="alert" style={{ margin: "0 16px" }}>{applicationsError}</div>}
 
       {applications.length === 0 ? (
         <div className="empty">

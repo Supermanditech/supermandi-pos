@@ -95,6 +95,7 @@ export default function SettingsPage() {
         const response = await authFetch('/api/v1/retailer-admin/settings', accessToken);
         if (response.ok) {
           const data = await safeJson(response);
+          if (!data) throw new Error('Invalid response from server');
           // RET-C5-001: Backend returns { success, settings: { ... } } — unwrap envelope
           const s = data.settings || data || {};
           // T-156: Extract receipt settings from nested JSONB or top-level
@@ -226,7 +227,7 @@ export default function SettingsPage() {
       } else {
         const data = await safeJson(response);
         // STG-070: Extract message from error object instead of rendering [object Object]
-        setSaveError(typeof data.error === 'string' ? data.error : (data.error?.message || 'Failed to save settings'));
+        setSaveError(typeof data?.error === 'string' ? data.error : (data?.error?.message || 'Failed to save settings'));
       }
     } catch (err: any) {
       logger.error('Failed to save settings:', err);
@@ -278,7 +279,7 @@ export default function SettingsPage() {
         }, 2000);
       } else {
         const data = await safeJson(response);
-        setPasswordError(data.error?.message || 'Failed to change password');
+        setPasswordError(data?.error?.message || 'Failed to change password');
       }
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to change password');

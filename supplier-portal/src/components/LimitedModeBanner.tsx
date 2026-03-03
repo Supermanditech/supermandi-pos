@@ -94,7 +94,7 @@ export default function LimitedModeBanner({ status, businessName, onDismiss }: L
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${config.bgColor} ${config.color} rounded text-xs font-semibold`}>
               ⚠ LIMITED MODE
             </span>
-            <span className="px-2 py-0.5 bg-white rounded text-xs font-medium">
+            <span className="px-2 py-0.5 bg-white dark:bg-slate-800 rounded text-xs font-medium">
               Status: {config.label}
             </span>
           </div>
@@ -105,7 +105,7 @@ export default function LimitedModeBanner({ status, businessName, onDismiss }: L
           </p>
 
           {/* Restrictions */}
-          <details className="text-xs text-slate-600">
+          <details className="text-xs text-slate-600 dark:text-slate-300">
             <summary className="cursor-pointer font-medium mb-2">
               View restrictions
             </summary>

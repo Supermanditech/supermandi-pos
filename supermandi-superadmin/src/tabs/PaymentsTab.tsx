@@ -30,7 +30,7 @@ export function PaymentsTab({ paymentEvents, loading, error }: PaymentsTabProps)
       {loading ? (
         <div className="empty sa-text-muted">Loading payment events...</div>
       ) : error ? (
-        <div className="empty sa-text-danger">{error}</div>
+        <div className="empty sa-text-danger" role="alert">{error}</div>
       ) : paymentEvents.length === 0 ? (
         <div className="empty">No payment events found for the current filters.</div>
       ) : (

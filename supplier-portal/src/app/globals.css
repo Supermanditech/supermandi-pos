@@ -133,6 +133,14 @@ html.dark .text-amber-800 { color: #fcd34d; }
 html.dark .border-red-200 { border-color: #7f1d1d; }
 html.dark .border-green-200 { border-color: #14532d; }
 html.dark .border-slate-100 { border-color: #1e293b; }
+html.dark .border-amber-300 { border-color: #92400e; }
+html.dark .border-blue-300 { border-color: #1e40af; }
+html.dark .border-yellow-200 { border-color: #854d0e; }
+html.dark .border-yellow-300 { border-color: #a16207; }
+
+/* Dark mode secondary text not covered above */
+html.dark .text-slate-300 { color: #cbd5e1; }
+html.dark .text-blue-600 { color: #60a5fa; }
 
 /* Dark mode form inputs */
 html.dark input, html.dark select, html.dark textarea {

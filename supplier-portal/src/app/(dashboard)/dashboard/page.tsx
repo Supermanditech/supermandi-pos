@@ -30,11 +30,11 @@ function StatCard({
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-slate-500">{title}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
           {value === '-' ? (
-            <div className="h-8 w-20 bg-slate-200 rounded mt-1 animate-pulse" />
+            <div className="h-8 w-20 bg-slate-200 dark:bg-slate-700 rounded mt-1 animate-pulse" />
           ) : (
-            <p className="text-2xl font-bold text-slate-800 mt-1">{value}</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{value}</p>
           )}
         </div>
         <div
@@ -92,10 +92,10 @@ export default function DashboardPage() {
       <Breadcrumb items={[{ label: 'Dashboard' }]} />
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
           Welcome, {supplier?.businessName}
         </h1>
-        <p className="text-slate-500 mt-1">
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
           Here's what's happening with your products and orders.
         </p>
       </div>
@@ -168,12 +168,12 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="card mb-8">
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">
           Quick Actions
         </h2>
         {/* STG-008: Disable actions for unverified suppliers */}
         <div className="flex flex-wrap gap-3">
-          {supplier?.verificationStatus === 'ACTIVE' ? (
+          {supplier?.verificationStatus === 'verified' ? (
             <Link
               href="/products?action=add"
               className="btn btn-primary flex items-center gap-2"
@@ -189,7 +189,7 @@ export default function DashboardPage() {
               <Plus size={16} /> Add Product
             </button>
           )}
-          {supplier?.verificationStatus === 'ACTIVE' ? (
+          {supplier?.verificationStatus === 'verified' ? (
             <Link
               href="/upload"
               className="btn btn-secondary flex items-center gap-2"
@@ -217,7 +217,7 @@ export default function DashboardPage() {
       {/* Recent Orders */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-800">Recent Orders</h2>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Recent Orders</h2>
           <Link
             href="/orders"
             className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -243,20 +243,20 @@ export default function DashboardPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                     Order ID
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                     Store
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                     Items
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                     Total
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                     Status
                   </th>
                 </tr>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="text-center py-8 text-slate-500">
+          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
             <p>No orders yet.</p>
             <p className="text-sm mt-1">
               Orders will appear here when retailers place orders.

@@ -9,12 +9,12 @@ const SUPPORT_EMAIL = 'hello@supermandi.tech';
 export default function HelpPage() {
   return (
     <>
-      <h1 className="text-2xl font-bold text-slate-900 mb-1">Help &amp; Support</h1>
-      <p className="text-slate-500 text-sm mb-8">Need help? We&apos;re here for you.</p>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">Help &amp; Support</h1>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">Need help? We&apos;re here for you.</p>
 
       {/* Contact Section */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
-        <h2 className="font-semibold text-slate-900 text-sm mb-3">Contact Us</h2>
+      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-4">
+        <h2 className="font-semibold text-slate-900 dark:text-slate-100 text-sm mb-3">Contact Us</h2>
         <p className="text-sm mb-1">
           <a href={`mailto:${SUPPORT_EMAIL}`} className="text-blue-600 font-medium hover:text-blue-700">
             {SUPPORT_EMAIL}
@@ -24,8 +24,8 @@ export default function HelpPage() {
       </div>
 
       {/* Quick Links */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
-        <h2 className="font-semibold text-slate-900 text-sm mb-3">Quick Links</h2>
+      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-4">
+        <h2 className="font-semibold text-slate-900 dark:text-slate-100 text-sm mb-3">Quick Links</h2>
         <ul className="space-y-2 text-sm">
           <li>
             <span className="text-slate-500 text-xs mr-2">Supplier Portal:</span>
@@ -43,8 +43,8 @@ export default function HelpPage() {
       </div>
 
       {/* Legal */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4">
-        <h2 className="font-semibold text-slate-900 text-sm mb-3">Legal</h2>
+      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-4">
+        <h2 className="font-semibold text-slate-900 dark:text-slate-100 text-sm mb-3">Legal</h2>
         <ul className="space-y-2 text-sm">
           <li><a href="/terms" className="text-blue-600 font-medium hover:text-blue-700">Terms of Service</a></li>
           <li><a href="/privacy" className="text-blue-600 font-medium hover:text-blue-700">Privacy Policy</a></li>

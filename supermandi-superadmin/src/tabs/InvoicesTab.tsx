@@ -155,7 +155,7 @@ export function InvoicesTab() {
         <span className="muted sa-text-sm" style={{ marginLeft: "auto" }}>{total} invoice{total !== 1 ? "s" : ""}</span>
       </div>
 
-      {error && <div className="banner sa-mb-12">{error}</div>}
+      {error && <div className="banner sa-mb-12" role="alert">{error}</div>}
 
       {/* Table */}
       {invoices.length > 0 && (

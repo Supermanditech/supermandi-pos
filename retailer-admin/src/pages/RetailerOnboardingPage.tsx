@@ -342,16 +342,21 @@ export default function RetailerOnboardingPage() {
       return;
     }
 
-    // Create preview for images
-    let preview: string | null = null;
-    if (file.type.startsWith('image/')) {
-      preview = URL.createObjectURL(file);
-    }
-
-    setDocuments(prev => ({
-      ...prev,
-      [docType]: { file, preview, status: 'pending', error: undefined }
-    }));
+    // Revoke previous preview URL to prevent memory leak
+    setDocuments(prev => {
+      if (prev[docType]?.preview) {
+        URL.revokeObjectURL(prev[docType].preview!);
+      }
+      // Create preview for images
+      let preview: string | null = null;
+      if (file.type.startsWith('image/')) {
+        preview = URL.createObjectURL(file);
+      }
+      return {
+        ...prev,
+        [docType]: { file, preview, status: 'pending', error: undefined }
+      };
+    });
   }, []);
 
   // Upload document to server
@@ -374,7 +379,7 @@ export default function RetailerOnboardingPage() {
 
       if (!response.ok) {
         const data = await safeJson(response);
-        throw new Error(data.error?.message || 'Upload failed');
+        throw new Error(data?.error?.message || 'Upload failed');
       }
 
       setDocuments(prev => ({
@@ -441,7 +446,7 @@ export default function RetailerOnboardingPage() {
       const data = await safeJson(response);
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to submit KYC');
+        throw new Error(data?.error?.message || 'Failed to submit KYC');
       }
 
       localStorage.setItem('retailer_application_status', 'KYC_SUBMITTED');

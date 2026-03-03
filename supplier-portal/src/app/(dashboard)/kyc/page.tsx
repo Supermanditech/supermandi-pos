@@ -222,8 +222,8 @@ export default function KycPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'KYC' }]} />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">KYC & Bank Verification</h1>
-        <p className="text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">KYC & Bank Verification</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
           Upload documents and verify bank details to enable payouts.
         </p>
       </div>
@@ -323,11 +323,11 @@ export default function KycPage() {
                 return (
                   <div
                     key={docType.key}
-                    className="border border-slate-200 rounded-lg p-4 flex items-center justify-between"
+                    className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex items-center justify-between"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-800">{docType.label}</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-100">{docType.label}</span>
                         {docType.required && (
                           <span className="text-xs text-red-500">Required</span>
                         )}

@@ -54,9 +54,11 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
       Alert.alert("Support Unavailable", "WhatsApp support is not configured.");
       return;
     }
+    let phone = SUPPORT_PHONE.replace(/\D/g, "");
+    if (phone.length === 10) phone = `91${phone}`;
     const msg = encodeURIComponent("Hi, I need help with SuperMandi POS.");
     openUrl(
-      `https://wa.me/${SUPPORT_PHONE}?text=${msg}`,
+      `https://wa.me/${phone}?text=${msg}`,
       "Please install WhatsApp to use this feature."
     );
   };

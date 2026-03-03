@@ -80,7 +80,7 @@ export function UsersTab({
             <button onClick={requestCreateUser} disabled={createUserLoading} className="btnSuccess">
               {createUserLoading ? "Creating..." : "Create User"}
             </button>
-            {createUserError && <span className="errorText">{createUserError}</span>}
+            {createUserError && <span className="errorText" role="alert">{createUserError}</span>}
             {createUserSuccess && <span className="sa-text-success sa-fw-600">{createUserSuccess}</span>}
           </div>
           <div className="muted sa-mt-8">* Name and Email are required.</div>
@@ -93,8 +93,8 @@ export function UsersTab({
           <input id="filter-users-search" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search by name, email, or phone..." className="sa-input" style={{ flex: 1, minWidth: 200 }} />
           <button onClick={refreshUsers} disabled={usersLoading}>{usersLoading ? "Loading..." : "Refresh"}</button>
         </div>
-        {userActionError && <div className="errorText sa-mb-8">{userActionError}</div>}
-        {usersError && <div className="errorText sa-mb-8">{usersError}</div>}
+        {userActionError && <div className="errorText sa-mb-8" role="alert">{userActionError}</div>}
+        {usersError && <div className="errorText sa-mb-8" role="alert">{usersError}</div>}
         {usersLoading ? (
           <TableSkeleton rows={5} columns={7} />
         ) : (
@@ -112,7 +112,7 @@ export function UsersTab({
                 <td><span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeError" : "badgeWarn"}`}>{user.status}</span></td>
                 <td>{formatDate(user.created_at)}</td>
                 <td>
-                  <select value={user.status} onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")} disabled={userStatusSaving[user.id]} className="sa-select" style={{ minWidth: 100 }}>
+                  <select value={user.status} onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")} disabled={userStatusSaving[user.id]} className="sa-select" style={{ minWidth: 100 }} aria-label={`Change status for ${user.name}`}>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     <option value="suspended">Suspended</option>

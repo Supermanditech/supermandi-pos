@@ -154,7 +154,7 @@ export default function MenuScreen() {
       // GO-LIVE-250: Fetch both today and yesterday for trend comparison
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const yesterdayStr = yesterday.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
       const [summary, yesterdayData] = await Promise.all([
         getDailySummary(),
@@ -516,13 +516,12 @@ export default function MenuScreen() {
       </View>
 
       {/* POS-002 + GL-RJ-009: Daily Summary Card - Enhanced with error handling and refresh */}
-      <Pressable style={styles.summaryCard} onPress={goToSalesStatement} accessibilityRole="button" accessibilityLabel="View today's sales details">
+      <View style={styles.summaryCard}>
         <View style={styles.statusHeader}>
           <MaterialCommunityIcons name="chart-bar" size={16} color={tc.primary} />
           <Text style={styles.statusHeaderText}>{t('menu.todaysSales', { defaultValue: "Today's Sales" })}</Text>
-          {/* GL-RJ-009: Refresh button */}
           <Pressable
-            onPress={(e) => { e.stopPropagation(); void loadDailySummary(); }}
+            onPress={() => { void loadDailySummary(); }}
             style={styles.summaryRefresh}
             hitSlop={8}
             accessibilityRole="button"
@@ -534,7 +533,9 @@ export default function MenuScreen() {
               color={tc.textTertiary}
             />
           </Pressable>
-          <MaterialCommunityIcons name="chevron-right" size={16} color={tc.textTertiary} />
+          <Pressable onPress={goToSalesStatement} hitSlop={8} accessibilityRole="button" accessibilityLabel="View today's sales details">
+            <MaterialCommunityIcons name="chevron-right" size={16} color={tc.textTertiary} />
+          </Pressable>
         </View>
         {summaryLoading ? (
           <Text style={styles.summaryLoading}>{t('common.loading', { defaultValue: 'Loading...' })}</Text>
@@ -598,7 +599,11 @@ export default function MenuScreen() {
             </View>
           </View>
         )}
-      </Pressable>
+        <Pressable onPress={goToSalesStatement} style={styles.summaryTapArea} accessibilityRole="button" accessibilityLabel="View sales details">
+          <Text style={styles.summaryTapText}>{t('menu.viewDetails', { defaultValue: 'View Details' })}</Text>
+          <MaterialCommunityIcons name="chevron-right" size={14} color={tc.primary} />
+        </Pressable>
+      </View>
 
       <Pressable style={styles.menuItem} onPress={goToBills} accessibilityRole="button" accessibilityLabel="Sales History">
         <View style={styles.menuIcon}>
@@ -865,15 +870,16 @@ export default function MenuScreen() {
         accessibilityRole="button"
         accessibilityLabel="WhatsApp Support"
         onPress={() => {
-          const supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE;
+          let supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE;
           if (!supportPhone) {
             Alert.alert("Support Unavailable", "Support phone not configured. Please contact support via email.");
             return;
           }
+          supportPhone = supportPhone.replace(/\D/g, "");
+          if (supportPhone.length === 10) supportPhone = `91${supportPhone}`;
           const message = encodeURIComponent(
             `Hi SuperMandi Support,\n\nStore: ${opStatus.storeName || "N/A"}\nDevice: ${opStatus.deviceLabel || "N/A"}\n\nI need help with: `
           );
-          // wa.me universal link works on both Android and iOS
           const url = `https://wa.me/${supportPhone}?text=${message}`;
           Linking.openURL(url).catch(() => {
             Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
@@ -1540,6 +1546,21 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontSize: 13,
     fontWeight: '600',
     color: colors.textInverse,
+  },
+  summaryTapArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  summaryTapText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
   },
   // GO-LIVE-250: Trend indicator styles
   summaryValueRow: {

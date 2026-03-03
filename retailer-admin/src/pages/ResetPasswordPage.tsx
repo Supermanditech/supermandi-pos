@@ -88,7 +88,7 @@ export default function ResetPasswordPage() {
       );
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || data.message || 'Password reset failed');
+        throw new Error(data?.error?.message || data?.message || 'Password reset failed');
       }
       setStep('success');
     } catch (err) {

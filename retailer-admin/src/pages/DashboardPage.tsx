@@ -94,8 +94,8 @@ export default function DashboardPage() {
         setEditingCategory(null);
       } else {
         // GL-CRIT-0039: Show error to user on API failure
-        const data = await safeJson(response).catch(() => ({}));
-        setCatEditError(data.error?.message || 'Failed to rename category. Please try again.');
+        const data = await safeJson(response).catch(() => null);
+        setCatEditError(data?.error?.message || 'Failed to rename category. Please try again.');
       }
     } catch (err) {
       logger.error('Failed to rename category:', err);
@@ -118,12 +118,12 @@ export default function DashboardPage() {
       if (response.ok) {
         const data = await safeJson(response);
         setCategories(prev => prev.map(c =>
-          c.id === category.id ? { ...c, isHidden: data.isHidden } : c
+          c.id === category.id ? { ...c, isHidden: data?.isHidden } : c
         ));
       } else {
         // RET-AUD-040: Show API error to user
-        const data = await safeJson(response).catch(() => ({}));
-        setCatToggleError(data.error?.message || `Failed to ${category.isHidden ? 'show' : 'hide'} category. Please try again.`);
+        const data = await safeJson(response).catch(() => null);
+        setCatToggleError(data?.error?.message || `Failed to ${category.isHidden ? 'show' : 'hide'} category. Please try again.`);
       }
     } catch (err) {
       logger.error('Failed to toggle category visibility:', err);

@@ -1,7 +1,7 @@
 // T-198: Opening Stock Ledger Creation from POS
 // Initialize stock for products not yet in inventory via search/scan + quantity entry
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -83,6 +83,12 @@ export default function OpeningStockScreen({
   const [searching, setSearching] = useState(false);
   // UIUX-POS-018: useRef for debounce timer so it can be properly cancelled
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   // Entries to submit
   const [entries, setEntries] = useState<OpeningStockEntry[]>([]);

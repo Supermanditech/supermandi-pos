@@ -96,6 +96,10 @@ export default function BarcodeSheetScreen() {
   const PAGE_SIZE = 12;
   const [previewPage, setPreviewPage] = useState(0);
 
+  // STG-490: Product list pagination for large lists
+  const PRODUCT_PAGE_SIZE = 50;
+  const [productListLimit, setProductListLimit] = useState(PRODUCT_PAGE_SIZE);
+
   // T-172: Check for GRN pre-selection on mount
   const grnItems = (route.params as BarcodeSheetRouteParams)?.grnItems;
 
@@ -447,7 +451,7 @@ export default function BarcodeSheetScreen() {
                   placeholder="Search by name or barcode..."
                   placeholderTextColor={colors.textTertiary}
                   value={searchQuery}
-                  onChangeText={setSearchQuery}
+                  onChangeText={(text) => { setSearchQuery(text); setProductListLimit(PRODUCT_PAGE_SIZE); }}
                   autoCorrect={false}
                   autoCapitalize="none"
                 />
@@ -473,7 +477,7 @@ export default function BarcodeSheetScreen() {
                     <Text style={styles.emptySearchText}>No products match your search.</Text>
                   </View>
                 ) : (
-                  searchFilteredItems.slice(0, 100).map((item) => {
+                  searchFilteredItems.slice(0, productListLimit).map((item) => {
                     const isSelected = selectedBarcodes.has(item.barcode);
                     const copies = copiesMap[item.barcode] ?? 1;
                     return (
@@ -539,6 +543,17 @@ export default function BarcodeSheetScreen() {
                       </View>
                     );
                   })
+                )}
+                {searchFilteredItems.length > productListLimit && (
+                  <Pressable
+                    accessibilityRole="button"
+                    style={styles.loadMoreBtn}
+                    onPress={() => setProductListLimit((prev) => prev + PRODUCT_PAGE_SIZE)}
+                  >
+                    <Text style={styles.loadMoreText}>
+                      Load More ({searchFilteredItems.length - productListLimit} remaining)
+                    </Text>
+                  </Pressable>
                 )}
               </View>
             </View>
@@ -1029,12 +1044,22 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
 
   // T-167: Product list
   productListContainer: {
-    maxHeight: 300,
+    maxHeight: 400,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
+  },
+  loadMoreBtn: {
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: colors.backgroundSecondary,
+  },
+  loadMoreText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.primary,
   },
   productRow: {
     flexDirection: "row",

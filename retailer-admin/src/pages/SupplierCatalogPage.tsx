@@ -71,6 +71,7 @@ export default function SupplierCatalogPage() {
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch supplier catalog');
       const data = await safeJson(response);
+      if (!data) throw new Error('Invalid response from server');
       // GL-CRIT-0037: Append products when loading more (offset > 0), replace on new search (offset = 0)
       const items = data.data || [];
       if (offset > 0) {
@@ -133,7 +134,7 @@ export default function SupplierCatalogPage() {
       if (response.status === 401) return;
       const data = await safeJson(response);
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to add product');
+        throw new Error(data?.error?.message || 'Failed to add product');
       }
       setSuccess(`Added "${product.displayName}" to your catalog!`);
       // Update local state to mark as in catalog

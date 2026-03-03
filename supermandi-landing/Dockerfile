@@ -12,6 +12,8 @@ COPY favicon.svg /usr/share/nginx/html/favicon.svg
 COPY robots.txt /usr/share/nginx/html/robots.txt
 COPY sitemap.xml /usr/share/nginx/html/sitemap.xml
 COPY brand/ /usr/share/nginx/html/brand/
+# STG-474: og-image.png required for social sharing (referenced in index.html + pos.html meta tags)
+COPY og-image.png /usr/share/nginx/html/og-image.png
 
 # Add health check file
 RUN echo "OK" > /usr/share/nginx/html/health.txt

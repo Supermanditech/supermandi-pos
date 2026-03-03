@@ -21,8 +21,8 @@ export default function Modal({ isOpen, onClose, title, children, footer }: Moda
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-slate-800 mb-2">{title}</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">{title}</h3>
         {children}
         {footer && <div className="flex gap-3 justify-end mt-4">{footer}</div>}
       </div>

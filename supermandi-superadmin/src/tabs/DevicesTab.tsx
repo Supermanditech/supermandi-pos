@@ -100,7 +100,7 @@ export function DevicesTab({
           </div>
         </div>
 
-        {enrollError && <div className="banner sa-mt-12">{enrollError}</div>}
+        {enrollError && <div className="banner sa-mt-12" role="alert">{enrollError}</div>}
 
         {enrollment && (
           <div className="qrCard sa-mt-16">
@@ -163,8 +163,8 @@ export function DevicesTab({
         <div className="muted">Live heartbeat + sync status</div>
       </div>
 
-      {deviceActionError && <div className="banner sa-mb-12">{deviceActionError}</div>}
-      {devicesError && <div className="banner sa-mb-12">{devicesError}</div>}
+      {deviceActionError && <div className="banner sa-mb-12" role="alert">{deviceActionError}</div>}
+      {devicesError && <div className="banner sa-mb-12" role="alert">{devicesError}</div>}
 
       {filteredDeviceRecords.length === 0 ? (
         <div className="empty">No devices synced yet.</div>

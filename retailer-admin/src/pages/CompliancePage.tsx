@@ -52,9 +52,9 @@ export default function CompliancePage() {
         const response = await authFetch('/api/v1/retailer-admin/compliance', accessToken);
         if (response.ok) {
           const data = await safeJson(response);
-          setDocuments(data.data?.documents || []);
-          setUploadEnabled(data.data?.uploadEnabled ?? false);
-          if (data.data?.message) setStatusMessage(data.data.message);
+          setDocuments(data?.data?.documents || []);
+          setUploadEnabled(data?.data?.uploadEnabled ?? false);
+          if (data?.data?.message) setStatusMessage(data.data.message);
         }
       } catch (err) {
         logger.error('Failed to fetch documents:', err);
@@ -111,11 +111,11 @@ export default function CompliancePage() {
       const data = await safeJson(response);
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Upload failed');
+        throw new Error(data?.error?.message || 'Upload failed');
       }
 
       // Add new document to the list
-      if (data.data) {
+      if (data?.data) {
         setDocuments(prev => [data.data, ...prev]);
       }
 

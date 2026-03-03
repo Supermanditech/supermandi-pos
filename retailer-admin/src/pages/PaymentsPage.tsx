@@ -47,9 +47,9 @@ export default function PaymentsPage() {
       if (response.ok) {
         const data = await safeJson(response);
         setSettings({
-          upiVpa: data.settings?.upiVpa || '',
-          bankAccount: data.settings?.bankAccount || '',
-          ifscCode: data.settings?.ifscCode || '',
+          upiVpa: data?.settings?.upiVpa || '',
+          bankAccount: data?.settings?.bankAccount || '',
+          ifscCode: data?.settings?.ifscCode || '',
         });
       }
     } catch (err) {
@@ -128,7 +128,7 @@ export default function PaymentsPage() {
 
       if (!upiResponse.ok) {
         const data = await safeJson(upiResponse);
-        setSaveError(data.error?.message || 'Failed to save UPI settings');
+        setSaveError(data?.error?.message || 'Failed to save UPI settings');
         setSaving(false);
         return;
       }
@@ -148,7 +148,7 @@ export default function PaymentsPage() {
 
         if (!bankResponse.ok) {
           const data = await safeJson(bankResponse);
-          const errMsg = data.error?.errors?.bankAccount || data.error?.errors?.ifscCode || data.error?.message || 'Failed to save bank details';
+          const errMsg = data?.error?.errors?.bankAccount || data?.error?.errors?.ifscCode || data?.error?.message || 'Failed to save bank details';
           // RET-C3-012: Warn user that UPI was saved even though bank failed
           setSaveError(`UPI updated successfully, but bank details failed: ${errMsg}`);
           setSaving(false);
@@ -157,7 +157,7 @@ export default function PaymentsPage() {
       }
 
       setSaveSuccess(true);
-      setStatusTransitioned(upiData.statusTransitioned || false);
+      setStatusTransitioned(upiData?.statusTransitioned || false);
 
       setTimeout(() => {
         setSaveSuccess(false);

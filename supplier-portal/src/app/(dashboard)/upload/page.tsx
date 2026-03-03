@@ -93,8 +93,8 @@ export default function UploadPage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'CSV Upload' }]} />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">CSV Upload</h1>
-        <p className="text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">CSV Upload</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
           Bulk import products from a CSV file. Download the template to get started.
         </p>
       </div>

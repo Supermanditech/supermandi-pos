@@ -98,7 +98,7 @@ export function RegistrationsTab({
           </div>
         </div>
 
-        {regEventsError && <div className="errorText sa-mb-8">{regEventsError}</div>}
+        {regEventsError && <div className="errorText sa-mb-8" role="alert">{regEventsError}</div>}
 
         <table className="table">
           <thead>

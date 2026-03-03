@@ -197,8 +197,8 @@ export default function ProfilePage() {
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Profile' }]} />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Profile Settings</h1>
-        <p className="text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Profile Settings</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
           Manage your business profile, security settings, and bank details.
         </p>
       </div>
@@ -207,10 +207,10 @@ export default function ProfilePage() {
       <div className="card mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-800">
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
               {supplier?.businessName || 'Business Name'}
             </h2>
-            <p className="text-slate-500 mt-1">GSTIN: {supplier?.gstin || '—'}</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">GSTIN: {supplier?.gstin || '—'}</p>
           </div>
           {verificationStatusBadge()}
         </div>

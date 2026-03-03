@@ -682,7 +682,9 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                       const message = encodeURIComponent(
                         `Hi ${name}, greetings from SuperMandi!`
                       );
-                      const phone = selectedCustomer.phone.replace(/\D/g, "");
+                      let phone = selectedCustomer.phone.replace(/\D/g, "");
+                      // STG-470: Prepend India country code if 10-digit number
+                      if (phone.length === 10) phone = `91${phone}`;
                       // wa.me universal link works on both Android and iOS
                       const url = `https://wa.me/${phone}?text=${message}`;
                       Linking.openURL(url).catch(() => {

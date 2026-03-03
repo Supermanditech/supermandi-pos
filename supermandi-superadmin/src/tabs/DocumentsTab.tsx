@@ -94,7 +94,7 @@ export function DocumentsTab({
           </div>
         </div>
 
-        {documentsError && <div className="errorText sa-mb-8">{documentsError}</div>}
+        {documentsError && <div className="errorText sa-mb-8" role="alert">{documentsError}</div>}
 
         {documentsLoading ? (
           <TableSkeleton rows={5} columns={6} />
