@@ -5997,5 +5997,90 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 - **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
 - **Supplier Web**: STG-761..STG-802 (31 findings: 0 P1, 5 P2, 26 P3)
 - **SuperAdmin Web**: STG-803..STG-826 (24 findings: 0 P1, 6 P2, 18 P3)
-- **Next finding starts at**: STG-827
-- **Do NOT rewrite** STG-001..STG-826 entries (frozen)
+
+---
+
+## Final Live Sign-Off — Cross-Function Matrix (7 Flows)
+
+> **Date**: 2026-03-04
+> **Method**: Code-level trace of cross-portal data flows + API auth isolation tests on staging
+> **Mode**: Discovery-only — no fixes this session
+
+### P1 Finding (Critical)
+
+| ID | Flow | Finding | Evidence |
+|----|------|---------|----------|
+| STG-827 | **Flow 3: Supplier Product → Catalog** | **`verification_status` enum mismatch breaks catalog visibility**. Admin supplier approval via `admin/suppliers.ts:607` sets `verification_status = 'ACTIVE'`. Catalog service at `catalog.ts:126` and 5 other locations filter for `verification_status = 'verified'` (lowercase). Platform-service at `admin.ts:663` sets `'verified'`. Suppliers approved via the wrong path have invisible products. | `admin/suppliers.ts:607` → `'ACTIVE'`, `catalog-service/catalog.ts:126` → `WHERE s.verification_status = 'verified'` |
+
+### P2 Findings (Medium)
+
+| ID | Flow | Finding | Evidence |
+|----|------|---------|----------|
+| STG-828 | Flow 1: Supplier Reg | **Supplier login does NOT gate on `verification_status`** — pending (unapproved) suppliers can log in and get full-permission JWT. `requireActiveSupplier` on write routes provides partial gate. | `supplier-service/auth.ts:189-253`, only checks `status = 'suspended'` |
+| STG-829 | Flow 3: Products | Product approval requires 2 steps (approve + publish) — approved-but-unpublished products invisible to retailers | `admin/suppliers.ts:787` (approve) vs `:1574` (publish) |
+| STG-830 | Flow 4: Orders | Dual status update paths: order-service state machine vs supplier direct SQL UPDATE. Supplier bypasses order-service business logic. | `supplier/orders.ts:502` vs `order-service/statusTransitions.ts` |
+| STG-831 | Flow 5: Invoices | No automatic invoice generation from PO delivery. All invoices require manual admin API calls. | `admin/invoices.ts` — only manual POST endpoints, no trigger from receive/GRN |
+| STG-832 | Flow 6: Chat | Chat admin role check in handler (`userType !== 'admin'`) not in middleware. Admin email OTP users can't use chat (UUID validation rejects email-based user IDs). | `chat.ts:364,385,404` + `chat.ts:89-93` |
+| STG-833 | Flow 7: Auth | **Supplier token refresh lacks rotation and DB tracking**. Auth-service implements full token rotation with revocation; supplier-service reissues new token without revoking old. Compromised token stays valid until expiry. | `supplier-service/auth.ts:351-413` vs `auth-service/auth.ts:196-272` |
+
+### P3 Findings (Low)
+
+| ID | Flow | Finding | Evidence |
+|----|------|---------|----------|
+| STG-834 | Flow 1 | Dual approval paths (applications vs pending-suppliers) for same entity | admin/applications.ts vs admin/suppliers.ts |
+| STG-835 | Flow 2 | Retailer login requires exact phone match with no recovery path | auth-service/retailerAuth.ts:287-294 |
+| STG-836 | Flow 4 | Multi-supplier POs have single status — one supplier can mark entire PO shipped | supplier/orders.ts |
+| STG-837 | Flow 6 | Admin email OTP users cannot access chat due to UUID validation rejecting email-based user IDs | chat.ts:89-93 |
+| STG-838 | Flow 7 | Dual auth model (admin session JWT vs portal JWT) adds complexity | Different claim structures |
+
+### Cross-Portal Auth Isolation: VERIFIED PASS
+
+| Test | Result |
+|------|--------|
+| Gateway strips client `x-actor-id`/`x-user-id` headers before JWT processing | PASS |
+| `/api/v1/retailer-admin/` rejects non-store actor types | PASS |
+| `/api/v1/supplier/` rejects non-supplier actor types | PASS |
+| `/api/v1/admin/` requires separate admin auth token | PASS |
+| Token blacklist (Redis) uses fail-closed behavior | PASS |
+| Demo tokens rejected in production | PASS |
+| JWT HS256 algorithm pinned | PASS |
+
+### Cross-Function Matrix Totals
+
+| Severity | Count |
+|----------|-------|
+| **P1 (Critical)** | **1** (STG-827: verification_status enum mismatch) |
+| **P2 (Important)** | **6** |
+| **P3 (Minor)** | **5** |
+| **Total** | **12 findings** |
+
+### Cross-Function Matrix Verdict
+
+**CONDITIONAL PASS** — 7/7 flows verified. Cross-portal auth isolation is strong.
+
+**1 P1 blocker**: STG-827 — `verification_status` enum value mismatch between admin approval code paths (`'ACTIVE'` vs `'verified'`) silently breaks the supplier-to-retailer product pipeline.
+
+---
+
+## COMPLETE SIGN-OFF SUMMARY
+
+### All Platforms
+
+| Platform | Screens | P1 | P2 | P3 | Total |
+|----------|---------|----|----|-----|-------|
+| Retailer Web | 28/28 | **1** | 10 | 27 | 38 |
+| Supplier Web | 23/23 | 0 | 5 | 26 | 31 |
+| SuperAdmin Web | 25/25 | 0 | 6 | 18 | 24 |
+| Cross-Function Matrix | 7/7 flows | **1** | 6 | 5 | 12 |
+| **TOTAL** | **83 screens + 7 flows** | **2** | **27** | **76** | **105** |
+
+### P1 Blockers (Must Fix Before Production)
+
+1. **STG-759** (Retailer): Admin SupplierQueue + ProductQueue pages call API paths that don't exist (`/retailer-admin/admin/*` vs `/admin/*`). Pages are non-functional.
+2. **STG-827** (Cross-Function): Admin supplier approval sets `verification_status = 'ACTIVE'` but catalog queries filter for `'verified'`. Products from suppliers approved via wrong path are invisible.
+
+### Finding Range
+
+- **Full range**: STG-723..STG-838 (105 findings total)
+- **Next finding starts at**: STG-839
+- **Do NOT rewrite** STG-001..STG-838 entries (frozen)
