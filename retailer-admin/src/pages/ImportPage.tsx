@@ -152,7 +152,7 @@ export default function ImportPage() {
       if (!validateResp.ok) {
         const data = await safeJson(validateResp) as any;
         // GL-CRIT-0102: Show specific error type and row number if available
-        const errorDetails = data.error;
+        const errorDetails = data?.error;
         if (errorDetails?.row !== undefined) {
           throw new Error(`Row ${errorDetails.row}: ${errorDetails.message || 'Invalid data'}`);
         }
