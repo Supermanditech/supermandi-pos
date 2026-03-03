@@ -63,8 +63,9 @@ describe('CompliancePage', () => {
     });
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('gstin')).toBeInTheDocument();
-      expect(screen.getByText('fssai')).toBeInTheDocument();
+      // Component renders label from documentTypes lookup, not raw type value
+      expect(screen.getByText('GSTIN Certificate')).toBeInTheDocument();
+      expect(screen.getByText('FSSAI License')).toBeInTheDocument();
     });
   });
 

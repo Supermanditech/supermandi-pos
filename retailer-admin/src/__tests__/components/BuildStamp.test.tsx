@@ -57,13 +57,13 @@ describe('BuildStamp', () => {
     expect(screen.getByText(/Build: xyz9876 · Deployed: 2024-02-16T14:20:00Z/)).toBeInTheDocument();
   });
 
-  it('applies monospace font styling', () => {
+  it('applies build-stamp class (monospace styling via CSS)', () => {
     import.meta.env.VITE_BUILD_SHA = 'test123';
     import.meta.env.VITE_BUILD_TIME = '2024-01-01T00:00:00Z';
 
     const { container } = render(<BuildStamp />);
 
     const buildStampDiv = container.querySelector('div');
-    expect(buildStampDiv).toHaveStyle({ fontFamily: 'monospace' });
+    expect(buildStampDiv?.className).toBe('build-stamp');
   });
 });

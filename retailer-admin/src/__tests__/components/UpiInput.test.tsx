@@ -131,31 +131,29 @@ describe('UpiInput', () => {
     expect(input).toBeDisabled();
   });
 
-  it('applies different border color when focused', () => {
+  it('has upi-input class for default styling (border via CSS)', () => {
     render(<UpiInput value="" onChange={vi.fn()} />);
 
     const input = screen.getByPlaceholderText('yourstore@upi');
 
-    // Before focus - default border
-    expect(input).toHaveStyle({ border: '1px solid #e2e8f0' });
-
-    // Focus input
-    fireEvent.focus(input);
-
-    // After focus - blue border
-    expect(input).toHaveStyle({ border: '1px solid #3b82f6' });
+    // Default state: has upi-input class, no error class
+    expect(input.className).toContain('upi-input');
+    expect(input.className).not.toContain('upi-input--error');
   });
 
-  it('applies error border color when there is an error', () => {
+  it('applies error class when there is an error', () => {
     render(<UpiInput value="invalid" onChange={vi.fn()} />);
 
     const input = screen.getByPlaceholderText('yourstore@upi');
 
+    // Before blur - no error class
+    expect(input.className).not.toContain('upi-input--error');
+
     // Trigger error by blurring
     fireEvent.blur(input);
 
-    // Error border
-    expect(input).toHaveStyle({ border: '1px solid #ef4444' });
+    // Error class applied
+    expect(input.className).toContain('upi-input--error');
   });
 
   it('does not show error for valid VPA after blur', () => {

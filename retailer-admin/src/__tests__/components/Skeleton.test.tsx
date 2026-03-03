@@ -92,9 +92,9 @@ describe('TableSkeleton', () => {
     expect(card).toBeTruthy();
   });
 
-  it('has header row with border-bottom', () => {
+  it('has header row with table-skeleton-header class (border via CSS)', () => {
     const { container } = render(<TableSkeleton />);
-    const firstRow = container.querySelector('.card > div');
-    expect((firstRow as HTMLElement)?.style.borderBottom).toContain('1px solid');
+    const headerRow = container.querySelector('.table-skeleton-header');
+    expect(headerRow).toBeTruthy();
   });
 });
