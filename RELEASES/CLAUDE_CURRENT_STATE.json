@@ -1,7 +1,7 @@
 {
-  "version": "105.0",
-  "lastUpdated": "2026-03-04T01:00:00Z",
-  "currentPhase": "LIVE_FINAL_SIGNOFF: Retailer Web COMPLETE (28/28 screens, 38 findings: 1 P1 + 10 P2 + 27 P3). P1 blocker: STG-759 admin queue route mismatch. Next: Supplier Web sign-off.",
+  "version": "106.0",
+  "lastUpdated": "2026-03-04T02:30:00Z",
+  "currentPhase": "LIVE_FINAL_SIGNOFF: Retailer Web + Supplier Web COMPLETE. Retailer: 28/28 screens (1 P1 + 10 P2 + 27 P3). Supplier: 23/23 screens (0 P1 + 5 P2 + 26 P3). Combined: 69 findings. Next: SuperAdmin Web sign-off.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -110,7 +110,7 @@
     "platformCompletionState": {
       "posApp": "DEFERRED_PENDING_OPERATOR_DEVICE_TESTING",
       "retailerWeb": "COMPLETE_38_FINDINGS_1P1_10P2_27P3",
-      "supplierWeb": "NEXT_IN_QUEUE",
+      "supplierWeb": "COMPLETE_31_FINDINGS_0P1_5P2_26P3",
       "superadminWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
       "crossFunctionMatrix": "PENDING_FINAL_TWO_STAGE_SIGNOFF"
     },

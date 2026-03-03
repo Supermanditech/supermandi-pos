@@ -5819,6 +5819,115 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 ### Finding Range Update (cumulative)
 
-- **This wave**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
-- **Next finding starts at**: STG-761
-- **Do NOT rewrite** STG-001..STG-760 entries (frozen)
+- **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
+
+---
+
+## Final Live Sign-Off — Supplier Web (23 Screens)
+
+> **Date**: 2026-03-04
+> **Staging SHA**: `de452b1a` (app code)
+> **Method**: Full 17-layer runtime verification + business-logic edge-case checklist per screen
+> **Mode**: Discovery-only — no fixes this session
+
+### Auth Pages (8 screens)
+
+| ID | Severity | Layer | Finding | Evidence |
+|----|----------|-------|---------|----------|
+| STG-761 | P3 | Anti-Enum | Registration lookup endpoint reveals phone registration status (`exists: false`). By design for registration-first flow. | `POST /api/v1/supplier/registration/lookup` |
+| STG-762 | **P2** | Firebase | **Register page reCAPTCHA `useEffect` missing `mounted` gate**. All other OTP pages (login, forgot-pw, onboard) correctly gate on `mounted`. Register page can fire `setupRecaptcha` before DOM hydration. Defensive check in `firebase.ts` catches but `recaptchaInitialized` stays false. | `supplier-portal/src/app/register/page.tsx:238` vs login:56 |
+| STG-763 | P3 | A11y | Reset password error div missing `aria-live="assertive"` (has `role="alert"` only). All other auth pages include both. | `reset-password/page.tsx:223` |
+| STG-764 | P3 | Navigation | Forgot password "Register" link only in email step, missing from OTP phone step. | `forgot-password/page.tsx:554` |
+| STG-765 | P3 | UX | Forgot password `handleResendOtp` doesn't clear OTP input after resend. User may re-submit old code. | `forgot-password/page.tsx:239-261` |
+| STG-766 | P3 | UX | Same: onboard `handleResendOtp` doesn't clear OTP input. | `onboard/page.tsx:284-305` |
+| STG-767 | P3 | Dark Mode | Register page inner cards/headings hardcoded to light-mode colors (`text-slate-900`, `bg-white`), no `dark:` variants. | `register/page.tsx:704,716,789,937` |
+| STG-768 | P3 | A11y | All auth pages missing `autocomplete` attributes on email/password/phone inputs. | Cross-page |
+
+### Dashboard Pages — Batch 1 (Dashboard, Orders, Products, Earnings)
+
+| ID | Severity | Layer | Finding | Evidence |
+|----|----------|-------|---------|----------|
+| STG-771 | P3 | Date/TZ | Order note timestamps use inline `toLocaleString` without `timeZone: 'Asia/Kolkata'`, bypassing shared formatter. Shows browser-local time. | `orders/page.tsx:928` |
+| STG-772 | P3 | Date/TZ | Payout order dates use inline `toLocaleDateString` without timezone, same issue. | `earnings/page.tsx:437` |
+| STG-773 | P3 | Hardcoded | Hardcoded "Rs. 100" text for minimum payout instead of `formatCurrency(10000)`. | `earnings/page.tsx:344` |
+| STG-774 | P3 | A11y | Orders status filter tabs lack arrow-key keyboard navigation (Products page has it). | `orders/page.tsx:324-352` |
+| STG-775 | P3 | Pagination | Earnings pagination uses local `useState` instead of URL-synced state. Position lost on refresh. | `earnings/page.tsx:17` |
+| STG-776 | **P2** | Filtering | **Orders status filter is client-side only** — `getOrders()` doesn't pass status to backend. Inaccurate filtered counts on paginated datasets. | `orders/page.tsx:110-113,258-260` |
+
+### Dashboard Pages — Batch 2 (Invoices, KYC, Profile, Upload)
+
+| ID | Severity | Layer | Finding | Evidence |
+|----|----------|-------|---------|----------|
+| STG-781 | **P2** | Security | **Profile bank account number returned unmasked** in API response. Full number visible in network traces and browser dev tools. Payouts endpoint correctly masks to `****1234`. | `backend/src/routes/v1/supplier/profile.ts:86` |
+| STG-782 | P3 | A11y | Invoice detail modal lacks Escape key handler and focus trap. | `invoices/page.tsx:200-220` |
+| STG-783 | P3 | A11y | KYC tabs missing `aria-controls`/`id` linking and `role="tabpanel"` on content panels. Incomplete WCAG tab pattern. | `kyc/page.tsx:289-304` |
+| STG-784 | P3 | A11y | KYC bank verification form labels not connected to inputs via `htmlFor`/`id`. Screen readers may not announce labels. | `kyc/page.tsx` bank fields |
+| STG-785 | P3 | A11y | Profile tabs same issue as STG-783 — missing `aria-controls`/tabpanel. | `profile/page.tsx:221-240` |
+| STG-786 | P3 | A11y | Profile form labels (14 fields across 3 tabs) not connected to inputs. | `profile/page.tsx` |
+| STG-787 | P3 | A11y | Upload drag-and-drop zone lacks `role` and `aria-label` for screen readers. | `upload/page.tsx:162-189` |
+| STG-788 | P3 | Validation | Password strength rules differ: frontend requires uppercase+lowercase+digit, backend only requires any letter+digit. Backend more lenient — causes UX confusion. | `profile/page.tsx:13-29` vs `auth.ts:199-211` |
+
+### Remaining Pages (Help, BNPL Orders, Chat, Notifications)
+
+| ID | Severity | Layer | Finding | Evidence |
+|----|----------|-------|---------|----------|
+| STG-791 | **P2** | Auth | **Help page missing from middleware `PROTECTED_PATHS`** + `config.matcher`. Bypasses edge-level auth. Client-side guard still works, but breaks defense-in-depth. | `supplier-portal/src/middleware.ts:11-23,51-64` |
+| STG-792 | P3 | Error | Chat conversation list has no error state for fetch failure. Shows "No conversations yet" instead of error+retry. | `chat/page.tsx:80-84,186,198` |
+| STG-793 | P3 | Dark Mode | Notifications error retry button has no dark mode styling — nearly invisible in dark theme. | `notifications/page.tsx:128-131` |
+| STG-794 | P3 | Arch | Chat uses polling (5s/10s) instead of consuming existing WebSocket/socket events from backend. Backend `socketManager.emitToConversation` exists but frontend doesn't connect. | `chat/page.tsx:83,98` |
+| STG-795 | P3 | Dark Mode | BNPL Orders page missing dark mode on table header, rows, filter buttons, pagination. | `bnpl-orders/page.tsx:168,180,131,215,222` |
+| STG-796 | P3 | Dark Mode | Notifications page missing dark mode on Mark All Read, Refresh, pagination buttons. | `notifications/page.tsx:97,104,129,169,178` |
+| STG-799 | **P2** | A11y | **BNPL Orders table lacks `<caption>`/`aria-label`**, `<th>` missing `scope="col"`, tablist pattern incomplete (no `aria-controls`/tabpanel). | `bnpl-orders/page.tsx:122-127,166` |
+| STG-800 | P3 | A11y | Notification items use `div+onClick` without `role="button"`, `tabIndex`, or keyboard handler. Keyboard users can't mark individual notifications. | `notifications/page.tsx:145` |
+| STG-802 | P3 | Business Logic | BNPL filter tabs missing `partial` status option despite badge support for it. | `bnpl-orders/page.tsx:57,123` |
+
+### Supplier Web Sign-Off Summary
+
+| Screen | Verdict | Key Findings |
+|--------|---------|--------------|
+| Root redirect (`/`) | **PASS** | 0 |
+| Login | **PASS** | 0 |
+| Register | 2 findings | STG-762 (P2), STG-767 (P3) |
+| Forgot Password | 2 findings | STG-764 (P3), STG-765 (P3) |
+| Reset Password | 1 finding | STG-763 (P3) |
+| Onboard | 1 finding | STG-766 (P3) |
+| Pending Approval | **PASS** | 0 |
+| Support | **PASS** | 0 |
+| Dashboard | **PASS** | 0 |
+| Orders | 2 findings | STG-776 (P2), STG-771 (P3), STG-774 (P3) |
+| Products | **PASS** | 0 |
+| Earnings | 3 findings | STG-772 (P3), STG-773 (P3), STG-775 (P3) |
+| Invoices | 1 finding | STG-782 (P3) |
+| KYC | 2 findings | STG-783 (P3), STG-784 (P3) |
+| Profile | 3 findings | STG-781 (P2), STG-785 (P3), STG-786 (P3) |
+| Upload | 1 finding | STG-787 (P3) |
+| Help (dashboard) | 1 finding | STG-791 (P2) |
+| BNPL Orders | 2 findings | STG-799 (P2), STG-795 (P3), STG-802 (P3) |
+| Chat | 2 findings | STG-792 (P3), STG-794 (P3) |
+| Notifications | 2 findings | STG-796 (P3), STG-800 (P3) |
+| Cross-cutting auth | 2 findings | STG-761 (P3), STG-768 (P3) |
+| Cross-cutting validation | 1 finding | STG-788 (P3) |
+| Cross-cutting dark mode | 1 finding | STG-793 (P3) |
+
+### Supplier Web Totals
+
+| Severity | Count |
+|----------|-------|
+| **P1 (Critical)** | **0** |
+| **P2 (Important)** | **5** (STG-762, 776, 781, 791, 799) |
+| **P3 (Minor)** | **26** |
+| **Total** | **31 findings** |
+
+### Supplier Web Verdict
+
+**PASS** — 23/23 screens verified across all 17 runtime layers. No P1 blockers.
+
+- **5 P2 findings**: register reCAPTCHA mounted gate (STG-762), orders client-side-only filter (STG-776), bank account unmasked in profile API (STG-781), help page missing from middleware auth (STG-791), BNPL table accessibility (STG-799)
+- **26 P3 findings**: a11y polish (tabs, labels, focus traps, keyboard), dark mode gaps, OTP UX, date formatting, autocomplete attributes
+
+### Finding Range Update (cumulative)
+
+- **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
+- **Supplier Web**: STG-761..STG-802 (31 findings: 0 P1, 5 P2, 26 P3)
+- **Next finding starts at**: STG-803
+- **Do NOT rewrite** STG-001..STG-802 entries (frozen)
