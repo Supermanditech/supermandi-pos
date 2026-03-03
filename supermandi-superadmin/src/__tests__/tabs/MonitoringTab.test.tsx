@@ -494,7 +494,8 @@ describe('MonitoringTab', () => {
         expect(screen.getByText('Domain')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      expect(screen.getByText('staging.supermandi.tech')).toBeInTheDocument();
+      // Domain now renders window.location.hostname dynamically (jsdom defaults to 'localhost')
+      expect(screen.getByText('localhost')).toBeInTheDocument();
       expect(screen.getByText('Cloudflare DNS')).toBeInTheDocument();
     });
   });

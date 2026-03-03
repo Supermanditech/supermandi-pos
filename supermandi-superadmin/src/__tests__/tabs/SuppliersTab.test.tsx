@@ -13,6 +13,7 @@ vi.mock('../../api/suppliers', () => ({
 
 vi.mock('../../lib/formatters', () => ({
   formatDateTime: vi.fn((v: string) => v || '--'),
+  formatDate: vi.fn((v: string) => v || '--'),
 }));
 
 function createDefaultProps(overrides: Partial<Parameters<typeof SuppliersTab>[0]> = {}) {

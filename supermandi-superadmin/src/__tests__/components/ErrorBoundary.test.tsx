@@ -139,14 +139,9 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
+      // Component uses CSS classes, not inline styles
       const container = screen.getByText('Something went wrong').parentElement;
-      expect(container).toHaveStyle({
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-      });
+      expect(container?.className).toContain('sa-error-boundary');
     });
 
     it('applies error color to heading', () => {
@@ -157,7 +152,7 @@ describe('ErrorBoundary', () => {
       );
 
       const heading = screen.getByRole('heading', { level: 2 });
-      expect(heading).toHaveStyle({ color: '#991b1b' });
+      expect(heading.className).toContain('sa-error-title');
     });
 
     it('styles try again button correctly', () => {
@@ -168,9 +163,7 @@ describe('ErrorBoundary', () => {
       );
 
       const button = screen.getByRole('button', { name: /try again/i });
-      // Just verify key styles are present (jsdom may apply browser defaults)
-      expect(button).toHaveStyle({ cursor: 'pointer' });
-      expect(button.style.background).toBeTruthy();
+      expect(button.className).toContain('sa-btn-retry');
     });
   });
 
