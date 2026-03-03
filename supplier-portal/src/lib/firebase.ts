@@ -58,6 +58,11 @@ export function setupRecaptcha(buttonId: string): void {
     throw new Error('Firebase not configured');
   }
 
+  // STG-722: Defensive check — button must exist in DOM before RecaptchaVerifier init
+  if (!document.getElementById(buttonId)) {
+    throw new Error(`reCAPTCHA target element '${buttonId}' not found in DOM`);
+  }
+
   // Clean up existing verifier
   if (recaptchaVerifier) {
     try { recaptchaVerifier.clear(); } catch { /* ignore cleanup errors */ }

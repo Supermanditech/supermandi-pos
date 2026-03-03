@@ -105,8 +105,9 @@ export default function SupplierOnboardingPage() {
   useUnsavedChanges(hasUnsavedData);
 
   // Setup reCAPTCHA when on phone step
+  // STG-722: Gate on `mounted` — button must exist in DOM after hydration
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
+    if (mounted && isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -121,7 +122,7 @@ export default function SupplierOnboardingPage() {
         recaptchaInitialized.current = false;
       }
     };
-  }, [step]);
+  }, [mounted, step]);
 
   // Resend cooldown timer
   useEffect(() => {

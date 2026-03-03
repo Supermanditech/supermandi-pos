@@ -1,8 +1,8 @@
 {
-  "version": "101.0",
-  "lastUpdated": "2026-03-03T00:00:00Z",
-  "currentPhase": "POS_COMPAT_HARDENING_COMPLETE: Proactive hardening wave (8 fixes, commit 95d8473a) merged. Awaiting redeploy then operator device testing (POS_COMPATIBILITY_MATRIX_PASS). STG-722+ reserved for actual runtime/device failures only. Platform order unchanged: POS App -> Retailer Web -> Supplier Web -> SuperAdmin Web -> Cross-function matrix.",
-  "currentTicket": null,
+  "version": "102.0",
+  "lastUpdated": "2026-03-03T22:30:00Z",
+  "currentPhase": "STG-722_FIX_IN_PROGRESS: Supplier reCAPTCHA auth/argument-error (P1 go-live blocker). Root cause: login page useEffect fires RecaptchaVerifier before Next.js hydration renders the button element. Fix: gate on mounted state + defensive DOM check. Staging serving 9712d509. CI blockers cleared (5 commits 8a330ecc..9712d509).",
+  "currentTicket": "STG-722",
   "ticketQueue": [],
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",

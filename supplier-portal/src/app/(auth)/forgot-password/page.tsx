@@ -55,8 +55,9 @@ export default function ForgotPasswordPage() {
   useEffect(() => { setMounted(true); }, []);
 
   // Setup reCAPTCHA when on phone step
+  // STG-722: Gate on `mounted` — button must exist in DOM after hydration
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && channel === 'otp') {
+    if (mounted && isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && channel === 'otp') {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -68,7 +69,7 @@ export default function ForgotPasswordPage() {
       cleanup();
       recaptchaInitialized.current = false;
     };
-  }, [step, channel]);
+  }, [mounted, step, channel]);
 
   useEffect(() => {
     if (resendCooldown > 0) {

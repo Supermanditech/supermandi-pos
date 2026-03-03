@@ -51,8 +51,9 @@ export default function LoginPage() {
   }, []);
 
   // T-021: Setup reCAPTCHA when in OTP phone step (initialize early for combined lookup+send)
+  // STG-722: Gate on `mounted` — the send-otp-button only exists after hydration (skeleton shown while mounted=false)
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && authMode === 'otp') {
+    if (mounted && isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && authMode === 'otp') {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -65,7 +66,7 @@ export default function LoginPage() {
       cleanup();
       recaptchaInitialized.current = false;
     };
-  }, [step, authMode]);
+  }, [mounted, step, authMode]);
 
   // FIX-064: Resend cooldown timer — clear sessionStorage when done
   useEffect(() => {
