@@ -1,7 +1,7 @@
 {
-  "version": "100.0",
-  "lastUpdated": "2026-03-05T00:00:00Z",
-  "currentPhase": "TWO_STAGE_FINAL_GCP_SIGNOFF_REQUIRED: all-platform live sign-off is active under strict screen lock. Business-logic edge-case testing is mandatory on every screen/flow before closure. Restart POS from Screen 1 and retest Screen 1 and Screen 2 edge cases first. Platform order is POS App -> Retailer Web -> Supplier Web -> SuperAdmin Web -> Cross-function matrix. New findings start at STG-722.",
+  "version": "101.0",
+  "lastUpdated": "2026-03-03T00:00:00Z",
+  "currentPhase": "POS_COMPAT_HARDENING_COMPLETE: Proactive hardening wave (8 fixes, commit 95d8473a) merged. Awaiting redeploy then operator device testing (POS_COMPATIBILITY_MATRIX_PASS). STG-722+ reserved for actual runtime/device failures only. Platform order unchanged: POS App -> Retailer Web -> Supplier Web -> SuperAdmin Web -> Cross-function matrix.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -89,6 +89,15 @@
     "deployedAppCodeSha": "610cbc39",
     "findingRangeStart": "STG-722",
     "mode": "LIVE_VERIFICATION_DISCOVERY_ONLY",
+    "currentExecutionOrder": [
+      "DONE: POS compatibility hardening (8 fixes, 95d8473a)",
+      "NEXT: merge hardening to main, redeploy, operator device testing",
+      "resume final two-stage live sign-off from POS Screen 1",
+      "Retailer Web live sign-off",
+      "Supplier Web live sign-off",
+      "SuperAdmin Web live sign-off",
+      "Cross-Function Matrix live sign-off"
+    ],
     "platformOrder": [
       "POS App",
       "Retailer Web",
@@ -98,6 +107,13 @@
     ],
     "activePlatform": "POS App",
     "activeScreenOrFlow": "SplashScreen",
+    "platformCompletionState": {
+      "posApp": "PENDING_FINAL_TWO_STAGE_SIGNOFF_AFTER_COMPATIBILITY_HARDENING",
+      "retailerWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
+      "supplierWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
+      "superadminWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
+      "crossFunctionMatrix": "PENDING_FINAL_TWO_STAGE_SIGNOFF"
+    },
     "strictLock": {
       "singlePlatform": true,
       "singleScreenOrFlow": true,
@@ -110,6 +126,17 @@
       "emailForTesting": "supermanditech@gmail.com",
       "phoneForOtpTesting": "7737914383",
       "rule": "If OTP, browser session, email click-through, or device action is required, ask for the exact operator input and continue the same locked screen immediately."
+    },
+    "posCompatibilityMatrix": {
+      "status": "HARDENING_COMPLETE_AWAITING_REDEPLOY_AND_DEVICE_TESTING",
+      "artifact": "RELEASES/POS_COMPATIBILITY_MATRIX.md",
+      "hardeningCommit": "95d8473a",
+      "hardeningBranch": "fix/pos-compat-hardening",
+      "hardeningFixes": 8,
+      "hardeningScope": "H1-H8: responsive grid, camera settings link, UPI persistence, voice toast, auto-print wiring, split poll timeout, compact tabs, print retry",
+      "predictedRisksAreHypothesesOnly": true,
+      "doNotConvertPredictedRisksToStgUntilReproduced": true,
+      "nextStep": "merge to main -> redeploy -> operator device testing"
     },
     "platformManifests": {
       "posApp": {

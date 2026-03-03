@@ -181,14 +181,18 @@ export function SplitPaymentModal({
 
       // POS-PAY-001: Increased to 40 attempts (~5+ min with exponential backoff)
       // GO-LIVE-125: Exponential backoff polling (2s, 4s, 8s, 16s, capped at 30s)
+      // R10: Wall-clock guard — stop polling after 5 minutes regardless of attempt count
       let currentAttempt = 0;
       const maxAttempts = 40;
       const baseDelay = 2000;
       const maxDelay = 30000;
+      const pollStartTime = Date.now();
+      const MAX_POLL_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
       const scheduleNextPoll = () => {
-        if (currentAttempt >= maxAttempts) {
+        if (currentAttempt >= maxAttempts || Date.now() - pollStartTime > MAX_POLL_DURATION_MS) {
           setPollingActive(false);
+          setManualUtrVisible(true);
           return;
         }
         // Exponential backoff: 2^attempt * baseDelay, capped at maxDelay

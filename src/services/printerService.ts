@@ -171,9 +171,28 @@ class PrinterService {
       const html = this.textToReceiptHtml(content);
       // STG-451: Respect user-configured copies setting
       const copies = useSettingsStore.getState().printerCopies;
-      for (let i = 0; i < copies; i++) {
-        await Print.printAsync({ html });
-      }
+
+      // R8: Single retry on print failure (not on user cancel)
+      const printWithRetry = async () => {
+        try {
+          for (let i = 0; i < copies; i++) {
+            await Print.printAsync({ html });
+          }
+        } catch (firstErr: unknown) {
+          const fe = asError(firstErr);
+          // Don't retry user cancellations
+          if (fe?.message?.includes('cancelled') || fe?.message?.includes('canceled')) {
+            throw firstErr;
+          }
+          // Wait 1s and retry once
+          await new Promise((r) => setTimeout(r, 1000));
+          for (let i = 0; i < copies; i++) {
+            await Print.printAsync({ html });
+          }
+        }
+      };
+
+      await printWithRetry();
 
       await eventLogger.log('PRINT_RECEIPT', {
         contentLength: content.length,
@@ -191,7 +210,7 @@ class PrinterService {
 
       return true;
     } catch (_e: unknown) {
-    const e = asError(_e);
+      const e = asError(_e);
       // User cancelled the print dialog — not a real error
       if (e?.message?.includes('cancelled') || e?.message?.includes('canceled')) {
         await eventLogger.log('USER_ACTION', {

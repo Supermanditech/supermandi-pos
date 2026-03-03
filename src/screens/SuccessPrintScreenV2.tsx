@@ -42,6 +42,7 @@ export default function SuccessPrintScreenV2() {
   const route = useRoute<Rt>();
   const { items, total, subtotal, discountAmount, discount, clearCart, unlockCart } = useCartStore();
   const storeName = useSettingsStore((s) => s.storeName);
+  const printerAutoPrint = useSettingsStore((s) => s.printerAutoPrint);
 
   // UIUX-POS-001: useRef MUST be unconditional (Rules of Hooks).
   // These are fallbacks when route params don't provide billId/transactionId.
@@ -162,6 +163,16 @@ export default function SuccessPrintScreenV2() {
       void logPosEvent("PRINTER_ERROR", { billId: billNumber, transactionId, reason: "print_failed" });
     }
   };
+
+  // R9: Auto-print on mount when setting is enabled
+  const autoPrintDoneRef = useRef(false);
+  useEffect(() => {
+    if (printerAutoPrint && !autoPrintDoneRef.current && printStatus === "idle") {
+      autoPrintDoneRef.current = true;
+      const timer = setTimeout(() => { void handlePrint(); }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [printerAutoPrint, printStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // WA-001: Validate Indian mobile number (10 digits starting with 6-9)
   const validatePhone = (raw: string): string | null => {

@@ -7,12 +7,12 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   FlatList,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -95,11 +95,8 @@ export interface PurchaseScreenProps {
 // NOTE: The old LIVE_SUPPLIERS_ENABLED and STOCK_IN_API_AVAILABLE flags have been
 // replaced by useFeatureReadiness() hooks that probe actual endpoint availability.
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const NUM_COLUMNS = 3;
 const CARD_GAP = 8;
 const CARD_PADDING = 12;
-const CARD_WIDTH = (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
 // =============================================================================
 // COMPONENT
@@ -114,6 +111,10 @@ export default function PurchaseScreen({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+
+  // R1+R2: Responsive grid — 1 column for very small, 2 for normal
+  const numColumns = screenWidth < 340 ? 1 : 2;
 
   // GATE-000: Runtime endpoint readiness detection
   const {
@@ -904,7 +905,7 @@ export default function PurchaseScreen({
             <>
               {/* POS-BUY-001: Catalog product grid */}
               <FlatList
-                key="catalog-grid-2col"
+                key={`catalog-grid-${numColumns}col`}
                 data={catalogProducts}
                 renderItem={({ item }) => (
                   <CatalogProductCard
@@ -917,7 +918,7 @@ export default function PurchaseScreen({
                   />
                 )}
                 keyExtractor={(item) => item.id}
-                numColumns={2}
+                numColumns={numColumns}
                 contentContainerStyle={[
                   styles.skuGrid,
                   { paddingBottom: insets.bottom + (purchaseCartTotals.itemCount > 0 ? 90 : 20) },
@@ -1214,55 +1215,6 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   skuGrid: {
     padding: CARD_PADDING,
     paddingTop: 8,
-  },
-  skuRow: {
-    gap: CARD_GAP,
-    marginBottom: CARD_GAP,
-  },
-  skuCard: {
-    width: CARD_WIDTH,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 8,
-    alignItems: "center",
-  },
-  skuCardDisabled: {
-    opacity: 0.5,
-  },
-  skuPhoto: {
-    width: 50,
-    height: 50,
-    borderRadius: 6,
-    backgroundColor: colors.backgroundSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  skuName: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    textAlign: "center",
-    minHeight: 28,
-  },
-  skuMeta: {
-    fontSize: 10,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-  skuPrice: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.primary,
-    marginTop: 4,
-  },
-  skuMoq: {
-    fontSize: 9,
-    color: colors.warning,
-    fontWeight: "600",
-    marginTop: 2,
   },
   cartBadge: {
     position: "absolute",
