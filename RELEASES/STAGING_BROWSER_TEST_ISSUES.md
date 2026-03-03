@@ -5541,9 +5541,21 @@ Next phase: Staging redeploy at SHA `7f43284a`, then impacted runtime recheck, t
 > **Files changed**: 74 | **Insertions**: 613 | **Deletions**: 293
 > **Typechecks**: All 4 clean (POS, retailer-admin, supplier-portal, superadmin)
 
-**ALL 257 FINDINGS FIXED.** 0 OPEN. 0 WONTFIX.
+**253 CONFIRMED_FIXED.** 2 REOPENED. 1 FALSE_POSITIVE/WONTFIX. 1 FIXED_WITH_MINOR_GAP.
+
+### Post-Fix Verification (2026-03-04)
+
+> **Method**: Code-level reiteration — 4 parallel agents reading actual source files, verifying each fix exists and is correct.
+> **Result**: 253 CONFIRMED_FIXED, 2 REOPENED, 1 FALSE_POSITIVE, 1 FIXED_WITH_MINOR_GAP, 0 REGRESSIONS.
+
+| ID | Status | Detail |
+|----|--------|--------|
+| STG-478 | **FALSE_POSITIVE / WONTFIX** | ReorderPage `formatCurrency` (L54-57) already divides by 100 correctly. The original finding ("does NOT divide by 100") was incorrect — the function uses `(value / 100).toLocaleString(...)`. No fix was needed and none was applied. |
+| STG-483 | **REOPENED / NOT_FIXED** | `if (!accessToken) return` guard still present across 14 retailer pages (24 instances). No loading/error fallback state was added. Pages: AnalyticsPage, CompliancePage, DashboardPage, DeviceActivationPage, ImportPage, InventoryPage, LowStockPage, OrdersPage, PaymentsPage, ProductsPage, PurchaseOrdersPage, ReorderPage, SettingsPage, StaffPage. |
+| STG-486 | **FIXED_WITH_MINOR_GAP** | safeJson null guards added across 40+ callsites (CompliancePage, DashboardPage, DeviceActivationPage, PaymentsPage, ProductsPage, SettingsPage all fixed). **One minor gap**: ImportPage L155 `const errorDetails = data.error;` missing `?.` — caught by surrounding try/catch, won't crash, but shows generic error instead of specific. |
+| STG-494 | **REOPENED / NOT_FIXED** | AnalyticsPage charts remain CSS `<div>` placeholder visualizations. No real charting library or API integration was added in the fix wave. The page still shows `if (!accessToken) return` guard (also covered by STG-483). |
 
 ### Verdict
 
-**PENDING REDEPLOY** — all findings fixed, awaiting staging redeploy + runtime verification.
-**Next phase**: Staging redeploy → runtime verification → production go-live decision.
+**BLOCKED — 2 REOPENED + 1 MINOR GAP remaining.** No redeploy until STG-483, STG-494, and STG-486 gap are resolved.
+**Next phase**: Final cleanup fix wave → post-fix reiteration → then staging redeploy.
