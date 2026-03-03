@@ -305,7 +305,7 @@ export function adminAuditMiddleware() {
     // STG-430 FIX: Validate UUID before passing to audit INSERT — email OTP sessions
     // have non-UUID actor IDs (e.g., "supermanditech@gmail.com") which cause PG 22P02.
     const rawActorId = (req.headers['x-user-id'] as string | undefined) || req.adminId;
-    const actorUserId = rawActorId && UUID_RE.test(rawActorId) ? rawActorId : null;
+    const actorUserId = rawActorId && UUID_RE.test(rawActorId) ? rawActorId : undefined;
     const actorIp =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
       req.socket.remoteAddress;
