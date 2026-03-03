@@ -3392,9 +3392,15 @@ IMPACTED RUNTIME RECHECK (2026-03-04):
   STG-494: PASS — ARIA roles/labels, value labels CSS present
   Services: 6/6 200 OK, version 610cbc3
 
-VERDICT: BLOCKED_PENDING_FINAL_TWO_STAGE_GCP_SIGNOFF — staging redeploy verified and impacted runtime recheck passed, but production promotion is not allowed until the final two-stage live GCP sign-off completes.
-NEXT: Two-stage final GCP sign-off at STG-722+ → collect any remaining runtime findings → separate fix wave if needed → only then production go-live decision.
+VERDICT: BLOCKED_PENDING_FINAL_TWO_STAGE_GCP_SIGNOFF
+NEXT: Two-stage final GCP sign-off (76 views across 5 platforms) → fix wave if needed → go-live.
 NEXT FINDING STARTS AT: STG-722
+
+TWO-STAGE FINAL SIGN-OFF — POS INVENTORY (LOCKED):
+  44 screen files | 32 modals | 76 testable views | 15 phases
+  Platform order: POS → Retailer Web → Supplier Web → SuperAdmin Web → Cross-function
+  Active: POS | Completed: 0/76 | Findings: 0
+  Rules: one view at a time, no grouped execution, no skipping modals, no sampling, no fixes
 ```
 
 ---

@@ -1,7 +1,7 @@
 {
-  "version": "99.0",
-  "lastUpdated": "2026-03-04T22:30:00Z",
-  "currentPhase": "TWO_STAGE_FINAL_GCP_SIGNOFF_REQUIRED: SHA 610cbc39 redeployed and impacted runtime recheck passed, but production promotion is blocked pending one final two-stage live GCP sign-off. New findings start at STG-722.",
+  "version": "100.0",
+  "lastUpdated": "2026-03-05T00:00:00Z",
+  "currentPhase": "TWO_STAGE_FINAL_GCP_SIGNOFF_REQUIRED: all-platform live sign-off is active under strict screen lock. Platform order is POS App -> Retailer Web -> Supplier Web -> SuperAdmin Web -> Cross-function matrix. New findings start at STG-722.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -83,6 +83,78 @@
       "Browser verification of all 6 staging services post-deploy",
       "STG-004 email: verify smtp-password secret is present in Secret Manager"
     ]
+  },
+  "finalTwoStageGcpSignoff": {
+    "status": "ACTIVE",
+    "deployedAppCodeSha": "610cbc39",
+    "findingRangeStart": "STG-722",
+    "mode": "LIVE_VERIFICATION_DISCOVERY_ONLY",
+    "platformOrder": [
+      "POS App",
+      "Retailer Web",
+      "Supplier Web",
+      "SuperAdmin Web",
+      "Cross-Function Matrix"
+    ],
+    "activePlatform": "POS App",
+    "strictLock": {
+      "singlePlatform": true,
+      "singleScreenOrFlow": true,
+      "groupedExecutionForbidden": true,
+      "samplingForbidden": true,
+      "fixesForbiddenInThisSession": true,
+      "screenExitRule": "Do not exit the active screen/flow until all meaningful user actions are exercised and all required runtime layers are covered or explicitly blocked with evidence."
+    },
+    "operatorAssistedInputs": {
+      "emailForTesting": "supermanditech@gmail.com",
+      "phoneForOtpTesting": "7737914383",
+      "rule": "If OTP, browser session, email click-through, or device action is required, ask for the exact operator input and continue the same locked screen immediately."
+    },
+    "requiredRuntimeLayers": [
+      "user_actions",
+      "business_logic",
+      "ui",
+      "ux",
+      "navigation",
+      "wiring",
+      "validation",
+      "loading_empty_error_states",
+      "auth_session_behavior",
+      "api_visible_behavior",
+      "backend_behavior",
+      "db_data_integrity_symptoms",
+      "migration_runtime_parity",
+      "gcp_runtime_parity",
+      "external_dependency_behavior",
+      "accessibility",
+      "responsive_behavior"
+    ],
+    "platformManifests": {
+      "posApp": {
+        "screenFiles": 44,
+        "modals": 32,
+        "testableViews": 76,
+        "canonicalInventoryLocked": true,
+        "firstScreen": "SplashScreen"
+      },
+      "retailerWeb": {
+        "productionScreens": 28,
+        "allPagesPage": "DEV_ONLY_EXCLUDED",
+        "firstScreen": "LoginPage"
+      },
+      "supplierWeb": {
+        "screens": 23,
+        "firstScreen": "LoginPage"
+      },
+      "superadminWeb": {
+        "screens": 25,
+        "firstScreen": "LoginGate"
+      },
+      "crossFunctionMatrix": {
+        "flows": 7
+      }
+    },
+    "resultRule": "Record every new issue as STG-722+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it."
   },
   "firebaseProductionAudit": {
     "status": "REPO_HARDENED_OPERATOR_VERIFICATION_DEFERRED",
@@ -726,8 +798,169 @@
       "services": "retailer 200, supplier 200, admin 200, landing 200, API health 200, version 610cbc3",
       "regressions": 0
     },
-    "productionGoLiveVerdict": "BLOCKED_PENDING_FINAL_TWO_STAGE_GCP_SIGNOFF — engineering wave is deployed and rechecked, but production promotion is not allowed until the final operator-assisted two-stage sign-off completes.",
-    "nextPhase": "Two-stage final GCP sign-off at STG-722+ → collect remaining runtime findings if any → separate fix wave if needed → only then production go-live decision"
+    "productionGoLiveVerdict": "BLOCKED_PENDING_FINAL_TWO_STAGE_GCP_SIGNOFF",
+    "nextPhase": "Two-stage final GCP sign-off (76 views across 5 platforms) → fix wave if needed → production go-live",
+    "twoStageFinalSignoff": {
+      "status": "IN_PROGRESS",
+      "activePlatform": "POS",
+      "activeView": null,
+      "completedViews": 0,
+      "totalViews": 76,
+      "findingsFound": 0,
+      "nextFindingId": "STG-722",
+      "platformOrder": ["POS", "Retailer Web", "Supplier Web", "SuperAdmin Web", "Cross-function matrix"],
+      "posInventory": {
+        "totalScreenFiles": 44,
+        "totalModals": 32,
+        "totalTestableViews": 76,
+        "phases": {
+          "1_boot_gates": {
+            "views": [
+              {"id": 1, "name": "SplashScreen", "file": "src/screens/SplashScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 2, "name": "EnrollDeviceScreen", "file": "src/screens/EnrollDeviceScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 3, "name": "PaymentSetupScreen", "file": "src/screens/PaymentSetupScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 4, "name": "ForceUpdateScreen", "file": "src/screens/ForceUpdateScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 5, "name": "DeviceBlockedScreen", "file": "src/screens/DeviceBlockedScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "2_staff_login": {
+            "views": [
+              {"id": 6, "name": "StaffLoginScreen", "file": "src/screens/StaffLoginScreen.tsx", "type": "gate", "status": "pending"}
+            ]
+          },
+          "3_pos_root_tabs": {
+            "views": [
+              {"id": 7, "name": "PosRootLayout (tab host + status bar + banners)", "file": "src/screens/PosRootLayout.tsx", "type": "tab-host", "status": "pending"},
+              {"id": "7a", "name": "PosStatusBar Popover", "file": "src/components/PosStatusBar.tsx", "type": "modal", "status": "pending"},
+              {"id": "7b", "name": "Camera Scanner Modal", "file": "src/screens/PosRootLayout.tsx", "type": "modal", "status": "pending"},
+              {"id": 8, "name": "SellScanScreen (SELL tab)", "file": "src/screens/SellScanScreen.tsx", "type": "tab", "status": "pending"},
+              {"id": "8a", "name": "Cart Sheet", "file": "src/screens/SellScanScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "8b", "name": "Sell-First Onboarding Modal", "file": "src/screens/SellScanScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "8c", "name": "Product Detail Modal", "file": "src/screens/SellScanScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "8d", "name": "Line Item Editor", "file": "src/screens/SellScanScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "8e", "name": "Bulk Quantity Selector", "file": "src/screens/SellScanScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "8f", "name": "AddStoreProductModal", "file": "src/components/sell/AddStoreProductModal.tsx", "type": "modal", "status": "pending"},
+              {"id": "8g", "name": "VariantPickerModal", "file": "src/components/sell/VariantPickerModal.tsx", "type": "modal", "status": "pending"},
+              {"id": "8h", "name": "VoiceSheet", "file": "src/components/voice/VoiceSheet.tsx", "type": "modal", "status": "pending"},
+              {"id": 9, "name": "MenuScreen (MENU tab)", "file": "src/screens/MenuScreen.tsx", "type": "tab", "status": "pending"},
+              {"id": 10, "name": "PurchaseScreen (PURCHASE tab)", "file": "src/screens/PurchaseScreen.tsx", "type": "tab", "status": "pending"},
+              {"id": "10a", "name": "PurchaseCartModal", "file": "src/components/buy/PurchaseCartModal.tsx", "type": "modal", "status": "pending"},
+              {"id": "10b", "name": "ProductDetailModal (buy)", "file": "src/components/buy/ProductDetailModal.tsx", "type": "modal", "status": "pending"},
+              {"id": "10c", "name": "PaymentOptionsSheet", "file": "src/components/buy/PaymentOptionsSheet.tsx", "type": "modal", "status": "pending"},
+              {"id": 11, "name": "ReorderScreen (REORDER tab)", "file": "src/screens/ReorderScreen.tsx", "type": "tab", "status": "pending"},
+              {"id": "11a", "name": "DismissReasonModal", "file": "src/components/reorder/DismissReasonModal.tsx", "type": "modal", "status": "pending"},
+              {"id": "11b", "name": "EditReorderModal", "file": "src/components/reorder/EditReorderModal.tsx", "type": "modal", "status": "pending"},
+              {"id": 12, "name": "CreditScreen (CREDIT tab)", "file": "src/screens/CreditScreen.tsx", "type": "tab", "status": "pending"},
+              {"id": "12a", "name": "Apply Modal (credit)", "file": "src/screens/CreditScreen.tsx", "type": "modal", "status": "pending"}
+            ]
+          },
+          "4_checkout_flow": {
+            "views": [
+              {"id": 13, "name": "PaymentScreen", "file": "src/screens/PaymentScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "13a", "name": "SplitPaymentModal", "file": "src/components/sell/SplitPaymentModal.tsx", "type": "modal", "status": "pending"},
+              {"id": 14, "name": "SuccessPrintScreenV2", "file": "src/screens/SuccessPrintScreenV2.tsx", "type": "stack", "status": "pending"},
+              {"id": "14a", "name": "WhatsApp Phone Input Modal", "file": "src/screens/SuccessPrintScreenV2.tsx", "type": "modal", "status": "pending"}
+            ]
+          },
+          "5_sales_billing": {
+            "views": [
+              {"id": 15, "name": "SalesHistoryScreen", "file": "src/screens/SalesHistoryScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 16, "name": "BillDetailScreen", "file": "src/screens/BillDetailScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "6_inventory_purchasing": {
+            "views": [
+              {"id": 17, "name": "BarcodeSheetScreen", "file": "src/screens/BarcodeSheetScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "17a", "name": "Print Settings Modal", "file": "src/screens/BarcodeSheetScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": 18, "name": "OrderHistoryScreen", "file": "src/screens/OrderHistoryScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 19, "name": "OrderDetailScreen", "file": "src/screens/OrderDetailScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 20, "name": "GRNScreen", "file": "src/screens/GRNScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 21, "name": "InwardScreen", "file": "src/screens/InwardScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "21a", "name": "Supplier Picker Modal", "file": "src/screens/InwardScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": 22, "name": "PurchaseHistoryScreen", "file": "src/screens/PurchaseHistoryScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 23, "name": "BuyScreen", "file": "src/screens/BuyScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "7_reorder_config": {
+            "views": [
+              {"id": 24, "name": "ReorderSettingsScreen", "file": "src/screens/ReorderSettingsScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 25, "name": "ReorderPoliciesScreen", "file": "src/screens/ReorderPoliciesScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "25a", "name": "EditPolicyModal", "file": "src/components/reorder/EditPolicyModal.tsx", "type": "modal", "status": "pending"}
+            ]
+          },
+          "8_reports": {
+            "views": [
+              {"id": 26, "name": "SalesStatementScreen", "file": "src/screens/SalesStatementScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 27, "name": "StockStatementScreen", "file": "src/screens/StockStatementScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 28, "name": "DailyReportScreen", "file": "src/screens/DailyReportScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "9_customer_credit": {
+            "views": [
+              {"id": 29, "name": "KhataScreen", "file": "src/screens/KhataScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "29a", "name": "Ledger Modal", "file": "src/screens/KhataScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "29b", "name": "Add Credit Modal", "file": "src/screens/KhataScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "29c", "name": "Record Payment Modal", "file": "src/screens/KhataScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": 30, "name": "CustomerListScreen", "file": "src/screens/CustomerListScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "30a", "name": "Detail Modal (CustomerList)", "file": "src/screens/CustomerListScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "30b", "name": "Add Customer Modal (CustomerList)", "file": "src/screens/CustomerListScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "30c", "name": "Edit Customer Modal", "file": "src/screens/CustomerListScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": 31, "name": "CustomerManagementScreen", "file": "src/screens/CustomerManagementScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "31a", "name": "Detail Modal (CustomerMgmt)", "file": "src/screens/CustomerManagementScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "31b", "name": "Add Customer Modal (CustomerMgmt)", "file": "src/screens/CustomerManagementScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": 32, "name": "OverdueDuesScreen", "file": "src/screens/OverdueDuesScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 33, "name": "BnplDuesScreen", "file": "src/screens/BnplDuesScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": "33a", "name": "Payment Modal (BNPL)", "file": "src/screens/BnplDuesScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": "33b", "name": "Dispute Modal (BNPL)", "file": "src/screens/BnplDuesScreen.tsx", "type": "modal", "status": "pending"},
+              {"id": 34, "name": "BulkPurchaseCreditScreen", "file": "src/screens/BulkPurchaseCreditScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "10_operations": {
+            "views": [
+              {"id": 35, "name": "DailyClosingScreen", "file": "src/screens/DailyClosingScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 36, "name": "ShiftScreen", "file": "src/screens/ShiftScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 37, "name": "ReturnScreen", "file": "src/screens/ReturnScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 38, "name": "OpeningStockScreen", "file": "src/screens/OpeningStockScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "11_settings": {
+            "views": [
+              {"id": 39, "name": "PrinterSettingsScreen", "file": "src/screens/PrinterSettingsScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "12_communication": {
+            "views": [
+              {"id": 40, "name": "ChatListScreen", "file": "src/screens/ChatListScreen.tsx", "type": "stack", "status": "pending"},
+              {"id": 41, "name": "ChatConversationScreen", "file": "src/screens/ChatConversationScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "13_analytics": {
+            "views": [
+              {"id": 42, "name": "AIInsightsScreen", "file": "src/screens/AIInsightsScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "14_help": {
+            "views": [
+              {"id": 43, "name": "HelpScreen", "file": "src/screens/HelpScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          },
+          "15_cross_cutting": {
+            "views": [
+              {"id": 44, "name": "SyncConflictPanel", "file": "src/components/ui/SyncConflictPanel.tsx", "type": "modal", "status": "pending"},
+              {"id": 45, "name": "UiShowcaseScreen (QA only)", "file": "src/screens/UiShowcaseScreen.tsx", "type": "stack", "status": "pending"}
+            ]
+          }
+        },
+        "dependencyMatrix": {
+          "deviceEnrollment": "All except #1 (Splash), #43 (Help), #45 (UiShowcase)",
+          "staffLogin": "#7-#42 and all their modals",
+          "printer": "#9 (Menu), #14 (SuccessPrint), #16 (BillDetail), #17+17a (BarcodeSheet), #28 (DailyReport), #39 (PrinterSettings)",
+          "scanner": "#7b (Camera), #8+8b+8f+8g (SellScan), #10 (Purchase), #21 (Inward)",
+          "network": "All except #43 (Help), #45 (UiShowcase)",
+          "operatorAction": "#2 (activation code), #3 (UPI VPA), #4 (minAppVersion via SuperAdmin), #5 (deactivate via SuperAdmin), #6 (staff credentials), #7b (camera permission), #13 (UPI), #14a (WhatsApp phone), #31/#32 (WhatsApp/call), #8h (microphone)"
+        }
+      }
+    }
   },
   "finalMegaImplementation": {
     "status": "ALL_FINDINGS_RESOLVED",
