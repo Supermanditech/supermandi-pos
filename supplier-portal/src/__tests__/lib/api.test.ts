@@ -902,7 +902,8 @@ describe('Invoice APIs', () => {
 
   it('getSupplierInvoiceDetail unwraps nested data', async () => {
     const invoice = { id: 'inv1', invoiceNumber: 'INV-001', status: 'issued' };
-    mockFetch.mockResolvedValueOnce(mockResponse({ data: { data: invoice } }));
+    // apiFetch unwraps data.data → single { data: invoice } is sufficient
+    mockFetch.mockResolvedValueOnce(mockResponse({ data: invoice }));
     const result = await getSupplierInvoiceDetail('inv1');
     expect(result.invoiceNumber).toBe('INV-001');
   });

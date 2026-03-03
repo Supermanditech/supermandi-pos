@@ -85,7 +85,9 @@ describe('ResetPasswordPage', () => {
     fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'Password456' } });
     fireEvent.click(screen.getByText('Reset Password'));
     await waitFor(() => {
-      expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+      // Multiple elements show this message (form-level alert + inline validation)
+      const matches = screen.getAllByText('Passwords do not match');
+      expect(matches.length).toBeGreaterThan(0);
     });
   });
 

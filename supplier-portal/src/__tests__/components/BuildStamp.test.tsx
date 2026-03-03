@@ -34,10 +34,10 @@ describe('BuildStamp', () => {
     expect(await screen.findByText(/Deployed: local/)).toBeInTheDocument();
   });
 
-  it('renders with monospace font', () => {
+  it('renders with monospace font class (Tailwind font-mono)', () => {
     const { container } = render(<BuildStamp />);
 
     const buildStampDiv = container.firstChild as HTMLElement;
-    expect(buildStampDiv).toHaveStyle({ fontFamily: 'monospace' });
+    expect(buildStampDiv.className).toContain('font-mono');
   });
 });

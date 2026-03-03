@@ -94,6 +94,11 @@ jest.mock('../../../lib/api', () => ({
   uploadProductImage: jest.fn(),
 }));
 
+// STG-010: Mock useAuth to provide verified supplier (button disabled without it)
+jest.mock('../../../lib/auth', () => ({
+  useAuth: () => ({ supplier: { verificationStatus: 'verified' } }),
+}));
+
 describe('ProductsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -155,7 +160,7 @@ describe('ProductsPage', () => {
     expect(screen.getByText('Your SKU Code')).toBeInTheDocument();
     expect(screen.getByText(/Purchase Price/)).toBeInTheDocument();
     expect(screen.getByText('Minimum Order Quantity')).toBeInTheDocument();
-    expect(screen.getByText('Description')).toBeInTheDocument();
+    // STG-081: Description field removed from form
     expect(screen.getByText('Product Image')).toBeInTheDocument();
   });
 

@@ -28,10 +28,10 @@ describe('NotFound Page', () => {
     expect(screen.getByText(/The page you're looking for doesn't exist/)).toBeInTheDocument();
   });
 
-  it('renders Back to Dashboard link', () => {
+  it('renders Go to Login link', () => {
     render(<NotFound />);
-    const link = screen.getByText('Back to Dashboard');
+    const link = screen.getByText('Go to Login');
     expect(link).toBeInTheDocument();
-    expect(link.closest('a')).toHaveAttribute('href', '/dashboard');
+    expect(link.closest('a')).toHaveAttribute('href', '/login');
   });
 });
