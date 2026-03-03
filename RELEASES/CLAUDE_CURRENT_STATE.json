@@ -1,7 +1,7 @@
 {
-  "version": "103.0",
-  "lastUpdated": "2026-03-03T23:00:00Z",
-  "currentPhase": "STG-722_RESOLVED: Supplier reCAPTCHA P1 blocker FIXED. Staging serving de452b1a. All CI gates PASS, CD deploy SUCCESS, Deploy Verification PASS (37/37 E2E + API + Token). Ready for broader final sign-off. Next: resume platform sign-off per CTO directive.",
+  "version": "104.0",
+  "lastUpdated": "2026-03-03T23:30:00Z",
+  "currentPhase": "LIVE_FINAL_SIGNOFF_RESUMED: STG-722 FIXED (de452b1a). Staging confirmed. Resuming final live sign-off: Retailer Web → Supplier Web → SuperAdmin Web → Cross-Function Matrix. Discovery-only mode, no fixes this session. Findings start at STG-723.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -42,8 +42,8 @@
     "deployHold": true,
     "nextRoundRules": {
       "auditFrom": "main@7f43284a",
-      "newFindingsStartAt": "STG-722",
-      "regressionAgainstPriorFixes": "Append as new STG-722+ IDs, do NOT silently edit historical closures",
+      "newFindingsStartAt": "STG-723",
+      "regressionAgainstPriorFixes": "Append as new STG-723+ IDs, do NOT silently edit historical closures",
       "doNotRewrite": "STG-001..STG-721 entries are frozen — only append, never edit"
     },
     "migrations": {
@@ -86,14 +86,14 @@
   },
   "finalTwoStageGcpSignoff": {
     "status": "ACTIVE",
-    "deployedAppCodeSha": "610cbc39",
-    "findingRangeStart": "STG-722",
+    "deployedAppCodeSha": "de452b1a",
+    "findingRangeStart": "STG-723",
     "mode": "LIVE_VERIFICATION_DISCOVERY_ONLY",
     "currentExecutionOrder": [
-      "DONE: POS compatibility hardening (8 fixes, 95d8473a)",
-      "NEXT: merge hardening to main, redeploy, operator device testing",
-      "resume final two-stage live sign-off from POS Screen 1",
-      "Retailer Web live sign-off",
+      "DONE: POS compatibility hardening (8 fixes, merged 9ecec062)",
+      "DONE: CI gates fix wave (9712d509), CD deployed, STG-722 reCAPTCHA fix (de452b1a)",
+      "DONE: STG-722 RESOLVED — staging de452b1a verified, all gates PASS",
+      "NEXT: Retailer Web live sign-off",
       "Supplier Web live sign-off",
       "SuperAdmin Web live sign-off",
       "Cross-Function Matrix live sign-off"
@@ -105,11 +105,11 @@
       "SuperAdmin Web",
       "Cross-Function Matrix"
     ],
-    "activePlatform": "POS App",
-    "activeScreenOrFlow": "SplashScreen",
+    "activePlatform": "Retailer Web",
+    "activeScreenOrFlow": "LoginPage",
     "platformCompletionState": {
-      "posApp": "PENDING_FINAL_TWO_STAGE_SIGNOFF_AFTER_COMPATIBILITY_HARDENING",
-      "retailerWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
+      "posApp": "DEFERRED_PENDING_OPERATOR_DEVICE_TESTING",
+      "retailerWeb": "IN_PROGRESS_LIVE_SIGNOFF",
       "supplierWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
       "superadminWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
       "crossFunctionMatrix": "PENDING_FINAL_TWO_STAGE_SIGNOFF"
@@ -268,7 +268,7 @@
       "accessibility",
       "responsive_behavior"
     ],
-    "resultRule": "Record every new issue as STG-722+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it."
+    "resultRule": "Record every new issue as STG-723+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it."
   },  "firebaseProductionAudit": {
     "status": "REPO_HARDENED_OPERATOR_VERIFICATION_DEFERRED",
     "artifacts": [
@@ -794,7 +794,7 @@
     "stagingUrl": "https://staging.supermandi.tech",
     "auditMethod": "Full live runtime audit — 10 parallel audit agents + manual HTTP verification",
     "findingRange": "STG-465..STG-721",
-    "nextFindingStartsAt": "STG-722",
+    "nextFindingStartsAt": "STG-723 (STG-722 used for supplier reCAPTCHA fix)",
     "totalFindings": 257,
     "severityBreakdown": {
       "p1": 10,
@@ -920,7 +920,7 @@
       "completedViews": 0,
       "totalViews": 76,
       "findingsFound": 0,
-      "nextFindingId": "STG-722",
+      "nextFindingId": "STG-723",
       "platformOrder": ["POS", "Retailer Web", "Supplier Web", "SuperAdmin Web", "Cross-function matrix"],
       "posInventory": {
         "totalScreenFiles": 44,

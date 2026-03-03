@@ -5594,3 +5594,42 @@ Next phase: Staging redeploy at SHA `7f43284a`, then impacted runtime recheck, t
 
 **PRODUCTION-READY** — 256 FIXED, 1 FALSE_POSITIVE/WONTFIX (STG-478), 0 OPEN, 0 REGRESSIONS.
 Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live decision.
+
+---
+
+## Post-Hardening Wave — STG-722
+
+> **Date**: 2026-03-03
+> **Deployed SHA**: `de452b1a`
+> **Baseline SHA**: `9712d509` (POS compat hardening + CI fixes merged)
+
+### STG-722: Supplier reCAPTCHA auth/argument-error (P1 Go-Live Blocker)
+
+| Field | Value |
+|-------|-------|
+| **ID** | STG-722 |
+| **Severity** | P1 — Go-Live Blocker |
+| **Platform** | Supplier Web |
+| **Screen** | Login (OTP phone step) |
+| **Symptom** | `FirebaseError: auth/argument-error` in console.error during page load |
+| **Root Cause** | Next.js SSR hydration timing: `useEffect([step, authMode])` fires after first render when `mounted=false`. DOM shows skeleton (no `send-otp-button` element). `RecaptchaVerifier` constructor throws because target element doesn't exist. |
+| **Fix** | Added `mounted` gate to reCAPTCHA useEffect condition + deps in login, forgot-password, onboard pages. Added defensive DOM element check in `setupRecaptcha()` for both supplier and retailer `firebase.ts`. |
+| **Commits** | `df07be2b` (reCAPTCHA timing fix), `de452b1a` (accessibility — heading hierarchy + contrast) |
+| **Status** | **FIXED** |
+| **CI** | 20/20 PASS |
+| **CD** | 6 services deployed SUCCESS |
+| **Deploy Verification** | 37/37 E2E + API + Token ALL PASS |
+| **Runtime Evidence** | Staging serving `de452b1a`, supplier login loads without console.error, reCAPTCHA initializes after hydration |
+
+### Accessory Fixes (found during STG-722 deploy verification)
+
+| Sub-ID | Platform | Issue | Fix | Commit |
+|--------|----------|-------|-----|--------|
+| STG-722-A | Retailer Web | `accessibility.spec.ts` heading-order: `/retailer/` redirects to `/login` (no h1) | Made h1 assertion conditional on not being on login page | `de452b1a` |
+| STG-722-B | Supplier Web | Footer "Help" link `text-slate-400` fails WCAG AA contrast (2.56:1) | Changed to `text-slate-500` (4.6:1) on auth, register, support layouts | `de452b1a` |
+
+### Finding Range Update
+
+- **This wave**: STG-722 (1 finding + 2 accessory fixes)
+- **Next finding starts at**: STG-723
+- **Do NOT rewrite** STG-001..STG-722 entries (frozen)
