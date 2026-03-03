@@ -2,8 +2,28 @@
 
 > **Phase**: POS_COMPATIBILITY_MATRIX_PASS
 > **Purpose**: Prove multi-device, multi-environment compatibility before production promotion
-> **Rule**: Discovery only. No code changes. No fix wave. Findings appended as STG-722+.
-> **Status**: PENDING
+> **Rule**: Findings appended as STG-722+. Proactive hardening completed (not STG closures).
+> **Status**: HARDENING_COMPLETE — awaiting operator device testing
+
+---
+
+## Proactive Hardening Wave (pre-device-testing)
+
+Commit `95d8473a` on branch `fix/pos-compat-hardening` — 8 preemptive fixes based on code-level risk predictions.
+These are **NOT confirmed defect closures** — STG-722+ is reserved for actual runtime/device failures only.
+
+| Fix | Risk | File | What Changed |
+|-----|------|------|-------------|
+| H1 | R1+R2 HIGH | PurchaseScreen.tsx | Reactive `useWindowDimensions()`, responsive numColumns, dead style cleanup |
+| H2 | R3 HIGH | PosRootLayout.tsx | Camera permanent denial → "Open Settings" via `Linking.openSettings()` |
+| H3 | R4 HIGH | PaymentScreen.tsx | Pending UPI persisted to AsyncStorage, recovered on mount (15-min TTL) |
+| H4 | R5 HIGH | SellScanScreen.tsx | Toast on voice recording failure |
+| H5 | R9 MED | SuccessPrintScreenV2.tsx | Wired `printerAutoPrint` setting (auto-print on mount when enabled) |
+| H6 | R10 MED | SplitPaymentModal.tsx | 5-min wall-clock timeout guard on UPI polling |
+| H7 | R7 MED | PosRootLayout.tsx | Compact tab threshold 280→320dp |
+| H8 | R8 MED | printerService.ts | Single auto-retry (1s delay) on print failure |
+
+Skipped: R6 (font scaling — already guarded), R11-R15 (low risk / need device testing).
 
 ---
 
