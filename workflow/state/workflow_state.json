@@ -114,6 +114,21 @@
           "secondaryOption2": "General enquiries and partnerships"
         },
         "reason": "Replace internal-sounding labels ('SuperAdmin', 'Company') with clear customer-facing support copy in the next release wave."
+      },
+      "stagingTestDataPurge": {
+        "status": "TODO_BEFORE_OPERATOR_REAL_USER_STAGING_TEST",
+        "type": "staging_data_hygiene_and_reset",
+        "scope": [
+          "retailer seeded/test users",
+          "supplier seeded/test users",
+          "test POS devices and sessions",
+          "seed stores used only for automation",
+          "mock/sample transactional data",
+          "test phone/email identities",
+          "test chat/support data"
+        ],
+        "operatorPlanAfterPurge": "Create one real retailer user and one real supplier user on staging, then create/approve one real test store for operator-led verification.",
+        "executionRule": "Run as a separate controlled cleanup before operator real-user staging tests. Verify exact seeded/test rows first and avoid deleting required canonical/master data."
       }
     },
     "platformManifests": {

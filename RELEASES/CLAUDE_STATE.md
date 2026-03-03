@@ -3408,6 +3408,7 @@ TWO-STAGE FINAL SIGN-OFF — POS INVENTORY (LOCKED):
   POS compatibility matrix artifact: `RELEASES/POS_COMPATIBILITY_MATRIX.md` (predicted risks are hypotheses only until reproduced live)
   Deferred post-signoff implementation: POS native launcher icon refresh is queued for after all platform + cross-function sign-off completes. Use existing SuperMandi shortmark sources (`shared/brand/logo-shortmark.svg`, `src/components/BrandShortmark.tsx`) and implement the Android launcher/round/adaptive icon as a blue rounded-square background with centered white SuperMandi glyph. This is a native app build change, not a GCP-only change, and must follow strict git discipline in the next release wave.
   Deferred post-signoff implementation: WhatsApp CTA copy refinement is also queued for the next release wave. Replace internal/vague labels with customer-facing copy: `Chat with Support` / `Platform help and account support` and `Contact SuperMandi` / `General enquiries and partnerships`.
+  Deferred post-signoff/ pre-operator task: staging test-data purge is required before operator real-user verification. Remove seeded/mock retailer and supplier users, test POS devices/sessions, automation-only stores, mock/sample transactional data, and stale test phone/email/chat artifacts from GCP staging with strict safety review. After purge, operator will create one real retailer user, one real supplier user, and one real staging test store for clean real-user validation.
 ```
 
 ---
