@@ -33,10 +33,10 @@ export default function HelpLayout({
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-3 px-6 text-xs text-slate-400 dark:text-slate-500 flex justify-between items-center">
+      <footer className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-3 px-6 text-xs text-slate-500 dark:text-slate-400 flex justify-between items-center">
         <span>&copy; {new Date().getFullYear()} SuperMandi Tech Pvt Ltd</span>
         <div className="flex items-center gap-4">
-          <a href="/supplier/login" className="text-slate-400 dark:text-slate-500 text-xs no-underline hover:underline">Sign In</a>
+          <a href="/supplier/login" className="text-slate-500 dark:text-slate-400 text-xs no-underline hover:underline">Sign In</a>
           <BuildStamp />
         </div>
       </footer>
