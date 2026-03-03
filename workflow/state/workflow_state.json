@@ -108,6 +108,7 @@
       "responsive_behavior"
     ],
     "resultRule": "Record every new issue as STG-722+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it.",
+    "layeredAndEdgeCaseRule": "A screen or flow may only pass after both the full 17-layer runtime checklist and the business-logic edge-case checklist are completed or explicitly blocked with evidence.",
     "activeScreenOrFlow": "SplashScreen",
     "businessLogicEdgeCaseChecklist": [
       "empty_or_missing_required_inputs",
@@ -2544,3 +2545,5 @@
     "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_aa898b65_THEN_GATE_3_POST_DEPLOY_VERIFICATION"
   }
 }
+
+

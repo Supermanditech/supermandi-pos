@@ -3401,7 +3401,7 @@ TWO-STAGE FINAL SIGN-OFF — POS INVENTORY (LOCKED):
   Platform order: POS → Retailer Web → Supplier Web → SuperAdmin Web → Cross-function
   Active: POS | Completed: 0/76 | Findings: 0
   Rules: one view at a time, no grouped execution, no skipping modals, no sampling, no fixes
-  Edge-case lock: every screen/flow must exhaust business-logic edge cases before closure
+  Layered+edge-case lock: every screen/flow must pass all 17 runtime layers and exhaust business-logic edge cases before closure
   Restart rule: restart POS from Screen 1 and retest SplashScreen + EnrollDeviceScreen edge cases first
   Edge cases: empty/missing inputs, invalid format/bounds, min/max values, duplicate submit, retry after timeout/network drop, stale session, unauthorized/forbidden role mismatch, refresh/back/resume state, partial failure recovery, offline/degraded dependency behavior, idempotency/repeat actions, cross-store/actor isolation, enum/state-transition mismatch, large data/pagination/search limits, currency/rounding precision, timezone/date boundaries, external dependency unavailability, permission denial, null/empty payload handling, user-feedback specificity
 ```
@@ -3412,3 +3412,4 @@ TWO-STAGE FINAL SIGN-OFF — POS INVENTORY (LOCKED):
 
 *This file is the single source of truth. All other rule files are historical reference only.*
 *Claude reads this file first, follows only this file, and updates CLAUDE_CURRENT_STATE.json as it works.*
+

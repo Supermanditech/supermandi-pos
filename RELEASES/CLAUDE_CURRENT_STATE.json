@@ -104,7 +104,7 @@
       "groupedExecutionForbidden": true,
       "samplingForbidden": true,
       "fixesForbiddenInThisSession": true,
-      "screenExitRule": "Do not exit the active screen/flow until all meaningful user actions are exercised, all required runtime layers are covered, and the business-logic edge-case checklist is exhausted or explicitly blocked with evidence."
+      "screenExitRule": "Do not exit the active screen/flow until all meaningful user actions are exercised, all 17 required runtime layers are covered, and the business-logic edge-case checklist is exhausted or explicitly blocked with evidence."
     },
     "operatorAssistedInputs": {
       "emailForTesting": "supermanditech@gmail.com",
@@ -3799,4 +3799,5 @@
     }
   }
 }
+
 
