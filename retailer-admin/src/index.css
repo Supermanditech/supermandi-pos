@@ -4986,6 +4986,10 @@ html.dark .imp-warnings { background: #422006; color: #fde68a; }
   min-height: 2px; transition: all 0.15s ease;
 }
 
+.anly-chart-value {
+  font-size: 9px; color: var(--text-muted); white-space: nowrap;
+  margin-bottom: 0.125rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
 .anly-chart-label {
   font-size: 10px; color: var(--text-muted);
   margin-top: 0.25rem; white-space: nowrap;
