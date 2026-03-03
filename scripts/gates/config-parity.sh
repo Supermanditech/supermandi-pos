@@ -97,40 +97,73 @@ else
 fi
 
 # =============================================================================
-# ZRP-D-006: Firebase build-args reference secrets (not empty)
+# ZRP-D-006: Firebase config is available at build time
+# Firebase client keys are public (safe to commit) and loaded via .env.production
+# files in Dockerfiles (STAGING-FIX-007). Accept: deploy.yml secrets, deploy.yml
+# values, OR .env.production files containing the var.
 # =============================================================================
 echo ""
-echo "--- ZRP-D-006: Firebase config references secrets ---"
+echo "--- ZRP-D-006: Firebase config available at build time ---"
 
-FIREBASE_ARGS=(
+# Map: VITE_* → retailer-admin, NEXT_PUBLIC_* → supplier-portal
+FIREBASE_ARGS_VITE=(
   "VITE_FIREBASE_API_KEY"
   "VITE_FIREBASE_AUTH_DOMAIN"
   "VITE_FIREBASE_PROJECT_ID"
+)
+FIREBASE_ARGS_NEXT=(
   "NEXT_PUBLIC_FIREBASE_API_KEY"
   "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"
   "NEXT_PUBLIC_FIREBASE_PROJECT_ID"
 )
 
 EMPTY_FIREBASE=0
-for arg in "${FIREBASE_ARGS[@]}"; do
+
+check_firebase_arg() {
+  local arg="$1"
+  local env_file="$2"
+
+  # 1. Check deploy.yml for value or secret reference
+  local VALUE
   VALUE=$(grep -oP "${arg}=\K.*" "$DEPLOY_YML" 2>/dev/null | head -1 || echo "")
-  if [ -z "$VALUE" ] || [ "$VALUE" = '""' ] || [ "$VALUE" = "''" ]; then
-    # Check if it references a secret (which is fine)
-    if grep -qE "${arg}.*secrets\." "$DEPLOY_YML" 2>/dev/null; then
-      echo "  OK: $arg (references secret)"
-    else
-      echo "  EMPTY: $arg has no value and no secret reference"
-      EMPTY_FIREBASE=$((EMPTY_FIREBASE + 1))
-    fi
-  else
-    echo "  OK: $arg (has value or secret ref)"
+  if [ -n "$VALUE" ] && [ "$VALUE" != '""' ] && [ "$VALUE" != "''" ]; then
+    echo "  OK: $arg (deploy.yml value)"
+    return 0
   fi
+  if grep -qE "${arg}.*secrets\." "$DEPLOY_YML" 2>/dev/null; then
+    echo "  OK: $arg (deploy.yml secret reference)"
+    return 0
+  fi
+
+  # 2. Check .env.production file (STAGING-FIX-007 pattern)
+  if [ -f "$env_file" ] && grep -qE "^${arg}=.+" "$env_file" 2>/dev/null; then
+    echo "  OK: $arg (.env.production — loaded by Dockerfile)"
+    return 0
+  fi
+
+  # 3. Check .env.production.example as fallback (Dockerfile copies it)
+  local example_file="${env_file}.example"
+  if [ -f "$example_file" ] && grep -qE "^${arg}=.+" "$example_file" 2>/dev/null; then
+    echo "  OK: $arg (.env.production.example — Dockerfile fallback)"
+    return 0
+  fi
+
+  echo "  EMPTY: $arg has no value in deploy.yml, secrets, or .env.production"
+  EMPTY_FIREBASE=$((EMPTY_FIREBASE + 1))
+  return 1
+}
+
+for arg in "${FIREBASE_ARGS_VITE[@]}"; do
+  check_firebase_arg "$arg" "retailer-admin/.env.production"
+done
+for arg in "${FIREBASE_ARGS_NEXT[@]}"; do
+  check_firebase_arg "$arg" "supplier-portal/.env.production"
 done
 
 if [ "$EMPTY_FIREBASE" -eq 0 ]; then
   gate_pass "ZRP-D-006" "Firebase config"
 else
-  gate_fail "ZRP-D-006" "Firebase config" "$EMPTY_FIREBASE Firebase build-arg(s) are empty without secret references"
+  gate_fail "ZRP-D-006" "Firebase config" "$EMPTY_FIREBASE Firebase build-arg(s) missing from deploy.yml, secrets, and .env.production"
 fi
 
 # =============================================================================
