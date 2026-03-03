@@ -3392,8 +3392,8 @@ IMPACTED RUNTIME RECHECK (2026-03-04):
   STG-494: PASS — ARIA roles/labels, value labels CSS present
   Services: 6/6 200 OK, version 610cbc3
 
-VERDICT: PRODUCTION-READY — staging redeploy verified, runtime recheck passed, 0 regressions.
-NEXT: CTO go-live decision → production promote.
+VERDICT: BLOCKED_PENDING_FINAL_TWO_STAGE_GCP_SIGNOFF — staging redeploy verified and impacted runtime recheck passed, but production promotion is not allowed until the final two-stage live GCP sign-off completes.
+NEXT: Two-stage final GCP sign-off at STG-722+ → collect any remaining runtime findings → separate fix wave if needed → only then production go-live decision.
 NEXT FINDING STARTS AT: STG-722
 ```
 
