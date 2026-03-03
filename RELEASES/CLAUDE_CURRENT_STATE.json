@@ -1,7 +1,7 @@
 {
   "version": "100.0",
   "lastUpdated": "2026-03-05T00:00:00Z",
-  "currentPhase": "TWO_STAGE_FINAL_GCP_SIGNOFF_REQUIRED: all-platform live sign-off is active under strict screen lock. Platform order is POS App -> Retailer Web -> Supplier Web -> SuperAdmin Web -> Cross-function matrix. New findings start at STG-722.",
+  "currentPhase": "TWO_STAGE_FINAL_GCP_SIGNOFF_REQUIRED: all-platform live sign-off is active under strict screen lock. Business-logic edge-case testing is mandatory on every screen/flow before closure. Restart POS from Screen 1 and retest Screen 1 and Screen 2 edge cases first. Platform order is POS App -> Retailer Web -> Supplier Web -> SuperAdmin Web -> Cross-function matrix. New findings start at STG-722.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -97,38 +97,20 @@
       "Cross-Function Matrix"
     ],
     "activePlatform": "POS App",
+    "activeScreenOrFlow": "SplashScreen",
     "strictLock": {
       "singlePlatform": true,
       "singleScreenOrFlow": true,
       "groupedExecutionForbidden": true,
       "samplingForbidden": true,
       "fixesForbiddenInThisSession": true,
-      "screenExitRule": "Do not exit the active screen/flow until all meaningful user actions are exercised and all required runtime layers are covered or explicitly blocked with evidence."
+      "screenExitRule": "Do not exit the active screen/flow until all meaningful user actions are exercised, all required runtime layers are covered, and the business-logic edge-case checklist is exhausted or explicitly blocked with evidence."
     },
     "operatorAssistedInputs": {
       "emailForTesting": "supermanditech@gmail.com",
       "phoneForOtpTesting": "7737914383",
       "rule": "If OTP, browser session, email click-through, or device action is required, ask for the exact operator input and continue the same locked screen immediately."
     },
-    "requiredRuntimeLayers": [
-      "user_actions",
-      "business_logic",
-      "ui",
-      "ux",
-      "navigation",
-      "wiring",
-      "validation",
-      "loading_empty_error_states",
-      "auth_session_behavior",
-      "api_visible_behavior",
-      "backend_behavior",
-      "db_data_integrity_symptoms",
-      "migration_runtime_parity",
-      "gcp_runtime_parity",
-      "external_dependency_behavior",
-      "accessibility",
-      "responsive_behavior"
-    ],
     "platformManifests": {
       "posApp": {
         "screenFiles": 44,
@@ -154,9 +136,57 @@
         "flows": 7
       }
     },
+    "businessLogicEdgeCaseChecklist": [
+      "empty_or_missing_required_inputs",
+      "invalid_format_and_boundary_values",
+      "min_max_limit_values",
+      "duplicate_submit_and_double_click",
+      "retry_after_timeout_or_network_drop",
+      "stale_session_or_expired_token",
+      "unauthorized_forbidden_role_mismatch",
+      "refresh_back_forward_resume_state",
+      "partial_failure_and_recovery_path",
+      "offline_or_degraded_dependency_path",
+      "concurrency_or_repeat_action_idempotency",
+      "cross_store_cross_actor_isolation",
+      "wrong_enum_status_or_state_transition",
+      "large_data_pagination_search_sort_limits",
+      "numeric_unit_currency_rounding_precision",
+      "date_time_timezone_boundary_behavior",
+      "external_dependency_unavailable_behavior",
+      "device_permission_or_capability_denial",
+      "unsafe_null_undefined_or_empty_payload_path",
+      "user_feedback_specificity_on_failure"
+    ],
+    "retestDirective": {
+      "edgeCasePassMandatory": true,
+      "restartPlatformFromScreen1": true,
+      "retestFirstScreensBeforeContinue": [
+        "SplashScreen",
+        "EnrollDeviceScreen"
+      ]
+    },
+    "requiredRuntimeLayers": [
+      "user_actions",
+      "business_logic",
+      "ui",
+      "ux",
+      "navigation",
+      "wiring",
+      "validation",
+      "loading_empty_error_states",
+      "auth_session_behavior",
+      "api_visible_behavior",
+      "backend_behavior",
+      "db_data_integrity_symptoms",
+      "migration_runtime_parity",
+      "gcp_runtime_parity",
+      "external_dependency_behavior",
+      "accessibility",
+      "responsive_behavior"
+    ],
     "resultRule": "Record every new issue as STG-722+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it."
-  },
-  "firebaseProductionAudit": {
+  },  "firebaseProductionAudit": {
     "status": "REPO_HARDENED_OPERATOR_VERIFICATION_DEFERRED",
     "artifacts": [
       "RELEASES/FIREBASE_PRODUCTION_AUDIT_CHECKLIST.md",
@@ -3769,3 +3799,4 @@
     }
   }
 }
+

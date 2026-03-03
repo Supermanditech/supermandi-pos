@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "updatedAt": "2026-03-05T00:00:00Z",
-  "workflowMode": "TWO_STAGE_FINAL_GCP_SIGNOFF",
+  "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -39,6 +39,105 @@
       "accepted": 1,
       "deferredCosmetic": 0,
       "productionGradeComplete": true
+    }
+  },
+  "finalTwoStageGcpSignoff": {
+    "status": "ACTIVE",
+    "deployedAppCodeSha": "610cbc39",
+    "findingRangeStart": "STG-722",
+    "mode": "LIVE_VERIFICATION_DISCOVERY_ONLY",
+    "platformOrder": [
+      "POS App",
+      "Retailer Web",
+      "Supplier Web",
+      "SuperAdmin Web",
+      "Cross-Function Matrix"
+    ],
+    "activePlatform": "POS App",
+    "singlePlatformLock": true,
+    "singleScreenOrFlowLock": true,
+    "groupedExecutionForbidden": true,
+    "samplingForbidden": true,
+    "fixesForbiddenInThisSession": true,
+    "operatorAssistedInputs": {
+      "emailForTesting": "supermanditech@gmail.com",
+      "phoneForOtpTesting": "7737914383"
+    },
+    "platformManifests": {
+      "posApp": {
+        "screenFiles": 44,
+        "modals": 32,
+        "testableViews": 76,
+        "canonicalInventoryLocked": true,
+        "firstScreen": "SplashScreen"
+      },
+      "retailerWeb": {
+        "productionScreens": 28,
+        "allPagesPage": "DEV_ONLY_EXCLUDED",
+        "firstScreen": "LoginPage"
+      },
+      "supplierWeb": {
+        "screens": 23,
+        "firstScreen": "LoginPage"
+      },
+      "superadminWeb": {
+        "screens": 25,
+        "firstScreen": "LoginGate"
+      },
+      "crossFunctionMatrix": {
+        "flows": 7
+      }
+    },
+    "requiredRuntimeLayers": [
+      "user_actions",
+      "business_logic",
+      "ui",
+      "ux",
+      "navigation",
+      "wiring",
+      "validation",
+      "loading_empty_error_states",
+      "auth_session_behavior",
+      "api_visible_behavior",
+      "backend_behavior",
+      "db_data_integrity_symptoms",
+      "migration_runtime_parity",
+      "gcp_runtime_parity",
+      "external_dependency_behavior",
+      "accessibility",
+      "responsive_behavior"
+    ],
+    "resultRule": "Record every new issue as STG-722+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it.",
+    "activeScreenOrFlow": "SplashScreen",
+    "businessLogicEdgeCaseChecklist": [
+      "empty_or_missing_required_inputs",
+      "invalid_format_and_boundary_values",
+      "min_max_limit_values",
+      "duplicate_submit_and_double_click",
+      "retry_after_timeout_or_network_drop",
+      "stale_session_or_expired_token",
+      "unauthorized_forbidden_role_mismatch",
+      "refresh_back_forward_resume_state",
+      "partial_failure_and_recovery_path",
+      "offline_or_degraded_dependency_path",
+      "concurrency_or_repeat_action_idempotency",
+      "cross_store_cross_actor_isolation",
+      "wrong_enum_status_or_state_transition",
+      "large_data_pagination_search_sort_limits",
+      "numeric_unit_currency_rounding_precision",
+      "date_time_timezone_boundary_behavior",
+      "external_dependency_unavailable_behavior",
+      "device_permission_or_capability_denial",
+      "unsafe_null_undefined_or_empty_payload_path",
+      "user_feedback_specificity_on_failure"
+    ],
+    "retestDirective": {
+      "edgeCasePassMandatory": true,
+      "restartPlatformFromScreen1": true,
+      "retestFirstScreensBeforeContinue": [
+        "SplashScreen",
+        "EnrollDeviceScreen"
+      ]
     }
   },
   "firebaseProductionAudit": {
@@ -164,7 +263,9 @@
       "completedAt": "2026-03-03T23:30:00Z",
       "method": "Individual screen-by-screen across 16 runtime layers (strict lock discipline)",
       "canonicalScreenCount": 28,
-      "excludedScreens": ["AllPagesPage (dev-only: import.meta.env.DEV gate at App.tsx:341)"],
+      "excludedScreens": [
+        "AllPagesPage (dev-only: import.meta.env.DEV gate at App.tsx:341)"
+      ],
       "screensReviewed": 28,
       "screensClean": 24,
       "screensWithFindings": 4,
@@ -332,7 +433,11 @@
     "p3": 138,
     "fixWaveComplete": true,
     "cleanupWaveComplete": true,
-    "cleanupWaveCommits": ["938afc98", "0813f604", "610cbc39"],
+    "cleanupWaveCommits": [
+      "938afc98",
+      "0813f604",
+      "610cbc39"
+    ],
     "reiterationResult": "ALL_CONFIRMED_FIXED",
     "appCodeSha": "610cbc39",
     "filesChanged": 74,
@@ -368,7 +473,13 @@
         "findingsFound": 0,
         "nextFindingId": "STG-722"
       },
-      "platformOrder": ["POS", "Retailer Web", "Supplier Web", "SuperAdmin Web", "Cross-function matrix"]
+      "platformOrder": [
+        "POS",
+        "Retailer Web",
+        "Supplier Web",
+        "SuperAdmin Web",
+        "Cross-function matrix"
+      ]
     }
   },
   "impactedScreenReiteration": {
@@ -2218,7 +2329,10 @@
       ],
       "completedAt": "2026-03-02T10:45:00Z",
       "liveSignoff": "SIGNED_OFF_UNDER_STRICT_LOCK",
-      "liveSignoffFindings": ["STG-463", "STG-464"],
+      "liveSignoffFindings": [
+        "STG-463",
+        "STG-464"
+      ],
       "liveSignoffScreens": 25,
       "liveSignoffClean": 23,
       "liveSignoffCompletedAt": "2026-03-04T05:00:00Z"
@@ -2237,7 +2351,10 @@
       "endpointsTested": 12,
       "authenticatedFindings": 0,
       "liveSignoff": "SIGNED_OFF_UNDER_STRICT_LOCK",
-      "liveSignoffFindings": ["STG-461", "STG-462"],
+      "liveSignoffFindings": [
+        "STG-461",
+        "STG-462"
+      ],
       "liveSignoffScreens": 23,
       "liveSignoffClean": 21,
       "liveSignoffCompletedAt": "2026-03-04T02:00:00Z"
@@ -2289,7 +2406,6 @@
     "samplingForbidden": true,
     "groupedScreenExecutionForbidden": true,
     "finalOperatorAssistedLiveSignoff": {
-      "status": "ACTIVE",
       "rule": "Run one platform at a time, one screen at a time, starting with POS App. No grouped execution, no sampling, no fixes, and no redeploys during this sign-off session. Exercise each meaningful user action and all required runtime layers per screen. Ask the operator for exact OTP, browser, email, session, or device input when needed and continue the same locked screen immediately.",
       "platformOrder": [
         "POS App",
