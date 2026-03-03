@@ -6,6 +6,7 @@ import {
   AccessibilityInfo,
   Easing,
   Keyboard,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -268,8 +269,8 @@ export default function PosRootLayout() {
   }, [deviceType]);
   const isMobileDevice = !isDedicatedPosDevice;
   const showCameraTimeoutNote = !isMobileDevice && !hidConnected;
-  // Lowered threshold from 360 to 280 so Menu text shows on handheld POS devices
-  const compactTabs = screenWidth <= 280;
+  // R7: Raised compact threshold to 320dp to cover small-phone devices (280-320dp range)
+  const compactTabs = screenWidth <= 320;
   const reorderLabel = reorderEnabled ? t('tabs.reorderOn') : t('tabs.reorderOff');
   const reorderStatusLabel = reorderEnabled ? "ON" : "OFF";
   const tabLabels: Record<PosTab, string> = {
@@ -1078,10 +1079,22 @@ export default function PosRootLayout() {
     if (!cameraPermission?.granted) {
       const result = await requestCameraPermission();
       if (!result.granted) {
-        setScanNotice({
-          tone: "warning",
-          message: "Camera permission is required to scan barcodes.",
-        });
+        // R3: If permanently denied (canAskAgain=false), prompt user to open Settings
+        if (!result.canAskAgain) {
+          Alert.alert(
+            "Camera Access Required",
+            "Camera permission was denied. Please enable it in Settings to scan barcodes.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Open Settings", onPress: () => Linking.openSettings() },
+            ],
+          );
+        } else {
+          setScanNotice({
+            tone: "warning",
+            message: "Camera permission is required to scan barcodes.",
+          });
+        }
         return;
       }
     }
@@ -1397,16 +1410,28 @@ export default function PosRootLayout() {
             ) : (
               <View style={styles.cameraPermission}>
                 <Text style={styles.cameraPermissionText}>
-                  Camera permission is required to scan barcodes.
+                  {cameraPermission?.canAskAgain === false
+                    ? "Camera permission was denied. Please enable it in Settings."
+                    : "Camera permission is required to scan barcodes."}
                 </Text>
                 <Pressable
                   style={styles.cameraPermissionButton}
-                  onPress={() => requestCameraPermission()}
+                  onPress={() =>
+                    cameraPermission?.canAskAgain === false
+                      ? Linking.openSettings()
+                      : requestCameraPermission()
+                  }
                   testID="camera-allow-btn"
-                  accessibilityLabel="Allow camera access"
+                  accessibilityLabel={
+                    cameraPermission?.canAskAgain === false
+                      ? "Open device settings"
+                      : "Allow camera access"
+                  }
                   accessibilityRole="button"
                 >
-                  <Text style={styles.cameraPermissionButtonText}>Allow Camera</Text>
+                  <Text style={styles.cameraPermissionButtonText}>
+                    {cameraPermission?.canAskAgain === false ? "Open Settings" : "Allow Camera"}
+                  </Text>
                 </Pressable>
               </View>
             )}

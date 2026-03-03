@@ -4,6 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 const MIN_LOADING_DISPLAY_MS = 300;
 // ISSUE-MICRO-068: Warn if cart prices are older than 4 hours
 const PRICE_FRESHNESS_THRESHOLD_MS = 4 * 60 * 60 * 1000;
+// R4: Persist pending UPI payment for crash/network recovery
+const PENDING_UPI_KEY = "@pos_pending_upi";
+const PENDING_UPI_TTL_MS = 15 * 60 * 1000; // 15 minutes
 import {
   View,
   Text,
@@ -32,6 +35,7 @@ import { getStockBatch } from "../services/api/inventoryApi";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { logPaymentEvent } from "../services/cloudEventLogger";
 import { ApiError } from "../services/api/apiClient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { subscribeNetworkStatus } from "../services/networkStatus";
 import { clearDeviceSession } from "../services/deviceSession";
 import { POS_MESSAGES } from "../utils/uiStatus";
@@ -222,16 +226,40 @@ const PaymentScreen = () => {
     };
   }, [lockCart, unlockCart]);
 
+  // R4: On mount, check for pending UPI from a previous crash/close
+  useEffect(() => {
+    AsyncStorage.getItem(PENDING_UPI_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const pending = JSON.parse(raw) as { paymentId: string; saleId: string; timestamp: number };
+        if (Date.now() - pending.timestamp > PENDING_UPI_TTL_MS) {
+          // Stale — silently clear
+          AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {});
+          return;
+        }
+        Alert.alert(
+          "Previous UPI Payment Pending",
+          `A UPI payment (${pending.paymentId.slice(0, 8)}…) was interrupted. Please verify with the customer whether it was completed before starting a new transaction.`,
+          [{ text: "OK", onPress: () => AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {}) }],
+        );
+      } catch {
+        AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {});
+      }
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const unsubscribe = subscribeNetworkStatus((online) => {
       const wasOffline = !isOnline;
       setIsOnline(online);
 
       if (!online && selectedMode === "UPI") {
-        // GO-LIVE-124: Save pending payment before clearing for potential recovery
+        // GO-LIVE-124 + R4: Save pending payment to ref AND AsyncStorage for crash recovery
         if (paymentId && saleId) {
+          const pending = { paymentId, saleId, timestamp: Date.now() };
           pendingPaymentRef.current = { paymentId, saleId };
-          if (__DEV__) console.log(`[Payment] GO-LIVE-124: Saved pending payment ${paymentId} for network recovery`);
+          AsyncStorage.setItem(PENDING_UPI_KEY, JSON.stringify(pending)).catch(() => {});
+          if (__DEV__) console.log(`[Payment] R4: Persisted pending UPI ${paymentId} to AsyncStorage`);
         }
         // SA-P1-006: Fall back to first allowed method (not hardcoded CASH)
         const fallback = allowedMethods.includes("CASH") ? "CASH" : allowedMethods.includes("DUE") ? "DUE" : allowedMethods[0] ?? "CASH";
@@ -240,13 +268,17 @@ const PaymentScreen = () => {
         setPaymentId(null);
       }
 
-      // GO-LIVE-124: Check pending payment status when coming back online
+      // GO-LIVE-124 + R4: Alert user about pending payment when network recovers
       if (online && wasOffline && pendingPaymentRef.current) {
         const pending = pendingPaymentRef.current;
-        if (__DEV__) console.log(`[Payment] GO-LIVE-124: Network recovered, checking pending payment ${pending.paymentId}`);
-        // Note: User can manually check by refreshing or re-selecting UPI mode
-        // The pending payment info is logged for debugging
         pendingPaymentRef.current = null;
+        AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {});
+        Alert.alert(
+          "Pending UPI Payment",
+          `A UPI payment was in progress when the network dropped (Payment: ${pending.paymentId.slice(0, 8)}…). Please verify with the customer whether the payment was completed.`,
+          [{ text: "OK" }],
+        );
+        if (__DEV__) console.log(`[Payment] R4: Network recovered, alerted user about pending ${pending.paymentId}`);
       }
     });
 

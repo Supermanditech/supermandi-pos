@@ -2874,6 +2874,8 @@ export default function SellScanScreen({
     if (!started) {
       setVoiceButtonState("idle");
       setVoiceRecordingMode("none");
+      // R5: Show feedback when voice recording fails to start (permission denied or audio error)
+      showToast("Microphone permission required for voice commands");
       return false;
     }
 
