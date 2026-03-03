@@ -139,6 +139,9 @@ export default function ChatPage() {
 
   const selected = conversations.find(c => c.id === selectedId);
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <>
       <div className="breadcrumb-wrap">

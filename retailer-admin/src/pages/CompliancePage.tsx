@@ -159,6 +159,9 @@ export default function CompliancePage() {
     rejected: documents.filter(d => d.status === 'rejected').length,
   };
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <>
       {/* T-112: Breadcrumb navigation */}

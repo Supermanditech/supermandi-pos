@@ -122,6 +122,9 @@ export default function ReconciliationPage() {
     URL.revokeObjectURL(url);
   };
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <>
       <div className="breadcrumb-wrap">

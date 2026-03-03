@@ -221,6 +221,9 @@ export default function DeviceActivationPage() {
     }
   };
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <div className="pay-container">
       {/* UIUX-RET-002: Styled confirmation modal for device toggle */}

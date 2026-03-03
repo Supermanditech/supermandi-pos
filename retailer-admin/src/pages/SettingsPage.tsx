@@ -288,6 +288,9 @@ export default function SettingsPage() {
     }
   };
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   if (loading) {
     return (
       <div className="set-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

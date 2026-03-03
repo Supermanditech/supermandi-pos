@@ -270,6 +270,9 @@ export default function DashboardPage() {
     return getCategoryIconFromConfig(iconKey);
   }, []);
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <div className="dash-container">
       {/* T-112: Breadcrumb navigation */}

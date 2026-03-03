@@ -59,6 +59,9 @@ export default function AnalyticsPage() {
   const upiPct = paymentTotal > 0 && data ? Math.round((data.paymentBreakdown.upi / paymentTotal) * 100) : 0;
   const creditPct = paymentTotal > 0 ? 100 - cashPct - upiPct : 0;
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <div>
       <Breadcrumb items={[{ label: 'Dashboard', path: `/s/${storeCode}` }, { label: 'Sales Analytics' }]} />
@@ -129,22 +132,26 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Daily Sales Chart (simple bar chart using divs) */}
+          {/* STG-494: Daily Sales Chart — CSS bar chart rendering live API data */}
           <div className="card anly-card-mb">
             <h2 className="anly-section-title">Daily Sales Trend</h2>
             {data.daily.length === 0 ? (
               <p className="text-center-muted">No sales data for this period</p>
             ) : (
-              <div className="anly-chart-container">
+              <div className="anly-chart-container" role="img" aria-label={`Daily sales chart showing ${data.daily.length} days of data`}>
                 {data.daily.map(d => {
                   const pct = maxDailySales > 0 ? (d.totalSales / maxDailySales) * 100 : 0;
                   const dateLabel = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                   return (
                     <div key={d.date} className="anly-chart-col">
+                      {data.daily.length <= 14 && (
+                        <span className="anly-chart-value" aria-hidden="true">{formatCurrency(d.totalSales)}</span>
+                      )}
                       <div
                         className="anly-chart-bar"
                         style={{ height: `${Math.max(pct, 1)}%` }}
                         title={`${dateLabel}: ${formatCurrency(d.totalSales)} (${d.bills} bills)`}
+                        role="presentation"
                       />
                       {data.daily.length <= 14 && (
                         <span className="anly-chart-label">{dateLabel}</span>
@@ -166,7 +173,7 @@ export default function AnalyticsPage() {
               ) : (
                 <>
                   {/* Stacked bar */}
-                  <div className="anly-pay-bar">
+                  <div className="anly-pay-bar" role="img" aria-label={`Payment breakdown: Cash ${cashPct}%, UPI ${upiPct}%, Credit ${creditPct}%`}>
                     {cashPct > 0 && <div className="anly-pay-dot--cash" style={{ width: `${cashPct}%` }} />}
                     {upiPct > 0 && <div className="anly-pay-dot--upi" style={{ width: `${upiPct}%` }} />}
                     {creditPct > 0 && <div className="anly-pay-dot--credit" style={{ width: `${creditPct}%` }} />}

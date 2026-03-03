@@ -96,6 +96,9 @@ export default function CreditDashboardPage() {
   // RET-C3-006: Clamp utilization to 0–100 to handle inconsistent API data
   const utilization = balance ? Math.min(Math.round((balance.usedMinor / Math.max(balance.totalCreditLimitMinor, 1)) * 100), 100) : 0;
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <>
       <div className="breadcrumb-wrap">

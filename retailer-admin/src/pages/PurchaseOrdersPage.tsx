@@ -154,6 +154,9 @@ export default function PurchaseOrdersPage() {
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(offset / limit) + 1;
 
+  // STG-483: Auth loading guard
+  if (!accessToken) return <div className="text-center-muted">Loading...</div>;
+
   return (
     <>
       <div className="breadcrumb-wrap">
