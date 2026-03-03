@@ -46,6 +46,15 @@
     "deployedAppCodeSha": "610cbc39",
     "findingRangeStart": "STG-722",
     "mode": "LIVE_VERIFICATION_DISCOVERY_ONLY",
+    "currentExecutionOrder": [
+      "POS compatibility hardening implementation",
+      "git discipline and truth sync",
+      "resume final two-stage live sign-off from POS Screen 1",
+      "Retailer Web live sign-off",
+      "Supplier Web live sign-off",
+      "SuperAdmin Web live sign-off",
+      "Cross-Function Matrix live sign-off"
+    ],
     "platformOrder": [
       "POS App",
       "Retailer Web",
@@ -54,6 +63,13 @@
       "Cross-Function Matrix"
     ],
     "activePlatform": "POS App",
+    "platformCompletionState": {
+      "posApp": "PENDING_FINAL_TWO_STAGE_SIGNOFF_AFTER_COMPATIBILITY_HARDENING",
+      "retailerWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
+      "supplierWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
+      "superadminWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
+      "crossFunctionMatrix": "PENDING_FINAL_TWO_STAGE_SIGNOFF"
+    },
     "singlePlatformLock": true,
     "singleScreenOrFlowLock": true,
     "groupedExecutionForbidden": true,
@@ -62,6 +78,12 @@
     "operatorAssistedInputs": {
       "emailForTesting": "supermanditech@gmail.com",
       "phoneForOtpTesting": "7737914383"
+    },
+    "posCompatibilityMatrix": {
+      "status": "PENDING_OPERATOR_DEVICE_COMPATIBILITY_VERIFICATION_AFTER_HARDENING",
+      "artifact": "RELEASES/POS_COMPATIBILITY_MATRIX.md",
+      "predictedRisksAreHypothesesOnly": true,
+      "doNotConvertPredictedRisksToStgUntilReproduced": true
     },
     "platformManifests": {
       "posApp": {

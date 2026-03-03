@@ -3404,6 +3404,8 @@ TWO-STAGE FINAL SIGN-OFF — POS INVENTORY (LOCKED):
   Layered+edge-case lock: every screen/flow must pass all 17 runtime layers and exhaust business-logic edge cases before closure
   Restart rule: restart POS from Screen 1 and retest SplashScreen + EnrollDeviceScreen edge cases first
   Edge cases: empty/missing inputs, invalid format/bounds, min/max values, duplicate submit, retry after timeout/network drop, stale session, unauthorized/forbidden role mismatch, refresh/back/resume state, partial failure recovery, offline/degraded dependency behavior, idempotency/repeat actions, cross-store/actor isolation, enum/state-transition mismatch, large data/pagination/search limits, currency/rounding precision, timezone/date boundaries, external dependency unavailability, permission denial, null/empty payload handling, user-feedback specificity
+  Pending sequence after compatibility hardening: git discipline → POS final sign-off resume → Retailer → Supplier → SuperAdmin → Cross-function matrix
+  POS compatibility matrix artifact: `RELEASES/POS_COMPATIBILITY_MATRIX.md` (predicted risks are hypotheses only until reproduced live)
 ```
 
 ---
