@@ -3381,8 +3381,19 @@ CLEANUP WAVE (16 files, 3 commits):
 
 INFRASTRUCTURE: ALL CLEAN (6 services 200, SHA parity, security headers present)
 
-VERDICT: PENDING REDEPLOY — cleanup wave reiterated, all clear.
-NEXT: Staging redeploy at app-code SHA 610cbc39 → impacted runtime verification → production go-live.
+STAGING REDEPLOY (2026-03-04):
+  SHA deployed: 610cbc39 (app-code, NOT state-only HEAD)
+  CI run: 22620393440 — 7/7 PASSED
+  SHA parity: staging /version returns 610cbc3 — CONFIRMED
+
+IMPACTED RUNTIME RECHECK (2026-03-04):
+  STG-483: PASS — auth loading guard in compiled bundle, 14 pages hardened
+  STG-486: PASS — optional chaining compiled, portal 200
+  STG-494: PASS — ARIA roles/labels, value labels CSS present
+  Services: 6/6 200 OK, version 610cbc3
+
+VERDICT: PRODUCTION-READY — staging redeploy verified, runtime recheck passed, 0 regressions.
+NEXT: CTO go-live decision → production promote.
 NEXT FINDING STARTS AT: STG-722
 ```
 

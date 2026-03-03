@@ -5571,7 +5571,26 @@ Next phase: Staging redeploy at SHA `7f43284a`, then impacted runtime recheck, t
 | STG-486 | **CONFIRMED_FIXED** | ImportPage L155 uses `data?.error`, all 7 safeJson callsites have null guards |
 | STG-494 | **CONFIRMED_FIXED** | `role="img"` + `aria-label` on chart containers, value labels present, CSS class exists, real API calls confirmed |
 
+### Staging Redeploy (2026-03-04)
+
+> **SHA deployed**: `610cbc39` (app-code cleanup wave, NOT HEAD which is state-only)
+> **CI run**: 22620393440 — 7/7 jobs PASSED (gate → build → pre-deploy → deploy → artifact-verify → routing-verify → smoke)
+> **SHA parity**: staging `/version` returns `610cbc3` — CONFIRMED
+
+### Impacted Runtime Recheck (2026-03-04)
+
+> **Method**: 3 parallel verification agents checking compiled bundles on live staging.
+> **Result**: ALL 3 PASS. All 6 services 200 OK.
+
+| ID | Runtime Result | Detail |
+|----|---------------|--------|
+| STG-483 | **PASS** | Auth loading guard compiled into retailer bundle, CSS class `.text-center-muted` deployed, 14 pages hardened |
+| STG-486 | **PASS** | Optional chaining `data?.error` compiled (111 patterns in bundle), portal returns 200 |
+| STG-494 | **PASS** | `role="img"` + `aria-label` on chart containers, `.anly-chart-value` CSS class present, `role="presentation"` on bars |
+
+**Services**: retailer 200, supplier 200, admin 200, landing 200, API health 200, version `610cbc3`.
+
 ### Verdict
 
-**CLEAN** — 256 FIXED, 1 FALSE_POSITIVE/WONTFIX (STG-478), 0 OPEN, 0 REGRESSIONS.
-Cleanup wave complete. Next phase: staging redeploy at app-code SHA `610cbc39`, then impacted runtime verification.
+**PRODUCTION-READY** — 256 FIXED, 1 FALSE_POSITIVE/WONTFIX (STG-478), 0 OPEN, 0 REGRESSIONS.
+Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live decision.
