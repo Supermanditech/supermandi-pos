@@ -85,6 +85,37 @@
       "predictedRisksAreHypothesesOnly": true,
       "doNotConvertPredictedRisksToStgUntilReproduced": true
     },
+    "deferredPostSignoffImplementation": {
+      "posLauncherIconRefresh": {
+        "status": "TODO_AFTER_ALL_PLATFORM_AND_CROSS_FUNCTION_SIGNOFF",
+        "type": "native_mobile_app_icon_update",
+        "designDirection": "SuperMandi blue rounded-square background with centered white SuperMandi shortmark/glyph",
+        "existingBrandSources": [
+          "shared/brand/logo-shortmark.svg",
+          "src/components/BrandShortmark.tsx"
+        ],
+        "scope": [
+          "Android launcher icon",
+          "Android round icon",
+          "Android adaptive icon foreground/background",
+          "Expo app config icon parity"
+        ],
+        "executionRule": "Do not implement during current live sign-off. Implement only after POS, Retailer Web, Supplier Web, SuperAdmin Web, and Cross-Function Matrix testing are complete, with strict git discipline and a new Android build in the next release wave.",
+        "deployRule": "Not a GCP-only change. Requires native mobile asset/config update and new app build."
+      },
+      "whatsappCtaCopyRefinement": {
+        "status": "TODO_AFTER_ALL_PLATFORM_AND_CROSS_FUNCTION_SIGNOFF",
+        "type": "ui_copy_refinement",
+        "recommendedCopy": {
+          "sectionTitle": "CONTACT US ON WHATSAPP",
+          "primaryOption1": "Chat with Support",
+          "secondaryOption1": "Platform help and account support",
+          "primaryOption2": "Contact SuperMandi",
+          "secondaryOption2": "General enquiries and partnerships"
+        },
+        "reason": "Replace internal-sounding labels ('SuperAdmin', 'Company') with clear customer-facing support copy in the next release wave."
+      }
+    },
     "platformManifests": {
       "posApp": {
         "screenFiles": 44,

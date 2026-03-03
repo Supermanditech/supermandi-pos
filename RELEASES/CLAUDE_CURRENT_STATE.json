@@ -138,6 +138,44 @@
       "doNotConvertPredictedRisksToStgUntilReproduced": true,
       "nextStep": "merge to main -> redeploy -> operator device testing"
     },
+    "deferredPostSignoffImplementation": {
+      "posLauncherIconRefresh": {
+        "status": "TODO_AFTER_ALL_PLATFORM_AND_CROSS_FUNCTION_SIGNOFF",
+        "type": "native_mobile_app_icon_update",
+        "priority": "PENDING_POST_SIGNOFF_IMPLEMENTATION",
+        "designDirection": "SuperMandi blue rounded-square background with centered white SuperMandi shortmark/glyph",
+        "existingBrandSources": [
+          "shared/brand/logo-shortmark.svg",
+          "src/components/BrandShortmark.tsx"
+        ],
+        "scope": [
+          "Android launcher icon",
+          "Android round icon",
+          "Android adaptive icon foreground/background",
+          "Expo app config icon parity"
+        ],
+        "executionRule": "Do not implement during the current sign-off session. Implement only after POS, Retailer Web, Supplier Web, SuperAdmin Web, and Cross-Function Matrix testing are complete, then follow strict git discipline, build a new app binary, and include it in the next deployment/release cycle if required.",
+        "deployRule": "This is not a GCP-only change. It requires mobile asset/config updates and a new Android app build. If implemented, keep it in the next disciplined deployment/release wave rather than mixing it into current live testing."
+      },
+      "whatsappCtaCopyRefinement": {
+        "status": "TODO_AFTER_ALL_PLATFORM_AND_CROSS_FUNCTION_SIGNOFF",
+        "type": "ui_copy_refinement",
+        "priority": "PENDING_POST_SIGNOFF_IMPLEMENTATION",
+        "currentCopy": {
+          "primaryOption1": "Chat with SuperAdmin",
+          "primaryOption2": "Chat with Company"
+        },
+        "recommendedCopy": {
+          "sectionTitle": "CONTACT US ON WHATSAPP",
+          "primaryOption1": "Chat with Support",
+          "secondaryOption1": "Platform help and account support",
+          "primaryOption2": "Contact SuperMandi",
+          "secondaryOption2": "General enquiries and partnerships"
+        },
+        "reason": "Current labels feel internal and awkward. 'SuperAdmin' is an implementation role, not a user-facing support identity. 'Company' is vague. Replace with customer-facing copy that sounds professional and brand-consistent.",
+        "executionRule": "Implement later in the next release wave with strict git discipline, together with other deferred polish tasks such as the POS launcher icon refresh."
+      }
+    },
     "platformManifests": {
       "posApp": {
         "screenFiles": 44,
