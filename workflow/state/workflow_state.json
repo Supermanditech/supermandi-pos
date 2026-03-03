@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "updatedAt": "2026-03-04T18:00:00Z",
-  "workflowMode": "COMPREHENSIVE_FIX_WAVE_COMPLETE",
+  "workflowMode": "CLEANUP_WAVE_REITERATED_PENDING_REDEPLOY",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -317,22 +317,30 @@
     }
   },
   "comprehensiveLiveAudit": {
-    "status": "ALL_FIXED",
+    "status": "CLEANUP_WAVE_REITERATED",
     "auditDate": "2026-03-04",
     "deployedSha": "7f43284a",
     "findingRange": "STG-465..STG-721",
     "nextFindingStartsAt": "STG-722",
     "totalFindings": 257,
+    "fixed": 256,
+    "falsePositive": 1,
+    "open": 0,
+    "regressions": 0,
     "p1": 10,
     "p2": 109,
     "p3": 138,
     "fixWaveComplete": true,
+    "cleanupWaveComplete": true,
+    "cleanupWaveCommits": ["938afc98", "0813f604", "610cbc39"],
+    "reiterationResult": "ALL_CONFIRMED_FIXED",
+    "appCodeSha": "610cbc39",
     "filesChanged": 74,
     "insertions": 613,
     "deletions": 293,
     "typechecksClean": true,
     "productionGoLiveVerdict": "PENDING_REDEPLOY",
-    "nextPhase": "Staging redeploy → runtime verification → production go-live"
+    "nextPhase": "Staging redeploy (SHA 610cbc39) → impacted runtime verification → production go-live"
   },
   "impactedScreenReiteration": {
     "status": "PASSED",

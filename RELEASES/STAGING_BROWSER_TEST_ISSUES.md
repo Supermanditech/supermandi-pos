@@ -5560,6 +5560,18 @@ Next phase: Staging redeploy at SHA `7f43284a`, then impacted runtime recheck, t
 | STG-486 | **FIXED** | ImportPage L155: `data.error` → `data?.error`. Ensures specific validation error is shown instead of generic fallback when safeJson returns null. | `938afc98` |
 | STG-494 | **FIXED** | AnalyticsPage charts: added `role="img"` + descriptive `aria-label` on daily chart and payment breakdown containers, visible value labels above daily bars (≤14 days), `role="presentation"` on decorative elements, CSS `.anly-chart-value` class. Charts render live API data with proper accessibility. | `610cbc39` |
 
+### Post-Fix Reiteration (2026-03-04)
+
+> **Method**: Code-level reiteration of STG-483, STG-486, STG-494 by 3 parallel verification agents.
+> **Result**: ALL 3 CONFIRMED_FIXED. 0 regressions. Typecheck clean.
+
+| ID | Reiteration Result | Detail |
+|----|-------------------|--------|
+| STG-483 | **CONFIRMED_FIXED** | 14/14 pages have guard after all hooks, CSS class valid, callback guards retained |
+| STG-486 | **CONFIRMED_FIXED** | ImportPage L155 uses `data?.error`, all 7 safeJson callsites have null guards |
+| STG-494 | **CONFIRMED_FIXED** | `role="img"` + `aria-label` on chart containers, value labels present, CSS class exists, real API calls confirmed |
+
 ### Verdict
 
-**PENDING REITERATION** — all 4 items resolved. Awaiting post-fix reiteration of STG-483, STG-494, STG-486, then staging redeploy.
+**CLEAN** — 256 FIXED, 1 FALSE_POSITIVE/WONTFIX (STG-478), 0 OPEN, 0 REGRESSIONS.
+Cleanup wave complete. Next phase: staging redeploy at app-code SHA `610cbc39`, then impacted runtime verification.

@@ -3355,37 +3355,34 @@ VERDICT: PRODUCTION-READY — Awaiting CTO go-live decision.
 
 ## §19.3 Comprehensive Live Staging Audit (STG-465..721)
 
-**Status**: ALL_FIXED
+**Status**: CLEANUP_WAVE_REITERATED
 **Audit Date**: 2026-03-04
 **Deployed SHA**: `7f43284a` (audit baseline)
 **Audit Method**: Full live runtime audit — 10 parallel audit agents + manual HTTP verification
 **Fix Wave**: 74 files changed, 613 insertions, 293 deletions. All 4 typechecks clean.
+**Cleanup Wave**: STG-483/STG-486/STG-494 fixed (3 commits, 16 files). STG-478 = FALSE_POSITIVE.
+**Reiteration**: All 3 cleanup fixes CONFIRMED_FIXED. 0 regressions. Typecheck clean.
 
 ### Results
 
 ```
-TOTAL FINDINGS: 257 (STG-465..STG-721) — ALL FIXED
+TOTAL FINDINGS: 257 (STG-465..STG-721)
+  256 FIXED | 1 FALSE_POSITIVE/WONTFIX (STG-478) | 0 OPEN | 0 REGRESSIONS
+
   P1 (CRITICAL):  10 FIXED — money units, idempotency, enum mismatches, phone normalization
   P2 (HIGH):     109 FIXED — null safety, dark mode, accessibility, UTC→IST, offline handling
-  P3 (LOW):      138 FIXED — aria-labels, loading states, testIDs, cosmetic polish
+  P3 (LOW):      137 FIXED, 1 FALSE_POSITIVE — aria-labels, loading states, testIDs, cosmetic polish
 
-FIX WAVE BREAKDOWN (74 files):
-  POS App:       14 files — UTC→IST dates (4 screens), WhatsApp country code (3 screens),
-                             card payment summary (2 screens), testIDs, offline handling,
-                             pagination, money units, idempotency key, split payment saleId
-  Retailer Web:  14 files — safeJson null safety (40+ guards across 12 pages),
-                             modal close during loading, phone normalization, object URL leak
-  Supplier Web:  23 files — dark mode across all dashboard pages + shared components,
-                             verification status enum fix (ACTIVE→verified)
-  SuperAdmin:    14 files — role="alert" on error banners (14 tabs), aria-labels,
-                             AnalyticsTab Live Data badge
-  Backend:        2 files — CORS wildcard warning, body size enforcement, rate limiter docs
-  Landing:        4 files — og-image Dockerfile, dark mode privacy/terms, Permissions-Policy
+CLEANUP WAVE (16 files, 3 commits):
+  STG-486: ImportPage L155 data?.error null safety (938afc98)
+  STG-483: Auth loading guard on 14 retailer pages (0813f604)
+  STG-494: AnalyticsPage chart ARIA + value labels (610cbc39)
+  STG-478: FALSE_POSITIVE — ReorderPage formatCurrency already correct
 
 INFRASTRUCTURE: ALL CLEAN (6 services 200, SHA parity, security headers present)
 
-VERDICT: PENDING REDEPLOY — all findings fixed, awaiting staging redeploy + runtime verification.
-NEXT: Staging redeploy → runtime verification → production go-live decision.
+VERDICT: PENDING REDEPLOY — cleanup wave reiterated, all clear.
+NEXT: Staging redeploy at app-code SHA 610cbc39 → impacted runtime verification → production go-live.
 NEXT FINDING STARTS AT: STG-722
 ```
 
