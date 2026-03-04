@@ -20,6 +20,7 @@ const PROTECTED_PATHS = [
   "/supplier/notifications",
   "/supplier/upload",
   "/supplier/bnpl-orders",
+  "/supplier/help",  // STG-791: Was missing from protected paths
 ];
 
 // Cookie name must match the HttpOnly cookie set by the auth service.
@@ -61,5 +62,6 @@ export const config = {
     "/supplier/notifications/:path*",
     "/supplier/upload/:path*",
     "/supplier/bnpl-orders/:path*",
+    "/supplier/help/:path*",  // STG-791
   ],
 };

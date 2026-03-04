@@ -233,9 +233,9 @@ function RegisterPage() {
     })();
   }, [searchParams]);
 
-  // Setup reCAPTCHA on mount
+  // STG-762: Setup reCAPTCHA on mount (mounted gate matches STG-722 fix pattern)
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
+    if (mounted && isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -248,7 +248,7 @@ function RegisterPage() {
       cleanup();
       recaptchaInitialized.current = false;
     };
-  }, [step]);
+  }, [mounted, step]);
 
   // Resend cooldown timer
   useEffect(() => {

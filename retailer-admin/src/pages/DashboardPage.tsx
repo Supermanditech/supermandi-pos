@@ -638,9 +638,15 @@ export default function DashboardPage() {
                 return;
               }
               const headers = ['Product Name', 'Barcode', 'Stock Qty', 'Purchase Value (Rs)', 'Sell Revenue (Rs)'];
+              // STG-735: Escape CSV fields to prevent formula injection (=, +, -, @, tab, CR)
+              const csvSafe = (val: string) => {
+                const s = val.replace(/"/g, '""');
+                if (/^[=+\-@\t\r]/.test(s)) return `"'${s}"`;
+                return `"${s}"`;
+              };
               const rows = inventory.map(item => [
-                `"${(item.productName || '').replace(/"/g, '""')}"`,
-                item.barcode || '',
+                csvSafe(item.productName || ''),
+                csvSafe(item.barcode || ''),
                 String(item.totalStockQty || 0),
                 ((item.totalPurchaseValue || 0) / 100).toFixed(2),
                 ((item.totalSellRevenue || 0) / 100).toFixed(2),

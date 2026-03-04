@@ -1129,19 +1129,15 @@ router.post("/auth/forgot-password/request", authRateLimiter, async (req: Reques
       [phoneNormalized]
     );
 
-    if (!result.rows[0]) {
-      // Don't reveal if user exists — always return success
-      res.json({
-        success: true,
-        message: "If an account exists with this phone, you can proceed to verify OTP.",
-      });
-      return;
-    }
-
+    // STG-723: Identical response regardless of whether account exists (prevent phone enumeration)
     res.json({
       success: true,
-      message: "Account found. Please verify your phone with OTP to reset password.",
+      message: "If an account exists with this phone, you can proceed to verify OTP.",
     });
+
+    if (!result.rows[0]) {
+      return;
+    }
   } catch (error) {
     next(error);
   }

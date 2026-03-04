@@ -107,6 +107,9 @@ export function AiPanel({
 
           {aiAnswer && (
             <div className="aiResponse">
+              {/* STG-805: SAFETY-CRITICAL ORDER — HTML entity escaping MUST run before markdown→HTML transforms.
+                  Chain: escape(&<>") → then inject safe HTML tags (h2/h3/h4/strong/li).
+                  Do NOT reorder these .replace() calls. Do NOT add new .replace() before the first 4 escapes. */}
               <div className="aiResponseContent" dangerouslySetInnerHTML={{ __html: aiAnswer.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/^### (.+)$/gm, '<h4 style="margin:8px 0 4px;font-size:14px">$1</h4>').replace(/^## (.+)$/gm, '<h3 style="margin:10px 0 4px;font-size:15px">$1</h3>').replace(/^# (.+)$/gm, '<h2 style="margin:12px 0 6px;font-size:16px">$1</h2>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/^- (.+)$/gm, '<li style="margin-left:16px">$1</li>').replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:16px">$1. $2</li>') }} />
             </div>
           )}

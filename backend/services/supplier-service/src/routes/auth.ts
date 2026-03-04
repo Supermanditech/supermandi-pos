@@ -218,6 +218,15 @@ router.post(
         );
       }
 
+      // STG-828: Block login for unapproved suppliers (pending verification)
+      if (supplier.verification_status && supplier.verification_status !== 'verified' && supplier.verification_status !== 'ACTIVE') {
+        throw new ApiError(
+          403,
+          ERROR_CODES.FORBIDDEN,
+          'Account pending verification. Please wait for admin approval.'
+        );
+      }
+
       // Check if password hash exists (supplier registered via new flow)
       if (!supplier.password_hash) {
         throw new ApiError(

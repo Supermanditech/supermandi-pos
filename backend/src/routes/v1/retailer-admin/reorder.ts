@@ -85,6 +85,20 @@ retailerReorderRouter.put("/reorder/settings", async (req: Request, res: Respons
     defaultLeadDays,
   } = req.body;
 
+  // STG-753: Server-side validation (frontend validates but API must not trust client)
+  if (defaultLeadDays !== undefined && defaultLeadDays !== null) {
+    const days = Number(defaultLeadDays);
+    if (!Number.isFinite(days) || days < 1 || days > 90) {
+      return res.status(400).json({ error: "defaultLeadDays must be between 1 and 90" });
+    }
+  }
+  if (autoApproveThreshold !== undefined && autoApproveThreshold !== null) {
+    const threshold = Number(autoApproveThreshold);
+    if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1000000) {
+      return res.status(400).json({ error: "autoApproveThreshold must be between 0 and 1000000" });
+    }
+  }
+
   try {
     const result = await pool.query(
       `INSERT INTO reorder.store_reorder_settings

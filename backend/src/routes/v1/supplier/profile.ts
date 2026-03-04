@@ -82,8 +82,11 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
         status: supplier.status,
         rating: parseFloat(supplier.rating),
         // STG-088: Include bankName in response
+        // STG-781: Mask account number (show last 4 digits only)
         bankDetails: supplier.bank_account_number ? {
-          accountNumber: supplier.bank_account_number,
+          accountNumber: supplier.bank_account_number.length > 4
+            ? '****' + supplier.bank_account_number.slice(-4)
+            : supplier.bank_account_number,
           ifscCode: supplier.bank_ifsc,
           accountName: supplier.bank_account_name,
           bankName: supplier.bank_name || null,
@@ -311,8 +314,11 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
         pincode: supplier.pincode,
         verificationStatus: supplier.verification_status,
         // STG-088: Include bankName in response
+        // STG-781: Mask account number (show last 4 digits only)
         bankDetails: supplier.bank_account_number ? {
-          accountNumber: supplier.bank_account_number,
+          accountNumber: supplier.bank_account_number.length > 4
+            ? '****' + supplier.bank_account_number.slice(-4)
+            : supplier.bank_account_number,
           ifscCode: supplier.bank_ifsc,
           accountName: supplier.bank_account_name,
           bankName: supplier.bank_name || null,

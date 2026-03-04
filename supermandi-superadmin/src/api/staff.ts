@@ -25,7 +25,8 @@ export type StaffListResponse = {
 
 export async function fetchStoreStaff(storeId: string): Promise<StaffListResponse> {
   const base = requireApiBase();
-  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${storeId}/staff`, {
+  // STG-804: Encode path params to prevent URL traversal
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/staff`, {
     cache: "no-store",
     headers: { Accept: "application/json", ...getAuthHeaders() },
   });
@@ -44,7 +45,7 @@ export async function createStaff(storeId: string, input: {
   role: string;
 }): Promise<{ staff: StaffMember }> {
   const base = requireApiBase();
-  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${storeId}/staff`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/staff`, {
     method: "POST",
     cache: "no-store",
     headers: {
@@ -69,7 +70,7 @@ export async function updateStaff(storeId: string, staffId: string, input: {
   is_active?: boolean;
 }): Promise<{ staff: StaffMember }> {
   const base = requireApiBase();
-  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${storeId}/staff/${staffId}`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/staff/${encodeURIComponent(staffId)}`, {
     method: "PATCH",
     cache: "no-store",
     headers: {
@@ -90,7 +91,7 @@ export async function updateStaff(storeId: string, staffId: string, input: {
 
 export async function resetStaffPin(storeId: string, staffId: string, pin: string): Promise<void> {
   const base = requireApiBase();
-  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${storeId}/staff/${staffId}/reset-pin`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/staff/${encodeURIComponent(staffId)}/reset-pin`, {
     method: "POST",
     cache: "no-store",
     headers: {
