@@ -5658,29 +5658,29 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 |----|----------|-------|---------|----------|
 | STG-723 | **P2** | Security | **FIXED @ 0c94ca44** — Normalized forgot-password response to identical message for both existing and non-existing phones. | `auth.ts:1132-1140` |
 | STG-724 | **P2** | Security/Infra | **FALSE_POSITIVE_OR_BY_DESIGN** — Rate limiter code is correct (5/min/IP with `authRateLimiter`). Trust proxy configured in `app.ts:63`. Staging anomaly from `RATE_LIMIT_MULTIPLIER` env var / multi-instance Cloud Run. Deploy checklist: verify `RATE_LIMIT_MULTIPLIER=1` in production. | `posRateLimiter.ts:241-247`, `app.ts:61-65` |
-| STG-725 | P3 | UX | No user-visible message when Firebase is unavailable on forgot-password OTP step — Send OTP button silently disabled | `ForgotPasswordPage.tsx:432` |
+| STG-725 | P3 | UX | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — No user-visible message when Firebase is unavailable on forgot-password OTP step — Send OTP button silently disabled. Edge case, button disabled not broken. | `ForgotPasswordPage.tsx:432` |
 
 #### ResetPasswordPage (`retailer-admin/src/pages/ResetPasswordPage.tsx`)
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-726 | P3 | UX Parity | Missing `PasswordChecklist` real-time component. Supplier portal + retailer ForgotPasswordPage both show checkmarks as each rule is met; ResetPasswordPage only shows static hint text. | Compare `ForgotPasswordPage.tsx:527` (has checklist) vs `ResetPasswordPage.tsx:215` (static hint) |
-| STG-727 | P3 | UX Parity | No auto-redirect countdown on success. Supplier portal's reset-password auto-redirects to login after 5s. Retailer requires manual "Sign In" click. | `supplier-portal/src/app/(auth)/reset-password/page.tsx:76-92` vs retailer has none |
+| STG-726 | P3 | UX Parity | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Missing `PasswordChecklist` real-time component on ResetPasswordPage. Static hint text still shows requirements. Parity gap, functional. | Compare `ForgotPasswordPage.tsx:527` (has checklist) vs `ResetPasswordPage.tsx:215` (static hint) |
+| STG-727 | P3 | UX Parity | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — No auto-redirect countdown on success. Manual "Sign In" click works. Polish only. | `supplier-portal/src/app/(auth)/reset-password/page.tsx:76-92` vs retailer has none |
 
 #### HelpPage (`retailer-admin/src/pages/HelpPage.tsx`)
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-728 | **P2** | Infra/Perf | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — No gzip/brotli on static assets. Infra config (Cloud Run / reverse proxy), not code. 115KB CSS uncompressed — performance-only, no functional/security impact. Post-launch: enable compression at ingress or add CDN. | `curl -H "Accept-Encoding: gzip, deflate, br"` → no `Content-Encoding` in response. `Content-Length: 115212` (raw) |
-| STG-729 | P3 | A11y | `.login-footer-link` has no `:focus-visible` style. Keyboard-only users cannot see focus on footer "Sign In" / "Help" links. WCAG 2.4.7 gap. | Grep `login-footer-link:focus` in `retailer-admin/src/index.css` → 0 matches |
-| STG-730 | P3 | A11y | Footer link borderline contrast in dark mode. `.login-footer-link` inherits `color: #64748b` on `bg: #1e293b` → ~4.0:1 ratio (AA requires 4.5:1 for small text). | CSS: `login-footer-inner color: #64748b`, dark bg: `#1e293b` |
+| STG-729 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — `.login-footer-link` has no `:focus-visible` style. A11y gap on non-critical footer links. | Grep `login-footer-link:focus` in `retailer-admin/src/index.css` → 0 matches |
+| STG-730 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Footer link borderline contrast ~4.0:1 in dark mode (AA requires 4.5:1). Dark mode footer only. | CSS: `login-footer-inner color: #64748b`, dark bg: `#1e293b` |
 
 #### Cross-Cutting Findings (affect multiple auth screens)
 
 | ID | Severity | Layer | Finding | Affected Screens | Evidence |
 |----|----------|-------|---------|-----------------|----------|
-| STG-731 | P3 | A11y/UX | OTP inputs missing `inputMode="numeric"` for mobile numeric keypad. All OTP inputs show full keyboard on mobile despite digit-only filter. | Login, Register, ForgotPassword | `LoginPage.tsx:594`, `RegisterPage.tsx:590`, `ForgotPasswordPage.tsx:552` |
-| STG-732 | P3 | A11y | Missing `autocomplete` attributes: OTP inputs need `one-time-code`, password inputs need `new-password` or `current-password`. Prevents browser/OS autofill assistance. | Login, Register, ForgotPassword, ResetPassword | Cross-page |
+| STG-731 | P3 | A11y/UX | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — OTP inputs missing `inputMode="numeric"`. Web portal desktop-primary; mobile users get functional but suboptimal keyboard. | Login, Register, ForgotPassword | `LoginPage.tsx:594`, `RegisterPage.tsx:590`, `ForgotPasswordPage.tsx:552` |
+| STG-732 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Missing `autocomplete` attributes on OTP/password inputs. Browser autofill hints, no functional impact. | Login, Register, ForgotPassword, ResetPassword | Cross-page |
 
 ### Finding Range Update
 
@@ -5690,29 +5690,29 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-733 | P3 | A11y | Category rename modal lacks focus trap. `useFocusTrap` hook exists in `lib/hooks.ts:47` but is not used. Tab can escape modal to background. | `DashboardPage.tsx:789-842`, no `useFocusTrap` import |
-| STG-734 | P3 | A11y | Modal does not auto-focus first input on open. Focus stays on trigger button. | No `autoFocus` on modal inputs, no focus useEffect |
+| STG-733 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Category rename modal lacks focus trap. Modal works, a11y gap. | `DashboardPage.tsx:789-842`, no `useFocusTrap` import |
+| STG-734 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Modal does not auto-focus first input on open. Minor a11y gap. | No `autoFocus` on modal inputs, no focus useEffect |
 | STG-735 | **P2** | Security | **FIXED @ 0c94ca44** — Added `csvSafe()` helper that quotes all string fields and prefixes formula-triggering chars (`=+\-@\t\r`) with `'`. Applied to productName and barcode. | `DashboardPage.tsx:643-648` |
 
 #### ProductsPage (`retailer-admin/src/pages/ProductsPage.tsx`)
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-736 | P3 | Auth/UX | SKU PDF download `<a href>` link bypasses `authFetch()`, relies on cookie-based auth. If gateway requires Authorization header (not just cookie), user sees raw JSON error in new tab. | `ProductsPage.tsx:847-853`, `1636-1643` |
+| STG-736 | P3 | Auth/UX | **MUST_FIX_BEFORE_GOLIVE** — SKU PDF download `<a href>` link bypasses `authFetch()`, relies on cookie-based auth. If gateway requires Authorization header (not just cookie), user sees raw JSON error in new tab. | `ProductsPage.tsx:847-853`, `1636-1643` |
 
 #### InventoryPage (`retailer-admin/src/pages/InventoryPage.tsx`)
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-737 | P3 | A11y | Filter button group (All/Inward/Outward/Adjustment) missing `role="group"` and `aria-label`. Buttons have correct `aria-pressed`. | `InventoryPage.tsx:239-248` |
+| STG-737 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Filter button group missing `role="group"` and `aria-label`. Buttons work, a11y gap. | `InventoryPage.tsx:239-248` |
 
 #### Cross-Cutting: SettingsPage + PaymentsPage
 
 | ID | Severity | Layer | Finding | Affected | Evidence |
 |----|----------|-------|---------|----------|----------|
 | STG-738 | **P2** | A11y | **FIXED @ 114c0c51** — Added `role="alert"` and `aria-live` to all dynamic save/error alerts in SettingsPage (settings + password) and PaymentsPage. Success uses `aria-live="polite"`, errors use `aria-live="assertive"`. | SettingsPage, PaymentsPage | `SettingsPage.tsx:319,326,566,570`, `PaymentsPage.tsx:209,224` |
-| STG-739 | P3 | A11y | Missing `aria-describedby` linking inputs to their validation error messages. Error `<p>` elements not associated with inputs. | SettingsPage, PaymentsPage | `SettingsPage.tsx:353`, `PaymentsPage.tsx` bank fields |
-| STG-740 | P3 | UX | PaymentsPage lacks `useUnsavedChanges` guard. Accidental tab close loses UPI/bank changes without warning. SettingsPage has this guard. | PaymentsPage | No `useUnsavedChanges` import in `PaymentsPage.tsx` |
+| STG-739 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Missing `aria-describedby` linking inputs to error messages. A11y gap. | SettingsPage, PaymentsPage | `SettingsPage.tsx:353`, `PaymentsPage.tsx` bank fields |
+| STG-740 | P3 | UX | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — PaymentsPage lacks `useUnsavedChanges` guard. Re-entry possible, guard is enhancement. | PaymentsPage | No `useUnsavedChanges` import in `PaymentsPage.tsx` |
 
 ### Finding Range Update (cumulative)
 
@@ -5720,28 +5720,28 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-741 | P3 | Navigation | ImportPage "View Products" link uses plain HTML `<a href>` instead of React Router `<Link>`, causing full page reload | `ImportPage.tsx:563` |
-| STG-742 | P3 | Pagination | GET /suppliers has no pagination — returns all store suppliers in single query | `suppliers.ts:57-106` no LIMIT clause |
+| STG-741 | P3 | Navigation | **MUST_FIX_BEFORE_GOLIVE** — ImportPage "View Products" link uses plain HTML `<a href>` instead of React Router `<Link>`, causing full page reload. One-line fix. | `ImportPage.tsx:563` |
+| STG-742 | P3 | Pagination | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — GET /suppliers has no pagination. Works for v1 store supplier counts. Scalability concern only. | `suppliers.ts:57-106` no LIMIT clause |
 
 #### InvoicesPage, ReconciliationPage, CreditDashboardPage
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-743 | **P2** | Error Handling | **FIXED @ 114c0c51** — Removed silent `if (res.status === 401) return` from ReconciliationPage and CreditDashboardPage. 401s now flow through existing `!res.ok` throw path matching InvoicesPage pattern. | `ReconciliationPage.tsx:91`, `CreditDashboardPage.tsx:80` |
-| STG-744 | P3 | Currency | InvoicesPage uses manual `₹${(minor/100).toFixed(2)}` formatter lacking Indian comma grouping. Other pages use `Intl.NumberFormat('en-IN')`. Large invoices (≥₹1,00,000) display without commas. | `InvoicesPage.tsx:71-73` |
-| STG-745 | P3 | Business Logic | `replace("_", " ")` only replaces first underscore in invoice type. Multi-underscore types like `credit_note_debit` display as `"credit note_debit"`. Should use `replaceAll` or `/\_/g`. | `InvoicesPage.tsx:230,301` |
-| STG-746 | P3 | A11y | Reconciliation + Credit tables lack `<caption>` or `aria-label`. Screen readers can't distinguish multiple tables on CreditDashboardPage. | `ReconciliationPage.tsx:228`, `CreditDashboardPage.tsx:194,228` |
-| STG-747 | P3 | A11y | Credit utilization bar missing `role="progressbar"` and `aria-valuenow`. Screen readers can't perceive percentage. | `CreditDashboardPage.tsx:155-162` |
-| STG-748 | P3 | A11y | InvoicesPage modal lacks focus trap. Tab escapes to background elements. | `InvoicesPage.tsx:273-287` |
+| STG-744 | P3 | Currency | **MUST_FIX_BEFORE_GOLIVE** — InvoicesPage uses manual `₹${(minor/100).toFixed(2)}` formatter lacking Indian comma grouping. Large invoices (≥₹1,00,000) display without commas. Indian market — financial readability. | `InvoicesPage.tsx:71-73` |
+| STG-745 | P3 | Business Logic | **MUST_FIX_BEFORE_GOLIVE** — `replace("_", " ")` only replaces first underscore in invoice type. `credit_note_debit` → "credit note_debit". Actual display bug. One-line fix: `replaceAll` or regex. | `InvoicesPage.tsx:230,301` |
+| STG-746 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Tables lack `<caption>` or `aria-label`. A11y gap. | `ReconciliationPage.tsx:228`, `CreditDashboardPage.tsx:194,228` |
+| STG-747 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Credit utilization bar missing `role="progressbar"` and `aria-valuenow`. A11y gap. | `CreditDashboardPage.tsx:155-162` |
+| STG-748 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — InvoicesPage modal lacks focus trap. A11y gap. | `InvoicesPage.tsx:273-287` |
 
 #### ChatPage, PurchaseOrdersPage, AnalyticsPage
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-749 | P3 | Store Isolation | ChatPage `createSupport()` sends `storeId` from client state in POST body. Backend should derive from JWT instead of trusting client body. Defense-in-depth gap. | `ChatPage.tsx:127`, `chat.ts:151-152` |
-| STG-750 | P3 | A11y | ChatPage message text input missing `aria-label` (only has placeholder) | `ChatPage.tsx:239-245` |
-| STG-751 | P3 | A11y | PurchaseOrdersPage table rows clickable but not keyboard-accessible (no tabIndex/role/onKeyDown on `<tr>`) | `PurchaseOrdersPage.tsx:242` |
-| STG-752 | P3 | Integration | WhatsApp phone links (InvoicesPage + PurchaseOrdersPage) may fail when phone stored without country code. `wa.me` requires full international number. | `InvoicesPage.tsx:388-403`, `PurchaseOrdersPage.tsx:338` |
+| STG-749 | P3 | Store Isolation | **MUST_FIX_BEFORE_GOLIVE** — ChatPage `createSupport()` sends `storeId` from client state in POST body. Backend should derive from JWT instead of trusting client body. Store isolation rule violation per CLAUDE.md. | `ChatPage.tsx:127`, `chat.ts:151-152` |
+| STG-750 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — ChatPage input missing `aria-label`. A11y gap. | `ChatPage.tsx:239-245` |
+| STG-751 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — PurchaseOrdersPage table rows not keyboard-accessible. A11y gap. | `PurchaseOrdersPage.tsx:242` |
+| STG-752 | P3 | Integration | **MUST_FIX_BEFORE_GOLIVE** — WhatsApp phone links (InvoicesPage + PurchaseOrdersPage) may fail when phone stored without country code. `wa.me` requires full international number. Broken user-facing links. | `InvoicesPage.tsx:388-403`, `PurchaseOrdersPage.tsx:338` |
 
 ### Finding Range Update (cumulative)
 
@@ -5751,17 +5751,17 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 |----|----------|-------|---------|----------|
 | STG-753 | **P2** | Input Validation | **FIXED @ 0c94ca44** — Added server-side validation: defaultLeadDays 1-90, autoApproveThreshold 0-1000000. Returns 400 on invalid input. | `reorder.ts:88-98` |
 | STG-754 | **P2** | A11y | **FIXED @ 114c0c51** — Added `onKeyDown` handler to Breadcrumb `<a>` elements for Enter/Space key activation. Keyboard users can now navigate breadcrumbs. | `retailer-admin/src/components/Breadcrumb.tsx:22` |
-| STG-755 | P3 | CSS | `.spin` class used on refresh icons in CustomersPage + ReorderPage but never defined in CSS. Refresh icon doesn't visually spin during loading. | `CustomersPage.tsx:217`, `ReorderPage.tsx:220,263,271,317` |
-| STG-756 | P3 | A11y | CustomersPage table rows have `onClick` + cursor pointer but no tabIndex/role/onKeyDown for keyboard access | `CustomersPage.tsx:245` |
-| STG-757 | P3 | Error Handling | NotificationsPage `markAsRead`/`markAllAsRead` don't clear previous error state before attempting operation. Stale error banner persists after successful action. | `NotificationsPage.tsx:54-73` |
-| STG-758 | P3 | Currency | ReorderPage defines local `formatCurrency` diverging from shared `lib/formatters.ts`. Different null handling and format string. Inconsistent display risk. | `ReorderPage.tsx:54-57` |
+| STG-755 | P3 | CSS | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — `.spin` CSS class undefined. Cosmetic, loading still shown via text. | `CustomersPage.tsx:217`, `ReorderPage.tsx:220,263,271,317` |
+| STG-756 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — CustomersPage table rows not keyboard-accessible. A11y gap. | `CustomersPage.tsx:245` |
+| STG-757 | P3 | Error Handling | **MUST_FIX_BEFORE_GOLIVE** — NotificationsPage `markAsRead`/`markAllAsRead` don't clear previous error state before attempting operation. Stale error banner persists after successful action. Actual UX bug. | `NotificationsPage.tsx:54-73` |
+| STG-758 | P3 | Currency | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — ReorderPage local `formatCurrency` diverges from shared formatter. Works for normal values, inconsistency risk only. | `ReorderPage.tsx:54-57` |
 
 #### DeviceActivationPage, HelpDashboardPage, admin/SupplierQueuePage, admin/ProductQueuePage, NotFoundPage
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-759 | **P1** | **API Routing** | **FIXED @ 678bf1b7** — SupplierQueuePage + ProductQueuePage API paths corrected from `/api/v1/retailer-admin/admin/*` to `/api/v1/admin/*` (9 path strings across 2 files). Typecheck pass, 7/7 unit tests pass. | `SupplierQueuePage.tsx:45,71,97`, `ProductQueuePage.tsx:86,169,185,213,241` |
-| STG-760 | P3 | A11y | DeviceActivationPage Modal component uses static `id="modal-title"`. Duplicate IDs if multiple modals render simultaneously (latent, no current impact). | `Modal.tsx:50` |
+| STG-760 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Modal static `id="modal-title"`. Latent, no current impact. | `Modal.tsx:50` |
 
 ### Retailer Web Sign-Off Summary
 
@@ -5834,24 +5834,24 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-761 | P3 | Anti-Enum | Registration lookup endpoint reveals phone registration status (`exists: false`). By design for registration-first flow. | `POST /api/v1/supplier/registration/lookup` |
+| STG-761 | P3 | Anti-Enum | **FALSE_POSITIVE_OR_BY_DESIGN** — Registration lookup endpoint reveals phone registration status (`exists: false`). By design for registration-first flow — lookup is the intended entry point. | `POST /api/v1/supplier/registration/lookup` |
 | STG-762 | **P2** | Firebase | **FIXED @ 0c94ca44** — Added `mounted` gate to register reCAPTCHA useEffect and `mounted` to dependency array. Matches STG-722 pattern used by login/forgot-pw/onboard. | `register/page.tsx:238,251` |
-| STG-763 | P3 | A11y | Reset password error div missing `aria-live="assertive"` (has `role="alert"` only). All other auth pages include both. | `reset-password/page.tsx:223` |
-| STG-764 | P3 | Navigation | Forgot password "Register" link only in email step, missing from OTP phone step. | `forgot-password/page.tsx:554` |
-| STG-765 | P3 | UX | Forgot password `handleResendOtp` doesn't clear OTP input after resend. User may re-submit old code. | `forgot-password/page.tsx:239-261` |
-| STG-766 | P3 | UX | Same: onboard `handleResendOtp` doesn't clear OTP input. | `onboard/page.tsx:284-305` |
-| STG-767 | P3 | Dark Mode | Register page inner cards/headings hardcoded to light-mode colors (`text-slate-900`, `bg-white`), no `dark:` variants. | `register/page.tsx:704,716,789,937` |
-| STG-768 | P3 | A11y | All auth pages missing `autocomplete` attributes on email/password/phone inputs. | Cross-page |
+| STG-763 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Reset password error div missing `aria-live="assertive"`. Has `role="alert"`, aria-live is supplementary. | `reset-password/page.tsx:223` |
+| STG-764 | P3 | Navigation | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Forgot password missing Register link in OTP step. User can navigate back. | `forgot-password/page.tsx:554` |
+| STG-765 | P3 | UX | **MUST_FIX_BEFORE_GOLIVE** — Forgot password `handleResendOtp` doesn't clear OTP input after resend. User may re-submit stale code. Actual UX bug. | `forgot-password/page.tsx:239-261` |
+| STG-766 | P3 | UX | **MUST_FIX_BEFORE_GOLIVE** — Onboard `handleResendOtp` doesn't clear OTP input. Same stale-OTP bug as STG-765. | `onboard/page.tsx:284-305` |
+| STG-767 | P3 | Dark Mode | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Register page no dark mode on inner cards. Cosmetic. | `register/page.tsx:704,716,789,937` |
+| STG-768 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Auth pages missing `autocomplete` attributes. Browser hints, no functional impact. | Cross-page |
 
 ### Dashboard Pages — Batch 1 (Dashboard, Orders, Products, Earnings)
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-771 | P3 | Date/TZ | Order note timestamps use inline `toLocaleString` without `timeZone: 'Asia/Kolkata'`, bypassing shared formatter. Shows browser-local time. | `orders/page.tsx:928` |
-| STG-772 | P3 | Date/TZ | Payout order dates use inline `toLocaleDateString` without timezone, same issue. | `earnings/page.tsx:437` |
-| STG-773 | P3 | Hardcoded | Hardcoded "Rs. 100" text for minimum payout instead of `formatCurrency(10000)`. | `earnings/page.tsx:344` |
-| STG-774 | P3 | A11y | Orders status filter tabs lack arrow-key keyboard navigation (Products page has it). | `orders/page.tsx:324-352` |
-| STG-775 | P3 | Pagination | Earnings pagination uses local `useState` instead of URL-synced state. Position lost on refresh. | `earnings/page.tsx:17` |
+| STG-771 | P3 | Date/TZ | **MUST_FIX_BEFORE_GOLIVE** — Order note timestamps use inline `toLocaleString` without `timeZone: 'Asia/Kolkata'`. Shows browser-local time instead of IST. Data display error for non-IST users. | `orders/page.tsx:928` |
+| STG-772 | P3 | Date/TZ | **MUST_FIX_BEFORE_GOLIVE** — Payout order dates use inline `toLocaleDateString` without timezone. Same IST data error as STG-771. | `earnings/page.tsx:437` |
+| STG-773 | P3 | Hardcoded | **MUST_FIX_BEFORE_GOLIVE** — Hardcoded "Rs. 100" text for minimum payout instead of `formatCurrency(10000)`. Violates no-hardcoded-values rule. One-line fix. | `earnings/page.tsx:344` |
+| STG-774 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Orders status tabs lack arrow-key nav. Click/tab works. A11y gap. | `orders/page.tsx:324-352` |
+| STG-775 | P3 | Pagination | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Earnings pagination not URL-synced. Position lost on refresh, functional. | `earnings/page.tsx:17` |
 | STG-776 | **P2** | Filtering | **FIXED @ 114c0c51** — Added server-side status filter to supplier orders backend (whitelisted valid statuses). Frontend `getOrders()` now passes `status` param. Query key includes statusFilter for proper cache invalidation. | `orders.ts:66-68`, `api.ts:703`, `orders/page.tsx:111` |
 
 ### Dashboard Pages — Batch 2 (Invoices, KYC, Profile, Upload)
@@ -5859,27 +5859,27 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-781 | **P2** | Security | **FIXED @ 0c94ca44** — Masked bank account number to `****NNNN` in both profile GET endpoints. Matches payouts masking pattern. | `profile.ts:86-89,318-321` |
-| STG-782 | P3 | A11y | Invoice detail modal lacks Escape key handler and focus trap. | `invoices/page.tsx:200-220` |
-| STG-783 | P3 | A11y | KYC tabs missing `aria-controls`/`id` linking and `role="tabpanel"` on content panels. Incomplete WCAG tab pattern. | `kyc/page.tsx:289-304` |
-| STG-784 | P3 | A11y | KYC bank verification form labels not connected to inputs via `htmlFor`/`id`. Screen readers may not announce labels. | `kyc/page.tsx` bank fields |
-| STG-785 | P3 | A11y | Profile tabs same issue as STG-783 — missing `aria-controls`/tabpanel. | `profile/page.tsx:221-240` |
-| STG-786 | P3 | A11y | Profile form labels (14 fields across 3 tabs) not connected to inputs. | `profile/page.tsx` |
-| STG-787 | P3 | A11y | Upload drag-and-drop zone lacks `role` and `aria-label` for screen readers. | `upload/page.tsx:162-189` |
-| STG-788 | P3 | Validation | Password strength rules differ: frontend requires uppercase+lowercase+digit, backend only requires any letter+digit. Backend more lenient — causes UX confusion. | `profile/page.tsx:13-29` vs `auth.ts:199-211` |
+| STG-782 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Invoice modal lacks Escape/focus trap. A11y gap. | `invoices/page.tsx:200-220` |
+| STG-783 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — KYC tabs missing WCAG tab pattern (aria-controls/tabpanel). A11y gap. | `kyc/page.tsx:289-304` |
+| STG-784 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — KYC bank labels not connected to inputs. A11y gap. | `kyc/page.tsx` bank fields |
+| STG-785 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Profile tabs missing WCAG tab pattern. Same as STG-783. | `profile/page.tsx:221-240` |
+| STG-786 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Profile 14 labels not connected to inputs. A11y gap. | `profile/page.tsx` |
+| STG-787 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Upload drag zone lacks aria role/label. A11y gap. | `upload/page.tsx:162-189` |
+| STG-788 | P3 | Validation | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Password rules: frontend stricter than backend. Safer direction — frontend-passing passwords always pass backend. | `profile/page.tsx:13-29` vs `auth.ts:199-211` |
 
 ### Remaining Pages (Help, BNPL Orders, Chat, Notifications)
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-791 | **P2** | Auth | **FIXED @ 0c94ca44** — Added `/supplier/help` to PROTECTED_PATHS array and `/supplier/help/:path*` to config.matcher. | `middleware.ts:23,64` |
-| STG-792 | P3 | Error | Chat conversation list has no error state for fetch failure. Shows "No conversations yet" instead of error+retry. | `chat/page.tsx:80-84,186,198` |
-| STG-793 | P3 | Dark Mode | Notifications error retry button has no dark mode styling — nearly invisible in dark theme. | `notifications/page.tsx:128-131` |
-| STG-794 | P3 | Arch | Chat uses polling (5s/10s) instead of consuming existing WebSocket/socket events from backend. Backend `socketManager.emitToConversation` exists but frontend doesn't connect. | `chat/page.tsx:83,98` |
-| STG-795 | P3 | Dark Mode | BNPL Orders page missing dark mode on table header, rows, filter buttons, pagination. | `bnpl-orders/page.tsx:168,180,131,215,222` |
-| STG-796 | P3 | Dark Mode | Notifications page missing dark mode on Mark All Read, Refresh, pagination buttons. | `notifications/page.tsx:97,104,129,169,178` |
+| STG-792 | P3 | Error | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Chat no error state for fetch failure. Shows "No conversations" instead of error. Misleading but functional. | `chat/page.tsx:80-84,186,198` |
+| STG-793 | P3 | Dark Mode | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Notifications retry button invisible in dark mode. Cosmetic. | `notifications/page.tsx:128-131` |
+| STG-794 | P3 | Arch | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Chat uses polling instead of WebSocket. Feature enhancement, polling works. | `chat/page.tsx:83,98` |
+| STG-795 | P3 | Dark Mode | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — BNPL Orders no dark mode on table. Cosmetic. | `bnpl-orders/page.tsx:168,180,131,215,222` |
+| STG-796 | P3 | Dark Mode | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Notifications buttons no dark mode. Cosmetic. | `notifications/page.tsx:97,104,129,169,178` |
 | STG-799 | **P2** | A11y | **FIXED @ 114c0c51** — Added `aria-label="BNPL Orders"` to table and `scope="col"` to all 7 `<th>` elements. | `bnpl-orders/page.tsx:166-176` |
-| STG-800 | P3 | A11y | Notification items use `div+onClick` without `role="button"`, `tabIndex`, or keyboard handler. Keyboard users can't mark individual notifications. | `notifications/page.tsx:145` |
-| STG-802 | P3 | Business Logic | BNPL filter tabs missing `partial` status option despite badge support for it. | `bnpl-orders/page.tsx:57,123` |
+| STG-800 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Notification items not keyboard-accessible. A11y gap. | `notifications/page.tsx:145` |
+| STG-802 | P3 | Business Logic | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — BNPL filter missing `partial` status. Data visible in All tab. | `bnpl-orders/page.tsx:57,123` |
 
 ### Supplier Web Sign-Off Summary
 
@@ -5954,24 +5954,24 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Screen(s) | Layer | Finding | Evidence |
 |----|-----------|-------|---------|----------|
-| STG-809 | DevicesTab | A11y | 4 form controls missing accessible labels (device type dropdown, printing mode, device label input, enrollment store picker) | `DevicesTab.tsx:259-298` |
-| STG-810 | GrnAlertsTab | A11y | Filter select missing `id`/`aria-label`/`<label>` | `GrnAlertsTab.tsx:33` |
-| STG-811 | StaffTab, GrnAlertsTab | Type Safety | `as any` type assertions on select onChange instead of proper union types | `StaffTab.tsx:98`, `GrnAlertsTab.tsx:33` |
-| STG-812 | Events, Devices, GrnAlerts | A11y | Pagination buttons missing `aria-label` (cross-cutting pattern) | Multiple files |
-| STG-813 | Invoices, GstCompliance, Refunds | Currency | Local `₹${(minor/100).toFixed(2)}` formatters instead of shared `Intl.NumberFormat('en-IN')`. Large amounts lack comma grouping. | `InvoicesTab.tsx:9`, `GstComplianceTab.tsx:5`, `RefundsTab.tsx:8` |
-| STG-814 | InvoicesTab | Business Logic | `void` status missing from filter dropdown despite being in `STATUS_STYLES` map | `InvoicesTab.tsx:13-20,143-151` |
-| STG-815 | Invoices, Refunds | Error | Error state not cleared before new actions — stale error banner persists after success | `InvoicesTab.tsx:59-115`, `RefundsTab.tsx:55-94` |
-| STG-816 | Invoices, GstCompliance | A11y | Modal `onKeyDown` for Escape on non-focusable overlay div (no `tabIndex`) — only fires if overlay itself is focused | `InvoicesTab.tsx:216`, `GstComplianceTab.tsx:191` |
-| STG-817 | Audit, Payments | A11y | Pagination buttons use arrow chars only, no `aria-label` | `AuditTab.tsx:150-162`, `PaymentsTab.tsx:66-68` |
-| STG-818 | SuppliersTab | A11y | Batch reject modal + product edit modal missing `role="dialog"` and `aria-modal="true"` | `SuppliersTab.tsx:739,786` |
-| STG-819 | CreditProvidersTab | A11y | Error div missing `role="alert"` | `CreditProvidersTab.tsx:134-137` |
-| STG-820 | AnalyticsTab | A11y | Refresh button label is `&nbsp;` — screen readers announce "blank" | `AnalyticsTab.tsx:92` |
-| STG-821 | CreditProvidersTab | Currency | `fmt()` uses `minimumFractionDigits:0` while shared uses `2`. Inconsistent display. | `CreditProvidersTab.tsx:47` |
-| STG-822 | SuppliersTab | Currency | Product prices use manual `INR {(price/100).toFixed(2)}` — no locale-aware comma grouping | `SuppliersTab.tsx:663-664,818-821` |
-| STG-823 | SuppliersTab, ConfirmDialog | A11y | Batch reject modal + ConfirmDialog lack Escape key handler for keyboard dismissal | `SuppliersTab.tsx:738`, `ConfirmDialog.tsx:21` |
-| STG-824 | SuppliersTab | Type Safety | `PendingSupplierRequest` type only declares 3 statuses but code filters on 5 additional status values | `SuppliersTab.tsx:265` |
-| STG-825 | PaymentsTab | UX | No standalone refresh/retry mechanism — error state shown but no retry button within tab | `PaymentsTab.tsx` |
-| STG-826 | QualityDashboardTab | Error | Quality API error messages expose raw HTTP status codes (`Quality overview failed: 401`) instead of human-readable messages | `quality.ts:110,118,127` |
+| STG-809 | DevicesTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — 4 form controls missing accessible labels. Internal tool, a11y gap. | `DevicesTab.tsx:259-298` |
+| STG-810 | GrnAlertsTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Filter select missing label. Internal tool, a11y gap. | `GrnAlertsTab.tsx:33` |
+| STG-811 | StaffTab, GrnAlertsTab | Type Safety | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — `as any` type assertions. No runtime impact. | `StaffTab.tsx:98`, `GrnAlertsTab.tsx:33` |
+| STG-812 | Events, Devices, GrnAlerts | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Pagination buttons no aria-label. A11y gap. | Multiple files |
+| STG-813 | Invoices, GstCompliance, Refunds | Currency | **MUST_FIX_BEFORE_GOLIVE** — Local `₹${(minor/100).toFixed(2)}` formatters instead of shared `Intl.NumberFormat('en-IN')`. Large amounts lack Indian comma grouping across 3 financial tabs. Same pattern as STG-744. | `InvoicesTab.tsx:9`, `GstComplianceTab.tsx:5`, `RefundsTab.tsx:8` |
+| STG-814 | InvoicesTab | Business Logic | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Void status missing from filter. Data visible in All view. | `InvoicesTab.tsx:13-20,143-151` |
+| STG-815 | Invoices, Refunds | Error | **MUST_FIX_BEFORE_GOLIVE** — Error state not cleared before new actions — stale error banner persists after success. Same UX bug pattern as STG-757. | `InvoicesTab.tsx:59-115`, `RefundsTab.tsx:55-94` |
+| STG-816 | Invoices, GstCompliance | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Escape on non-focusable overlay. A11y gap. | `InvoicesTab.tsx:216`, `GstComplianceTab.tsx:191` |
+| STG-817 | Audit, Payments | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Pagination buttons no aria-label. A11y gap. | `AuditTab.tsx:150-162`, `PaymentsTab.tsx:66-68` |
+| STG-818 | SuppliersTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Modals missing dialog role. A11y gap. | `SuppliersTab.tsx:739,786` |
+| STG-819 | CreditProvidersTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Error div missing role=alert. A11y gap. | `CreditProvidersTab.tsx:134-137` |
+| STG-820 | AnalyticsTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Refresh button label is `&nbsp;`. Button works visually, a11y gap. | `AnalyticsTab.tsx:92` |
+| STG-821 | CreditProvidersTab | Currency | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — `fmt()` fraction digits differ from shared. Amounts still correct. | `CreditProvidersTab.tsx:47` |
+| STG-822 | SuppliersTab | Currency | **MUST_FIX_BEFORE_GOLIVE** — Product prices use manual `INR {(price/100).toFixed(2)}` — no locale-aware comma grouping. Same currency pattern as STG-744/813. | `SuppliersTab.tsx:663-664,818-821` |
+| STG-823 | SuppliersTab, ConfirmDialog | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Modals lack Escape key handler. A11y gap. | `SuppliersTab.tsx:738`, `ConfirmDialog.tsx:21` |
+| STG-824 | SuppliersTab | Type Safety | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Type declares 3 statuses, code uses 8. No runtime impact. | `SuppliersTab.tsx:265` |
+| STG-825 | PaymentsTab | UX | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — No retry button in error state. Page refresh works. | `PaymentsTab.tsx` |
+| STG-826 | QualityDashboardTab | Error | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Raw HTTP status in error messages. Internal tool, status codes informative. | `quality.ts:110,118,127` |
 
 ### SuperAdmin Web Sign-Off Summary
 
@@ -6027,11 +6027,11 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Flow | Finding | Evidence |
 |----|------|---------|----------|
-| STG-834 | Flow 1 | Dual approval paths (applications vs pending-suppliers) for same entity | admin/applications.ts vs admin/suppliers.ts |
-| STG-835 | Flow 2 | Retailer login requires exact phone match with no recovery path | auth-service/retailerAuth.ts:287-294 |
-| STG-836 | Flow 4 | Multi-supplier POs have single status — one supplier can mark entire PO shipped | supplier/orders.ts |
-| STG-837 | Flow 6 | Admin email OTP users cannot access chat due to UUID validation rejecting email-based user IDs | chat.ts:89-93 |
-| STG-838 | Flow 7 | Dual auth model (admin session JWT vs portal JWT) adds complexity | Different claim structures |
+| STG-834 | Flow 1 | **FALSE_POSITIVE_OR_BY_DESIGN** — Dual approval paths (applications vs pending-suppliers) serve different contexts. Separate endpoints for application-stage vs existing-supplier approval is intentional. | admin/applications.ts vs admin/suppliers.ts |
+| STG-835 | Flow 2 | **FALSE_POSITIVE_OR_BY_DESIGN** — Retailer login requires exact phone match. Phone IS the identity. OTP-based auth with phone as primary key is the intended design. | auth-service/retailerAuth.ts:287-294 |
+| STG-836 | Flow 4 | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Multi-supplier POs have single status. Design limitation, requires schema change. | supplier/orders.ts |
+| STG-837 | Flow 6 | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Admin chat blocked by UUID validation. Duplicate of P2 STG-832, already dispositioned. | chat.ts:89-93 |
+| STG-838 | Flow 7 | **FALSE_POSITIVE_OR_BY_DESIGN** — Dual auth model (admin session JWT vs portal JWT) is standard architecture. Separate claim structures for separate user types (admin vs retailer/supplier) is correct design. | Different claim structures |
 
 ### Cross-Portal Auth Isolation: VERIFIED PASS
 
@@ -6093,6 +6093,21 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 - STG-728 (gzip/brotli — performance only, infra config), STG-832 (admin chat — not a designed flow), STG-833 (token rotation — mitigated by short expiry + suspension check)
 
 **0 open or ambiguously deferred P2 findings remain. All 27 P2s have final disposition.**
+
+### P3 Forced Disposition — COMPLETE
+
+**15 MUST_FIX_BEFORE_GOLIVE** (actual bugs, data errors, rule violations):
+- Retailer Web (7): STG-736 (PDF auth bypass), STG-741 (`<a href>` → `<Link>`), STG-744 (currency no Indian commas), STG-745 (`replace` → `replaceAll`), STG-749 (store isolation violation), STG-752 (WhatsApp phone links), STG-757 (stale error)
+- Supplier Web (5): STG-765 (OTP not cleared), STG-766 (same), STG-771 (timestamps no IST), STG-772 (same), STG-773 (hardcoded Rs. 100)
+- SuperAdmin Web (3): STG-813 (currency no Indian commas, 3 tabs), STG-815 (stale error, 2 tabs), STG-822 (manual currency)
+
+**4 FALSE_POSITIVE_OR_BY_DESIGN** (not defects):
+- STG-761 (registration lookup by design), STG-834 (dual approval paths intentional), STG-835 (phone as identity by design), STG-838 (dual auth model is standard)
+
+**57 EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** (a11y polish, dark mode gaps, cosmetic, enhancement):
+- All remaining P3 findings — primarily a11y attributes, dark mode gaps, keyboard navigation, type safety, pagination UX
+
+**0 open or ambiguously deferred P3 findings remain. All 76 P3s have final disposition.**
 
 ### Finding Range
 
