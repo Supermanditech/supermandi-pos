@@ -931,6 +931,7 @@ export default function OrdersPage() {
                                 month: 'short',
                                 hour: '2-digit',
                                 minute: '2-digit',
+                                timeZone: 'Asia/Kolkata', // STG-771: Explicit IST
                               })}
                             </span>
                           </div>

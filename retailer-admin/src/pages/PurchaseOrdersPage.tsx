@@ -334,8 +334,10 @@ export default function PurchaseOrdersPage() {
                   const expected = selectedPO.expectedDeliveryDate ? new Date(selectedPO.expectedDeliveryDate).toLocaleDateString('en-IN') : 'N/A';
                   const status = fmtStatus(selectedPO.status);
                   const msg = `Follow-up on PO #${selectedPO.poNumber}. Status: ${status}. Expected delivery: ${expected}.`;
-                  const phone = selectedPO.supplierPhone!.replace(/\D/g, '');
+                  let phone = selectedPO.supplierPhone!.replace(/\D/g, '');
                   if (phone.length < 10) return;
+                  // STG-752: wa.me requires international format — prepend 91 for Indian 10-digit numbers
+                  if (phone.length === 10) phone = '91' + phone;
                   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
                 }}
                 className="po-wa-btn"

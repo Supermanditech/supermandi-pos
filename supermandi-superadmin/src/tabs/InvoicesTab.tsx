@@ -6,8 +6,10 @@ import { formatDateTime } from "../lib/formatters";
 // UIUX-SA-008: Styled confirmation dialog instead of bare confirm()
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
+// STG-813: Use Indian comma grouping (₹1,00,000.00 not ₹100000.00)
+const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
 function formatMinor(minor: number): string {
-  return "\u20B9" + (minor / 100).toFixed(2);
+  return inrFmt.format(minor / 100);
 }
 
 const STATUS_STYLES: Record<InvoiceStatus, { bg: string; color: string }> = {
@@ -56,7 +58,9 @@ export function InvoicesTab() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // STG-815: Clear stale error before each action
   const openDetail = async (id: string) => {
+    setError("");
     setDetailLoading(true);
     try {
       const inv = await getInvoice(id);
@@ -69,6 +73,7 @@ export function InvoicesTab() {
   };
 
   const handleIssue = async (id: string) => {
+    setError("");
     setActionLoading(true);
     try {
       await issueInvoice(id);
@@ -92,6 +97,7 @@ export function InvoicesTab() {
       variant: "danger",
       onConfirm: async () => {
         setConfirmDialog(null);
+        setError("");
         setActionLoading(true);
         try {
           await cancelInvoice(id);
@@ -107,6 +113,7 @@ export function InvoicesTab() {
   };
 
   const handleDownload = async (id: string, invoiceNumber: string) => {
+    setError("");
     try {
       await downloadInvoicePdf(id, invoiceNumber);
     } catch (err: any) {

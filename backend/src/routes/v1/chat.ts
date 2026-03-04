@@ -125,7 +125,9 @@ chatRouter.get('/conversations', async (req, res) => {
 chatRouter.post('/conversations/direct', async (req, res) => {
   try {
     const { userId, userType } = getUser(req);
-    const { supplierId, storeId, displayName, otherUserId, otherUserType, otherUserName } = req.body;
+    const { supplierId, displayName, otherUserId, otherUserType, otherUserName } = req.body;
+    // STG-749: Derive storeId from JWT header — never trust client-sent storeId
+    const storeId = req.headers['x-actor-id'] ? String(req.headers['x-actor-id']) : undefined;
 
     if (!supplierId || !storeId) {
       return res.status(400).json({ error: 'supplierId and storeId are required' });
@@ -148,7 +150,9 @@ chatRouter.post('/conversations/direct', async (req, res) => {
 chatRouter.post('/conversations/support', async (req, res) => {
   try {
     const { userId, userType } = getUser(req);
-    const { displayName, storeId } = req.body;
+    const { displayName } = req.body;
+    // STG-749: Derive storeId from JWT header — never trust client-sent storeId
+    const storeId = req.headers['x-actor-id'] ? String(req.headers['x-actor-id']) : undefined;
 
     const pool = getPool();
     const conversation = await chatService.createSupportConversation(

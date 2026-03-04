@@ -41,7 +41,7 @@ function formatTime(iso: string | null): string {
 
 export default function ChatPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
-  const { accessToken, store } = useAuth();
+  const { accessToken } = useAuth();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -123,8 +123,8 @@ export default function ChatPage() {
       const res = await authFetch('/api/v1/chat/conversations/support', accessToken, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // STG-068: Include storeId so the conversation is linked to this store
-        body: JSON.stringify({ displayName: 'Store Owner', storeId: store?.id }),
+        // STG-749: storeId derived from JWT on backend — not sent from client
+        body: JSON.stringify({ displayName: 'Store Owner' }),
       });
       if (!res.ok) throw new Error(`${res.status}`);
       const json = await safeJson<any>(res);

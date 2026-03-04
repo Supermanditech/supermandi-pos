@@ -51,8 +51,10 @@ export default function NotificationsPage() {
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   // RET-C4-007: Validate response before optimistic UI update
+  // STG-757: Clear stale error before each action
   const markAsRead = async (id: string) => {
     if (!accessToken) return;
+    setError('');
     try {
       const res = await authFetch(`/api/v1/retailer-admin/notifications/${id}/read`, accessToken, { method: 'PUT' });
       if (!res.ok) throw new Error(`${res.status}`);
@@ -64,6 +66,7 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     if (!accessToken) return;
+    setError('');
     try {
       const res = await authFetch('/api/v1/retailer-admin/notifications/read-all', accessToken, { method: 'PUT' });
       if (!res.ok) throw new Error(`${res.status}`);

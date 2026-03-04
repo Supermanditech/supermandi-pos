@@ -4,6 +4,10 @@ import React, { Component, useEffect, useState } from "react";
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
 import { toggleAutoApproval, publishProduct, batchProductAction } from "../api/suppliers";
 
+// STG-822: Use Indian comma grouping for currency display
+const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
+function fmtInr(minor: number): string { return inrFmt.format(minor / 100); }
+
 // FIX-048: Light error boundary for modal dialogs — shows close button instead of crashing app
 // UNMAPPED.045: Reset hasError when resetKey changes (e.g., different product opened)
 class ModalErrorBoundary extends Component<
@@ -660,10 +664,10 @@ export function SuppliersTab({
                     <strong>Barcode:</strong> <span className="mono">{product.barcode || "-"}</span>
                   </div>
                   <div>
-                    <strong>Purchase Price:</strong> <span className="mono">INR {(product.purchasePrice / 100).toFixed(2)}</span>
+                    <strong>Purchase Price:</strong> <span className="mono">{fmtInr(product.purchasePrice)}</span>
                   </div>
                   <div>
-                    <strong>MRP:</strong> <span className="mono">INR {(product.mrp / 100).toFixed(2)}</span>
+                    <strong>MRP:</strong> <span className="mono">{fmtInr(product.mrp)}</span>
                   </div>
                   <div>
                     <strong>MOQ:</strong> <span className="mono">{product.moq || 1}</span>
@@ -815,10 +819,10 @@ export function SuppliersTab({
                 <strong>Original Name:</strong> {editingProduct.productName}
               </div>
               <div className="sa-mb-12">
-                <strong>Purchase Price:</strong> INR {(editingProduct.purchasePrice / 100).toFixed(2)}
+                <strong>Purchase Price:</strong> {fmtInr(editingProduct.purchasePrice)}
               </div>
               <div className="sa-mb-12">
-                <strong>MRP:</strong> INR {(editingProduct.mrp / 100).toFixed(2)}
+                <strong>MRP:</strong> {fmtInr(editingProduct.mrp)}
               </div>
 
               <hr style={{ margin: "16px 0", borderColor: "var(--color-border)" }} />
@@ -855,7 +859,7 @@ export function SuppliersTab({
                     placeholder="e.g. 5.00"
                   />
                   <div className="muted" style={{ marginTop: 4 }}>
-                    Retailer Price: INR {((editingProduct.purchasePrice / 100) + (parseFloat(editProductForm.fixedMargin) || 0)).toFixed(2)}
+                    Retailer Price: {inrFmt.format((editingProduct.purchasePrice / 100) + (parseFloat(editProductForm.fixedMargin) || 0))}
                   </div>
                 </div>
               ) : (
@@ -871,7 +875,7 @@ export function SuppliersTab({
                     placeholder="e.g. 10"
                   />
                   <div className="muted" style={{ marginTop: 4 }}>
-                    Retailer Price: INR {((editingProduct.purchasePrice / 100) * (1 + (parseFloat(editProductForm.percentMargin) || 0) / 100)).toFixed(2)}
+                    Retailer Price: {inrFmt.format((editingProduct.purchasePrice / 100) * (1 + (parseFloat(editProductForm.percentMargin) || 0) / 100))}
                   </div>
                 </div>
               )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch, safeJson, API_GATEWAY_BASE } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 import { fetchCategories, FmcgCategory } from '../api/store';
 // CURRENCY-FORMAT-001: Use shared currency formatters
 import { formatCurrency } from '../lib/formatters';
@@ -273,6 +273,26 @@ export default function ProductsPage() {
       logger.error('Error fetching suppliers:', err);
       // RET-AUD-040: Show feedback that supplier list couldn't be loaded
       setSupplierFetchError(true);
+    }
+  };
+
+  // STG-736: Auth-aware PDF download — plain <a href> doesn't send auth headers
+  const downloadSkuPdf = async (productId: string) => {
+    if (!accessToken) return;
+    try {
+      const res = await authFetch(`/api/v1/retailer-admin/products/${productId}/sku.pdf`, accessToken);
+      if (!res.ok) throw new Error(`${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sku_${productId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to download SKU PDF');
     }
   };
 
@@ -843,14 +863,13 @@ export default function ProductsPage() {
                   )}
 
                   <div className="prod-created-actions">
-                    <a
-                      href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${createdProduct.productId}/sku.pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className="btn btn-primary prod-sku-link"
+                      onClick={() => downloadSkuPdf(createdProduct.productId)}
                     >
                       📄 Download SKU Labels (PDF)
-                    </a>
+                    </button>
                     <button
                       type="button"
                       className="btn btn-secondary"
@@ -1632,16 +1651,15 @@ Loose Rice,, , 45, 40, , KG, 25`}
                     </td>
                     <td>
                       <div className="prod-table-actions">
-                        <a
-                          href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${product.id}/sku.pdf`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
                           className="btn btn-secondary"
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                           title="Download SKU Labels"
+                          onClick={() => downloadSkuPdf(product.id)}
                         >
                           📄
-                        </a>
+                        </button>
                         {product.mode === 'LOOSE_BULK' && (
                           <button
                             className="btn"

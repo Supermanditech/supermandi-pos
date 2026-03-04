@@ -5,8 +5,10 @@ import { fetchRefunds, approveRefund, rejectRefund, type RefundRequest, type Ref
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import { formatDateTime } from "../lib/formatters";
 
+// STG-813: Use Indian comma grouping (₹1,00,000.00 not ₹100000.00)
+const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
 function formatCurrency(minor: number): string {
-  return "\u20B9" + (minor / 100).toFixed(2);
+  return inrFmt.format(minor / 100);
 }
 
 const STATUS_STYLES: Record<RefundStatus, { bg: string; color: string; label: string }> = {
@@ -52,7 +54,9 @@ export function RefundsTab() {
   useEffect(() => { refresh(); }, [refresh]);
 
   // R7.SA.007: Actual approve — only called after user confirms in dialog
+  // STG-815: Clear stale error before each action
   const executeApprove = async (id: string) => {
+    setError("");
     setActionLoading(id);
     try {
       await approveRefund(id);
@@ -80,6 +84,7 @@ export function RefundsTab() {
 
   const handleReject = async () => {
     if (!rejectId || !rejectReason.trim()) return;
+    setError("");
     setActionLoading(rejectId);
     try {
       await rejectRefund(rejectId, rejectReason.trim());

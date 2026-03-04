@@ -68,8 +68,10 @@ interface InvoiceDetail extends InvoiceListItem {
   }>;
 }
 
+// STG-744: Use Indian comma grouping (₹1,00,000.00 not ₹100000.00)
+const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
 function fmt(minor: number): string {
-  return `\u20B9${(minor / 100).toFixed(2)}`;
+  return inrFmt.format(minor / 100);
 }
 
 function fmtDate(d: string): string {
@@ -227,7 +229,7 @@ export default function InvoicesPage() {
                   <td className="inv-table-mono">{inv.invoiceNumber}</td>
                   <td>{fmtDate(inv.invoiceDate)}</td>
                   <td>{inv.sellerName}</td>
-                  <td className="inv-table-cap">{inv.invoiceType.replace("_", " ")}</td>
+                  <td className="inv-table-cap">{inv.invoiceType.replace(/_/g, " ")}</td>
                   <td className="cell-mono-right-bold">{fmt(inv.totalAmountMinor)}</td>
                   <td className="cell-right" style={{ color: inv.balanceDueMinor > 0 ? 'var(--danger)' : 'var(--success)' }}>
                     {fmt(inv.balanceDueMinor)}
@@ -298,7 +300,7 @@ export default function InvoicesPage() {
                   <div><strong>Date:</strong> {fmtDate(detail.invoiceDate)}</div>
                   <div><strong>Due:</strong> {detail.dueDate ? fmtDate(detail.dueDate) : "-"}</div>
                   <div><strong>Status:</strong> {detail.status.toUpperCase()}</div>
-                  <div><strong>Type:</strong> {detail.invoiceType.replace("_", " ")}</div>
+                  <div><strong>Type:</strong> {detail.invoiceType.replace(/_/g, " ")}</div>
                   <div><strong>From:</strong> {detail.sellerName}{detail.sellerGstin ? ` (${detail.sellerGstin})` : ""}</div>
                   <div><strong>To:</strong> {detail.buyerName}</div>
                 </div>
@@ -390,8 +392,10 @@ export default function InvoicesPage() {
                     onClick={() => {
                       const amount = fmt(detail.totalAmountMinor);
                       const msg = `Regarding invoice #${detail.invoiceNumber}, amount: ${amount}. Status: ${detail.status.toUpperCase()}.`;
-                      const phone = detail.sellerPhone!.replace(/\D/g, '');
+                      let phone = detail.sellerPhone!.replace(/\D/g, '');
                       if (phone.length < 10) return;
+                      // STG-752: wa.me requires international format — prepend 91 for Indian 10-digit numbers
+                      if (phone.length === 10) phone = '91' + phone;
                       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
                     }}
                     className="po-wa-btn"

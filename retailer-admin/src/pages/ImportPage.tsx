@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // T-112: Breadcrumb navigation
@@ -560,7 +560,7 @@ export default function ImportPage() {
               </div>
             )}
             <div className="imp-actions-center">
-              <a href="products" className="btn btn-primary">View Products</a>
+              <Link to="products" className="btn btn-primary">View Products</Link>
               <button className="btn btn-secondary" onClick={reset}>
                 Import More
               </button>

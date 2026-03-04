@@ -285,6 +285,7 @@ export default function SupplierOnboardingPage() {
     if (resendCooldown > 0) return;
 
     setError('');
+    setOtp(''); // STG-766: Clear stale OTP input on resend
     setIsLoading(true);
 
     try {

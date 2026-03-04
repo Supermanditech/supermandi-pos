@@ -239,6 +239,7 @@ export default function ForgotPasswordPage() {
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     setError('');
+    setOtpVal(''); // STG-765: Clear stale OTP input on resend
     setIsLoading(true);
     try {
       cleanup();

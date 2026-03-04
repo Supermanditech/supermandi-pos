@@ -2,8 +2,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchGstStoresOverview, fetchGstSummary, exportGstr1, type GstStoresOverviewResponse, type GstSummary } from "../api/gstCompliance";
 
+// STG-813: Use Indian comma grouping (₹1,00,000.00 not ₹100000.00)
+const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
 function formatCurrency(minor: number): string {
-  return "\u20B9" + (minor / 100).toFixed(2);
+  return inrFmt.format(minor / 100);
 }
 
 function getCurrentMonth(): string {

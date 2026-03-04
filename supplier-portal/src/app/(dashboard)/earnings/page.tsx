@@ -341,7 +341,7 @@ export default function EarningsPage() {
         <h3 className="font-medium text-blue-800 mb-2">Payout Information</h3>
         <ul className="text-sm text-blue-700 space-y-1">
           <li>Payouts are processed weekly on Mondays for all delivered orders.</li>
-          <li>Minimum payout amount is Rs. 100.</li>
+          <li>Minimum payout amount is {formatCurrency(10000)}.</li>
           <li>Payouts are credited within 2-3 business days after processing.</li>
           <li>Ensure your bank details are verified to avoid payout failures.</li>
         </ul>
@@ -437,6 +437,7 @@ export default function EarningsPage() {
                               {new Date(order.orderDate).toLocaleDateString('en-IN', {
                                 day: 'numeric',
                                 month: 'short',
+                                timeZone: 'Asia/Kolkata', // STG-772: Explicit IST
                               })}
                             </td>
                             <td className="py-2 px-4 text-right font-medium">
