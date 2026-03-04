@@ -1,0 +1,122 @@
+# EAS Build ignore — based on .gitignore but INCLUDES android/ for CNG
+# (android/ is gitignored but must be uploaded for EAS credential injection)
+
+# Temp / runtime
+.tmp/
+*.log
+
+# IDE
+.vscode/
+
+# OSX
+.DS_Store
+
+# node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Bundle artifacts
+*.jsbundle
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Next.js
+.next/
+out/
+
+# Tooling artifacts
+screenshots/
+artifacts/
+_tmp_pdf/
+builds/
+.worktrees/
+
+# Metro health check
+.metro-health-check*
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
+.env.prod
+**/.env.production
+**/.env.prod
+
+# Spec PDFs
+Supermandi POS App Plan.pdf
+supermandi pos plan1.pdf
+POS DEVELOPER TICKET.pdf
+
+# Build artifacts
+.build-manifest.json
+nul
+expo-output.txt
+expo-lan-output.txt
+expo-qr.html
+superadmin-output.txt
+COMMIT_STATUS_SUMMARY.txt
+
+# Claude Code
+.claude/
+skills/
+tmpclaude-*-cwd
+tmpclaude-*-cwd/
+tmpclaude-*/
+
+# Monorepo backend/portals (not needed for POS APK build)
+backend/
+retailer-admin/
+supplier-portal/
+supermandi-superadmin/
+supermandi-landing/
+e2e-tests/
+docker-compose*.yml
+scripts/
+
+# Notes / WIP
+notes/
+WIP_SAVE_*.txt
+
+# Coverage
+coverage/
+retailer-admin/coverage/
+supermandi-superadmin/coverage/
+supplier-portal/coverage/
+
+# Firebase keys
+firebase-service-account*.json
+*-firebase-adminsdk-*.json
+google-services.json
+
+# Research files
+cashfree_*.txt
+decentro_*.txt
+hdfc_*.txt
+juspay_*.txt
+npci_*.txt
+open_*.txt
+paytm_*.txt
+paytmpayments_*.txt
+payu_*.txt
+phonepe_*.txt
+razorpay_*.txt
+razorpayx_*.txt
+rbi_*.txt
+tmp_*.txt
+
+# TS artifacts
+*.tsbuildinfo
+**/*.tsbuildinfo
+**/*.d.ts.map
+deploy-package/
+*.tar.gz
+package-lock.json
+
+# Workflow state
+workflow/state/live_monitor_report.json
+scripts/.session-state.json

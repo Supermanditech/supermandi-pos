@@ -123,7 +123,6 @@
   "private": true,
   "pnpm": {
     "overrides": {
-      "tar": ">=7.5.7",
       "undici": ">=6.23.0"
     }
   }
