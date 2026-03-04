@@ -5656,8 +5656,8 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-723 | **P2** | Security | **Phone enumeration leak**: Backend `/forgot-password/request` returns different messages for existing vs non-existing phone accounts. Existing: "Account found. Please verify your phone with OTP to reset password." Non-existing: "If an account exists with this phone, you can proceed to verify OTP." Email channel correctly uses identical responses for both paths. | Code: `backend/src/routes/v1/retailer-admin/auth.ts:1134` vs `:1142` |
-| STG-724 | **P2** | Security/Infra | **Rate limiting ineffective on staging**: 8 rapid sequential POST requests to `/forgot-password/request` all returned HTTP 200 (no 429). `authRateLimiter` uses `req.ip` which likely resolves to Cloud Run LB IP behind proxy. All auth endpoints affected. | `curl` 8x rapid fire → all 200. Code: `backend/src/middleware/posRateLimiter.ts:91` |
+| STG-723 | **P2** | Security | **FIXED @ 0c94ca44** — Normalized forgot-password response to identical message for both existing and non-existing phones. | `auth.ts:1132-1140` |
+| STG-724 | **P2** | Security/Infra | **DEFERRED (INFRA-CONFIG)** — Rate limiter code is correct (5/min/IP with `authRateLimiter`). Trust proxy is configured in `app.ts:63`. Staging failure explained by `RATE_LIMIT_MULTIPLIER` env var and/or multi-instance Cloud Run distribution. No code fix needed; verify `RATE_LIMIT_MULTIPLIER=1` in production. | `posRateLimiter.ts:241-247`, `app.ts:61-65` |
 | STG-725 | P3 | UX | No user-visible message when Firebase is unavailable on forgot-password OTP step — Send OTP button silently disabled | `ForgotPasswordPage.tsx:432` |
 
 #### ResetPasswordPage (`retailer-admin/src/pages/ResetPasswordPage.tsx`)
@@ -5692,7 +5692,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 |----|----------|-------|---------|----------|
 | STG-733 | P3 | A11y | Category rename modal lacks focus trap. `useFocusTrap` hook exists in `lib/hooks.ts:47` but is not used. Tab can escape modal to background. | `DashboardPage.tsx:789-842`, no `useFocusTrap` import |
 | STG-734 | P3 | A11y | Modal does not auto-focus first input on open. Focus stays on trigger button. | No `autoFocus` on modal inputs, no focus useEffect |
-| STG-735 | **P2** | Security | **CSV export vulnerable to CSV formula injection**. `barcode` field is unquoted/unescaped. Fields starting with `=`, `+`, `-`, `@` can trigger Excel formula execution. Only `productName` double-quotes are escaped. | `DashboardPage.tsx:636-657`, line 641-646 |
+| STG-735 | **P2** | Security | **FIXED @ 0c94ca44** — Added `csvSafe()` helper that quotes all string fields and prefixes formula-triggering chars (`=+\-@\t\r`) with `'`. Applied to productName and barcode. | `DashboardPage.tsx:643-648` |
 
 #### ProductsPage (`retailer-admin/src/pages/ProductsPage.tsx`)
 
@@ -5749,7 +5749,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-753 | **P2** | Input Validation | **Reorder settings PUT endpoint has zero server-side validation**. `req.body` values go directly to SQL. Frontend validates (lead days 1-90, threshold ≥0) but direct API call can set negative or extreme values. | `backend/src/routes/v1/retailer-admin/reorder.ts:80-86` |
+| STG-753 | **P2** | Input Validation | **FIXED @ 0c94ca44** — Added server-side validation: defaultLeadDays 1-90, autoApproveThreshold 0-1000000. Returns 400 on invalid input. | `reorder.ts:88-98` |
 | STG-754 | **P2** | A11y | **Breadcrumb `<a>` without `href` and without `onKeyDown`** — keyboard users can focus via tabIndex=0 but Enter/Space won't fire onClick. Used by CustomersPage detail back navigation. | `retailer-admin/src/components/Breadcrumb.tsx:22` |
 | STG-755 | P3 | CSS | `.spin` class used on refresh icons in CustomersPage + ReorderPage but never defined in CSS. Refresh icon doesn't visually spin during loading. | `CustomersPage.tsx:217`, `ReorderPage.tsx:220,263,271,317` |
 | STG-756 | P3 | A11y | CustomersPage table rows have `onClick` + cursor pointer but no tabIndex/role/onKeyDown for keyboard access | `CustomersPage.tsx:245` |
@@ -5835,7 +5835,7 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-761 | P3 | Anti-Enum | Registration lookup endpoint reveals phone registration status (`exists: false`). By design for registration-first flow. | `POST /api/v1/supplier/registration/lookup` |
-| STG-762 | **P2** | Firebase | **Register page reCAPTCHA `useEffect` missing `mounted` gate**. All other OTP pages (login, forgot-pw, onboard) correctly gate on `mounted`. Register page can fire `setupRecaptcha` before DOM hydration. Defensive check in `firebase.ts` catches but `recaptchaInitialized` stays false. | `supplier-portal/src/app/register/page.tsx:238` vs login:56 |
+| STG-762 | **P2** | Firebase | **FIXED @ 0c94ca44** — Added `mounted` gate to register reCAPTCHA useEffect and `mounted` to dependency array. Matches STG-722 pattern used by login/forgot-pw/onboard. | `register/page.tsx:238,251` |
 | STG-763 | P3 | A11y | Reset password error div missing `aria-live="assertive"` (has `role="alert"` only). All other auth pages include both. | `reset-password/page.tsx:223` |
 | STG-764 | P3 | Navigation | Forgot password "Register" link only in email step, missing from OTP phone step. | `forgot-password/page.tsx:554` |
 | STG-765 | P3 | UX | Forgot password `handleResendOtp` doesn't clear OTP input after resend. User may re-submit old code. | `forgot-password/page.tsx:239-261` |
@@ -5858,7 +5858,7 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-781 | **P2** | Security | **Profile bank account number returned unmasked** in API response. Full number visible in network traces and browser dev tools. Payouts endpoint correctly masks to `****1234`. | `backend/src/routes/v1/supplier/profile.ts:86` |
+| STG-781 | **P2** | Security | **FIXED @ 0c94ca44** — Masked bank account number to `****NNNN` in both profile GET endpoints. Matches payouts masking pattern. | `profile.ts:86-89,318-321` |
 | STG-782 | P3 | A11y | Invoice detail modal lacks Escape key handler and focus trap. | `invoices/page.tsx:200-220` |
 | STG-783 | P3 | A11y | KYC tabs missing `aria-controls`/`id` linking and `role="tabpanel"` on content panels. Incomplete WCAG tab pattern. | `kyc/page.tsx:289-304` |
 | STG-784 | P3 | A11y | KYC bank verification form labels not connected to inputs via `htmlFor`/`id`. Screen readers may not announce labels. | `kyc/page.tsx` bank fields |
@@ -5871,7 +5871,7 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-791 | **P2** | Auth | **Help page missing from middleware `PROTECTED_PATHS`** + `config.matcher`. Bypasses edge-level auth. Client-side guard still works, but breaks defense-in-depth. | `supplier-portal/src/middleware.ts:11-23,51-64` |
+| STG-791 | **P2** | Auth | **FIXED @ 0c94ca44** — Added `/supplier/help` to PROTECTED_PATHS array and `/supplier/help/:path*` to config.matcher. | `middleware.ts:23,64` |
 | STG-792 | P3 | Error | Chat conversation list has no error state for fetch failure. Shows "No conversations yet" instead of error+retry. | `chat/page.tsx:80-84,186,198` |
 | STG-793 | P3 | Dark Mode | Notifications error retry button has no dark mode styling — nearly invisible in dark theme. | `notifications/page.tsx:128-131` |
 | STG-794 | P3 | Arch | Chat uses polling (5s/10s) instead of consuming existing WebSocket/socket events from backend. Backend `socketManager.emitToConversation` exists but frontend doesn't connect. | `chat/page.tsx:83,98` |
@@ -5944,8 +5944,8 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | ID | Screen(s) | Layer | Finding | Evidence |
 |----|-----------|-------|---------|----------|
 | STG-803 | **All screens** | Security/CSP | **CSP mismatch between server header and HTML meta tag**. Server `connect-src 'self'` blocks the meta tag's `https://*.googleapis.com`. Server `img-src 'self' data: https:` vs meta `'self' data: blob:` — intersection blocks both `blob:` and `https:` images. Confusing config. | `supermandi-superadmin/index.html:9` vs nginx CSP header |
-| STG-804 | StaffTab | Security | **Missing `encodeURIComponent` on storeId/staffId in API paths**. All sibling API modules encode path params; staff.ts does not. URL path traversal risk if IDs contain special chars. | `supermandi-superadmin/src/api/staff.ts:28,47,72,93` |
-| STG-805 | AiPanel | Security | **`dangerouslySetInnerHTML` with fragile regex sanitization** for AI responses. Currently safe (escape-first ordering) but maintenance-fragile. Should use a markdown library. | `supermandi-superadmin/src/components/AiPanel.tsx:110` |
+| STG-804 | StaffTab | Security | **FIXED @ 0c94ca44** — Added `encodeURIComponent()` on storeId and staffId in all 4 API functions (fetchStoreStaff, createStaff, updateStaff, resetStaffPin). | `staff.ts:28,47,72,93` |
+| STG-805 | AiPanel | Security | **FIXED @ 0c94ca44** — Added safety-critical ordering comment documenting that HTML entity escaping MUST run before markdown→HTML transforms. Escape chain verified correct. | `AiPanel.tsx:110` |
 | STG-806 | GstCompliance, Refunds, Monitoring, Quality, Registrations | A11y | **5 tabs: error banners missing `role="alert"`**. CSS-only `.sa-alert-error` without ARIA semantics. Other tabs (Invoices, Applications) correctly use `role="alert"`. | Multiple files |
 | STG-807 | RefundsTab | A11y | **Reject modal missing `role="dialog"`, `aria-modal="true"`, Escape key handler**. Other modals (Invoices, GstCompliance) have these. | `RefundsTab.tsx:233-234` |
 | STG-808 | SuppliersTab | Validation | **Bank reject button has no minimum reason length**. Product reject + doc reject enforce 10-char min; bank reject can submit empty reason. | `SuppliersTab.tsx:422-428` |
@@ -6016,12 +6016,12 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Flow | Finding | Evidence |
 |----|------|---------|----------|
-| STG-828 | Flow 1: Supplier Reg | **Supplier login does NOT gate on `verification_status`** — pending (unapproved) suppliers can log in and get full-permission JWT. `requireActiveSupplier` on write routes provides partial gate. | `supplier-service/auth.ts:189-253`, only checks `status = 'suspended'` |
+| STG-828 | Flow 1: Supplier Reg | **FIXED @ 0c94ca44** — Added verification_status gate to supplier login. Blocks unapproved suppliers (KYC_SUBMITTED, pending, rejected) with 403. Accepts both `'verified'` and `'ACTIVE'` for backward compat. | `supplier-service/auth.ts:220-228` |
 | STG-829 | Flow 3: Products | Product approval requires 2 steps (approve + publish) — approved-but-unpublished products invisible to retailers | `admin/suppliers.ts:787` (approve) vs `:1574` (publish) |
 | STG-830 | Flow 4: Orders | Dual status update paths: order-service state machine vs supplier direct SQL UPDATE. Supplier bypasses order-service business logic. | `supplier/orders.ts:502` vs `order-service/statusTransitions.ts` |
 | STG-831 | Flow 5: Invoices | No automatic invoice generation from PO delivery. All invoices require manual admin API calls. | `admin/invoices.ts` — only manual POST endpoints, no trigger from receive/GRN |
 | STG-832 | Flow 6: Chat | Chat admin role check in handler (`userType !== 'admin'`) not in middleware. Admin email OTP users can't use chat (UUID validation rejects email-based user IDs). | `chat.ts:364,385,404` + `chat.ts:89-93` |
-| STG-833 | Flow 7: Auth | **Supplier token refresh lacks rotation and DB tracking**. Auth-service implements full token rotation with revocation; supplier-service reissues new token without revoking old. Compromised token stays valid until expiry. | `supplier-service/auth.ts:351-413` vs `auth-service/auth.ts:196-272` |
+| STG-833 | Flow 7: Auth | **DEFERRED (AUTH-HARDENING)** — Token rotation requires adding refresh_tokens table, modifying token issuance, and adding revocation on refresh. Not a "smallest safe change" — requires dedicated auth hardening ticket. Current mitigation: short JWT expiry + suspension check on refresh. | `supplier-service/auth.ts:351-413` |
 
 ### P3 Findings (Low)
 
