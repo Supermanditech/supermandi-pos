@@ -5792,8 +5792,8 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 | NotificationsPage | 1 finding | STG-757 (P3) |
 | DeviceActivationPage | 1 finding | STG-760 (P3) |
 | HelpDashboardPage | **PASS** | 0 |
-| admin/SupplierQueuePage | **1 P1** | **STG-759 (P1)** |
-| admin/ProductQueuePage | **1 P1** | **STG-759 (P1)** |
+| admin/SupplierQueuePage | **FIXED** | STG-759 (P1 → FIXED @ 678bf1b7) |
+| admin/ProductQueuePage | **FIXED** | STG-759 (P1 → FIXED @ 678bf1b7) |
 | NotFoundPage | **PASS** | 0 |
 
 **Cross-cutting findings**: STG-731 (P3), STG-732 (P3), STG-738 (P2), STG-739 (P3), STG-740 (P3), STG-752 (P3), STG-755 (P3)
@@ -5802,24 +5802,24 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | Severity | Count |
 |----------|-------|
-| **P1 (Critical)** | **1** (STG-759: admin queue pages non-functional) |
+| **P1 (Critical)** | **0** (STG-759 FIXED @ 678bf1b7) |
 | **P2 (Important)** | **10** |
 | **P3 (Minor)** | **27** |
-| **Total** | **38 findings** |
+| **Total** | **38 findings (1 P1 fixed)** |
 
 ### Retailer Web Verdict
 
-**CONDITIONAL PASS** — 28/28 screens verified across all 17 runtime layers + business-logic edge cases.
+**PASS** — 28/28 screens verified across all 17 runtime layers + business-logic edge cases.
 
-- **1 P1 blocker**: STG-759 (admin SupplierQueue + ProductQueue route mismatch — pages non-functional)
+- ~~1 P1 blocker~~: STG-759 **FIXED @ 678bf1b7**
 - **10 P2 findings**: rate limiting, phone enumeration, CSV injection, missing aria-live, no compression, server-side validation gaps, breadcrumb a11y, silent 401 race
 - **27 P3 findings**: a11y polish, currency formatting, focus traps, parity gaps
 
-The P1 must be fixed before production. The P2s are recommended before go-live. P3s can be deferred to a post-launch hardening wave.
+P2s are recommended before go-live. P3s can be deferred to a post-launch hardening wave.
 
 ### Finding Range Update (cumulative)
 
-- **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
+- **Retailer Web**: STG-723..STG-760 (38 findings: 0 open P1 [1 fixed], 10 P2, 27 P3)
 
 ---
 
@@ -5927,7 +5927,7 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 ### Finding Range Update (cumulative)
 
-- **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
+- **Retailer Web**: STG-723..STG-760 (38 findings: 0 open P1 [1 fixed], 10 P2, 27 P3)
 - **Supplier Web**: STG-761..STG-802 (31 findings: 0 P1, 5 P2, 26 P3)
 
 ---
@@ -5994,7 +5994,7 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 ### Finding Range Update (cumulative)
 
-- **Retailer Web**: STG-723..STG-760 (38 findings: 1 P1, 10 P2, 27 P3)
+- **Retailer Web**: STG-723..STG-760 (38 findings: 0 open P1 [1 fixed], 10 P2, 27 P3)
 - **Supplier Web**: STG-761..STG-802 (31 findings: 0 P1, 5 P2, 26 P3)
 - **SuperAdmin Web**: STG-803..STG-826 (24 findings: 0 P1, 6 P2, 18 P3)
 
@@ -6006,7 +6006,7 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 > **Method**: Code-level trace of cross-portal data flows + API auth isolation tests on staging
 > **Mode**: Discovery-only — no fixes this session
 
-### P1 Finding (Critical)
+### P1 Finding (FIXED)
 
 | ID | Flow | Finding | Evidence |
 |----|------|---------|----------|
@@ -6049,16 +6049,16 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 | Severity | Count |
 |----------|-------|
-| **P1 (Critical)** | **1** (STG-827: verification_status enum mismatch) |
+| **P1 (Critical)** | **0** (STG-827 FIXED @ 678bf1b7) |
 | **P2 (Important)** | **6** |
 | **P3 (Minor)** | **5** |
-| **Total** | **12 findings** |
+| **Total** | **12 findings (1 P1 fixed)** |
 
 ### Cross-Function Matrix Verdict
 
-**CONDITIONAL PASS** — 7/7 flows verified. Cross-portal auth isolation is strong.
+**PASS** — 7/7 flows verified. Cross-portal auth isolation is strong.
 
-**1 P1 blocker**: STG-827 — `verification_status` enum value mismatch between admin approval code paths (`'ACTIVE'` vs `'verified'`) silently breaks the supplier-to-retailer product pipeline.
+~~1 P1 blocker~~: STG-827 **FIXED @ 678bf1b7** — enum value corrected to `'verified'`.
 
 ---
 
@@ -6066,18 +6066,20 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 ### All Platforms
 
-| Platform | Screens | P1 | P2 | P3 | Total |
-|----------|---------|----|----|-----|-------|
-| Retailer Web | 28/28 | **1** | 10 | 27 | 38 |
+| Platform | Screens | P1 (open) | P2 | P3 | Total |
+|----------|---------|-----------|----|----|-------|
+| Retailer Web | 28/28 | ~~1~~ **0** (FIXED) | 10 | 27 | 38 |
 | Supplier Web | 23/23 | 0 | 5 | 26 | 31 |
 | SuperAdmin Web | 25/25 | 0 | 6 | 18 | 24 |
-| Cross-Function Matrix | 7/7 flows | **1** | 6 | 5 | 12 |
-| **TOTAL** | **83 screens + 7 flows** | **2** | **27** | **76** | **105** |
+| Cross-Function Matrix | 7/7 flows | ~~1~~ **0** (FIXED) | 6 | 5 | 12 |
+| **TOTAL** | **83 screens + 7 flows** | **0** (2 fixed) | **27** | **76** | **105** |
 
-### P1 Blockers (Must Fix Before Production)
+### P1 Blockers — ALL RESOLVED
 
 1. **STG-759** (Retailer): ~~Admin SupplierQueue + ProductQueue pages call API paths that don't exist~~ **FIXED @ 678bf1b7** — 9 API paths corrected.
 2. **STG-827** (Cross-Function): ~~Admin supplier approval sets `verification_status = 'ACTIVE'`~~ **FIXED @ 678bf1b7** — 4 enum values corrected to `'verified'`.
+
+**0 open P1 blockers remain.** Production is no longer blocked by P1 findings.
 
 ### Finding Range
 
