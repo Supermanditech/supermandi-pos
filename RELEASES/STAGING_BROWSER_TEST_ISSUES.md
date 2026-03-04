@@ -5760,7 +5760,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-759 | **P1** | **API Routing** | **SupplierQueuePage + ProductQueuePage are non-functional: API route mismatch**. Frontend calls `/api/v1/retailer-admin/admin/suppliers/pending` (and 6 other `/retailer-admin/admin/*` paths). Backend only has `/api/v1/admin/suppliers/pending` (mounted at `v1Router.use("/admin", adminSuppliersRouter)` line 181). No router handles `/retailer-admin/admin/*`. With valid JWT, requests 404 at Express route matching. Both pages always show "Failed to load" error. Additionally, backend admin routes use `requireAdminToken` (separate admin auth), not retailer JWT auth — fundamental auth architecture mismatch. | Frontend: `SupplierQueuePage.tsx:45,71,97`, `ProductQueuePage.tsx:86,169,185,213,241`. Backend: `routes/v1/index.ts:181` mounts at `/admin/` only. No `/retailer-admin/admin/` mount. |
+| STG-759 | **P1** | **API Routing** | **FIXED @ 678bf1b7** — SupplierQueuePage + ProductQueuePage API paths corrected from `/api/v1/retailer-admin/admin/*` to `/api/v1/admin/*` (9 path strings across 2 files). Typecheck pass, 7/7 unit tests pass. | `SupplierQueuePage.tsx:45,71,97`, `ProductQueuePage.tsx:86,169,185,213,241` |
 | STG-760 | P3 | A11y | DeviceActivationPage Modal component uses static `id="modal-title"`. Duplicate IDs if multiple modals render simultaneously (latent, no current impact). | `Modal.tsx:50` |
 
 ### Retailer Web Sign-Off Summary
@@ -6010,7 +6010,7 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 | ID | Flow | Finding | Evidence |
 |----|------|---------|----------|
-| STG-827 | **Flow 3: Supplier Product → Catalog** | **`verification_status` enum mismatch breaks catalog visibility**. Admin supplier approval via `admin/suppliers.ts:607` sets `verification_status = 'ACTIVE'`. Catalog service at `catalog.ts:126` and 5 other locations filter for `verification_status = 'verified'` (lowercase). Platform-service at `admin.ts:663` sets `'verified'`. Suppliers approved via the wrong path have invisible products. | `admin/suppliers.ts:607` → `'ACTIVE'`, `catalog-service/catalog.ts:126` → `WHERE s.verification_status = 'verified'` |
+| STG-827 | **Flow 3: Supplier Product → Catalog** | **FIXED @ 678bf1b7** — `admin/suppliers.ts` lines 134, 527, 607, 616 changed from `'ACTIVE'` to `'verified'` to match 40+ downstream consumers. Typecheck pass. Grep confirms zero remaining `'ACTIVE'` writes in non-migration code. | `admin/suppliers.ts:134,527,607,616` |
 
 ### P2 Findings (Medium)
 
@@ -6076,8 +6076,8 @@ The P1 must be fixed before production. The P2s are recommended before go-live. 
 
 ### P1 Blockers (Must Fix Before Production)
 
-1. **STG-759** (Retailer): Admin SupplierQueue + ProductQueue pages call API paths that don't exist (`/retailer-admin/admin/*` vs `/admin/*`). Pages are non-functional.
-2. **STG-827** (Cross-Function): Admin supplier approval sets `verification_status = 'ACTIVE'` but catalog queries filter for `'verified'`. Products from suppliers approved via wrong path are invisible.
+1. **STG-759** (Retailer): ~~Admin SupplierQueue + ProductQueue pages call API paths that don't exist~~ **FIXED @ 678bf1b7** — 9 API paths corrected.
+2. **STG-827** (Cross-Function): ~~Admin supplier approval sets `verification_status = 'ACTIVE'`~~ **FIXED @ 678bf1b7** — 4 enum values corrected to `'verified'`.
 
 ### Finding Range
 
