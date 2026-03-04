@@ -42,7 +42,7 @@ export default function SupplierQueuePage() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await authFetch('/api/v1/retailer-admin/admin/suppliers/pending', accessToken);
+      const response = await authFetch('/api/v1/admin/suppliers/pending', accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch pending suppliers');
       const data = await safeJson(response);
@@ -68,7 +68,7 @@ export default function SupplierQueuePage() {
     setSuccess('');
     try {
       const response = await authFetch(
-        `/api/v1/retailer-admin/admin/suppliers/${supplierId}/approve`,
+        `/api/v1/admin/suppliers/${supplierId}/approve`,
         accessToken,
         { method: 'POST' }
       );
@@ -94,7 +94,7 @@ export default function SupplierQueuePage() {
     setSuccess('');
     try {
       const response = await authFetch(
-        `/api/v1/retailer-admin/admin/suppliers/${selectedSupplier.id}/reject`,
+        `/api/v1/admin/suppliers/${selectedSupplier.id}/reject`,
         accessToken,
         {
           method: 'POST',

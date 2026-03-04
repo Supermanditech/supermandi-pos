@@ -83,7 +83,7 @@ export default function ProductQueuePage() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await authFetch('/api/v1/retailer-admin/admin/products/pending', accessToken);
+      const response = await authFetch('/api/v1/admin/products/pending', accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch pending products');
       const data = await safeJson(response);
@@ -166,7 +166,7 @@ export default function ProductQueuePage() {
       // Apply edits
       if (Object.keys(editPayload).length > 0) {
         const editResponse = await authFetch(
-          `/api/v1/retailer-admin/admin/products/${selectedProduct.id}/edit`,
+          `/api/v1/admin/products/${selectedProduct.id}/edit`,
           accessToken,
           {
             method: 'PUT',
@@ -182,7 +182,7 @@ export default function ProductQueuePage() {
 
       // Then approve the product
       const approveResponse = await authFetch(
-        `/api/v1/retailer-admin/admin/products/${selectedProduct.id}/approve`,
+        `/api/v1/admin/products/${selectedProduct.id}/approve`,
         accessToken,
         { method: 'POST' }
       );
@@ -210,7 +210,7 @@ export default function ProductQueuePage() {
     setSuccess('');
     try {
       const response = await authFetch(
-        `/api/v1/retailer-admin/admin/products/${productId}/approve`,
+        `/api/v1/admin/products/${productId}/approve`,
         accessToken,
         { method: 'POST' }
       );
@@ -238,7 +238,7 @@ export default function ProductQueuePage() {
     setSuccess('');
     try {
       const response = await authFetch(
-        `/api/v1/retailer-admin/admin/products/${selectedProduct.id}/reject`,
+        `/api/v1/admin/products/${selectedProduct.id}/reject`,
         accessToken,
         {
           method: 'POST',

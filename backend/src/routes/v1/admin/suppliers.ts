@@ -131,7 +131,7 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
   const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
   try {
-    let whereClause = "WHERE (s.verification_status = 'ACTIVE' OR s.status = 'active')";
+    let whereClause = "WHERE (s.verification_status = 'verified' OR s.status = 'active')";
     const params: any[] = [];
     let paramIdx = 1;
 
@@ -524,7 +524,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminTok
       return res.status(404).json({ error: "Supplier not found" });
     }
 
-    if (enabled && check.rows[0].verification_status !== 'ACTIVE') {
+    if (enabled && check.rows[0].verification_status !== 'verified') {
       return res.status(400).json({
         error: "supplier_not_verified",
         message: "Cannot enable auto-approval for non-verified suppliers"
@@ -604,7 +604,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
     // Update supplier to ACTIVE
     const updateResult = await client.query(
       `UPDATE supplier.suppliers
-       SET verification_status = 'ACTIVE', verified_at = NOW(), status = 'active'
+       SET verification_status = 'verified', verified_at = NOW(), status = 'active'
        WHERE id = $1::uuid
        RETURNING id, verification_status as "status", verified_at as "verifiedAt"`,
       [supplierId]
@@ -613,7 +613,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
     // Log the approval
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
-       VALUES ('supplier', $1::uuid, 'approve', 'KYC_SUBMITTED', 'ACTIVE', $2::uuid)`,
+       VALUES ('supplier', $1::uuid, 'approve', 'KYC_SUBMITTED', 'verified', $2::uuid)`,
       [supplierId, adminId]
     );
 
