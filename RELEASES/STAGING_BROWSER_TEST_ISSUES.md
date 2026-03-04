@@ -5698,7 +5698,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-736 | P3 | Auth/UX | **MUST_FIX_BEFORE_GOLIVE** — SKU PDF download `<a href>` link bypasses `authFetch()`, relies on cookie-based auth. If gateway requires Authorization header (not just cookie), user sees raw JSON error in new tab. | `ProductsPage.tsx:847-853`, `1636-1643` |
+| STG-736 | P3 | Auth/UX | **FIXED @ a29c2387** — SKU PDF download now uses `authFetch()` blob download instead of plain `<a href>`. Both creation modal and table row links fixed. | `ProductsPage.tsx:847-853`, `1636-1643` |
 
 #### InventoryPage (`retailer-admin/src/pages/InventoryPage.tsx`)
 
@@ -5720,7 +5720,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-741 | P3 | Navigation | **MUST_FIX_BEFORE_GOLIVE** — ImportPage "View Products" link uses plain HTML `<a href>` instead of React Router `<Link>`, causing full page reload. One-line fix. | `ImportPage.tsx:563` |
+| STG-741 | P3 | Navigation | **FIXED @ a29c2387** — ImportPage "View Products" link now uses React Router `<Link>` instead of plain `<a href>`. SPA navigation preserved. | `ImportPage.tsx:563` |
 | STG-742 | P3 | Pagination | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — GET /suppliers has no pagination. Works for v1 store supplier counts. Scalability concern only. | `suppliers.ts:57-106` no LIMIT clause |
 
 #### InvoicesPage, ReconciliationPage, CreditDashboardPage
@@ -5728,8 +5728,8 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-743 | **P2** | Error Handling | **FIXED @ 114c0c51** — Removed silent `if (res.status === 401) return` from ReconciliationPage and CreditDashboardPage. 401s now flow through existing `!res.ok` throw path matching InvoicesPage pattern. | `ReconciliationPage.tsx:91`, `CreditDashboardPage.tsx:80` |
-| STG-744 | P3 | Currency | **MUST_FIX_BEFORE_GOLIVE** — InvoicesPage uses manual `₹${(minor/100).toFixed(2)}` formatter lacking Indian comma grouping. Large invoices (≥₹1,00,000) display without commas. Indian market — financial readability. | `InvoicesPage.tsx:71-73` |
-| STG-745 | P3 | Business Logic | **MUST_FIX_BEFORE_GOLIVE** — `replace("_", " ")` only replaces first underscore in invoice type. `credit_note_debit` → "credit note_debit". Actual display bug. One-line fix: `replaceAll` or regex. | `InvoicesPage.tsx:230,301` |
+| STG-744 | P3 | Currency | **FIXED @ a29c2387** — InvoicesPage `fmt()` now uses `Intl.NumberFormat('en-IN')` with proper Indian comma grouping. | `InvoicesPage.tsx:71-73` |
+| STG-745 | P3 | Business Logic | **FIXED @ a29c2387** — `replace("_", " ")` → `replace(/_/g, " ")` to replace all underscores in invoice type display. | `InvoicesPage.tsx:230,301` |
 | STG-746 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Tables lack `<caption>` or `aria-label`. A11y gap. | `ReconciliationPage.tsx:228`, `CreditDashboardPage.tsx:194,228` |
 | STG-747 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Credit utilization bar missing `role="progressbar"` and `aria-valuenow`. A11y gap. | `CreditDashboardPage.tsx:155-162` |
 | STG-748 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — InvoicesPage modal lacks focus trap. A11y gap. | `InvoicesPage.tsx:273-287` |
@@ -5738,10 +5738,10 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-749 | P3 | Store Isolation | **MUST_FIX_BEFORE_GOLIVE** — ChatPage `createSupport()` sends `storeId` from client state in POST body. Backend should derive from JWT instead of trusting client body. Store isolation rule violation per CLAUDE.md. | `ChatPage.tsx:127`, `chat.ts:151-152` |
+| STG-749 | P3 | Store Isolation | **FIXED @ a29c2387** — Backend chat routes now derive storeId from `x-actor-id` header (JWT). Client no longer sends storeId in body. Store isolation restored. | `ChatPage.tsx:127`, `chat.ts:151-152` |
 | STG-750 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — ChatPage input missing `aria-label`. A11y gap. | `ChatPage.tsx:239-245` |
 | STG-751 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — PurchaseOrdersPage table rows not keyboard-accessible. A11y gap. | `PurchaseOrdersPage.tsx:242` |
-| STG-752 | P3 | Integration | **MUST_FIX_BEFORE_GOLIVE** — WhatsApp phone links (InvoicesPage + PurchaseOrdersPage) may fail when phone stored without country code. `wa.me` requires full international number. Broken user-facing links. | `InvoicesPage.tsx:388-403`, `PurchaseOrdersPage.tsx:338` |
+| STG-752 | P3 | Integration | **FIXED @ a29c2387** — WhatsApp phone links now prepend `91` country code for 10-digit Indian numbers. Both InvoicesPage and PurchaseOrdersPage fixed. | `InvoicesPage.tsx:388-403`, `PurchaseOrdersPage.tsx:338` |
 
 ### Finding Range Update (cumulative)
 
@@ -5753,7 +5753,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 | STG-754 | **P2** | A11y | **FIXED @ 114c0c51** — Added `onKeyDown` handler to Breadcrumb `<a>` elements for Enter/Space key activation. Keyboard users can now navigate breadcrumbs. | `retailer-admin/src/components/Breadcrumb.tsx:22` |
 | STG-755 | P3 | CSS | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — `.spin` CSS class undefined. Cosmetic, loading still shown via text. | `CustomersPage.tsx:217`, `ReorderPage.tsx:220,263,271,317` |
 | STG-756 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — CustomersPage table rows not keyboard-accessible. A11y gap. | `CustomersPage.tsx:245` |
-| STG-757 | P3 | Error Handling | **MUST_FIX_BEFORE_GOLIVE** — NotificationsPage `markAsRead`/`markAllAsRead` don't clear previous error state before attempting operation. Stale error banner persists after successful action. Actual UX bug. | `NotificationsPage.tsx:54-73` |
+| STG-757 | P3 | Error Handling | **FIXED @ a29c2387** — NotificationsPage `markAsRead`/`markAllAsRead` now clear error state before each action. Stale banner eliminated. | `NotificationsPage.tsx:54-73` |
 | STG-758 | P3 | Currency | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — ReorderPage local `formatCurrency` diverges from shared formatter. Works for normal values, inconsistency risk only. | `ReorderPage.tsx:54-57` |
 
 #### DeviceActivationPage, HelpDashboardPage, admin/SupplierQueuePage, admin/ProductQueuePage, NotFoundPage
@@ -5838,8 +5838,8 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | STG-762 | **P2** | Firebase | **FIXED @ 0c94ca44** — Added `mounted` gate to register reCAPTCHA useEffect and `mounted` to dependency array. Matches STG-722 pattern used by login/forgot-pw/onboard. | `register/page.tsx:238,251` |
 | STG-763 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Reset password error div missing `aria-live="assertive"`. Has `role="alert"`, aria-live is supplementary. | `reset-password/page.tsx:223` |
 | STG-764 | P3 | Navigation | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Forgot password missing Register link in OTP step. User can navigate back. | `forgot-password/page.tsx:554` |
-| STG-765 | P3 | UX | **MUST_FIX_BEFORE_GOLIVE** — Forgot password `handleResendOtp` doesn't clear OTP input after resend. User may re-submit stale code. Actual UX bug. | `forgot-password/page.tsx:239-261` |
-| STG-766 | P3 | UX | **MUST_FIX_BEFORE_GOLIVE** — Onboard `handleResendOtp` doesn't clear OTP input. Same stale-OTP bug as STG-765. | `onboard/page.tsx:284-305` |
+| STG-765 | P3 | UX | **FIXED @ a29c2387** — Forgot password `handleResendOtp` now clears OTP input field on resend. | `forgot-password/page.tsx:239-261` |
+| STG-766 | P3 | UX | **FIXED @ a29c2387** — Onboard `handleResendOtp` now clears OTP input field on resend. | `onboard/page.tsx:284-305` |
 | STG-767 | P3 | Dark Mode | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Register page no dark mode on inner cards. Cosmetic. | `register/page.tsx:704,716,789,937` |
 | STG-768 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Auth pages missing `autocomplete` attributes. Browser hints, no functional impact. | Cross-page |
 
@@ -5847,9 +5847,9 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-771 | P3 | Date/TZ | **MUST_FIX_BEFORE_GOLIVE** — Order note timestamps use inline `toLocaleString` without `timeZone: 'Asia/Kolkata'`. Shows browser-local time instead of IST. Data display error for non-IST users. | `orders/page.tsx:928` |
-| STG-772 | P3 | Date/TZ | **MUST_FIX_BEFORE_GOLIVE** — Payout order dates use inline `toLocaleDateString` without timezone. Same IST data error as STG-771. | `earnings/page.tsx:437` |
-| STG-773 | P3 | Hardcoded | **MUST_FIX_BEFORE_GOLIVE** — Hardcoded "Rs. 100" text for minimum payout instead of `formatCurrency(10000)`. Violates no-hardcoded-values rule. One-line fix. | `earnings/page.tsx:344` |
+| STG-771 | P3 | Date/TZ | **FIXED @ a29c2387** — Order note timestamps now include `timeZone: 'Asia/Kolkata'` for explicit IST display. | `orders/page.tsx:928` |
+| STG-772 | P3 | Date/TZ | **FIXED @ a29c2387** — Payout order dates now include `timeZone: 'Asia/Kolkata'` for explicit IST display. | `earnings/page.tsx:437` |
+| STG-773 | P3 | Hardcoded | **FIXED @ a29c2387** — Hardcoded "Rs. 100" replaced with `formatCurrency(10000)`. Uses shared formatter. | `earnings/page.tsx:344` |
 | STG-774 | P3 | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Orders status tabs lack arrow-key nav. Click/tab works. A11y gap. | `orders/page.tsx:324-352` |
 | STG-775 | P3 | Pagination | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Earnings pagination not URL-synced. Position lost on refresh, functional. | `earnings/page.tsx:17` |
 | STG-776 | **P2** | Filtering | **FIXED @ 114c0c51** — Added server-side status filter to supplier orders backend (whitelisted valid statuses). Frontend `getOrders()` now passes `status` param. Query key includes statusFilter for proper cache invalidation. | `orders.ts:66-68`, `api.ts:703`, `orders/page.tsx:111` |
@@ -5958,16 +5958,16 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | STG-810 | GrnAlertsTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Filter select missing label. Internal tool, a11y gap. | `GrnAlertsTab.tsx:33` |
 | STG-811 | StaffTab, GrnAlertsTab | Type Safety | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — `as any` type assertions. No runtime impact. | `StaffTab.tsx:98`, `GrnAlertsTab.tsx:33` |
 | STG-812 | Events, Devices, GrnAlerts | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Pagination buttons no aria-label. A11y gap. | Multiple files |
-| STG-813 | Invoices, GstCompliance, Refunds | Currency | **MUST_FIX_BEFORE_GOLIVE** — Local `₹${(minor/100).toFixed(2)}` formatters instead of shared `Intl.NumberFormat('en-IN')`. Large amounts lack Indian comma grouping across 3 financial tabs. Same pattern as STG-744. | `InvoicesTab.tsx:9`, `GstComplianceTab.tsx:5`, `RefundsTab.tsx:8` |
+| STG-813 | Invoices, GstCompliance, Refunds | Currency | **FIXED @ a29c2387** — All 3 SuperAdmin finance tabs (InvoicesTab, GstComplianceTab, RefundsTab) now use `Intl.NumberFormat('en-IN')` with Indian comma grouping. | `InvoicesTab.tsx:9`, `GstComplianceTab.tsx:5`, `RefundsTab.tsx:8` |
 | STG-814 | InvoicesTab | Business Logic | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Void status missing from filter. Data visible in All view. | `InvoicesTab.tsx:13-20,143-151` |
-| STG-815 | Invoices, Refunds | Error | **MUST_FIX_BEFORE_GOLIVE** — Error state not cleared before new actions — stale error banner persists after success. Same UX bug pattern as STG-757. | `InvoicesTab.tsx:59-115`, `RefundsTab.tsx:55-94` |
+| STG-815 | Invoices, Refunds | Error | **FIXED @ a29c2387** — InvoicesTab and RefundsTab now clear error state before each action. Stale banner eliminated. | `InvoicesTab.tsx:59-115`, `RefundsTab.tsx:55-94` |
 | STG-816 | Invoices, GstCompliance | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Escape on non-focusable overlay. A11y gap. | `InvoicesTab.tsx:216`, `GstComplianceTab.tsx:191` |
 | STG-817 | Audit, Payments | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Pagination buttons no aria-label. A11y gap. | `AuditTab.tsx:150-162`, `PaymentsTab.tsx:66-68` |
 | STG-818 | SuppliersTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Modals missing dialog role. A11y gap. | `SuppliersTab.tsx:739,786` |
 | STG-819 | CreditProvidersTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Error div missing role=alert. A11y gap. | `CreditProvidersTab.tsx:134-137` |
 | STG-820 | AnalyticsTab | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Refresh button label is `&nbsp;`. Button works visually, a11y gap. | `AnalyticsTab.tsx:92` |
 | STG-821 | CreditProvidersTab | Currency | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — `fmt()` fraction digits differ from shared. Amounts still correct. | `CreditProvidersTab.tsx:47` |
-| STG-822 | SuppliersTab | Currency | **MUST_FIX_BEFORE_GOLIVE** — Product prices use manual `INR {(price/100).toFixed(2)}` — no locale-aware comma grouping. Same currency pattern as STG-744/813. | `SuppliersTab.tsx:663-664,818-821` |
+| STG-822 | SuppliersTab | Currency | **FIXED @ a29c2387** — SuppliersTab product prices now use `Intl.NumberFormat('en-IN')` with Indian comma grouping. All 6 price displays fixed. | `SuppliersTab.tsx:663-664,818-821` |
 | STG-823 | SuppliersTab, ConfirmDialog | A11y | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Modals lack Escape key handler. A11y gap. | `SuppliersTab.tsx:738`, `ConfirmDialog.tsx:21` |
 | STG-824 | SuppliersTab | Type Safety | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — Type declares 3 statuses, code uses 8. No runtime impact. | `SuppliersTab.tsx:265` |
 | STG-825 | PaymentsTab | UX | **EXPLICIT_POST_LAUNCH_ACCEPTED_RISK** — No retry button in error state. Page refresh works. | `PaymentsTab.tsx` |
@@ -6094,12 +6094,12 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 **0 open or ambiguously deferred P2 findings remain. All 27 P2s have final disposition.**
 
-### P3 Forced Disposition — COMPLETE
+### P3 Forced Disposition — COMPLETE (ALL 15 MUST_FIX NOW FIXED)
 
-**15 MUST_FIX_BEFORE_GOLIVE** (actual bugs, data errors, rule violations):
-- Retailer Web (7): STG-736 (PDF auth bypass), STG-741 (`<a href>` → `<Link>`), STG-744 (currency no Indian commas), STG-745 (`replace` → `replaceAll`), STG-749 (store isolation violation), STG-752 (WhatsApp phone links), STG-757 (stale error)
-- Supplier Web (5): STG-765 (OTP not cleared), STG-766 (same), STG-771 (timestamps no IST), STG-772 (same), STG-773 (hardcoded Rs. 100)
-- SuperAdmin Web (3): STG-813 (currency no Indian commas, 3 tabs), STG-815 (stale error, 2 tabs), STG-822 (manual currency)
+**15 FIXED @ a29c2387** (all implemented in single commit):
+- Retailer Web (7): STG-736 (PDF auth → authFetch), STG-741 (`<a>` → `<Link>`), STG-744 (Indian currency formatting), STG-745 (regex replace all underscores), STG-749 (store isolation from JWT), STG-752 (WhatsApp +91 prefix), STG-757 (stale error cleared)
+- Supplier Web (5): STG-765 (OTP cleared on resend), STG-766 (same), STG-771 (IST timezone), STG-772 (same), STG-773 (formatCurrency replaces hardcoded)
+- SuperAdmin Web (3): STG-813 (Indian formatting 3 tabs), STG-815 (stale error 2 tabs), STG-822 (SuppliersTab formatting)
 
 **4 FALSE_POSITIVE_OR_BY_DESIGN** (not defects):
 - STG-761 (registration lookup by design), STG-834 (dual approval paths intentional), STG-835 (phone as identity by design), STG-838 (dual auth model is standard)
