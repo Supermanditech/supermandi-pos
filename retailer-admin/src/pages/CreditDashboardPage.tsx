@@ -77,7 +77,6 @@ export default function CreditDashboardPage() {
     setError(null);
     try {
       const res = await authFetch('/api/v1/retailer-admin/reports/credit-summary', accessToken);
-      if (res.status === 401) return;
       if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
       const json = await safeJson<any>(res);
       if (!json) throw new Error('Invalid response');

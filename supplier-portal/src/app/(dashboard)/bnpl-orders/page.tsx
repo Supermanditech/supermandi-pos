@@ -163,16 +163,16 @@ export default function BnplOrdersPage() {
         ) : (
           <>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="BNPL Orders">
               <thead>
                 <tr className="border-b-2 border-slate-200 bg-slate-50">
-                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Store</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Provider</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Amount</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Outstanding</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Due Date</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Guaranteed</th>
+                  <th scope="col" className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Store</th>
+                  <th scope="col" className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Provider</th>
+                  <th scope="col" className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Amount</th>
+                  <th scope="col" className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Outstanding</th>
+                  <th scope="col" className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Due Date</th>
+                  <th scope="col" className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Status</th>
+                  <th scope="col" className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-300">Guaranteed</th>
                 </tr>
               </thead>
               <tbody>

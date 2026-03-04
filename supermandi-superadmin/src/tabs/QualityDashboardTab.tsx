@@ -147,7 +147,7 @@ export function QualityDashboardTab() {
   if (error && !overview) {
     return (
       <div className="sa-p-24">
-        <div className="sa-alert-error">
+        <div className="sa-alert-error" role="alert">
           {error}
         </div>
       </div>

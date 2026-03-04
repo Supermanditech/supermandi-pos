@@ -19,7 +19,7 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
           {item.path ? (
             <Link to={item.path} className="breadcrumb-link">{item.label}</Link>
           ) : item.onClick ? (
-            <a onClick={item.onClick} className="breadcrumb-link" role="button" tabIndex={0}>{item.label}</a>
+            <a onClick={item.onClick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.onClick?.(); } }} className="breadcrumb-link" role="button" tabIndex={0}>{item.label}</a>
           ) : (
             <span className="breadcrumb-current">{item.label}</span>
           )}

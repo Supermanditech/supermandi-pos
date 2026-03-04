@@ -146,7 +146,7 @@ export function MonitoringTab() {
       )}
 
       {error && (
-        <div className="sa-alert-error sa-mb-16">
+        <div className="sa-alert-error sa-mb-16" role="alert">
           {error}
         </div>
       )}

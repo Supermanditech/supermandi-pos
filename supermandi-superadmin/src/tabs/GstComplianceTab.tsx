@@ -92,7 +92,7 @@ export function GstComplianceTab() {
         </div>
       </div>
 
-      {error && <div className="sa-alert-error sa-mb-16">{error}</div>}
+      {error && <div className="sa-alert-error sa-mb-16" role="alert">{error}</div>}
 
       {/* Totals summary */}
       {overview && (

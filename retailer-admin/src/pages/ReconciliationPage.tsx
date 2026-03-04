@@ -88,7 +88,6 @@ export default function ReconciliationPage() {
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
       const res = await authFetch(`/api/v1/retailer-admin/reports/reconciliation?${params}`, accessToken);
-      if (res.status === 401) return;
       if (!res.ok) throw new Error(`Failed to load reconciliation data: ${res.status}`);
       const json = await safeJson<ReconciliationResponse>(res);
       if (!json) throw new Error('Invalid response from server');

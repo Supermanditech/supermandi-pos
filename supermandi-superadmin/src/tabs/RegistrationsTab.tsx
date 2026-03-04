@@ -193,7 +193,7 @@ export function RegistrationsTab({
 
       {/* STBT-186.4: Enrollment error banner */}
       {enrollmentError && (
-        <div className="sa-alert-error sa-mt-8">
+        <div className="sa-alert-error sa-mt-8" role="alert">
           {enrollmentError}
         </div>
       )}

@@ -63,6 +63,11 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const offset = (page - 1) * limit;
 
+    // STG-776: Server-side status filter (whitelist valid statuses)
+    const validStatuses = ['submitted', 'confirmed', 'shipped', 'partial_received', 'delivered', 'cancelled'];
+    const statusParam = req.query.status as string | undefined;
+    const statusFilter = statusParam && validStatuses.includes(statusParam) ? statusParam : null;
+
     // GL-WF-063: Get total count of unique orders for this supplier
     // FIX: Use correct column names (order_id instead of purchase_order_id)
     const countResult = await pool.query(
@@ -71,8 +76,8 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
        JOIN orders.purchase_order_items poi ON poi.order_id = po.id
        JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
        WHERE sp.supplier_id = $1
-         AND po.status != 'draft'`,
-      [req.supplierId]
+         AND po.status != 'draft'${statusFilter ? ' AND po.status = $2' : ''}`,
+      statusFilter ? [req.supplierId, statusFilter] : [req.supplierId]
     );
     const total = parseInt(countResult.rows[0]?.total || '0');
 
@@ -125,11 +130,11 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
       WHERE sp.supplier_id = $1
-        AND po.status != 'draft'
+        AND po.status != 'draft'${statusFilter ? ' AND po.status = $4' : ''}
       GROUP BY po.id, po.store_id, s.name, po.status, po.order_type, po.total_amount, po.created_at, po.updated_at
       ORDER BY po.created_at DESC
       LIMIT $2 OFFSET $3`,
-      [req.supplierId, limit, offset]
+      statusFilter ? [req.supplierId, limit, offset, statusFilter] : [req.supplierId, limit, offset]
     );
 
     res.json({

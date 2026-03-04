@@ -699,10 +699,12 @@ export interface Order {
 }
 
 // GL-WF-063: Paginated orders
-export async function getOrders(params: PaginationParams = {}): Promise<PaginatedResponse<Order>> {
+// STG-776: Accept status param for server-side filtering
+export async function getOrders(params: PaginationParams & { status?: string } = {}): Promise<PaginatedResponse<Order>> {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.set('page', params.page.toString());
   if (params.limit) queryParams.set('limit', params.limit.toString());
+  if (params.status && params.status !== 'all') queryParams.set('status', params.status);
   const queryString = queryParams.toString();
   const url = `/api/v1/supplier/orders${queryString ? `?${queryString}` : ''}`;
   return apiFetch<PaginatedResponse<Order>>(url);

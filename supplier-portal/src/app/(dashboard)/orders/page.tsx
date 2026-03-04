@@ -107,9 +107,10 @@ export default function OrdersPage() {
 
   // GL-WF-063: Paginated orders query
   // PRA-REAUDIT: Added isError + refetch to prevent API failure showing as empty state
+  // STG-776: Pass statusFilter to backend for server-side filtering
   const { data: ordersResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: ['orders', currentPage, pageSize],
-    queryFn: () => getOrders({ page: currentPage, limit: pageSize }),
+    queryKey: ['orders', currentPage, pageSize, statusFilter],
+    queryFn: () => getOrders({ page: currentPage, limit: pageSize, status: statusFilter }),
   });
 
   const orders = ordersResponse?.data;

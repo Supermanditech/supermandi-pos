@@ -316,14 +316,14 @@ export default function SettingsPage() {
 
       {/* Success/Error Messages */}
       {saveSuccess && (
-        <div className="set-alert-success">
+        <div className="set-alert-success" role="alert" aria-live="polite">
           <span className="set-alert-icon" aria-hidden="true">✅</span>
           Settings saved successfully!
         </div>
       )}
 
       {saveError && (
-        <div className="set-alert-error">
+        <div className="set-alert-error" role="alert" aria-live="assertive">
           <span className="set-alert-icon" aria-hidden="true">❌</span>
           {saveError}
         </div>
@@ -563,11 +563,11 @@ export default function SettingsPage() {
           </h2>
 
           {passwordSuccess && (
-            <div className="set-pw-success">Password changed successfully!</div>
+            <div className="set-pw-success" role="alert" aria-live="polite">Password changed successfully!</div>
           )}
 
           {passwordError && (
-            <div className="set-pw-error">{passwordError}</div>
+            <div className="set-pw-error" role="alert" aria-live="assertive">{passwordError}</div>
           )}
 
           <div className="set-password-grid">

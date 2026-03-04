@@ -127,7 +127,7 @@ export function RefundsTab() {
         </div>
       </div>
 
-      {error && <div className="sa-alert-error sa-mb-16">{error}</div>}
+      {error && <div className="sa-alert-error sa-mb-16" role="alert">{error}</div>}
 
       {loading ? (
         <div className="sa-text-center sa-p-24 sa-text-muted">Loading refunds...</div>
@@ -230,9 +230,9 @@ export function RefundsTab() {
 
       {/* Reject modal */}
       {rejectId && (
-        <div className="sa-modal-overlay" onClick={() => { setRejectId(null); setRejectReason(""); }}>
-          <div className="sa-modal-sm" onClick={(e) => e.stopPropagation()}>
-            <h3 className="sa-modal-title">Reject Refund</h3>
+        <div className="sa-modal-overlay" onClick={() => { setRejectId(null); setRejectReason(""); }} onKeyDown={(e) => { if (e.key === 'Escape') { setRejectId(null); setRejectReason(""); } }}>
+          <div className="sa-modal-sm" role="dialog" aria-modal="true" aria-labelledby="reject-modal-title" onClick={(e) => e.stopPropagation()}>
+            <h3 className="sa-modal-title" id="reject-modal-title">Reject Refund</h3>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}

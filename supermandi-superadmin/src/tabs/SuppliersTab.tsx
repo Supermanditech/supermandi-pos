@@ -422,7 +422,7 @@ export function SuppliersTab({
                   <button
                     className="sa-btn-danger-sm"
                     onClick={() => handleBankVerify(bc.id, "reject")}
-                    disabled={bankVerifyLoading[bc.id]}
+                    disabled={bankVerifyLoading[bc.id] || (bankRejectReason[bc.id]?.length || 0) < 10}
                   >
                     {bankVerifyLoading[bc.id] ? "..." : "Reject"}
                   </button>

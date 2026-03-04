@@ -206,7 +206,7 @@ export default function PaymentsPage() {
 
       {/* Success Message */}
       {saveSuccess && (
-        <div className="pay-alert-success">
+        <div className="pay-alert-success" role="alert" aria-live="polite">
           <span className="pay-alert-icon" aria-hidden="true">&#10003;</span>
           <div>
             <div className="pay-alert-bold">Payment settings saved successfully!</div>
@@ -221,7 +221,7 @@ export default function PaymentsPage() {
 
       {/* Error Message */}
       {saveError && (
-        <div className="pay-alert-error">
+        <div className="pay-alert-error" role="alert" aria-live="assertive">
           <span className="pay-alert-icon" aria-hidden="true">&#10007;</span>
           {saveError}
         </div>
