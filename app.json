@@ -14,10 +14,15 @@
         "NSMicrophoneUsageDescription": "SuperMandi uses your microphone for voice commands to quickly add products to your cart"
       }
     },
+    "icon": "./assets/icon.png",
     "android": {
       "package": "com.supermanditech.supermandipos",
       "permissions": ["RECORD_AUDIO", "CAMERA"],
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
+      }
     },
     "extra": {
       "API_URL": "https://supermandi.tech",
