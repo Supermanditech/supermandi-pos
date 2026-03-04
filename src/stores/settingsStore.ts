@@ -102,11 +102,25 @@ export const useSettingsStore = create<SettingsState>()(
 // LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001: Hydration-aware hook
 // Gates rendering until AsyncStorage has rehydrated persisted theme preference.
 // Prevents light-mode flash for dark-mode users on app startup.
+// COMPAT-HYDRATION-001: 5s timeout fallback — if AsyncStorage hangs (observed on
+// MIUI/Redmi devices), proceed with Zustand defaults rather than spinning forever.
+const HYDRATION_TIMEOUT_MS = 5_000;
+
 export function useSettingsHydrated(): boolean {
   const [hydrated, setHydrated] = useState(useSettingsStore.persist.hasHydrated());
   useEffect(() => {
+    if (hydrated) return;
     const unsub = useSettingsStore.persist.onFinishHydration(() => setHydrated(true));
-    return unsub;
-  }, []);
+    const timeout = setTimeout(() => {
+      if (!useSettingsStore.persist.hasHydrated()) {
+        console.warn('[SettingsStore] Hydration timeout after 5s, proceeding with defaults');
+      }
+      setHydrated(true);
+    }, HYDRATION_TIMEOUT_MS);
+    return () => {
+      unsub();
+      clearTimeout(timeout);
+    };
+  }, [hydrated]);
   return hydrated;
 }

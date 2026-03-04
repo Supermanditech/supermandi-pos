@@ -353,6 +353,7 @@ function HelpScreenWrapper() {
 
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
+import { isCacheLoaded, getCachedSession } from "./src/services/deviceSession";
 // Phase 8: Push notification setup
 import { registerForPushNotifications, setupNotificationListeners } from "./src/services/pushNotifications";
 
@@ -382,15 +383,20 @@ export default function App() {
 
   const initializeApp = useCallback(async () => {
     try {
-      // Load fonts and initialize i18n in parallel
-      await Promise.all([
+      // Load fonts and initialize i18n in parallel, with 10s timeout failsafe
+      // to prevent infinite spinner on devices where Font.loadAsync hangs
+      const initPromise = Promise.all([
         Font.loadAsync(MaterialCommunityIcons.font),
         initI18n(),
       ]);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("App init timed out after 10s")), 10_000)
+      );
+      await Promise.race([initPromise, timeoutPromise]);
       setAppReady(true);
     } catch (error) {
       console.error("Error initializing app:", error);
-      // Still allow app to render even if initialization fails
+      // Still allow app to render even if initialization fails or times out
       setAppReady(true);
     }
   }, []);
@@ -413,11 +419,14 @@ export default function App() {
   }, [appReady]);
 
   // CACHE-000: Force refresh truth data (products/stock) when app resumes from background
+  // Guard: only refresh if device session exists (prevents DEVICE_SESSION_MISSING on unenrolled devices)
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (appStateRef.current.match(/inactive|background/) && nextState === "active") {
-        useProductsStore.getState().loadProducts();
+        if (isCacheLoaded() && getCachedSession()) {
+          useProductsStore.getState().loadProducts();
+        }
       }
       appStateRef.current = nextState;
     });

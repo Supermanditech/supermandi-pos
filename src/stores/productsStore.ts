@@ -4,6 +4,7 @@ import * as productsApi from '../services/api/productsApi';
 import { checkCatalogFreshness } from '../services/api/sellSearchApi';
 import { storeScopedStorage } from "../services/storeScope";
 import { upsertStockFromProducts } from "../services/stockService";
+import { getDeviceToken } from "../services/deviceSession";
 
 const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
 
@@ -37,6 +38,12 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   lastSyncedAt: null,
 
   loadProducts: async () => {
+    // Guard: do not call protected API without a device session
+    const token = await getDeviceToken();
+    if (!token) {
+      return;
+    }
+
     set({ loading: true, error: null });
 
     try {
@@ -106,6 +113,10 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
   // RET-POS-SYNC-010: Check freshness via backend and re-fetch if stale
   checkAndRefresh: async () => {
+    // Guard: do not call protected API without a device session
+    const token = await getDeviceToken();
+    if (!token) return;
+
     const { lastSyncedAt, loadProducts } = get();
     try {
       const resp = await checkCatalogFreshness(lastSyncedAt);
