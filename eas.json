@@ -21,6 +21,16 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "staging-apk": {
+      "distribution": "internal",
+      "channel": "staging",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://staging.supermandi.tech"
+      },
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
