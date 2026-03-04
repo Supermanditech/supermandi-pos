@@ -17,7 +17,10 @@
     "icon": "./assets/icon.png",
     "android": {
       "package": "com.supermanditech.supermandipos",
-      "permissions": ["RECORD_AUDIO", "CAMERA"],
+      "permissions": [
+        "RECORD_AUDIO",
+        "CAMERA"
+      ],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -26,7 +29,10 @@
     },
     "extra": {
       "API_URL": "https://supermandi.tech",
-      "POS_API_URL": "https://supermandi.tech"
+      "POS_API_URL": "https://supermandi.tech",
+      "eas": {
+        "projectId": "633923dd-e9cd-4bee-8b7a-f2120c1cce91"
+      }
     },
     "plugins": [
       "expo-secure-store",
