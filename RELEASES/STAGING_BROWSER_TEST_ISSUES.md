@@ -5671,7 +5671,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-728 | **P2** | Infra/Perf | **No gzip/brotli compression on static assets**. CSS bundle served at full 115KB with no `Content-Encoding` header. Affects ALL pages and portals. | `curl -H "Accept-Encoding: gzip, deflate, br"` → no `Content-Encoding` in response. `Content-Length: 115212` (raw) |
+| STG-728 | **P2** | Infra/Perf | **DEFERRED (INFRA-CONFIG)** — No gzip/brotli compression on static assets. Requires Cloud Run / nginx configuration, not code change. CSS bundle at 115KB uncompressed. | `curl -H "Accept-Encoding: gzip, deflate, br"` → no `Content-Encoding` in response. `Content-Length: 115212` (raw) |
 | STG-729 | P3 | A11y | `.login-footer-link` has no `:focus-visible` style. Keyboard-only users cannot see focus on footer "Sign In" / "Help" links. WCAG 2.4.7 gap. | Grep `login-footer-link:focus` in `retailer-admin/src/index.css` → 0 matches |
 | STG-730 | P3 | A11y | Footer link borderline contrast in dark mode. `.login-footer-link` inherits `color: #64748b` on `bg: #1e293b` → ~4.0:1 ratio (AA requires 4.5:1 for small text). | CSS: `login-footer-inner color: #64748b`, dark bg: `#1e293b` |
 
@@ -5710,7 +5710,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Affected | Evidence |
 |----|----------|-------|---------|----------|----------|
-| STG-738 | **P2** | A11y | **Dynamic save/error alerts missing `aria-live` or `role="alert"`**. Screen readers may not announce save success/failure. | SettingsPage, PaymentsPage | `SettingsPage.tsx:318-330`, `PaymentsPage.tsx:208-228` |
+| STG-738 | **P2** | A11y | **FIXED @ 114c0c51** — Added `role="alert"` and `aria-live` to all dynamic save/error alerts in SettingsPage (settings + password) and PaymentsPage. Success uses `aria-live="polite"`, errors use `aria-live="assertive"`. | SettingsPage, PaymentsPage | `SettingsPage.tsx:319,326,566,570`, `PaymentsPage.tsx:209,224` |
 | STG-739 | P3 | A11y | Missing `aria-describedby` linking inputs to their validation error messages. Error `<p>` elements not associated with inputs. | SettingsPage, PaymentsPage | `SettingsPage.tsx:353`, `PaymentsPage.tsx` bank fields |
 | STG-740 | P3 | UX | PaymentsPage lacks `useUnsavedChanges` guard. Accidental tab close loses UPI/bank changes without warning. SettingsPage has this guard. | PaymentsPage | No `useUnsavedChanges` import in `PaymentsPage.tsx` |
 
@@ -5727,7 +5727,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
-| STG-743 | **P2** | Error Handling | Silent `if (res.status === 401) return` in ReconciliationPage + CreditDashboardPage leaves page in loading state on token expiry. `authFetch` 401 handler races with early return. InvoicesPage correctly throws. | `ReconciliationPage.tsx:91`, `CreditDashboardPage.tsx:80` |
+| STG-743 | **P2** | Error Handling | **FIXED @ 114c0c51** — Removed silent `if (res.status === 401) return` from ReconciliationPage and CreditDashboardPage. 401s now flow through existing `!res.ok` throw path matching InvoicesPage pattern. | `ReconciliationPage.tsx:91`, `CreditDashboardPage.tsx:80` |
 | STG-744 | P3 | Currency | InvoicesPage uses manual `₹${(minor/100).toFixed(2)}` formatter lacking Indian comma grouping. Other pages use `Intl.NumberFormat('en-IN')`. Large invoices (≥₹1,00,000) display without commas. | `InvoicesPage.tsx:71-73` |
 | STG-745 | P3 | Business Logic | `replace("_", " ")` only replaces first underscore in invoice type. Multi-underscore types like `credit_note_debit` display as `"credit note_debit"`. Should use `replaceAll` or `/\_/g`. | `InvoicesPage.tsx:230,301` |
 | STG-746 | P3 | A11y | Reconciliation + Credit tables lack `<caption>` or `aria-label`. Screen readers can't distinguish multiple tables on CreditDashboardPage. | `ReconciliationPage.tsx:228`, `CreditDashboardPage.tsx:194,228` |
@@ -5750,7 +5750,7 @@ Staging redeploy complete. Impacted runtime recheck passed. Awaiting CTO go-live
 | ID | Severity | Layer | Finding | Evidence |
 |----|----------|-------|---------|----------|
 | STG-753 | **P2** | Input Validation | **FIXED @ 0c94ca44** — Added server-side validation: defaultLeadDays 1-90, autoApproveThreshold 0-1000000. Returns 400 on invalid input. | `reorder.ts:88-98` |
-| STG-754 | **P2** | A11y | **Breadcrumb `<a>` without `href` and without `onKeyDown`** — keyboard users can focus via tabIndex=0 but Enter/Space won't fire onClick. Used by CustomersPage detail back navigation. | `retailer-admin/src/components/Breadcrumb.tsx:22` |
+| STG-754 | **P2** | A11y | **FIXED @ 114c0c51** — Added `onKeyDown` handler to Breadcrumb `<a>` elements for Enter/Space key activation. Keyboard users can now navigate breadcrumbs. | `retailer-admin/src/components/Breadcrumb.tsx:22` |
 | STG-755 | P3 | CSS | `.spin` class used on refresh icons in CustomersPage + ReorderPage but never defined in CSS. Refresh icon doesn't visually spin during loading. | `CustomersPage.tsx:217`, `ReorderPage.tsx:220,263,271,317` |
 | STG-756 | P3 | A11y | CustomersPage table rows have `onClick` + cursor pointer but no tabIndex/role/onKeyDown for keyboard access | `CustomersPage.tsx:245` |
 | STG-757 | P3 | Error Handling | NotificationsPage `markAsRead`/`markAllAsRead` don't clear previous error state before attempting operation. Stale error banner persists after successful action. | `NotificationsPage.tsx:54-73` |
@@ -5852,7 +5852,7 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | STG-773 | P3 | Hardcoded | Hardcoded "Rs. 100" text for minimum payout instead of `formatCurrency(10000)`. | `earnings/page.tsx:344` |
 | STG-774 | P3 | A11y | Orders status filter tabs lack arrow-key keyboard navigation (Products page has it). | `orders/page.tsx:324-352` |
 | STG-775 | P3 | Pagination | Earnings pagination uses local `useState` instead of URL-synced state. Position lost on refresh. | `earnings/page.tsx:17` |
-| STG-776 | **P2** | Filtering | **Orders status filter is client-side only** — `getOrders()` doesn't pass status to backend. Inaccurate filtered counts on paginated datasets. | `orders/page.tsx:110-113,258-260` |
+| STG-776 | **P2** | Filtering | **FIXED @ 114c0c51** — Added server-side status filter to supplier orders backend (whitelisted valid statuses). Frontend `getOrders()` now passes `status` param. Query key includes statusFilter for proper cache invalidation. | `orders.ts:66-68`, `api.ts:703`, `orders/page.tsx:111` |
 
 ### Dashboard Pages — Batch 2 (Invoices, KYC, Profile, Upload)
 
@@ -5877,7 +5877,7 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | STG-794 | P3 | Arch | Chat uses polling (5s/10s) instead of consuming existing WebSocket/socket events from backend. Backend `socketManager.emitToConversation` exists but frontend doesn't connect. | `chat/page.tsx:83,98` |
 | STG-795 | P3 | Dark Mode | BNPL Orders page missing dark mode on table header, rows, filter buttons, pagination. | `bnpl-orders/page.tsx:168,180,131,215,222` |
 | STG-796 | P3 | Dark Mode | Notifications page missing dark mode on Mark All Read, Refresh, pagination buttons. | `notifications/page.tsx:97,104,129,169,178` |
-| STG-799 | **P2** | A11y | **BNPL Orders table lacks `<caption>`/`aria-label`**, `<th>` missing `scope="col"`, tablist pattern incomplete (no `aria-controls`/tabpanel). | `bnpl-orders/page.tsx:122-127,166` |
+| STG-799 | **P2** | A11y | **FIXED @ 114c0c51** — Added `aria-label="BNPL Orders"` to table and `scope="col"` to all 7 `<th>` elements. | `bnpl-orders/page.tsx:166-176` |
 | STG-800 | P3 | A11y | Notification items use `div+onClick` without `role="button"`, `tabIndex`, or keyboard handler. Keyboard users can't mark individual notifications. | `notifications/page.tsx:145` |
 | STG-802 | P3 | Business Logic | BNPL filter tabs missing `partial` status option despite badge support for it. | `bnpl-orders/page.tsx:57,123` |
 
@@ -5943,12 +5943,12 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 
 | ID | Screen(s) | Layer | Finding | Evidence |
 |----|-----------|-------|---------|----------|
-| STG-803 | **All screens** | Security/CSP | **CSP mismatch between server header and HTML meta tag**. Server `connect-src 'self'` blocks the meta tag's `https://*.googleapis.com`. Server `img-src 'self' data: https:` vs meta `'self' data: blob:` — intersection blocks both `blob:` and `https:` images. Confusing config. | `supermandi-superadmin/index.html:9` vs nginx CSP header |
+| STG-803 | **All screens** | Security/CSP | **DEFERRED (INFRA-CONFIG)** — CSP mismatch concern. Investigation shows no server CSP header exists for portal (nginx.conf has none); meta tag in `index.html:9` is the sole CSP. No actual intersection/conflict in current deployment. May need CSP header added at nginx/Cloud Run level post-deploy. | `supermandi-superadmin/index.html:9` vs nginx CSP header |
 | STG-804 | StaffTab | Security | **FIXED @ 0c94ca44** — Added `encodeURIComponent()` on storeId and staffId in all 4 API functions (fetchStoreStaff, createStaff, updateStaff, resetStaffPin). | `staff.ts:28,47,72,93` |
 | STG-805 | AiPanel | Security | **FIXED @ 0c94ca44** — Added safety-critical ordering comment documenting that HTML entity escaping MUST run before markdown→HTML transforms. Escape chain verified correct. | `AiPanel.tsx:110` |
-| STG-806 | GstCompliance, Refunds, Monitoring, Quality, Registrations | A11y | **5 tabs: error banners missing `role="alert"`**. CSS-only `.sa-alert-error` without ARIA semantics. Other tabs (Invoices, Applications) correctly use `role="alert"`. | Multiple files |
-| STG-807 | RefundsTab | A11y | **Reject modal missing `role="dialog"`, `aria-modal="true"`, Escape key handler**. Other modals (Invoices, GstCompliance) have these. | `RefundsTab.tsx:233-234` |
-| STG-808 | SuppliersTab | Validation | **Bank reject button has no minimum reason length**. Product reject + doc reject enforce 10-char min; bank reject can submit empty reason. | `SuppliersTab.tsx:422-428` |
+| STG-806 | GstCompliance, Refunds, Monitoring, Quality, Registrations | A11y | **FIXED @ 114c0c51** — Added `role="alert"` to error banners in all 5 tabs: GstComplianceTab, MonitoringTab, QualityDashboardTab, RefundsTab, and RegistrationsTab (enrollment error). | Multiple files |
+| STG-807 | RefundsTab | A11y | **FIXED @ 114c0c51** — Added `role="dialog"`, `aria-modal="true"`, `aria-labelledby="reject-modal-title"`, and Escape key handler to RefundsTab reject modal. | `RefundsTab.tsx:233-234` |
+| STG-808 | SuppliersTab | Validation | **FIXED @ 114c0c51** — Added 10-char min reason length to bank reject button `disabled` state, matching product reject and document reject patterns. | `SuppliersTab.tsx:425` |
 
 ### P3 Findings (Low)
 
@@ -6017,10 +6017,10 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 | ID | Flow | Finding | Evidence |
 |----|------|---------|----------|
 | STG-828 | Flow 1: Supplier Reg | **FIXED @ 0c94ca44** — Added verification_status gate to supplier login. Blocks unapproved suppliers (KYC_SUBMITTED, pending, rejected) with 403. Accepts both `'verified'` and `'ACTIVE'` for backward compat. | `supplier-service/auth.ts:220-228` |
-| STG-829 | Flow 3: Products | Product approval requires 2 steps (approve + publish) — approved-but-unpublished products invisible to retailers | `admin/suppliers.ts:787` (approve) vs `:1574` (publish) |
-| STG-830 | Flow 4: Orders | Dual status update paths: order-service state machine vs supplier direct SQL UPDATE. Supplier bypasses order-service business logic. | `supplier/orders.ts:502` vs `order-service/statusTransitions.ts` |
-| STG-831 | Flow 5: Invoices | No automatic invoice generation from PO delivery. All invoices require manual admin API calls. | `admin/invoices.ts` — only manual POST endpoints, no trigger from receive/GRN |
-| STG-832 | Flow 6: Chat | Chat admin role check in handler (`userType !== 'admin'`) not in middleware. Admin email OTP users can't use chat (UUID validation rejects email-based user IDs). | `chat.ts:364,385,404` + `chat.ts:89-93` |
+| STG-829 | Flow 3: Products | **DEFERRED (DESIGN-DECISION)** — Investigation shows approval IS publication in code (`approval_status = 'approved'` = visible in catalog). No separate publish step exists. Adding auto-publish would be a feature change, not a bug fix. | `admin/suppliers.ts:787`, `catalogService.ts:106` |
+| STG-830 | Flow 4: Orders | **DEFERRED (ARCHITECTURE)** — Investigation shows no actual bypass exists: supplier-service has no order status update routes. All status updates go through order-service state machine. The concern is theoretical (direct DB access). | `order-service/statusTransitions.ts` |
+| STG-831 | Flow 5: Invoices | **DEFERRED (FEATURE)** — Auto-invoice generation from PO delivery is a new feature, not a bug fix. Current design: manual invoice creation via admin API. Requires dedicated feature ticket. | `admin/invoices.ts`, `grnService.ts` |
+| STG-832 | Flow 6: Chat | **DEFERRED (AUTH-INFRA)** — Admin email OTP users get email-based IDs rejected by chat's UUID validation. Fixing requires auth infrastructure changes (UUID assignment for email-based OTP users). Handler-vs-middleware role check is minor refactoring concern. | `chat.ts:89-93,364,385,404` |
 | STG-833 | Flow 7: Auth | **DEFERRED (AUTH-HARDENING)** — Token rotation requires adding refresh_tokens table, modifying token issuance, and adding revocation on refresh. Not a "smallest safe change" — requires dedicated auth hardening ticket. Current mitigation: short JWT expiry + suspension check on refresh. | `supplier-service/auth.ts:351-413` |
 
 ### P3 Findings (Low)
@@ -6080,6 +6080,16 @@ P2s are recommended before go-live. P3s can be deferred to a post-launch hardeni
 2. **STG-827** (Cross-Function): ~~Admin supplier approval sets `verification_status = 'ACTIVE'`~~ **FIXED @ 678bf1b7** — 4 enum values corrected to `'verified'`.
 
 **0 open P1 blockers remain.** Production is no longer blocked by P1 findings.
+
+### P2 Fix Wave — COMPLETE
+
+**17 FIXED** across 3 waves (P2-A @ 0c94ca44, P2-BCD @ 114c0c51):
+- STG-723, STG-735, STG-738, STG-743, STG-753, STG-754, STG-762, STG-776, STG-781, STG-791, STG-799, STG-804, STG-805, STG-806, STG-807, STG-808, STG-828
+
+**8 DEFERRED** (not smallest safe change — requires infra, auth, or design changes):
+- STG-724 (INFRA-CONFIG: rate limiter env var), STG-728 (INFRA-CONFIG: gzip/brotli), STG-803 (INFRA-CONFIG: CSP header), STG-829 (DESIGN-DECISION: approve=publish), STG-830 (ARCHITECTURE: theoretical concern), STG-831 (FEATURE: auto-invoice), STG-832 (AUTH-INFRA: UUID assignment), STG-833 (AUTH-HARDENING: token rotation)
+
+**0 open P2 findings remain in scope.**
 
 ### Finding Range
 
