@@ -1199,12 +1199,13 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       const stockQty = item.stockQuantity !== item.quantity ? item.stockQuantity : null;
       await client.query(
         `
-        INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode, stock_quantity)
-        VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10)
+        INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode, stock_quantity)
+        VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9, $10, $11)
         `,
         [
           randomUUID(),
           saleId,
+          storeId,
           itemProductId,
           item.variantId,
           item.quantity,

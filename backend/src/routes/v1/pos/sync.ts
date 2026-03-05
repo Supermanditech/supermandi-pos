@@ -990,12 +990,13 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
               const lineTotal = item.priceMinor * item.quantity;
               await client.query(
                 `
-                INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
+                VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10)
                 `,
                 [
                   randomUUID(),
                   saleId,
+                  storeId,
                   item.productId,
                   item.variantId,
                   item.quantity,
