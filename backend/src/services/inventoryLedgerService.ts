@@ -247,7 +247,7 @@ export async function applyInventoryMovement(
   );
   const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
   const expectedVersion = parseInt(balanceResult.rows[0]?.stock_version ?? '0', 10);
-  const catalogStockAfter = Math.max(0, catalogStockBefore + delta);
+  const catalogStockAfter = catalogStockBefore + delta;
 
   // Insert ledger entry to inventory.inventory_ledger
   const invLedgerId = randomUUID();

@@ -1102,7 +1102,7 @@ posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, requireAc
       [storeId, productId]
     );
     const stockBefore = beforeResult.rows[0]?.current_qty ?? 0;
-    const stockAfter = Math.max(0, stockBefore + deltaQty);
+    const stockAfter = stockBefore + deltaQty;
 
     // Prevent negative stock
     if (stockAfter < 0) {

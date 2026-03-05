@@ -328,7 +328,7 @@ async function decrementCatalogStock(
 
     const stockBefore = balanceResult.rows[0]?.current_qty ?? 0;
     const deltaQty = -Math.abs(item.quantity);
-    const stockAfter = Math.max(0, stockBefore + deltaQty);
+    const stockAfter = stockBefore + deltaQty;
 
     // Create ledger entry for audit trail
     const ledgerId = randomUUID();

@@ -372,7 +372,7 @@ export async function applyBulkDeductions(params: {
         [storeId, productId]
       );
       const stockBefore = balanceResult.rows.length > 0 ? Number(balanceResult.rows[0].stock_before) : 0;
-      const stockAfter = Math.max(0, stockBefore + unitDelta);
+      const stockAfter = stockBefore + unitDelta;
 
       // T-177: Include stock_version increment for optimistic concurrency
       await client.query(
