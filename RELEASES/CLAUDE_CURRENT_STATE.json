@@ -4222,7 +4222,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "CLAUDE RESUME (IMPLEMENT NOW, TEST TOMORROW): 1) execute RELEASES/CLAUDE_NEXT_ACTION_IMPLEMENT_NOW_TEST_TOMORROW_2026-03-06.md exactly, 2) implement pending issue wave in priority order (001,011,008,002,003,012,005,004,010, then remaining), 3) run required gates after each batch, 4) deploy to staging and verify SHA, 5) if POS changed build/install local APK (no EAS cloud), 6) update machine state to READY_FOR_LOCKED_LIVE_TESTING for tomorrow.",
+  "nextAction": "CLAUDE RESUME (TOMORROW LIVE TEST ONLY): 1) no new implementation unless explicitly instructed by CTO, 2) run pre-gates (typecheck, unit tests, staging health, deployed SHA parity), 3) execute strict locked traversal screen->sub-screen->modal in platform order (POS, Retailer, Supplier, SuperAdmin, Cross-function), 4) validate real-user click/tap paths and all required runtime layers, 5) append-only findings in RELEASES/LIVE_TESTING_ISSUES.md as ISSUE-014+, 6) reiterate until productionGradeCoverageDefinition closure (100% coverage) with no open CRITICAL/HIGH or explicit BLOCKED owner+ETA.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
