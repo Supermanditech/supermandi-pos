@@ -1,9 +1,65 @@
 {
-  "version": "118.0",
-  "lastUpdated": "2026-03-05T18:45:00Z",
-  "currentPhase": "LIVE_TESTING_LOCKED_FOR_CLAUDE: Execute real-user screen-by-screen audit on GCP staging (screen -> sub-screen -> modal), append runtime findings into RELEASES/LIVE_TESTING_ISSUES.md, no skipping.",
+  "version": "121.0",
+  "lastUpdated": "2026-03-06T00:40:00Z",
+  "currentPhase": "IMPLEMENTATION_WAVE_ACTIVE_TEST_TOMORROW: Complete prioritized pending issue fixes now, deploy/rebuild local APK tonight, execute locked live testing tomorrow.",
   "currentTicket": null,
   "ticketQueue": [],
+  "liveTestingToolchain": {
+    "status": "READY_FOR_POST_IMPLEMENTATION_LIVE_TESTING",
+    "deployRunId": "22730271139",
+    "expectedSha": "da7ded4a",
+    "scripts": {
+      "manifestFreeze": "npm run live:manifest:freeze",
+      "mcpCheck": "npm run live:mcp:check",
+      "toolchainCheck": "npm run live:tools:check -- -ExpectedDeploySha da7ded4a -DeployRunId 22730271139",
+      "postDeployGate": "npm run live:gate:postdeploy -- -ExpectedSha da7ded4a",
+      "detoxCheck": "npm run live:detox:check",
+      "firebaseTestLabMatrix": "npm run live:testlab:matrix -- -ProjectId <project> -AppApk <app.apk> -TestApk <androidTest.apk> -NumShards 4"
+    },
+    "lockedStartCondition": "Begin live screen-lock testing only after deploy run success and all post-deploy gates PASS.",
+    "handoffFile": "RELEASES/CLAUDE_NEXT_ACTION_IMPLEMENT_NOW_TEST_TOMORROW_2026-03-06.md"
+  },
+  "implementationWavePlan": {
+    "status": "ACTIVE",
+    "issueDashboard": {
+      "totalTracked": 34,
+      "range": "ISSUE-001..ISSUE-034",
+      "pendingImplementation": 21,
+      "resolvedOrSystemicFixed": 13,
+      "ctoOriginalPending": 12,
+      "ctoOriginalResolved": [
+        "ISSUE-006"
+      ]
+    },
+    "priorityQueue": [
+      "ISSUE-001",
+      "ISSUE-011",
+      "ISSUE-008",
+      "ISSUE-002",
+      "ISSUE-003",
+      "ISSUE-012",
+      "ISSUE-005",
+      "ISSUE-004",
+      "ISSUE-010"
+    ],
+    "constraints": {
+      "noEasCloudBuilds": true,
+      "localApkOnlyIfPosChanged": true,
+      "strictGitDiscipline": true,
+      "appendOnlyIssueTracking": true
+    },
+    "deployCategories": {
+      "codeOnlyAutoDeployCount": 18,
+      "manualGcpAction": [
+        "ISSUE-001 -> SUPERADMIN_ALLOWED_EMAILS secret"
+      ],
+      "operatorBuildAction": [
+        "ISSUE-011 -> staging URL correctness on APK build path",
+        "ISSUE-012/013 -> POS UX changes require local APK rebuild"
+      ]
+    },
+    "executionGoalTonight": "Implement prioritized pending issues, deploy staging, complete local APK rebuild if POS changed, and hand off ready state for tomorrow locked live testing."
+  },
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -123,6 +179,7 @@
       "samplingForbidden": true,
       "fixesForbiddenInThisSession": true,
       "realUserClickPathMandatory": true,
+      "reiterationUntilHundredPercentCoverage": true,
       "issueLoggingFile": "RELEASES/LIVE_TESTING_ISSUES.md",
       "issueAppendOnly": true,
       "newIssueStartId": "ISSUE-014",
@@ -139,6 +196,35 @@
         "real_user_click_or_tap_flow"
       ],
       "screenExitRule": "Do not exit the active screen/flow until all meaningful user actions are exercised, all 17 required runtime layers are covered, screen->sub-screen->modal checks are completed, and the business-logic edge-case checklist is exhausted or explicitly blocked with evidence."
+    },
+    "productionGradeCoverageDefinition": {
+      "status": "ACTIVE_NON_NEGOTIABLE",
+      "definitionVersion": "1.0.0",
+      "coverageTarget": "100_percent",
+      "coverageUnitHierarchy": [
+        "platform",
+        "screen",
+        "sub_screen",
+        "modal_or_drawer_or_dialog",
+        "user_interaction_path"
+      ],
+      "userInteractionCoverageRule": "Every meaningful click/tap/input/submit/back/refresh/retry/cancel path must be executed and observed with runtime evidence.",
+      "requiredEvidencePerCoverageUnit": [
+        "repro_steps",
+        "expected_vs_actual",
+        "api_or_log_or_ui_evidence",
+        "db_or_table_symptom_when_applicable",
+        "business_logic_outcome"
+      ],
+      "closureRule": "Testing is NOT COMPLETE until every coverage unit is PASS_WITH_EVIDENCE or BLOCKED_WITH_OWNER_AND_UNBLOCK_PLAN.",
+      "reiterationRule": "If any coverage unit is uncovered, ambiguous, failed, or newly regressed, reiteration is mandatory (iteration 3/4/5...) until closureRule is satisfied.",
+      "severityGate": "No open CRITICAL or HIGH issues at final signoff.",
+      "explicitBlockedAllowedOnlyWith": [
+        "named_owner",
+        "unblock_action",
+        "eta_or_next_checkpoint",
+        "risk_statement"
+      ]
     },
     "operatorAssistedInputs": {
       "emailForTesting": "supermanditech@gmail.com",
@@ -4097,6 +4183,14 @@
     "status": "ACTIVE",
     "rule": "100_percent_or_continue",
     "forbidScoreBasedClosure": true,
+    "reiterationMode": "MANDATORY_UNTIL_100_PERCENT",
+    "coverageGateUnits": [
+      "screen",
+      "sub_screen",
+      "modal_or_drawer_or_dialog",
+      "user_interaction_path"
+    ],
+    "productionGrade100PercentDefinitionRef": "finalTwoStageGcpSignoff.productionGradeCoverageDefinition",
     "requiredResolutionStates": [
       "PASS_WITH_EVIDENCE",
       "BLOCKED_WITH_OWNER_AND_UNBLOCK_PLAN"
@@ -4107,7 +4201,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "CLAUDE RESUME (LOCKED): Run live user-flow testing on GCP staging in strict order POS App -> Retailer Web -> Supplier Web -> SuperAdmin Web -> Cross-Function. For every screen, complete screen -> sub-screen -> modal before moving ahead. Cover UI/UX/wiring/navigation/API/DB/tables/GCP/business logic for each user click/tap. Preserve ISSUE-001..013 and append all new runtime findings in RELEASES/LIVE_TESTING_ISSUES.md as ISSUE-014+ with repro, evidence, impact, and owner. Start with health/version parity, then execute real interaction flows including POS-to-retailer stock sync.",
+  "nextAction": "CLAUDE RESUME (IMPLEMENT NOW, TEST TOMORROW): 1) execute RELEASES/CLAUDE_NEXT_ACTION_IMPLEMENT_NOW_TEST_TOMORROW_2026-03-06.md exactly, 2) implement pending issue wave in priority order (001,011,008,002,003,012,005,004,010, then remaining), 3) run required gates after each batch, 4) deploy to staging and verify SHA, 5) if POS changed build/install local APK (no EAS cloud), 6) update machine state to READY_FOR_LOCKED_LIVE_TESTING for tomorrow.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -4195,7 +4289,15 @@
     "NEXT: CTO device test on Redmi (enrollment flow, payment cancel, split payment). Then Phase F if device test passes.",
     "CODEX LOCK 2026-03-05T18:45Z: Claude must execute live GCP staging audit in strict screen->sub-screen->modal sequence; no grouped sampling and no skipping.",
     "TRACKING LOCK 2026-03-05T18:45Z: RELEASES/LIVE_TESTING_ISSUES.md is canonical. Keep ISSUE-001..013 intact and append new findings as ISSUE-014+ only, with runtime evidence.",
-    "FLOW LOCK 2026-03-05T18:45Z: Mandatory real-user order POS app, Retailer, Supplier, SuperAdmin, then cross-function flows (including POS to Retailer stock sync parity)."
+    "FLOW LOCK 2026-03-05T18:45Z: Mandatory real-user order POS app, Retailer, Supplier, SuperAdmin, then cross-function flows (including POS to Retailer stock sync parity).",
+    "TOOLCHAIN SETUP 2026-03-05T19:20Z: Added scripts/live-testing/toolchain-check.ps1 and scripts/live-testing/post-deploy-live-gate.ps1 with npm aliases live:tools:check and live:gate:postdeploy.",
+    "DEPLOY TRACK 2026-03-05T19:20Z: Waiting for deploy.yml run 22730271139 (target SHA da7ded4a). Live testing start is blocked until deploy success + gate pass.",
+    "HANDOFF UPDATE 2026-03-05T19:20Z: Canonical post-deploy execution note created at RELEASES/CLAUDE_NEXT_ACTION_DEPLOY_TO_LIVE_TESTING_2026-03-05.md.",
+    "PENDING TOOLS SET 2026-03-06T00:10Z: Added manifest freeze tool, MCP config checker, Firebase Test Lab matrix runner, Detox scaffold/check, and runbook.",
+    "MANIFEST FREEZE 2026-03-06T00:10Z: Generated workflow/state/freeze_manifest.runtime.json and RELEASES/LIVE_SCREEN_MANIFEST_LOCKED.{json,md}.",
+    "MCP SETUP 2026-03-06T00:10Z: .mcp.json configured with staging-db/fetch/filesystem/ops-shell/github servers plus validation script.",
+    "COVERAGE POLICY LOCK 2026-03-06T00:20Z: Added explicit production-grade 100% coverage definition for every screen/sub-screen/modal/user interaction with mandatory reiteration until complete.",
+    "IMPLEMENTATION HANDOFF LOCK 2026-03-06T00:40Z: Added end-to-end instruction set for code implementation now and locked live testing tomorrow, with no-EAS constraint."
   ],
   "liveDeployTicketizationControl": {
     "status": "ACTIVE",
@@ -4721,20 +4823,24 @@
     }
   },
   "codexCheckpoint": {
-    "timestampUtc": "2026-03-05T18:45:00Z",
-    "operatorInstruction": "Update machine state to hard-lock Claude on live screen-by-screen GCP staging testing and append findings into RELEASES/LIVE_TESTING_ISSUES.md.",
+    "timestampUtc": "2026-03-06T00:40:00Z",
+    "operatorInstruction": "Prepare end-to-end machine state for Claude to implement pending issues now and run live testing tomorrow under locked coverage policy.",
     "executed": {
       "uiAudit": "PASS",
       "buildCheck": "PASS",
       "typecheck": "PASS",
       "backendUnit": "PASS (52 suites, 928 tests, runInBand; post-run open-handle warning)",
-      "machineStateLockUpdate": "DONE (strict live test protocol + issue append policy + flow order lock)"
+      "machineStateLockUpdate": "DONE (strict live test protocol + issue append policy + flow order lock)",
+      "toolchainScriptsWired": "DONE (toolchain-check + post-deploy-live-gate + npm aliases + deploy-to-live handoff file)",
+      "pendingToolsSet": "DONE (manifest freeze + mcp config/check + firebase testlab matrix runner + detox scaffold + runbook)",
+      "implementationNowTestTomorrowHandoff": "DONE (step-by-step execution file + machine-state routing)"
     },
     "notExecuted": [
-      "End-to-end live screen-by-screen discovery pass on staging",
-      "Per-screen/per-modal runtime evidence capture across all platforms",
-      "Cross-function parity pass including POS->Retailer stock synchronization validation"
+      "Pending issue code implementation wave execution",
+      "Deployment validation on latest post-fix SHA",
+      "Local APK rebuild/install path for POS-impacting fixes",
+      "Tomorrow locked live testing execution"
     ],
-    "handoffFile": "RELEASES/CLAUDE_NEXT_ACTION_CODEX_HANDOFF_2026-03-05.md"
+    "handoffFile": "RELEASES/CLAUDE_NEXT_ACTION_IMPLEMENT_NOW_TEST_TOMORROW_2026-03-06.md"
   }
 }
