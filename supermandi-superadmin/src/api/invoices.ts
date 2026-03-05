@@ -214,7 +214,8 @@ export async function createSupplierSaleInvoice(input: CreateCommissionInvoiceIn
 export async function issueInvoice(invoiceId: string): Promise<void> {
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}/issue`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({}),
   });
   if (!res.ok) throw new Error('Failed to issue invoice. Please try again.');
 }

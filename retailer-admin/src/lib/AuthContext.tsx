@@ -279,6 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         signal: authAbortRef.current.signal, // ISSUE-MICRO-047: Abort on logout
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {

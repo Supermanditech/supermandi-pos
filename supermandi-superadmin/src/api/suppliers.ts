@@ -235,7 +235,8 @@ export async function approveProduct(productId: string): Promise<{ productId: st
       Accept: "application/json",
       "Content-Type": "application/json",
       ...getAuthHeaders()
-    }
+    },
+    body: JSON.stringify({}),
   });
 
   if (!res.ok) {

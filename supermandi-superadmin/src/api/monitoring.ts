@@ -45,7 +45,8 @@ export async function fetchHealthStatus(): Promise<HealthResponse> {
 export async function triggerTokenCleanup(): Promise<TokenCleanupResult> {
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/jobs/token-cleanup`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({}),
   });
   if (!res.ok) throw new Error('Token cleanup failed. Please try again.');
   const json = await res.json();

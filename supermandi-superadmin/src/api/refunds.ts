@@ -55,7 +55,8 @@ export async function fetchRefunds(params?: {
 export async function approveRefund(refundId: string): Promise<void> {
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/refunds/${encodeURIComponent(refundId)}/approve`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({}),
   });
   if (!res.ok) throw new Error('Failed to approve refund. Please try again.');
 }

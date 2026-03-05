@@ -103,6 +103,7 @@ export async function refreshAccessToken(): Promise<boolean> {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         signal: refreshController.signal,
+        body: JSON.stringify({}),
       });
       clearTimeout(refreshTimeout);
 
@@ -141,6 +142,7 @@ export async function logoutApi(): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      body: JSON.stringify({}),
     });
   } catch {
     // Swallow errors — local logout should always succeed
@@ -450,6 +452,7 @@ export interface SendVerificationResponse {
 export async function sendVerificationEmail(): Promise<SendVerificationResponse> {
   return apiFetch<SendVerificationResponse>('/api/v1/supplier/auth/send-verification', {
     method: 'POST',
+    body: JSON.stringify({}),
   });
 }
 

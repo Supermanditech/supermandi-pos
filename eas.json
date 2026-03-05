@@ -6,18 +6,30 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://staging.supermandi.tech"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://staging.supermandi.tech"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://supermandi.tech"
+      }
     },
     "production-apk": {
       "distribution": "internal",
       "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://supermandi.tech"
+      },
       "android": {
         "buildType": "apk"
       }

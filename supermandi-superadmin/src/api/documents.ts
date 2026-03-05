@@ -146,6 +146,7 @@ export async function approveDocument(documentId: string): Promise<{ success: bo
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
+    body: JSON.stringify({}),
   });
 
   if (!res.ok) {

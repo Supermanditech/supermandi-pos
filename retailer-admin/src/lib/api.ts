@@ -175,6 +175,7 @@ export async function logoutApi(): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      body: JSON.stringify({}),
     });
   } catch {
     console.warn('[AUTH-LOGOUT-001] Backend logout call failed (non-blocking)');

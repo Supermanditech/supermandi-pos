@@ -172,6 +172,10 @@ export default function EnrollDeviceScreen() {
   // #342: Accept both ?enrollmentCode=X and ?code=X from deep links
   const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || route.params?.code || "");
   const [loading, setLoading] = useState(false);
+  // ISSUE-013: Track retry attempt for progress feedback
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  // ISSUE-012: AbortController ref for cancel support
+  const abortRef = React.useRef<AbortController | null>(null);
   // ENROLL-MISSING-ERROR-STATE-UI: persistent inline error shown after API failure
   const [enrollError, setEnrollError] = useState<string | null>(null);
   // ENROLL-SESSION-CHECK-RACE-CONDITION: hide form until session check completes
@@ -274,7 +278,11 @@ export default function EnrollDeviceScreen() {
       // NetInfo failed — proceed anyway
     }
 
+    // ISSUE-012: Create abort controller for cancel support
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
+    setRetryAttempt(0);
     try {
       if (__DEV__) {
         console.log("[Activate] Payload:", { activationCode, deviceMeta });
@@ -283,18 +291,20 @@ export default function EnrollDeviceScreen() {
       const previousSession = await getDeviceSession();
       const previousStoreId = previousSession?.storeId ?? null;
 
-      // P2-1: Retry with exponential backoff for transient errors
-      // Enrollment is idempotent so retries are safe (same code + device fingerprint)
-      const MAX_ENROLL_RETRIES = 3;
-      const ENROLL_BASE_DELAY_MS = 1000;
+      // ISSUE-012+013: Reduced retries (2 max) with shorter backoff and progress feedback
+      const MAX_ENROLL_RETRIES = 2;
+      const ENROLL_BASE_DELAY_MS = 2000;
       let res: Awaited<ReturnType<typeof enrollDevice>> | null = null;
       let lastError: unknown = null;
       for (let attempt = 0; attempt <= MAX_ENROLL_RETRIES; attempt++) {
+        if (controller.signal.aborted) throw new Error("Cancelled by user");
+        setRetryAttempt(attempt);
         try {
           res = await enrollDevice({ enrollmentCode: activationCode, deviceMeta: { ...deviceMeta, label: trimmedLabel } });
           break;
         } catch (err) {
           lastError = err;
+          if (controller.signal.aborted) throw new Error("Cancelled by user");
           const isTransient =
             (err instanceof TypeError && err.message?.includes("Network")) ||
             (err instanceof Error && err.message?.toLowerCase().includes("timeout")) ||
@@ -367,7 +377,10 @@ export default function EnrollDeviceScreen() {
       let errorKey = "ENROLLMENT_FAILED";
       let rawMessage = "";
 
-      if (error instanceof TypeError && error.message?.includes("Network")) {
+      if (error instanceof Error && error.message === "Cancelled by user") {
+        // ISSUE-012: User tapped cancel — no error to show
+        return;
+      } else if (error instanceof TypeError && error.message?.includes("Network")) {
         errorKey = "network_error";
         rawMessage = error.message;
       } else if (error instanceof Error && error.message?.toLowerCase().includes("timeout")) {
@@ -397,8 +410,19 @@ export default function EnrollDeviceScreen() {
       setEnrollError(`${message} ${hint}`);
     } finally {
       setLoading(false);
+      setRetryAttempt(0);
+      abortRef.current = null;
     }
   }, [codeInput, labelInput, deviceMeta, navigation]);
+
+  // ISSUE-012: Cancel activation handler
+  const handleCancel = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    setLoading(false);
+    setRetryAttempt(0);
+  }, []);
 
   // ENROLL-SESSION-CHECK-RACE-CONDITION: show spinner until session check completes
   if (checkingSession) {
@@ -490,12 +514,27 @@ export default function EnrollDeviceScreen() {
           {loading ? (
             <View style={styles.activatingRow}>
               <ActivityIndicator size="small" color={tc.textInverse} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.activateButtonText}>Activating...</Text>
+              <Text style={styles.activateButtonText}>
+                {retryAttempt === 0 ? "Connecting..." : `Retrying (${retryAttempt + 1}/3)...`}
+              </Text>
             </View>
           ) : (
             <Text style={styles.activateButtonText}>Activate POS</Text>
           )}
         </Pressable>
+
+        {/* ISSUE-012: Cancel button during activation */}
+        {loading && (
+          <Pressable
+            style={styles.cancelButton}
+            onPress={handleCancel}
+            testID="enroll-cancel-button"
+            accessibilityLabel="Cancel activation"
+            accessibilityRole="button"
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* ENROLL-MISSING-ERROR-STATE-UI: Persistent inline error banner after API failure */}
@@ -717,6 +756,16 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   activateButtonText: {
     ...typography.button,
     color: colors.textInverse,
+  },
+  cancelButton: {
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    marginTop: spacing.xs,
+  },
+  cancelButtonText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textDecorationLine: "underline" as const,
   },
   activatingRow: {
     flexDirection: "row",

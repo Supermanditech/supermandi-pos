@@ -234,18 +234,26 @@ const PaymentScreen = () => {
         const pending = JSON.parse(raw) as { paymentId: string; saleId: string; timestamp: number };
         if (Date.now() - pending.timestamp > PENDING_UPI_TTL_MS) {
           // Stale — silently clear
-          AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {});
+          AsyncStorage.removeItem(PENDING_UPI_KEY).catch((e) => {
+            if (__DEV__) console.warn("[PaymentScreen] POS-A09: Failed to clear stale pending UPI:", e);
+          });
           return;
         }
         Alert.alert(
           "Previous UPI Payment Pending",
           `A UPI payment (${pending.paymentId.slice(0, 8)}…) was interrupted. Please verify with the customer whether it was completed before starting a new transaction.`,
-          [{ text: "OK", onPress: () => AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {}) }],
+          [{ text: "OK", onPress: () => AsyncStorage.removeItem(PENDING_UPI_KEY).catch((e) => {
+            if (__DEV__) console.warn("[PaymentScreen] POS-A09: Failed to clear pending UPI after ack:", e);
+          }) }],
         );
       } catch {
-        AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {});
+        AsyncStorage.removeItem(PENDING_UPI_KEY).catch((e) => {
+          if (__DEV__) console.warn("[PaymentScreen] POS-A09: Failed to clear corrupt pending UPI:", e);
+        });
       }
-    }).catch(() => {});
+    }).catch((e) => {
+      if (__DEV__) console.warn("[PaymentScreen] POS-A09: Failed to read pending UPI from storage:", e);
+    });
   }, []);
 
   useEffect(() => {

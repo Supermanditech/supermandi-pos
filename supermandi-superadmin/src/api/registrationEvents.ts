@@ -103,6 +103,7 @@ export async function sendEnrollmentCodeToStore(
         "Content-Type": "application/json",
         ...getAuthHeaders(),
       },
+      body: JSON.stringify({}),
     }
   );
 

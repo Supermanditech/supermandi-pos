@@ -122,7 +122,8 @@ export async function fetchTestResults(): Promise<TestResults> {
 export async function resetMetrics(): Promise<void> {
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/quality/metrics/reset`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({}),
   });
   if (!res.ok) throw new Error(`Metrics reset failed: ${res.status}`);
 }

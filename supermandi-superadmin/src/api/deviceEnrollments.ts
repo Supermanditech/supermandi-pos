@@ -41,7 +41,8 @@ export async function createDeviceEnrollment(storeId: string): Promise<DeviceEnr
       Accept: "application/json",
       "Content-Type": "application/json",
       ...getAuthHeaders()
-    }
+    },
+    body: JSON.stringify({}),
   });
 
   if (!res.ok) {
@@ -61,7 +62,8 @@ export async function revokeEnrollmentCode(code: string): Promise<{ success: boo
       Accept: "application/json",
       "Content-Type": "application/json",
       ...getAuthHeaders()
-    }
+    },
+    body: JSON.stringify({}),
   });
 
   if (!res.ok) {
@@ -104,7 +106,8 @@ export async function resendEnrollmentCode(code: string): Promise<{ sent: boolea
       Accept: "application/json",
       "Content-Type": "application/json",
       ...getAuthHeaders()
-    }
+    },
+    body: JSON.stringify({}),
   });
 
   if (!res.ok) {

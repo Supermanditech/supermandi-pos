@@ -243,6 +243,7 @@ async function attemptTokenRefresh(currentToken: string): Promise<string | null>
         "Content-Type": "application/json",
         "x-device-token": currentToken,
       },
+      body: JSON.stringify({}),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -291,6 +292,9 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   }
 
   // GL-CRIT-0043: Add timeout using AbortController
+  // SA-P1-001: Read staff ID once (avoid TOCTOU from double getState() call)
+  const staffId = useStaffSessionStore.getState().session?.staffId;
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
@@ -306,10 +310,7 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
         "Accept-Language": locale,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(deviceToken ? { "x-device-token": deviceToken } : {}),
-        // SA-P1-001: Include staff ID in all POS requests
-        ...(useStaffSessionStore.getState().session?.staffId
-          ? { "x-staff-id": useStaffSessionStore.getState().session!.staffId }
-          : {}),
+        ...(staffId ? { "x-staff-id": staffId } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body)
     });

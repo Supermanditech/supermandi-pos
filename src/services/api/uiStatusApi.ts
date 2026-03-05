@@ -144,8 +144,8 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s for splash
     const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
       headers: {
-        "X-Device-Token": deviceToken,
-        "X-App-Version": getDeviceMeta().appVersion ?? "unknown",
+        "x-device-token": deviceToken,
+        "x-app-version": getDeviceMeta().appVersion ?? "unknown",
       },
       signal: controller.signal,
     });
@@ -205,8 +205,8 @@ export async function fetchUiStatusStrict(): Promise<UiStatusResponse> {
   const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s for gate screens
   const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
     headers: {
-      "X-Device-Token": deviceToken,
-      "X-App-Version": getDeviceMeta().appVersion ?? "unknown",
+      "x-device-token": deviceToken,
+      "x-app-version": getDeviceMeta().appVersion ?? "unknown",
     },
     signal: controller.signal,
   });
