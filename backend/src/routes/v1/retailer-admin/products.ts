@@ -636,7 +636,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         `SELECT current_qty, updated_at FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
         [storeId, productId]
       );
-      const stockBefore = stockResult.rows[0]?.current_qty ?? 0;
+      const stockBefore = Number(stockResult.rows[0]?.current_qty ?? 0);
       const serverStockUpdatedAt = stockResult.rows[0]?.updated_at;
 
       // RET-POS-SYNC-012: LWW guard — reject stale stock writes if client provides timestamp

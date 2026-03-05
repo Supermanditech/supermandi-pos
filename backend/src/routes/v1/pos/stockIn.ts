@@ -263,7 +263,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
          FOR UPDATE`,
         [storeId, productId]
       );
-      const stockBalancesBefore = balanceResult.rows[0]?.current_qty ?? 0;
+      const stockBalancesBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
       const stockBalancesAfter = stockBalancesBefore + deltaQty;
 
       // Insert single ledger entry to inventory.inventory_ledger with source tracking

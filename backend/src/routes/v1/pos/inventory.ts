@@ -330,7 +330,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
          FOR UPDATE`,
         [storeId, productId]
       );
-      const stockBalancesBefore = balanceResult.rows[0]?.current_qty ?? 0;
+      const stockBalancesBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
       // Do NOT clamp to 0 — constraint requires stock_before + delta_qty = stock_after
       const stockBalancesAfter = stockBalancesBefore + deltaQty;
 
@@ -868,7 +868,7 @@ posInventoryRouter.post("/inventory/stock/recompute", requireDeviceToken, requir
        FOR UPDATE`,
       [storeId, productId]
     );
-    const stockBefore = beforeResult.rows[0]?.current_qty ?? 0;
+    const stockBefore = Number(beforeResult.rows[0]?.current_qty ?? 0);
 
     // GO-LIVE-094: Recompute from ledger entries
     const recomputeResult = await client.query(
@@ -968,7 +968,7 @@ posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, re
          WHERE store_id = $1 AND product_id = $2`,
         [storeId, productId]
       );
-      const currentQty = balanceResult.rows[0]?.current_qty ?? 0;
+      const currentQty = Number(balanceResult.rows[0]?.current_qty ?? 0);
 
       // Recompute from ledger
       const recomputeResult = await client.query(
@@ -1101,7 +1101,7 @@ posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, requireAc
        FOR UPDATE`,
       [storeId, productId]
     );
-    const stockBefore = beforeResult.rows[0]?.current_qty ?? 0;
+    const stockBefore = Number(beforeResult.rows[0]?.current_qty ?? 0);
     const stockAfter = stockBefore + deltaQty;
 
     // Prevent negative stock

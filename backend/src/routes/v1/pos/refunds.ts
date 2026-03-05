@@ -201,7 +201,7 @@ posRefundsRouter.post(
             [storeId, item.productId]
           );
 
-          const stockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+          const stockBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
           const stockAfter = stockBefore + deltaQty;
 
           // Find original sale ledger entry for reversal chain tracking

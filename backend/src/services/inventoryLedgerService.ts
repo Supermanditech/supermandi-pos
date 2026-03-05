@@ -245,7 +245,7 @@ export async function applyInventoryMovement(
      FOR UPDATE`,
     [storeId, globalProductId]
   );
-  const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+  const catalogStockBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
   const expectedVersion = parseInt(balanceResult.rows[0]?.stock_version ?? '0', 10);
   const catalogStockAfter = catalogStockBefore + delta;
 
@@ -712,7 +712,7 @@ export async function recordSaleReturnMovements(params: {
        FOR UPDATE`,
       [storeId, globalProductId]
     );
-    const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+    const catalogStockBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
     const catalogStockAfter = catalogStockBefore + quantity;
 
     // T-062: Find original sale ledger entry for reversal chain tracking

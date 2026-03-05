@@ -326,7 +326,7 @@ async function decrementCatalogStock(
       [params.storeId, item.productId]
     );
 
-    const stockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+    const stockBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
     const deltaQty = -Math.abs(item.quantity);
     const stockAfter = stockBefore + deltaQty;
 
@@ -384,7 +384,7 @@ async function incrementCatalogStock(
       [params.storeId, item.productId]
     );
 
-    const stockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+    const stockBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
     const deltaQty = Math.abs(item.quantity);
     const stockAfter = stockBefore + deltaQty;
 

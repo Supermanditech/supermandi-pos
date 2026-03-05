@@ -812,7 +812,7 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requir
       `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
       [storeId, updatedRow.product_id]
     );
-    const currentStock = stockResult.rows[0]?.current_qty ?? 0;
+    const currentStock = Number(stockResult.rows[0]?.current_qty ?? 0);
 
     return res.json({
       success: true,
@@ -904,7 +904,7 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, requir
       `SELECT current_qty, updated_at FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2 FOR UPDATE`,
       [storeId, resolvedProductId]
     );
-    const stockBefore = stockResult.rows[0]?.current_qty ?? 0;
+    const stockBefore = Number(stockResult.rows[0]?.current_qty ?? 0);
     const serverStockUpdatedAt = stockResult.rows[0]?.updated_at;
 
     // RET-POS-SYNC-012: LWW guard — reject stale writes if client provides timestamp
