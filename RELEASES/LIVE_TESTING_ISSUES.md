@@ -70,8 +70,8 @@ This is now the mandatory execution contract for Claude during live staging test
 4. Move-forward rule: do not move to the next screen until the current layer is exhausted or blocked with evidence.
 
 ### Issue Logging Lock
-1. Keep existing `ISSUE-001..ISSUE-013` unchanged.
-2. Append new findings as `ISSUE-014+` only (append-only policy).
+1. Keep existing `ISSUE-001..ISSUE-034` unchanged.
+2. Append new findings as `ISSUE-035+` only (append-only policy).
 3. Every finding must include:
    - platform and exact screen path
    - sub-screen/modal path

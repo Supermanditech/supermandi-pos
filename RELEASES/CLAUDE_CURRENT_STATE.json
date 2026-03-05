@@ -203,7 +203,7 @@
       "reiterationUntilHundredPercentCoverage": true,
       "issueLoggingFile": "RELEASES/LIVE_TESTING_ISSUES.md",
       "issueAppendOnly": true,
-      "newIssueStartId": "ISSUE-014",
+      "newIssueStartId": "ISSUE-035",
       "requiredLayerSet": [
         "ui",
         "ux",
@@ -4222,7 +4222,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "CLAUDE RESUME (TOMORROW LIVE TEST ONLY): 1) no new implementation unless explicitly instructed by CTO, 2) run pre-gates (typecheck, unit tests, staging health, deployed SHA parity), 3) execute strict locked traversal screen->sub-screen->modal in platform order (POS, Retailer, Supplier, SuperAdmin, Cross-function), 4) validate real-user click/tap paths and all required runtime layers, 5) append-only findings in RELEASES/LIVE_TESTING_ISSUES.md as ISSUE-014+, 6) reiterate until productionGradeCoverageDefinition closure (100% coverage) with no open CRITICAL/HIGH or explicit BLOCKED owner+ETA.",
+  "nextAction": "CLAUDE RESUME (TOMORROW LIVE TEST ONLY): 1) no new implementation unless explicitly instructed by CTO, 2) run pre-gates (typecheck, unit tests, staging health, deployed SHA parity), 3) execute strict locked traversal screen->sub-screen->modal in platform order (POS, Retailer, Supplier, SuperAdmin, Cross-function), 4) validate real-user click/tap paths and all required runtime layers, 5) append-only findings in RELEASES/LIVE_TESTING_ISSUES.md as ISSUE-035+, keeping ISSUE-001..034 immutable, 6) reiterate until productionGradeCoverageDefinition closure (100% coverage) with no open CRITICAL/HIGH or explicit BLOCKED owner+ETA.",
   "productionHardeningDeferred": {
     "status": "DONE — PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -4309,7 +4309,7 @@
     "OPERATOR ACTION NEEDED: Create 'cto' and 'qa' tester groups in Firebase App Distribution console for group distribution.",
     "NEXT: CTO device test on Redmi (enrollment flow, payment cancel, split payment). Then Phase F if device test passes.",
     "CODEX LOCK 2026-03-05T18:45Z: Claude must execute live GCP staging audit in strict screen->sub-screen->modal sequence; no grouped sampling and no skipping.",
-    "TRACKING LOCK 2026-03-05T18:45Z: RELEASES/LIVE_TESTING_ISSUES.md is canonical. Keep ISSUE-001..013 intact and append new findings as ISSUE-014+ only, with runtime evidence.",
+    "TRACKING LOCK 2026-03-06T03:40Z: RELEASES/LIVE_TESTING_ISSUES.md is canonical. Keep ISSUE-001..034 intact and append new findings as ISSUE-035+ only, with runtime evidence.",
     "FLOW LOCK 2026-03-05T18:45Z: Mandatory real-user order POS app, Retailer, Supplier, SuperAdmin, then cross-function flows (including POS to Retailer stock sync parity).",
     "TOOLCHAIN SETUP 2026-03-05T19:20Z: Added scripts/live-testing/toolchain-check.ps1 and scripts/live-testing/post-deploy-live-gate.ps1 with npm aliases live:tools:check and live:gate:postdeploy.",
     "DEPLOY TRACK 2026-03-05T19:20Z: Waiting for deploy.yml run 22730271139 (target SHA da7ded4a). Live testing start is blocked until deploy success + gate pass.",
