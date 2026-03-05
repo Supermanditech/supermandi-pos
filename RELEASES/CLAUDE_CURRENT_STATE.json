@@ -1,7 +1,7 @@
 {
-  "version": "116.0",
-  "lastUpdated": "2026-03-05T12:30:00Z",
-  "currentPhase": "POS_AUDIT_PHASE_A_D_COMPLETE: 14 issues fixed, 1 not-a-bug, 1 already-implemented, 7 deferred. All gates pass. Ready for staging APK rebuild + device test.",
+  "version": "117.0",
+  "lastUpdated": "2026-03-05T16:30:00Z",
+  "currentPhase": "STAGING_APK_BUILT_INSTALLED_DISTRIBUTED: APK d78e09c7 built, installed on Redmi, uploaded to Firebase. CTO device testing next.",
   "currentTicket": null,
   "ticketQueue": [],
   "stagingBrowserTestWave": {
@@ -4163,7 +4163,18 @@
     "FINAL GATES 2026-03-05T12:20Z: typecheck PASS, ui:audit PASS, backend tests 72 pass / 4 fail (pre-existing on clean main).",
     "STAGING_POS_BUILD_RULES.md created: build profiles, pre/post-build checklists, smoke gates, rollback criteria.",
     "SUMMARY: 14 FIXED, 1 NOT_A_BUG, 1 ALREADY_IMPLEMENTED, 7 DEFERRED. All changes uncommitted in working tree (17 modified + 3 new files).",
-    "NEXT: Commit fixes to branch, rebuild staging APK with staging-apk profile, CTO device test, then Phase F if needed."
+    "NEXT: Commit fixes to branch, rebuild staging APK with staging-apk profile, CTO device test, then Phase F if needed.",
+    "GIT BRANCH 2026-03-05T15:45Z: All fixes committed to codex/pos-audit-phase-a-e at d78e09c7, pushed to origin.",
+    "APK BUILD 2026-03-05T16:20Z: Gradle clean assembleRelease SUCCESS in 23m46s. Artifact: android/app/build/outputs/apk/release/app-release.apk (101MB).",
+    "BUILD STAMP: Fingerprint d78e09c7-dirty-698f47c0, SHA d78e09c7, Branch codex/pos-audit-phase-a-e, Build Time 2026-03-05 10:30:35 UTC.",
+    "ADB INSTALL 2026-03-05T16:22Z: Streamed install SUCCESS on Redmi device TG8HCYTGGQT885OF.",
+    "FIREBASE 2026-03-05T16:25Z: APK uploaded as release 1.0.1 (1). Release notes added. Group distribution failed (cto,qa groups not yet created in Firebase console).",
+    "FIREBASE CONSOLE: https://console.firebase.google.com/project/supermandi-pos/appdistribution/app/android:com.supermanditech.supermandipos/releases/16hg3s41eab40",
+    "FIREBASE TESTER LINK: https://appdistribution.firebase.google.com/testerapps/1:547554299508:android:2495e1b0b6dbf8b0cd0b21/releases/16hg3s41eab40",
+    "STAGING PARITY 2026-03-05T16:00Z: /api/v1/health 200 OK, /api/health 200 OK, /version 200 (SHA 794cb24 — pre-fix main HEAD, expected since fixes not deployed to GCP yet).",
+    "PLAYWRIGHT RERUN 2026-03-05T16:05Z: staging-url-smoke 12/12 PASS (41.9s), portal-verification 18/18 PASS (25.8s).",
+    "OPERATOR ACTION NEEDED: Create 'cto' and 'qa' tester groups in Firebase App Distribution console for group distribution.",
+    "NEXT: CTO device test on Redmi (enrollment flow, payment cancel, split payment). Then Phase F if device test passes."
   ],
   "liveDeployTicketizationControl": {
     "status": "ACTIVE",
