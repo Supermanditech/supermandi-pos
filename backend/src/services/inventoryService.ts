@@ -455,7 +455,7 @@ export async function listInventoryVariants(params: {
            ${stockSelect}
     FROM variants v
     LEFT JOIN retailer_variants rv
-      ON rv.variant_id = v.id AND rv.store_id = $1
+      ON rv.variant_id = v.id AND rv.store_id = $1::uuid
     LEFT JOIN barcodes b
       ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
     LEFT JOIN bulk_inventory bi
@@ -544,7 +544,7 @@ export async function ensureSaleAvailability(params: {
            COALESCE(sb.current_qty, 0) AS catalog_stock
     FROM variants v
     JOIN retailer_variants rv
-      ON rv.variant_id = v.id AND rv.store_id = $1
+      ON rv.variant_id = v.id AND rv.store_id = $1::uuid
     LEFT JOIN bulk_inventory bi
       ON bi.store_id = $1 AND bi.product_id = v.product_id
     LEFT JOIN inventory.stock_balances sb

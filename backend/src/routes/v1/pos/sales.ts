@@ -369,7 +369,7 @@ async function resolveVariantForGlobalProduct(params: {
     SELECT v.id
     FROM variants v
     JOIN retailer_variants rv
-      ON rv.variant_id = v.id AND rv.store_id = $1
+      ON rv.variant_id = v.id AND rv.store_id = $1::uuid
     WHERE v.product_id = $2
     ORDER BY v.size_base NULLS LAST, v.created_at ASC
     LIMIT 1

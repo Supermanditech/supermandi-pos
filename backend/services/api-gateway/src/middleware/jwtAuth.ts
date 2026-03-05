@@ -69,9 +69,8 @@ const JWT_REQUIRED_PREFIXES = [
   '/api/v1/retailer-admin',
   '/api/v1/supplier',
   '/api/v1/inventory',
-  '/api/v1/orders',
-  '/api/v1/catalog',
-  '/api/v1/reorder',
+  // ISSUE-015: catalog/orders/reorder removed — POS uses device tokens, not JWT.
+  // Backend route handlers enforce requireDeviceToken or requireAuth as needed.
   '/api/v1/voice',
   '/api/v1/platform',
   '/api/v1/suppliers',

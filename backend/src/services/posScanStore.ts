@@ -171,7 +171,7 @@ async function fetchStoreProductByBarcode(
     LEFT JOIN barcodes sb
       ON sb.variant_id = v.id AND sb.barcode_type = 'supermandi'
     JOIN retailer_variants rv
-      ON rv.variant_id = v.id AND rv.store_id = $2
+      ON rv.variant_id = v.id AND rv.store_id = $2::uuid
     WHERE b.barcode = $1
     LIMIT 1
     `,
@@ -566,7 +566,7 @@ export async function updateProductPrice(
     SELECT v.id, v.name, v.currency, b.barcode, rv.selling_price_minor, rv.digitised_by_retailer
     FROM variants v
     JOIN retailer_variants rv
-      ON rv.variant_id = v.id AND rv.store_id = $2
+      ON rv.variant_id = v.id AND rv.store_id = $2::uuid
     LEFT JOIN barcodes b
       ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
     WHERE v.id = $1

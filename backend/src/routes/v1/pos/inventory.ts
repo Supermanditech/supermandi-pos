@@ -309,7 +309,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
       let deltaQty = quantity;
       if (transactionType === "sale" || transactionType === "adjustment_out") {
         deltaQty = -Math.abs(quantity);
-      } else if (transactionType === "purchase_received" || transactionType === "sale_return" || transactionType === "adjustment_in") {
+      } else if (transactionType === "purchase_received" || transactionType === "sale_return" || transactionType === "adjustment_in" || transactionType === "stock_in") {
         deltaQty = Math.abs(quantity);
       }
 
@@ -331,11 +331,13 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
         [storeId, productId]
       );
       const stockBalancesBefore = balanceResult.rows[0]?.current_qty ?? 0;
-      const stockBalancesAfter = Math.max(0, stockBalancesBefore + deltaQty);
+      // Do NOT clamp to 0 — constraint requires stock_before + delta_qty = stock_after
+      const stockBalancesAfter = stockBalancesBefore + deltaQty;
 
       // Map transaction type for inventory schema check constraint
       const invTransactionType = transactionType === 'adjustment_in' ? 'adjustment' :
                                  transactionType === 'adjustment_out' ? 'adjustment' :
+                                 transactionType === 'stock_in' ? 'purchase_received' :
                                  transactionType;
 
       // Insert single ledger entry

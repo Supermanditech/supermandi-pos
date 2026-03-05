@@ -852,7 +852,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     // Update product to approved
     const updateResult = await client.query(
       `UPDATE catalog.supplier_products
-       SET approval_status = 'approved', approved_at = NOW(), approved_by = $2::uuid
+       SET approval_status = 'approved', approved_at = NOW(), approved_by = $2
        WHERE id = $1::uuid
        RETURNING id, approval_status as "approvalStatus", approved_at as "approvedAt"`,
       [productId, adminId]
@@ -861,7 +861,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     // Log the approval
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
-       VALUES ('product', $1::uuid, 'approve', 'pending', 'approved', $2::uuid)`,
+       VALUES ('product', $1::uuid, 'approve', 'pending', 'approved', $2)`,
       [productId, adminId]
     );
 

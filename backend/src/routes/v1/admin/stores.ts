@@ -388,6 +388,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     }
     // FIX-019-005: Use UPPERCASE status values (migration 094 CHECK constraint)
     addUpdate("status", normalized ? "ACTIVE" : "DRAFT");
+    addUpdate("upi_vpa", normalized || null);
   }
 
   // Contact and address fields

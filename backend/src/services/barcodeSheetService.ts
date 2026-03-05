@@ -84,7 +84,7 @@ export async function listBarcodeSheetItems(params: {
 
   if (storeId) {
     args.push(storeId);
-    joins.push(`JOIN retailer_variants rv ON rv.variant_id = v.id AND rv.store_id = $${args.length}`);
+    joins.push(`JOIN retailer_variants rv ON rv.variant_id = v.id AND rv.store_id = $${args.length}::uuid`);
   }
 
   if (variantIds.length) {
