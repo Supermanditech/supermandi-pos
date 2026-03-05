@@ -1550,3 +1550,74 @@ Returns `{"error":"store not found"}` — the endpoint likely requires a storeId
 
 **After fixes:** Redeploy main-backend only (no gateway or portal changes needed).
 **Then:** Re-run Iteration 3 to verify Tier 1+2 fixes and expand retailer coverage.
+
+---
+
+## ITERATION_3_FIX_VERIFY — Started 2026-03-05T18:00:00Z
+
+**Mode:** Fix → Deploy → Verify loop for Tier 1+2 critical issues.
+**Deployed SHAs:** `4abe9dbd` → `da7ded4a` → `05a573cf` → `e6bd8b7e` → `104672b6` (final)
+
+### Root Causes Found (via Cloud Run logs + code analysis)
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| ISSUE-016 | Migration 163 changed `retailer_variants.store_id` to UUID, but queries passed text params. Then `sale_items` INSERT missing `store_id` column (migration 162 added NOT NULL). Then `inventory_ledger` constraint failed due to NUMERIC→string concatenation in JS arithmetic. | 3 cascading fixes: (1) `::uuid` casts on all `rv.store_id` comparisons, (2) add `store_id` to sale_items INSERT, (3) `Number()` coercion on all `current_qty` reads from PostgreSQL NUMERIC columns |
+| ISSUE-028 | `"stock_in"` transaction type not mapped to valid `chk_ledger_transaction_type` values. `Math.max(0,...)` clamping on `stock_after` broke `chk_ledger_stock_consistency` constraint. NUMERIC→string concatenation same as ISSUE-016. | Map `stock_in` → `purchase_received`, remove Math.max clamping, Number() coercion |
+| ISSUE-014 | `stores.ts` PATCH handler never called `addUpdate("upi_vpa", ...)` | Added 1 line |
+| ISSUE-015 | Gateway `JWT_REQUIRED_PREFIXES` included `/api/v1/catalog`, `/api/v1/orders`, `/api/v1/reorder` — POS uses device tokens, not JWT | Removed from JWT_REQUIRED_PREFIXES |
+| ISSUE-023 | `approved_by` and `actor_id` columns were UUID type, but admin email strings passed | Migration 172: change to TEXT, remove `::uuid` casts |
+
+### Systemic Issues Discovered
+
+1. **NUMERIC→String concatenation (ISSUE-033):** PostgreSQL NUMERIC columns return as strings via node-postgres. `"100.000" + (-1)` = `"100.000-1"` (string concatenation, not subtraction). Fixed across 7 files. This is a class of bug that affects ANY arithmetic on NUMERIC query results.
+
+2. **Math.max(0,...) on stock_after (ISSUE-034):** `chk_ledger_stock_consistency` requires `stock_before + delta_qty = stock_after`. Clamping `stock_after` to >= 0 breaks this constraint when stock goes negative. Fixed across 4 files.
+
+### Verification Results (SHA `104672b6`)
+
+| Issue | Status | Evidence |
+|-------|--------|----------|
+| ISSUE-014 | **VERIFIED** | `upi_vpa: "store@upi"` saved and returned in GET |
+| ISSUE-015 | **VERIFIED** | Catalog returns products with device token only (no JWT) |
+| ISSUE-016 | **VERIFIED** | Sale created (`bc15d78d`), confirmed (PAID_CASH), stock deducted |
+| ISSUE-023 | **VERIFIED** | Product approved (`f6f94952`), auto-mapped to catalog |
+| ISSUE-028 | **VERIFIED** | Stock-in 5 units processed, ledger entry created |
+
+### Extended Flow Verification (SHA `104672b6`)
+
+| Flow | Status | Evidence |
+|------|--------|----------|
+| Sale Create → Confirm (CASH) | **PASS** | Sale `bc15d78d` → PAID_CASH |
+| Sale Create → Confirm (DUE) | **PASS** (create), needs customer_phone in sale | DUE confirm requires phone on sale record |
+| Product Search | **PASS** | `Test Dal 1kg` found via `/store-products/search?q=dal` |
+| Stock-In via POS | **PASS** | 5 units added, stock 99→104 |
+| Refund (cash) | **PASS** | Refund `b12c562e` processed for sale `bc15d78d` |
+| Inventory Ledger History | **PASS** | 4 entries, all stock_before/stock_after consistent |
+| Product Approval → Catalog Map | **PASS** | Auto-mapped with confidence=1 |
+| Staff Login | **PASS** | Manager `d6e51a7d` authenticated |
+
+### Issues Still Open
+
+| Issue | Severity | Status | Notes |
+|-------|----------|--------|-------|
+| ISSUE-001 | CRITICAL | SOLUTION_DESIGNED | SuperAdmin OTP allowlist — needs env var + code |
+| ISSUE-002 | HIGH | SOLUTION_DESIGNED | Registration OTP bypass — needs migration |
+| ISSUE-003 | HIGH | SOLUTION_DESIGNED | APPLICATION_EXISTS block — needs auto-expire |
+| ISSUE-019 | MEDIUM | DISCOVERED | Auth refresh returns same token |
+| ISSUE-029 | MEDIUM | DISCOVERED | Barcode validator rejects alphanumeric |
+| ISSUE-030 | MEDIUM | DISCOVERED | Shift staff attribution |
+| ISSUE-031 | MEDIUM | DISCOVERED | Supplier dashboard endpoint |
+| ISSUE-032 | MEDIUM | DISCOVERED | Store stats endpoint |
+| ISSUE-033 | MEDIUM | FIXED | NUMERIC→String concatenation (systemic) |
+| ISSUE-034 | MEDIUM | FIXED | Math.max(0,...) on stock_after (systemic) |
+
+### Commits in Iteration 3
+
+| SHA | Description |
+|-----|-------------|
+| `4abe9dbd` | Fix 5 issues: UUID casts, sale_items store_id, stock_in mapping, UPI VPA, JWT prefixes, migration 172 |
+| `da7ded4a` | Fix explicit `::text`/`::uuid` casts for mixed-type parameter queries |
+| `05a573cf` | Add store_id to sale_items INSERT for migration 162 compat |
+| `e6bd8b7e` | Remove Math.max(0,...) clamping on stock_after ledger values (4 files) |
+| `104672b6` | Coerce NUMERIC current_qty to Number before arithmetic (7 files) |
