@@ -11,6 +11,43 @@ DISCOVERED → ANALYZED → SOLUTION_DESIGNED → FIXED → VERIFIED
 
 ---
 
+## Codex Live Testing Lock (2026-03-05)
+
+This is now the mandatory execution contract for Claude during live staging testing.
+
+### Scope Lock
+1. Environment: `https://staging.supermandi.tech` (GCP staging only).
+2. Mode: Real user interaction only (actual clicks/taps and observed runtime behavior).
+3. Traversal lock: `screen -> sub-screen -> modal/drawer/dialog`.
+4. Move-forward rule: do not move to the next screen until the current layer is exhausted or blocked with evidence.
+
+### Issue Logging Lock
+1. Keep existing `ISSUE-001..ISSUE-013` unchanged.
+2. Append new findings as `ISSUE-014+` only (append-only policy).
+3. Every finding must include:
+   - platform and exact screen path
+   - sub-screen/modal path
+   - repro steps and trigger action
+   - expected vs actual behavior
+   - impact layers (`ui`, `ux`, `wiring`, `navigation`, `api`, `db/tables`, `gcp state`, `business logic`, `user flow`)
+   - evidence reference (log, response, screenshot, or timestamped observation)
+
+### Platform Order Lock
+1. POS app (device)
+2. Retailer web
+3. Supplier web
+4. SuperAdmin web
+5. Cross-function flows
+
+### Cross-Function Mandatory Flows
+1. Store onboarding and approval chain across roles.
+2. POS enrollment/re-enrollment/cancel/retry behavior.
+3. Stock sync parity from POS to Retailer views.
+4. Retailer/Supplier/SuperAdmin role boundary and data visibility checks.
+5. Transaction lifecycle continuity (create, cancel, retry, partial failure recovery).
+
+---
+
 ## Tomorrow Machine-State TODO (Locked, No Execution Tonight)
 
 This section is the canonical handoff for tomorrow. Do not run fixes tonight.
