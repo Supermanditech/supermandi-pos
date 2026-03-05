@@ -1088,6 +1088,7 @@ export async function addOrderNote(orderId: string, input: OrderNoteInput): Prom
 export async function markOrdersRead(): Promise<{ success: boolean }> {
   return apiFetch<{ success: boolean }>('/api/v1/supplier/orders/mark-read', {
     method: 'POST',
+    body: JSON.stringify({}),
   });
 }
 

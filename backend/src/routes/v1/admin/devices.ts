@@ -323,3 +323,30 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
     }
   });
 });
+
+// ISSUE-024: POST /api/v1/admin/devices/:deviceId/revoke
+// Convenience endpoint — deactivates device and clears its token
+adminDevicesRouter.post("/devices/:deviceId/revoke", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const result = await pool.query(
+    `UPDATE pos_devices SET active = false, device_token = NULL, updated_at = NOW()
+     WHERE id = $1
+     RETURNING id, store_id, active, label`,
+    [deviceId]
+  );
+
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  return res.json({ success: true, device: result.rows[0] });
+});

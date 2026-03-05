@@ -174,8 +174,22 @@ export async function verifyOtp(otp: string): Promise<string> {
     confirmationResult = null;
     return idToken;
   } catch (error: unknown) {
+    // ISSUE-005 FIX: Differentiate rate-limit errors from invalid OTP
+    const firebaseError = error as { code?: string; message?: string };
+    const errorCode = firebaseError.code || '';
+
+    if (errorCode === 'auth/too-many-requests') {
+      throw new Error('Too many attempts. Please wait 30 minutes and try again.');
+    } else if (errorCode === 'auth/quota-exceeded') {
+      throw new Error('Verification service temporarily unavailable. Please try again later.');
+    } else if (errorCode === 'auth/code-expired') {
+      throw new Error('OTP has expired. Please request a new one.');
+    } else if (errorCode === 'auth/invalid-verification-code') {
+      throw new Error('Invalid OTP. Please check the code and try again.');
+    }
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    throw new Error(`Invalid OTP: ${errorMessage}`);
+    throw new Error(`Verification failed: ${errorMessage}`);
   }
 }
 

@@ -366,31 +366,22 @@ export default function RegisterPage() {
       const appId = appResult.application.id;
       setApplicationId(appId);
 
-      // If application was resumed and already OTP-verified, skip to documents
-      if (appResult.application.status === 'OTP_VERIFIED') {
-        setStep('documents');
-      } else {
-        // 2. Verify OTP on backend (links firebase_uid to application)
-        await verifyRetailerOtp({ idToken, applicationId: appId });
-        setStep('documents');
-      }
+      // ISSUE-002 FIX: Always verify OTP on backend, even if previously verified.
+      // This re-links the fresh Firebase UID and prevents stale-session resume bypass.
+      await verifyRetailerOtp({ idToken, applicationId: appId });
+      setStep('documents');
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string; status?: number; applicationId?: string; applicationStatus?: string };
       // STAGING-FIX-009 + OTP_SUCCESS_ERROR_CONFLICT fix:
       // Auto-resume existing application from 409 error body.
       // Prevent contradictory success+error banners by handling every resume path explicitly.
       if (error.code === 'APPLICATION_EXISTS' && error.applicationId) {
-        const PAST_OTP_STATUSES = ['OTP_VERIFIED', 'UPLOAD_DOCUMENTS', 'KYC_SUBMITTED', 'UNDER_REVIEW', 'ACTIVE'];
         try {
           setApplicationId(error.applicationId);
-          if (error.applicationStatus && PAST_OTP_STATUSES.includes(error.applicationStatus)) {
-            // Application is already past OTP verification — skip directly to documents
-            setStep('documents');
-          } else {
-            // Verify OTP to advance the application
-            await verifyRetailerOtp({ idToken, applicationId: error.applicationId });
-            setStep('documents');
-          }
+          // ISSUE-002 FIX: Always verify OTP on resume, never skip based on status.
+          // This ensures fresh phone ownership verification on every resume attempt.
+          await verifyRetailerOtp({ idToken, applicationId: error.applicationId });
+          setStep('documents');
           return;
         } catch (resumeErr: unknown) {
           // If verifyRetailerOtp failed because app is already approved/past-OTP, navigate to documents

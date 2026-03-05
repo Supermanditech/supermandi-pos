@@ -245,6 +245,38 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
   }
 });
 
+// ISSUE-032: GET /api/v1/admin/stores/stats — aggregate stats across all stores
+adminStoresRouter.get("/stores/stats", requirePermission("stores", "read"), async (_req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*)::int AS total_stores,
+        COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active_stores,
+        COUNT(*) FILTER (WHERE status = 'DRAFT')::int AS draft_stores,
+        COUNT(*) FILTER (WHERE status = 'SUSPENDED')::int AS suspended_stores
+      FROM platform.stores
+    `);
+
+    const deviceResult = await pool.query(`
+      SELECT
+        COUNT(*)::int AS total_devices,
+        COUNT(*) FILTER (WHERE active = true)::int AS active_devices
+      FROM pos_devices
+    `);
+
+    return res.json({
+      stores: result.rows[0],
+      devices: deviceResult.rows[0],
+    });
+  } catch (err: any) {
+    log.error("[admin/stores/stats] Query failed:", err?.message);
+    return res.status(500).json({ error: "Failed to fetch store stats" });
+  }
+});
+
 // GET /api/v1/admin/stores/:storeId
 // GO-LIVE-128: Requires 'stores:read' permission
 adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), async (req, res) => {

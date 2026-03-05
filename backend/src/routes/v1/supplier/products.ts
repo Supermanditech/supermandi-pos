@@ -309,6 +309,59 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
 });
 
 /**
+ * GET /api/v1/supplier/products/:productId
+ * ISSUE-026: Get a single product by ID (scoped to supplier)
+ */
+router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT id, name, category, brand, supplier_sku, barcode,
+              purchase_price, mrp, moq, unit, stock_quantity, stock_status,
+              is_active, approval_status, rejection_reason,
+              edited_name, edited_category, supermandi_margin_minor, bnpl_eligible,
+              price_change_pending, pending_purchase_price, pending_mrp,
+              image_url, thumbnail_url, created_at, updated_at
+       FROM catalog.supplier_products
+       WHERE id = $1::uuid AND supplier_id = $2`,
+      [req.params.productId, req.supplierId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Product not found' } });
+      return;
+    }
+
+    const p = result.rows[0];
+    res.json({
+      data: {
+        id: p.id, name: p.name, category: p.category, brand: p.brand,
+        supplierSku: p.supplier_sku, barcode: p.barcode,
+        purchasePrice: p.purchase_price, mrp: p.mrp, moq: p.moq, unit: p.unit,
+        stockQuantity: p.stock_quantity, stockStatus: p.stock_status,
+        isActive: p.is_active, approvalStatus: p.approval_status || 'pending',
+        rejectionReason: p.rejection_reason,
+        editedName: p.edited_name || null, editedCategory: p.edited_category || null,
+        superMandiMarginMinor: p.supermandi_margin_minor || 0,
+        bnplEligible: p.bnpl_eligible || false,
+        priceChangePending: p.price_change_pending || false,
+        pendingPurchasePrice: p.pending_purchase_price || null,
+        pendingMrp: p.pending_mrp || null,
+        imageUrl: p.image_url || null, thumbnailUrl: p.thumbnail_url || null,
+        createdAt: p.created_at, updatedAt: p.updated_at,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/v1/supplier/products
  * Create a new product
  * SEC-001: Requires ACTIVE supplier status

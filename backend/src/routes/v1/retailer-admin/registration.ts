@@ -394,6 +394,14 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       return;
     }
 
+    // ISSUE-003 FIX: Auto-expire stale DRAFT applications older than 24 hours
+    // This prevents APPLICATION_EXISTS blocking re-registration for abandoned drafts
+    await pool.query(
+      `UPDATE auth.applications SET status = 'EXPIRED', updated_at = NOW()
+       WHERE status = 'DRAFT' AND entity_type = 'retailer'
+         AND created_at < NOW() - INTERVAL '24 hours'`
+    );
+
     // Check GSTIN uniqueness
     const gstinCheck = await pool.query(
       `SELECT * FROM auth.check_gstin_uniqueness($1, 'retailer')`,

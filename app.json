@@ -28,8 +28,8 @@
       }
     },
     "extra": {
-      "API_URL": "https://supermandi.tech",
-      "POS_API_URL": "https://supermandi.tech",
+      "API_URL": "https://staging.supermandi.tech",
+      "POS_API_URL": "https://staging.supermandi.tech",
       "eas": {
         "projectId": "633923dd-e9cd-4bee-8b7a-f2120c1cce91"
       }
