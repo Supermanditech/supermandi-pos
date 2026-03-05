@@ -459,9 +459,9 @@ export async function listInventoryVariants(params: {
     LEFT JOIN barcodes b
       ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
     LEFT JOIN bulk_inventory bi
-      ON bi.store_id = $1 AND bi.product_id = v.product_id
+      ON bi.store_id = $1::text AND bi.product_id = v.product_id
     LEFT JOIN store_inventory si
-      ON si.store_id = $1 AND si.global_product_id = v.product_id
+      ON si.store_id = $1::uuid AND si.global_product_id = v.product_id
     WHERE (bi.quantity_base IS NOT NULL OR si.available_qty IS NOT NULL OR rv.variant_id IS NOT NULL)
     ${whereClause ? `AND ${whereClause.replace('WHERE ', '')}` : ''}
     ORDER BY v.name ASC
@@ -546,7 +546,7 @@ export async function ensureSaleAvailability(params: {
     JOIN retailer_variants rv
       ON rv.variant_id = v.id AND rv.store_id = $1::uuid
     LEFT JOIN bulk_inventory bi
-      ON bi.store_id = $1 AND bi.product_id = v.product_id
+      ON bi.store_id = $1::text AND bi.product_id = v.product_id
     LEFT JOIN inventory.stock_balances sb
       ON sb.store_id = $1::uuid
       AND sb.product_id = CASE
