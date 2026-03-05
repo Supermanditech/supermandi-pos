@@ -1,3 +1,47 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "repo-filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\supermandi-pos"
+      ]
+    },
+    "staging-fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ]
+    },
+    "staging-db": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:${STAGING_DB_PASSWORD}@127.0.0.1:15432/supermandi?sslmode=disable"
+      ]
+    },
+    "staging-ops-shell": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-shell"
+      ],
+      "env": {
+        "SHELL_TOOL_ALLOWLIST": "gcloud,gh,curl,node,npm,pnpm,adb,cloud-sql-proxy,cloud_sql_proxy,psql"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
 }

@@ -1,5 +1,9 @@
 # CLAUDE Resume Handoff (Live Testing Lock)
 
+> Superseded for immediate execution by:
+> `RELEASES/CLAUDE_NEXT_ACTION_DEPLOY_TO_LIVE_TESTING_2026-03-05.md`
+> because deploy run `22730271139` (SHA `da7ded4a`) must complete before locked live testing starts.
+
 - Generated at (UTC): 2026-03-05T18:45:00Z
 - Operator instruction: run strict live testing only, from real user interaction, and append findings into `RELEASES/LIVE_TESTING_ISSUES.md`.
 
