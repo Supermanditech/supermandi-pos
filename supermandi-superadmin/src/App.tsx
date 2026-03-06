@@ -370,8 +370,13 @@ export default function App() {
         consecutiveFailures = 0;
       } else {
         consecutiveFailures++;
-        if (consecutiveFailures >= 5) {
-          console.warn('[STAGING-FIX-006] Token refresh failed 5 times consecutively, logging out');
+        // ISSUE-164: Progressive warnings before surprise logout
+        if (consecutiveFailures === 3) {
+          toast.error('Session refresh failed. Check your connection.', { duration: 8000 });
+        } else if (consecutiveFailures === 4) {
+          toast.error('Session expiring soon. Save your work — you may be logged out.', { duration: 12000 });
+        } else if (consecutiveFailures >= 5) {
+          toast.error('Session expired. Logging out.', { duration: 5000 });
           await logout();
           setIsAuthenticated(false);
         }
