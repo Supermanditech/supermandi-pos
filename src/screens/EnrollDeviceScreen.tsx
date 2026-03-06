@@ -248,6 +248,8 @@ export default function EnrollDeviceScreen() {
     const activationCode = parseActivationCode(codeInput);
     if (!activationCode) {
       Keyboard.dismiss();
+      // ISSUE-075: Set persistent banner alongside Alert
+      setEnrollError("Enter the activation code shared after retailer registration.");
       Alert.alert(
         "Missing Code",
         "Enter the activation code shared after retailer registration and superadmin account activation."
@@ -259,6 +261,8 @@ export default function EnrollDeviceScreen() {
     const trimmedLabel = labelInput.trim();
     if (!trimmedLabel) {
       Keyboard.dismiss();
+      // ISSUE-075: Set persistent banner alongside Alert
+      setEnrollError("Device name is required (e.g., Counter-1, Billing-Main).");
       Alert.alert("Device Name Required", "Enter a name for this POS device (e.g., Counter-1, Billing-Main).");
       return;
     }
@@ -268,6 +272,8 @@ export default function EnrollDeviceScreen() {
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
         Keyboard.dismiss();
+        // ISSUE-075: Set persistent banner alongside Alert
+        setEnrollError("No internet connection. Connect to the internet and try again.");
         Alert.alert(
           "No Internet",
           "Activation requires a network connection. Please connect to the internet and try again."
@@ -277,6 +283,8 @@ export default function EnrollDeviceScreen() {
     } catch {
       // NetInfo failed — proceed anyway
     }
+    // ISSUE-075: Clear previous error on valid submission attempt
+    setEnrollError(null);
 
     // ISSUE-012: Create abort controller for cancel support
     const controller = new AbortController();

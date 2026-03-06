@@ -159,13 +159,18 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
     const cashStr = closingCash.trim();
     const closingCashMinor = Math.round(parseFloat(cashStr) * 100);
     if (!cashStr || isNaN(closingCashMinor) || closingCashMinor < 0) {
-      Alert.alert("Invalid Amount", "Please enter the closing cash amount.");
+      Alert.alert("Invalid Amount", "Please enter a valid closing cash amount (must be zero or positive).");
       return;
     }
 
+    // ISSUE-105: Warn on zero closing cash — likely a mistake
+    const confirmMessage = closingCashMinor === 0
+      ? "Closing cash is ₹0. Are you sure you want to end your shift with zero cash?"
+      : "Are you sure you want to end your current shift?";
+
     Alert.alert(
       "End Shift",
-      "Are you sure you want to end your current shift?",
+      confirmMessage,
       [
         { text: "Cancel", style: "cancel" },
         {

@@ -1,6 +1,7 @@
 // SCR-AUDIT-310: Production-grade DeviceBlocked with strict fetch + theme tokens + a11y
 import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator, BackHandler } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -177,7 +178,7 @@ export default function DeviceBlockedScreen() {
   }), [colors]);
 
   return (
-    <View
+    <SafeAreaView
       style={styles.container}
       testID="device-blocked-screen"
       accessibilityLabel="Device disabled screen"
@@ -230,6 +231,6 @@ export default function DeviceBlockedScreen() {
           )}
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

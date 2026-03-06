@@ -1,7 +1,7 @@
 // T-107: Brand-styled splash screen with shortmark icon
 // SCR-S1-HARDENING: Production-grade error handling, timeout, retry, a11y
 // STG-283: Converted error card/retry styles to use dynamic theme colors
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Pressable, BackHandler } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -36,6 +36,8 @@ const SESSION_TIMEOUT_MS = 5000;
 export default function SplashScreen() {
   const navigation = useNavigation<NavProp>();
   const [errorState, setErrorState] = useState<string | null>(null);
+  // ISSUE-108: Guard against double navigation
+  const hasNavigated = useRef(false);
   // LIVE.POS.THEME.TOKENS_BRAND_PARITY.001: Dynamic theme colors for brand treatment
   const tc = useThemeColors();
 
@@ -108,9 +110,12 @@ export default function SplashScreen() {
 
   /** S1-1 + S1-2 + S1-3 + #337: Session + version/blocked check */
   const navigateAfterSession = useCallback(async () => {
+    // ISSUE-108: Prevent double navigation from timer + promise race
+    if (hasNavigated.current) return;
     try {
       const session = await getSessionWithTimeout();
       if (!session) {
+        hasNavigated.current = true;
         navigation.replace("EnrollDevice");
         return;
       }
@@ -123,6 +128,7 @@ export default function SplashScreen() {
       try {
         const status = await fetchUiStatus();
         if (status.forceUpdate) {
+          hasNavigated.current = true;
           navigation.replace("ForceUpdate", {
             currentVersion: getDeviceMeta().appVersion ?? "unknown",
             requiredVersion: status.minAppVersion ?? undefined,
@@ -130,6 +136,7 @@ export default function SplashScreen() {
           return;
         }
         if (status.deviceActive === false) {
+          hasNavigated.current = true;
           navigation.replace("DeviceBlocked");
           return;
         }
@@ -139,6 +146,7 @@ export default function SplashScreen() {
         if (__DEV__) console.warn("[SplashScreen] fetchUiStatus failed, proceeding offline-first:", uiErr instanceof Error ? uiErr.message : uiErr);
       }
 
+      hasNavigated.current = true;
       navigation.replace("SellScan");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -150,6 +158,7 @@ export default function SplashScreen() {
   /** S1-4: Retry handler — resets error and re-runs session check */
   const handleRetry = useCallback(() => {
     setErrorState(null);
+    hasNavigated.current = false; // ISSUE-108: Allow retry navigation
     navigateAfterSession();
   }, [navigateAfterSession]);
 

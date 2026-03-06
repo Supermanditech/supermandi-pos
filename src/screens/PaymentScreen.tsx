@@ -525,7 +525,11 @@ const PaymentScreen = () => {
     // GL-CRIT-0086: Track start time for minimum display
     loadingUpiStartRef.current = Date.now();
 
-    initUpiPayment({ saleId, transactionId })
+    // ISSUE-077: Race UPI init against 30s timeout
+    const upiTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("UPI initialization timed out")), 30000)
+    );
+    Promise.race([initUpiPayment({ saleId, transactionId }), upiTimeout])
       .then((res) => {
         if (cancelled) return;
         const intent = buildUpiIntent({
@@ -589,7 +593,12 @@ const PaymentScreen = () => {
             return;
           }
         }
-        Alert.alert("UPI Error", "UPI ID not configured or QR failed.");
+        // ISSUE-077: Differentiate timeout from other errors
+        if (error instanceof Error && error.message.includes("timed out")) {
+          Alert.alert("UPI Timeout", "UPI initialization took too long. Try again or switch to Cash.");
+        } else {
+          Alert.alert("UPI Error", "UPI ID not configured or QR failed.");
+        }
       })
       .finally(() => {
         if (cancelled) return;

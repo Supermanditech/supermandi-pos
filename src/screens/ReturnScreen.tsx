@@ -21,6 +21,7 @@ import { uuidv4 } from "../utils/uuid";
 import { BackHeader } from "../components/ui/BackHeader";
 import { apiClient } from "../services/api/apiClient";
 import { asError } from "../utils/errorUtils";
+import NetInfo from "@react-native-community/netinfo";
 
 // =============================================================================
 // TYPES
@@ -212,6 +213,15 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
     // UIUX-POS-019: Guard against double-tap — reject if already processing
     if (processing) return;
     if (!sale || !reason || !refundMethod || selectedItems.length === 0) return;
+
+    // ISSUE-088: Check connectivity before financial operation
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        Alert.alert("No Connection", "Refund requires an internet connection. Please connect and try again.");
+        return;
+      }
+    } catch { /* NetInfo failed — proceed anyway */ }
 
     setProcessing(true);
     try {
