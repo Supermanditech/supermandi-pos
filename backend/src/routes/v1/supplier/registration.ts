@@ -351,13 +351,12 @@ router.post("/check-gstin", registrationRateLimiter, async (req: Request, res: R
 
     if (exists_in === 'application') {
       if (can_resume) {
-        // Can resume existing application
+        // ISSUE-194: Never leak applicationId in unauthenticated check-gstin endpoint.
+        // User should resume via phone verification, not via GSTIN lookup.
         res.json({
           exists: true,
           action: 'RESUME',
-          message: 'An application with this GSTIN already exists. You can resume it.',
-          applicationId: entity_id,
-          applicationStatus: entity_status,
+          message: 'An application with this GSTIN already exists. Please verify your phone number to resume it.',
         });
       } else {
         // Application exists but can't resume (ACTIVE or EXPIRED)
@@ -516,24 +515,14 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
         );
 
         if (ownerCheck.rows.length === 0) {
-          // GSTIN belongs to a different user's application or non-resumable status
-          if (can_resume) {
-            res.status(409).json({
-              error: {
-                code: "APPLICATION_EXISTS",
-                message: "An application with this GSTIN already exists. Please resume it.",
-                applicationId: entity_id,
-                applicationStatus: entity_status,
-              }
-            });
-          } else {
-            res.status(409).json({
-              error: {
-                code: "GSTIN_EXISTS",
-                message: "This GSTIN is already registered.",
-              }
-            });
-          }
+          // ISSUE-194: GSTIN belongs to a different user's application.
+          // Never return applicationId — prevents cross-user resume hijacking.
+          res.status(409).json({
+            error: {
+              code: "GSTIN_EXISTS",
+              message: "This GSTIN is already associated with another application. Please contact support if you believe this is an error.",
+            }
+          });
           return;
         }
         // Same phone owns this GSTIN application — fall through to upsert

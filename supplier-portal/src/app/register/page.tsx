@@ -472,30 +472,10 @@ function RegisterPage() {
         }
       }
     } catch (err) {
-      // STAGING-FIX-009: Handle APPLICATION_EXISTS by auto-resuming
-      if (err instanceof ApiError && err.code === 'APPLICATION_EXISTS') {
-        // Extract applicationId from error response and resume
-        const match = err.message.match(/already exists/i);
-        // The backend error includes applicationId in the response body
-        // Try to extract it from the raw error or use lookup
-        try {
-          let normalizedPhone = phone.replace(/[\s-]/g, '');
-          if (!normalizedPhone.startsWith('+')) {
-            normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
-          }
-          const lookup = await lookupSupplierRegistration(normalizedPhone);
-          if (lookup.application_id) {
-            setApplicationId(lookup.application_id);
-            // Try to verify OTP with existing application
-            await verifySupplierOtp(idToken, lookup.application_id);
-            setStep('documents');
-            toast.success('Existing application found. Please upload documents.');
-            return;
-          }
-        } catch {
-          // Lookup or verify failed
-        }
-        setError('An application already exists for this GSTIN. Please use a different GSTIN or contact support.');
+      // ISSUE-194: GSTIN conflict — never auto-resume another user's application.
+      // Show clear error and let user contact support or use different GSTIN.
+      if (err instanceof ApiError && (err.code === 'APPLICATION_EXISTS' || err.code === 'GSTIN_EXISTS')) {
+        setError(err.message || 'This GSTIN is already associated with another application. Please use a different GSTIN or contact support.');
         return;
       }
 
