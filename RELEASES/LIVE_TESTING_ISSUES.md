@@ -4200,7 +4200,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 163-169) + supplier-portal/src/hooks/useNavigationSafety.ts
 **Severity:** CRITICAL
 **Category:** UX / navigation safety
-**Status:** DISCOVERED
+**Status:** FIXED (commit 4a678415)
 **Steps to reproduce:**
 1. Go to staging.supermandi.tech/supplier/register
 2. Fill in business details (name, phone, GSTIN, etc.)
@@ -4538,7 +4538,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** retailer-admin/src/lib/firebase.ts (line 71) + supplier-portal/src/lib/firebase.ts (line 74)
 **Severity:** CRITICAL
 **Category:** Browser compatibility / auth
-**Status:** DISCOVERED
+**Status:** FIXED (commit 97143d24)
 **Steps to reproduce:**
 1. Share retailer or supplier login link on Facebook/Instagram
 2. User opens link in Facebook/Instagram in-app browser (WebView)
@@ -4890,7 +4890,7 @@ Ready for consolidated fix wave.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx + backend/src/routes/v1/supplier/registration.ts
 **Severity:** CRITICAL — SECURITY
 **Category:** Multi-tab state collision
-**Status:** DISCOVERED
+**Status:** FIXED (commit 009bae00)
 **Steps to reproduce:**
 1. Tab A: Verify phone, get applicationId=app-a-uuid (stored in Tab A sessionStorage)
 2. Tab B: Verify same phone, get applicationId=app-b-uuid (stored in Tab B sessionStorage)
@@ -4910,7 +4910,7 @@ Ready for consolidated fix wave.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 476-498) + backend/src/routes/v1/supplier/registration.ts
 **Severity:** CRITICAL — SECURITY
 **Category:** Authorization bypass
-**Status:** DISCOVERED
+**Status:** FIXED (commit f2494efe)
 **Steps to reproduce:**
 1. User A registers with GSTIN "22AAAAA0000A1Z5", gets applicationId=app-A
 2. User B enters same GSTIN → backend returns 409 APPLICATION_EXISTS with `applicationId: app-A`
@@ -5087,7 +5087,7 @@ Pass 2 re-scanned all 4 clusters for residual CRITICAL/HIGH findings. Clusters A
 **Screen/Route:** backend/src/routes/v1/admin/adminAuth.ts (lines 228-290)
 **Severity:** CRITICAL — SECURITY
 **Category:** Authorization bypass / enumeration
-**Status:** DISCOVERED
+**Status:** FIXED (commit 05caff57)
 **Steps to reproduce:**
 1. `send-email-otp` endpoint (line 161): checks `isEmailAllowed()` + returns generic response (prevents enumeration)
 2. `verify-email-otp` endpoint (line 253): NO allowlist check — accepts ANY email

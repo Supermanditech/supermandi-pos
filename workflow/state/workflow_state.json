@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-06T18:00:00Z",
-  "workflowMode": "DISCOVERY_DEEPENING_LOCK",
+  "updatedAt": "2026-03-07T12:00:00Z",
+  "workflowMode": "WAVE_17_CRITICAL_COMPLETE",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
