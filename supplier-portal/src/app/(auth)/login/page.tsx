@@ -11,6 +11,13 @@ import { phoneOtpLogin, loginSupplier, ApiError, lookupSupplierRegistration, api
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 
+// ISSUE-177: Detect Facebook/Instagram in-app browser where reCAPTCHA fails
+function isInAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /FBAN|FBAV|Instagram|Line\/|Snapchat|Twitter|LinkedIn/i.test(ua);
+}
+
 type Step = 'phone' | 'otp' | 'not_onboarded' | 'incomplete';
 type AuthMode = 'otp' | 'password';
 
@@ -317,6 +324,22 @@ export default function LoginPage() {
 
   return (
     <>
+      {/* ISSUE-177: In-app browser warning */}
+      {isInAppBrowser() && (step === 'phone' || step === 'otp') && (
+        <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontSize: 14 }}>
+          <strong>Open in your browser for best experience.</strong>
+          <p style={{ margin: '4px 0 8px' }}>Phone verification may not work in this app. Tap below to open in your default browser.</p>
+          <button
+            onClick={() => {
+              try { navigator.clipboard.writeText(window.location.href); } catch { /* ignore */ }
+              window.open(window.location.href, '_system');
+            }}
+            style={{ background: '#ffc107', border: 'none', borderRadius: 4, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Open in Browser
+          </button>
+        </div>
+      )}
       <h2 className="text-2xl font-semibold text-slate-900 mb-2">
         Sign in to your account
       </h2>

@@ -12,6 +12,13 @@ import { ApiError, createSupplierApplication, verifySupplierOtp, submitSupplierK
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
 
+// ISSUE-177: Detect Facebook/Instagram in-app browser where reCAPTCHA fails
+function isInAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /FBAN|FBAV|Instagram|Line\/|Snapchat|Twitter|LinkedIn/i.test(ua);
+}
+
 // Indian states for dropdown
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
@@ -679,6 +686,22 @@ function RegisterPage() {
 
   return (
     <div className="space-y-8">
+      {/* ISSUE-177: In-app browser warning — reCAPTCHA fails in FB/IG WebView */}
+      {isInAppBrowser() && (step === 'phone' || step === 'otp') && (
+        <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '12px 16px', fontSize: 14 }}>
+          <strong>Open in your browser for best experience.</strong>
+          <p style={{ margin: '4px 0 8px' }}>Phone verification may not work in this app. Tap below to open in your default browser.</p>
+          <button
+            onClick={() => {
+              try { navigator.clipboard.writeText(window.location.href); } catch { /* ignore */ }
+              window.open(window.location.href, '_system');
+            }}
+            style={{ background: '#ffc107', border: 'none', borderRadius: 4, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Open in Browser
+          </button>
+        </div>
+      )}
       {/* Page Title */}
       <div className="text-center">
         <h2 className="text-[1.75rem] font-bold text-slate-900">

@@ -78,6 +78,12 @@ function getProgressStep(step: Step): number {
 
 const PROGRESS_LABELS = ['Verify Phone', 'Business Details', 'KYC Documents'];
 
+// ISSUE-177: Detect Facebook/Instagram in-app browser where reCAPTCHA fails
+function isInAppBrowser(): boolean {
+  const ua = navigator.userAgent || '';
+  return /FBAN|FBAV|Instagram|Line\/|Snapchat|Twitter|LinkedIn/i.test(ua);
+}
+
 // Styles moved to index.css under .reg-* classes for dark mode support
 
 // T-005: SessionStorage key for registration state persistence
@@ -484,6 +490,24 @@ export default function RegisterPage() {
 
       <main className="reg-main">
         <div className="reg-container">
+          {/* ISSUE-177: In-app browser warning — reCAPTCHA fails in FB/IG WebView */}
+          {isInAppBrowser() && (step === 'phone' || step === 'otp') && (
+            <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontSize: 14 }}>
+              <strong>Open in your browser for best experience.</strong>
+              <p style={{ margin: '4px 0 8px' }}>Phone verification may not work in this app. Tap below to open in your default browser.</p>
+              <button
+                onClick={() => {
+                  const url = window.location.href;
+                  // Try intent:// for Android, fallback to clipboard
+                  try { navigator.clipboard.writeText(url); } catch { /* ignore */ }
+                  window.open(url, '_system');
+                }}
+                style={{ background: '#ffc107', border: 'none', borderRadius: 4, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Open in Browser
+              </button>
+            </div>
+          )}
           {/* Title */}
           <div className="reg-title-section">
             <h1 className="reg-page-title">

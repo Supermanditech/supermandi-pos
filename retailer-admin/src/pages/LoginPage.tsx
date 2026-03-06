@@ -7,6 +7,12 @@ import { BuildStamp } from '../components/BuildStamp';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { logger } from '../lib/logger';
 
+// ISSUE-177: Detect Facebook/Instagram in-app browser where reCAPTCHA fails
+function isInAppBrowser(): boolean {
+  const ua = navigator.userAgent || '';
+  return /FBAN|FBAV|Instagram|Line\/|Snapchat|Twitter|LinkedIn/i.test(ua);
+}
+
 // UI-SPEC-001: Stripe-level calm infrastructure design
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
 // T-090: All styles moved to CSS classes in index.css (.login-page-container, .login-card-box, etc.)
@@ -415,6 +421,22 @@ export default function LoginPage() {
       <main className="login-main login-page-fade">
         <div className="login-card-container">
           <div className="login-card-box">
+            {/* ISSUE-177: In-app browser warning */}
+            {isInAppBrowser() && (step === 'phone' || step === 'otp') && (
+              <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontSize: 14 }}>
+                <strong>Open in your browser for best experience.</strong>
+                <p style={{ margin: '4px 0 8px' }}>Phone verification may not work in this app. Tap below to open in your default browser.</p>
+                <button
+                  onClick={() => {
+                    try { navigator.clipboard.writeText(window.location.href); } catch { /* ignore */ }
+                    window.open(window.location.href, '_system');
+                  }}
+                  style={{ background: '#ffc107', border: 'none', borderRadius: 4, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Open in Browser
+                </button>
+              </div>
+            )}
             <h2 className="login-card-title">Sign in to your account</h2>
 
             {step === 'phone' && authMode === 'otp' && (
