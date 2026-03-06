@@ -3921,9 +3921,74 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-145
+- **Severity:** HIGH
+- **Screen/Route:** AddStoreProductModal (src/components/sell/AddStoreProductModal.tsx)
+- **Status:** DISCOVERED
+- **Category:** Double-submit — product creation race
+
+**Description:** `handleSubmit` at line 154 uses state-only `busy` guard (`setBusy(true)` at line 163). Between validation passing (line 155) and React rendering the disabled state, rapid double-tap can fire two concurrent `createStoreProduct()` API calls (line 175). This creates duplicate store products — one with the expected barcode and one that may conflict or create orphaned inventory records. Unlike read-only screens, product creation is a write operation with real data consequences.
+
+**Steps to reproduce:**
+1. Scan an unknown barcode → AddStoreProductModal opens
+2. Fill in product details (name, price, stock)
+3. Rapidly double-tap "Save & Add to Cart" within 50ms
+4. Both taps pass validation (line 155), both reach `setBusy(true)` before React re-renders
+5. Two `createStoreProduct` API calls fire concurrently
+**Expected:** Only one product creation call. Second tap should be blocked synchronously.
+**Actual:** State-based `busy` guard is async — both calls pass before re-render disables button.
+**Runtime evidence:** AddStoreProductModal.tsx:154-203. `setBusy(true)` at line 163 is async React state. No `useRef` guard. Button disabled at line 471 via `disabled={busy}`.
+**Blocker impact:** Medium — creates duplicate store products. Backend may handle via barcode uniqueness constraint (returning existing product at line 194-195), but the duplicate API call is still wasteful and may trigger error states.
+
+---
+
+## ISSUE-146
+- **Severity:** MEDIUM
+- **Screen/Route:** PurchaseCartModal (src/components/buy/PurchaseCartModal.tsx)
+- **Status:** DISCOVERED
+- **Category:** Concurrent async execution in setInterval
+
+**Description:** UPI timeout cleanup at lines 396-418 runs async work (`getDeviceStoreId()` + `orderApi.cancelOrder()`) inside a `setInterval(async () => {...}, 60_000)`. If the async work (particularly `cancelOrder` on a slow/unreliable network) takes longer than 60 seconds, the next interval tick fires while the previous one is still executing. This causes concurrent modifications to `pendingUpiOrders.current` Map — `delete()` at line 401 could execute twice for the same orderId if two interval ticks overlap, and `removeSupplierItems` at line 403 could fire twice for the same supplier.
+
+**Steps to reproduce:**
+1. Place a UPI order, creating a pending order entry in `pendingUpiOrders`
+2. Wait 15 minutes for UPI timeout
+3. Network is slow — `cancelOrder` takes 65+ seconds
+4. 60-second interval fires again while previous iteration still running
+5. Second iteration iterates over same Map entries (not yet deleted by first iteration)
+6. Both iterations call `removeSupplierItems` and `cancelOrder` for same order
+**Expected:** Only one cleanup per timed-out order. Async work should complete before next interval fires.
+**Actual:** No concurrency guard. Multiple interval ticks can process the same pending orders simultaneously.
+**Runtime evidence:** PurchaseCartModal.tsx:396-418. `setInterval` with async callback at line 397. No `processingRef` or similar guard.
+**Blocker impact:** Low — `cancelOrder` is idempotent on backend. `removeSupplierItems` may flash UI but doesn't corrupt data.
+
+---
+
+## ISSUE-147
+- **Severity:** MEDIUM
+- **Screen/Route:** AddStoreProductModal (src/components/sell/AddStoreProductModal.tsx)
+- **Status:** DISCOVERED
+- **Category:** Stale onSuccess callback after modal reset
+
+**Description:** If user opens the modal, fills form, submits, and then the modal is closed/reset (via parent changing `request` prop) before the `createStoreProduct` API call completes (line 175), the `onSuccess` callback at line 192 fires with the result from the old request context. The parent callback adds the product to cart — but it's the product from the previous modal session, not the current one. The form reset effect at line 74 (`useEffect(() => { if (!request) return; ... }, [request])`) resets form state but cannot cancel the in-flight API call.
+
+**Steps to reproduce:**
+1. Scan barcode A → AddStoreProductModal opens
+2. Fill details, tap "Save & Add to Cart" — API call starts
+3. Before API responds, close modal (back press or overlay tap)
+4. Scan barcode B → modal opens for new product
+5. API call for barcode A completes → `onSuccess` fires with product A's data
+6. Parent adds product A to cart instead of product B
+**Expected:** Closing modal should cancel in-flight API call, or guard onSuccess against stale requests.
+**Actual:** No AbortController. `onSuccess` fires with stale product data after modal reset.
+**Runtime evidence:** AddStoreProductModal.tsx:154-203. No AbortController. `request` prop changes trigger form reset at line 74 but don't cancel `createStoreProduct`.
+**Blocker impact:** Low in practice — modal close typically waits for API response (button shows spinner). But possible on network delays + impatient user.
+
+---
+
 ## Consolidated Issue Count
 
-**132 issue entries** in this file (ISSUE-001 through ISSUE-144, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**135 issue entries** in this file (ISSUE-001 through ISSUE-147, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -3933,16 +3998,17 @@ Breakdown:
 - Agent-discovered audit wave 4: ISSUE-089..113 = 25 entries
 - Deep agent audit wave 5: ISSUE-114..119 = 6 entries (5 HIGH, 1 MEDIUM)
 - Deep cascading audit wave 6: ISSUE-120..140 = 21 entries (4 HIGH, 14 MEDIUM, 3 LOW)
-- Reorder/Order agent wave 7: ISSUE-141..144 = 4 entries (0 HIGH, 3 MEDIUM, 1 LOW) [remaining agents pending]
+- Reorder/Order agent wave 7: ISSUE-141..144 = 4 entries (0 HIGH, 3 MEDIUM, 1 LOW)
+- Modal/Component agent wave 8: ISSUE-145..147 = 3 entries (1 HIGH, 2 MEDIUM) [remaining agents pending]
 
 ### Cross-Cutting Patterns Identified
 
 | Pattern | Severity | Affected Screens | Note |
 |---------|----------|-----------------|------|
-| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen | Only PaymentScreen uses `submittingRef` for synchronous guard |
+| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen, AddStoreProductModal | Only PaymentScreen uses `submittingRef` for synchronous guard |
 | `clearDeviceSession()` throw in catch blocks | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen, PaymentScreen | Same bug in 3 screens — shared `handleDeviceAuthError` pattern |
 | `onSubmitEditing` bypasses `disabled` guard | LOW | StaffLoginScreen, SuccessPrintScreenV2 | Keyboard Enter can fire when button is disabled |
 | AbortError misclassification from `fetchUiStatusStrict` | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen | AbortError (DOMException) not caught by string-based error detection |
-| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen | No request cancellation on unmount or filter change |
+| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal | No request cancellation on unmount or filter change |
 
 Ready for consolidated fix wave.
