@@ -237,6 +237,14 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
 
   const normalizedEmail = email.toLowerCase().trim();
 
+  // ISSUE-203: Enforce allowlist on verify (matches send-email-otp gate)
+  if (!isEmailAllowed(normalizedEmail)) {
+    log.warn(`[ISSUE-203] Blocked verify-otp for non-allowlisted email: ${normalizedEmail}`);
+    return res.status(400).json({
+      error: { code: "OTP_NOT_FOUND", message: "No verification code found. Please request a new one." }
+    });
+  }
+
   // Check if locked out
   const lockedUntil = await getLockout(normalizedEmail);
   if (lockedUntil && Date.now() < lockedUntil) {
