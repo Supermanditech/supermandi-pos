@@ -124,6 +124,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
+  // ISSUE-154: Proactive token expiry warning (minutes remaining, null = no warning)
+  const [tokenMinutesLeft, setTokenMinutesLeft] = useState<number | null>(null);
   const recaptchaInitialized = useRef(false);
   // REQ.AUTH.PARITY.REGISTRATION_FLOW: Track idToken age for 50-min expiry check (parity with supplier)
   const idTokenObtainedAt = useRef<number>(0);
@@ -227,6 +229,33 @@ export default function RegisterPage() {
       return () => clearTimeout(t);
     }
   }, [otpExpirySeconds]);
+
+  // ISSUE-154: Proactive idToken expiry warning — check every 30s on details/documents steps
+  useEffect(() => {
+    if ((step !== 'details' && step !== 'documents') || !idTokenObtainedAt.current) {
+      setTokenMinutesLeft(null);
+      return;
+    }
+    const TOKEN_TTL_MS = 50 * 60 * 1000;
+    const WARNING_THRESHOLD_MS = 5 * 60 * 1000; // warn at 5 min remaining
+    const check = () => {
+      const elapsed = Date.now() - idTokenObtainedAt.current;
+      const remaining = TOKEN_TTL_MS - elapsed;
+      if (remaining <= 0) {
+        setError('Phone verification expired. Please verify your phone again. Your details are saved.');
+        setIdToken('');
+        setStep('phone');
+        setTokenMinutesLeft(null);
+      } else if (remaining <= WARNING_THRESHOLD_MS) {
+        setTokenMinutesLeft(Math.ceil(remaining / 60000));
+      } else {
+        setTokenMinutesLeft(null);
+      }
+    };
+    check();
+    const t = setInterval(check, 30000);
+    return () => clearInterval(t);
+  }, [step, idToken]);
 
   const normalizePhone = (raw: string): string => {
     const cleaned = raw.replace(/[\s\-()]/g, '');
@@ -651,6 +680,12 @@ export default function RegisterPage() {
           {/* STEP 3: Business Details — Multi-card layout matching Supplier Portal */}
           {step === 'details' && (
             <form onSubmit={handleSubmitDetails} className="reg-details-form">
+              {/* ISSUE-154: Token expiry warning banner */}
+              {tokenMinutesLeft !== null && (
+                <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 14 }}>
+                  <strong>Session expiring in ~{tokenMinutesLeft} min.</strong> Please submit your details soon, or you'll need to verify your phone again.
+                </div>
+              )}
               {/* Phone verified banner — hidden when error is active to prevent conflicting state */}
               {!error && (
                 <div className="reg-alert-success reg-alert-flex">
@@ -808,6 +843,12 @@ export default function RegisterPage() {
           {/* STEP 4: KYC Documents — Card-per-document layout matching Supplier Portal */}
           {step === 'documents' && (
             <div className="reg-details-form">
+              {/* ISSUE-154: Token expiry warning banner */}
+              {tokenMinutesLeft !== null && (
+                <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 14 }}>
+                  <strong>Session expiring in ~{tokenMinutesLeft} min.</strong> Please submit your documents soon, or you'll need to verify your phone again.
+                </div>
+              )}
               {/* Upload guidelines */}
               <div className="reg-alert-info">
                 <h4 className="reg-guidelines-title">Document Upload Guidelines</h4>

@@ -135,6 +135,8 @@ function RegisterPage() {
   const recaptchaInitialized = useRef(false);
   const [idToken, setIdToken] = useState('');
   const idTokenObtainedAt = useRef<number>(0);
+  // ISSUE-161: Proactive token expiry warning (minutes remaining, null = no warning)
+  const [tokenMinutesLeft, setTokenMinutesLeft] = useState<number | null>(null);
 
   // Step 2: Business Details — restore from sessionStorage
   const [applicationId, setApplicationId] = useState(saved.current.applicationId || '');
@@ -274,6 +276,33 @@ function RegisterPage() {
       return () => clearTimeout(t);
     }
   }, [otpExpirySeconds]);
+
+  // ISSUE-161: Proactive idToken expiry warning — check every 30s on details/documents steps
+  useEffect(() => {
+    if ((step !== 'details' && step !== 'documents') || !idTokenObtainedAt.current) {
+      setTokenMinutesLeft(null);
+      return;
+    }
+    const TOKEN_TTL_MS = 50 * 60 * 1000;
+    const WARNING_THRESHOLD_MS = 5 * 60 * 1000;
+    const check = () => {
+      const elapsed = Date.now() - idTokenObtainedAt.current;
+      const remaining = TOKEN_TTL_MS - elapsed;
+      if (remaining <= 0) {
+        setError('Phone verification expired. Please verify your phone again. Your details are saved.');
+        setIdToken('');
+        setStep('phone');
+        setTokenMinutesLeft(null);
+      } else if (remaining <= WARNING_THRESHOLD_MS) {
+        setTokenMinutesLeft(Math.ceil(remaining / 60000));
+      } else {
+        setTokenMinutesLeft(null);
+      }
+    };
+    check();
+    const t = setInterval(check, 30000);
+    return () => clearInterval(t);
+  }, [step, idToken]);
 
   // FIX-030: Validate phone — enforce Indian format (+91 prefix + 10 digits starting 6-9)
   const validatePhone = (value: string): boolean => {
@@ -930,6 +959,12 @@ function RegisterPage() {
       {/* Step 2: Business Details - Full-width spacious form */}
       {step === 'details' && (
         <form onSubmit={handleSubmitDetails} className="space-y-6">
+          {/* ISSUE-161: Token expiry warning banner */}
+          {tokenMinutesLeft !== null && (
+            <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
+              <strong>Session expiring in ~{tokenMinutesLeft} min.</strong> Please submit your details soon, or you&apos;ll need to verify your phone again.
+            </div>
+          )}
           {/* Phone verified banner */}
           <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-lg flex items-center gap-3">
             <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1214,6 +1249,12 @@ function RegisterPage() {
       {/* Step 3: KYC Documents - Full-width spacious form */}
       {step === 'documents' && (
         <form onSubmit={handleSubmitDocuments} className="space-y-6">
+          {/* ISSUE-161: Token expiry warning banner */}
+          {tokenMinutesLeft !== null && (
+            <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 8, padding: '10px 14px', marginBottom: 8, fontSize: 14 }}>
+              <strong>Session expiring in ~{tokenMinutesLeft} min.</strong> Please submit your documents soon, or you&apos;ll need to verify your phone again.
+            </div>
+          )}
           {/* Instructions */}
           <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-lg">
             <h4 className="font-medium mb-1">Document Upload Guidelines</h4>
