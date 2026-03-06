@@ -3756,6 +3756,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 **Screen:** SuccessPrintScreenV2 → WhatsApp phone modal
 **Severity:** LOW
+**Status:** FIXED (commit 7ff5aabf)
 **Category:** Double-submit / UX
 **Steps to reproduce:**
 1. Complete a sale and arrive at SuccessPrintScreenV2
@@ -3774,6 +3775,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 **Screen:** SuccessPrintScreenV2 → WhatsApp phone modal
 **Severity:** LOW
+**Status:** FIXED (commit 7ff5aabf)
 **Category:** Input validation inconsistency
 **Steps to reproduce:**
 1. On WhatsApp phone modal, try to enter "919876543210" (12-digit with country code)
@@ -4070,9 +4072,46 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-152: Backend sendBillReceipt Uses Text-Only Mode Instead of Approved Template (MEDIUM)
+
+**Screen/Route:** backend/src/services/whatsappService.ts → `sendBillReceipt()`
+**Severity:** MEDIUM
+**Category:** WhatsApp Cloud API integration
+**Status:** FIXED (commit 7ff5aabf)
+**Steps to reproduce:**
+1. Customer completes a sale on POS
+2. Operator taps "WhatsApp Bill" and sends receipt
+3. Backend calls `sendBillReceipt()` which only sends text message
+4. Text messages require 24hr customer service window — fails for business-initiated messages
+**Expected:** Use approved `bill_receipt` template (works outside 24hr window), fall back to text if template fails.
+**Actual:** Only sent text message. Template was approved in Meta Business Manager but never wired in code.
+**Fix:** Template-first with text fallback in `sendBillReceipt()`. Template uses 4 body parameters: storeName, billRef, amount, paymentMode.
+**Runtime evidence:** whatsappService.ts lines 180-224. Template `bill_receipt` approved in Meta dashboard.
+**Blocker impact:** Medium — WhatsApp bill receipts fail outside 24hr window (most real-world scenarios).
+
+---
+
+## ISSUE-153: POS send-bill Route Logs message_type as 'text' Instead of 'template' (LOW)
+
+**Screen/Route:** backend/src/routes/v1/pos/whatsapp.ts → `/whatsapp/send-bill`
+**Severity:** LOW
+**Category:** Audit log accuracy
+**Status:** FIXED (commit 7ff5aabf)
+**Steps to reproduce:**
+1. Send a bill via WhatsApp from POS
+2. Check `whatsapp.message_logs` table
+3. `message_type` column shows 'text' even though the message is now sent as a template
+**Expected:** `message_type = 'template'` to match the actual sending method.
+**Actual:** Hardcoded `'text'` in INSERT statement.
+**Fix:** Changed `'text'` to `'template'` in the INSERT VALUES clause.
+**Runtime evidence:** whatsapp.ts line 91. Now logs 'template' correctly.
+**Blocker impact:** None — cosmetic audit log inaccuracy.
+
+---
+
 ## Consolidated Issue Count
 
-**139 issue entries** in this file (ISSUE-001 through ISSUE-151, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**141 issue entries** in this file (ISSUE-001 through ISSUE-153, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -4088,8 +4127,10 @@ Breakdown:
 - History/Report agent wave 10: ISSUE-149 = 1 entry (0 HIGH, 1 MEDIUM)
 - Credit/Customer agent wave 11: ISSUE-150..151 = 2 entries (0 HIGH, 2 MEDIUM)
 - Menu/Settings agent wave 12: 0 new issues (all findings = cross-cutting patterns already documented)
+- WhatsApp hardening wave 13: ISSUE-152..153 = 2 entries (0 HIGH, 1 MEDIUM, 1 LOW)
 
 **All 6 agents complete. Deep cascading audit FINISHED.**
+**WhatsApp production hardening: 4 issues fixed (ISSUE-136, 137, 152, 153).**
 
 ### Cross-Cutting Patterns Identified
 
