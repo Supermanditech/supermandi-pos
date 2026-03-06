@@ -26,6 +26,7 @@ export interface StoreProductStock {
 
 export interface StoreProductResponse {
   storeProductId: string;
+  productId: string; // ISSUE-068: catalog.products.id for createSale variant resolution
   name: string;
   barcode: string;
   sellPrice: number | null;
@@ -101,6 +102,7 @@ async function lookupStoreProductByBarcode(
     `
     SELECT
       sp.id AS store_product_id,
+      sp.product_id,
       COALESCE(sp.display_name, p.name) AS name,
       spb.barcode AS barcode,
       sp.sell_price,
@@ -130,6 +132,7 @@ async function lookupStoreProductByBarcode(
     const row = result.rows[0];
     return {
       storeProductId: row.store_product_id,
+      productId: row.product_id, // ISSUE-068: catalog.products.id
       name: row.name || "",
       barcode: row.barcode,
       sellPrice: row.sell_price,
@@ -158,6 +161,7 @@ async function lookupStoreProductByBarcode(
     `
     SELECT
       sp.id AS store_product_id,
+      sp.product_id,
       COALESCE(sp.display_name, p.name) AS name,
       p.primary_barcode AS barcode,
       sp.sell_price,
@@ -186,6 +190,7 @@ async function lookupStoreProductByBarcode(
     const row = fallbackResult.rows[0];
     return {
       storeProductId: row.store_product_id,
+      productId: row.product_id, // ISSUE-068: catalog.products.id
       name: row.name || "",
       barcode: row.barcode,
       sellPrice: row.sell_price,
@@ -536,6 +541,7 @@ export async function createStoreProductFromDigitisation(
       success: true,
       storeProduct: {
         storeProductId: actualStoreProductId,
+        productId, // ISSUE-068: catalog.products.id for variant resolution
         name: productName,
         barcode: normalizedBarcode,
         sellPrice: sellPriceMinor ?? null,

@@ -306,6 +306,7 @@ export async function createStoreProductFromScan(input: {
 
   type StoreProductPayload = {
     storeProductId: string;
+    productId?: string; // ISSUE-068: catalog.products.id
     name: string;
     barcode: string;
     sellPrice: number | null;
@@ -338,7 +339,8 @@ export async function createStoreProductFromScan(input: {
   }
 
   return {
-    global_product_id: sp.storeProductId,
+    global_product_id: sp.productId || sp.storeProductId, // ISSUE-068: prefer catalog productId
+    store_product_id: sp.storeProductId, // ISSUE-068: pass storeProductId for catalog bridge
     global_name: sp.name,
     store_display_name: sp.name,
     sell_price: sp.sellPrice,
@@ -378,6 +380,7 @@ export async function receiveStoreProductFromScan(input: {
 
   type StoreProductPayload = {
     storeProductId: string;
+    productId?: string; // ISSUE-068: catalog.products.id
     name: string;
     barcode: string;
     sellPrice: number | null;
@@ -411,7 +414,8 @@ export async function receiveStoreProductFromScan(input: {
   }
 
   return {
-    global_product_id: sp.storeProductId,
+    global_product_id: sp.productId || sp.storeProductId, // ISSUE-068: prefer catalog productId
+    store_product_id: sp.storeProductId, // ISSUE-068: pass storeProductId for catalog bridge
     global_name: sp.name,
     store_display_name: sp.name,
     sell_price: sp.sellPrice,

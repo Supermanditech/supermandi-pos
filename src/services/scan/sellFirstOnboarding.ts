@@ -103,6 +103,7 @@ export async function submitSellFirstOnboarding(
       barcode,
       metadata: {
         globalProductId: product.global_product_id,
+        storeProductId: product.store_product_id, // ISSUE-068: for catalog bridge in createSale
         globalName: product.global_name,
         storeDisplayName: product.store_display_name,
         scanFormat: input.format ?? null,
