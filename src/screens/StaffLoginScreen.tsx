@@ -1,5 +1,5 @@
 // SA-P1-001: Staff PIN login screen
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import NetInfo from "@react-native-community/netinfo";
 import { theme, useThemeColors } from "../theme";
 import { staffLogin } from "../services/api/staffApi";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
@@ -32,7 +33,12 @@ export default function StaffLoginScreen({ storeName }: Props) {
   const pinRef = useRef<TextInput>(null);
   const setSession = useStaffSessionStore((s) => s.setSession);
 
-  const handleLogin = async () => {
+  // ISSUE-081: Client-side rate limiting
+  const [cooldown, setCooldown] = useState(false);
+  const failCountRef = useRef(0);
+
+  const handleLogin = useCallback(async () => {
+    if (cooldown) return; // ISSUE-081: Throttle rapid submissions
     const trimmedPhone = phone.trim();
     const trimmedPin = pin.trim();
 
@@ -47,16 +53,32 @@ export default function StaffLoginScreen({ storeName }: Props) {
       return;
     }
 
+    // ISSUE-080: Check network before API call
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        Alert.alert("No Connection", "Please connect to the internet to log in.");
+        return;
+      }
+    } catch { /* NetInfo failed — proceed */ }
+
     setLoading(true);
     try {
       // STG-162: Send normalized 10-digit phone (strip +91/91 prefix) since DB stores 10-digit
       const result = await staffLogin({ phone: phone10, pin: trimmedPin });
+      failCountRef.current = 0;
       setSession({
         staffId: result.staffId,
         name: result.name,
         role: result.role as StaffRole,
       });
     } catch (err: any) {
+      // ISSUE-081: Increase cooldown on repeated failures
+      failCountRef.current += 1;
+      const cooldownMs = Math.min(failCountRef.current * 3000, 15000);
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), cooldownMs);
+
       const code = err?.body?.error?.code || err?.message;
       if (code === "STAFF_INVALID_CREDENTIALS") {
         Alert.alert("Login Failed", "Invalid phone or PIN. Please try again.");
@@ -66,7 +88,7 @@ export default function StaffLoginScreen({ storeName }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [phone, pin, cooldown, setSession]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -241,11 +263,11 @@ export default function StaffLoginScreen({ storeName }: Props) {
         </View>
 
         <Pressable
-          style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+          style={[styles.loginButton, (loading || cooldown) && styles.loginButtonDisabled]}
           onPress={handleLogin}
-          disabled={loading}
+          disabled={loading || cooldown}
           testID="staff-login-btn"
-          accessibilityLabel={loading ? "Logging in" : "Login"}
+          accessibilityLabel={loading ? "Logging in" : cooldown ? "Please wait" : "Login"}
           accessibilityRole="button"
           accessibilityState={{ disabled: loading }}
         >

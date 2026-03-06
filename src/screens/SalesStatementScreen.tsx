@@ -352,7 +352,7 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
         <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Sales Statement</Text>
+        <Text style={styles.title}>Inventory Cost Statement</Text>
         <Pressable accessibilityRole="button" style={styles.refreshButton} onPress={() => loadData(true)}>
           <MaterialCommunityIcons name="refresh" size={22} color={colors.textSecondary} />
         </Pressable>

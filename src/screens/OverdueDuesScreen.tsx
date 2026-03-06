@@ -323,10 +323,11 @@ export default function OverdueDuesScreen({
       const dateStr = due.dueDate ? formatIndianDate(due.dueDate) : "N/A";
       const message = `Dear ${due.customerName}, you have an outstanding payment of ${amountStr} from ${dateStr}. Please pay at your earliest. - ${storeName}`;
 
-      // Try WhatsApp first, fallback to Share
+      // ISSUE-099: Normalize phone to 91XXXXXXXXXX format without double-prefix
       let phone = due.customerPhone.replace(/\D/g, "");
+      if (phone.startsWith("0")) phone = phone.slice(1); // strip leading 0
       if (phone.length === 10) phone = `91${phone}`;
-      if (!phone.startsWith("91")) phone = `91${phone}`;
+      else if (!phone.startsWith("91")) phone = `91${phone}`;
       const phoneNumber = `+${phone}`;
       const whatsappUrl = `whatsapp://send?phone=${encodeURIComponent(
         phoneNumber
