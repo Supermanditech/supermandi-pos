@@ -4007,9 +4007,29 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-149
+- **Severity:** MEDIUM
+- **Screen/Route:** DailyReportScreen (src/screens/DailyReportScreen.tsx)
+- **Status:** DISCOVERED
+- **Category:** Missing request cancellation on rapid date navigation
+
+**Description:** `loadReport` at line 248-266 fetches daily report data without an AbortController. The effect at line 268-270 re-fires on `selectedDate` change. If the user rapidly taps prev/next date arrows, multiple concurrent `fetchDailyReport` requests fire without cancelling previous ones. The last response to arrive wins — which may not be the last request sent. If dates are A→B→C and the C request arrives before B, the user sees date C data. But if B then arrives after C, it overwrites with date B data while the UI shows date C is selected.
+
+**Steps to reproduce:**
+1. Open DailyReportScreen
+2. Rapidly tap next-date arrow 5+ times within 2 seconds
+3. Multiple `fetchDailyReport` requests fire concurrently
+4. Responses arrive out of order — report data shows wrong date
+**Expected:** Only the most recent date's request should update state. Previous requests cancelled or results discarded.
+**Actual:** All responses write to `setReport()` — last response wins regardless of which date it's for.
+**Runtime evidence:** DailyReportScreen.tsx:248-270. No AbortController, no request ID, no staleness check.
+**Blocker impact:** Low — visual inconsistency only. Pull-to-refresh or re-selecting date corrects it.
+
+---
+
 ## Consolidated Issue Count
 
-**136 issue entries** in this file (ISSUE-001 through ISSUE-148, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**137 issue entries** in this file (ISSUE-001 through ISSUE-149, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -4021,17 +4041,18 @@ Breakdown:
 - Deep cascading audit wave 6: ISSUE-120..140 = 21 entries (4 HIGH, 14 MEDIUM, 3 LOW)
 - Reorder/Order agent wave 7: ISSUE-141..144 = 4 entries (0 HIGH, 3 MEDIUM, 1 LOW)
 - Modal/Component agent wave 8: ISSUE-145..147 = 3 entries (1 HIGH, 2 MEDIUM)
-- Purchase agent wave 9: ISSUE-148 = 1 entry (0 HIGH, 1 MEDIUM) [remaining agents pending]
+- Purchase agent wave 9: ISSUE-148 = 1 entry (0 HIGH, 1 MEDIUM)
+- History/Report agent wave 10: ISSUE-149 = 1 entry (0 HIGH, 1 MEDIUM) [remaining agents pending]
 
 ### Cross-Cutting Patterns Identified
 
 | Pattern | Severity | Affected Screens | Note |
 |---------|----------|-----------------|------|
-| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen, AddStoreProductModal, PurchaseScreen | Only PaymentScreen uses `submittingRef` for synchronous guard |
+| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen, AddStoreProductModal, PurchaseScreen, BillDetailScreen | Only PaymentScreen uses `submittingRef` for synchronous guard |
 | `clearDeviceSession()` throw in catch blocks | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen, PaymentScreen | Same bug in 3 screens — shared `handleDeviceAuthError` pattern |
 | `onSubmitEditing` bypasses `disabled` guard | LOW | StaffLoginScreen, SuccessPrintScreenV2 | Keyboard Enter can fire when button is disabled |
 | AbortError misclassification from `fetchUiStatusStrict` | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen | AbortError (DOMException) not caught by string-based error detection |
-| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal, PurchaseScreen | No request cancellation on unmount or filter change |
+| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal, PurchaseScreen, DailyReportScreen | No request cancellation on unmount or filter/date change |
 | Dual-effect race on async readiness flag | MEDIUM | EditReorderModal, PurchaseScreen | Two effects both trigger fetch when a readiness flag flips — duplicate API calls |
 
 Ready for consolidated fix wave.
