@@ -3840,9 +3840,90 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-141
+- **Severity:** MEDIUM
+- **Screen/Route:** EditReorderModal (src/components/reorder/EditReorderModal.tsx)
+- **Status:** DISCOVERED
+- **Category:** Race condition — duplicate supplier load
+
+**Description:** Two separate `useEffect` hooks both call `loadSuppliers()` when the modal opens. The first effect (line 80-87) fires on `[visible, item]` change. The second effect (line 134-138) fires on `[storeId, visible, item, availableSuppliers.length, loadSuppliers]` change. When modal opens and `storeId` is already available, both effects fire in the same render cycle. The second has a guard (`availableSuppliers.length === 0`) but there's a timing window where both calls execute before either response arrives, causing duplicate API requests and potential state conflicts if responses arrive in different orders.
+
+**Steps to reproduce:**
+1. Open EditReorderModal for any reorder item
+2. Both effects fire — `loadSuppliers()` called twice
+3. Two concurrent `catalogApi.getProductSuppliers` requests
+4. If first response sets `selectedSupplier` to supplier A, and second response arrives later and sets it to supplier B (or same), the selection flickers
+**Expected:** Single `loadSuppliers()` call per modal open.
+**Actual:** Two concurrent calls due to dual-effect pattern with overlapping triggers.
+**Runtime evidence:** EditReorderModal.tsx:80-87 (effect 1) and :134-138 (effect 2). Both call `loadSuppliers()` when `visible && item && storeId` are truthy.
+**Blocker impact:** Low — functional but wasteful. Potential UI flicker on supplier selection.
+
+---
+
+## ISSUE-142
+- **Severity:** MEDIUM
+- **Screen/Route:** OrderDetailScreen (src/screens/OrderDetailScreen.tsx)
+- **Status:** DISCOVERED
+- **Category:** Unhandled promise in polling
+
+**Description:** Auto-refresh polling at line 134 uses `void loadOrder()` (fire-and-forget). If `loadOrder` throws an unhandled error (e.g., network error after the catch handler re-throws, or an unexpected exception), it becomes an unhandled promise rejection. Additionally, `loadOrder` is a `useCallback` with `storeId` in its dependency chain — when `storeId` changes, `loadOrder` reference changes, which causes the polling effect (deps: `[order?.status, loadOrder]`) to tear down and restart, resetting `pollCountRef.current = 0` and potentially polling indefinitely if `loadOrder` keeps getting recreated.
+
+**Steps to reproduce:**
+1. Navigate to OrderDetailScreen for an in-progress order
+2. Polling starts (30s interval, max 60 attempts)
+3. If network drops, `loadOrder` error becomes unhandled rejection via `void` call
+4. If `storeId` state changes (e.g., async load resolves late), `loadOrder` changes → effect restarts → `pollCountRef` resets to 0 → max attempt counter never reached
+**Expected:** Polling errors should be caught. Poll count should not reset on effect restart.
+**Actual:** `void loadOrder()` at line 134 discards the promise. `pollCountRef.current = 0` at line 125 resets on every effect restart.
+**Runtime evidence:** OrderDetailScreen.tsx:118-138. `void` operator at line 134. `pollCountRef.current = 0` at line 125 inside effect body.
+**Blocker impact:** Low — polling has max 60 attempts per effect cycle, but restarts reset the counter.
+
+---
+
+## ISSUE-143
+- **Severity:** MEDIUM
+- **Screen/Route:** OrderHistoryScreen (src/screens/OrderHistoryScreen.tsx)
+- **Status:** DISCOVERED
+- **Category:** Filter race condition — stale response ordering
+
+**Description:** The filter change effect at lines 257-261 calls `loadOrders(true, 1)` whenever `filter` changes, with no debounce or request cancellation. If the user rapidly switches filters (e.g., "pending" → "confirmed" → "all"), three concurrent requests fire. The responses can arrive out of order — the "pending" response (slowest) arriving last would overwrite the "all" results the user currently expects to see. `loadOrders` at line 253 has `filter` in its `useCallback` deps, so each call captures the correct filter, but `setOrders()` inside it overwrites state regardless of which filter the user is currently viewing.
+
+**Steps to reproduce:**
+1. Open OrderHistoryScreen
+2. Rapidly tap through filter tabs (Pending → Confirmed → All) within 1 second
+3. Three `loadOrders` calls fire concurrently
+4. If network latency varies, earlier filter's response arrives after later filter's response
+5. Order list shows results for wrong filter
+**Expected:** Only the most recent filter's results should be displayed. Previous requests should be cancelled or their results discarded.
+**Actual:** All responses write to `setOrders()` — last response wins regardless of filter relevance.
+**Runtime evidence:** OrderHistoryScreen.tsx:257-261. No AbortController, no request ID, no staleness check.
+**Blocker impact:** Low — visual inconsistency only, no data corruption. User can pull-to-refresh to correct.
+
+---
+
+## ISSUE-144
+- **Severity:** LOW
+- **Screen/Route:** EditReorderModal (src/components/reorder/EditReorderModal.tsx)
+- **Status:** DISCOVERED
+- **Category:** Missing abort on unmount
+
+**Description:** `loadSuppliers()` at line 90-131 makes an async API call (`catalogApi.getProductSuppliers`) without an AbortController. If the modal is closed while the request is in flight, the response handler still runs — calling `setAvailableSuppliers()` and `setSelectedSupplier()` on an unmounted (or re-mounted with different item) component. React 18 suppresses the warning, but the state updates are wasteful and could apply to the wrong item if the modal is reopened quickly with a different product.
+
+**Steps to reproduce:**
+1. Open EditReorderModal
+2. `loadSuppliers()` fires, API request in flight
+3. Close modal before response arrives
+4. Response arrives → setState calls on stale component state
+**Expected:** API request cancelled on modal close / unmount.
+**Actual:** No AbortController. Request completes and state updates fire.
+**Runtime evidence:** EditReorderModal.tsx:90-131. No AbortController or cleanup return from effect.
+**Blocker impact:** None — no data corruption, no user-visible error. Cosmetic/waste only.
+
+---
+
 ## Consolidated Issue Count
 
-**128 issue entries** in this file (ISSUE-001 through ISSUE-140, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**132 issue entries** in this file (ISSUE-001 through ISSUE-144, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -3851,7 +3932,8 @@ Breakdown:
 - Code-level audit wave 3: ISSUE-079..088 = 10 entries
 - Agent-discovered audit wave 4: ISSUE-089..113 = 25 entries
 - Deep agent audit wave 5: ISSUE-114..119 = 6 entries (5 HIGH, 1 MEDIUM)
-- Deep cascading audit wave 6: ISSUE-120..140 = 21 entries (4 HIGH, 14 MEDIUM, 3 LOW) [in progress — 6 background agents auditing remaining screens]
+- Deep cascading audit wave 6: ISSUE-120..140 = 21 entries (4 HIGH, 14 MEDIUM, 3 LOW)
+- Reorder/Order agent wave 7: ISSUE-141..144 = 4 entries (0 HIGH, 3 MEDIUM, 1 LOW) [remaining agents pending]
 
 ### Cross-Cutting Patterns Identified
 
@@ -3861,5 +3943,6 @@ Breakdown:
 | `clearDeviceSession()` throw in catch blocks | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen, PaymentScreen | Same bug in 3 screens — shared `handleDeviceAuthError` pattern |
 | `onSubmitEditing` bypasses `disabled` guard | LOW | StaffLoginScreen, SuccessPrintScreenV2 | Keyboard Enter can fire when button is disabled |
 | AbortError misclassification from `fetchUiStatusStrict` | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen | AbortError (DOMException) not caught by string-based error detection |
+| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen | No request cancellation on unmount or filter change |
 
 Ready for consolidated fix wave.
