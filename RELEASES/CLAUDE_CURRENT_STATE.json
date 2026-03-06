@@ -1,11 +1,11 @@
 {
-  "version": "122.0",
-  "lastUpdated": "2026-03-06T01:30:00Z",
-  "currentPhase": "READY_FOR_LOCKED_LIVE_TESTING: Implementation wave complete. All code-fixable issues implemented. Await CI deploy then live test tomorrow.",
+  "version": "123.0",
+  "lastUpdated": "2026-03-06T08:40:00Z",
+  "currentPhase": "LOCKED_IMPLEMENTATION_AND_REITERATION: Deep cascading POS audit complete (139 issue entries). Implement findings with production-grade git discipline, then reiterate and deploy-gate.",
   "currentTicket": null,
   "ticketQueue": [],
   "liveTestingToolchain": {
-    "status": "READY_FOR_LOCKED_LIVE_TESTING",
+    "status": "DISCOVERY_COMPLETE_PENDING_LOCKED_IMPLEMENTATION",
     "deployRunId": "22736131070",
     "expectedSha": "d05efbee",
     "scripts": {
@@ -16,8 +16,42 @@
       "detoxCheck": "npm run live:detox:check",
       "firebaseTestLabMatrix": "npm run live:testlab:matrix -- -ProjectId <project> -AppApk <app.apk> -TestApk <androidTest.apk> -NumShards 4"
     },
-    "lockedStartCondition": "Begin live screen-lock testing only after deploy run success and all post-deploy gates PASS.",
+    "lockedStartCondition": "Begin implementation only after machine-state pre-read, tool connectivity pass, and issue-ledger freeze confirmation.",
     "handoffFile": "RELEASES/CLAUDE_NEXT_ACTION_IMPLEMENT_NOW_TEST_TOMORROW_2026-03-06.md"
+  },
+  "deepCascadingAuditSummary": {
+    "status": "COMPLETE_READY_FOR_IMPLEMENTATION",
+    "auditDate": "2026-03-06",
+    "coverage": {
+      "posScreensAudited": "44/44",
+      "auditWaves": 12,
+      "stateCommits": 7
+    },
+    "issueLedger": {
+      "totalIssueEntries": 139,
+      "issueRange": "ISSUE-001..ISSUE-151",
+      "numberingGaps": [
+        "ISSUE-014..ISSUE-018",
+        "ISSUE-028..ISSUE-034"
+      ],
+      "frozenBaseline": "ISSUE-001..ISSUE-151",
+      "newIssueStartId": "ISSUE-152"
+    },
+    "sessionSeverityDistribution": {
+      "high": 5,
+      "medium": 22,
+      "low": 5
+    },
+    "crossCuttingPatterns": [
+      "state_only_double_submit_guards_missing_across_multiple_screens",
+      "missing_abortcontroller_cleanup_on_unmount",
+      "clearDeviceSession_throw_propagation_without_try_catch",
+      "aborterror_misclassification_in_error_handlers",
+      "dual_effect_race_conditions",
+      "onSubmitEditing_bypasses_disabled_loading_guard",
+      "mutation_without_try_catch_wrapper"
+    ],
+    "implementationDirective": "Implement findings ticket-by-ticket in production discipline, reiterate after each batch, and only then deploy."
   },
   "implementationWavePlan": {
     "status": "COMPLETE",
@@ -162,18 +196,19 @@
     ]
   },
   "finalTwoStageGcpSignoff": {
-    "status": "ACTIVE",
+    "status": "ACTIVE_IMPLEMENTATION_LOCK",
     "deployedAppCodeSha": "de452b1a",
     "findingRangeStart": "STG-723",
-    "mode": "LIVE_VERIFICATION_DISCOVERY_ONLY",
+    "mode": "LOCKED_IMPLEMENTATION_AND_REITERATION",
     "currentExecutionOrder": [
-      "DONE: POS compatibility hardening (8 fixes, merged 9ecec062)",
-      "DONE: CI gates fix wave (9712d509), CD deployed, STG-722 reCAPTCHA fix (de452b1a)",
-      "DONE: STG-722 RESOLVED — staging de452b1a verified, all gates PASS",
-      "DONE: Retailer Web live sign-off (28/28 screens, 38 findings: 1 P1 + 10 P2 + 27 P3)",
-      "Supplier Web live sign-off",
-      "SuperAdmin Web live sign-off",
-      "Cross-Function Matrix live sign-off"
+      "Read machine-state and locked manifests before edits",
+      "Implement findings one-by-one with strict git discipline",
+      "Run impacted verification for each implementation batch",
+      "Reiterate affected screens/flows to detect missed/impacted issues",
+      "Truth-sync issue/state updates after each validated batch",
+      "Deploy to GCP staging if web/backend code changed",
+      "Build and distribute new POS APK if POS/mobile code changed",
+      "Run runtime verification gates on deployed artifacts"
     ],
     "platformOrder": [
       "POS App",
@@ -182,14 +217,14 @@
       "SuperAdmin Web",
       "Cross-Function Matrix"
     ],
-    "activePlatform": "POS App — LOCKED_RETEST_REQUIRED",
-    "activeScreenOrFlow": "SplashScreen -> EnrollDeviceScreen -> Child modals (LOCKED)",
+    "activePlatform": "POS App + shared backend/web surfaces (implementation wave)",
+    "activeScreenOrFlow": "Issue implementation queue (highest severity first), then mandatory reiteration",
     "platformCompletionState": {
-      "posApp": "LOCKED_RETEST_REQUIRED",
-      "retailerWeb": "LOCKED_RETEST_REQUIRED",
-      "supplierWeb": "LOCKED_RETEST_REQUIRED",
-      "superadminWeb": "LOCKED_RETEST_REQUIRED",
-      "crossFunctionMatrix": "LOCKED_RETEST_REQUIRED"
+      "posApp": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "retailerWeb": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "supplierWeb": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "superadminWeb": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "crossFunctionMatrix": "PENDING_IMPLEMENTATION_AND_REITERATION"
     },
     "strictLock": {
       "singlePlatform": true,
@@ -198,12 +233,16 @@
       "subScreenAndModalLock": true,
       "groupedExecutionForbidden": true,
       "samplingForbidden": true,
-      "fixesForbiddenInThisSession": true,
+      "fixesForbiddenInThisSession": false,
+      "implementationOneIssueAtATime": true,
+      "noUnrelatedRefactors": true,
+      "mandatoryImpactedRetestPerBatch": true,
+      "mandatoryPostImplementationReiteration": true,
       "realUserClickPathMandatory": true,
       "reiterationUntilHundredPercentCoverage": true,
       "issueLoggingFile": "RELEASES/LIVE_TESTING_ISSUES.md",
       "issueAppendOnly": true,
-      "newIssueStartId": "ISSUE-035",
+      "newIssueStartId": "ISSUE-152",
       "requiredLayerSet": [
         "ui",
         "ux",
@@ -364,11 +403,12 @@
     ],
     "retestDirective": {
       "edgeCasePassMandatory": true,
-      "restartPlatformFromScreen1": true,
+      "restartPlatformFromScreen1": false,
       "retestFirstScreensBeforeContinue": [
-        "SplashScreen",
-        "EnrollDeviceScreen"
-      ]
+        "affected_screens_from_current_batch"
+      ],
+      "fullPosReiterationRequiredBeforeSignoff": true,
+      "deployGateRule": "Web/backend changes require GCP staging redeploy + runtime gate. POS app changes require fresh APK build/distribution + device runtime gate."
     },
     "requiredRuntimeLayers": [
       "user_actions",
@@ -389,7 +429,7 @@
       "accessibility",
       "responsive_behavior"
     ],
-    "resultRule": "Record every new issue as STG-723+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it."
+    "resultRule": "Implement every actionable finding with evidence-backed fixes. Record newly discovered or impacted regressions as ISSUE-152+ with runtime proof."
   },
   "firebaseProductionAudit": {
     "status": "REPO_HARDENED_OPERATOR_VERIFICATION_DEFERRED",

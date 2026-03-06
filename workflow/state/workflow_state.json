@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-05T00:00:00Z",
-  "workflowMode": "LIVE_FIX",
+  "updatedAt": "2026-03-06T08:40:00Z",
+  "workflowMode": "LOCKED_IMPLEMENTATION_AND_REITERATION",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -41,19 +41,41 @@
       "productionGradeComplete": true
     }
   },
+  "deepCascadingAuditSummary": {
+    "status": "COMPLETE_READY_FOR_IMPLEMENTATION",
+    "auditDate": "2026-03-06",
+    "posScreensAudited": 44,
+    "posScreensTotal": 44,
+    "auditWaves": 12,
+    "stateCommits": 7,
+    "issueEntries": 139,
+    "issueRange": "ISSUE-001..ISSUE-151",
+    "numberingGaps": [
+      "ISSUE-014..ISSUE-018",
+      "ISSUE-028..ISSUE-034"
+    ],
+    "newIssueStartId": "ISSUE-152",
+    "sessionSeverityDistribution": {
+      "high": 5,
+      "medium": 22,
+      "low": 5
+    },
+    "implementationDirective": "Implement one issue at a time with strict git discipline, reiterate after each batch, then deploy-gate."
+  },
   "finalTwoStageGcpSignoff": {
-    "status": "ACTIVE",
+    "status": "ACTIVE_IMPLEMENTATION_LOCK",
     "deployedAppCodeSha": "610cbc39",
     "findingRangeStart": "STG-722",
-    "mode": "LIVE_VERIFICATION_DISCOVERY_ONLY",
+    "mode": "LOCKED_IMPLEMENTATION_AND_REITERATION",
     "currentExecutionOrder": [
-      "POS compatibility hardening implementation",
-      "git discipline and truth sync",
-      "resume final two-stage live sign-off from POS Screen 1",
-      "Retailer Web live sign-off",
-      "Supplier Web live sign-off",
-      "SuperAdmin Web live sign-off",
-      "Cross-Function Matrix live sign-off"
+      "Read machine-state and locked manifests before edits",
+      "Implement findings one-by-one with strict git discipline",
+      "Run impacted verification for each implementation batch",
+      "Reiterate affected screens/flows to detect missed/impacted issues",
+      "Truth-sync issue/state updates after each validated batch",
+      "Deploy to GCP staging if web/backend code changed",
+      "Build and distribute new POS APK if POS/mobile code changed",
+      "Run runtime verification gates on deployed artifacts"
     ],
     "platformOrder": [
       "POS App",
@@ -62,19 +84,23 @@
       "SuperAdmin Web",
       "Cross-Function Matrix"
     ],
-    "activePlatform": "POS App",
+    "activePlatform": "POS App + shared backend/web surfaces (implementation wave)",
     "platformCompletionState": {
-      "posApp": "PENDING_FINAL_TWO_STAGE_SIGNOFF_AFTER_COMPATIBILITY_HARDENING",
-      "retailerWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
-      "supplierWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
-      "superadminWeb": "PENDING_FINAL_TWO_STAGE_SIGNOFF",
-      "crossFunctionMatrix": "PENDING_FINAL_TWO_STAGE_SIGNOFF"
+      "posApp": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "retailerWeb": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "supplierWeb": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "superadminWeb": "PENDING_IMPLEMENTATION_AND_REITERATION",
+      "crossFunctionMatrix": "PENDING_IMPLEMENTATION_AND_REITERATION"
     },
     "singlePlatformLock": true,
     "singleScreenOrFlowLock": true,
     "groupedExecutionForbidden": true,
     "samplingForbidden": true,
-    "fixesForbiddenInThisSession": true,
+    "fixesForbiddenInThisSession": false,
+    "implementationOneIssueAtATime": true,
+    "noUnrelatedRefactors": true,
+    "mandatoryImpactedRetestPerBatch": true,
+    "mandatoryPostImplementationReiteration": true,
     "operatorAssistedInputs": {
       "emailForTesting": "supermanditech@gmail.com",
       "phoneForOtpTesting": "7737914383"
@@ -175,9 +201,9 @@
       "accessibility",
       "responsive_behavior"
     ],
-    "resultRule": "Record every new issue as STG-722+ with runtime evidence. Do not fix in this phase. If a previously known issue is re-confirmed, reference it instead of duplicating it.",
+    "resultRule": "Implement every actionable finding with evidence-backed fixes. Record newly discovered or impacted regressions as ISSUE-152+ with runtime proof.",
     "layeredAndEdgeCaseRule": "A screen or flow may only pass after both the full 17-layer runtime checklist and the business-logic edge-case checklist are completed or explicitly blocked with evidence.",
-    "activeScreenOrFlow": "SplashScreen",
+    "activeScreenOrFlow": "Issue implementation queue (highest severity first), then mandatory reiteration",
     "businessLogicEdgeCaseChecklist": [
       "empty_or_missing_required_inputs",
       "invalid_format_and_boundary_values",
@@ -202,11 +228,12 @@
     ],
     "retestDirective": {
       "edgeCasePassMandatory": true,
-      "restartPlatformFromScreen1": true,
+      "restartPlatformFromScreen1": false,
       "retestFirstScreensBeforeContinue": [
-        "SplashScreen",
-        "EnrollDeviceScreen"
-      ]
+        "affected_screens_from_current_batch"
+      ],
+      "fullPosReiterationRequiredBeforeSignoff": true,
+      "deployGateRule": "Web/backend changes require GCP staging redeploy + runtime gate. POS app changes require fresh APK build/distribution + device runtime gate."
     }
   },
   "firebaseProductionAudit": {
