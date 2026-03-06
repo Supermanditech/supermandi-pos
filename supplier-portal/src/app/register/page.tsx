@@ -503,10 +503,9 @@ function RegisterPage() {
           setStep('documents');
           toast.success('Details saved! Please upload documents.');
         } catch {
-          // Phone verification failed but application was created — proceed anyway
-          // User can re-verify later or documents step will handle it
+          // ISSUE-160: Phone verification failed — show warning instead of silent success
           setStep('documents');
-          toast.success('Details saved! Please upload documents.');
+          toast.error('Phone verification failed. Your details are saved, but you may need to re-verify your phone before final submission.');
         }
       }
     } catch (err) {
