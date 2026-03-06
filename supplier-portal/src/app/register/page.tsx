@@ -642,9 +642,14 @@ function RegisterPage() {
     });
   };
 
+  // ISSUE-189: Ref guard to prevent double-submit on documents
+  const submittingDocsRef = useRef(false);
+
   // Submit all documents and application
   const handleSubmitDocuments = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingDocsRef.current) return;
+    submittingDocsRef.current = true;
     setError('');
 
     // Validate required documents
@@ -658,6 +663,7 @@ function RegisterPage() {
       if (!doc.file && doc.status !== 'uploaded') {
         const label = DOCUMENT_TYPES[docType as keyof typeof DOCUMENT_TYPES]?.label || docType;
         setError(`Please upload: ${label}`);
+        submittingDocsRef.current = false;
         return;
       }
     }
@@ -671,7 +677,6 @@ function RegisterPage() {
           const success = await uploadDocument(docType, doc.file);
           if (!success) {
             setError(`Failed to upload ${DOCUMENT_TYPES[docType as keyof typeof DOCUMENT_TYPES]?.label || docType}`);
-            setIsLoading(false);
             return;
           }
         }
@@ -690,6 +695,7 @@ function RegisterPage() {
       }
     } finally {
       setIsLoading(false);
+      submittingDocsRef.current = false;
     }
   };
 
