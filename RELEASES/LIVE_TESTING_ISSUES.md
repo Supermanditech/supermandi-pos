@@ -4614,7 +4614,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ## Consolidated Issue Count
 
-**169 issue entries** in this file (ISSUE-001 through ISSUE-180, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**192 issue entries** in this file (ISSUE-001 through ISSUE-203, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -4631,8 +4631,10 @@ Breakdown:
 - Credit/Customer agent wave 11: ISSUE-150..151 = 2 entries (0 HIGH, 2 MEDIUM)
 - Menu/Settings agent wave 12: 0 new issues (all findings = cross-cutting patterns already documented)
 - WhatsApp hardening wave 13: ISSUE-152..153 = 2 entries (0 HIGH, 1 MEDIUM, 1 LOW)
-- Portal auth deep audit wave 14: ISSUE-154..167 = 14 entries (1 CRITICAL, 5 HIGH, 7 MEDIUM, 1 LOW-implied)
-- Deep auth/browser audit wave 15: ISSUE-168..180 = 13 entries (1 CRITICAL, 3 HIGH, 7 MEDIUM, 2 LOW)
+- Portal auth deep audit wave 14: ISSUE-154..167 = 14 entries (1 CRITICAL, 5 HIGH, 8 MEDIUM, 0 LOW)
+- Deep auth/browser audit wave 15: ISSUE-168..180 = 13 entries (1 CRITICAL, 4 HIGH, 5 MEDIUM, 2 LOW)
+- Targeted deepening wave 16 Pass 1 (Clusters A-D): ISSUE-181..202 = 22 entries (2 CRITICAL, 3 HIGH, 16 MEDIUM, 1 LOW)
+- Targeted deepening wave 16 Pass 2 (convergence): ISSUE-203 = 1 entry (1 CRITICAL)
 
 **All 6 agents complete. Deep cascading audit FINISHED.**
 **WhatsApp production hardening: 4 issues fixed (ISSUE-136, 137, 152, 153).**
@@ -4652,3 +4654,448 @@ Breakdown:
 | Missing try-catch on async mutation | MEDIUM | CustomerListScreen | Unhandled rejection locks form permanently |
 
 Ready for consolidated fix wave.
+
+---
+
+## WAVE 16 — Targeted Deepening (Clusters A-D) — 2026-03-06
+
+**Mode:** DISCOVERY_DEEPENING_LOCK — append-only, no fixes, no deploy.
+**Baseline frozen at:** ISSUE-001..180
+**Clusters audited:** A (FB/IG WebView), B (idToken TTL/resume), C (Supplier state loss), D (Rate-limit/session sync)
+
+---
+
+## ISSUE-181: Landing Page — wa.me Link Missing `noreferrer` Attribute (MEDIUM)
+
+**Screen/Route:** supermandi-landing/index.html (line 839)
+**Severity:** MEDIUM
+**Category:** Security best practice / consistency
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Open landing page
+2. Click WhatsApp CTA widget
+3. Inspect outbound request headers
+**Expected:** `window.open(url, '_blank', 'noopener,noreferrer')` — consistent with all other portals.
+**Actual:** `window.open(buildWaUrl(cfg.number, cfg.message), '_blank', 'noopener')` — missing `noreferrer`. Referrer header leaks origin URL to wa.me endpoint.
+**Runtime evidence:** Landing page line 839 uses `'noopener'` only. All other portal wa.me calls use `'noopener,noreferrer'` (verified via grep).
+**Blocker impact:** Low — referrer leakage to external domain. Not exploitable by wa.me but inconsistent security posture.
+
+---
+
+## ISSUE-182: Retailer RegisterPage — /pos Download Link Uses target="_blank" (Fails in WebView) (MEDIUM)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (line 923)
+**Severity:** MEDIUM
+**Category:** Browser compatibility
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Complete retailer registration in FB/IG in-app browser
+2. Reach success step
+3. Click "Download the SuperMandi POS app" link
+4. Link is `href="/pos" target="_blank"` — fails silently in WebView
+**Expected:** In-page download instructions or deep link to app store.
+**Actual:** Relative path `/pos` with `target="_blank"` — fails in FB/IG WebView, ambiguous destination even in normal browsers.
+**Runtime evidence:** RegisterPage.tsx:923 — `<a href="/pos" target="_blank" rel="noopener noreferrer">`. ISSUE-179 covers terms links; this is a distinct /pos link on success screen.
+**Blocker impact:** Medium — users completing registration in WebView cannot download POS app via this link.
+
+---
+
+## ISSUE-183: SuperAdmin — Service Worker Registration Silent Failure (No User Feedback) (LOW)
+
+**Screen/Route:** supermandi-superadmin/index.html (lines 23-35)
+**Severity:** LOW
+**Category:** Offline capability
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Open SuperAdmin in an in-app browser or restricted WebView
+2. Service worker registration fails (sw.js blocked)
+3. Only `console.warn` logged — no user-facing indication
+**Expected:** Store SW registration state; show subtle indicator if offline cache unavailable.
+**Actual:** Error caught and logged to console only. No sessionStorage state or user notification.
+**Runtime evidence:** Lines 26-32 — catch block calls `console.warn('[App] Service worker registration failed:', error)` only.
+**Blocker impact:** Low — offline caching is nice-to-have for SuperAdmin.
+
+---
+
+## ISSUE-184: POS — whatsapp:// Phone Format Inconsistency Between billShare and OverdueDuesScreen (MEDIUM)
+
+**Screen/Route:** src/services/billing/billShare.ts (line 41) + src/screens/OverdueDuesScreen.tsx (line 332)
+**Severity:** MEDIUM
+**Category:** Deep link reliability
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Share bill via WhatsApp from SuccessPrintScreen (uses billShare.ts) — phone format: `91XXXXXXXXXX` (no +)
+2. Send overdue reminder via WhatsApp from OverdueDuesScreen — phone format: `+91XXXXXXXXXX` (with +)
+3. Some devices reject one format but accept the other for `whatsapp://send?phone=` deep links
+**Expected:** Consistent phone format across both implementations.
+**Actual:** billShare.ts:40 strips non-digits (`/\D/g`). OverdueDuesScreen.tsx:331 prefixes with `+`. Inconsistent.
+**Runtime evidence:** billShare.ts:40 — `cleanPhone = phone.replace(/\D/g, "")`. OverdueDuesScreen.tsx:331 — `phoneNumber = \`+${phone}\``.
+**Blocker impact:** Medium — WhatsApp deep link may fail on strict-format devices for one path but not the other.
+
+---
+
+## ISSUE-185: Firebase confirmationResult Not Shared Across Browser Tabs (MEDIUM)
+
+**Screen/Route:** retailer-admin/src/lib/firebase.ts (lines 44-45) + supplier-portal/src/lib/firebase.ts
+**Severity:** MEDIUM
+**Category:** Multi-tab UX
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Open retailer registration in Tab A, send OTP → `confirmationResult` stored in module scope
+2. Open registration in Tab B → fresh module instance, `confirmationResult = null`
+3. Enter OTP in Tab B → `confirmationResult.confirm(otp)` fails: "No OTP pending"
+**Expected:** Either share confirmationResult across tabs or show clear error explaining the limitation.
+**Actual:** Module-scoped variable is per-tab. Second tab cannot verify OTP sent from first tab.
+**Runtime evidence:** firebase.ts:44 — `let confirmationResult: ConfirmationResult | null = null` (module scope, not shared via localStorage/BroadcastChannel).
+**Blocker impact:** Medium — users who open multiple tabs get stuck.
+
+---
+
+## ISSUE-186: SuperAdmin — Concurrent 401s Only First Triggers Logout, Others Silently Fail (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/api/authToken.ts (lines 285-298)
+**Severity:** MEDIUM
+**Category:** Token management / UX
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. SuperAdmin token expires
+2. Three concurrent API calls (analytics, dashboard, audit) all get 401
+3. First call: `handleAutoLogout()` fires, sets `autoLogoutFired = true`, clears token, dispatches logout
+4. Second + third calls: `handleAutoLogout()` returns early (debounced), no error shown
+5. User sees login gate for call A, but calls B and C appear to hang with no error
+**Expected:** All concurrent 401s resolve (either via refresh retry or unified logout).
+**Actual:** 2-second debounce blocks subsequent logouts. No token refresh attempt at all — immediate logout.
+**Runtime evidence:** authToken.ts:291 — `if (autoLogoutFired) return;` + line 295 — `setTimeout(() => { autoLogoutFired = false; }, 2000)`.
+**Blocker impact:** Medium — UI appears partially broken during concurrent 401 scenarios.
+
+---
+
+## ISSUE-187: Backend JWT Verification Has No Clock Skew Tolerance (HIGH)
+
+**Screen/Route:** backend/services/auth-service/src/services/jwtService.ts (lines 176-182)
+**Severity:** HIGH
+**Category:** Auth / infrastructure
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Backend server clock is 30s ahead of client (possible on Cloud Run with NTP drift)
+2. Client issues fresh JWT with `iat = T`
+3. Backend verifies: `jwt.verify(token, secret, { algorithms: ['HS256'] })` — no `clockTolerance` option
+4. If backend clock at `T+30s`, a token with 15-min expiry is seen as 14:30 remaining — OK
+5. But a token near expiry boundary (last 30s) is rejected as expired — user gets 401 on fresh token
+**Expected:** `jwt.verify()` with `{ clockTolerance: 30 }` to handle NTP drift.
+**Actual:** No clockTolerance set. Zero tolerance for clock skew between services.
+**Runtime evidence:** jwtService.ts:179 — `jwt.verify(token, config.jwt.secret, { issuer: config.jwt.issuer, algorithms: ['HS256'] })` — no clockTolerance option.
+**Blocker impact:** High — fresh login can fail immediately if cloud instances have slight clock drift.
+
+---
+
+## ISSUE-188: Retailer Registration — Documents→Success Step Skips idToken Age Check (MEDIUM)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (lines 448-464)
+**Severity:** MEDIUM
+**Category:** Token validation gap
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Verify phone → get idToken at minute 0
+2. Fill details (step 2) — idToken age checked at line 308 before submit
+3. Upload documents (step 3-4) — spend 50+ minutes on uploads
+4. Click "Submit KYC" → `submitRetailerKyc()` fires at line 452
+5. No idToken age check before this API call
+6. Backend returns 401 (idToken expired) → generic error: "Failed to submit KYC"
+**Expected:** Check `TOKEN_MAX_AGE_MS` before calling `submitRetailerKyc()`, show "Phone verification expired" message.
+**Actual:** Step 2 has token check; step 4 (KYC submit) does not. User gets misleading error.
+**Runtime evidence:** Line 308 checks `Date.now() - idTokenObtainedAt.current > TOKEN_MAX_AGE_MS` for details submit. Line 448-464 (`handleSubmitKyc`) has no equivalent check.
+**Blocker impact:** Medium — user loses document upload work, gets cryptic error instead of clear "re-verify phone" message.
+
+---
+
+## ISSUE-189: Supplier — Document Upload Double-Submit Race (No Ref Guard on handleSubmitDocuments) (HIGH)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 618-649)
+**Severity:** HIGH
+**Category:** Data integrity
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Fill documents, click "Submit Application" twice rapidly
+2. First click: enters `handleSubmitDocuments`, starts uploading pan_card
+3. `setIsLoading(true)` at line 637 executes — but button not yet re-rendered as disabled
+4. Second click: ALSO enters `handleSubmitDocuments`, starts parallel upload loop
+5. Two XHR requests for same document type fire concurrently
+6. Backend upserts: second upload overwrites first via `ON CONFLICT (entity_type, entity_id, document_type)`
+7. First upload's GCS file is orphaned
+**Expected:** Ref-based guard (like `submittingRef.current`) prevents double entry.
+**Actual:** Only state-based `isLoading` guard — React re-render latency allows double entry.
+**Runtime evidence:** Line 637 — `setIsLoading(true)` is async state update. No `useRef` guard. ISSUE-173 covers double-submit on details form; this is the documents step — different function, same pattern.
+**Blocker impact:** High — orphaned files on GCS, potential document data corruption.
+
+---
+
+## ISSUE-190: Supplier — Frontend/Backend File Size Limits Inconsistent (5MB vs 10MB) (MEDIUM)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (line 526) + backend/src/routes/v1/documents.ts (line 57)
+**Severity:** MEDIUM
+**Category:** Validation consistency
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Frontend rejects files >5MB: `file.size > 5 * 1024 * 1024` at line 526
+2. Backend accepts files up to 10MB: `MAX_FILE_SIZE = 10 * 1024 * 1024` at documents.ts:57
+3. If frontend check bypassed (devtools), 9MB file uploads successfully
+4. Cloud Run memory impact: multer memoryStorage × 4 documents × concurrent users
+**Expected:** Consistent limits (either both 5MB or both 10MB).
+**Actual:** Frontend 5MB, backend 10MB. Frontend-bypassed uploads accepted.
+**Runtime evidence:** register/page.tsx:526 — `5 * 1024 * 1024`. documents.ts:57 — `10 * 1024 * 1024`.
+**Blocker impact:** Low — functional but inconsistent. Memory pressure risk under load.
+
+---
+
+## ISSUE-191: Supplier — beforeunload Hook Active During Document Upload XHR (MEDIUM)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (line 166) + hooks/useNavigationSafety.ts
+**Severity:** MEDIUM
+**Category:** UX confusion
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. On documents step, initiate upload (XHR fires)
+2. Close browser tab → "Leave site?" dialog appears
+3. User clicks "Stay" → XHR still in-flight (cannot cancel via UI)
+4. User clicks "Leave" → XHR continues in background; file may upload and be orphaned
+**Expected:** Suppress beforeunload during active upload, or provide cancel button.
+**Actual:** `hasUnsavedDetails` memo at line 166 depends on `[step, businessName, ownerName, email]` — always true during documents step. No check for `isLoading` state. ISSUE-159 covers the dialog during form submission; this is during XHR upload — distinct trigger.
+**Runtime evidence:** useNavigationSafety.ts sets `beforeunload` listener. No mechanism to suppress during XHR.
+**Blocker impact:** Medium — confusing UX; user can't cleanly cancel or stay.
+
+---
+
+## ISSUE-192: Supplier — Details Form Submission Has No Fetch Timeout (MEDIUM)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (line 433) + supplier-portal/src/lib/api.ts
+**Severity:** MEDIUM
+**Category:** Network resilience
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Fill all details, click "Continue to Document Upload"
+2. Network drops mid-POST to `createSupplierApplication()`
+3. No timeout on fetch — browser default (5-10 minutes) applies
+4. User sees indefinite spinner "Saving Details..."
+5. Must manually refresh → loses idToken → must re-verify phone
+**Expected:** 30s fetch timeout → "Network error" toast → stay on details step.
+**Actual:** No timeout. User trapped in loading state until browser gives up. ISSUE-172 covers upload XHR timeout; this is the details form POST — different endpoint, same pattern.
+**Runtime evidence:** api.ts fetch calls have no AbortController timeout. Browser default applies.
+**Blocker impact:** Medium — user data loss on network failure during form submission.
+
+---
+
+## ISSUE-193: Supplier — Concurrent Tab Registration Creates applicationId Confusion (CRITICAL)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx + backend/src/routes/v1/supplier/registration.ts
+**Severity:** CRITICAL — SECURITY
+**Category:** Multi-tab state collision
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Tab A: Verify phone, get applicationId=app-a-uuid (stored in Tab A sessionStorage)
+2. Tab B: Verify same phone, get applicationId=app-b-uuid (stored in Tab B sessionStorage)
+3. Tab A: Submit details for Business A → backend finds app-a-uuid
+4. Tab B: Submit details for Business B → backend `SELECT id FROM auth.applications WHERE phone=$1 AND status IN ('DRAFT', 'OTP_VERIFIED') LIMIT 1` → may return app-a-uuid instead of app-b-uuid
+5. Tab B's session now points to wrong applicationId
+6. Document uploads from Tab B attach to wrong application
+**Expected:** Backend should enforce one active DRAFT per phone, or return the specific applicationId that was created.
+**Actual:** Multiple DRAFT applications per phone allowed. Backend query returns arbitrary match. Tab isolation via sessionStorage breaks when backend state conflicts.
+**Runtime evidence:** registration.ts SELECT uses `LIMIT 1` without ordering — returns whichever row the DB planner picks. sessionStorage is per-tab but backend state is global.
+**Blocker impact:** Critical — documents and business details can cross-contaminate between applications.
+
+---
+
+## ISSUE-194: Supplier — GSTIN Uniqueness Race + Resume Can Hijack Another User's Application (CRITICAL)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 476-498) + backend/src/routes/v1/supplier/registration.ts
+**Severity:** CRITICAL — SECURITY
+**Category:** Authorization bypass
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. User A registers with GSTIN "22AAAAA0000A1Z5", gets applicationId=app-A
+2. User B enters same GSTIN → backend returns 409 APPLICATION_EXISTS with `applicationId: app-A`
+3. Frontend catches APPLICATION_EXISTS error at line 476
+4. Frontend extracts `applicationId` from error response
+5. Frontend calls `lookupSupplierRegistration()` with that applicationId
+6. Frontend sets `setApplicationId(lookup.application_id)` — now User B is editing User A's application
+7. No phone-matching check to verify the resumed application belongs to User B
+**Expected:** APPLICATION_EXISTS error should NOT return the existing applicationId. Resume should verify phone ownership.
+**Actual:** Error response leaks applicationId. Frontend blindly resumes without verifying ownership. User B can access/modify User A's application data.
+**Runtime evidence:** Backend error at line 524 returns `applicationId: entity_id`. Frontend at line 488 extracts and uses it without phone verification.
+**Blocker impact:** Critical — authorization bypass. Any user can access another user's supplier application by entering their GSTIN.
+
+---
+
+## ISSUE-195: Supplier — No File Signature Validation on Document Upload (MIME Spoofing) (MEDIUM)
+
+**Screen/Route:** backend/src/routes/v1/documents.ts (lines 112-119)
+**Severity:** MEDIUM
+**Category:** Security / file validation
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Rename malicious.exe to document.pdf
+2. Upload via supplier registration documents step
+3. Frontend input accept="image/*,application/pdf" passes (browser trusts extension)
+4. Backend multer fileFilter checks `file.mimetype` from request headers — passes (application/pdf)
+5. File stored on GCS as .pdf but contains executable content
+6. Admin downloads file to review → potentially opens executable
+**Expected:** Backend validates file magic bytes (e.g., PDF starts with `%PDF-`, images start with known headers).
+**Actual:** Only MIME type from request header is checked. No file-type library used.
+**Runtime evidence:** documents.ts:113 — `fileFilter` checks `file.mimetype` only. No `file-type` npm package in dependencies.
+**Blocker impact:** Medium — admin could download and open malicious files. Mitigated by GCS serving with Content-Disposition: attachment.
+
+---
+
+## ISSUE-196: SuperAdmin — Logout Does Not Revoke/Blacklist JWT Token (HIGH)
+
+**Screen/Route:** backend/src/routes/v1/admin/adminAuth.ts (lines 425-428) + api-gateway/src/redis.ts
+**Severity:** HIGH
+**Category:** Security / token management
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Admin logs in → JWT issued with 24h expiry
+2. Admin copies JWT from localStorage (or attacker intercepts it)
+3. Admin clicks "Logout" → backend clears HttpOnly cookie only
+4. Stolen JWT still valid for remaining duration (up to 24h)
+5. Attacker uses stolen JWT via `Authorization: Bearer <token>` header
+6. Backend validates JWT signature + expiry → accepts
+**Expected:** Logout should blacklist token in Redis (pattern exists in `api-gateway/src/redis.ts` as `blacklistToken()`).
+**Actual:** Logout endpoint at line 425-428 only calls `res.clearCookie('admin_session')`. No `blacklistToken()` call.
+**Runtime evidence:** adminAuth.ts:425-428 — logout handler clears cookie, returns success. No Redis blacklist operation. `blacklistToken()` exists in gateway Redis module but is never called from admin logout.
+**Blocker impact:** High — stolen admin tokens remain valid after logout. Comparison: retailer admin portal does blacklist tokens on logout.
+
+---
+
+## ISSUE-197: SuperAdmin — Sessions Not Exclusive (Concurrent Device Logins Allowed) (MEDIUM)
+
+**Screen/Route:** backend/src/routes/v1/admin/adminAuth.ts (verify-email-otp endpoint)
+**Severity:** MEDIUM
+**Category:** Session management
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Admin logs in from Device A → token_A issued
+2. Admin logs in from Device B → token_B issued
+3. Both tokens valid simultaneously for 24 hours
+4. No "force logout other sessions" feature
+5. No session tracking table
+**Expected:** New login should invalidate previous session, or provide session management UI.
+**Actual:** verify-email-otp issues new JWT without revoking previous. No session tracking.
+**Runtime evidence:** adminAuth.ts verify-email-otp endpoint issues JWT via `jwtService.generateAccessToken()` — no prior session lookup or invalidation.
+**Blocker impact:** Medium — compromised device maintains access even after re-login from new device.
+
+---
+
+## ISSUE-198: SuperAdmin — OTP Email Endpoint Lacks Per-IP Enumeration Protection (MEDIUM)
+
+**Screen/Route:** backend/src/routes/v1/admin/adminAuth.ts + backend/services/api-gateway/src/middleware/rateLimiter.ts
+**Severity:** MEDIUM
+**Category:** Security / rate limiting
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Attacker sends OTP requests for admin@example.com — rate limited at 2/minute per email
+2. Attacker tries admin1@example.com, admin2@example.com, ... from same IP
+3. Each email gets 2 OTPs/minute — total: 200 emails × 2 = 400 OTP emails/minute from one IP
+4. adminRateLimiter tracks failed auth attempts, but rate-limited 429 responses don't count as "failed"
+5. Attacker discovers valid admin emails by checking for 200 OK vs 404 responses
+**Expected:** Per-IP rate limiting across all OTP sends, regardless of email address.
+**Actual:** Per-email rate limiting only. Per-IP limit only applies to auth failures, not OTP sends.
+**Runtime evidence:** emailService.ts rate limit keyed by email only. adminRateLimiter.ts tracks failed auth attempts by IP.
+**Blocker impact:** Medium — email enumeration + spam attack vector. Mitigated partially by email allowlist (ISSUE-001 fix).
+
+---
+
+## ISSUE-199: SuperAdmin — JWT Stored in localStorage (XSS Extractable) (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/api/authToken.ts (line 59, 388)
+**Severity:** MEDIUM
+**Category:** Security / token storage
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Admin logs in → JWT stored: `localStorage.setItem(SESSION_TOKEN_KEY, data.token)`
+2. XSS vulnerability anywhere in SuperAdmin → attacker extracts token: `localStorage.getItem('supermandi_admin_session')`
+3. Attacker sends token to external server → full admin access for 24h
+4. Even after admin logs out, extracted token remains valid (see ISSUE-196)
+**Expected:** Use HttpOnly cookie exclusively (already set by backend). Send with `credentials: 'include'`.
+**Actual:** Backend sets HttpOnly cookie AND returns token in response body. Frontend stores in localStorage for `Authorization: Bearer` header.
+**Runtime evidence:** authToken.ts:59 — `localStorage.setItem(SESSION_TOKEN_KEY, data.token)`. Line 388 — `headers: { Authorization: \`Bearer ${token}\` }`.
+**Blocker impact:** Medium — requires XSS as prerequisite. Token extraction amplifies XSS to full admin takeover.
+
+---
+
+## ISSUE-200: SuperAdmin — Idle Timeout Spoofable via Synthetic DOM Events (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/api/authToken.ts (lines 445-448)
+**Severity:** MEDIUM
+**Category:** Session security
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Inject script (via XSS or browser extension): `setInterval(() => document.dispatchEvent(new MouseEvent('mousemove')), 59000)`
+2. Activity listeners fire on synthetic events
+3. `updateActivity()` writes to localStorage every 59 seconds (within 60s debounce)
+4. Session never hits 30-minute idle timeout
+**Expected:** Distinguish real user events from synthetic events (e.g., `event.isTrusted` check).
+**Actual:** No `event.isTrusted` validation. Synthetic events keep session alive indefinitely.
+**Runtime evidence:** authToken.ts:445 — activity listeners on `mousemove`, `keydown`, etc. No `isTrusted` check.
+**Blocker impact:** Medium — requires XSS or malicious extension as prerequisite. Extends session indefinitely.
+
+---
+
+## ISSUE-201: SuperAdmin — No Hard Maximum Session Duration (24h JWT Only) (MEDIUM)
+
+**Screen/Route:** backend/src/routes/v1/admin/adminAuth.ts (JWT_EXPIRY = '24h')
+**Severity:** MEDIUM
+**Category:** Session security
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Admin logs in at 12:00 PM → JWT expires at 12:00 PM next day
+2. Token is valid for 24 hours regardless of activity
+3. Idle timeout (30 min) exists on frontend but is client-side only — attacker with raw JWT ignores it
+4. No server-side session table to enforce hard max
+**Expected:** Hard maximum session duration (8-12h) independent of idle timeout, enforced server-side.
+**Actual:** Only JWT expiry (24h) limits session. No server-side session tracking.
+**Runtime evidence:** adminAuth.ts — `jwt.sign(payload, secret, { expiresIn: '24h' })`. No session table.
+**Blocker impact:** Medium — stolen token usable for full 24 hours. Combined with ISSUE-196 (no revocation on logout), this is extended exposure.
+
+---
+
+## ISSUE-202: API Gateway — adminAuth Failed Attempts Tracking Uses In-Memory Map (MEDIUM)
+
+**Screen/Route:** backend/services/api-gateway/src/middleware/adminAuth.ts (lines 30-32)
+**Severity:** MEDIUM
+**Category:** Security / rate limiting
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Attacker sends bad tokens repeatedly → Map tracks failed attempts per IP
+2. Cloud Run instance restarts (deploy, scale-down, OOM) → Map cleared
+3. Attacker resumes brute-forcing from clean slate
+4. Same pattern as ISSUE-176 (OTP rate limiting in-memory) but for token validation
+**Expected:** Use Redis for persistent rate limiting across instance restarts.
+**Actual:** `const failedAttempts = new Map<string, { count: number; firstAttempt: number }>()` — in-memory only.
+**Runtime evidence:** adminAuth.ts:30 — `new Map()`. Same root cause as ISSUE-176 but different endpoint.
+**Blocker impact:** Medium — brute-force protection resets on restart. Lower severity than ISSUE-176 because attacker needs valid-looking JWTs.
+
+---
+
+## WAVE 16 — Pass 2 (Convergence Check) — 2026-03-06
+
+Pass 2 re-scanned all 4 clusters for residual CRITICAL/HIGH findings. Clusters A+B: 0 new. Clusters C+D: 1 new CRITICAL.
+
+---
+
+## ISSUE-203: SuperAdmin — Email Allowlist NOT Enforced on verify-email-otp Endpoint (CRITICAL)
+
+**Screen/Route:** backend/src/routes/v1/admin/adminAuth.ts (lines 228-290)
+**Severity:** CRITICAL — SECURITY
+**Category:** Authorization bypass / enumeration
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. `send-email-otp` endpoint (line 161): checks `isEmailAllowed()` + returns generic response (prevents enumeration)
+2. `verify-email-otp` endpoint (line 253): NO allowlist check — accepts ANY email
+3. Attacker calls `POST /api/v1/admin/auth/verify-email-otp` with `email=admin@supermandi.com&otp=000000`
+4. Response differs based on whether email has active OTP state: "OTP not found" vs "Invalid OTP" vs "OTP expired"
+5. This is a direct oracle — attacker can determine which admin emails have active OTP state
+6. Combined with brute-force (only 6-digit OTP, 1M combinations, ISSUE-202 rate limit resets on restart), this is exploitable
+**Expected:** verify-email-otp should ALSO check `isEmailAllowed()` before processing. Response should be generic regardless of email state.
+**Actual:** Allowlist check asymmetric — enforced on send but not verify. Verify endpoint reveals email state.
+**Runtime evidence:** adminAuth.ts:161 — `isEmailAllowed(email)` in send handler. adminAuth.ts:253-290 — NO `isEmailAllowed()` call in verify handler. ISSUE-198 covers send-otp enumeration; this covers the verify-side bypass.
+**Blocker impact:** Critical — combined with ISSUE-176 (in-memory rate limit) and ISSUE-202 (in-memory failed attempts), this creates a viable admin account takeover path.

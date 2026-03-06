@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-06T14:00:00Z",
+  "updatedAt": "2026-03-06T18:00:00Z",
   "workflowMode": "DISCOVERY_DEEPENING_LOCK",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
@@ -46,15 +46,15 @@
     "auditDate": "2026-03-06",
     "posScreensAudited": 44,
     "posScreensTotal": 44,
-    "auditWaves": 13,
-    "stateCommits": 8,
-    "issueEntries": 155,
-    "issueRange": "ISSUE-001..ISSUE-167",
+    "auditWaves": 16,
+    "stateCommits": 9,
+    "issueEntries": 192,
+    "issueRange": "ISSUE-001..ISSUE-203",
     "numberingGaps": [
       "ISSUE-014..ISSUE-018",
       "ISSUE-028..ISSUE-034"
     ],
-    "newIssueStartId": "ISSUE-168",
+    "newIssueStartId": "ISSUE-204",
     "sessionSeverityDistribution": {
       "high": 5,
       "medium": 22,
