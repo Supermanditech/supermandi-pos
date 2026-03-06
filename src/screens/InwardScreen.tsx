@@ -266,6 +266,8 @@ export default function InwardScreen({
   const [showSearch, setShowSearch] = useState(false);
   const [showSupplierPicker, setShowSupplierPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // ISSUE-139: Ref-based double-submit guard (synchronous, not subject to React batching)
+  const submittingRef = useRef(false);
   const searchInputRef = useRef<TextInput>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -366,12 +368,19 @@ export default function InwardScreen({
   // GO-LIVE-235: Check inventory levels and warn if high stock
   const checkInventoryAndSubmit = async () => {
     if (!canSubmit) return;
+    // ISSUE-139: Synchronous double-submit guard
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     setSubmitting(true);
     try {
-      // Check current stock levels
+      // ISSUE-092: Add 10s timeout to stock check to prevent indefinite blocking
       const productIds = items.map((item) => item.id);
-      const stockResult = await getStockBatch(productIds);
+      const stockPromise = getStockBatch(productIds);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Stock check timed out")), 10000)
+      );
+      const stockResult = await Promise.race([stockPromise, timeoutPromise]);
 
       // Find items with high stock
       const highStockItems: string[] = [];
@@ -388,7 +397,7 @@ export default function InwardScreen({
           t("inward.highStockWarning", "High Stock Warning"),
           t("inward.highStockMessage", "The following items already have high stock levels:\n\n{{items}}\n\nAre you sure you want to add more?", { items: highStockItems.join("\n") }),
           [
-            { text: t("common.cancel", "Cancel"), style: "cancel", onPress: () => setSubmitting(false) },
+            { text: t("common.cancel", "Cancel"), style: "cancel", onPress: () => { submittingRef.current = false; setSubmitting(false); } },
             { text: t("inward.proceedAnyway", "Proceed Anyway"), onPress: () => doSubmit() },
           ]
         );
@@ -398,6 +407,7 @@ export default function InwardScreen({
     } catch (error) {
       // R6.POS.001: Block submission on stock check failure — no bypass allowed
       if (__DEV__) console.warn("[InwardScreen] Stock check failed:", error);
+      submittingRef.current = false;
       setSubmitting(false);
       Alert.alert(
         "Stock Check Failed",
@@ -439,6 +449,7 @@ export default function InwardScreen({
       const message = error instanceof Error ? error.message : "Unknown error";
       Alert.alert("Inward Failed", message);
     } finally {
+      submittingRef.current = false; // ISSUE-139
       setSubmitting(false);
     }
   };

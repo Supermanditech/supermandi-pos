@@ -128,10 +128,12 @@ export default function ForceUpdateScreen() {
         }
       }
       // FORCE-UPDATE-OFFLINE-VAGUE-ERROR: detect network/timeout errors separately
+      // ISSUE-122: Include AbortError (from timeout AbortController) in network error classification
       const isNetworkError =
         (error instanceof TypeError && error.message?.includes("Network")) ||
         (error instanceof Error && error.message?.toLowerCase().includes("timeout")) ||
-        (error instanceof Error && error.message?.toLowerCase().includes("fetch"));
+        (error instanceof Error && error.message?.toLowerCase().includes("fetch")) ||
+        (error instanceof Error && error.name === "AbortError");
       if (isNetworkError) {
         Alert.alert("No Connection", "Unable to check — no internet connection. Please check your network and try again.");
       } else {

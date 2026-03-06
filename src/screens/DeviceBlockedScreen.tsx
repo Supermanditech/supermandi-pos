@@ -86,7 +86,8 @@ export default function DeviceBlockedScreen() {
         }
       }
       // ISSUE-074: Differentiate network errors from server errors
-      const isNetworkError = error instanceof TypeError || (error instanceof Error && /network|fetch|timeout/i.test(error.message));
+      // ISSUE-122: Include AbortError in network error classification
+      const isNetworkError = error instanceof TypeError || (error instanceof Error && (error.name === "AbortError" || /network|fetch|timeout/i.test(error.message)));
       Alert.alert(
         isNetworkError ? "No Connection" : "Check Failed",
         isNetworkError

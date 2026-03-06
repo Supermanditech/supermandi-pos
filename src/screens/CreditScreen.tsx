@@ -142,7 +142,8 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
   // GO-LIVE-238: Auto-refresh when there's a pending application
   // POS-030: Max 20 polls (10 minutes) to prevent battery drain
   useEffect(() => {
-    if (!activeApplication || activeApplication.status === "approved" || activeApplication.status === "rejected") {
+    // ISSUE-086: Also skip polling when disbursed — no further status transitions expected
+    if (!activeApplication || activeApplication.status === "approved" || activeApplication.status === "rejected" || activeApplication.status === "disbursed") {
       return;
     }
 

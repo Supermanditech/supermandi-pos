@@ -1109,6 +1109,18 @@ export default function SellScanScreen({
     };
   }, []);
 
+  // ISSUE-131: Cancel voice recording when app goes to background
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if ((nextState === "background" || nextState === "inactive") && voiceButtonState === "recording") {
+        void cancelRecording().catch(() => {});
+        setVoiceButtonState("idle");
+        setVoiceRecordingDuration(0);
+      }
+    });
+    return () => sub.remove();
+  }, [voiceButtonState]);
+
   const detailPressRef = useRef(false);
   const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2657,6 +2669,7 @@ export default function SellScanScreen({
           placeholder={t('sell.searchProducts')}
           placeholderTextColor={colors.textTertiary}
           testID="sell-search-input"
+          accessibilityLabel="Search products"
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
@@ -2863,6 +2876,10 @@ export default function SellScanScreen({
 
   const handleCheckout = () => {
     if (!canPay) return;
+    // ISSUE-130: Cancel active voice recording before navigating to payment
+    if (voiceButtonState === "recording") {
+      void cancelVoiceRecording();
+    }
     setCartExpanded(false);
     navigation.navigate("Payment");
   };
@@ -3885,7 +3902,8 @@ export default function SellScanScreen({
       </Modal>
 
       {/* VOICE-001/009: Floating voice button / Recording panel (feature-gated) */}
-      {voiceEnabled && voiceButtonState === "recording" ? (
+      {/* ISSUE-110: Hide voice FAB when cart modal is expanded (FAB renders behind Modal on small screens) */}
+      {voiceEnabled && !cartExpanded && voiceButtonState === "recording" ? (
         // Expanded recording panel
         <View style={[styles.voiceRecordingPanel, itemCount > 0 && styles.voiceRecordingPanelWithCart]}>
           {/* Cancel button */}
@@ -3917,8 +3935,8 @@ export default function SellScanScreen({
             <MaterialCommunityIcons name="send" size={20} color={colors.textInverse} />
           </Pressable>
         </View>
-      ) : voiceEnabled ? (
-        // Normal FAB (only shown when voice feature is enabled)
+      ) : voiceEnabled && !cartExpanded ? (
+        // Normal FAB (only shown when voice feature is enabled, hidden when cart expanded)
         <Pressable
           accessibilityRole="button"
           style={[

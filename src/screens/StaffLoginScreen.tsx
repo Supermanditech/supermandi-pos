@@ -36,8 +36,11 @@ export default function StaffLoginScreen({ storeName }: Props) {
   // ISSUE-081: Client-side rate limiting
   const [cooldown, setCooldown] = useState(false);
   const failCountRef = useRef(0);
+  // ISSUE-127: Ref-based guard to prevent double submission via keyboard onSubmitEditing
+  const loginInFlightRef = useRef(false);
 
   const handleLogin = useCallback(async () => {
+    if (loginInFlightRef.current) return; // ISSUE-127: Block re-entry during active login
     if (cooldown) return; // ISSUE-081: Throttle rapid submissions
     const trimmedPhone = phone.trim();
     const trimmedPin = pin.trim();
@@ -62,6 +65,7 @@ export default function StaffLoginScreen({ storeName }: Props) {
       }
     } catch { /* NetInfo failed — proceed */ }
 
+    loginInFlightRef.current = true; // ISSUE-127
     setLoading(true);
     try {
       // STG-162: Send normalized 10-digit phone (strip +91/91 prefix) since DB stores 10-digit
@@ -86,6 +90,7 @@ export default function StaffLoginScreen({ storeName }: Props) {
         Alert.alert("Login Failed", "Could not log in. Please check your connection and try again.");
       }
     } finally {
+      loginInFlightRef.current = false; // ISSUE-127
       setLoading(false);
     }
   }, [phone, pin, cooldown, setSession]);

@@ -244,6 +244,9 @@ export default function PosRootLayout() {
     useState<VariantPickerRequest | null>(null);
 
   const [scannerOpen, setScannerOpen] = useState(false);
+  // ISSUE-083: Torch state for camera barcode scanner — reset when scanner closes
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  useEffect(() => { if (!scannerOpen) setTorchEnabled(false); }, [scannerOpen]);
   const [cameraScanLocked, setCameraScanLocked] = useState(false);
   const [hidInput, setHidInput] = useState("");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -254,7 +257,8 @@ export default function PosRootLayout() {
   const addStoreProductActive = addStoreProductRequest !== null && effectiveMode === "SELL";
   // T-059: Block scans while variant picker is open
   const variantPickerActive = variantPickerRequest !== null && effectiveMode === "SELL";
-  const scanDisabled = !isFocused || storeActive === false || scannerOpen || sellOnboardingActive || addStoreProductActive || variantPickerActive;
+  // ISSUE-084: Block scans when storeActive is null (loading) or false (inactive) — only allow when explicitly true
+  const scanDisabled = !isFocused || storeActive !== true || scannerOpen || sellOnboardingActive || addStoreProductActive || variantPickerActive;
   const cartMode = effectiveMode === "PURCHASE" ? "PURCHASE" : "SELL";
   const statusMode = "SELL";
   const hidConnected = scannerOk;
@@ -1426,6 +1430,7 @@ export default function PosRootLayout() {
               <CameraView
                 style={styles.cameraView}
                 facing="back"
+                enableTorch={torchEnabled}
                 barcodeScannerSettings={{
                   barcodeTypes: [
                     "qr",
@@ -1480,14 +1485,29 @@ export default function PosRootLayout() {
                   </Text>
                 ) : null}
               </View>
-              <Pressable
-                onPress={() => setScannerOpen(false)}
-                testID="camera-close-btn"
-                accessibilityLabel="Close camera"
-                accessibilityRole="button"
-              >
-                <Text style={styles.cameraClose}>Close</Text>
-              </Pressable>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                {/* ISSUE-083: Torch toggle for low-light scanning */}
+                <Pressable
+                  onPress={() => setTorchEnabled((prev) => !prev)}
+                  testID="camera-torch-btn"
+                  accessibilityLabel={torchEnabled ? "Turn off flashlight" : "Turn on flashlight"}
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons
+                    name={torchEnabled ? "flashlight" : "flashlight-off"}
+                    size={22}
+                    color="#fff"
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => setScannerOpen(false)}
+                  testID="camera-close-btn"
+                  accessibilityLabel="Close camera"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.cameraClose}>Close</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
@@ -1515,6 +1535,7 @@ export default function PosRootLayout() {
         onFallback={handleVariantFallback}
       />
 
+      {/* ISSUE-082: Hide HID scanner input from screen readers */}
       <TextInput
         ref={hidInputRef}
         value={hidInput}
@@ -1532,6 +1553,8 @@ export default function PosRootLayout() {
         editable
         showSoftInputOnFocus={false}
         style={styles.hidInput}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
       />
 
       {/* T-126: Offline indicator banner — overlays on top when offline */}

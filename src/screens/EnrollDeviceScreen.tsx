@@ -325,6 +325,8 @@ export default function EnrollDeviceScreen() {
         }
       }
       if (!res) throw lastError;
+      // ISSUE-124: Check if user cancelled during the API call — don't navigate after cancel
+      if (controller.signal.aborted) throw new Error("Cancelled by user");
       const storeChanged = previousStoreId !== res.storeId;
 
       if (storeChanged) {
