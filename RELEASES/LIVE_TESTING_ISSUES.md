@@ -4109,9 +4109,257 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-154: Retailer Registration — Firebase idToken Expires During Detail Entry (HIGH)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (lines 306-313)
+**Severity:** HIGH
+**Category:** Auth / OTP flow
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Go to staging.supermandi.tech/retailer/register
+2. Enter phone, receive and verify OTP successfully
+3. Spend >50 minutes filling in business details (GSTIN, store name, etc.)
+4. Click "Continue to Document Upload"
+5. Error: "Phone verification expired. Please verify your phone again."
+**Expected:** Token refresh or proactive expiry warning before submission.
+**Actual:** Firebase idToken obtained at OTP verify (50-min TTL) expires silently. User sees "Invalid or expired OTP" which is confusing since the OTP was valid when verified.
+**Runtime evidence:** RegisterPage.tsx:308 — `TOKEN_MAX_AGE_MS = 50 * 60 * 1000`. Check happens at detail submission, not proactively.
+**Blocker impact:** HIGH — Matches operator-reported "Invalid or expired OTP" error on staging.
+
+---
+
+## ISSUE-155: Retailer Registration — No Double-Submit Guard on OTP Verification (MEDIUM)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (lines 257-271)
+**Severity:** MEDIUM
+**Category:** Double-submit
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Enter phone and OTP on retailer registration
+2. Click "Verify OTP" twice rapidly before first request completes
+**Expected:** Second click blocked by loading guard.
+**Actual:** `handleVerifyOtp` has no `isLoading` check at entry. Both calls attempt Firebase verification.
+**Runtime evidence:** RegisterPage.tsx:257 — no early return on `isLoading`.
+**Blocker impact:** Medium — duplicate Firebase verify calls, second may fail confusingly.
+
+---
+
+## ISSUE-156: Retailer Registration — Stale idToken on Resume Flow (MEDIUM)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (lines 176-208)
+**Severity:** MEDIUM
+**Category:** Auth / session
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Start retailer registration, verify OTP, begin filling details
+2. Close browser, reopen staging.supermandi.tech/retailer/register
+3. Resume flow triggered — existing application found
+4. Submit details — uses stale/no Firebase idToken
+**Expected:** Re-verify phone on resume.
+**Actual:** Resume skips to documents step with no fresh idToken. Backend will reject expired token.
+**Runtime evidence:** RegisterPage.tsx:191 — `lookupRetailerRegistration()` restores app but not idToken.
+**Blocker impact:** Medium — resume always fails for returning users.
+
+---
+
+## ISSUE-157: Retailer Registration — Backend Returns Generic Error for Phone Mismatch (HIGH)
+
+**Screen/Route:** backend/src/routes/v1/retailer-admin/registration.ts (lines 624-687)
+**Severity:** HIGH
+**Category:** Security + UX
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Verify OTP with phone A
+2. Somehow submit with phone B's token (e.g., shared device)
+3. Backend returns "Invalid or expired OTP" instead of "Phone mismatch"
+**Expected:** Separate error code for phone mismatch vs. expired token.
+**Actual:** `verifyFirebaseIdToken()` failure returns generic "Invalid or expired OTP" (line 627). Phone mismatch check at line 680 never reached if Firebase verify fails first.
+**Runtime evidence:** registration.ts:627 — generic error conflates 2 failure modes.
+**Blocker impact:** HIGH — confusing error message, harder to debug auth issues.
+
+---
+
+## ISSUE-158: Retailer Registration — RecaptchaVerifier Race on Parallel OTP Sends (MEDIUM)
+
+**Screen/Route:** retailer-admin/src/lib/firebase.ts (lines 94-107)
+**Severity:** MEDIUM
+**Category:** Race condition
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Double-click "Send OTP" on retailer registration before recaptcha loads
+2. Two parallel `ensureRecaptcha()` calls attempt to initialize RecaptchaVerifier on same DOM element
+**Expected:** Mutex prevents concurrent initialization.
+**Actual:** Both calls can create verifiers, leading to DOM element conflicts.
+**Runtime evidence:** firebase.ts:94 — no mutex flag on `ensureRecaptcha()`.
+**Blocker impact:** Medium — edge case but can cause invisible reCAPTCHA failure.
+
+---
+
+## ISSUE-159: Supplier Registration — "Leave site?" Dialog During Form Submission (CRITICAL)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 163-169) + supplier-portal/src/hooks/useNavigationSafety.ts
+**Severity:** CRITICAL
+**Category:** UX / navigation safety
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Go to staging.supermandi.tech/supplier/register
+2. Fill in business details (name, phone, GSTIN, etc.)
+3. Click "Save Details" → "Saving Details..." spinner shown
+4. During async submission, browser shows "Leave site?" confirmation dialog
+**Expected:** No navigation warning during active submission.
+**Actual:** `useUnsavedChanges(hasUnsavedDetails)` registers `beforeunload` listener. During async `handleSubmitDetails()`, form data is still non-empty so `hasUnsavedDetails` remains true. Any browser-level navigation event triggers the dialog.
+**Runtime evidence:** register/page.tsx:163 — `useUnsavedChanges(hasUnsavedDetails)`. The guard is not disabled during submission. Operator confirmed this behavior in screenshots.
+**Blocker impact:** CRITICAL — Operator directly observed this. Users may cancel the submission thinking something is wrong.
+
+---
+
+## ISSUE-160: Supplier Registration — Silent Failure in OTP Verify Fallback (HIGH)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 462-472)
+**Severity:** HIGH
+**Category:** Silent error
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Register as supplier, submit details
+2. If primary `verifySupplierOtp` fails in the success path
+3. Catch block still calls `setStep('documents')` and shows success toast
+**Expected:** Error shown, user stays on current step.
+**Actual:** Silent failure — user proceeds to document upload with unverified phone. KYC submission may fail later.
+**Runtime evidence:** register/page.tsx:472 — catch block contains `setStep('documents')` + `toast.success(...)`.
+**Blocker impact:** HIGH — users with unverified phone reach document upload, waste time.
+
+---
+
+## ISSUE-161: Supplier Registration — OTP Token Expiry Race Condition (HIGH)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 410-417)
+**Severity:** HIGH
+**Category:** Auth timing
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Verify OTP on supplier registration
+2. Spend ~49 minutes on details form
+3. Token validates at start of handler (still <50 min)
+4. Network request takes >1 minute → token expired at backend
+**Expected:** Token validated closer to API call, or auto-refreshed.
+**Actual:** Pre-validation passes but actual API call uses expired token.
+**Runtime evidence:** register/page.tsx:410 — `TOKEN_MAX_AGE_MS = 50 * 60 * 1000`. Same pattern as ISSUE-154 (retailer).
+**Blocker impact:** HIGH — same root cause as retailer "Invalid or expired OTP".
+
+---
+
+## ISSUE-162: Supplier Login — No Error Handling After refreshProfile Failure (MEDIUM)
+
+**Screen/Route:** supplier-portal/src/app/(auth)/login/page.tsx (lines 150-185)
+**Severity:** MEDIUM
+**Category:** Error handling
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Log in as supplier successfully
+2. `refreshProfile()` call fails (network timeout)
+3. User redirected to dashboard with no profile data loaded
+**Expected:** Error toast or retry before redirect.
+**Actual:** If `refreshProfile()` throws, it propagates to outer catch but user may already be redirected.
+**Runtime evidence:** login/page.tsx:180 — `await refreshProfile()` without dedicated try-catch.
+**Blocker impact:** Medium — dashboard loads with stale/empty profile.
+
+---
+
+## ISSUE-163: SuperAdmin Login — Email Enumeration UX Gap (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/components/LoginGate.tsx (lines 40-46) + backend adminAuth.ts (lines 158-168)
+**Severity:** MEDIUM
+**Category:** UX / auth
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Go to staging.supermandi.tech/admin
+2. Enter any non-allowlisted email (e.g., test@example.com)
+3. Click "Send OTP"
+4. Backend returns `success: true` (anti-enumeration)
+5. Frontend transitions to OTP step — user waits for OTP that never arrives
+6. User enters any OTP → "OTP_NOT_FOUND" error
+**Expected:** Either a) longer generic message explaining OTP may take time, or b) frontend shows OTP step but with clearer messaging.
+**Actual:** User proceeds to OTP step believing email was valid. Gets confusing error only after entering OTP.
+**Runtime evidence:** LoginGate.tsx:43 — always calls `setStep("otp")` on `result.success`. Backend returns success for all emails.
+**Blocker impact:** Medium — users with wrong emails waste time waiting for OTP. Security trade-off: anti-enumeration is correct, but UX needs improvement.
+
+---
+
+## ISSUE-164: SuperAdmin — Silent Token Refresh Failure Causes Surprise Logout (HIGH)
+
+**Screen/Route:** supermandi-superadmin/src/App.tsx (lines 361-381)
+**Severity:** HIGH
+**Category:** Session management
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Login to SuperAdmin dashboard
+2. Network drops for extended period (or backend restarts)
+3. Token refresh fails 5 consecutive times (every 10 minutes = ~50 min of failures)
+4. User silently logged out — no toast, no warning, no save prompt
+**Expected:** Warning toast at 3 failures, "Session expiring" modal at 4, then logout at 5.
+**Actual:** Only `console.warn` on 5th failure, then immediate `logout()`.
+**Runtime evidence:** App.tsx:375 — `if (consecutiveFailures >= 5) { await logout(); }` with only console.warn.
+**Blocker impact:** HIGH — users mid-operation (editing WhatsApp config, reviewing logs) lose unsaved work.
+
+---
+
+## ISSUE-165: SuperAdmin — No Frontend OTP Attempt Counter (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/components/LoginGate.tsx (lines 56-77)
+**Severity:** MEDIUM
+**Category:** UX
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Login to SuperAdmin with valid email
+2. Enter wrong OTP 5 times
+3. Backend locks account for 30 minutes
+4. No frontend warning about remaining attempts
+**Expected:** "Attempts remaining: 2/5" counter shown.
+**Actual:** No attempt counter. User surprised by sudden 30-minute lockout.
+**Runtime evidence:** LoginGate.tsx — no attempt tracking variable. Backend enforces limit at adminAuth.ts:236.
+**Blocker impact:** Medium — poor UX, users locked out without warning.
+
+---
+
+## ISSUE-166: SuperAdmin — Session Extends Indefinitely With Activity (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/App.tsx + backend adminAuth.ts (line 404)
+**Severity:** MEDIUM
+**Category:** Security / session management
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Login to SuperAdmin
+2. Keep browser active (any mouse/keyboard activity)
+3. Token refreshes every 10 minutes, each time extending 24-hour window
+4. Session never expires as long as user is active
+**Expected:** Absolute session timeout (e.g., 8 hours max regardless of activity).
+**Actual:** Each refresh resets 24-hour TTL. No absolute cap.
+**Runtime evidence:** App.tsx:379 — 10-min interval. adminAuth.ts:404 — `Date.now() + 24h` on every refresh.
+**Blocker impact:** Medium — security concern for shared machines. Low practical risk for current use.
+
+---
+
+## ISSUE-167: All Web Portals — WhatsApp wa.me Links May Fail in Facebook/Instagram In-App Browser (MEDIUM)
+
+**Screen/Route:** retailer-admin (10 instances), supplier-portal (2 instances), supermandi-superadmin (3 instances)
+**Severity:** MEDIUM
+**Category:** Browser compatibility
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Share any portal link (e.g., retailer dashboard) in Facebook or Instagram
+2. User opens link in Facebook/Instagram in-app browser
+3. User clicks any WhatsApp contact button (wa.me link)
+4. `window.open(url, '_blank', 'noopener,noreferrer')` may be blocked silently by Facebook WebView
+**Expected:** WhatsApp opens, or user sees fallback (copy phone, open in browser prompt).
+**Actual:** No action, no error. Link silently fails in Facebook/Instagram in-app browsers.
+**Runtime evidence:** CustomersPage.tsx:122, PurchaseOrdersPage.tsx:341, InvoicesPage.tsx:399, SuppliersPage.tsx:1386, orders/page.tsx:562, invoices/page.tsx:303, SuppliersTab.tsx:298,499, StoresTab.tsx:466.
+**Blocker impact:** Medium — affects users who open portal links from social media. Low frequency for B2B users.
+
+---
+
 ## Consolidated Issue Count
 
-**141 issue entries** in this file (ISSUE-001 through ISSUE-153, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**155 issue entries** in this file (ISSUE-001 through ISSUE-167, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -4128,9 +4376,11 @@ Breakdown:
 - Credit/Customer agent wave 11: ISSUE-150..151 = 2 entries (0 HIGH, 2 MEDIUM)
 - Menu/Settings agent wave 12: 0 new issues (all findings = cross-cutting patterns already documented)
 - WhatsApp hardening wave 13: ISSUE-152..153 = 2 entries (0 HIGH, 1 MEDIUM, 1 LOW)
+- Portal auth deep audit wave 14: ISSUE-154..167 = 14 entries (1 CRITICAL, 5 HIGH, 7 MEDIUM, 1 LOW-implied)
 
 **All 6 agents complete. Deep cascading audit FINISHED.**
 **WhatsApp production hardening: 4 issues fixed (ISSUE-136, 137, 152, 153).**
+**Portal auth deep audit: 14 new issues discovered across retailer, supplier, superadmin login/registration flows.**
 
 ### Cross-Cutting Patterns Identified
 
