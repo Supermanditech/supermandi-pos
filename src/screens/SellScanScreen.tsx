@@ -2098,6 +2098,16 @@ export default function SellScanScreen({
       else if (detailItem.productId) stockUpdates.push({ key: detailItem.productId, stock: confirmedStock });
       if (detailItem.barcode) stockUpdates.push({ key: detailItem.barcode, stock: confirmedStock });
       if (stockUpdates.length > 0) upsertStockEntries(stockUpdates);
+      // ISSUE-042: Update stock in SkuItem arrays so search/list show correct value
+      const updateStock = (items: SkuItem[]) =>
+        items.map(i =>
+          (i.storeProductId === detailItem.storeProductId || i.barcode === detailItem.barcode)
+            ? { ...i, currentStock: confirmedStock }
+            : i
+        );
+      setCatalogItems(updateStock);
+      setAddResults(updateStock);
+      setStockRefreshTick((prev) => prev + 1);
       // SYNC-PRD-001: Refresh local product lists so updated name shows immediately
       if (nameChanged) {
         const updateName = (items: SkuItem[]) =>
