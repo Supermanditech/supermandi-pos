@@ -1660,7 +1660,13 @@ export default function SellScanScreen({
     // T-130: Save search term to history
     void saveSearchTerm(trimmed);
     setSearchHistoryVisible(false);
-    void onBarcodeScanned(trimmed, undefined, "keyboard");
+    // ISSUE-039/041: Only route to barcode handler if input looks like a barcode (numeric, 8+ chars).
+    // Non-barcode text (e.g. "scan", "milk") should only trigger text search, not the scan API.
+    // This prevents VALIDATION_ERROR banners and unnecessary rate limit consumption.
+    const looksLikeBarcode = /^\d{8,}$/.test(trimmed);
+    if (looksLikeBarcode) {
+      void onBarcodeScanned(trimmed, undefined, "keyboard");
+    }
     setAddQuery("");
     setAddExpanded(true);
     focusAddInput();

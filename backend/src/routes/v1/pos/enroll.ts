@@ -280,6 +280,12 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
         [codeHash]
       );
 
+      // ISSUE-037: Reactivate device on fingerprint-match re-enrollment (revoke sets active=false)
+      await client.query(
+        `UPDATE pos_devices SET active = true, last_seen_online = NOW(), updated_at = NOW() WHERE id = $1`,
+        [existingDeviceByFingerprint.id]
+      );
+
       // AUD-063-B FIX: Log re-enrollment with full context for audit trail
       // LIVE.SECRETS.ENROLLMENT_CODE_LOG_REDACTION.001: Redact enrollment code from logs
       log.info(`[Enroll] Idempotent re-enrollment: device=${existingDeviceByFingerprint.id} code=***REDACTED store=${store.id} matchType=fingerprint`);
@@ -398,6 +404,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
           // Update existing device with new token and metadata
           // FINDING-026: Reset token_expires_at on re-enrollment (90 days from now)
           // FINDING-028: Track re-enrollment for superadmin notification
+          // ISSUE-037: Set active=true on re-enrollment (revoke sets active=false)
           await client.query(
             `
             UPDATE pos_devices
@@ -411,6 +418,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
                 printing_mode = $8,
                 device_fingerprint = COALESCE($9, device_fingerprint),
                 enrollment_code = $12,
+                active = true,
                 last_seen_online = NOW(),
                 updated_at = NOW(),
                 re_enrolled = true,

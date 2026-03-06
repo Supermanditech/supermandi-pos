@@ -71,6 +71,9 @@ export async function authFetch(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
+  // ISSUE-035: Always include X-Requested-With for CSRF protection on bodyless DELETE/POST/PUT/PATCH
+  headers['X-Requested-With'] = 'XMLHttpRequest';
+
   // Add Content-Type for JSON if body exists and not already set
   // RET-B1-006: Skip for FormData — browser must auto-set multipart boundary
   if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {

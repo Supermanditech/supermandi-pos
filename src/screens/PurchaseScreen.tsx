@@ -364,11 +364,12 @@ export default function PurchaseScreen({
   }, [searchQuery, liveSuppliersReady, expandedSegment, fetchCatalog]);
 
   // POS-BUY-001: Initial catalog load when switching to suppliers mode
+  // ISSUE-067: Guard against catalogError to prevent infinite re-fetch loop
   useEffect(() => {
-    if (liveSuppliersReady && expandedSegment === "suppliers" && catalogProducts.length === 0 && !catalogLoading) {
+    if (liveSuppliersReady && expandedSegment === "suppliers" && catalogProducts.length === 0 && !catalogLoading && !catalogError) {
       fetchCatalog("", 1);
     }
-  }, [liveSuppliersReady, expandedSegment, catalogProducts.length, catalogLoading, fetchCatalog]);
+  }, [liveSuppliersReady, expandedSegment, catalogProducts.length, catalogLoading, catalogError, fetchCatalog]);
 
   // POS-BUY-001: Barcode scan → supplier product resolution
   const handleBuyBarcodeScan = useCallback(async (barcode: string) => {

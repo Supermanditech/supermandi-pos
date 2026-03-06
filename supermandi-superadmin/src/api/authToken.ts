@@ -206,8 +206,10 @@ export function hasValidSession(): boolean {
  */
 export function getAuthHeaders(): Record<string, string> {
   // ISSUE-MICRO-081: Add correlation ID for cross-service request tracing
+  // ISSUE-035: Include X-Requested-With for CSRF protection on all requests (incl. bodyless DELETE)
   const headers: Record<string, string> = {
     'X-Request-ID': crypto.randomUUID(),
+    'X-Requested-With': 'XMLHttpRequest',
   };
   const sessionToken = getSessionToken();
   if (sessionToken) {

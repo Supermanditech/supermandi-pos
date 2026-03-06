@@ -492,6 +492,13 @@ export default function PosRootLayout() {
     setScanNotice(null);
   }, [effectiveMode]);
 
+  // ISSUE-040: Auto-dismiss scan error/warning notices after 5 seconds
+  useEffect(() => {
+    if (!scanNotice || scanNotice.tone === "info") return;
+    const timer = setTimeout(() => setScanNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [scanNotice]);
+
   useEffect(() => {
     let cancelled = false;
 

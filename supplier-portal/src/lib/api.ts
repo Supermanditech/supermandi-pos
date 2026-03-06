@@ -177,8 +177,10 @@ export async function apiFetch<T>(
 
   // REQ.AUTH.API_WIRING_AND_CONTRACT_PARITY: Skip Content-Type for FormData (parity with retailer authFetch)
   // Browser must auto-set multipart boundary for file uploads
+  // ISSUE-035: Include X-Requested-With for CSRF protection on all requests
   const headers: Record<string, string> = {
     ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+    'X-Requested-With': 'XMLHttpRequest',
     ...(options.headers as Record<string, string>),
   };
 

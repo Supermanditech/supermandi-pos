@@ -150,6 +150,8 @@ const PaymentScreen = () => {
   // GO-LIVE-124: Track pending payment for network recovery
   const pendingPaymentRef = useRef<{ paymentId: string; saleId: string } | null>(null);
   const [loadingSale, setLoadingSale] = useState(false);
+  // ISSUE-076: Track sale creation error to prevent infinite retry loop
+  const [saleError, setSaleError] = useState<string | null>(null);
   const [loadingUpi, setLoadingUpi] = useState(false);
   // GL-CRIT-0086: Track when loading started for minimum display time
   const loadingSaleStartRef = useRef<number>(0);
@@ -354,10 +356,12 @@ const PaymentScreen = () => {
   }, [selectedMode, storeActive, upiVpa, allowedMethods]);
 
   useEffect(() => {
-    if (saleId || saleItems.length === 0 || loadingSale) return;
+    // ISSUE-076: Guard against infinite retry — stop if saleError is set
+    if (saleId || saleItems.length === 0 || loadingSale || saleError) return;
 
     let cancelled = false;
     setLoadingSale(true);
+    setSaleError(null);
     // GL-CRIT-0086: Track start time for minimum display
     loadingSaleStartRef.current = Date.now();
 
@@ -469,17 +473,20 @@ const PaymentScreen = () => {
           return;
         }
         if (error.message === "store_inactive") {
+          setSaleError("Store is inactive");
           Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
             { text: "OK", onPress: () => navigation.navigate("SellScan") }
           ]);
           return;
         }
         if (error.message === "store not found") {
+          setSaleError("Store not found");
           Alert.alert("Store Missing", "Store not found. Check Superadmin setup.");
           return;
         }
       }
-      Alert.alert("Sale Error", "Unable to start payment. Please try again.");
+      // ISSUE-076: Set error state to prevent infinite retry loop
+      setSaleError("Unable to start payment. Please try again.");
     }).finally(() => {
       if (cancelled) return;
       // GL-CRIT-0086: Ensure minimum display time to prevent flash
@@ -501,6 +508,7 @@ const PaymentScreen = () => {
     discountMinor,
     itemCount,
     loadingSale,
+    saleError,
     saleId,
     saleItems,
     selectedMode,
@@ -1256,6 +1264,22 @@ const PaymentScreen = () => {
           <Text style={{ color: colors.warningDark, fontSize: 13, marginLeft: 8, flex: 1 }}>
             {stalePriceCount} item(s) have prices loaded over 4 hours ago. Prices may have changed.
           </Text>
+        </View>
+      )}
+
+      {/* ISSUE-076: Sale creation error with retry */}
+      {saleError && !loadingSale && (
+        <View style={{ backgroundColor: colors.errorSoft ?? "#FEE2E2", paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center" }}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.error ?? "#DC2626"} />
+          <Text style={{ color: colors.error ?? "#DC2626", fontSize: 13, marginLeft: 8, flex: 1 }}>
+            {saleError}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setSaleError(null)}
+            style={{ backgroundColor: colors.error ?? "#DC2626", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, marginLeft: 8 }}
+          >
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Retry</Text>
+          </TouchableOpacity>
         </View>
       )}
 
