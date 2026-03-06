@@ -1009,7 +1009,7 @@ The supplier portal frontend likely expects a dashboard endpoint. Working suppli
 | **Severity** | HIGH |
 | **Platform** | SuperAdmin Web |
 | **Screen** | Supplier Product Management |
-| **Status** | DISCOVERED |
+| **Status** | FIXED (commits 9e4b6daf, 08d21c8f — removed ::uuid casts from approval audit trail; migration 172 changes columns to TEXT) |
 | **Impacted Layers** | API, DB, Business Logic |
 
 **Evidence:**
@@ -1722,7 +1722,7 @@ The `minAppVersion` row in screenshot 1 shows "(killed)" text and Global=OFF in 
 | **Platform** | POS App (Android) |
 | **Screen** | EnrollDeviceScreen → SellScan |
 | **Severity** | HIGH |
-| **Status** | DISCOVERED |
+| **Status** | FIXED (commit c07d463f — already implemented in enroll.ts lines 283-285, 407-421) |
 
 **Discovered:** CTO live testing 2026-03-06
 
@@ -4114,7 +4114,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (lines 306-313)
 **Severity:** HIGH
 **Category:** Auth / OTP flow
-**Status:** DISCOVERED
+**Status:** FIXED (commit 58b79409 — proactive idToken expiry warning timer + banner on details/documents steps)
 **Steps to reproduce:**
 1. Go to staging.supermandi.tech/retailer/register
 2. Enter phone, receive and verify OTP successfully
@@ -4167,7 +4167,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** backend/src/routes/v1/retailer-admin/registration.ts (lines 624-687)
 **Severity:** HIGH
 **Category:** Security + UX
-**Status:** DISCOVERED
+**Status:** FIXED (commit dd96c133 — distinguish TOKEN_EXPIRED from INVALID_TOKEN in registration endpoints)
 **Steps to reproduce:**
 1. Verify OTP with phone A
 2. Somehow submit with phone B's token (e.g., shared device)
@@ -4218,7 +4218,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 462-472)
 **Severity:** HIGH
 **Category:** Silent error
-**Status:** DISCOVERED
+**Status:** FIXED (commit fa7b7e07 — changed toast.success to toast.error in OTP verify fallback catch)
 **Steps to reproduce:**
 1. Register as supplier, submit details
 2. If primary `verifySupplierOtp` fails in the success path
@@ -4235,7 +4235,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 410-417)
 **Severity:** HIGH
 **Category:** Auth timing
-**Status:** DISCOVERED
+**Status:** FIXED (commit 58b79409 — proactive idToken expiry warning timer + banner, same fix as ISSUE-154)
 **Steps to reproduce:**
 1. Verify OTP on supplier registration
 2. Spend ~49 minutes on details form
@@ -4290,7 +4290,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** supermandi-superadmin/src/App.tsx (lines 361-381)
 **Severity:** HIGH
 **Category:** Session management
-**Status:** DISCOVERED
+**Status:** FIXED (commit 45f4d575 — progressive toast warnings at 3/4/5 consecutive failures before logout)
 **Steps to reproduce:**
 1. Login to SuperAdmin dashboard
 2. Network drops for extended period (or backend restarts)
@@ -4401,7 +4401,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 165-168)
 **Severity:** HIGH
 **Category:** Navigation safety gap
-**Status:** DISCOVERED
+**Status:** FIXED (commit 19967a35 — hasDocumentWork memo + expanded hasUnsavedDetails to include document uploads)
 **Steps to reproduce:**
 1. Supplier completes phone verify + business details → step='documents'
 2. Select and begin uploading pan_card (50% progress)
@@ -4421,7 +4421,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 75-82)
 **Severity:** HIGH
 **Category:** State persistence / UX
-**Status:** DISCOVERED
+**Status:** FIXED (commit 19967a35 — sessionDowngraded flag + blue info banner explaining re-verify needed)
 **Steps to reproduce:**
 1. Supplier completes details, uploads 2 of 4 required documents
 2. Hit F5 (refresh)
@@ -4520,7 +4520,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** backend/src/services/emailService.ts (lines 551-560)
 **Severity:** HIGH
 **Category:** Security / rate limiting
-**Status:** DISCOVERED
+**Status:** FIXED (commit 2bed6036 — Redis sorted set rate limiting with in-memory fallback)
 **Steps to reproduce:**
 1. Send 5 OTP emails to admin@example.com → hits hourly rate limit
 2. Backend restarts (deploy, crash, Cloud Run cold start)
@@ -4561,7 +4561,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Screen/Route:** All portals (landing, retailer-admin, supplier-portal, superadmin)
 **Severity:** HIGH
 **Category:** Browser compatibility
-**Status:** DISCOVERED
+**Status:** FIXED (subsumed by ISSUE-177 fix — commit 97143d24)
 **Steps to reproduce:**
 1. Share any portal link on Facebook or Instagram
 2. User opens in FB/IG in-app browser
@@ -4571,6 +4571,7 @@ state carryover, and long-path flow completion. One screen lock at a time.
 **Actual:** Zero WebView detection across entire codebase. Grep for FBAN, FBAV, Instagram in all JS/TS — zero results.
 **Runtime evidence:** No user-agent detection code exists. User-agent identifiers: `FBAN/`, `FBAV/`, `Instagram` in navigator.userAgent.
 **Blocker impact:** High — all WhatsApp CTAs, Firebase auth, and target="_blank" links fail silently for FB/IG traffic.
+**Resolution:** ISSUE-177 fix added isInAppBrowser() detection + warning banners to all 4 auth pages (supplier register, supplier login, retailer register, retailer login). This issue is a duplicate.
 
 ---
 
@@ -4775,7 +4776,7 @@ Ready for consolidated fix wave.
 **Screen/Route:** backend/services/auth-service/src/services/jwtService.ts (lines 176-182)
 **Severity:** HIGH
 **Category:** Auth / infrastructure
-**Status:** DISCOVERED
+**Status:** FIXED (commit 137de2cc — added clockTolerance: 30 to all JWT verify calls across 5 files)
 **Steps to reproduce:**
 1. Backend server clock is 30s ahead of client (possible on Cloud Run with NTP drift)
 2. Client issues fresh JWT with `iat = T`
@@ -4814,7 +4815,7 @@ Ready for consolidated fix wave.
 **Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 618-649)
 **Severity:** HIGH
 **Category:** Data integrity
-**Status:** DISCOVERED
+**Status:** FIXED (commit 2cd37a78 — submittingDocsRef guard prevents double-submit race condition)
 **Steps to reproduce:**
 1. Fill documents, click "Submit Application" twice rapidly
 2. First click: enters `handleSubmitDocuments`, starts uploading pan_card
@@ -4951,7 +4952,7 @@ Ready for consolidated fix wave.
 **Screen/Route:** backend/src/routes/v1/admin/adminAuth.ts (lines 425-428) + api-gateway/src/redis.ts
 **Severity:** HIGH
 **Category:** Security / token management
-**Status:** DISCOVERED
+**Status:** FIXED (commit 9615def8 — blacklist JWT on logout via Redis with TTL matching remaining token lifetime)
 **Steps to reproduce:**
 1. Admin logs in → JWT issued with 24h expiry
 2. Admin copies JWT from localStorage (or attacker intercepts it)
