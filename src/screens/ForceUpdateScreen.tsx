@@ -122,7 +122,7 @@ export default function ForceUpdateScreen() {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.message === "device_unauthorized" || error.message === "device_not_enrolled") {
-          await clearDeviceSession();
+          try { await clearDeviceSession(); } catch { /* best-effort */ }
           navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
           return;
         }

@@ -124,6 +124,8 @@ export default function PosRootLayout() {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
   const hidInputRef = useRef<TextInput>(null);
+  // ISSUE-129: Deferred force-navigation when PaymentScreen is on top
+  const pendingForceNavRef = useRef<"DeviceBlocked" | "ForceUpdate" | null>(null);
   // LIVE.POS.THEME.TOKENS_BRAND_PARITY.001: Dynamic theme colors
   const tc = useThemeColors();
   // STG-286: Dynamic styles for dark mode support
@@ -418,7 +420,7 @@ export default function PosRootLayout() {
       return true;
     }
     if (error.message === "device_unauthorized") {
-      await clearDeviceSession();
+      try { await clearDeviceSession(); } catch { /* best-effort */ }
       navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
       return true;
     }
@@ -499,6 +501,22 @@ export default function PosRootLayout() {
     return () => clearTimeout(timer);
   }, [scanNotice]);
 
+  // ISSUE-129: Execute deferred force-navigation when PosRootLayout regains focus
+  useEffect(() => {
+    if (!isFocused || !pendingForceNavRef.current) return;
+    const target = pendingForceNavRef.current;
+    pendingForceNavRef.current = null;
+    if (target === "DeviceBlocked") {
+      navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
+    } else if (target === "ForceUpdate") {
+      const meta = getDeviceMeta();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "ForceUpdate", params: { currentVersion: meta.appVersion ?? "unknown", requiredVersion: "unknown" } }],
+      });
+    }
+  }, [isFocused, navigation]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -562,12 +580,22 @@ export default function PosRootLayout() {
         // This runs asynchronously and caches results for 5 minutes
         void probeReadiness();
 
+        // ISSUE-129: Don't force-navigate when PaymentScreen/SuccessPrint is on top
+        // This would destroy an active transaction. Defer until PosRootLayout regains focus.
         if (status.deviceActive === false) {
+          if (!isFocused) {
+            pendingForceNavRef.current = "DeviceBlocked";
+            return;
+          }
           navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
           return;
         }
         // SA-P2-003: Force update screen when app version is below minimum
         if (status.forceUpdate) {
+          if (!isFocused) {
+            pendingForceNavRef.current = "ForceUpdate";
+            return;
+          }
           const meta = getDeviceMeta();
           navigation.reset({
             index: 0,
@@ -1142,7 +1170,8 @@ export default function PosRootLayout() {
   const isCashier = staffSession?.role === "CASHIER";
 
   // T-123: Session timeout — auto-logout staff after 35 min idle
-  const { resetTimer: resetSessionTimer } = useSessionTimeout(clearStaffSession);
+  // ISSUE-128: Pass isFocused so timeout doesn't fire during Payment/SuccessPrint screens
+  const { resetTimer: resetSessionTimer } = useSessionTimeout(clearStaffSession, isFocused);
 
   if (!staffSession) {
     return <StaffLoginScreen storeName={storeName} />;

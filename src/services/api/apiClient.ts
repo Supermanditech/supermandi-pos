@@ -367,7 +367,7 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
           }
         }
         // Refresh failed or unavailable — clear session (forces re-enrollment)
-        await clearDeviceSession();
+        try { await clearDeviceSession(); } catch { /* best-effort */ }
       }
       throw new ApiError(res.status, message, parsed);
     }

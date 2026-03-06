@@ -192,6 +192,8 @@ const PaymentScreen = () => {
   const submittingRef = useRef(false);
   // ISSUE-MICRO-068: Track if user dismissed stale price warning
   const priceWarningDismissedRef = useRef(false);
+  // ISSUE-133: Mirror mutable state into ref for unmount-only cleanup
+  const cleanupStateRef = useRef({ saleId: "", billRef: null as string | null, selectedMode: "UPI" as string, totalMinor: 0, currency: "INR" });
 
   const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
     if (error.message === "device_inactive") {
@@ -199,7 +201,7 @@ const PaymentScreen = () => {
       return true;
     }
     if (error.message === "device_unauthorized") {
-      await clearDeviceSession();
+      try { await clearDeviceSession(); } catch { /* best-effort */ }
       navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
       return true;
     }
@@ -641,26 +643,33 @@ const PaymentScreen = () => {
     return () => clearInterval(intervalId);
   }, [qrExpiresAt, selectedMode]);
 
+  // ISSUE-133: Keep cleanup ref in sync — avoid stale closures
+  useEffect(() => {
+    cleanupStateRef.current = { saleId: saleId ?? "", billRef, selectedMode, totalMinor, currency };
+  }, [saleId, billRef, selectedMode, totalMinor, currency]);
+
+  // ISSUE-133: Unmount-only cleanup — empty deps so payment mode switch does NOT cancel sale
   useEffect(() => {
     return () => {
-      if (!finalized.current && saleId) {
-        // Cancel the sale to prevent stock loss
-        void cancelSale({ saleId }).catch((error) => {
+      const s = cleanupStateRef.current;
+      if (!finalized.current && s.saleId) {
+        void cancelSale({ saleId: s.saleId }).catch((error) => {
           if (__DEV__) console.error("Failed to cancel sale on cleanup:", error);
         });
 
-        if (billRef) {
+        if (s.billRef) {
           void logPaymentEvent("PAYMENT_CANCELLED", {
             transactionId,
-            billId: billRef,
-            paymentMode: selectedMode,
-            amountMinor: totalMinor,
-            currency
+            billId: s.billRef,
+            paymentMode: s.selectedMode,
+            amountMinor: s.totalMinor,
+            currency: s.currency
           });
         }
       }
     };
-  }, [billRef, currency, selectedMode, saleId, totalMinor, transactionId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // AUD-060-B FIX: Block back navigation during payment processing to prevent cancel/pay race
   useEffect(() => {

@@ -250,6 +250,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
     setReason(null);
     setRefundMethod(null);
     setRefundResult(null);
+    setIdempotencyKey(uuidv4()); // ISSUE-087: Regenerate key for next return
     setStep("LOOKUP");
   }, []);
 

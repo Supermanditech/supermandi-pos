@@ -10,7 +10,8 @@ const IDLE_WARNING_MS = 30 * 60 * 1000; // 30 minutes
 const IDLE_LOGOUT_MS = 35 * 60 * 1000;  // 35 minutes
 const CHECK_INTERVAL_MS = 30000;         // Check every 30 seconds
 
-export function useSessionTimeout(onLogout: () => void) {
+// ISSUE-128: Accept isFocused flag — skip auto-logout when PaymentScreen is on top
+export function useSessionTimeout(onLogout: () => void, isFocused = true) {
   const lastActivity = useRef(Date.now());
   const warningShown = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -22,6 +23,13 @@ export function useSessionTimeout(onLogout: () => void) {
 
   useEffect(() => {
     const checkIdle = () => {
+      // ISSUE-128: Don't auto-logout when another screen (e.g. PaymentScreen) is on top
+      // The user may be actively completing a payment — treat as active
+      if (!isFocused) {
+        lastActivity.current = Date.now();
+        return;
+      }
+
       const idle = Date.now() - lastActivity.current;
 
       if (idle >= IDLE_LOGOUT_MS) {
@@ -54,7 +62,7 @@ export function useSessionTimeout(onLogout: () => void) {
       }
       subscription.remove();
     };
-  }, [onLogout, resetTimer]);
+  }, [onLogout, resetTimer, isFocused]);
 
   return { resetTimer };
 }

@@ -26,10 +26,14 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "DeviceBlocked">;
 const ICON_SIZE = 28;
 const ICON_WRAP_SIZE = 52;
 
+// ISSUE-073: Retry cooldown to prevent rapid retries
+const RETRY_COOLDOWN_MS = 3000;
+
 export default function DeviceBlockedScreen() {
   const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
   const [checking, setChecking] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
 
   // DEPLOY-390: Prevent Android back gesture from bypassing device blocked gate
   useEffect(() => {
@@ -38,15 +42,19 @@ export default function DeviceBlockedScreen() {
   }, []);
 
   const handleRetry = async () => {
-    // Check network before API call
+    if (cooldown) return; // ISSUE-073: Throttle rapid retries
+
+    // ISSUE-074: Check network before API call — differentiate "No Connection"
+    let isConnected = true;
     try {
       const netState = await NetInfo.fetch();
-      if (!netState.isConnected) {
-        Alert.alert("No Internet", "Please connect to the internet and try again.");
-        return;
-      }
+      isConnected = netState.isConnected ?? true;
     } catch {
       // NetInfo failed — proceed anyway
+    }
+    if (!isConnected) {
+      Alert.alert("No Connection", "Please connect to the internet and try again.");
+      return;
     }
 
     setChecking(true);
@@ -63,7 +71,7 @@ export default function DeviceBlockedScreen() {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.message === "device_unauthorized") {
-          await clearDeviceSession();
+          try { await clearDeviceSession(); } catch { /* best-effort */ }
           navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
           return;
         }
@@ -76,9 +84,19 @@ export default function DeviceBlockedScreen() {
           return;
         }
       }
-      Alert.alert("Check Failed", "Unable to verify device status. Please try again.");
+      // ISSUE-074: Differentiate network errors from server errors
+      const isNetworkError = error instanceof TypeError || (error instanceof Error && /network|fetch|timeout/i.test(error.message));
+      Alert.alert(
+        isNetworkError ? "No Connection" : "Check Failed",
+        isNetworkError
+          ? "Could not reach the server. Check your internet connection."
+          : "Unable to verify device status. Please try again."
+      );
     } finally {
       setChecking(false);
+      // ISSUE-073: Start cooldown timer
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), RETRY_COOLDOWN_MS);
     }
   };
 
@@ -194,13 +212,13 @@ export default function DeviceBlockedScreen() {
         </Text>
 
         <Pressable
-          style={[styles.button, checking && styles.buttonDisabled]}
+          style={[styles.button, (checking || cooldown) && styles.buttonDisabled]}
           onPress={handleRetry}
-          disabled={checking}
+          disabled={checking || cooldown}
           testID="device-blocked-check-button"
           accessibilityLabel={checking ? "Checking device status" : "Check again"}
           accessibilityRole="button"
-          accessibilityState={{ disabled: checking }}
+          accessibilityState={{ disabled: checking || cooldown }}
         >
           {checking ? (
             <View style={styles.checkingRow}>

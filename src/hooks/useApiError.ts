@@ -125,7 +125,7 @@ export function useApiError(options: UseApiErrorOptions = {}): UseApiErrorReturn
 
           // Check if re-enrollment needed
           if (requiresReauth(parsedError)) {
-            await clearDeviceSession();
+            try { await clearDeviceSession(); } catch { /* best-effort */ }
             navigation.dispatch(
               CommonActions.reset({
                 index: 0,
