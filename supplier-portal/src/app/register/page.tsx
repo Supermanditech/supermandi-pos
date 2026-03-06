@@ -74,6 +74,7 @@ function loadSavedSupRegState(): Partial<{
   state: string; pincode: string;
   idProofType: 'aadhaar' | 'pan' | 'driving_license';
   businessProofType: 'shop_license' | 'msme' | 'incorporation' | 'trade_license';
+  sessionDowngraded: boolean;
 }> {
   try {
     const raw = sessionStorage.getItem(SUP_REG_STORAGE_KEY);
@@ -83,7 +84,11 @@ function loadSavedSupRegState(): Partial<{
     if (data.step === 'otp') data.step = 'phone';
     // UNMAPPED.038: Don't restore 'details'/'documents' steps since idToken
     // is not persisted (security) — user must re-verify phone on page refresh
-    if (data.step === 'details' || data.step === 'documents') data.step = 'phone';
+    // ISSUE-171: Flag the downgrade so we can show a helpful message
+    if (data.step === 'details' || data.step === 'documents') {
+      data.sessionDowngraded = true;
+      data.step = 'phone';
+    }
     return data;
   } catch { return {}; }
 }
@@ -123,6 +128,8 @@ function RegisterPage() {
 
   // Step state
   const [step, setStep] = useState<Step>(saved.current.step || 'phone');
+  // ISSUE-171: Show message when step was downgraded due to session refresh
+  const [sessionDowngraded, setSessionDowngraded] = useState(!!saved.current.sessionDowngraded);
 
   // Step 1: Phone — pre-fill from login redirect, then sessionStorage, then empty
   const [phone, setPhone] = useState(searchParams.get('phone') || saved.current.phone || '');
@@ -172,10 +179,14 @@ function RegisterPage() {
   // LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001: Unsaved-change guard
   // Prevents accidental page close/refresh when user has entered business details
   // ISSUE-159: Suppress beforeunload during active form submission (isLoading)
-  // to prevent "Leave site?" dialog when POST is in-flight.
+  // ISSUE-170: Also track document uploads (any file selected = unsaved work)
+  const hasDocumentWork = useMemo(
+    () => Object.values(documents).some(d => d.file !== null || d.status === 'uploading' || d.status === 'uploaded'),
+    [documents],
+  );
   const hasUnsavedDetails = useMemo(
-    () => !isLoading && (step === 'details' || step === 'documents') && (businessName !== '' || ownerName !== '' || email !== ''),
-    [step, businessName, ownerName, email, isLoading],
+    () => !isLoading && (step === 'details' || step === 'documents') && (businessName !== '' || ownerName !== '' || email !== '' || hasDocumentWork),
+    [step, businessName, ownerName, email, isLoading, hasDocumentWork],
   );
   useUnsavedChanges(hasUnsavedDetails);
 
@@ -819,6 +830,13 @@ function RegisterPage() {
       {/* Step 1: Phone Number - Centered card for phone entry */}
       {step === 'phone' && (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+          {/* ISSUE-171: Session downgrade notification */}
+          {sessionDowngraded && (
+            <div style={{ background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 14 }}>
+              <strong>Session expired.</strong> Please verify your phone again to continue. Your business details are saved.
+              {' '}<button type="button" onClick={() => setSessionDowngraded(false)} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', textDecoration: 'underline', fontSize: 14 }}>Dismiss</button>
+            </div>
+          )}
           <h3 className="text-lg font-semibold text-slate-900 mb-2">Verify your phone number</h3>
           <p className="text-slate-600 text-sm mb-6">
             We&apos;ll send a verification code to confirm your identity.
