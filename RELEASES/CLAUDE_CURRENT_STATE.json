@@ -1,7 +1,7 @@
 {
-  "version": "131.0",
-  "lastUpdated": "2026-03-07T22:00:00Z",
-  "currentPhase": "WAVE_19_FIRST_MINI_BATCH_COMPLETE: 3 non-POS HIGHs addressed (1 already fixed, 2 new fixes). Reiteration passed. 79 POS device-dep HIGHs parked. Stopped for CTO review.",
+  "version": "133.0",
+  "lastUpdated": "2026-03-07T23:45:00Z",
+  "currentPhase": "WAVE_20_G6_COMPLETE_AWAITING_CTO",
   "currentTicket": null,
   "ticketQueue": [],
   "controlGate": {
@@ -12,18 +12,159 @@
       "total": 191,
       "resolved": 47,
       "pending": 144,
-      "pendingBySeverity": {"CRITICAL": 0, "HIGH": 79, "MEDIUM": 56, "LOW": 5, "UNKNOWN": 4},
-      "nextIssueId": "ISSUE-204"
+      "pendingBySeverity": {"CRITICAL": 0, "HIGH": 80, "MEDIUM": 56, "LOW": 5, "UNKNOWN": 3},
+      "nextIssueId": "ISSUE-204",
+      "countCorrectionNote": "HIGH corrected 79→80 (ISSUE-056 undercounted), UNKNOWN corrected 4→3 (ISSUE-178 confirmed FIXED/subsumed)"
     }
   },
   "wave19": {
     "scope": "HIGH-only, non-POS, non-device-dependent",
     "implementableNow": [],
     "implementedThisBatch": ["ISSUE-035 (already fixed)", "ISSUE-057", "ISSUE-063"],
-    "posDeviceDepParked": 79,
+    "posDeviceDepParked": 80,
     "deployForbidden": true,
     "apkRebuildForbidden": true,
     "bundledDeployPrepared": true
+  },
+  "wave20": {
+    "phase": "WAVE_20_ENVIRONMENT_ALIGNMENT",
+    "status": "ENVIRONMENT_ALIGNMENT_PENDING_OPERATOR",
+    "productionDeployForbidden": true,
+    "mediumLowFrozen": true,
+    "authoritativeCountsLocked": true,
+    "totalHighPending": 80,
+    "byPlatform": {
+      "POS": 75,
+      "SUPPLIER": 4,
+      "SUPERADMIN": 1
+    },
+    "bySubsystem": {
+      "startup/session/enrollment": 11,
+      "sell/scan/search": 23,
+      "stock/inventory": 6,
+      "payment/receipt/print": 12,
+      "reorder/buy/purchase": 11,
+      "credit/customer/dues": 6,
+      "history/reports": 2,
+      "returns": 1,
+      "navigation/layout": 3,
+      "chat/ai": 4,
+      "uncategorized": 1
+    },
+    "backendDependent": 28,
+    "posOnlyFrontend": 52,
+    "stagingBaseline": {
+      "currentMainSha": "67604ac5",
+      "lastDeployedSha": "d05efbee",
+      "backendChangedFiles": 15,
+      "posChangedFiles": 31,
+      "webPortalChangedFiles": 10,
+      "stagingRedeployRequired": true,
+      "apkRebuildRequired": true,
+      "redeployScope": "backend + all 3 web portals + POS APK"
+    },
+    "executionClusters": [
+      {"id": "C1", "name": "Core sell flow blockers", "issues": 8, "scope": "ISSUE-051,066,068 (payment blocker) + ISSUE-042,043,046 (stock/cart) + ISSUE-039,040 (scan errors)"},
+      {"id": "C2", "name": "Scan/search/voice UX", "issues": 8, "scope": "ISSUE-041,048,049,052,071,083,110,111"},
+      {"id": "C3", "name": "Payment/receipt hardening", "issues": 6, "scope": "ISSUE-076,077,087,107,128,133"},
+      {"id": "C4", "name": "Stock/inventory fixes", "issues": 6, "scope": "ISSUE-050,065,070,091,092,114"},
+      {"id": "C5", "name": "Startup/enrollment/session", "issues": 11, "scope": "ISSUE-073,074,075,079,080,081,089,090,105,108,109"},
+      {"id": "C6", "name": "Purchase/reorder flow", "issues": 7, "scope": "ISSUE-060,062,064,078,093,094,125 (POS only)"},
+      {"id": "C7", "name": "GRN/buy hardening", "issues": 4, "scope": "ISSUE-095,096,115,116"},
+      {"id": "C8", "name": "Credit/customer/dues", "issues": 6, "scope": "ISSUE-085,086,097,098,099,118"},
+      {"id": "C9", "name": "Navigation/layout/misc", "issues": 8, "scope": "ISSUE-044,045,053,058,082,084,112,113"},
+      {"id": "C10", "name": "Chat/AI + utilities", "issues": 6, "scope": "ISSUE-056,059,100,101,102,129"},
+      {"id": "C11", "name": "Reports/print/barcode", "issues": 5, "scope": "ISSUE-069,104,106,117,178_already_fixed"},
+      {"id": "C12", "name": "Supplier registration", "issues": 4, "scope": "ISSUE-061,067,161,171"},
+      {"id": "C13", "name": "Web portal detection", "issues": 1, "scope": "moved_to_resolved_ISSUE-178"}
+    ],
+    "rebuildCadence": "One APK rebuild per 2-3 clusters (8-15 issues). Estimated 4-5 rebuilds total.",
+    "queueFile": "scripts/wave20_high_queue.json",
+    "environmentAlignment": {
+      "status": "G6_COMPLETE",
+      "requiredShaFull": "3b021a53b79dda4168b06d24142350a6eba3bdd2",
+      "requiredShaShort": "3b021a53",
+      "gates": {
+        "G1_truthLocked": true,
+        "G2_stagingRedeployed": true,
+        "G2_deployRunId": "22784036481",
+        "G2a_deployVerificationPassed": true,
+        "G2a_verifyRunId": "22784510485",
+        "G3_stagingShaVerified": true,
+        "G3_verifiedSha": "3b021a5",
+        "G4_baselineApkBuilt": true,
+        "G4_apkSizeBytes": 105225774,
+        "G5_apkTruthVerified": "PASS",
+        "G5_runtimeSha": "3b021a53",
+        "G5_runtimeBuildTime": "2026-03-06 22:34:56 UTC",
+        "G5_packageName": "com.supermanditech.supermandipos",
+        "G5_lanLeakCheck": "PASS",
+        "G5_stagingUrlPresent": "PASS",
+        "G6_c1BaselineRuntimeRecheck": true,
+        "G6_completedAt": "2026-03-07T23:45:00Z",
+        "G6_device": "23106RN0DA (TG8HCYTGGQT885OF)",
+        "G6_store": "SuperMandi Test Store (a6c43ede-b14f-4b1a-973f-c334ca696f39)",
+        "G6_staff": "Raju Manager (7737914383)"
+      },
+      "currentApkOnDevice": {"sha": "3b021a53", "installedAt": "2026-03-07T23:13:00Z"},
+      "c1ImplementationBlocked": true,
+      "blockReason": "Awaiting CTO instruction to open C1 implementation"
+    },
+    "g6BaselineResults": {
+      "sha": "3b021a53",
+      "testedAt": "2026-03-07T23:45:00Z",
+      "device": "Redmi 23106RN0DA",
+      "store": "SuperMandi Test Store",
+      "results": {
+        "ISSUE-039": {
+          "title": "VALIDATION_ERROR banner on search",
+          "reproduces": "YES_INTERMITTENT",
+          "detail": "Fires on first search keystroke of new session, auto-dismisses after ~5s. Does not fire on subsequent searches in same session."
+        },
+        "ISSUE-040": {
+          "title": "Scan error banner never auto-dismisses",
+          "reproduces": "NO",
+          "detail": "Banner auto-dismisses after ~5s. Original report said it persisted indefinitely. Behavior changed on this build."
+        },
+        "ISSUE-042": {
+          "title": "Stock count inconsistency same product",
+          "reproduces": "YES",
+          "detail": "Stock updated to 10 via product edit modal, but search results still show 0. Dual data source confirmed."
+        },
+        "ISSUE-043": {
+          "title": "Zero-stock product can be added to cart",
+          "reproduces": "PARTIAL",
+          "detail": "Zero-stock correctly blocked on direct tap. But after editing stock to 10, cart shows qty 0 (stale). Product added to cart with inconsistent stock."
+        },
+        "ISSUE-046": {
+          "title": "Zero-stock race condition inconsistent guard",
+          "reproduces": "YES",
+          "detail": "First add succeeds (guard uses edited/stale value). After remove + re-tap, 'No stock' blocks (guard uses fresh 0 value). Inconsistent behavior confirmed."
+        },
+        "ISSUE-051": {
+          "title": "Complete Payment button non-functional",
+          "reproduces": "YES",
+          "detail": "Button does not respond to tap. saleId is null because createSale() failed on mount. No POST /api/v1/pos/sales in backend logs."
+        },
+        "ISSUE-066": {
+          "title": "End-to-end sell checkout broken",
+          "reproduces": "YES",
+          "detail": "No payment method works. Screen locks after reaching payment. Cart locked, cannot go back or complete."
+        },
+        "ISSUE-068": {
+          "title": "createSale() fails on variant resolution",
+          "reproduces": "CONFIRMED_CODE",
+          "detail": "No POST /sales in backend logs. createSale() fails at frontend or returns error. saleId stays null, blocking Complete Payment. Root cause: product metadata/variant resolution chain likely fails for sell-first-onboarded products."
+        }
+      },
+      "summary": {
+        "totalTested": 8,
+        "reproduces": 6,
+        "doesNotReproduce": 1,
+        "partial": 1,
+        "criticalBlocker": "ISSUE-051/066/068 payment chain — no sales can complete"
+      }
+    }
   },
   "liveTestingToolchain": {
     "status": "DISCOVERY_COMPLETE_PENDING_LOCKED_IMPLEMENTATION",
