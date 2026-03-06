@@ -4027,9 +4027,52 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-150
+- **Severity:** MEDIUM
+- **Screen/Route:** CustomerListScreen (src/screens/CustomerListScreen.tsx)
+- **Status:** DISCOVERED
+- **Category:** Missing try-catch — form locks on error
+
+**Description:** `handleSubmitAdd` at lines 140-163 calls `await createCustomer(...)` without a try-catch block. If `createCustomer` throws an uncaught exception (e.g., network error not handled by the API layer), `setFormSubmitting(false)` at line 157 never executes. The submit button remains disabled (`disabled={formSubmitting}`), locking the form permanently until the modal is closed and reopened.
+
+**Steps to reproduce:**
+1. Open CustomerListScreen, tap "Add Customer"
+2. Fill form with valid name and phone
+3. Kill network connection
+4. Tap submit — `createCustomer` throws
+5. `setFormSubmitting(false)` never runs
+6. Button stays disabled, no error feedback shown
+**Expected:** Error caught, form unlocked, user sees error message.
+**Actual:** Unhandled rejection, form stays in submitting state permanently.
+**Runtime evidence:** CustomerListScreen.tsx:140-163. No try-catch around `createCustomer`. `setFormSubmitting(false)` at line 157 only reachable on success path.
+**Blocker impact:** Medium — form becomes unusable until modal is closed. No data corruption.
+
+---
+
+## ISSUE-151
+- **Severity:** MEDIUM
+- **Screen/Route:** BulkPurchaseCreditScreen (src/screens/BulkPurchaseCreditScreen.tsx)
+- **Status:** DISCOVERED
+- **Category:** Missing loading state + double-submit guard on credit application
+
+**Description:** `applyForCredit` at lines 102-118 sends a POST request to `/api/v1/pos/credit/apply` inside an Alert callback, but has no loading state or double-submit guard. The user can dismiss the Alert, tap "Apply Now" again, and trigger a second Alert while the first API call is still in flight. Additionally, the catch block is empty (no error variable captured), losing diagnostic information. `fetchOffers()` is called fire-and-forget after success without error handling — if refresh fails, the screen shows stale data.
+
+**Steps to reproduce:**
+1. Open BulkPurchaseCreditScreen
+2. Tap "Apply Now" on an offer → Alert appears
+3. Tap "Apply" → API call starts, Alert dismisses
+4. Immediately tap "Apply Now" again → second Alert appears
+5. Tap "Apply" again → duplicate API call
+**Expected:** Loading state shown, button disabled during API call, error details preserved.
+**Actual:** No loading indicator, button remains tappable, duplicate applications possible.
+**Runtime evidence:** BulkPurchaseCreditScreen.tsx:102-118. No `applying` state, no ref guard, empty catch block.
+**Blocker impact:** Medium — duplicate credit applications. Backend may have idempotency, but client gives no feedback.
+
+---
+
 ## Consolidated Issue Count
 
-**137 issue entries** in this file (ISSUE-001 through ISSUE-149, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**139 issue entries** in this file (ISSUE-001 through ISSUE-151, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -4042,17 +4085,19 @@ Breakdown:
 - Reorder/Order agent wave 7: ISSUE-141..144 = 4 entries (0 HIGH, 3 MEDIUM, 1 LOW)
 - Modal/Component agent wave 8: ISSUE-145..147 = 3 entries (1 HIGH, 2 MEDIUM)
 - Purchase agent wave 9: ISSUE-148 = 1 entry (0 HIGH, 1 MEDIUM)
-- History/Report agent wave 10: ISSUE-149 = 1 entry (0 HIGH, 1 MEDIUM) [remaining agents pending]
+- History/Report agent wave 10: ISSUE-149 = 1 entry (0 HIGH, 1 MEDIUM)
+- Credit/Customer agent wave 11: ISSUE-150..151 = 2 entries (0 HIGH, 2 MEDIUM) [1 agent remaining]
 
 ### Cross-Cutting Patterns Identified
 
 | Pattern | Severity | Affected Screens | Note |
 |---------|----------|-----------------|------|
-| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen, AddStoreProductModal, PurchaseScreen, BillDetailScreen | Only PaymentScreen uses `submittingRef` for synchronous guard |
+| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen, AddStoreProductModal, PurchaseScreen, BillDetailScreen, BulkPurchaseCreditScreen | Only PaymentScreen uses `submittingRef` for synchronous guard |
 | `clearDeviceSession()` throw in catch blocks | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen, PaymentScreen | Same bug in 3 screens — shared `handleDeviceAuthError` pattern |
 | `onSubmitEditing` bypasses `disabled` guard | LOW | StaffLoginScreen, SuccessPrintScreenV2 | Keyboard Enter can fire when button is disabled |
 | AbortError misclassification from `fetchUiStatusStrict` | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen | AbortError (DOMException) not caught by string-based error detection |
 | Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal, PurchaseScreen, DailyReportScreen | No request cancellation on unmount or filter/date change |
 | Dual-effect race on async readiness flag | MEDIUM | EditReorderModal, PurchaseScreen | Two effects both trigger fetch when a readiness flag flips — duplicate API calls |
+| Missing try-catch on async mutation | MEDIUM | CustomerListScreen | Unhandled rejection locks form permanently |
 
 Ready for consolidated fix wave.
