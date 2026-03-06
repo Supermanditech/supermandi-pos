@@ -1168,7 +1168,7 @@ adminSuppliersRouter.post(
             // Approve the product
             await client.query(
               `UPDATE catalog.supplier_products
-               SET approval_status = 'approved', approved_at = NOW(), approved_by = $2::uuid
+               SET approval_status = 'approved', approved_at = NOW(), approved_by = $2
                WHERE id = $1::uuid`,
               [productId, adminId]
             );
