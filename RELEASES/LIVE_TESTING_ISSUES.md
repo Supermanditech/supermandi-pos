@@ -4086,7 +4086,10 @@ Breakdown:
 - Modal/Component agent wave 8: ISSUE-145..147 = 3 entries (1 HIGH, 2 MEDIUM)
 - Purchase agent wave 9: ISSUE-148 = 1 entry (0 HIGH, 1 MEDIUM)
 - History/Report agent wave 10: ISSUE-149 = 1 entry (0 HIGH, 1 MEDIUM)
-- Credit/Customer agent wave 11: ISSUE-150..151 = 2 entries (0 HIGH, 2 MEDIUM) [1 agent remaining]
+- Credit/Customer agent wave 11: ISSUE-150..151 = 2 entries (0 HIGH, 2 MEDIUM)
+- Menu/Settings agent wave 12: 0 new issues (all findings = cross-cutting patterns already documented)
+
+**All 6 agents complete. Deep cascading audit FINISHED.**
 
 ### Cross-Cutting Patterns Identified
 
@@ -4096,7 +4099,7 @@ Breakdown:
 | `clearDeviceSession()` throw in catch blocks | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen, PaymentScreen | Same bug in 3 screens — shared `handleDeviceAuthError` pattern |
 | `onSubmitEditing` bypasses `disabled` guard | LOW | StaffLoginScreen, SuccessPrintScreenV2 | Keyboard Enter can fire when button is disabled |
 | AbortError misclassification from `fetchUiStatusStrict` | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen | AbortError (DOMException) not caught by string-based error detection |
-| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal, PurchaseScreen, DailyReportScreen | No request cancellation on unmount or filter/date change |
+| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal, PurchaseScreen, DailyReportScreen, ReorderSettingsScreen, PrinterSettingsScreen, MenuScreen | No request cancellation on unmount or filter/date change |
 | Dual-effect race on async readiness flag | MEDIUM | EditReorderModal, PurchaseScreen | Two effects both trigger fetch when a readiness flag flips — duplicate API calls |
 | Missing try-catch on async mutation | MEDIUM | CustomerListScreen | Unhandled rejection locks form permanently |
 
