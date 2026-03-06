@@ -1,7 +1,7 @@
 {
   "version": "123.0",
   "lastUpdated": "2026-03-06T08:40:00Z",
-  "currentPhase": "LOCKED_IMPLEMENTATION_AND_REITERATION: Deep cascading POS audit complete (139 issue entries). Implement findings with production-grade git discipline, then reiterate and deploy-gate.",
+  "currentPhase": "LOCKED_IMPLEMENTATION_AND_REITERATION: 30 issues implemented (batches 1-5, ee37b5af). Control gate: truth-sync + reiteration before Wave 6.",
   "currentTicket": null,
   "ticketQueue": [],
   "liveTestingToolchain": {
@@ -4903,5 +4903,65 @@
       "Tomorrow locked live testing execution"
     ],
     "handoffFile": "RELEASES/CLAUDE_NEXT_ACTION_IMPLEMENT_NOW_TEST_TOMORROW_2026-03-06.md"
+  },
+  "liveTestingImplementation": {
+    "status": "IN_PROGRESS_WAVE6_PENDING",
+    "lastTruthSync": "2026-03-06T12:00:00Z",
+    "headSha": "ee37b5af",
+    "baseSha": "743ca0c5",
+    "batches": {
+      "batch1": {
+        "sha": "c07d463f",
+        "message": "fix(live): batch 1 — 7 critical live-testing issues",
+        "issuesFixed": ["ISSUE-035","ISSUE-037","ISSUE-039","ISSUE-040","ISSUE-041","ISSUE-051","ISSUE-066","ISSUE-067","ISSUE-076"],
+        "filesChanged": ["backend/src/routes/v1/pos/enroll.ts","retailer-admin/src/lib/api.ts","src/screens/PaymentScreen.tsx","src/screens/PosRootLayout.tsx","src/screens/PurchaseScreen.tsx","src/screens/SellScanScreen.tsx","supermandi-superadmin/src/api/authToken.ts","supplier-portal/src/lib/api.ts"],
+        "typecheckPass": true
+      },
+      "batch2": {
+        "sha": "8bc85fa9",
+        "message": "fix(live): batch 2 — 6 critical live-testing issues + cross-cutting hardening",
+        "issuesFixed": ["ISSUE-073","ISSUE-074","ISSUE-087","ISSUE-128","ISSUE-129","ISSUE-133"],
+        "crossCutting": "clearDeviceSession() wrapped in try/catch across ForceUpdateScreen, PaymentScreen, PosRootLayout, useApiError, apiClient",
+        "filesChanged": ["src/hooks/useApiError.ts","src/hooks/useSessionTimeout.ts","src/screens/DeviceBlockedScreen.tsx","src/screens/ForceUpdateScreen.tsx","src/screens/PaymentScreen.tsx","src/screens/PosRootLayout.tsx","src/screens/ReturnScreen.tsx","src/services/api/apiClient.ts"],
+        "typecheckPass": true
+      },
+      "batch3": {
+        "sha": "0a8b0670",
+        "message": "fix(live): batch 3 — 7 hardening fixes across POS screens",
+        "issuesFixed": ["ISSUE-075","ISSUE-077","ISSUE-088","ISSUE-105","ISSUE-108","ISSUE-109"],
+        "filesChanged": ["src/screens/DeviceBlockedScreen.tsx","src/screens/EnrollDeviceScreen.tsx","src/screens/PaymentScreen.tsx","src/screens/ReturnScreen.tsx","src/screens/ShiftScreen.tsx","src/screens/SplashScreen.tsx"],
+        "typecheckPass": true
+      },
+      "batch4": {
+        "sha": "bd392571",
+        "message": "fix(live): batch 4 — 4 issues + BackHandler for 5 menu sub-screens",
+        "issuesFixed": ["ISSUE-085","ISSUE-097","ISSUE-112","ISSUE-125"],
+        "filesChanged": ["src/screens/BnplDuesScreen.tsx","src/screens/CreditScreen.tsx","src/screens/CustomerListScreen.tsx","src/screens/DailyClosingScreen.tsx","src/screens/EnrollDeviceScreen.tsx","src/screens/KhataScreen.tsx","src/screens/MenuScreen.tsx","src/screens/PrinterSettingsScreen.tsx","src/screens/ShiftScreen.tsx"],
+        "typecheckPass": true
+      },
+      "batch5": {
+        "sha": "ee37b5af",
+        "message": "fix(live): batch 5 — StaffLogin hardening, phone format fix, cost label",
+        "issuesFixed": ["ISSUE-080","ISSUE-081","ISSUE-099","ISSUE-113"],
+        "filesChanged": ["src/screens/OverdueDuesScreen.tsx","src/screens/SalesStatementScreen.tsx","src/screens/StaffLoginScreen.tsx"],
+        "typecheckPass": true
+      }
+    },
+    "totalIssuesImplemented": 30,
+    "issuesSkippedAlreadyHandled": {
+      "ISSUE-089": "ForceUpdateScreen already has 15s AbortController timeout + 3s cooldown",
+      "ISSUE-090": "ForceUpdateScreen button disabled during checking state",
+      "ISSUE-091": "InwardScreen handleQtyBlur/handlePriceBlur already reject <=0",
+      "ISSUE-093": "BuyScreen has shouldStopPagination + MAX_PAGINATION_PAGE=100 cap",
+      "ISSUE-104": "OpeningStockScreen interval cleared in finally block (STG-455)",
+      "ISSUE-106": "BarcodeSheetScreen has finally { setActionLoading(null) } on both handlers"
+    },
+    "deployGates": {
+      "webBackendRedeployNeeded": true,
+      "webBackendReason": "batch1 changed backend/src/routes/v1/pos/enroll.ts + 3 portal api.ts files",
+      "posApkRebuildNeeded": true,
+      "posApkReason": "batches 1-5 changed 20+ POS screen files",
+      "reiterationStatus": "PENDING"
+    }
   }
 }
