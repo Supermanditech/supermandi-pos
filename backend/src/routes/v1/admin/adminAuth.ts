@@ -353,7 +353,7 @@ adminAuthRouter.get("/auth/check", (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'] }) as { email: string; role: string };
+    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'], clockTolerance: 30 }) as { email: string; role: string };
     return res.json({
       valid: true,
       admin: {
@@ -387,7 +387,7 @@ adminAuthRouter.post("/auth/refresh", (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'] }) as { email: string; role: string; type: string };
+    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'], clockTolerance: 30 }) as { email: string; role: string; type: string };
 
     // Issue new token with fresh expiry
     const newToken = jwt.sign(

@@ -192,6 +192,7 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: JWT_ISSUER,
       algorithms: ['HS256'],
+      clockTolerance: 30, // ISSUE-187: 30s tolerance for Cloud Run NTP drift
     }) as JwtPayload;
 
     // Store decoded payload on request for logging/debugging

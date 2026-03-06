@@ -82,6 +82,7 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: JWT_ISSUER,
       algorithms: ['HS256'],
+      clockTolerance: 30, // ISSUE-187: 30s tolerance for Cloud Run NTP drift
     }) as JwtPayload;
 
     // Validate required claims

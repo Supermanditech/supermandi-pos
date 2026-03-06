@@ -179,6 +179,7 @@ export function verifyAccessTokenWithError(token: string): JwtVerifyResult {
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
       algorithms: ['HS256'],
+      clockTolerance: 30, // ISSUE-187: 30s tolerance for Cloud Run NTP drift
     }) as jwt.JwtPayload;
 
     // Validate required fields
@@ -244,6 +245,7 @@ export function verifyRefreshTokenWithError(token: string): RefreshTokenVerifyRe
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
       algorithms: ['HS256'],
+      clockTolerance: 30, // ISSUE-187: 30s tolerance for Cloud Run NTP drift
     }) as jwt.JwtPayload;
 
     // Validate it's a refresh token
@@ -376,6 +378,7 @@ export function verifyServiceTokenWithError(token: string): ServiceTokenVerifyRe
     const decoded = jwt.verify(token, config.jwt.serviceTokenSecret, {
       issuer: config.jwt.issuer,
       algorithms: ['HS256'],
+      clockTolerance: 30, // ISSUE-187: 30s tolerance for Cloud Run NTP drift
     }) as jwt.JwtPayload;
 
     // Validate it's a service token
