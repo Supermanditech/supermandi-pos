@@ -3986,9 +3986,30 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-148
+- **Severity:** MEDIUM
+- **Screen/Route:** PurchaseScreen (src/screens/PurchaseScreen.tsx)
+- **Status:** DISCOVERED
+- **Category:** Dual-effect race — duplicate catalog fetch on supplier ready
+
+**Description:** Two separate `useEffect` hooks both call `fetchCatalog()` when `liveSuppliersReady` flips to true. The search effect at line 352-364 fires because `fetchCatalog` (in its deps) is recreated when `liveSuppliersReady` changes (it's in `fetchCatalog`'s deps at line 348). The initial load effect at line 367-371 also fires because `liveSuppliersReady` is directly in its deps. Both effects call `fetchCatalog("", 1)` / `fetchCatalog(searchQuery, 1)` concurrently, causing duplicate API requests. The initial load has a guard (`catalogProducts.length === 0 && !catalogLoading`) but both fire before either response sets `catalogLoading=true` (React state is async).
+
+**Steps to reproduce:**
+1. Open PurchaseScreen, switch to suppliers segment
+2. `liveSuppliersReady` starts false (backend health check pending)
+3. Backend responds → `liveSuppliersReady` flips true
+4. Both search effect and initial load effect fire → two `getBuyCatalog` API calls
+5. Second response overwrites first (or vice versa, depending on timing)
+**Expected:** Single catalog fetch when suppliers become ready.
+**Actual:** Two concurrent fetches due to dual-effect pattern with overlapping triggers.
+**Runtime evidence:** PurchaseScreen.tsx:348 (`fetchCatalog` deps: `[liveSuppliersReady]`), :352-364 (search effect with `fetchCatalog` in deps), :367-371 (initial load effect with `liveSuppliersReady` in deps).
+**Blocker impact:** Low — functional but wasteful. Same pattern as ISSUE-141 (EditReorderModal).
+
+---
+
 ## Consolidated Issue Count
 
-**135 issue entries** in this file (ISSUE-001 through ISSUE-147, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**136 issue entries** in this file (ISSUE-001 through ISSUE-148, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -3999,16 +4020,18 @@ Breakdown:
 - Deep agent audit wave 5: ISSUE-114..119 = 6 entries (5 HIGH, 1 MEDIUM)
 - Deep cascading audit wave 6: ISSUE-120..140 = 21 entries (4 HIGH, 14 MEDIUM, 3 LOW)
 - Reorder/Order agent wave 7: ISSUE-141..144 = 4 entries (0 HIGH, 3 MEDIUM, 1 LOW)
-- Modal/Component agent wave 8: ISSUE-145..147 = 3 entries (1 HIGH, 2 MEDIUM) [remaining agents pending]
+- Modal/Component agent wave 8: ISSUE-145..147 = 3 entries (1 HIGH, 2 MEDIUM)
+- Purchase agent wave 9: ISSUE-148 = 1 entry (0 HIGH, 1 MEDIUM) [remaining agents pending]
 
 ### Cross-Cutting Patterns Identified
 
 | Pattern | Severity | Affected Screens | Note |
 |---------|----------|-----------------|------|
-| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen, AddStoreProductModal | Only PaymentScreen uses `submittingRef` for synchronous guard |
+| State-only double-submit guard (no ref) | MEDIUM | InwardScreen, ReturnScreen, KhataScreen, GRNScreen, OpeningStockScreen, BnplDuesScreen, AddStoreProductModal, PurchaseScreen | Only PaymentScreen uses `submittingRef` for synchronous guard |
 | `clearDeviceSession()` throw in catch blocks | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen, PaymentScreen | Same bug in 3 screens — shared `handleDeviceAuthError` pattern |
 | `onSubmitEditing` bypasses `disabled` guard | LOW | StaffLoginScreen, SuccessPrintScreenV2 | Keyboard Enter can fire when button is disabled |
 | AbortError misclassification from `fetchUiStatusStrict` | MEDIUM | ForceUpdateScreen, DeviceBlockedScreen | AbortError (DOMException) not caught by string-based error detection |
-| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal | No request cancellation on unmount or filter change |
+| Missing AbortController on async loads | LOW | EditReorderModal, OrderHistoryScreen, VariantPickerModal, PurchaseCartModal, AddStoreProductModal, PurchaseScreen | No request cancellation on unmount or filter change |
+| Dual-effect race on async readiness flag | MEDIUM | EditReorderModal, PurchaseScreen | Two effects both trigger fetch when a readiness flag flips — duplicate API calls |
 
 Ready for consolidated fix wave.
