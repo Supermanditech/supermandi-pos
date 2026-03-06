@@ -539,7 +539,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminTok
     // Audit log — use valid entity_type/action per chk_approval_logs constraints
     await pool.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, changes)
-       VALUES ('supplier', $1::uuid, 'edit', NULL, NULL, $2::uuid, $3::jsonb)`,
+       VALUES ('supplier', $1::uuid, 'edit', NULL, NULL, $2, $3::jsonb)`,
       [supplierId, adminId, JSON.stringify({ auto_approve_products: enabled })]
     );
 
@@ -613,7 +613,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
     // Log the approval
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
-       VALUES ('supplier', $1::uuid, 'approve', 'KYC_SUBMITTED', 'verified', $2::uuid)`,
+       VALUES ('supplier', $1::uuid, 'approve', 'KYC_SUBMITTED', 'verified', $2)`,
       [supplierId, adminId]
     );
 
@@ -691,7 +691,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, re
     // Log the rejection
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, reason)
-       VALUES ('supplier', $1::uuid, 'reject', 'pending', 'rejected', $2::uuid, $3)`,
+       VALUES ('supplier', $1::uuid, 'reject', 'pending', 'rejected', $2, $3)`,
       [supplierId, adminId, reason || null]
     );
 
@@ -850,6 +850,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     }
 
     // Update product to approved
+    // ISSUE-023: approved_by and actor_id are TEXT columns (migration 172), so pass adminId directly
     const updateResult = await client.query(
       `UPDATE catalog.supplier_products
        SET approval_status = 'approved', approved_at = NOW(), approved_by = $2
@@ -1023,9 +1024,10 @@ adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, requ
     );
 
     // Log the rejection
+    // ISSUE-023: actor_id is TEXT column (migration 172), pass adminId directly
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, reason)
-       VALUES ('product', $1::uuid, 'reject', 'pending', 'rejected', $2::uuid, $3)`,
+       VALUES ('product', $1::uuid, 'reject', 'pending', 'rejected', $2, $3)`,
       [productId, adminId, reason || null]
     );
 
@@ -1174,7 +1176,7 @@ adminSuppliersRouter.post(
             // Log approval
             await client.query(
               `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
-               VALUES ('product', $1::uuid, 'approve', 'pending', 'approved', $2::uuid)`,
+               VALUES ('product', $1::uuid, 'approve', 'pending', 'approved', $2)`,
               [productId, adminId]
             );
 
@@ -1249,7 +1251,7 @@ adminSuppliersRouter.post(
             // Log rejection
             await client.query(
               `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, reason)
-               VALUES ('product', $1::uuid, 'reject', 'pending', 'rejected', $2::uuid, $3)`,
+               VALUES ('product', $1::uuid, 'reject', 'pending', 'rejected', $2, $3)`,
               [productId, adminId, rejectionReason?.trim() || null]
             );
           }
@@ -1672,7 +1674,7 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
     // Audit log — use valid entity_type/action per chk_approval_logs constraints
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, changes)
-       VALUES ('product', $1::uuid, 'approve', 'approved', 'published', $2::uuid, '{"action":"publish"}'::jsonb)`,
+       VALUES ('product', $1::uuid, 'approve', 'approved', 'published', $2, '{"action":"publish"}'::jsonb)`,
       [productId, adminId]
     );
 
