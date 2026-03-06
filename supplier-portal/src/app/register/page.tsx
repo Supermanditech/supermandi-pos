@@ -169,9 +169,11 @@ function RegisterPage() {
 
   // LIVE.NAV.RESILIENCE.BACK_FORWARD_DRAFT_RECOVERY.001: Unsaved-change guard
   // Prevents accidental page close/refresh when user has entered business details
+  // ISSUE-159: Suppress beforeunload during active form submission (isLoading)
+  // to prevent "Leave site?" dialog when POST is in-flight.
   const hasUnsavedDetails = useMemo(
-    () => (step === 'details' || step === 'documents') && (businessName !== '' || ownerName !== '' || email !== ''),
-    [step, businessName, ownerName, email],
+    () => !isLoading && (step === 'details' || step === 'documents') && (businessName !== '' || ownerName !== '' || email !== ''),
+    [step, businessName, ownerName, email, isLoading],
   );
   useUnsavedChanges(hasUnsavedDetails);
 
