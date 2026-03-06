@@ -131,7 +131,8 @@ export default function OrderDetailScreen({
         clearInterval(pollInterval);
         return;
       }
-      void loadOrder();
+      // ISSUE-142: Catch polling errors to prevent unhandled rejection
+      void loadOrder().catch(() => {});
     }, 30000);
 
     return () => clearInterval(pollInterval);

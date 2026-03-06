@@ -4140,10 +4140,11 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingVertical: 0,
   },
   // VOICE-001: Floating voice button (FAB)
+  // ISSUE-052: Raised from bottom:16 to bottom:80 to avoid overlapping product card price pills
   voiceFab: {
     position: "absolute",
     right: 16,
-    bottom: 16,
+    bottom: 80,
     width: 52,
     height: 52,
     borderRadius: 26,
@@ -4162,7 +4163,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     transform: [{ scale: 1.1 }],
   },
   voiceFabWithCart: {
-    bottom: 76,
+    bottom: 140,
   },
   // VOICE-001: Expanded recording panel
   voiceRecordingPanel: {

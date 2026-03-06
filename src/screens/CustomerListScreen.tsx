@@ -159,16 +159,22 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       return;
     }
     setFormSubmitting(true);
-    const success = await createCustomer({
-      name,
-      phone,
-      email: formEmail.trim() || undefined,
-      address: formAddress.trim() || undefined,
-    });
-    setFormSubmitting(false);
-    if (success) {
-      setShowAddModal(false);
-      Alert.alert("Success", "Customer added.");
+    try {
+      const success = await createCustomer({
+        name,
+        phone,
+        email: formEmail.trim() || undefined,
+        address: formAddress.trim() || undefined,
+      });
+      if (success) {
+        setShowAddModal(false);
+        Alert.alert("Success", "Customer added.");
+      }
+    } catch (err) {
+      // ISSUE-150: Prevent form lock on unexpected errors
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to add customer.");
+    } finally {
+      setFormSubmitting(false);
     }
   }, [formName, formPhone, formEmail, formAddress, createCustomer]);
 

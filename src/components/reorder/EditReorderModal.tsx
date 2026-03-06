@@ -77,12 +77,13 @@ export function EditReorderModal({
   }, []);
 
   // Reset state when modal opens
+  // ISSUE-141: Removed loadSuppliers() from here — second effect handles all supplier loading
   useEffect(() => {
     if (visible && item) {
       setQuantity(item.suggestedQuantity);
       setSelectedSupplier(null);
+      setAvailableSuppliers([]);
       setError(null);
-      loadSuppliers();
     }
   }, [visible, item]);
 

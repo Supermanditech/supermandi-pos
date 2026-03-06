@@ -300,7 +300,10 @@ export async function interpretVoice(
     }
 
     // VOICE-001: Handle specific error codes with user-friendly messages
-    if (response.status === 503 || errorCode === "VOICE_NOT_CONFIGURED") {
+    // ISSUE-071: Handle 401 Unauthorized with user-friendly message
+    if (response.status === 401 || errorCode === "DEVICE_UNAUTHORIZED") {
+      errorMessage = "Session expired. Please restart the app.";
+    } else if (response.status === 503 || errorCode === "VOICE_NOT_CONFIGURED") {
       errorMessage = "Voice service is not available. Please try again later.";
     } else if (response.status === 404) {
       errorMessage = "Voice service not found. Please update the app.";

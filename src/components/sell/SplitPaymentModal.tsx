@@ -217,8 +217,9 @@ export function SplitPaymentModal({
       scheduleNextPoll();
     }
 
+    // ISSUE-140: Always clear polling on cleanup (not conditional on step)
     return () => {
-      if (step !== "upi-waiting" && pollIntervalRef.current) {
+      if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
         setPollingActive(false);

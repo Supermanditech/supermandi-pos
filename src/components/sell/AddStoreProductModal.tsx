@@ -7,7 +7,7 @@
  * - Digitisation: Full product capture (all fields including purchase price, variant, pack size)
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Modal,
   View,
@@ -68,6 +68,8 @@ export function AddStoreProductModal({
   const [description, setDescription] = useState("");
   const [stockUnknown, setStockUnknown] = useState(false);
   const [busy, setBusy] = useState(false);
+  // ISSUE-145: Synchronous double-submit guard
+  const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset form when request changes
@@ -88,6 +90,7 @@ export function AddStoreProductModal({
     setDescription(prefill?.description || "");
     setStockUnknown(false);
     setError(null);
+    busyRef.current = false; // ISSUE-145
     setBusy(false);
   }, [request]);
 
@@ -152,6 +155,8 @@ export function AddStoreProductModal({
   }, [request, sellPrice, initialStock, stockUnknown, activeTab, purchasePrice]);
 
   const handleSubmit = useCallback(async (addToCart: boolean) => {
+    // ISSUE-145: Synchronous double-submit guard
+    if (busyRef.current) return;
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -160,6 +165,7 @@ export function AddStoreProductModal({
 
     if (!request) return;
 
+    busyRef.current = true;
     setBusy(true);
     setError(null);
 
@@ -198,6 +204,7 @@ export function AddStoreProductModal({
       console.error("[AddStoreProductModal] Error creating product:", err);
       setError("Failed to add product. Please try again.");
     } finally {
+      busyRef.current = false; // ISSUE-145
       setBusy(false);
     }
   }, [request, name, sellPrice, mrp, purchasePrice, initialStock, unit, variant, packSize, description, stockUnknown, activeTab, validateForm, onSuccess]);
