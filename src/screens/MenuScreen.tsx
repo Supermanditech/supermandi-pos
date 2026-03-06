@@ -11,6 +11,7 @@ import { isQaMenuEnabled } from "./UiShowcaseScreen";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
 import { useCartStore } from "../stores/cartStore";
+import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
 import { useProductsStore } from "../stores/productsStore";
 import { LANGUAGE_NAMES, type SupportedLanguage } from "../i18n";
@@ -341,6 +342,7 @@ export default function MenuScreen() {
 
       // Clear all local state
       useCartStore.getState().resetForStore();
+      usePurchaseCartStore.getState().resetForStore(); // ISSUE-125
       usePurchaseDraftStore.getState().resetForStore();
       useProductsStore.getState().resetForStore();
 

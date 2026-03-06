@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -89,6 +90,15 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
 
   // POS-035: Live duration ticker — re-render every 60s while shift is active
   const [, setTick] = useState(0);
+  // ISSUE-112: Android hardware back button support
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack?.();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
+
   useEffect(() => {
     if (!currentShift) return;
     const id = setInterval(() => setTick((t) => t + 1), 60000);

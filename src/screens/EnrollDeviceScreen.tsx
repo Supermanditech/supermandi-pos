@@ -40,6 +40,7 @@ import { theme, typography, spacing, useThemeColors } from "../theme";
 import { API_BASE_URL, BUILD_INFO, TEST_STORE_CONFIG } from "../config/api";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { useCartStore } from "../stores/cartStore";
+import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
 import { useProductsStore } from "../stores/productsStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -328,6 +329,7 @@ export default function EnrollDeviceScreen() {
 
       if (storeChanged) {
         useCartStore.getState().resetForStore();
+        usePurchaseCartStore.getState().resetForStore(); // ISSUE-125
         usePurchaseDraftStore.getState().resetForStore();
         useProductsStore.getState().resetForStore();
       }

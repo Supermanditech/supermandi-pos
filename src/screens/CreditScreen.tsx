@@ -102,6 +102,13 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     error: null,
   });
 
+  // ISSUE-085: Clear PII (PAN/Aadhaar) on unmount
+  useEffect(() => {
+    return () => {
+      setApplyModal((prev) => ({ ...prev, panNumber: "", aadhaarLast4: "" }));
+    };
+  }, []);
+
   // Load data
   const loadData = useCallback(async () => {
     try {

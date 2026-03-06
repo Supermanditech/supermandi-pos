@@ -1,9 +1,10 @@
 // T-195: Thermal Printer Configuration Screen
 // Paper width, auto-print, copies, test print
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  BackHandler,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,6 +26,15 @@ interface PrinterSettingsScreenProps {
 
 export default function PrinterSettingsScreen({ onBack }: PrinterSettingsScreenProps) {
   const colors = useThemeColors();
+
+  // ISSUE-112: Android hardware back button support
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack?.();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {

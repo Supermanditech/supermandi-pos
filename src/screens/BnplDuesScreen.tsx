@@ -283,11 +283,15 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             upiDeepLink: response.upiCollect?.deepLink ?? null,
             paying: false,
           }));
-          // Open UPI deep link
+          // ISSUE-097: Open UPI deep link with crash guard
           if (response.upiCollect?.deepLink) {
-            const canOpen = await Linking.canOpenURL(response.upiCollect.deepLink);
-            if (canOpen) {
-              await Linking.openURL(response.upiCollect.deepLink);
+            try {
+              const canOpen = await Linking.canOpenURL(response.upiCollect.deepLink);
+              if (canOpen) {
+                await Linking.openURL(response.upiCollect.deepLink);
+              }
+            } catch {
+              // UPI app unavailable — user can still enter UTR manually
             }
           }
           // GL-RJ-008: Start auto-polling for payment status
@@ -808,9 +812,14 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                     <Pressable
                       accessibilityRole="button"
                       style={styles.reopenUpiButton}
-                      onPress={() => {
+                      onPress={async () => {
+                        // ISSUE-097: Guard Linking.openURL against crash
                         if (paymentModal.upiDeepLink) {
-                          void Linking.openURL(paymentModal.upiDeepLink);
+                          try {
+                            await Linking.openURL(paymentModal.upiDeepLink);
+                          } catch {
+                            Alert.alert("UPI Unavailable", "Could not open UPI app. Please enter UTR manually.");
+                          }
                         }
                       }}
                     >

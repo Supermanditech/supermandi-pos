@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  BackHandler,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -85,6 +86,15 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "UPI">("CASH");
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+
+  // ISSUE-112: Android hardware back button support
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack?.();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
 
   useEffect(() => {
     void fetchCustomers();

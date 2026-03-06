@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   FlatList,
   Linking,
   Modal,
@@ -77,6 +78,15 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
   const [formEmail, setFormEmail] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // ISSUE-112: Android hardware back button support
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack?.();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
 
   useEffect(() => {
     void fetchCustomers();

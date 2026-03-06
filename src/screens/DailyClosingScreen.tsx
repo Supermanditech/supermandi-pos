@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -76,6 +77,15 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [actualCash, setActualCash] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  // ISSUE-112: Android hardware back button support
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack?.();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
 
   // UIUX-POS-003: All deps that are read inside the callback must be listed
   useEffect(() => {
