@@ -1,7 +1,7 @@
 {
-  "version": "123.0",
-  "lastUpdated": "2026-03-06T08:40:00Z",
-  "currentPhase": "LOCKED_IMPLEMENTATION_AND_REITERATION: 53 issues implemented across waves 1-7 + WhatsApp wave (7ff5aabf). 25 verified already handled. ~34 not code-fixable. PHASE 2 deep audit pending.",
+  "version": "124.0",
+  "lastUpdated": "2026-03-06T14:00:00Z",
+  "currentPhase": "DISCOVERY_DEEPENING_LOCK: 155 issues logged (ISSUE-001..167). No fixes. No deploys. Deep auth/OTP/browser audit in progress.",
   "currentTicket": null,
   "ticketQueue": [],
   "liveTestingToolchain": {
@@ -28,14 +28,14 @@
       "stateCommits": 8
     },
     "issueLedger": {
-      "totalIssueEntries": 141,
-      "issueRange": "ISSUE-001..ISSUE-153",
+      "totalIssueEntries": 155,
+      "issueRange": "ISSUE-001..ISSUE-167",
       "numberingGaps": [
         "ISSUE-014..ISSUE-018",
         "ISSUE-028..ISSUE-034"
       ],
-      "frozenBaseline": "ISSUE-001..ISSUE-153",
-      "newIssueStartId": "ISSUE-154"
+      "frozenBaseline": "ISSUE-001..ISSUE-167",
+      "newIssueStartId": "ISSUE-168"
     },
     "sessionSeverityDistribution": {
       "high": 5,
@@ -199,7 +199,7 @@
     "status": "ACTIVE_IMPLEMENTATION_LOCK",
     "deployedAppCodeSha": "de452b1a",
     "findingRangeStart": "STG-723",
-    "mode": "LOCKED_IMPLEMENTATION_AND_REITERATION",
+    "mode": "DISCOVERY_DEEPENING_LOCK",
     "currentExecutionOrder": [
       "Read machine-state and locked manifests before edits",
       "Implement findings one-by-one with strict git discipline",
@@ -233,7 +233,7 @@
       "subScreenAndModalLock": true,
       "groupedExecutionForbidden": true,
       "samplingForbidden": true,
-      "fixesForbiddenInThisSession": false,
+      "fixesForbiddenInThisSession": true,
       "implementationOneIssueAtATime": true,
       "noUnrelatedRefactors": true,
       "mandatoryImpactedRetestPerBatch": true,
@@ -242,7 +242,7 @@
       "reiterationUntilHundredPercentCoverage": true,
       "issueLoggingFile": "RELEASES/LIVE_TESTING_ISSUES.md",
       "issueAppendOnly": true,
-      "newIssueStartId": "ISSUE-154",
+      "newIssueStartId": "ISSUE-168",
       "requiredLayerSet": [
         "ui",
         "ux",

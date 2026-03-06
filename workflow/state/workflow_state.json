@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-03-06T12:00:00Z",
-  "workflowMode": "LOCKED_IMPLEMENTATION_AND_REITERATION",
+  "updatedAt": "2026-03-06T14:00:00Z",
+  "workflowMode": "DISCOVERY_DEEPENING_LOCK",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -48,13 +48,13 @@
     "posScreensTotal": 44,
     "auditWaves": 13,
     "stateCommits": 8,
-    "issueEntries": 141,
-    "issueRange": "ISSUE-001..ISSUE-153",
+    "issueEntries": 155,
+    "issueRange": "ISSUE-001..ISSUE-167",
     "numberingGaps": [
       "ISSUE-014..ISSUE-018",
       "ISSUE-028..ISSUE-034"
     ],
-    "newIssueStartId": "ISSUE-154",
+    "newIssueStartId": "ISSUE-168",
     "sessionSeverityDistribution": {
       "high": 5,
       "medium": 22,
@@ -66,16 +66,12 @@
     "status": "ACTIVE_IMPLEMENTATION_LOCK",
     "deployedAppCodeSha": "610cbc39",
     "findingRangeStart": "STG-722",
-    "mode": "LOCKED_IMPLEMENTATION_AND_REITERATION",
+    "mode": "DISCOVERY_DEEPENING_LOCK",
     "currentExecutionOrder": [
       "Read machine-state and locked manifests before edits",
-      "Implement findings one-by-one with strict git discipline",
-      "Run impacted verification for each implementation batch",
-      "Reiterate affected screens/flows to detect missed/impacted issues",
-      "Truth-sync issue/state updates after each validated batch",
-      "Deploy to GCP staging if web/backend code changed",
-      "Build and distribute new POS APK if POS/mobile code changed",
-      "Run runtime verification gates on deployed artifacts"
+      "Deep audit auth/OTP/browser flows only — no fixes, no deploys",
+      "Append findings as ISSUE-168+ with runtime evidence",
+      "Publish final deep-audit table and stop"
     ],
     "platformOrder": [
       "POS App",
@@ -96,7 +92,7 @@
     "singleScreenOrFlowLock": true,
     "groupedExecutionForbidden": true,
     "samplingForbidden": true,
-    "fixesForbiddenInThisSession": false,
+    "fixesForbiddenInThisSession": true,
     "implementationOneIssueAtATime": true,
     "noUnrelatedRefactors": true,
     "mandatoryImpactedRetestPerBatch": true,

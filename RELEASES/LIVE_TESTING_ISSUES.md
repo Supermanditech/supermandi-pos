@@ -4357,9 +4357,264 @@ state carryover, and long-path flow completion. One screen lock at a time.
 
 ---
 
+## ISSUE-168: Retailer Registration — idToken Not Persisted to SessionStorage (Tab Close Loses Auth) (MEDIUM)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (lines 149-161)
+**Severity:** MEDIUM
+**Category:** Session persistence / UX
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Retailer verifies OTP on registration → idToken obtained (line 262-264)
+2. Fill partial business details (5 minutes of work)
+3. Close browser tab
+4. Reopen staging.supermandi.tech/retailer/register
+5. Form data restored from sessionStorage (businessName, GSTIN, etc.)
+6. Click "Continue to Document Upload"
+7. idToken is empty string → "Phone verification expired" error
+**Expected:** Either persist idToken to sessionStorage (for short TTL resume), or show clear message: "Please verify your phone again to continue."
+**Actual:** Form data is restored but idToken is not. User sees pre-filled form, clicks submit, gets confusing error. SessionStorage (line 155) saves step/phone/businessName but NOT idToken.
+**Runtime evidence:** RegisterPage.tsx:155-161 — stateToSave object has no idToken field. idToken is declared at line 116 as useState('').
+**Blocker impact:** Medium — every tab-close during details step forces full re-verification with no explanation.
+
+---
+
+## ISSUE-169: Retailer Registration — No beforeunload Guard on Details/Documents Steps (LOW)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx
+**Severity:** LOW
+**Category:** UX / navigation safety
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Fill business details on retailer registration (step='details')
+2. Hit F5 (refresh) or click browser Back button
+3. No "Leave site?" warning dialog
+4. Page reloads, form data partially restored from sessionStorage but idToken lost
+**Expected:** beforeunload guard while form has unsaved data (like supplier portal has).
+**Actual:** No beforeunload handler on retailer RegisterPage. Contrast: supplier registration HAS useUnsavedChanges() hook (ISSUE-159).
+**Runtime evidence:** Grep for 'beforeunload' in retailer-admin — zero results in RegisterPage.tsx.
+**Blocker impact:** Low — data partially preserved via sessionStorage, but UX inconsistent with supplier portal.
+
+---
+
+## ISSUE-170: Supplier Registration — hasUnsavedDetails Ignores Document Uploads (HIGH)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 165-168)
+**Severity:** HIGH
+**Category:** Navigation safety gap
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Supplier completes phone verify + business details → step='documents'
+2. Select and begin uploading pan_card (50% progress)
+3. Hit F5 (refresh) mid-upload
+4. No "Leave site?" dialog — because hasUnsavedDetails only checks businessName/ownerName/email
+5. Upload lost, document selection lost, page drops back to phone step
+**Expected:** beforeunload guard should fire during active document upload.
+**Actual:** hasUnsavedDetails at line 166 only tracks `(businessName !== '' || ownerName !== '' || email !== '')`. On documents step, these are still non-empty so guard IS active. BUT on step='success', guard is disabled, AND on step='phone' after refresh, guard is disabled.
+**Deeper issue:** The real problem is step downgrade on refresh (ISSUE-171 below) — user goes from documents→phone, losing upload state.
+**Runtime evidence:** register/page.tsx:165-168 useMemo dependencies. documents[] state not tracked.
+**Blocker impact:** High — active upload lost without warning when combined with step downgrade.
+
+---
+
+## ISSUE-171: Supplier Registration — SessionStorage Step Downgrade Loses Document State (HIGH)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 75-82)
+**Severity:** HIGH
+**Category:** State persistence / UX
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Supplier completes details, uploads 2 of 4 required documents
+2. Hit F5 (refresh)
+3. loadSavedSupRegState() at line 77-80 downgrades step from 'documents' to 'phone'
+4. Comment says "idToken not persisted (security)" — correct reason
+5. But document selections (file references, upload status) are completely lost
+6. User sees phone step with no explanation of why they went back
+**Expected:** Show banner: "Your session expired. Please verify phone again. Your details are saved, but documents must be re-uploaded."
+**Actual:** Silent downgrade to phone step. No banner. Documents[] reset to all-pending on mount (line 148-153).
+**Runtime evidence:** register/page.tsx:77-80 — `if (data.step === 'details' || data.step === 'documents') data.step = 'phone'`.
+**Blocker impact:** High — user loses document upload progress on any page refresh.
+
+---
+
+## ISSUE-172: Supplier Registration — No XHR Timeout on Document Upload (MEDIUM)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 608-614)
+**Severity:** MEDIUM
+**Category:** Resilience / timeout
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Upload a document on supplier registration
+2. Backend hangs (GCS degraded, DB pool exhausted)
+3. XHR request waits indefinitely — no timeout configured
+4. User sees "Uploading..." forever with no way to cancel or retry
+**Expected:** xhr.timeout = 60000 (60s), on timeout show error with retry option.
+**Actual:** No timeout set on XMLHttpRequest. User must close/refresh page to escape.
+**Runtime evidence:** register/page.tsx:608 — `xhr.open('POST', ...)` then `xhr.send(formData)` with no `xhr.timeout`.
+**Blocker impact:** Medium — hangs indefinitely on degraded network.
+
+---
+
+## ISSUE-173: Supplier Registration — Double-Submit on Details Form (State-Only Guard) (MEDIUM)
+
+**Screen/Route:** supplier-portal/src/app/register/page.tsx (lines 360-519)
+**Severity:** MEDIUM
+**Category:** Double-submit / race condition
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Fill all supplier business details
+2. Click "Continue to Document Upload" rapidly (double-click)
+3. First click enters handleSubmitDetails, but setIsLoading(true) is at line 430 (after validation)
+4. Second click fires before first call sets isLoading=true
+5. Two POST /api/v1/supplier/registration/create requests fire in parallel
+6. First succeeds (201), second fails (409 APPLICATION_EXISTS)
+7. User sees confusing error: "An application already exists for this GSTIN"
+**Expected:** Ref-based synchronous guard at function entry, or disable button on first click via event handler.
+**Actual:** isLoading state guard only (async, not synchronous). Double-click window exists between click and setIsLoading.
+**Runtime evidence:** register/page.tsx:360 — no early `if (isLoading) return;` at function start. setIsLoading at line 430 after 70 lines of validation.
+**Blocker impact:** Medium — confusing error on double-click.
+
+---
+
+## ISSUE-174: SuperAdmin — Token Refresh Mutex Has Stale Promise Race (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/api/authToken.ts (lines 85-102)
+**Severity:** MEDIUM
+**Category:** Race condition / token management
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Token refresh interval fires (every 10 min)
+2. Network is flaky — first refresh call fails
+3. _isRefreshing set to false, _refreshPromise set to null in finally block
+4. Second refresh call fires immediately after (from retry or concurrent API call)
+5. Window between `_isRefreshing = false` and `_refreshPromise = null` — two separate assignments
+6. Concurrent caller may see inconsistent state (_isRefreshing=false but _refreshPromise still set)
+**Expected:** Atomic state update for mutex (single variable or lock object).
+**Actual:** Two separate boolean + promise assignments, non-atomic.
+**Runtime evidence:** authToken.ts:85-86 — `let _isRefreshing = false; let _refreshPromise = null;`. Line 147-149 finally block sets both separately.
+**Blocker impact:** Medium — edge case on flaky networks, could cause duplicate refresh requests.
+
+---
+
+## ISSUE-175: SuperAdmin — Idle Timeout Not Synced Across Browser Tabs (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/api/authToken.ts (lines 417-427, 452-463)
+**Severity:** MEDIUM
+**Category:** Session management / multi-tab
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Open SuperAdmin in Tab A and Tab B
+2. Be active in Tab B (clicking, typing) for 30 minutes
+3. Tab A is idle for 30 minutes
+4. Tab B writes activity to localStorage every 60s (debounced)
+5. If Tab B's last write was at minute 28.5, and Tab A checks at minute 30.0 — Tab A reads minute 28.5, elapsed = 1.5 min → no timeout
+6. BUT if Tab B's debounce misses a write, Tab A may time out even though user is active in Tab B
+**Expected:** Activity in any tab prevents timeout in all tabs.
+**Actual:** lastWrite debounce is per-tab (module-level variable). Cross-tab sync relies on localStorage reads, but 60s write granularity creates gaps.
+**Runtime evidence:** authToken.ts:415 — `let lastWrite = 0` (module-scoped, not shared). Line 419: 60s debounce. No `storage` event listener for cross-tab activity detection.
+**Blocker impact:** Medium — users with multiple SuperAdmin tabs may get unexpected logouts.
+
+---
+
+## ISSUE-176: SuperAdmin — OTP Rate Limiting In-Memory Only (Resets on Backend Restart) (HIGH)
+
+**Screen/Route:** backend/src/services/emailService.ts (lines 551-560)
+**Severity:** HIGH
+**Category:** Security / rate limiting
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Send 5 OTP emails to admin@example.com → hits hourly rate limit
+2. Backend restarts (deploy, crash, Cloud Run cold start)
+3. emailRateLimits Map is cleared (in-memory only)
+4. Send 5 more OTP emails immediately → all succeed (limit reset)
+**Expected:** Rate limits stored in Redis (which is available in this stack).
+**Actual:** JavaScript `Map` in memory. Lost on process restart.
+**Runtime evidence:** emailService.ts:556 — `const emailRateLimits = new Map(...)`. No Redis backing. Cloud Run instances scale to zero and restart frequently.
+**Blocker impact:** High — rate limit bypass on every deploy/restart. Attacker could spam OTPs by triggering restarts.
+
+---
+
+## ISSUE-177: Firebase reCAPTCHA Fails in Facebook/Instagram In-App Browser (CRITICAL)
+
+**Screen/Route:** retailer-admin/src/lib/firebase.ts (line 71) + supplier-portal/src/lib/firebase.ts (line 74)
+**Severity:** CRITICAL
+**Category:** Browser compatibility / auth
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Share retailer or supplier login link on Facebook/Instagram
+2. User opens link in Facebook/Instagram in-app browser (WebView)
+3. Enter phone number, click "Send OTP"
+4. Firebase invisible reCAPTCHA attempts to verify
+5. reCAPTCHA fails — WebView is restricted environment, popups blocked
+6. Error: auth/invalid-app-credential or auth/captcha-check-failed
+7. User sees: "Unable to send OTP. Please reload and try again."
+8. Reload doesn't help — still in WebView
+9. User cannot log in at all
+**Expected:** Detect WebView, show banner: "Open in your browser for full functionality" with deep link to system browser.
+**Actual:** No WebView detection. Generic error message. No escape path.
+**Runtime evidence:** firebase.ts:71 — `new RecaptchaVerifier(auth, buttonId, { size: 'invisible' })`. No user-agent check for FBAN/FBAV/Instagram.
+**Blocker impact:** CRITICAL — complete login block for users arriving from Facebook/Instagram. SuperAdmin is unaffected (uses email OTP, no Firebase).
+
+---
+
+## ISSUE-178: All Web Portals — No Facebook/Instagram WebView Detection (HIGH)
+
+**Screen/Route:** All portals (landing, retailer-admin, supplier-portal, superadmin)
+**Severity:** HIGH
+**Category:** Browser compatibility
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Share any portal link on Facebook or Instagram
+2. User opens in FB/IG in-app browser
+3. No detection, no banner, no fallback
+4. Multiple features silently fail: window.open(), reCAPTCHA, target="_blank"
+**Expected:** Detect FBAN/FBAV/Instagram in user-agent, show persistent banner: "For full functionality, open in your browser" with deep link.
+**Actual:** Zero WebView detection across entire codebase. Grep for FBAN, FBAV, Instagram in all JS/TS — zero results.
+**Runtime evidence:** No user-agent detection code exists. User-agent identifiers: `FBAN/`, `FBAV/`, `Instagram` in navigator.userAgent.
+**Blocker impact:** High — all WhatsApp CTAs, Firebase auth, and target="_blank" links fail silently for FB/IG traffic.
+
+---
+
+## ISSUE-179: Register Pages — Terms/Privacy Links Use target="_blank" (Fails in WebView) (LOW)
+
+**Screen/Route:** retailer-admin/src/pages/RegisterPage.tsx (lines 752-753) + supplier-portal/src/app/register/page.tsx (lines 1168-1172)
+**Severity:** LOW
+**Category:** Browser compatibility
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Open retailer or supplier registration from Facebook/Instagram in-app browser
+2. Scroll to Terms of Service / Privacy Policy links
+3. Click link (target="_blank")
+4. FB/IG WebView blocks new window opening
+5. Nothing happens — user cannot read terms before agreeing
+**Expected:** In-page navigation or modal with terms content.
+**Actual:** target="_blank" link fails silently in WebView.
+**Runtime evidence:** RegisterPage.tsx:752 — `<a href="/terms" target="_blank">`. supplier register/page.tsx:1168 — same pattern.
+**Blocker impact:** Low — terms are accessible in normal browsers, cosmetic issue in WebView.
+
+---
+
+## ISSUE-180: SuperAdmin — 50-Minute Logout Lag on Network Failure (MEDIUM)
+
+**Screen/Route:** supermandi-superadmin/src/App.tsx (lines 362-381)
+**Severity:** MEDIUM
+**Category:** Session management
+**Status:** DISCOVERED
+**Steps to reproduce:**
+1. Login to SuperAdmin
+2. Backend goes down completely (GCP incident, deploy)
+3. Token refresh fires every 10 minutes, fails each time
+4. After 5 consecutive failures (50 minutes), user is finally logged out
+5. During those 50 minutes, user operates with stale token, API calls fail silently
+**Expected:** Faster failover — logout after 2-3 failures (20-30 min max), with warning toast after first failure.
+**Actual:** 5-failure threshold × 10-min interval = 50 minutes before logout. No user notification during failing refreshes.
+**Runtime evidence:** App.tsx:373 — `if (consecutiveFailures >= 5)`. Line 379: 10-min interval.
+**Blocker impact:** Medium — user operates blind for up to 50 minutes during backend outage. Deepens ISSUE-164.
+
+---
+
 ## Consolidated Issue Count
 
-**155 issue entries** in this file (ISSUE-001 through ISSUE-167, with numbering gaps at 014-018 and 028-034 from prior sessions).
+**169 issue entries** in this file (ISSUE-001 through ISSUE-180, with numbering gaps at 014-018 and 028-034 from prior sessions).
 
 Breakdown:
 - Pre-existing issues (prior sessions): ISSUE-001..013, 019..027, 035..059 = 49 entries
@@ -4377,10 +4632,12 @@ Breakdown:
 - Menu/Settings agent wave 12: 0 new issues (all findings = cross-cutting patterns already documented)
 - WhatsApp hardening wave 13: ISSUE-152..153 = 2 entries (0 HIGH, 1 MEDIUM, 1 LOW)
 - Portal auth deep audit wave 14: ISSUE-154..167 = 14 entries (1 CRITICAL, 5 HIGH, 7 MEDIUM, 1 LOW-implied)
+- Deep auth/browser audit wave 15: ISSUE-168..180 = 13 entries (1 CRITICAL, 3 HIGH, 7 MEDIUM, 2 LOW)
 
 **All 6 agents complete. Deep cascading audit FINISHED.**
 **WhatsApp production hardening: 4 issues fixed (ISSUE-136, 137, 152, 153).**
 **Portal auth deep audit: 14 new issues discovered across retailer, supplier, superadmin login/registration flows.**
+**Deep auth/browser audit: 13 additional edge-case issues discovered (token TTL, state persistence, WebView compat).**
 
 ### Cross-Cutting Patterns Identified
 
