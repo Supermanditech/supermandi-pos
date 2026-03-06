@@ -88,7 +88,7 @@ posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response
         `INSERT INTO whatsapp.message_logs
           (store_id, sender_type, recipient_type, recipient_phone, message_type,
            content_preview, wamid, delivery_status, context_type, context_id, sent_by)
-         VALUES ($1, 'pos', 'consumer', $2, 'text', $3, $4, $5, 'bill_receipt', $6, $7)`,
+         VALUES ($1, 'pos', 'consumer', $2, 'template', $3, $4, $5, 'bill_receipt', $6, $7)`,
         [
           storeId,
           phone,

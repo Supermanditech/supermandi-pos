@@ -188,6 +188,9 @@ export default function SuccessPrintScreenV2() {
 
   // WA-001: Send bill via WhatsApp Cloud API (with retry support)
   const handleWhatsAppSend = async () => {
+    // ISSUE-136: Guard against double-submit via keyboard Enter while sending
+    if (waStatus === "sending") return;
+
     const cleanPhone = validatePhone(waPhone);
     if (!cleanPhone) {
       Alert.alert("Invalid Number", "Please enter a valid 10-digit Indian mobile number (starting with 6-9).");
@@ -392,7 +395,7 @@ export default function SuccessPrintScreenV2() {
               placeholder="9876543210"
               placeholderTextColor={colors.textTertiary}
               keyboardType="phone-pad"
-              maxLength={10}
+              maxLength={12}
               value={waPhone}
               onChangeText={(t) => setWaPhone(t.replace(/\D/g, ""))}
               editable={waStatus !== "sending"}

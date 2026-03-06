@@ -178,9 +178,9 @@ export async function sendTextMessage(params: {
 }
 
 /**
- * Convenience: Send bill receipt as a text message.
- * Uses text mode (works within customer service window).
- * For business-initiated messages, switch to template mode after Meta approves the bill_receipt template.
+ * Send bill receipt via WhatsApp.
+ * ISSUE-152: Uses approved `bill_receipt` template for business-initiated messages (no 24hr window).
+ * Falls back to text message if template send fails (e.g., template not yet approved).
  */
 export async function sendBillReceipt(params: {
   to: string;
@@ -189,6 +189,27 @@ export async function sendBillReceipt(params: {
   amount: string;
   paymentMode: string;
 }): Promise<WhatsAppSendResult> {
+  // Try template first (works outside 24hr window)
+  const templateResult = await sendTemplateMessage({
+    to: params.to,
+    templateName: "bill_receipt",
+    languageCode: "en",
+    components: [
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: params.storeName },
+          { type: "text", text: params.billRef },
+          { type: "text", text: params.amount },
+          { type: "text", text: params.paymentMode },
+        ],
+      },
+    ],
+  });
+
+  if (templateResult.sent) return templateResult;
+
+  // Fallback to text message (only works within 24hr customer service window)
   const text = [
     `Thank you for shopping at ${params.storeName}!`,
     "",
