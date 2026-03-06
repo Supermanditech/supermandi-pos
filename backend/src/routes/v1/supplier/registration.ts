@@ -755,8 +755,15 @@ router.post("/verify-otp", registrationRateLimiter, async (req: Request, res: Re
 
     const verifyResult = await verifyFirebaseIdToken(idToken);
     if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      // ISSUE-157: Distinguish expired token from other verification failures
+      const isExpired = verifyResult.error?.includes?.('expired') || verifyResult.error?.includes?.('exp');
       res.status(401).json({
-        error: { code: "INVALID_TOKEN", message: "Invalid or expired OTP. Please try again." }
+        error: {
+          code: isExpired ? "TOKEN_EXPIRED" : "INVALID_TOKEN",
+          message: isExpired
+            ? "Phone verification has expired. Please verify your phone number again."
+            : "Phone verification failed. Please try again."
+        }
       });
       return;
     }
