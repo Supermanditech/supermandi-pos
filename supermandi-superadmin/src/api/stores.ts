@@ -20,6 +20,10 @@ export type StoreRecord = {
   upi_vpa_updated_at?: string | null;
   upi_vpa_updated_by?: string | null;
   allowed_payment_methods?: string[] | null; // SA-P1-006
+  creditEnabled?: boolean; // ISSUE-063
+  credit_enabled?: boolean; // ISSUE-063 (snake_case from DB)
+  creditLimit?: number; // ISSUE-063
+  credit_limit?: number; // ISSUE-063 (snake_case from DB)
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -113,6 +117,8 @@ export type StoreUpdateInput = {
   contactPhone?: string;
   contactEmail?: string;
   allowedPaymentMethods?: string[]; // SA-P1-006
+  creditEnabled?: boolean; // ISSUE-063
+  creditLimit?: number; // ISSUE-063
 };
 
 export async function updateStore(

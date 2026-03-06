@@ -2229,6 +2229,16 @@ export default function App() {
     }
   }
 
+  // ISSUE-063: Toggle credit enabled on a store
+  async function handleCreditToggle(storeId: string, enabled: boolean) {
+    try {
+      const updated = await updateStore(storeId, { creditEnabled: enabled });
+      setStoreDirectory((prev) => prev.map((s) => (s.id === storeId ? updated : s)));
+    } catch (e: any) {
+      toast.error(e?.message ? String(e.message) : "Failed to toggle credit.");
+    }
+  }
+
   function resetBarcodeSheetNotice() {
     setBarcodeSheetError("");
     setBarcodeSheetSuccess("");
@@ -3096,6 +3106,7 @@ export default function App() {
           revokeLoading={revokeLoading}
           handleResendCode={handleResendCode}
           resendLoading={resendLoading}
+          handleCreditToggle={handleCreditToggle}
         />
       )}
 

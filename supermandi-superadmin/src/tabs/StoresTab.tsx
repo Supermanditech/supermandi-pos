@@ -87,6 +87,8 @@ interface StoresTabProps {
   // #331: Resend welcome message (download links + activation instructions)
   handleResendCode?: (code: string) => void;
   resendLoading?: boolean;
+  // ISSUE-063: Credit toggle
+  handleCreditToggle: (storeId: string, enabled: boolean) => void;
 }
 
 export function StoresTab({
@@ -160,6 +162,7 @@ export function StoresTab({
   revokeLoading,
   handleResendCode,
   resendLoading,
+  handleCreditToggle,
 }: StoresTabProps) {
   return (
     <section className="card">
@@ -510,6 +513,23 @@ export function StoresTab({
                                   </label>
                                 );
                               })}
+                            </div>
+                          </div>
+                          {/* ISSUE-063: Credit enable toggle */}
+                          <div className="sa-mt-12">
+                            <label className="sa-form-label sa-mb-6">Credit / BNPL</label>
+                            <div className="sa-flex sa-gap-12 sa-items-center">
+                              <label className="sa-flex sa-gap-6" style={{ cursor: "pointer" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={s.creditEnabled ?? s.credit_enabled ?? false}
+                                  onChange={() => handleCreditToggle(s.id, !(s.creditEnabled ?? s.credit_enabled ?? false))}
+                                />
+                                Enable Credit
+                              </label>
+                              <span className="sa-text-sm sa-text-muted">
+                                Limit: ₹{((s.creditLimit ?? s.credit_limit ?? 0) / 100).toLocaleString("en-IN")}
+                              </span>
                             </div>
                           </div>
                           {/* SA-P1-007: Per-store feature flag overrides */}

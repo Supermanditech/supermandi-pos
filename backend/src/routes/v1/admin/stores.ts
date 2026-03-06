@@ -226,7 +226,7 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
       const [countResult, result] = await Promise.all([
         pool.query(`SELECT COUNT(*)::int as total FROM platform.stores`),
         pool.query(
-          `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+          `SELECT id::TEXT as id, name, code, status, credit_enabled, credit_limit, created_at, updated_at FROM platform.stores ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
           [limit, offset]
         ),
       ]);
@@ -235,7 +235,9 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
         ...row,
         storeName: row.name,
         storeCode: row.code,
-        active: row.status === "ACTIVE" // FIX-019-007: Match UPPERCASE DB status
+        active: row.status === "ACTIVE", // FIX-019-007: Match UPPERCASE DB status
+        creditEnabled: row.credit_enabled ?? false,
+        creditLimit: row.credit_limit ?? 0
       }));
       return res.json({ stores, total, limit, offset });
     } catch (fallbackErr: any) {
@@ -349,12 +351,12 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
       const result = await pool.query(
-        `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "UPPER(code) = UPPER($1)"}`,
+        `SELECT id::TEXT as id, name, code, status, credit_enabled, credit_limit, created_at, updated_at FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "UPPER(code) = UPPER($1)"}`,
         [storeId]
       );
       const store = result.rows[0];
       if (!store) return res.status(404).json({ error: "store not found" });
-      return res.json({ store: { ...store, storeName: store.name, storeCode: store.code, active: store.status === "ACTIVE" } }); // FIX-019-008
+      return res.json({ store: { ...store, storeName: store.name, storeCode: store.code, active: store.status === "ACTIVE", creditEnabled: store.credit_enabled ?? false, creditLimit: store.credit_limit ?? 0 } }); // FIX-019-008
     } catch (fallbackErr: any) {
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch store" });
     }
@@ -385,7 +387,11 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     scanLookupV2Enabled,
     scan_lookup_v2_enabled: scanLookupV2EnabledSnake,
     allowedPaymentMethods,
-    allowed_payment_methods: allowedPaymentMethodsSnake
+    allowed_payment_methods: allowedPaymentMethodsSnake,
+    creditEnabled,
+    credit_enabled: creditEnabledSnake,
+    creditLimit,
+    credit_limit: creditLimitSnake
   } = req.body as Record<string, unknown>;
 
   const updates: string[] = [];
@@ -459,6 +465,21 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     addUpdate("allowed_payment_methods", `{${normalized.join(',')}}`);
   }
 
+  // ISSUE-063: Credit enablement per store
+  const creditEnabledValue = creditEnabled ?? creditEnabledSnake;
+  if (typeof creditEnabledValue === "boolean") {
+    addUpdate("credit_enabled", creditEnabledValue);
+  }
+
+  const creditLimitValue = creditLimit ?? creditLimitSnake;
+  if (creditLimitValue !== undefined) {
+    const limit = Number(creditLimitValue);
+    if (!Number.isFinite(limit) || limit < 0) {
+      return res.status(400).json({ error: "creditLimit must be a non-negative number" });
+    }
+    addUpdate("credit_limit", Math.round(limit));
+  }
+
   if (updates.length === 0) {
     return res.status(400).json({ error: "No fields to update" });
   }
@@ -474,7 +495,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       UPDATE platform.stores
       SET ${updates.join(", ")}
       WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `UPPER(code) = UPPER($${values.length + 1})`}
-      RETURNING id::TEXT as id, name, code, status, address, contact_name, contact_phone, contact_email, allowed_payment_methods, created_at, updated_at
+      RETURNING id::TEXT as id, name, code, status, address, contact_name, contact_phone, contact_email, allowed_payment_methods, credit_enabled, credit_limit, created_at, updated_at
     `;
     values.push(storeId);
 
@@ -492,7 +513,9 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       contactName: store.contact_name,
       contactPhone: store.contact_phone,
       contactEmail: store.contact_email,
-      allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE']
+      allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'],
+      creditEnabled: store.credit_enabled ?? false,
+      creditLimit: store.credit_limit ?? 0
     } });
   } catch (err: any) {
     log.error("[admin/stores PATCH] Update failed:", err?.message);

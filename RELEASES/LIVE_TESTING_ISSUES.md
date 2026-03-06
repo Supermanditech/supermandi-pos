@@ -2643,7 +2643,7 @@ Before next live testing session:
 **Actual:** Shows "Credit is not enabled for this store" — but there is no working mechanism in SuperAdmin to enable credit for a store
 **Impact:** Credit feature is inaccessible. Operator has no way to activate it.
 **Severity:** HIGH
-**Note:** Need to verify if credit enable/disable exists in SuperAdmin feature flags or store settings. If it's a feature flag, check `creditEnabled` in feature_flags table.
+**Status:** FIXED (added creditEnabled/creditLimit fields to store PATCH API + credit toggle checkbox in SuperAdmin store expanded detail + GET endpoints return credit fields)
 
 | Layer | Status |
 |-------|--------|
