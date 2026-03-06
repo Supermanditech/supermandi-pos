@@ -1183,7 +1183,7 @@ router.post("/auth/send-verification", requireSupplierAuth, async (req: Supplier
     }
 
     // Check rate limit before sending
-    const rateLimitError = checkEmailRateLimit(supplier.primary_email);
+    const rateLimitError = await checkEmailRateLimit(supplier.primary_email);
     if (rateLimitError) {
       res.status(429).json({
         error: { code: 'RATE_LIMITED', message: rateLimitError }
@@ -1215,7 +1215,7 @@ router.post("/auth/send-verification", requireSupplierAuth, async (req: Supplier
     });
 
     // Record the send attempt for rate limiting
-    recordEmailSend(supplier.primary_email);
+    await recordEmailSend(supplier.primary_email);
 
     // NEVER log OTP in production
     if (process.env.NODE_ENV !== 'production') {

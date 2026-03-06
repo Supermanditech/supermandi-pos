@@ -4,6 +4,7 @@
 
 import crypto from 'crypto';
 import { log } from "../lib/logger";
+import { getRedis } from "../db/redis";
 
 // =============================================================================
 // TYPES
@@ -548,22 +549,62 @@ This link will expire in 1 hour. If you didn't request this, please ignore this 
 }
 
 // =============================================================================
-// RATE LIMITING (In-Memory for now, should use Redis in production)
+// RATE LIMITING
+// ISSUE-176: Redis-backed when available, in-memory fallback
 // GO-LIVE-135: Tightened rate limits to prevent OTP abuse
 // =============================================================================
 
-// Email rate limiting: 2 per minute per email (was 3), 5 per hour (was 10)
+// In-memory fallback (used when Redis unavailable)
 const emailRateLimits = new Map<string, { minute: number[]; hour: number[] }>();
 
 // GO-LIVE-135: Reduced limits to be more restrictive
-const RATE_LIMIT_PER_MINUTE = 2;  // Was 3 - reduced to prevent rapid OTP requests
-const RATE_LIMIT_PER_HOUR = 5;    // Was 10 - reduced to limit daily abuse potential
+const RATE_LIMIT_PER_MINUTE = 2;
+const RATE_LIMIT_PER_HOUR = 5;
 
 /**
  * Check if email sending is rate limited
+ * ISSUE-176: Uses Redis when available (survives restarts), falls back to in-memory
  * Returns error message if rate limited, null if OK
  */
-export function checkEmailRateLimit(email: string): string | null {
+export async function checkEmailRateLimit(email: string): Promise<string | null> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      return await checkEmailRateLimitRedis(email, redis);
+    } catch (err) {
+      log.warn(`[EmailRateLimit] Redis error, falling back to in-memory: ${err}`);
+    }
+  }
+  return checkEmailRateLimitMemory(email);
+}
+
+async function checkEmailRateLimitRedis(email: string, redis: import('ioredis').default): Promise<string | null> {
+  const now = Date.now();
+  const minuteKey = `email_rl:min:${email}`;
+  const hourKey = `email_rl:hr:${email}`;
+
+  // Count requests in last minute
+  await redis.zremrangebyscore(minuteKey, 0, now - 60 * 1000);
+  const minuteCount = await redis.zcard(minuteKey);
+  if (minuteCount >= RATE_LIMIT_PER_MINUTE) {
+    const oldest = await redis.zrange(minuteKey, 0, 0, 'WITHSCORES');
+    const waitSeconds = oldest.length >= 2 ? Math.ceil((Number(oldest[1]) + 60000 - now) / 1000) : 60;
+    return `Too many requests. Please wait ${waitSeconds} seconds.`;
+  }
+
+  // Count requests in last hour
+  await redis.zremrangebyscore(hourKey, 0, now - 60 * 60 * 1000);
+  const hourCount = await redis.zcard(hourKey);
+  if (hourCount >= RATE_LIMIT_PER_HOUR) {
+    const oldest = await redis.zrange(hourKey, 0, 0, 'WITHSCORES');
+    const waitMinutes = oldest.length >= 2 ? Math.ceil((Number(oldest[1]) + 3600000 - now) / 60000) : 60;
+    return `Too many requests. Please try again in ${waitMinutes} minutes.`;
+  }
+
+  return null;
+}
+
+function checkEmailRateLimitMemory(email: string): string | null {
   const now = Date.now();
   const oneMinuteAgo = now - 60 * 1000;
   const oneHourAgo = now - 60 * 60 * 1000;
@@ -594,8 +635,27 @@ export function checkEmailRateLimit(email: string): string | null {
 
 /**
  * Record an email send attempt for rate limiting
+ * ISSUE-176: Redis-backed when available
  */
-export function recordEmailSend(email: string): void {
+export async function recordEmailSend(email: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const now = Date.now();
+      const minuteKey = `email_rl:min:${email}`;
+      const hourKey = `email_rl:hr:${email}`;
+      const pipeline = redis.pipeline();
+      pipeline.zadd(minuteKey, now, `${now}`);
+      pipeline.expire(minuteKey, 120); // 2 min TTL
+      pipeline.zadd(hourKey, now, `${now}`);
+      pipeline.expire(hourKey, 3700); // ~1 hour TTL
+      await pipeline.exec();
+      return;
+    } catch (err) {
+      log.warn(`[EmailRateLimit] Redis record error, falling back to in-memory: ${err}`);
+    }
+  }
+  // In-memory fallback
   const now = Date.now();
   let limits = emailRateLimits.get(email);
   if (!limits) {

@@ -168,7 +168,7 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
   }
 
   // Check rate limiting
-  const rateLimitError = checkEmailRateLimit(normalizedEmail);
+  const rateLimitError = await checkEmailRateLimit(normalizedEmail);
   if (rateLimitError) {
     return res.status(429).json({
       error: { code: "RATE_LIMITED", message: rateLimitError }
@@ -188,7 +188,7 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
   });
 
   // Record for rate limiting
-  recordEmailSend(normalizedEmail);
+  await recordEmailSend(normalizedEmail);
 
   // Send OTP email
   const emailResult = await sendVerificationEmail({
