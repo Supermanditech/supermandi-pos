@@ -85,12 +85,17 @@ function getUser(req: any): { userId: string; userType: string } {
   const userType = req.headers['x-actor-type'] || 'retailer';
   if (!userId) throw new Error('Authentication required');
   const userIdStr = String(userId);
-  // STG-431: Chat tables use UUID columns — reject non-UUID user IDs (e.g. admin email strings)
-  if (!isValidUUID(userIdStr)) {
-    throw new Error('Authentication required');
-  }
   const rawType = String(userType).toLowerCase();
-  return { userId: userIdStr, userType: ACTOR_TYPE_TO_CHAT_TYPE[rawType] || 'retailer' };
+  const chatType = ACTOR_TYPE_TO_CHAT_TYPE[rawType] || 'retailer';
+  // ISSUE-057: Admin/support users have session-based IDs (not UUIDs).
+  // Only enforce UUID validation for retailer/supplier users whose IDs are DB UUIDs.
+  if (chatType !== 'admin' && chatType !== 'support') {
+    // STG-431: Chat tables use UUID columns — reject non-UUID user IDs
+    if (!isValidUUID(userIdStr)) {
+      throw new Error('Authentication required');
+    }
+  }
+  return { userId: userIdStr, userType: chatType };
 }
 
 // =============================================================================

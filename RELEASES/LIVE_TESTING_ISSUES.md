@@ -1635,7 +1635,7 @@ Returns `{"error":"store not found"}` — the endpoint likely requires a storeId
 
 ## ISSUE-035: SuperAdmin Per-Store Feature Override DELETE Blocked by CSRF (HIGH)
 
-**State:** `DISCOVERED`
+**State:** FIXED (already fixed — all 3 portals have X-Requested-With: XMLHttpRequest in centralized fetch wrappers: retailer authFetch, supplier apiFetch, superadmin getAuthHeaders. Fixed in STG wave.)
 **Severity:** HIGH — FUNCTIONAL BLOCKER
 **Platform:** SuperAdmin Web
 **Screen:** Settings Tab → Per-Store Feature Overrides
@@ -2372,7 +2372,7 @@ Additionally, the SuperAdmin Support Queue page shows **"Authentication required
 | **Platform** | SuperAdmin Portal |
 | **Screen** | Support Queue |
 | **Severity** | HIGH |
-| **Status** | DISCOVERED |
+| **Status** | FIXED (getUser() in chat.ts now skips UUID validation for admin/support actor types — allows support queue to load) |
 
 **Discovered:** CTO live testing 2026-03-06 — SuperAdmin Support
 
