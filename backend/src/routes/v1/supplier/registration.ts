@@ -529,13 +529,24 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       }
     }
 
-    // Check if a DRAFT application already exists for this phone (allow re-registration)
+    // ISSUE-193: Enforce one active DRAFT per phone — expire stale duplicates.
+    // This prevents cross-tab contamination when user opens registration in multiple tabs.
     const existingApp = await pool.query(
       `SELECT id, status, gstin FROM auth.applications
        WHERE phone = $1 AND entity_type = 'supplier' AND status IN ('DRAFT', 'OTP_VERIFIED')
        ORDER BY created_at DESC LIMIT 1`,
       [phoneNormalized]
     );
+
+    // Expire any OTHER drafts for this phone (keep only the most recent one)
+    if (existingApp.rows.length > 0) {
+      await pool.query(
+        `UPDATE auth.applications SET status = 'EXPIRED', updated_at = NOW()
+         WHERE phone = $1 AND entity_type = 'supplier' AND status IN ('DRAFT', 'OTP_VERIFIED')
+           AND id != $2`,
+        [phoneNormalized, existingApp.rows[0].id]
+      );
+    }
 
     let application;
     let isResumed = false;
