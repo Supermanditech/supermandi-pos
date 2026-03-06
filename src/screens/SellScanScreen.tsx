@@ -3137,6 +3137,8 @@ export default function SellScanScreen({
       if (voiceDurationIntervalRef.current) clearInterval(voiceDurationIntervalRef.current);
       // T-129: Cleanup search debounce timer on unmount
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      // ISSUE-132: Release native voice recording resource on unmount
+      void cancelRecording().catch(() => {});
     };
   }, []);
 

@@ -1,7 +1,7 @@
 // T-288: Retailer Bulk Purchase Credit UI (POS)
 // Browse available credit offers and apply for bulk purchase financing
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Alert as RNAlert, BackHandler, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -99,18 +99,25 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
   useEffect(() => { fetchOffers(); }, [fetchOffers]);
   const onRefresh = () => { setRefreshing(true); fetchOffers(); };
 
+  // ISSUE-151: Ref-based guard to prevent duplicate credit applications
+  const applyingRef = useRef(false);
   const applyForCredit = async (offerId: string) => {
+    if (applyingRef.current) return;
     RNAlert.alert('Apply for Credit', 'Submit application for this credit offer?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Apply',
         onPress: async () => {
+          if (applyingRef.current) return;
+          applyingRef.current = true;
           try {
             await apiClient.post('/api/v1/pos/credit/apply', { offerId });
             RNAlert.alert('Success', 'Application submitted. You will be notified of the status.');
-            fetchOffers();
-          } catch {
-            RNAlert.alert('Error', 'Failed to submit application.');
+            void fetchOffers();
+          } catch (err) {
+            RNAlert.alert('Error', err instanceof Error ? err.message : 'Failed to submit application.');
+          } finally {
+            applyingRef.current = false;
           }
         },
       },
