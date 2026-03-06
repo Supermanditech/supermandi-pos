@@ -81,6 +81,7 @@ function createDefaultProps(overrides: Partial<Parameters<typeof StoresTab>[0]> 
     revokeLoading: false,
     handleResendCode: vi.fn(),
     resendLoading: false,
+    handleCreditToggle: vi.fn(),
     ...overrides,
   };
   return defaultProps;
