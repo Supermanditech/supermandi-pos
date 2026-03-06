@@ -1536,7 +1536,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
       await client.query(
         `INSERT INTO supplier.approval_logs
          (entity_type, entity_id, action, actor_id, changes)
-         VALUES ('product', $1::uuid, 'edit', $2::uuid, $3::jsonb)`,
+         VALUES ('product', $1::uuid, 'edit', $2, $3::jsonb)`,
         [productId, adminId, JSON.stringify(changes)]
       );
     }
