@@ -12,7 +12,8 @@ import {
   checkEmailRateLimit,
   recordEmailSend,
 } from "../../../services/emailService";
-import { getRedis } from "../../../db/redis";
+import { getRedis, blacklistToken } from "../../../db/redis";
+import crypto from "crypto";
 import { log } from "../../../lib/logger";
 
 export const adminAuthRouter = Router();
@@ -429,8 +430,30 @@ adminAuthRouter.post("/auth/refresh", (req: Request, res: Response) => {
 /**
  * POST /api/v1/admin/auth/logout
  * ISSUE-MICRO-025: Clear HttpOnly session cookie
+ * ISSUE-196: Also blacklist the JWT in Redis so stolen tokens are immediately revoked
  */
-adminAuthRouter.post("/auth/logout", (_req: Request, res: Response) => {
+adminAuthRouter.post("/auth/logout", (req: Request, res: Response) => {
+  // Extract token from cookie or Authorization header
+  const token = req.cookies?.admin_session
+    || (req.header('authorization')?.startsWith('Bearer ') ? req.header('authorization')!.slice(7) : null);
+
+  if (token) {
+    try {
+      // Decode without verification to get expiry (token may already be close to expiry)
+      const decoded = jwt.decode(token) as { exp?: number; jti?: string } | null;
+      if (decoded?.exp) {
+        const remainingSeconds = decoded.exp - Math.floor(Date.now() / 1000);
+        if (remainingSeconds > 0) {
+          // Use jti if available, otherwise hash the token
+          const blacklistKey = decoded.jti || crypto.createHash('sha256').update(token).digest('hex');
+          blacklistToken(blacklistKey, remainingSeconds).catch(() => {});
+        }
+      }
+    } catch {
+      // Non-fatal — cookie clear is still the primary action
+    }
+  }
+
   res.clearCookie('admin_session', { path: '/api' });
   return res.json({ success: true });
 });
