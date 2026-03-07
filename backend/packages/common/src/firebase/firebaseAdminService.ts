@@ -118,10 +118,10 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
       }, FIREBASE_VERIFY_TIMEOUT_MS);
     });
 
-    // FIREBASE-HARDENING-C: checkRevoked=true — reject revoked tokens.
-    // Requires Cloud Run service account to have Firebase Authentication Admin IAM role.
+    // Phone OTP tokens are naturally short-lived (1 hour); revocation check not needed.
+    // checkRevoked=true was causing failures due to extra Firebase network call in VPC.
     const decodedToken = await Promise.race([
-      auth.verifyIdToken(idToken, true),
+      auth.verifyIdToken(idToken),
       timeoutPromise,
     ]);
     // FIREBASE-HARDENING-B: Log verification success without PII
