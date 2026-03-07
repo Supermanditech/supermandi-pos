@@ -26,11 +26,11 @@
     ],
     "currentJourney": "JOURNEY-02",
     "currentPhase": "JOURNEY_02_PHASE4_PREP",
-    "auditProgressNote": "JOURNEY-02 STATIC AUDIT COMPLETE (2026-03-07). All 10 actions PASS. B1/B2/B6/B8 CLEAR. B3 CLEAR (PaymentScreen ISSUE-051/066/068 guards PASS at 7c62039f). B4 CLEAR (G1-G6 all signed 2026-03-07: all 20 scopeFiles read, APIs cited, cascade traced, failure modes documented, regression locks verified). B7 CLEAR (knownIssues cross-checked vs LIVE_TESTING_ISSUES.md \u2014 all 5 present). B10 CLEAR (commit boundaries: code-fix commits clean, state commits clean). Remaining blockers: B5 (seededStateLock.confirmed=false \u2014 PHASE_4), B9 (runtimeEvidence=[] \u2014 PHASE_4), B11 (commits not pushed), B12 (PHASE_4 not yet active). Next: (1) Push commits to origin/main (B11). (2) Schedule PHASE_4 with operator.",
+    "auditProgressNote": "JOURNEY-02 STATIC AUDIT COMPLETE (2026-03-07). All 10 actions PASS. B1/B2/B6/B8 CLEAR. B3 CLEAR (PaymentScreen ISSUE-051/066/068 guards PASS at 7c62039f). B4 CLEAR (G1-G6 all signed 2026-03-07: all 20 scopeFiles read, APIs cited, cascade traced, failure modes documented, regression locks verified). B7 CLEAR (knownIssues cross-checked vs LIVE_TESTING_ISSUES.md \u2014 all 5 present). B10 CLEAR (commit boundaries: code-fix commits clean, state commits clean). B11 CLEAR (pushed to origin/main 2026-03-07; HEAD = 96b1d7e7). Remaining blockers: B5 (seededStateLock.confirmed=false \u2014 PHASE_4), B9 (runtimeEvidence=[] \u2014 PHASE_4), B12 (PHASE_4 not yet active). Next: advance to PHASE_4 with operator to collect runtime evidence (B5/B9/B12).",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "JOURNEY-02 static audit complete. G1-G6 all signed. B1-B4, B6-B8, B10 CLEAR. B5/B9/B12 require PHASE_4 (runtime evidence + operator live test). B11 = commits not pushed.",
-      "nextUnblock": "Push commits to origin/main (B11). Then advance to PHASE_4 to collect runtime evidence (B5/B9/B12)."
+      "blockedBy": "JOURNEY-02 static audit complete. G1-G6 all signed. B1-B4, B6-B11 all CLEAR. B5, B9, B12 require PHASE_4 (runtime evidence + operator live test).",
+      "nextUnblock": "Operator must explicitly advance lifecycle to PHASE_4. Then collect runtime evidence to clear B5/B9/B12."
     },
     "antiDriftRules": [
       "Claude NEVER decides what to work on from conversation memory alone",
