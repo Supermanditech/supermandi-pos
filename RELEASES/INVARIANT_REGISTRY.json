@@ -1,0 +1,408 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "createdAt": "2026-03-07",
+    "purpose": "Machine-readable registry of all business invariants. Every invariant must be verified (code + test) before a journey that touches it reaches CERT-SEALED.",
+    "statusValues": ["VERIFIED", "UNVERIFIED", "GAP", "PARTIAL"],
+    "claudeRule": "For every invariant with status != VERIFIED in a journey's scope: find enforcement code, cite file:line, or raise as GAP. Never mark VERIFIED without a citation."
+  },
+
+  "invariants": {
+
+    "INV-S1": {
+      "category": "STOCK",
+      "statement": "stock_balances.current_qty never goes below zero as a result of a sale, unless the store has explicitly enabled oversell (config flag required).",
+      "enforcementLayers": ["DB constraint", "service-layer check before decrement"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04", "JOURNEY-05"],
+      "auditNote": ""
+    },
+
+    "INV-S2": {
+      "category": "STOCK",
+      "statement": "stock after a confirmed sale = stock before sale minus sum(quantity * 1 for each sold line item).",
+      "enforcementLayers": ["inventory-service decrement handler", "DB transaction"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04"],
+      "auditNote": ""
+    },
+
+    "INV-S3": {
+      "category": "STOCK",
+      "statement": "A manual stock edit persists through any subsequent background sync. syncProductsToOffline must not overwrite a pinned stock value with a server-stale value.",
+      "enforcementLayers": ["stockService.resolveStockForSku check in syncProductsToOffline"],
+      "currentStatus": "VERIFIED",
+      "verifiedAt": "536b8442",
+      "verifiedInFiles": ["src/screens/SellScanScreen.tsx:151-156"],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-05"],
+      "auditNote": "Fixed in ISSUE-204 (commit 536b8442). Test still needed."
+    },
+
+    "INV-S4": {
+      "category": "STOCK",
+      "statement": "Stock shown to the user equals stock available for sale at that moment. No phantom stock from stale cache or dirty SQLite.",
+      "enforcementLayers": ["resolveStockForSku (in-memory pin)", "syncProductsToOffline (SQLite write)"],
+      "currentStatus": "PARTIAL",
+      "verifiedAt": "536b8442",
+      "verifiedInFiles": ["src/services/stockService.ts", "src/screens/SellScanScreen.tsx"],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-05"],
+      "auditNote": "In-memory pin verified. SQLite write fixed. Cross-session persistence (app restart after pin) not yet verified."
+    },
+
+    "INV-P1": {
+      "category": "PAYMENT",
+      "statement": "A sale has at most one confirmed payment record. Duplicate payment submissions for the same saleId are rejected.",
+      "enforcementLayers": ["backend idempotency key on payment endpoint", "frontend submitting ref"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04"],
+      "auditNote": "Frontend submitting guard exists (PaymentScreen). Backend idempotency not yet read."
+    },
+
+    "INV-P2": {
+      "category": "PAYMENT",
+      "statement": "Payment amount sent to backend equals the sale total computed by the backend. Client total is never trusted. No rounding errors in minor units.",
+      "enforcementLayers": ["backend recomputes total from line items", "amount in minor units (paise) throughout"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-P3": {
+      "category": "PAYMENT",
+      "statement": "For UPI payments: the UPI payment/order ID from the payment gateway is stored before the sale is marked complete.",
+      "enforcementLayers": ["PaymentScreen UPI flow", "backend payment confirmation handler"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-03", "JOURNEY-04"],
+      "auditNote": ""
+    },
+
+    "INV-P4": {
+      "category": "PAYMENT",
+      "statement": "Cash payments complete immediately without external confirmation. No webhook wait for cash mode.",
+      "enforcementLayers": ["PaymentScreen selectedMode branch"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02"],
+      "auditNote": ""
+    },
+
+    "INV-P5": {
+      "category": "PAYMENT",
+      "statement": "For split payments: sum of all payment legs equals the total amount. No under-payment or over-payment accepted.",
+      "enforcementLayers": ["SplitPaymentModal total validation", "backend split payment handler"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-06"],
+      "auditNote": ""
+    },
+
+    "INV-P6": {
+      "category": "PAYMENT",
+      "statement": "Payment is atomic: either fully recorded in DB or fully rolled back. No partial payment records left on network failure.",
+      "enforcementLayers": ["DB transaction in payment handler"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04"],
+      "auditNote": ""
+    },
+
+    "INV-L1": {
+      "category": "LEDGER",
+      "statement": "Every confirmed sale produces exactly one pair of ledger entries (debit and credit). No orphaned single-entry records.",
+      "enforcementLayers": ["ledger-service ORDER_CONFIRMED handler"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-L2": {
+      "category": "LEDGER",
+      "statement": "Ledger is append-only. No UPDATE or DELETE on ledger_entries table in any code path.",
+      "enforcementLayers": ["DB-level: no UPDATE/DELETE permission on table", "code-level: only INSERT calls"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-07"],
+      "auditNote": ""
+    },
+
+    "INV-L3": {
+      "category": "LEDGER",
+      "statement": "Daily revenue summary = sum of credit ledger entries for that store on that date. No separate counter that can drift from the source.",
+      "enforcementLayers": ["analytics aggregation query", "daily_summary materialized view or computed on read"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-11"],
+      "auditNote": ""
+    },
+
+    "INV-L4": {
+      "category": "LEDGER",
+      "statement": "Refund creates a reversing ledger entry pair, not a deletion of original entries.",
+      "enforcementLayers": ["refund handler in order-service"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-07"],
+      "auditNote": ""
+    },
+
+    "INV-O1": {
+      "category": "ORDER",
+      "statement": "order.total_amount = sum(item.unit_price * item.quantity) - discount_amount + tax_amount. Backend recomputes this, never trusts client total.",
+      "enforcementLayers": ["order-service createOrder handler"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-O2": {
+      "category": "ORDER",
+      "statement": "Price at sale time is locked in order_items. Subsequent price changes to the catalog do not retroactively alter historical order amounts.",
+      "enforcementLayers": ["order_items stores unit_price at time of sale, not a FK to current price"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-11"],
+      "auditNote": ""
+    },
+
+    "INV-O3": {
+      "category": "ORDER",
+      "statement": "createSale is idempotent. Submitting the same cart twice (same saleId or same idempotency key) creates one order, not two.",
+      "enforcementLayers": ["createSaleInFlightRef in PaymentScreen", "backend idempotency key check"],
+      "currentStatus": "PARTIAL",
+      "verifiedAt": "b3b5bf6c",
+      "verifiedInFiles": ["src/screens/PaymentScreen.tsx:157"],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": "Frontend in-flight guard verified (ISSUE-051/066 fix). Backend idempotency check not yet read."
+    },
+
+    "INV-O4": {
+      "category": "ORDER",
+      "statement": "Order status transitions are forward-only: PENDING → CONFIRMED → COMPLETE. No backwards transitions except via explicit REFUND workflow.",
+      "enforcementLayers": ["order-service state machine"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-07"],
+      "auditNote": ""
+    },
+
+    "INV-I1": {
+      "category": "STORE_ISOLATION",
+      "statement": "Store A's orders, inventory, ledger, and analytics are never visible to Store B's retailer admin or POS session.",
+      "enforcementLayers": ["JWT storeId extraction on server", "WHERE store_id = $jwt.storeId in all queries"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-05", "JOURNEY-11", "JOURNEY-12"],
+      "auditNote": "Critical invariant. Every data query in every service must be verified."
+    },
+
+    "INV-I2": {
+      "category": "STORE_ISOLATION",
+      "statement": "Stock changes in Store A's inventory do not affect Store B's catalog or stock counts.",
+      "enforcementLayers": ["store_id scoping in inventory-service"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-05"],
+      "auditNote": ""
+    },
+
+    "INV-I3": {
+      "category": "STORE_ISOLATION",
+      "statement": "storeId is always derived from the JWT on the server. Client-sent storeId in request body or query params is ignored.",
+      "enforcementLayers": ["api-gateway JWT middleware strips client headers", "each service uses req.user.storeId"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-05", "JOURNEY-12"],
+      "auditNote": ""
+    },
+
+    "INV-I4": {
+      "category": "STORE_ISOLATION",
+      "statement": "Analytics and reporting aggregations are scoped to the requesting store. No cross-store data leaks in aggregate queries.",
+      "enforcementLayers": ["analytics-service query WHERE store_id"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-11", "JOURNEY-12"],
+      "auditNote": ""
+    },
+
+    "INV-I5": {
+      "category": "STORE_ISOLATION",
+      "statement": "A device belongs to exactly one store. A device cannot be enrolled in two stores simultaneously.",
+      "enforcementLayers": ["device_enrollments table unique constraint on device_id", "enrollment service check"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-01"],
+      "auditNote": ""
+    },
+
+    "INV-C1": {
+      "category": "CART",
+      "statement": "Cart total shown to the user matches the cart total sent to the backend (before backend recomputes). No silent modification between display and submission.",
+      "enforcementLayers": ["PaymentScreen reads items and recomputes total", "saleItems passed to createSale"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-C2": {
+      "category": "CART",
+      "statement": "Every item in the cart at checkout exists in the store catalog (no ghost SKU sales).",
+      "enforcementLayers": ["pos-service createSale validates each SKU against store catalog"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-C3": {
+      "category": "CART",
+      "statement": "Quantity sold <= available stock at time of sale (unless store explicitly enables oversell).",
+      "enforcementLayers": ["SellScanScreen addToCart zero-stock guard", "backend stock check before decrement"],
+      "currentStatus": "PARTIAL",
+      "verifiedAt": null,
+      "verifiedInFiles": ["src/screens/SellScanScreen.tsx (addToCart zero-stock check)"],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": "Frontend zero-stock guard exists but file:line not yet cited. Backend check not yet read."
+    },
+
+    "INV-C4": {
+      "category": "CART",
+      "statement": "Applied discount amount <= cart subtotal. Cart total after discount >= 0. No negative totals.",
+      "enforcementLayers": ["discount validation in cart computation"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-SN1": {
+      "category": "SESSION",
+      "statement": "An expired JWT cannot complete a payment, create an order, or modify inventory. 401 is returned and the client must re-authenticate.",
+      "enforcementLayers": ["api-gateway JWT validation middleware", "each service validates token freshness"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-08"],
+      "auditNote": ""
+    },
+
+    "INV-SN2": {
+      "category": "SESSION",
+      "statement": "A session is store-scoped. A session created for Store A cannot access Store B's endpoints.",
+      "enforcementLayers": ["JWT payload contains storeId", "server uses JWT.storeId not client param"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-01", "JOURNEY-02"],
+      "auditNote": ""
+    },
+
+    "INV-SN3": {
+      "category": "SESSION",
+      "statement": "A revoked admin session is immediately invalid. No cached valid state survives revocation.",
+      "enforcementLayers": ["admin session revocation in Redis", "adminSessionService.verifyAdminSession checks Redis"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-09"],
+      "auditNote": ""
+    },
+
+    "INV-PR1": {
+      "category": "PRINT",
+      "statement": "Receipt content (items, amounts, sale ID, bill ref) matches the actual completed sale, not a previous sale's data.",
+      "enforcementLayers": ["SuccessPrintScreenV2 receives saleItems, saleId, billRef as navigation params"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-PR2": {
+      "category": "PRINT",
+      "statement": "Print failure does not roll back or cancel the sale. The order exists in DB even if receipt printing fails.",
+      "enforcementLayers": ["SuccessPrintScreenV2 print error handling is independent of sale state"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    },
+
+    "INV-PR3": {
+      "category": "PRINT",
+      "statement": "Auto-print fires at most once per sale completion. It does not repeat on screen re-focus or component re-mount.",
+      "enforcementLayers": ["printerAutoPrint useEffect with ref guard (H5 hardening)"],
+      "currentStatus": "UNVERIFIED",
+      "verifiedAt": null,
+      "verifiedInFiles": [],
+      "testExists": false,
+      "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
+      "auditNote": ""
+    }
+  }
+}

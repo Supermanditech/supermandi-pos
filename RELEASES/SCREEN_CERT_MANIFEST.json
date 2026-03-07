@@ -1,0 +1,223 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "createdAt": "2026-03-07",
+    "purpose": "Tracks per-screen CCC certification status. Every screen that is part of any journey must appear here. Claude updates this after every action audit that touches a screen.",
+    "statusValues": ["CERT-PENDING", "CERT-IN-PROGRESS", "CERT-PASS", "NEEDS-REAUDIT"],
+    "claudeRule": "When a journey action for a screen reaches CERT-PASS, update this screen's status. When any file in a screen's scope changes, set status to NEEDS-REAUDIT and list reauditReasons."
+  },
+
+  "screens": {
+
+    "SellScanScreen": {
+      "file": "src/screens/SellScanScreen.tsx",
+      "status": "CERT-IN-PROGRESS",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-05"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [
+        {
+          "issueId": "ISSUE-204",
+          "status": "FIXED",
+          "sha": "536b8442",
+          "rootCause": "syncProductsToOffline wrote server-stale stock to SQLite even when in-memory cache was pinned. setCatalogItems(fresh) then loaded stale rows, overwriting React state with currentStock: 0.",
+          "fixDescription": "Check resolveStockForSku before upsertLocalProduct. If pin active, write pinned value to SQLite instead of server value.",
+          "regressionTestExists": false
+        },
+        {
+          "issueId": "ISSUE-042",
+          "status": "FIXED",
+          "sha": "9fd8f714",
+          "rootCause": "SkuItem array in state not updated after manual stock edit; stockRefreshTick not bumped.",
+          "fixDescription": "Added SkuItem array update after stock edit + stockRefreshTick bump to force re-render.",
+          "regressionTestExists": false
+        },
+        {
+          "issueId": "ISSUE-039",
+          "status": "ALREADY_FIXED",
+          "sha": "prior wave",
+          "rootCause": "Barcode-only guard at line 1678 prevents VALIDATION_ERROR on text search input.",
+          "fixDescription": "Pre-existing guard, verified in place.",
+          "regressionTestExists": false
+        }
+      ],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    },
+
+    "PaymentScreen": {
+      "file": "src/screens/PaymentScreen.tsx",
+      "status": "CERT-IN-PROGRESS",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04", "JOURNEY-06", "JOURNEY-08"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [
+        {
+          "issueId": "ISSUE-051",
+          "status": "FIXED",
+          "sha": "b3b5bf6c",
+          "rootCause": "loadingSale in useEffect deps caused React to run cleanup (cancelled=true) and re-run the effect every time setLoadingSale(true) was called. In-flight async work then bailed on if (cancelled) return, so setSaleId/setBillRef were never called.",
+          "fixDescription": "Added createSaleInFlightRef = useRef(false). Replaced loadingSale guard with createSaleInFlightRef.current. Removed loadingSale from deps array. Ref cleared in .finally() before cancelled check.",
+          "regressionTestExists": false
+        },
+        {
+          "issueId": "ISSUE-066",
+          "status": "FIXED",
+          "sha": "b3b5bf6c",
+          "rootCause": "Same as ISSUE-051 — payment chain unblocked by same fix.",
+          "fixDescription": "Same as ISSUE-051.",
+          "regressionTestExists": false
+        },
+        {
+          "issueId": "ISSUE-068",
+          "status": "FIXED",
+          "sha": "e9ee6592",
+          "rootCause": "productId mapping wrong in productsApi + storeProductDigitisationService for createSale variant resolution.",
+          "fixDescription": "Fixed productId mapping in productsApi and storeProductDigitisationService.",
+          "regressionTestExists": false
+        }
+      ],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    },
+
+    "SuccessPrintScreenV2": {
+      "file": "src/screens/SuccessPrintScreenV2.tsx",
+      "status": "CERT-PENDING",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-06"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    },
+
+    "SplitPaymentModal": {
+      "file": "src/components/sell/SplitPaymentModal.tsx",
+      "status": "CERT-PENDING",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-06"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    },
+
+    "EnrollDeviceScreen": {
+      "file": "src/screens/EnrollDeviceScreen.tsx",
+      "status": "CERT-PENDING",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-01"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    },
+
+    "ForceUpdateScreen": {
+      "file": "src/screens/ForceUpdateScreen.tsx",
+      "status": "CERT-PENDING",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-07"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    },
+
+    "PurchaseScreen": {
+      "file": "src/screens/PurchaseScreen.tsx",
+      "status": "CERT-PENDING",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-10"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    },
+
+    "PosRootLayout": {
+      "file": "src/screens/PosRootLayout.tsx",
+      "status": "CERT-PENDING",
+      "certifiedAt": null,
+      "certifiedSha": null,
+      "journeys": ["JOURNEY-01", "JOURNEY-07", "JOURNEY-08"],
+      "cccLevelsCompleted": [],
+      "openGaps": [],
+      "reauditReasons": [],
+      "knownIssues": [],
+      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+    }
+  },
+
+  "webScreens": {
+
+    "retailer-admin/SalesPage": {
+      "status": "CERT-PENDING",
+      "journeys": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-11"],
+      "crossPortalVerified": false,
+      "openGaps": [],
+      "knownIssues": []
+    },
+
+    "retailer-admin/InventoryPage": {
+      "status": "CERT-PENDING",
+      "journeys": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-05"],
+      "crossPortalVerified": false,
+      "openGaps": [],
+      "knownIssues": []
+    },
+
+    "retailer-admin/ReportsPage": {
+      "status": "CERT-PENDING",
+      "journeys": ["JOURNEY-11"],
+      "crossPortalVerified": false,
+      "openGaps": [],
+      "knownIssues": []
+    },
+
+    "superadmin/DeviceManagement": {
+      "status": "CERT-PENDING",
+      "journeys": ["JOURNEY-01"],
+      "crossPortalVerified": false,
+      "openGaps": [],
+      "knownIssues": []
+    },
+
+    "superadmin/Dashboard": {
+      "status": "CERT-PENDING",
+      "journeys": ["JOURNEY-12"],
+      "crossPortalVerified": false,
+      "openGaps": [],
+      "knownIssues": []
+    },
+
+    "supplier-portal/OrdersPage": {
+      "status": "CERT-PENDING",
+      "journeys": ["JOURNEY-10"],
+      "crossPortalVerified": false,
+      "openGaps": [],
+      "knownIssues": []
+    }
+  },
+
+  "deployGate": {
+    "rule": "A deploy candidate requires ALL screens in the target cluster's journeys to be CERT-PASS. No partial deployment of CERT-PENDING screens.",
+    "currentBlockers": "All screens in CERT-PENDING or CERT-IN-PROGRESS — no deploy until JOURNEY-02 fully CERT-SEALED",
+    "nextDeployEligibleWhen": "JOURNEY-02 + JOURNEY-03 + JOURNEY-04 + JOURNEY-05 all CERT-SEALED (C1 cluster)"
+  }
+}

@@ -1,0 +1,498 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "createdAt": "2026-03-07",
+    "purpose": "Defines all user journeys and their CCC audit state. This is the single source of truth for audit progress. Claude reads and updates this every session. Audit spine (per-action trace) is embedded in each journey.",
+    "statusValues": ["CERT-PENDING", "CERT-IN-PROGRESS", "CERT-BLOCKED", "CERT-SEALED", "NEEDS-REAUDIT"],
+    "claudeRule": "On session start: find the first journey with status != CERT-SEALED. Resume from lastAuditedAction + 1. Update this file after EVERY action audited. Never let session end without updating."
+  },
+
+  "currentAuditJourney": "JOURNEY-02",
+  "auditOrder": [
+    "JOURNEY-01", "JOURNEY-02", "JOURNEY-03", "JOURNEY-04", "JOURNEY-05",
+    "JOURNEY-06", "JOURNEY-07", "JOURNEY-08", "JOURNEY-09", "JOURNEY-10",
+    "JOURNEY-11", "JOURNEY-12"
+  ],
+
+  "journeys": {
+
+    "JOURNEY-01": {
+      "id": "JOURNEY-01",
+      "name": "Device Enrollment Lifecycle",
+      "cluster": "C5",
+      "description": "SuperAdmin creates store → generates enrollment QR → POS operator scans QR → device enrolls → badge shows USED in SuperAdmin → device loads catalog → POS ready",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["EnrollDeviceScreen", "SellScanScreen (post-enroll init)"],
+        "webScreens": ["superadmin/DeviceManagement", "superadmin/StoreManagement"],
+        "posServices": ["src/services/api/enrollmentApi.ts", "src/services/authService.ts"],
+        "backendRoutes": [
+          "api-gateway/src/routes/enrollDevice.ts",
+          "backend/services/pos-service/src/routes/enrollment.ts",
+          "backend/services/auth-service/src/routes/deviceAuth.ts"
+        ],
+        "dbTables": ["device_enrollments", "devices", "stores", "staff"],
+        "portals": ["superadmin"],
+        "invariants": ["INV-I5", "INV-SN2"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-02": {
+      "id": "JOURNEY-02",
+      "name": "Daily Sell Flow — Cash Payment",
+      "cluster": "C1",
+      "description": "SellScan idle → scan barcode → item added to cart → cart reviewed → PaymentScreen (cash) → Complete Payment → SuccessScreen with saleId + billRef → receipt prints → inventory decremented → order visible in retailer admin",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["SellScanScreen", "PaymentScreen", "SuccessPrintScreenV2"],
+        "webScreens": ["retailer-admin/SalesPage", "retailer-admin/InventoryPage"],
+        "posServices": [
+          "src/services/api/posApi.ts",
+          "src/services/stockService.ts",
+          "src/services/offlineDb.ts",
+          "src/store/cartStore.ts",
+          "src/services/printerService.ts"
+        ],
+        "backendRoutes": [
+          "backend/services/pos-service/src/routes/storeProducts.ts",
+          "backend/services/pos-service/src/routes/sales.ts",
+          "backend/services/order-service/src/routes/orders.ts",
+          "backend/services/inventory-service/src/handlers/decrementStock.ts",
+          "backend/services/analytics-service/src/handlers/recordSale.ts"
+        ],
+        "dbTables": ["store_products", "sales", "orders", "order_items", "stock_balances", "ledger_entries", "daily_summary"],
+        "portals": ["retailer-admin"],
+        "invariants": ["INV-S1", "INV-S2", "INV-S4", "INV-P1", "INV-P2", "INV-P4", "INV-P6", "INV-L1", "INV-O1", "INV-O2", "INV-O3", "INV-O4", "INV-I1", "INV-I3", "INV-C1", "INV-C2", "INV-C3", "INV-C4", "INV-SN1", "INV-PR1", "INV-PR2", "INV-PR3"]
+      },
+      "actions": [
+        {
+          "id": "ACT-02-01",
+          "label": "User opens SellScanScreen (app launch / tab switch)",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        },
+        {
+          "id": "ACT-02-02",
+          "label": "User scans barcode (camera scan or manual entry)",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        },
+        {
+          "id": "ACT-02-03",
+          "label": "Item added to cart — stock display updates",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        },
+        {
+          "id": "ACT-02-04",
+          "label": "User taps Proceed to Payment",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        },
+        {
+          "id": "ACT-02-05",
+          "label": "PaymentScreen mounts — createSale fires automatically",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": [],
+          "knownIssueLinks": ["ISSUE-051", "ISSUE-066"]
+        },
+        {
+          "id": "ACT-02-06",
+          "label": "User selects Cash payment mode",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        },
+        {
+          "id": "ACT-02-07",
+          "label": "User taps Complete Payment (cash)",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": [],
+          "knownIssueLinks": ["ISSUE-068"]
+        },
+        {
+          "id": "ACT-02-08",
+          "label": "SuccessScreen shows — saleId + billRef visible",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        },
+        {
+          "id": "ACT-02-09",
+          "label": "Receipt print triggered (auto or manual)",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        },
+        {
+          "id": "ACT-02-10",
+          "label": "Cross-portal: new order visible in retailer admin + stock decremented",
+          "certStatus": "CERT-PENDING",
+          "level2Cited": false,
+          "level3Cited": false,
+          "level4Cited": false,
+          "level5Cited": false,
+          "level6Cited": false,
+          "gaps": [],
+          "scenariosVerified": []
+        }
+      ],
+      "crossPortalMatrix": [
+        { "dbWrite": "orders", "table": "orders", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false },
+        { "dbWrite": "stock_balances decrement", "table": "stock_balances", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false },
+        { "dbWrite": "ledger_entries pair", "table": "ledger_entries", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false }
+      ],
+      "regressionLocks": [
+        { "issueId": "ISSUE-051", "verifiedAt": "b3b5bf6c", "guardType": "createSaleInFlightRef prevents self-cancelling useEffect" },
+        { "issueId": "ISSUE-066", "verifiedAt": "b3b5bf6c", "guardType": "same as ISSUE-051" },
+        { "issueId": "ISSUE-068", "verifiedAt": "e9ee6592", "guardType": "productId mapping fix in productsApi + storeProductDigitisationService" }
+      ],
+      "knownIssues": ["ISSUE-051", "ISSUE-066", "ISSUE-068"]
+    },
+
+    "JOURNEY-03": {
+      "id": "JOURNEY-03",
+      "name": "Daily Sell Flow — UPI Payment",
+      "cluster": "C1",
+      "description": "SellScan → cart → PaymentScreen (UPI mode) → QR shown → customer pays → webhook confirms → Complete Payment enabled → SuccessScreen → same DB effects as cash + payment_id recorded",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["SellScanScreen", "PaymentScreen", "SuccessPrintScreenV2"],
+        "webScreens": ["retailer-admin/SalesPage", "retailer-admin/InventoryPage"],
+        "posServices": ["src/services/api/posApi.ts", "src/services/stockService.ts", "src/store/cartStore.ts"],
+        "backendRoutes": [
+          "backend/services/pos-service/src/routes/sales.ts",
+          "backend/services/pos-service/src/routes/payment.ts",
+          "backend/services/order-service/src/routes/orders.ts",
+          "backend/services/inventory-service/src/handlers/decrementStock.ts"
+        ],
+        "dbTables": ["sales", "orders", "order_items", "stock_balances", "payments", "ledger_entries"],
+        "portals": ["retailer-admin"],
+        "invariants": ["INV-S1", "INV-S2", "INV-P1", "INV-P2", "INV-P3", "INV-P6", "INV-L1", "INV-O1", "INV-O3", "INV-I1", "INV-I3", "INV-C1", "INV-SN1", "INV-PR1", "INV-PR2"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": ["ISSUE-051", "ISSUE-066", "ISSUE-068"]
+    },
+
+    "JOURNEY-04": {
+      "id": "JOURNEY-04",
+      "name": "UPI Payment Failure Recovery",
+      "cluster": "C1/C3",
+      "description": "UPI payment initiated → network drops → app backgrounded → network returns → pending payment detected → status auto-checked → confirmed or manual UTR entry → order completes with no duplicate charge",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["PaymentScreen"],
+        "webScreens": [],
+        "posServices": ["src/services/api/posApi.ts"],
+        "backendRoutes": ["backend/services/pos-service/src/routes/payment.ts"],
+        "dbTables": ["payments", "orders"],
+        "portals": [],
+        "invariants": ["INV-P1", "INV-P3", "INV-P6", "INV-O3", "INV-SN1"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-05": {
+      "id": "JOURNEY-05",
+      "name": "Stock Management — Manual Edit Persistence",
+      "cluster": "C1/C4",
+      "description": "Retailer on POS manually edits stock → background sync fires → stock does NOT revert → SQLite matches server → catalog UI shows correct count → subsequent sale decrements from correct count",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["SellScanScreen (stock edit modal)"],
+        "webScreens": ["retailer-admin/InventoryPage"],
+        "posServices": ["src/services/stockService.ts", "src/services/offlineDb.ts", "src/services/api/posApi.ts"],
+        "backendRoutes": ["backend/services/pos-service/src/routes/storeProducts.ts (PATCH stock)"],
+        "dbTables": ["store_products", "stock_balances"],
+        "portals": ["retailer-admin"],
+        "invariants": ["INV-S3", "INV-S4", "INV-I1", "INV-I2", "INV-I3"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [
+        { "dbWrite": "store_products.current_stock update", "table": "store_products", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false }
+      ],
+      "regressionLocks": [
+        { "issueId": "ISSUE-204", "verifiedAt": "536b8442", "guardType": "resolveStockForSku check in syncProductsToOffline before SQLite write" },
+        { "issueId": "ISSUE-042", "verifiedAt": "9fd8f714", "guardType": "SkuItem array update + stockRefreshTick after stock edit" }
+      ],
+      "knownIssues": ["ISSUE-204", "ISSUE-042"]
+    },
+
+    "JOURNEY-06": {
+      "id": "JOURNEY-06",
+      "name": "Split Payment Flow",
+      "cluster": "C3",
+      "description": "Cart → PaymentScreen → split mode → enter cash portion + UPI portion → both legs confirmed → sale completes with full amount recorded",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["PaymentScreen", "SplitPaymentModal", "SuccessPrintScreenV2"],
+        "webScreens": [],
+        "posServices": ["src/services/api/posApi.ts"],
+        "backendRoutes": ["backend/services/pos-service/src/routes/payment.ts"],
+        "dbTables": ["payments", "orders"],
+        "portals": [],
+        "invariants": ["INV-P1", "INV-P5", "INV-P6", "INV-O1", "INV-O3"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-07": {
+      "id": "JOURNEY-07",
+      "name": "Force Update Flow",
+      "cluster": "C5",
+      "description": "SuperAdmin bumps min_app_version → POS next open shows ForceUpdate screen → no navigation possible → user updates APK → returns to normal flow",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["ForceUpdateScreen", "SplashScreen"],
+        "webScreens": ["superadmin/AppVersionManagement"],
+        "posServices": ["src/services/api/authApi.ts"],
+        "backendRoutes": ["backend/services/pos-service/src/routes/appVersion.ts"],
+        "dbTables": ["app_versions"],
+        "portals": ["superadmin"],
+        "invariants": []
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-08": {
+      "id": "JOURNEY-08",
+      "name": "Session Expiry Mid-Flow Recovery",
+      "cluster": "C5",
+      "description": "User in PaymentScreen → 8h JWT expires → Complete Payment tapped → 401 returned → graceful re-login prompt, not crash → after re-login returns to correct screen with cart intact",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["PaymentScreen", "SellScanScreen (after re-auth)"],
+        "webScreens": [],
+        "posServices": ["src/services/api/apiClient.ts", "src/services/authService.ts"],
+        "backendRoutes": ["api-gateway JWT middleware"],
+        "dbTables": [],
+        "portals": [],
+        "invariants": ["INV-SN1"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-09": {
+      "id": "JOURNEY-09",
+      "name": "Admin Session Lifecycle (SuperAdmin Web)",
+      "cluster": "SA-GOLIVE",
+      "description": "Admin logs in with master token → gets session JWT → uses admin APIs → session refreshed → logout revokes session → subsequent requests rejected",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": [],
+        "webScreens": ["superadmin/LoginPage", "superadmin/* (all protected routes)"],
+        "posServices": [],
+        "backendRoutes": [
+          "api-gateway/src/routes/adminAuth.ts",
+          "api-gateway/src/middleware/adminAuth.ts",
+          "api-gateway/src/services/adminSessionService.ts"
+        ],
+        "dbTables": [],
+        "portals": ["superadmin"],
+        "invariants": ["INV-SN3"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-10": {
+      "id": "JOURNEY-10",
+      "name": "Supplier Order Lifecycle",
+      "cluster": "C12",
+      "description": "Retailer raises reorder on POS → supplier portal shows pending order → supplier confirms → stock updated in catalog → retailer admin sees status change",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": ["PurchaseScreen (reorder)"],
+        "webScreens": ["supplier-portal/OrdersPage", "retailer-admin/PurchaseOrdersPage"],
+        "posServices": [],
+        "backendRoutes": [
+          "backend/services/reorder-service/src/routes/reorders.ts",
+          "backend/services/supplier-service/src/routes/orders.ts"
+        ],
+        "dbTables": ["purchase_orders", "po_items", "stock_balances"],
+        "portals": ["supplier-portal", "retailer-admin"],
+        "invariants": ["INV-I1", "INV-I3"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-11": {
+      "id": "JOURNEY-11",
+      "name": "Retailer Admin Daily Reports",
+      "cluster": "C11",
+      "description": "Sales created via POS → appear in daily/weekly reports → correct amounts → filtered by store → CSV export correct",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": [],
+        "webScreens": ["retailer-admin/ReportsPage", "retailer-admin/SalesPage"],
+        "posServices": [],
+        "backendRoutes": [
+          "backend/services/analytics-service/src/routes/reports.ts",
+          "backend/services/order-service/src/routes/orders.ts"
+        ],
+        "dbTables": ["orders", "order_items", "daily_summary", "ledger_entries"],
+        "portals": ["retailer-admin"],
+        "invariants": ["INV-L3", "INV-O2", "INV-I1", "INV-I4"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-12": {
+      "id": "JOURNEY-12",
+      "name": "SuperAdmin Platform Overview",
+      "cluster": "SA-GOLIVE",
+      "description": "POS sale → appears in platform analytics → store-level breakdown correct → cross-store data NOT leaking → SuperAdmin can manage stores, users, products",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "scope": {
+        "posScreens": [],
+        "webScreens": ["superadmin/Dashboard", "superadmin/StoreManagement", "superadmin/UserManagement"],
+        "posServices": [],
+        "backendRoutes": ["backend/services/platform-service/src/routes/*.ts"],
+        "dbTables": ["stores", "users", "orders", "analytics_aggregations"],
+        "portals": ["superadmin"],
+        "invariants": ["INV-I1", "INV-I4", "INV-SN3"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    }
+  }
+}

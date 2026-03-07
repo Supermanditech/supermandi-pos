@@ -1,9 +1,49 @@
 {
-  "version": "136.0",
-  "lastUpdated": "2026-03-08T07:30:00Z",
-  "currentPhase": "WAVE_20_C1_CODE_FIXES_COMPLETE_AWAITING_ARTIFACT_BUILD",
+  "version": "137.0",
+  "lastUpdated": "2026-03-07T00:00:00Z",
+  "currentPhase": "CCC_AUDIT_IN_PROGRESS_JOURNEY02",
   "currentTicket": null,
   "ticketQueue": [],
+
+  "cccFramework": {
+    "adopted": true,
+    "adoptedAt": "2026-03-07",
+    "governingDocuments": {
+      "methodology": "RELEASES/CCC_FRAMEWORK.md",
+      "invariantRegistry": "RELEASES/INVARIANT_REGISTRY.json",
+      "journeyMap": "RELEASES/JOURNEY_MAP.json",
+      "screenCertManifest": "RELEASES/SCREEN_CERT_MANIFEST.json",
+      "liveState": "RELEASES/CLAUDE_CURRENT_STATE.json"
+    },
+    "sessionStartProtocol": [
+      "1. Read RELEASES/CCC_FRAMEWORK.md — how Claude works",
+      "2. Read RELEASES/CLAUDE_CURRENT_STATE.json cccFramework.currentJourney",
+      "3. Read RELEASES/JOURNEY_MAP.json — find currentJourney, read lastAuditedAction",
+      "4. Read RELEASES/INVARIANT_REGISTRY.json — load journey-relevant invariants",
+      "5. Read RELEASES/SCREEN_CERT_MANIFEST.json — check screen cert statuses",
+      "6. git log --oneline -5 && git status — verify SHA",
+      "7. Announce: 'Resuming JOURNEY-XX. Last action: ACT-XX-NN. Next: ACT-XX-NN+1. Files: [list]'",
+      "8. Continue audit from lastAuditedAction + 1"
+    ],
+    "currentJourney": "JOURNEY-02",
+    "currentPhase": "AUDIT_NOT_STARTED",
+    "auditProgressNote": "JOURNEY-02 (Daily Sell Flow - Cash) not yet started. First action: ACT-02-01 (SellScanScreen opens). Must read SellScanScreen.tsx completely before starting.",
+    "deployGateStatus": {
+      "c1ClusterDeployEligible": false,
+      "blockedBy": "JOURNEY-02, JOURNEY-03, JOURNEY-04, JOURNEY-05 all CERT-PENDING",
+      "nextUnblock": "Complete CCC audit for all C1 cluster journeys. All screens CERT-PASS. Then ONE APK build + ONE staging deploy."
+    },
+    "antiDriftRules": [
+      "Claude NEVER decides what to work on from conversation memory alone",
+      "Claude NEVER declares CERT-SEALED without signing all 6 guarantees with file:line citations",
+      "Claude NEVER requests a deploy or APK build until current cluster journeys are CERT-SEALED",
+      "Claude NEVER skips updating JOURNEY_MAP.json after each action audit",
+      "Claude NEVER treats 'TypeScript compiles' as production grade certification",
+      "Claude NEVER audits by assumption — every claim requires a file:line citation"
+    ]
+  },
+
+
   "controlGate": {
     "passed": true,
     "passedAt": "2026-03-07T20:00:00Z",
