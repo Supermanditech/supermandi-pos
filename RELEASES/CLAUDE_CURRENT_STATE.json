@@ -26,11 +26,11 @@
     ],
     "currentJourney": "JOURNEY-02",
     "currentPhase": "JOURNEY_02_PHASE4_PREP",
-    "auditProgressNote": "JOURNEY-02 STATIC AUDIT COMPLETE (2026-03-07). All 10 actions PASS. B1/B2/B6/B8 CLEAR. B3 CLEAR (PaymentScreen ISSUE-051/066/068 guards PASS at 7c62039f). B4 CLEAR (G1-G6 all signed 2026-03-07: all 20 scopeFiles read, APIs cited, cascade traced, failure modes documented, regression locks verified). B7 CLEAR (knownIssues cross-checked vs LIVE_TESTING_ISSUES.md \u2014 all 5 present). B10 CLEAR (commit boundaries: code-fix commits clean, state commits clean). B11 CLEAR (pushed to origin/main 2026-03-07; HEAD = a1ce19ad). Remaining blockers: B5 (seededStateLock.confirmed=false \u2014 PHASE_4), B9 (runtimeEvidence=[] \u2014 PHASE_4), B12 (PHASE_4 not yet active). Next: advance to PHASE_4 with operator to collect runtime evidence (B5/B9/B12).",
+    "auditProgressNote": "JOURNEY-02 PHASE_4 ACTIVE (2026-03-07). Operator advanced lifecycle to PHASE_4_POST_FIX_RUNTIME_CERTIFICATION. Candidate SHA: 1a22ea48 (73d46ea1 + test typecheck fix). All static blockers B1-B12 CLEAR. Remaining: B5 (seededStateLock.confirmed=false \u2014 awaiting operator seeded-state confirmation), B9 (runtimeEvidence=[] \u2014 awaiting operator live test execution on device 23106RN0DA). GateA_shaParity: BACKEND PASS (e26dbe6 on Cloud Run \u2014 zero backend code changed between e26dbe6 and 1a22ea48; all 10 diff files are RELEASES/, src/__tests__/, src/screens/ only). APK parity: PENDING \u2014 operator must confirm device APK was built from a SHA >= ac67afac (includes ISSUE-051/066 + ISSUE-204 fixes). GateB_cleanSeededState: PENDING \u2014 operator must confirm seeded data present.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "JOURNEY-02 static audit complete. G1-G6 all signed. B1-B4, B6-B11 all CLEAR. B5, B9, B12 require PHASE_4 (runtime evidence + operator live test).",
-      "nextUnblock": "Operator must explicitly advance lifecycle to PHASE_4. Then collect runtime evidence to clear B5/B9/B12."
+      "blockedBy": "PHASE_4 active. B5 (seededStateLock) + B9 (runtimeEvidence) pending operator live test on candidate 1a22ea48.",
+      "nextUnblock": "(1) Operator confirms device APK includes ISSUE-051/066 fix (>= ac67afac). (2) Operator confirms seeded state (B5). (3) Operator runs 10-action script on device 23106RN0DA (B9). Claude writes evidence entries."
     },
     "antiDriftRules": [
       "Claude NEVER decides what to work on from conversation memory alone",
@@ -146,7 +146,7 @@
         "PHASE_5_OPERATOR_EXPLORATORY_PASS",
         "PHASE_6_DEPLOY_ELIGIBILITY"
       ],
-      "currentLifecyclePhase": "PHASE_1_STATIC_CCC_AUDIT",
+      "currentLifecyclePhase": "PHASE_4_POST_FIX_RUNTIME_CERTIFICATION",
       "phaseRules": {
         "PHASE_1_STATIC_CCC_AUDIT": {
           "purpose": "Code-and-architecture tracing before any live runtime certification.",

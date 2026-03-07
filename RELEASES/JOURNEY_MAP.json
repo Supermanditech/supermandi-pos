@@ -321,8 +321,8 @@
         "B8": "CLEAR \u00e2\u20ac\u201d all 10 actions now result=PASS",
         "B9": "BLOCKED \u00e2\u20ac\u201d crossPortalMatrix row 1 verified=true but runtimeEvidence=[] (PHASE_4 required)",
         "B10": "CLEAR \u2014 commit boundary audit (2026-03-07): code-fix commits (b3b5bf6c ISSUE-051/066, 536b8442 ISSUE-204) and test commit (e9bf825f) have zero RELEASES/ file touches. State commits (7c62039f etc.) touch only RELEASES/ \u2014 no src/ overlap. Boundary respected.",
-        "B11": "CLEAR \u2014 pushed to origin/main 2026-03-07: bd81f502..96b1d7e7 (code ac67afac + state 7eb3fdd2 + B11 truth-sync 96b1d7e7). HEAD on origin/main = 96b1d7e7.",
-        "B12": "BLOCKED \u00e2\u20ac\u201d currently PHASE_1_STATIC_CCC_AUDIT; CERT-SEALED requires PHASE_4"
+        "B11": "CLEAR \u2014 pushed to origin/main 2026-03-07: bd81f502..73d46ea1 (code ac67afac, state commits through 73d46ea1). HEAD on origin/main = 73d46ea1.",
+        "B12": "CLEAR \u2014 operator advanced lifecycle to PHASE_4_POST_FIX_RUNTIME_CERTIFICATION 2026-03-07. Candidate SHA 1a22ea48. GateA backend: PASS (Cloud Run main-backend at e26dbe6 \u2014 zero backend code diff vs 1a22ea48; all changes are POS/test/RELEASES only). GateA APK: PENDING operator confirmation. GateB seeded-state: PENDING operator confirmation."
       },
       "openGaps": [],
       "acceptedRisks": [
