@@ -51,6 +51,13 @@ If state files are stale, update them first, then work.
 >
 > Claude must trace this end-to-end. Not infer. Not assume. TRACE.
 
+If a downstream journey depends on upstream prerequisites such as retailer or
+supplier registration, portal login, superadmin approval/provisioning, device
+enrollment, stock setup, or session recovery, that prerequisite funnel is part
+of the production surface. Repeatedly fixing the same downstream symptom
+without mapping and stabilizing the full prerequisite funnel is NOT
+production-grade work.
+
 ---
 
 ## SECTION 2: THE EIGHT AUDIT LEVELS
@@ -332,6 +339,7 @@ Strict rule:
 - PHASE 2 and PHASE 4 are the only live runtime phases.
 - PHASE 5 is exploratory only after certification.
 - Operator testing must never be the first line of defense for known flows.
+- If a PHASE 4 operator script hits a basic setup crash or known-flow breakage before certification can start, PHASE 4 is immediately suspended. Claude must truth-sync the blocker, return to PHASE 3, and continue Claude-owned stabilization until operator time is no longer being used as the discovery engine.
 
 ---
 
@@ -350,6 +358,22 @@ APK REBUILD FORBIDDEN unless ALL of the following:
   [ ] Deploy conditions above are met
   [ ] At least one JS file in POS scope was changed (not just backend/web)
   [ ] No re-audit needed (NEEDS-REAUDIT is clear)
+
+WEB/PORTAL DEPLOY FORBIDDEN for any touched surface unless ALL of the following:
+  [ ] A real-user auth/onboarding matrix exists for that surface
+  [ ] Happy path, retry, expiry, duplicate/returning user, wrong-role,
+      pending-approval, and session-recovery scenarios are deterministic or
+      explicitly blocked with evidence
+  [ ] Surface-specific anti-regression gates pass for the touched surface
+
+POS APK BUILD FORBIDDEN unless, in addition to the normal APK rules, ALL of the following:
+  [ ] The POS prerequisite funnel from enrollment/login/store binding into the
+      target journey entry is stable
+  [ ] Any required stock-setup path (Opening Stock, Stock Inward, or portal-led
+      stock setup) is proven on the candidate or explicitly replaced by a
+      deterministic seeded-state path
+  [ ] The candidate does not rely on operator discovery to reach the target
+      journey entry
 
 OTA UPDATE (preferred for JS-only fixes):
   [ ] No native module changes
@@ -446,6 +470,7 @@ Operator runtime testing is FORBIDDEN unless:
   [ ] The code candidate SHA is pushed to origin/main
   [ ] The active machine-state/framework commits are also pushed
   [ ] The active cluster is internally stable per preArtifactExitCriteria
+  [ ] Gate B setup paths themselves are stable on the candidate (no seeded-state setup crash, no obvious blocker on the scripted certification entry path)
   [ ] Runtime testing is certifying a cluster candidate, not rediscovering basic known breakage
 
 SCRATCH / ARTIFACT FILES

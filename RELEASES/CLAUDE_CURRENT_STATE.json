@@ -1,6 +1,6 @@
 {
-  "version": "137.2",
-  "lastUpdated": "2026-03-07T15:28:22.9755369Z",
+  "version": "137.4",
+  "lastUpdated": "2026-03-08T00:30:00Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -25,12 +25,28 @@
       "8. Continue audit from lastAuditedAction + 1"
     ],
     "currentJourney": "JOURNEY-02",
-    "currentPhase": "JOURNEY_02_PHASE4_PREP",
-    "auditProgressNote": "JOURNEY-02 PHASE_4 ACTIVE (2026-03-07). Operator advanced lifecycle to PHASE_4_POST_FIX_RUNTIME_CERTIFICATION. Candidate SHA: 1a22ea48 (73d46ea1 + test typecheck fix). All static blockers B1-B12 CLEAR. Remaining: B5 (seededStateLock.confirmed=false \u2014 awaiting operator seeded-state confirmation), B9 (runtimeEvidence=[] \u2014 awaiting operator live test execution on device 23106RN0DA). GateA_shaParity: BACKEND PASS (e26dbe6 on Cloud Run \u2014 zero backend code changed between e26dbe6 and 1a22ea48; all 10 diff files are RELEASES/, src/__tests__/, src/screens/ only). APK parity: PENDING \u2014 operator must confirm device APK was built from a SHA >= ac67afac (includes ISSUE-051/066 + ISSUE-204 fixes). GateB_cleanSeededState: PENDING \u2014 operator must confirm seeded data present.",
+    "currentPhase": "JOURNEY_02_PHASE3_STABILIZATION",
+    "auditProgressNote": "JOURNEY-02 PHASE_4 SUSPENDED (2026-03-08). Operator hit a basic setup-path crash while trying to seed GateB state through Menu -> Opening Stock; typing product search caused the POS app to crash on device before runtime certification could begin. Operator also reported that upstream prerequisite paths remain unstable in real use: retailer registration/login, retailer-admin access after superadmin-driven setup, supplier registration/login, and stock-add entry paths are not yet mapped and stabilized end to end. Lifecycle is rolled back to PHASE_3_CODE_FIX_CLUSTER until Claude stabilizes the candidate. OpeningStockScreen is the first confirmed blocker, but Claude must now treat the full real-user prerequisite funnel as part of the blocking surface. The required OpeningStockScreen fix is identified, but it is not yet part of a certified candidate on main. Remaining blockers now: B1 (setup-path and prerequisite-funnel gaps documented), B5 (seededStateLock.confirmed=false because stock cannot yet be seeded through a stable real-user path on the current candidate), B9 (runtimeEvidence=[] because operator certification is paused), B12 (wrong lifecycle phase until the stabilized candidate is ready to re-enter PHASE_4). Operator testing is paused; Claude must own real-user funnel mapping, deterministic/live-assisted stabilization, clean commit boundaries, and candidate preparation before asking the operator to certify again.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "PHASE_4 active. B5 (seededStateLock) + B9 (runtimeEvidence) pending operator live test on candidate 1a22ea48.",
-      "nextUnblock": "(1) Operator confirms device APK includes ISSUE-051/066 fix (>= ac67afac). (2) Operator confirms seeded state (B5). (3) Operator runs 10-action script on device 23106RN0DA (B9). Claude writes evidence entries."
+      "blockedBy": "PHASE_3 stabilization active. Operator certification is paused because the current candidate is not yet operator-testable: OpeningStockScreen crashes during GateB seeded-state setup, and the broader real-user prerequisite funnel (retailer/supplier registration and login, admin approval handoff, stock-add entry paths) is not yet mapped and stabilized end to end.",
+      "nextUnblock": "(1) Claude builds the full real-user prerequisite funnel map across retailer, supplier, superadmin, and POS entry paths. (2) Claude enumerates the scenario matrix for registration/login/auth/session/approval/stock-setup edge cases. (3) Claude fixes the earliest broken prerequisite step first, adds deterministic regression guards, and continues outward until a real user can reach GateB/JOURNEY-02 entry without basic breakage. (4) Clean CODE_FIX and STATE_ONLY commits are pushed. (5) Only after the prerequisite funnel and GateB setup path are stable may lifecycle advance back to PHASE_4 and the operator run the scripted certification pass."
+    },
+    "resumeDirective": {
+      "mode": "PREREQUISITE_FUNNEL_STABILIZATION_FIRST",
+      "rule": "Tomorrow's resume starts from the full real-user prerequisite funnel, not from the nearest isolated symptom fix.",
+      "firstProgram": "productionGradeCertificationModel.realUserAuthAndOnboardingProgram",
+      "forbidden": [
+        "asking the operator to keep discovering basic breakage",
+        "requesting deploy/APK just to probe unmodeled prerequisite failures",
+        "treating OpeningStockScreen as the only blocker until upstream auth/onboarding paths are mapped"
+      ],
+      "requiredBeforeOperatorReturn": [
+        "full real-user map saved in repo truth",
+        "scenario matrix saved in repo truth",
+        "earliest prerequisite blockers fixed with regression guards",
+        "candidate path into JOURNEY-02 entry proven stable enough for scripted certification"
+      ]
     },
     "antiDriftRules": [
       "Claude NEVER decides what to work on from conversation memory alone",
@@ -46,8 +62,11 @@
       "Claude NEVER mix commits code changes with RELEASES/ or workflow/state/ changes except in FRAMEWORK_ONLY commits",
       "Claude NEVER truth-sync a fix while any affected HIGH/CRITICAL issue still has regressionGuardStatus != PASS",
       "Claude NEVER request operator certification while HEAD or active machine-state commits are unpushed",
+      "Claude NEVER keep operator certification running after the operator hits a basic setup crash or known-flow breakage; truth-sync the blocker, roll back to PHASE_3, and continue Claude-owned stabilization first",
       "Claude NEVER switch away from the active journey because a round feels short or because breadth seems efficient; depth-first completion is mandatory",
-      "Claude NEVER leave the current journey partially audited when remaining sealing blockers are still auditable in the current session"
+      "Claude NEVER leave the current journey partially audited when remaining sealing blockers are still auditable in the current session",
+      "Claude NEVER call an auth/onboarding fix permanent until the full real-user prerequisite funnel and scenario matrix for the touched surfaces are mapped and regression-guarded",
+      "Claude NEVER request a new deploy/build to rediscover retailer, supplier, superadmin, or POS prerequisite breakage that should already be modeled in repo truth"
     ]
   },
   "executionModel": {
@@ -103,7 +122,8 @@
       "Do not treat manual operator testing as the primary discovery engine for known business invariants.",
       "Do not pass a screen, modal, or flow until every user interaction, tap, click, submit path, failure state, recovery path, and end-to-end dependency chain in scope has been executed or explicitly blocked with evidence.",
       "Do not close a fix without adding or updating a regression guard: business invariant, API integration coverage, scripted UI flow, or documented runtime assertion.",
-      "Do not trust a build unless backend, web, and APK artifacts are proven to be on the same SHA."
+      "Do not trust a build unless backend, web, and APK artifacts are proven to be on the same SHA.",
+      "Do not accept repeated symptom fixes on retailer/supplier/admin/POS auth or onboarding paths as permanent until the full real-user prerequisite funnel is mapped, scenario-tested, and guarded."
     ],
     "releaseCertificationGates": {
       "GateA_shaParity": {
@@ -114,9 +134,13 @@
         "required": true,
         "rule": "use one deterministic seeded state with known retailer, supplier, store, device, products, stock, customer, payment mode, and test identities"
       },
+      "GateB1_realUserPrerequisiteFunnel": {
+        "required": true,
+        "rule": "Before operator certification or deploy/build requests for a touched surface, Claude must maintain a real-user prerequisite funnel map covering registration, login, approval/provisioning, enrollment, stock setup, and handoff into the target journey."
+      },
       "GateC_automatedCriticalFlowSuite": {
         "required": true,
-        "rule": "run critical business flows before operator exploratory testing",
+        "rule": "Claude runs critical business flows and setup-path stabilization before any operator exploratory testing or scripted certification handoff",
         "flows": [
           "Retailer register/login",
           "Supplier register/login",
@@ -134,8 +158,62 @@
       },
       "GateE_operatorExploratoryPass": {
         "required": true,
-        "rule": "operator exploratory testing runs only on an already-certified build that passed Gates A-D"
+        "rule": "operator exploratory testing runs only on an already-certified build that passed Gates A-D; operator time is never used to discover basic known breakage"
       }
+    },
+    "realUserAuthAndOnboardingProgram": {
+      "status": "ACTIVE_HARD_BLOCK",
+      "owner": "CLAUDE",
+      "purpose": "Stabilize the full real-user prerequisite funnel before more operator certification time is consumed. Repeated one-off auth/onboarding fixes are not accepted as permanent without this program.",
+      "blocks": [
+        "operator certification handoff",
+        "deploy requests for retailer-admin, supplier-portal, superadmin, or shared auth/backend surfaces",
+        "APK build requests whose only purpose is to discover upstream prerequisite breakage"
+      ],
+      "touchedSurfaces": [
+        "retailer registration",
+        "retailer login/session resume",
+        "supplier registration",
+        "supplier login/session resume",
+        "superadmin approval/provisioning handoff",
+        "POS enrollment/login/store binding",
+        "stock-add entry paths (retailer admin, stock inward, opening stock)",
+        "handoff into JOURNEY-02 sell/cash flow"
+      ],
+      "requiredArtifacts": [
+        "full real-user map from first identity creation to downstream sell-flow entry",
+        "scenario matrix covering success, retry, expired or invalid OTP/session, duplicate identity, returning user, approval pending, wrong role, inactive store/device, background/resume, and cross-portal handoff",
+        "ordered blocker ledger from earliest broken step to latest downstream consequence",
+        "surface-specific deterministic regression gates for retailer-admin, supplier-portal, superadmin, and POS"
+      ],
+      "verifiedRepoFacts": [
+        "Retailer superadmin init/activation does not create auth.store_users up front; backend/services/platform-service/src/routes/retailerAdmin.ts enables portal and stores phone, while retailer auth creates auth.users + auth.store_users on first successful login.",
+        "Retailer OTP login path is /api/v1/retailer-admin/auth/firebase-otp-login (separate from email/password /auth/login).",
+        "Supplier portal supports both phone OTP login via /api/v1/supplier/auth/firebase-login and password login via /api/v1/supplier/auth/login; runtime status is unverified, not auto-broken by absence of recent evidence.",
+        "Unified document upload route is /api/v1/documents/upload and uses GCS uploadBuffer with a backend 10MB limit; a runtime 500 does not by itself prove bucket permissions or missing env vars without logs.",
+        "OpeningStockScreen required fix is identified, but it is not yet merged into a certified candidate on main."
+      ],
+      "unverifiedRuntimeClaims": [
+        "exact root cause of retailer/supplier document upload 500",
+        "runtime behavior of supplier registration and supplier login on current staging",
+        "whether any additional prerequisite blocker exists between retailer activation and retailer dashboard beyond documented first-login user/store_user creation"
+      ],
+      "implementationOrder": [
+        "retailer registration end to end",
+        "retailer login/session persistence/recovery",
+        "supplier registration and login end to end",
+        "superadmin approval/provisioning dependencies and role handoffs",
+        "POS enrollment/login/store binding",
+        "stock-add path through real UI",
+        "JOURNEY-02 entry and downstream certification path"
+      ],
+      "resumeRule": "Fix the earliest broken prerequisite step first. Do not skip ahead to downstream flows while an upstream prerequisite still prevents a real user from reaching that stage.",
+      "doneWhen": [
+        "real-user map is saved in repo truth",
+        "scenario matrix is saved in repo truth",
+        "deterministic guards exist for the highest-risk prerequisite paths",
+        "a real retailer and supplier can reach the stock-add/JOURNEY-02 entry path without basic breakage on the candidate"
+      ]
     },
     "liveTestingLifecycle": {
       "canonicalOrder": [
@@ -146,7 +224,7 @@
         "PHASE_5_OPERATOR_EXPLORATORY_PASS",
         "PHASE_6_DEPLOY_ELIGIBILITY"
       ],
-      "currentLifecyclePhase": "PHASE_4_POST_FIX_RUNTIME_CERTIFICATION",
+      "currentLifecyclePhase": "PHASE_3_CODE_FIX_CLUSTER",
       "phaseRules": {
         "PHASE_1_STATIC_CCC_AUDIT": {
           "purpose": "Code-and-architecture tracing before any live runtime certification.",
@@ -220,7 +298,8 @@
         "PHASE_2 and PHASE_4 are the only live runtime certification phases.",
         "PHASE_5 is exploratory only after certification, never instead of certification.",
         "Claude must state the active lifecycle phase before requesting any operator action.",
-        "Claude must not request deploy/APK outside PHASE_2 baseline alignment or PHASE_4 post-fix certification."
+        "Claude must not request deploy/APK outside PHASE_2 baseline alignment or PHASE_4 post-fix certification.",
+        "If a PHASE_4 operator script hits a basic setup crash or known-flow breakage before certification can start, Claude must suspend operator testing, truth-sync the blocker, and return to PHASE_3_CODE_FIX_CLUSTER until the candidate is stable again."
       ]
     },
     "journeyDepthDiscipline": {
@@ -241,8 +320,8 @@
     },
     "testArchitecture": {
       "unitAndBusinessInvariantLayer": "Encode business rules such as stock non-negativity, createSale saleId creation, device/session invariants, and role/allowlist enforcement before relying on manual retest.",
-      "apiIntegrationLayer": "Run real API integration tests against staging-like backend state for enrollment, sale creation, payment init, approvals, and registration resume flows.",
-      "deterministicUiE2eLayer": "Use scripted E2E for critical web and POS flows. Manual taps must confirm, not discover, repeated breakage.",
+      "apiIntegrationLayer": "Run real API integration tests against staging-like backend state for enrollment, sale creation, payment init, approvals, and registration/login resume flows across retailer, supplier, and admin dependencies.",
+      "deterministicUiE2eLayer": "Use scripted E2E for critical web and POS flows, including auth/onboarding prerequisite funnels. Manual taps must confirm, not discover, repeated breakage.",
       "artifactParityLayer": "Trust only artifacts that prove identical SHA and seeded-state compatibility.",
       "operatorExplorationLayer": "Use operator time for edge cases, UX friction, and real-device behavior after deterministic gates pass."
     },
@@ -253,9 +332,12 @@
       "artifactLevelRule": "Do not rebuild the APK or redeploy staging for every single issue. Build and deploy once per validated cluster of related fixes on the same surface.",
       "clusterDefinition": "A bounded set of 5-15 closely related issues in one subsystem or dependency chain, such as payment, stock, enrollment, or auth.",
       "preArtifactExitCriteria": [
+        "real-user prerequisite funnel map is current for the touched surfaces",
+        "scenario matrix exists for registration/login/approval/enrollment/stock-setup edge cases touched by the active cluster",
         "local business invariant coverage passes",
         "API integration checks for touched backend flows pass",
         "scripted UI or deterministic interaction checks for touched surfaces pass",
+        "surface-specific anti-regression gates pass for retailer-admin, supplier-portal, superadmin, and POS if those surfaces are touched",
         "no unresolved regression in the active cluster"
       ],
       "artifactPromotionRule": "Create a new staging deploy or APK only after the current cluster is internally stable. Use runtime testing to certify the cluster, not to discover every individual bug from scratch.",

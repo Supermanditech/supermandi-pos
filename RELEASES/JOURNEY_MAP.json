@@ -27,6 +27,8 @@
     "lifecycleRule": "Before asking for any operator action or artifact build, Claude must state which lifecycle phase is active from CLAUDE_CURRENT_STATE.productionGradeCertificationModel.liveTestingLifecycle. Baseline live discovery and post-fix runtime certification are different phases and may not be conflated.",
     "depthFirstAuditRule": "One journey at a time, to 100% completion. Claude may move currentAuditJourney only when the current journey is CERT-SEALED, or when it is CERT-BLOCKED with exact blocker, requiredFix, and next-resume conditions documented in repo truth. 'Round not enough' is not a valid reason to switch journeys.",
     "roundBudgetRule": "If a session ends mid-journey, Claude records exact remaining blockers and next action, then resumes the same journey next session. Claude does not start sampling the next journey while the active one is still auditable.",
+    "prerequisiteFunnelRule": "If a journey depends on upstream registration, login, approval/provisioning, enrollment, or stock-setup flows, Claude must map and stabilize that full real-user prerequisite funnel before asking the operator to certify the downstream journey.",
+    "surfaceDeployGateRule": "A touched surface (retailer-admin, supplier-portal, superadmin, POS) cannot request deploy/APK until its real-user auth/onboarding matrix and deterministic regression gates pass on the candidate.",
     "sealingBlockers": {
       "B1_openGapsBlock": "Journey cannot reach CERT-SEALED if openGaps array is non-empty.",
       "B2_invariantBlock": "Journey cannot reach CERT-SEALED if any touched invariant with blockingForSeal=true has status != VERIFIED in INVARIANT_REGISTRY.json.",
@@ -145,6 +147,40 @@
       "leaving JOURNEY-02 partially traced while it still has auditable sealing blockers"
     ],
     "ifSessionEndsMidJourney": "Update lastAuditedAction, openGaps, blocker notes, and the exact next action to resume. Next session resumes JOURNEY-02."
+  },
+  "prerequisitePrograms": {
+    "C1_REAL_USER_FUNNEL": {
+      "status": "ACTIVE_HARD_BLOCK",
+      "owner": "CLAUDE",
+      "blocks": [
+        "JOURNEY-02 operator certification",
+        "deploy/APK requests for touched auth/onboarding surfaces",
+        "operator-led discovery of basic prerequisite failures"
+      ],
+      "scope": [
+        "retailer registration",
+        "retailer login/session recovery",
+        "supplier registration",
+        "supplier login/session recovery",
+        "superadmin approval/provisioning handoff",
+        "POS enrollment/login/store binding",
+        "stock-add entry paths",
+        "handoff into JOURNEY-02"
+      ],
+      "requiredArtifacts": [
+        "full real-user map from identity creation to downstream sell-flow entry",
+        "scenario matrix for happy path + failure + recovery cases",
+        "ordered blocker ledger from earliest failure to latest downstream effect",
+        "surface-specific anti-regression gates for retailer-admin, supplier-portal, superadmin, and POS"
+      ],
+      "verifiedRepoFacts": [
+        "Retailer portal init enables the portal and stores the phone but does not pre-create auth.store_users; first successful login creates the user linkage.",
+        "Retailer OTP login path is firebase-otp-login, not the email/password login route.",
+        "Supplier portal has both phone OTP and password login paths in code; runtime status is unverified.",
+        "Unified document upload route uses GCS-backed uploadBuffer; exact 500 root cause is not yet proven."
+      ],
+      "resumeRule": "Fix the earliest prerequisite blocker first. Do not skip to downstream sell-flow fixes while a real retailer or supplier cannot reach that stage through stable entry paths."
+    }
   },
   "_actionTemplate": {
     "_comment": "Copy this template for every new action. All fields required.",
@@ -305,26 +341,45 @@
       "name": "Daily Sell Flow \u00e2\u20ac\u201d Cash Payment",
       "cluster": "C1",
       "description": "SellScan idle \u00e2\u2020\u2019 scan barcode \u00e2\u2020\u2019 item added to cart \u00e2\u2020\u2019 cart reviewed \u00e2\u2020\u2019 PaymentScreen (cash) \u00e2\u2020\u2019 Complete Payment \u00e2\u2020\u2019 SuccessScreen with saleId + billRef \u00e2\u2020\u2019 receipt prints \u00e2\u2020\u2019 inventory decremented \u00e2\u2020\u2019 order visible in retailer admin",
-      "status": "CERT-IN-PROGRESS",
+      "status": "CERT-BLOCKED",
       "lastAuditedAction": "ACT-02-10",
-      "lastAuditedAt": "2026-03-07",
+      "lastAuditedAt": "2026-03-08",
       "staticAuditComplete": true,
       "staticAuditCompletedAt": "2026-03-07",
       "remainingSealingBlockers": {
-        "B1": "CLEAR \u00e2\u20ac\u201d openGaps empty, two gaps accepted as AR-02-01 and AR-02-02",
+        "B1": "BLOCKED \u2014 GAP-02-SEED-OPENING-STOCK and GAP-C1-REAL-USER-PREREQUISITE-FUNNEL are open. OpeningStockScreen is the first confirmed crash, and the broader real-user prerequisite funnel into JOURNEY-02 is not yet fully mapped and stabilized.",
         "B2": "CLEAR \u00e2\u20ac\u201d all 22 invariants VERIFIED or nonBlockingForJourneys:JOURNEY-02",
         "B3": "CLEAR \u2014 SCREEN_CERT_MANIFEST.json verified 2026-03-07 at 7c62039f: PaymentScreen ISSUE-051/066 (CRITICAL) and ISSUE-068 (HIGH) all regressionGuardStatus=PASS. SellScanScreen ISSUE-204/042/039 all PASS. No knownIssue has MISSING or FAIL guard.",
         "B4": "CLEAR \u2014 G1 signed 2026-03-07 (all 20 scopeFiles read). G2/G3/G5/G6 signed 2026-03-07. G4 already signed. All six guarantees now signed.",
-        "B5": "BLOCKED \u00e2\u20ac\u201d seededStateLock.confirmed=false. Requires live test data setup (PHASE_4)",
+        "B5": "BLOCKED \u2014 seededStateLock.confirmed=false. GateB cannot be completed because the current device build crashes on Menu -> Opening Stock -> product search before stock can be seeded, and no stable prerequisite stock-add path is yet proven for a real user on the candidate.",
         "B6": "CLEAR \u00e2\u20ac\u201d all action levels PASS or GAP with documented acceptedRisk",
         "B7": "CLEAR \u2014 knownIssues cross-checked against LIVE_TESTING_ISSUES.md (2026-03-07): ISSUE-051, ISSUE-066, ISSUE-068, ISSUE-204, ISSUE-042 all present and documented. No omission found. Cross-check feasible in PHASE_1 without runtime.",
         "B8": "CLEAR \u00e2\u20ac\u201d all 10 actions now result=PASS",
-        "B9": "BLOCKED \u00e2\u20ac\u201d crossPortalMatrix row 1 verified=true but runtimeEvidence=[] (PHASE_4 required)",
+        "B9": "BLOCKED \u2014 runtimeEvidence remains empty because operator certification is paused until Claude stabilizes both the immediate GateB setup path and the broader real-user prerequisite funnel into JOURNEY-02.",
         "B10": "CLEAR \u2014 commit boundary audit (2026-03-07): code-fix commits (b3b5bf6c ISSUE-051/066, 536b8442 ISSUE-204) and test commit (e9bf825f) have zero RELEASES/ file touches. State commits (7c62039f etc.) touch only RELEASES/ \u2014 no src/ overlap. Boundary respected.",
         "B11": "CLEAR \u2014 pushed to origin/main 2026-03-07: bd81f502..73d46ea1 (code ac67afac, state commits through 73d46ea1). HEAD on origin/main = 73d46ea1.",
-        "B12": "CLEAR \u2014 operator advanced lifecycle to PHASE_4_POST_FIX_RUNTIME_CERTIFICATION 2026-03-07. Candidate SHA 1a22ea48. GateA backend: PASS (Cloud Run main-backend at e26dbe6 \u2014 zero backend code diff vs 1a22ea48; all changes are POS/test/RELEASES only). GateA APK: PENDING operator confirmation. GateB seeded-state: PENDING operator confirmation."
+        "B12": "BLOCKED \u2014 PHASE_4 runtime certification was suspended after the operator hit a basic setup-path crash before certification could begin. Lifecycle is now PHASE_3_CODE_FIX_CLUSTER until the prerequisite funnel and OpeningStock setup blocker are fixed, rebuilt, and restabilized."
       },
-      "openGaps": [],
+      "openGaps": [
+        {
+          "gapId": "GAP-02-SEED-OPENING-STOCK",
+          "level": "PHASE_4_SETUP",
+          "type": "SETUP_PATH_RUNTIME_CRASH",
+          "severity": "HIGH",
+          "happyPathAffected": true,
+          "description": "Operator attempted GateB seeded-state setup through Menu -> Opening Stock on the enrolled POS device. Typing a product search such as 'Test Rice' caused the app to crash before any stock could be seeded. This makes operator runtime certification premature and blocks seeded-state creation required for JOURNEY-02.",
+          "requiredFix": "Fix OpeningStockScreen searchProducts() to normalize the grouped response returned by /api/v1/pos/store-products/search, rebuild/install a parity candidate, and prove the Opening Stock search + submit path is stable on-device before resuming PHASE_4 runtime certification."
+        },
+        {
+          "gapId": "GAP-C1-REAL-USER-PREREQUISITE-FUNNEL",
+          "level": "PHASE_3_PREREQUISITE_STABILIZATION",
+          "type": "REAL_USER_FUNNEL_UNMAPPED_OR_UNSTABLE",
+          "severity": "HIGH",
+          "happyPathAffected": true,
+          "description": "JOURNEY-02 depends on upstream real-user flows that are still unstable or unverified in practice: retailer registration/login, supplier registration/login, superadmin approval/provisioning handoff, and stock-add entry paths. Repeated symptom fixes are not accepted as permanent until these prerequisite flows are mapped scenario-by-scenario and stabilized from the earliest blocker outward.",
+          "requiredFix": "Build the full real-user map and scenario matrix across retailer, supplier, superadmin, and POS prerequisite flows; verify repo facts vs runtime evidence; fix the earliest blocker first; add deterministic anti-regression gates per touched surface; then resume JOURNEY-02 certification on a stable candidate."
+        }
+      ],
       "acceptedRisks": [
         {
           "riskId": "AR-02-01",
@@ -347,7 +402,12 @@
           "mitigation": "Haptic feedback on scan; isDuplicate guard; notification on success/error always shown."
         }
       ],
-      "cccBlocker": null,
+      "cccBlocker": {
+        "file": "src/screens/OpeningStockScreen.tsx",
+        "description": "GateB seeded-state setup crashes on device during product search in Opening Stock, and the broader prerequisite funnel into JOURNEY-02 is not yet mapped/stable enough for operator certification.",
+        "requiredFix": "Normalize grouped search response data in OpeningStockScreen, build the full prerequisite user-flow map, stabilize the earliest upstream blockers with regression guards, re-establish artifact parity on the fixed candidate, and verify the seeded-state setup path end-to-end before re-entering PHASE_4.",
+        "nextResumeCondition": "Resume JOURNEY-02 after the prerequisite funnel map exists in repo truth, the earliest prerequisite blockers are fixed, a new parity candidate is installed, and Menu -> Opening Stock -> search -> submit succeeds without crash."
+      },
       "seededStateLock": {
         "required": true,
         "confirmed": false,
