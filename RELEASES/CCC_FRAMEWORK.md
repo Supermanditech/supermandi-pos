@@ -167,6 +167,60 @@ G6 — REGRESSION GUARANTEE
 
 ---
 
+## SECTION 3B: HARD BLOCKING CONDITIONS (False-Seal Prevention)
+
+These conditions BLOCK CERT-SEALED regardless of all other checks passing.
+If any blocker is active, Claude must state it explicitly and fix the gap — not work around it.
+
+```
+BLOCKER B1 — OPEN GAPS
+  journey.openGaps array is non-empty.
+  Every gap must be resolved (fixed or documented as ACCEPTED_RISK with justification).
+  Action: Fix the gap. Update action.levels[LN].status = GAP → PASS. Clear openGaps.
+
+BLOCKER B2 — INVARIANT NOT VERIFIED
+  Any invariant in journey.scope.invariants with blockingForSeal=true
+  has currentStatus != VERIFIED in INVARIANT_REGISTRY.json.
+  Action: Find enforcement code. Add file:line to verifiedInFiles. Set status=VERIFIED.
+  If enforcement does not exist: raise as code gap, fix code first.
+
+BLOCKER B3 — REGRESSION GUARD MISSING
+  Any screen in journey scope has a knownIssue with regressionGuardStatus=MISSING or FAIL.
+  Action: Add automated test, invariant check, or documented structural proof.
+  Set regressionGuardStatus=PASS with regressionGuardRef pointing to the guard.
+  "The fix is structural" is NOT sufficient — the guard must be a verifiable artifact.
+
+BLOCKER B4 — UNSIGNED GUARANTEE
+  Any of G1-G6 has signed=false.
+  Action: Complete the work that each guarantee requires. Sign with citations.
+  G1: Read every file in scopeFiles. G2: Cite both call site and handler.
+  G3: Cite every downstream handler. G4: Cite every invariant enforcement.
+  G5: Document every failure mode. G6: Verify every regression lock.
+
+BLOCKER B5 — UNSEEDED STATE
+  journey.seededStateLock.confirmed=false at time of runtime evidence collection.
+  Action: Operator confirms seeded state before any runtimeEvidence is collected.
+  Set confirmed=true with confirmedAt timestamp.
+  Runtime evidence collected without seeded state is INVALID.
+
+BLOCKER B6 — INCOMPLETE LEVEL AUDIT
+  Any action has any level (L0-L8) with status=GAP and no ACCEPTED_RISK entry.
+  Action: Fix the gap in code, or document ACCEPTED_RISK with explicit justification
+  in levels[LN].notes. Undocumented gaps block sealing.
+
+BLOCKER B7 — CROSS-PORTAL MATRIX INCOMPLETE
+  journey.crossPortalMatrix contains any row with verified=false.
+  Action: Read the portal's query code. Confirm store_id filter. Set verified=true with citation.
+  "It probably works" is not verification.
+
+BLOCKER B8 — NO RUNTIME EVIDENCE
+  No action in the journey has any runtimeEvidence entry of type OPERATOR_CONFIRMED.
+  Action: Operator must run structured journey script and fill runtimeEvidence per action.
+  Code-only audit is necessary but not sufficient for CERT-SEALED.
+```
+
+---
+
 ## SECTION 4: CERTIFICATION STATES
 
 ```

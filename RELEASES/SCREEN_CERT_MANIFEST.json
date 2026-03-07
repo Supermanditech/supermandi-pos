@@ -1,10 +1,16 @@
 {
   "_meta": {
-    "version": "1.0",
+    "version": "2.0",
     "createdAt": "2026-03-07",
-    "purpose": "Tracks per-screen CCC certification status. Every screen that is part of any journey must appear here. Claude updates this after every action audit that touches a screen.",
+    "hardenedAt": "2026-03-07",
+    "purpose": "Tracks per-screen CCC certification status. Every screen in any journey must appear here. Claude updates after every action audit touching a screen.",
     "statusValues": ["CERT-PENDING", "CERT-IN-PROGRESS", "CERT-PASS", "NEEDS-REAUDIT"],
-    "claudeRule": "When a journey action for a screen reaches CERT-PASS, update this screen's status. When any file in a screen's scope changes, set status to NEEDS-REAUDIT and list reauditReasons."
+
+    "regressionGuardBlockingRule": "A screen CANNOT reach CERT-PASS if any entry in its knownIssues array has regressionGuardStatus != PASS. regressionGuardStatus=MISSING means no guard exists — must add test, invariant, or documented structural proof before CERT-PASS.",
+
+    "scopeLockRule": "At session start: for each file in scopeLock.files, run git log --oneline -1 -- <path>. If returned SHA is newer than auditedAtSha, set reauditRequired=true on that file and screen status=NEEDS-REAUDIT. List reason in reauditReasons.",
+
+    "claudeRule": "When a journey action for a screen is audited, update cccLevelsCompleted. When all journey actions for a screen are result=PASS, set screen status=CERT-PASS only if: (a) no knownIssue has regressionGuardStatus != PASS, (b) all sixGuarantees for all journeys using this screen are signed."
   },
 
   "screens": {
@@ -18,6 +24,13 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/screens/SellScanScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+          { "path": "src/services/stockService.ts", "auditedAtSha": null, "reauditRequired": false },
+          { "path": "src/services/offlineDb.ts", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [
         {
           "issueId": "ISSUE-204",
@@ -25,7 +38,10 @@
           "sha": "536b8442",
           "rootCause": "syncProductsToOffline wrote server-stale stock to SQLite even when in-memory cache was pinned. setCatalogItems(fresh) then loaded stale rows, overwriting React state with currentStock: 0.",
           "fixDescription": "Check resolveStockForSku before upsertLocalProduct. If pin active, write pinned value to SQLite instead of server value.",
-          "regressionTestExists": false
+          "regressionGuardStatus": "MISSING",
+          "regressionGuardType": null,
+          "regressionGuardRef": null,
+          "regressionGuardNote": "Structural fix exists. Automated test required: edit stock to N, trigger sync, assert stock still N."
         },
         {
           "issueId": "ISSUE-042",
@@ -33,7 +49,10 @@
           "sha": "9fd8f714",
           "rootCause": "SkuItem array in state not updated after manual stock edit; stockRefreshTick not bumped.",
           "fixDescription": "Added SkuItem array update after stock edit + stockRefreshTick bump to force re-render.",
-          "regressionTestExists": false
+          "regressionGuardStatus": "MISSING",
+          "regressionGuardType": null,
+          "regressionGuardRef": null,
+          "regressionGuardNote": "Structural fix exists. Test required: verify UI re-renders correct stock after edit."
         },
         {
           "issueId": "ISSUE-039",
@@ -41,10 +60,20 @@
           "sha": "prior wave",
           "rootCause": "Barcode-only guard at line 1678 prevents VALIDATION_ERROR on text search input.",
           "fixDescription": "Pre-existing guard, verified in place.",
-          "regressionTestExists": false
+          "regressionGuardStatus": "MISSING",
+          "regressionGuardType": null,
+          "regressionGuardRef": null,
+          "regressionGuardNote": "Guard exists in code. Test required: submit text string via barcode path, assert no VALIDATION_ERROR."
         }
       ],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     },
 
     "PaymentScreen": {
@@ -56,6 +85,13 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+          { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false },
+          { "path": "src/store/cartStore.ts", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [
         {
           "issueId": "ISSUE-051",
@@ -63,7 +99,10 @@
           "sha": "b3b5bf6c",
           "rootCause": "loadingSale in useEffect deps caused React to run cleanup (cancelled=true) and re-run the effect every time setLoadingSale(true) was called. In-flight async work then bailed on if (cancelled) return, so setSaleId/setBillRef were never called.",
           "fixDescription": "Added createSaleInFlightRef = useRef(false). Replaced loadingSale guard with createSaleInFlightRef.current. Removed loadingSale from deps array. Ref cleared in .finally() before cancelled check.",
-          "regressionTestExists": false
+          "regressionGuardStatus": "MISSING",
+          "regressionGuardType": null,
+          "regressionGuardRef": null,
+          "regressionGuardNote": "Structural fix exists. Test required: mount PaymentScreen with items, assert Complete Payment button enables within 3s without any user action."
         },
         {
           "issueId": "ISSUE-066",
@@ -71,7 +110,10 @@
           "sha": "b3b5bf6c",
           "rootCause": "Same as ISSUE-051 — payment chain unblocked by same fix.",
           "fixDescription": "Same as ISSUE-051.",
-          "regressionTestExists": false
+          "regressionGuardStatus": "MISSING",
+          "regressionGuardType": null,
+          "regressionGuardRef": null,
+          "regressionGuardNote": "Same test as ISSUE-051 covers this."
         },
         {
           "issueId": "ISSUE-068",
@@ -79,10 +121,20 @@
           "sha": "e9ee6592",
           "rootCause": "productId mapping wrong in productsApi + storeProductDigitisationService for createSale variant resolution.",
           "fixDescription": "Fixed productId mapping in productsApi and storeProductDigitisationService.",
-          "regressionTestExists": false
+          "regressionGuardStatus": "MISSING",
+          "regressionGuardType": null,
+          "regressionGuardRef": null,
+          "regressionGuardNote": "Test required: createSale with a product that has storeProductId set. Assert saleId returned (not error). Covers productId mapping path."
         }
       ],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     },
 
     "SuccessPrintScreenV2": {
@@ -94,8 +146,21 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/screens/SuccessPrintScreenV2.tsx", "auditedAtSha": null, "reauditRequired": false },
+          { "path": "src/services/printerService.ts", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     },
 
     "SplitPaymentModal": {
@@ -107,8 +172,20 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/components/sell/SplitPaymentModal.tsx", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     },
 
     "EnrollDeviceScreen": {
@@ -120,8 +197,20 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/screens/EnrollDeviceScreen.tsx", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     },
 
     "ForceUpdateScreen": {
@@ -133,8 +222,20 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/screens/ForceUpdateScreen.tsx", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     },
 
     "PurchaseScreen": {
@@ -146,8 +247,20 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/screens/PurchaseScreen.tsx", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     },
 
     "PosRootLayout": {
@@ -159,8 +272,20 @@
       "cccLevelsCompleted": [],
       "openGaps": [],
       "reauditReasons": [],
+      "scopeLock": {
+        "files": [
+          { "path": "src/screens/PosRootLayout.tsx", "auditedAtSha": null, "reauditRequired": false }
+        ]
+      },
       "knownIssues": [],
-      "sixGuaranteesStatus": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false }
+      "sixGuaranteesStatus": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      }
     }
   },
 
@@ -217,7 +342,27 @@
 
   "deployGate": {
     "rule": "A deploy candidate requires ALL screens in the target cluster's journeys to be CERT-PASS. No partial deployment of CERT-PENDING screens.",
-    "currentBlockers": "All screens in CERT-PENDING or CERT-IN-PROGRESS — no deploy until JOURNEY-02 fully CERT-SEALED",
-    "nextDeployEligibleWhen": "JOURNEY-02 + JOURNEY-03 + JOURNEY-04 + JOURNEY-05 all CERT-SEALED (C1 cluster)"
+    "regressionGuardBlockingRule": "Any screen with a knownIssue where regressionGuardStatus=MISSING or regressionGuardStatus=FAIL BLOCKS deploy. No exceptions.",
+    "scopeLockViolationRule": "Any screen with a file in scopeLock that has reauditRequired=true BLOCKS deploy until re-audit completes.",
+    "currentBlockers": "All screens CERT-PENDING or CERT-IN-PROGRESS. All knownIssues have regressionGuardStatus=MISSING.",
+    "nextDeployEligibleWhen": "JOURNEY-02 + JOURNEY-03 + JOURNEY-04 + JOURNEY-05 all CERT-SEALED. All regressionGuardStatus=PASS for C1 screens."
+  },
+
+  "operatorFatigueRules": {
+    "maxJourneysPerOperatorSession": 4,
+    "rule": "Operator tests at most 4 journeys per session. Each journey has a pre-written structured script. Operator follows script exactly and logs pass/fail per step. No freestyle exploration until scripted pass is complete.",
+    "structuredScriptRequired": true,
+    "structuredScriptFormat": "Each step: precondition + action + expectedOutcome. Operator logs: actualOutcome + PASS|FAIL.",
+    "noExplorationBeforeScriptedPass": true,
+    "operatorIsLastLineNotFirstLine": "Operator testing confirms what Claude certified. It does not discover basic flow breakage. If operator finds basic breakage, that is a CCC audit failure — fix the audit, not just the code.",
+    "runtimeEvidenceRequired": "Operator fills runtimeEvidence[] in JOURNEY_MAP.json for each action tested. Claude verifies evidence completeness before CERT-SEALED.",
+    "runtimeEvidenceFormat": {
+      "type": "OPERATOR_CONFIRMED | AUTOMATED_TEST | SCREENSHOT | LOG_EXTRACT",
+      "step": "ACT-02-NN",
+      "result": "PASS | FAIL",
+      "actualOutcome": "description of what actually happened",
+      "timestamp": "ISO timestamp",
+      "notes": ""
+    }
   }
 }

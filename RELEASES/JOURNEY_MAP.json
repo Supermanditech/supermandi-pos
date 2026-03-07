@@ -1,50 +1,101 @@
 {
   "_meta": {
-    "version": "1.0",
+    "version": "2.0",
     "createdAt": "2026-03-07",
-    "purpose": "Defines all user journeys and their CCC audit state. This is the single source of truth for audit progress. Claude reads and updates this every session. Audit spine (per-action trace) is embedded in each journey.",
+    "hardenedAt": "2026-03-07",
+    "purpose": "Defines all user journeys and their CCC audit state. Single source of truth for audit progress. Claude reads and updates every session.",
     "statusValues": ["CERT-PENDING", "CERT-IN-PROGRESS", "CERT-BLOCKED", "CERT-SEALED", "NEEDS-REAUDIT"],
-    "claudeRule": "On session start: find the first journey with status != CERT-SEALED. Resume from lastAuditedAction + 1. Update this file after EVERY action audited. Never let session end without updating."
+    "resultValues": ["PENDING", "PASS", "FAIL", "BLOCKED"],
+    "levelStatusValues": ["PENDING", "PASS", "GAP", "SKIPPED"],
+
+    "claudeSessionRule": "On session start: find first journey where status != CERT-SEALED. Check scopeFiles for reaudit triggers (git log). Resume from lastAuditedAction + 1. Update this file after EVERY action. Never end session without updating.",
+
+    "sealingBlockers": {
+      "B1_openGapsBlock": "Journey cannot reach CERT-SEALED if openGaps array is non-empty.",
+      "B2_invariantBlock": "Journey cannot reach CERT-SEALED if any touched invariant with blockingForSeal=true has status != VERIFIED in INVARIANT_REGISTRY.json.",
+      "B3_regressionGuardBlock": "Journey cannot reach CERT-SEALED if any knownIssue in any screen in scope has regressionGuardStatus != PASS in SCREEN_CERT_MANIFEST.json.",
+      "B4_unsignedGuaranteeBlock": "Journey cannot reach CERT-SEALED if any of G1-G6 has signed=false.",
+      "B5_unseededStateBlock": "Runtime evidence cannot be collected if seededStateLock.confirmed=false.",
+      "B6_incompleteLevelsBlock": "Journey cannot reach CERT-SEALED if any action has any level with status=GAP and gap is not documented as ACCEPTED_RISK with explicit justification."
+    },
+
+    "falseSealprevention": [
+      "CERT-SEALED requires ALL 6 guarantees signed=true with citations.",
+      "Each citation must be a file:line reference, not a description.",
+      "G1 cannot be signed until every file in scopeFiles is read in the current session.",
+      "G4 cannot be signed until every touched invariant entry is VERIFIED with file:line.",
+      "runtimeEvidence must contain at least one OPERATOR_CONFIRMED entry per action before journey is eligible for CERT-SEALED.",
+      "No action can be result=PASS without L2 citations (code path trace) completed.",
+      "No journey can be CERT-SEALED without crossPortalMatrix fully verified (all rows have verified=true)."
+    ]
   },
 
   "currentAuditJourney": "JOURNEY-02",
   "auditOrder": [
-    "JOURNEY-01", "JOURNEY-02", "JOURNEY-03", "JOURNEY-04", "JOURNEY-05",
-    "JOURNEY-06", "JOURNEY-07", "JOURNEY-08", "JOURNEY-09", "JOURNEY-10",
-    "JOURNEY-11", "JOURNEY-12"
+    "JOURNEY-02", "JOURNEY-05", "JOURNEY-03", "JOURNEY-04",
+    "JOURNEY-06", "JOURNEY-01", "JOURNEY-07", "JOURNEY-08",
+    "JOURNEY-09", "JOURNEY-10", "JOURNEY-11", "JOURNEY-12"
   ],
 
-  "journeys": {
-
-    "JOURNEY-01": {
-      "id": "JOURNEY-01",
-      "name": "Device Enrollment Lifecycle",
-      "cluster": "C5",
-      "description": "SuperAdmin creates store → generates enrollment QR → POS operator scans QR → device enrolls → badge shows USED in SuperAdmin → device loads catalog → POS ready",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "openGaps": [],
-      "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
-      "scope": {
-        "posScreens": ["EnrollDeviceScreen", "SellScanScreen (post-enroll init)"],
-        "webScreens": ["superadmin/DeviceManagement", "superadmin/StoreManagement"],
-        "posServices": ["src/services/api/enrollmentApi.ts", "src/services/authService.ts"],
-        "backendRoutes": [
-          "api-gateway/src/routes/enrollDevice.ts",
-          "backend/services/pos-service/src/routes/enrollment.ts",
-          "backend/services/auth-service/src/routes/deviceAuth.ts"
-        ],
-        "dbTables": ["device_enrollments", "devices", "stores", "staff"],
-        "portals": ["superadmin"],
-        "invariants": ["INV-I5", "INV-SN2"]
-      },
-      "actions": [],
-      "crossPortalMatrix": [],
-      "regressionLocks": [],
-      "knownIssues": []
+  "_actionTemplate": {
+    "_comment": "Copy this template for every new action. All fields required.",
+    "id": "ACT-XX-NN",
+    "label": "Human-readable description of the user action",
+    "result": "PENDING",
+    "expectedUi": {
+      "beforeAction": "Screen/component state before user takes this action",
+      "immediateResponse": "Visual change within 300ms of action",
+      "loadingState": "Spinner/skeleton/disabled description during async wait",
+      "successState": "What screen shows after successful async resolution",
+      "errorState": "What screen shows for each failure mode"
     },
+    "expectedApi": {
+      "calls": [
+        { "method": "METHOD", "path": "/api/v1/...", "triggeredBy": "function name at file:line", "requestShape": {}, "responseShape": {}, "errorCodes": [401, 404, 500] }
+      ],
+      "errorHandling": [
+        { "httpStatus": 401, "expectedUiBehavior": "description", "codeVerified": false },
+        { "httpStatus": 500, "expectedUiBehavior": "description", "codeVerified": false }
+      ]
+    },
+    "expectedDbEffect": {
+      "writes": [
+        { "table": "table_name", "operation": "INSERT|UPDATE|DELETE", "columns": [], "whereCondition": "store_id = JWT.storeId", "triggeredByService": "service-name" }
+      ],
+      "reads": [
+        { "table": "table_name", "whereCondition": "store_id = JWT.storeId", "isolationVerified": false }
+      ]
+    },
+    "expectedCrossPortalEffect": [
+      { "portal": "retailer-admin|superadmin|supplier-portal", "screen": "PageName", "expectedChange": "description", "mechanism": "polling|websocket|manual-refresh", "verified": false }
+    ],
+    "runtimeEvidence": [],
+    "levels": {
+      "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L1": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L2": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L3": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L4": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L5": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L6": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L7": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+      "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
+    },
+    "gaps": [],
+    "scenariosVerified": [],
+    "knownIssueLinks": []
+  },
+
+  "_guaranteeTemplate": {
+    "_comment": "Copy per journey. Each guarantee requires citations before signed=true.",
+    "signed": false,
+    "signedAt": null,
+    "signedSha": null,
+    "citations": [],
+    "notes": ""
+  },
+
+  "journeys": {
 
     "JOURNEY-02": {
       "id": "JOURNEY-02",
@@ -56,17 +107,55 @@
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+
+      "seededStateLock": {
+        "required": true,
+        "confirmed": false,
+        "confirmedAt": null,
+        "requiredData": [
+          "test store: SuperMandi Test Store (a6c43ede-b14f-4b1a-973f-c334ca696f39)",
+          "enrolled device: 23106RN0DA on test store",
+          "test product with barcode: known SKU with stock >= 5",
+          "staff login: Raju Manager (7737914383)",
+          "payment mode: cash available"
+        ],
+        "resetScriptNote": "Run seed script or confirm state via GET /api/v1/pos/store-products before collecting runtime evidence"
+      },
+
+      "blockingRules": {
+        "B1_openGapsBlock": true,
+        "B2_invariantBlock": true,
+        "B3_regressionGuardBlock": true,
+        "B4_unsignedGuaranteeBlock": true,
+        "B5_unseededStateBlock": true,
+        "B6_incompleteLevelsBlock": true
+      },
+
+      "scopeFiles": [
+        { "path": "src/screens/SellScanScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/screens/SuccessPrintScreenV2.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/stockService.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/offlineDb.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/store/cartStore.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/printerService.ts", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: for each file in scopeFiles, run git log --oneline -1 -- <path>. If returned SHA is newer than auditedAtSha, set reauditRequired=true and journey status=NEEDS-REAUDIT.",
+
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "Cannot sign until every file in scopeFiles is read in current session." },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "Must cite both call site (frontend file:line) and handler (backend file:line) for every API call." },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "Must cite handler for every downstream service and event subscriber." },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "Must cite specific file:line for every INV-xx enforcement in this journey." },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "Each failure mode must have recovery path cited or documented ACCEPTED_RISK." },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "All knownIssueLinks in all actions must have structural fixes and citations." }
+      },
+
       "scope": {
         "posScreens": ["SellScanScreen", "PaymentScreen", "SuccessPrintScreenV2"],
         "webScreens": ["retailer-admin/SalesPage", "retailer-admin/InventoryPage"],
-        "posServices": [
-          "src/services/api/posApi.ts",
-          "src/services/stockService.ts",
-          "src/services/offlineDb.ts",
-          "src/store/cartStore.ts",
-          "src/services/printerService.ts"
-        ],
+        "posServices": ["src/services/api/posApi.ts", "src/services/stockService.ts", "src/services/offlineDb.ts", "src/store/cartStore.ts", "src/services/printerService.ts"],
         "backendRoutes": [
           "backend/services/pos-service/src/routes/storeProducts.ts",
           "backend/services/pos-service/src/routes/sales.ts",
@@ -76,143 +165,478 @@
         ],
         "dbTables": ["store_products", "sales", "orders", "order_items", "stock_balances", "ledger_entries", "daily_summary"],
         "portals": ["retailer-admin"],
-        "invariants": ["INV-S1", "INV-S2", "INV-S4", "INV-P1", "INV-P2", "INV-P4", "INV-P6", "INV-L1", "INV-O1", "INV-O2", "INV-O3", "INV-O4", "INV-I1", "INV-I3", "INV-C1", "INV-C2", "INV-C3", "INV-C4", "INV-SN1", "INV-PR1", "INV-PR2", "INV-PR3"]
+        "invariants": ["INV-S1","INV-S2","INV-S4","INV-P1","INV-P2","INV-P4","INV-P6","INV-L1","INV-O1","INV-O2","INV-O3","INV-O4","INV-I1","INV-I3","INV-C1","INV-C2","INV-C3","INV-C4","INV-SN1","INV-PR1","INV-PR2","INV-PR3"]
       },
+
       "actions": [
         {
           "id": "ACT-02-01",
-          "label": "User opens SellScanScreen (app launch / tab switch)",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "label": "User opens SellScanScreen (app launch or tab switch)",
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "App launched and enrolled device authenticated. POS tab visible.",
+            "immediateResponse": "SellScanScreen renders — scan button visible, catalog loaded or loading",
+            "loadingState": "Skeleton or spinner while catalog fetches from SQLite/server",
+            "successState": "Product grid visible, scan button active, cart empty (0 items)",
+            "errorState": "If catalog fails: error banner with retry; not a blank screen"
+          },
+          "expectedApi": {
+            "calls": [
+              { "method": "GET", "path": "/api/v1/pos/store-products", "triggeredBy": "loadCatalog() on mount", "requestShape": { "headers": { "Authorization": "Bearer <JWT>" } }, "responseShape": { "products": [] }, "errorCodes": [401, 500] }
+            ],
+            "errorHandling": [
+              { "httpStatus": 401, "expectedUiBehavior": "re-login redirect or error banner", "codeVerified": false },
+              { "httpStatus": 500, "expectedUiBehavior": "error banner with retry button", "codeVerified": false }
+            ]
+          },
+          "expectedDbEffect": {
+            "writes": [
+              { "table": "local_products (SQLite)", "operation": "UPSERT", "columns": ["barcode","name","currentStock","productId"], "whereCondition": "barcode = product.barcode", "triggeredByService": "syncProductsToOffline" }
+            ],
+            "reads": [
+              { "table": "local_products (SQLite)", "whereCondition": "all rows for this device", "isolationVerified": false }
+            ]
+          },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "Journey = user wants to sell an item for cash", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Must read SellScanScreen.tsx mount logic, useEffect hooks, loadCatalog", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "Must read GET /store-products backend handler", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "SQLite upsert + INV-S4 compliance", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect on mount", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Network fail, 401, SQLite empty", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-S4 (stock shown = available), INV-I3 (storeId from JWT)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "Check for ISSUE-204 regression path in syncProductsToOffline", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": ["ISSUE-204"]
         },
         {
           "id": "ACT-02-02",
           "label": "User scans barcode (camera scan or manual entry)",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "SellScanScreen idle, camera or search input ready",
+            "immediateResponse": "Camera overlay closes or search input clears; lookup request fires",
+            "loadingState": "Brief loading indicator while product is fetched",
+            "successState": "Product found — item card appears in cart area or confirmation shown",
+            "errorState": "Barcode not found: toast 'Product not found'. Network fail: toast 'Check connection'. Zero stock: warning shown."
+          },
+          "expectedApi": {
+            "calls": [
+              { "method": "GET", "path": "/api/v1/pos/products/{barcode}", "triggeredBy": "handleBarcodeScan()", "requestShape": { "params": { "barcode": "string" }, "headers": { "Authorization": "Bearer <JWT>" } }, "responseShape": { "product": { "productId": "", "name": "", "currentStock": 0, "storeProductId": "" } }, "errorCodes": [404, 401, 500] }
+            ],
+            "errorHandling": [
+              { "httpStatus": 404, "expectedUiBehavior": "toast: Product not found", "codeVerified": false },
+              { "httpStatus": 401, "expectedUiBehavior": "session error handling", "codeVerified": false },
+              { "httpStatus": 500, "expectedUiBehavior": "error toast with retry option", "codeVerified": false }
+            ]
+          },
+          "expectedDbEffect": {
+            "writes": [],
+            "reads": [
+              { "table": "local_products (SQLite)", "whereCondition": "barcode = scanned barcode", "isolationVerified": false },
+              { "table": "store_products", "whereCondition": "barcode = scanned AND store_id = JWT.storeId", "isolationVerified": false }
+            ]
+          },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read handleBarcodeScan, lookupProduct, camera handler", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "Read GET /products/{barcode} backend handler — verify store_id filter", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "Read-only. No DB writes on lookup.", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect on scan", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Barcode not found, network fail, zero-stock product, double-scan", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-I3 (storeId from JWT in query), INV-C2 (item exists in catalog)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "ISSUE-039: barcode-only guard at line 1678", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": ["ISSUE-039"]
         },
         {
           "id": "ACT-02-03",
-          "label": "Item added to cart — stock display updates",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "label": "Item added to cart — quantity increases, stock display updates",
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "Product found from scan/search",
+            "immediateResponse": "Cart count badge increments, item appears in cart list",
+            "loadingState": "None (synchronous cart update)",
+            "successState": "Cart shows correct item, correct price, correct quantity. Stock indicator decrements.",
+            "errorState": "Zero-stock item: blocked with 'Out of stock' message (not added to cart)"
+          },
+          "expectedApi": {
+            "calls": [],
+            "errorHandling": []
+          },
+          "expectedDbEffect": {
+            "writes": [],
+            "reads": [
+              { "table": "stockService in-memory cache", "whereCondition": "resolveStockForSku(productId, barcode)", "isolationVerified": false }
+            ]
+          },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "addToCart() is synchronous. No API call.", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read addToCart in SellScanScreen or cartStore. Verify zero-stock guard (INV-C3).", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "No backend call. Verify no API is fired on add-to-cart.", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "No DB write. In-memory only.", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect at this step.", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Zero stock add, add same item twice (quantity increment), max quantity", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-C3 (qty <= stock), INV-C4 (total >= 0)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "ISSUE-042: SkuItem array update after stock edit", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": ["ISSUE-042"]
         },
         {
           "id": "ACT-02-04",
           "label": "User taps Proceed to Payment",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "Cart has at least 1 item. Proceed button visible and enabled.",
+            "immediateResponse": "Navigation to PaymentScreen begins",
+            "loadingState": "Screen transition animation",
+            "successState": "PaymentScreen opens with cart items displayed and total visible",
+            "errorState": "Empty cart: button disabled (cannot navigate). Cart total 0: button disabled."
+          },
+          "expectedApi": {
+            "calls": [],
+            "errorHandling": []
+          },
+          "expectedDbEffect": {
+            "writes": [],
+            "reads": []
+          },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "Navigation action. Verify cart state is passed correctly as params.", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read navigation call site. Verify saleItems snapshot is taken correctly. INV-C1.", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "No backend call on navigation.", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "No DB effect.", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect.", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Empty cart navigation blocked, back-press from PaymentScreen returns to correct state", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-C1 (cart total passed = displayed total)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": []
         },
         {
           "id": "ACT-02-05",
           "label": "PaymentScreen mounts — createSale fires automatically",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "PaymentScreen just mounted. saleId=null, billRef=null.",
+            "immediateResponse": "Complete Payment button is DISABLED. Loading indicator shows saleId fetching.",
+            "loadingState": "loadingSale=true. Button disabled. Spinner or 'Preparing sale...' text visible.",
+            "successState": "saleId and billRef received. Complete Payment button becomes ENABLED within ~2s.",
+            "errorState": "createSale fails: saleError banner shown. Button stays disabled. Retry option available."
+          },
+          "expectedApi": {
+            "calls": [
+              { "method": "POST", "path": "/api/v1/pos/sales", "triggeredBy": "useEffect on mount (PaymentScreen.tsx)", "requestShape": { "items": [], "storeProductIds": [], "discountMinor": 0 }, "responseShape": { "saleId": "uuid", "billRef": "string" }, "errorCodes": [400, 401, 422, 500] }
+            ],
+            "errorHandling": [
+              { "httpStatus": 401, "expectedUiBehavior": "saleError set — session expired message shown", "codeVerified": false },
+              { "httpStatus": 422, "expectedUiBehavior": "saleError set — validation error message shown", "codeVerified": false },
+              { "httpStatus": 500, "expectedUiBehavior": "saleError set — generic error with retry", "codeVerified": false }
+            ]
+          },
+          "expectedDbEffect": {
+            "writes": [
+              { "table": "sales", "operation": "INSERT", "columns": ["id","store_id","status","total_amount","created_at"], "whereCondition": "N/A — INSERT", "triggeredByService": "pos-service" }
+            ],
+            "reads": [
+              { "table": "store_products", "whereCondition": "store_id = JWT.storeId AND storeProductId IN (items)", "isolationVerified": false }
+            ]
+          },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "createSale fires on mount, not on user action. Verify disabled state while loading.", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read PaymentScreen.tsx useEffect. Verify createSaleInFlightRef guard. Verify loadingSale removed from deps. Verify canSubmit formula.", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "Read POST /api/v1/pos/sales handler in pos-service. Read storeProductDigitisationService.", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "Read sales table INSERT. Verify store_id from JWT (INV-I3).", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect at createSale stage (order not confirmed yet).", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Network fail, 401, 422, 500, double-mount (createSaleInFlightRef), navigate-away mid-call (cancelled ref)", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-O3 (idempotency — createSaleInFlightRef + backend check), INV-I3 (storeId from JWT)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "ISSUE-051/066: createSaleInFlightRef replaces loadingSale. Must verify dep array. ISSUE-068: productId mapping.", "citations": [] }
+          },
           "gaps": [],
           "scenariosVerified": [],
-          "knownIssueLinks": ["ISSUE-051", "ISSUE-066"]
+          "knownIssueLinks": ["ISSUE-051", "ISSUE-066", "ISSUE-068"]
         },
         {
           "id": "ACT-02-06",
           "label": "User selects Cash payment mode",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "PaymentScreen with payment mode selector. saleId obtained. Button enabled.",
+            "immediateResponse": "Cash mode selected/highlighted. Amount input may appear.",
+            "loadingState": "None — synchronous selection",
+            "successState": "Cash mode active. Complete Payment button enabled (UPI paymentId not required for cash).",
+            "errorState": "N/A — mode selection is synchronous and cannot fail"
+          },
+          "expectedApi": { "calls": [], "errorHandling": [] },
+          "expectedDbEffect": { "writes": [], "reads": [] },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "Verify selectedMode state change. Verify canSubmit re-evaluates for cash (no paymentId required).", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read mode selector handler. Read canSubmit formula — verify cash path does not require paymentId.", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "No backend call.", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "No DB effect.", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect.", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Switch between modes (cash → UPI → cash). Verify canSubmit is correct for each.", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-P4 (cash needs no webhook wait)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": []
         },
         {
           "id": "ACT-02-07",
           "label": "User taps Complete Payment (cash)",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "Cash mode selected, saleId + billRef present, submitting=false. Button enabled.",
+            "immediateResponse": "Button disabled immediately. submitting=true. Spinner visible.",
+            "loadingState": "Spinner. Button disabled. Cannot double-tap.",
+            "successState": "Navigate to SuccessScreen with saleId + billRef + items for receipt",
+            "errorState": "Payment fails: paymentError banner shown. Button re-enabled. submitting=false."
+          },
+          "expectedApi": {
+            "calls": [
+              { "method": "POST", "path": "/api/v1/pos/sales/{saleId}/complete", "triggeredBy": "handleCompletePayment()", "requestShape": { "paymentMethod": "CASH", "amountMinor": 0 }, "responseShape": { "orderId": "uuid", "success": true }, "errorCodes": [400, 401, 409, 500] }
+            ],
+            "errorHandling": [
+              { "httpStatus": 401, "expectedUiBehavior": "paymentError: session expired", "codeVerified": false },
+              { "httpStatus": 409, "expectedUiBehavior": "paymentError: already paid / duplicate", "codeVerified": false },
+              { "httpStatus": 500, "expectedUiBehavior": "paymentError: service error, retry", "codeVerified": false }
+            ]
+          },
+          "expectedDbEffect": {
+            "writes": [
+              { "table": "sales", "operation": "UPDATE", "columns": ["status=CONFIRMED", "completed_at"], "whereCondition": "id = saleId AND store_id = JWT.storeId", "triggeredByService": "pos-service" },
+              { "table": "orders", "operation": "INSERT", "columns": ["id","sale_id","store_id","total_amount","status"], "whereCondition": "N/A", "triggeredByService": "order-service" },
+              { "table": "order_items", "operation": "INSERT", "columns": ["order_id","product_id","quantity","unit_price"], "whereCondition": "N/A", "triggeredByService": "order-service" },
+              { "table": "stock_balances", "operation": "UPDATE", "columns": ["current_qty = current_qty - quantity"], "whereCondition": "product_id IN (order items) AND store_id = JWT.storeId", "triggeredByService": "inventory-service" },
+              { "table": "ledger_entries", "operation": "INSERT x2", "columns": ["debit","credit","amount","sale_id","store_id"], "whereCondition": "N/A", "triggeredByService": "ledger-service" }
+            ],
+            "reads": []
+          },
+          "expectedCrossPortalEffect": [
+            { "portal": "retailer-admin", "screen": "SalesPage", "expectedChange": "New order appears in today's sales list with correct amount", "mechanism": "polling|websocket", "verified": false },
+            { "portal": "retailer-admin", "screen": "InventoryPage", "expectedChange": "Stock count decremented for sold items", "mechanism": "polling|websocket", "verified": false }
+          ],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "Verify submitting ref guard, button disable, spinner", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read handleCompletePayment. Verify submitting guard. Verify navigation on success.", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "Read complete sale handler → order-service createOrder → inventory-service decrement → ledger-service entry", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "Verify all 5 DB writes. Verify stock_balances decrement formula. Verify ledger pair.", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "Verify SalesPage query includes this order. Verify InventoryPage shows decremented stock.", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Double-tap, network drop mid-call, 401, 409 (duplicate), service cascade partial fail, stock goes negative", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-S1,S2,P1,P2,P4,P6,L1,L2,O1,O2,O3,O4,I1,I3", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "ISSUE-068: productId resolution. ISSUE-051/066: canSubmit gate.", "citations": [] }
+          },
           "gaps": [],
           "scenariosVerified": [],
-          "knownIssueLinks": ["ISSUE-068"]
+          "knownIssueLinks": ["ISSUE-068", "ISSUE-051", "ISSUE-066"]
         },
         {
           "id": "ACT-02-08",
           "label": "SuccessScreen shows — saleId + billRef visible",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "Navigation to SuccessScreen triggered with saleId, billRef, items",
+            "immediateResponse": "SuccessScreen renders with sale ID and bill ref visible",
+            "loadingState": "None expected — data passed as nav params",
+            "successState": "saleId, billRef, item summary, total displayed. New Sale and Print buttons visible.",
+            "errorState": "If saleId or billRef missing from params: error state shown (not blank screen)"
+          },
+          "expectedApi": { "calls": [], "errorHandling": [] },
+          "expectedDbEffect": { "writes": [], "reads": [] },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "Read SuccessPrintScreenV2 nav param extraction. Verify no stale data from previous sale.", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read SuccessPrintScreenV2.tsx completely. Verify INV-PR1 (receipt = actual sale).", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "No backend call on SuccessScreen render.", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "No DB effect.", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect.", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Missing saleId in params, back-press from SuccessScreen, repeated navigation", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-PR1 (receipt matches sale), INV-PR2 (sale exists even if print fails)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": []
         },
         {
           "id": "ACT-02-09",
-          "label": "Receipt print triggered (auto or manual)",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "label": "Receipt print triggered (auto-print or manual print)",
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "SuccessScreen visible. printerAutoPrint setting may be true.",
+            "immediateResponse": "If auto-print: print job fires after 500ms delay. If manual: user taps Print.",
+            "loadingState": "Print button shows loading/printing state. Auto-print shows status indicator.",
+            "successState": "Print success: confirmation toast or status indicator.",
+            "errorState": "Print fails: error shown. Retry button visible. Sale is NOT rolled back."
+          },
+          "expectedApi": {
+            "calls": [],
+            "errorHandling": []
+          },
+          "expectedDbEffect": { "writes": [], "reads": [] },
+          "expectedCrossPortalEffect": [],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "Auto-print: useEffect on mount if printerAutoPrint. Manual: tap handler.", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read printerService.printReceipt(). Read auto-print useEffect guard (INV-PR3: fires once). Read printerAutoPrint from settingsStore.", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "Print is local (no backend API call). Verify no backend dependency.", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "No DB effect from print.", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect.", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Printer not connected, print timeout, print error, auto-print fires twice (INV-PR3), user kills app mid-print", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-PR2 (sale not rolled back on print fail), INV-PR3 (auto-print fires once)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": []
         },
         {
           "id": "ACT-02-10",
-          "label": "Cross-portal: new order visible in retailer admin + stock decremented",
-          "certStatus": "CERT-PENDING",
-          "level2Cited": false,
-          "level3Cited": false,
-          "level4Cited": false,
-          "level5Cited": false,
-          "level6Cited": false,
+          "label": "Cross-portal verification: new order in retailer admin + stock decremented",
+          "result": "PENDING",
+          "expectedUi": {
+            "beforeAction": "Sale completed in POS. Retailer admin browser open.",
+            "immediateResponse": "New order appears in SalesPage. Stock count updated in InventoryPage.",
+            "loadingState": "Portal may need refresh or websocket event",
+            "successState": "Order with correct amount, items, store visible. Stock shows pre-sale count minus sold quantity.",
+            "errorState": "Order not appearing: cross-portal data flow broken. Stock not updated: inventory-service cascade broken."
+          },
+          "expectedApi": {
+            "calls": [
+              { "method": "GET", "path": "/api/v1/retailer/orders (or equivalent)", "triggeredBy": "retailer-admin SalesPage data fetch", "requestShape": {}, "responseShape": { "orders": [] }, "errorCodes": [] }
+            ],
+            "errorHandling": []
+          },
+          "expectedDbEffect": {
+            "writes": [],
+            "reads": [
+              { "table": "orders", "whereCondition": "store_id = retailer.storeId AND created_at >= today", "isolationVerified": false },
+              { "table": "stock_balances", "whereCondition": "store_id = retailer.storeId", "isolationVerified": false }
+            ]
+          },
+          "expectedCrossPortalEffect": [
+            { "portal": "retailer-admin", "screen": "SalesPage", "expectedChange": "New order row with correct total and items", "mechanism": "UNKNOWN — must verify", "verified": false },
+            { "portal": "retailer-admin", "screen": "InventoryPage", "expectedChange": "Stock count reduced by sold quantity", "mechanism": "UNKNOWN — must verify", "verified": false }
+          ],
+          "runtimeEvidence": [],
+          "levels": {
+            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
+            "L1": { "status": "PENDING", "completedAt": null, "notes": "Portal-side user interaction: refresh or observe real-time update", "citations": [] },
+            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read retailer-admin SalesPage data fetch code. Read InventoryPage stock query.", "citations": [] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "Read orders API endpoint used by retailer admin. Verify store_id filter.", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "Read DB queries for SalesPage and InventoryPage. Verify store isolation (INV-I1).", "citations": [] },
+            "L5": { "status": "PENDING", "completedAt": null, "notes": "This entire action IS the L5 cross-portal verification.", "citations": [] },
+            "L6": { "status": "PENDING", "completedAt": null, "notes": "Order doesn't appear (event lost), stock doesn't update (inventory cascade broken), wrong store's data shown", "citations": [] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-I1 (store A's data not visible to store B), INV-I4 (analytics scoped)", "citations": [] },
+            "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
+          },
           "gaps": [],
-          "scenariosVerified": []
+          "scenariosVerified": [],
+          "knownIssueLinks": []
         }
       ],
+
       "crossPortalMatrix": [
-        { "dbWrite": "orders", "table": "orders", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false },
-        { "dbWrite": "stock_balances decrement", "table": "stock_balances", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false },
-        { "dbWrite": "ledger_entries pair", "table": "ledger_entries", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false }
+        { "trigger": "sale completed", "dbWrite": "orders INSERT", "table": "orders", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null },
+        { "trigger": "sale completed", "dbWrite": "stock_balances UPDATE", "table": "stock_balances", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null },
+        { "trigger": "sale completed", "dbWrite": "ledger_entries INSERT x2", "table": "ledger_entries", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null }
       ],
+
       "regressionLocks": [
         { "issueId": "ISSUE-051", "verifiedAt": "b3b5bf6c", "guardType": "createSaleInFlightRef prevents self-cancelling useEffect" },
         { "issueId": "ISSUE-066", "verifiedAt": "b3b5bf6c", "guardType": "same as ISSUE-051" },
-        { "issueId": "ISSUE-068", "verifiedAt": "e9ee6592", "guardType": "productId mapping fix in productsApi + storeProductDigitisationService" }
+        { "issueId": "ISSUE-068", "verifiedAt": "e9ee6592", "guardType": "productId mapping fix in productsApi + storeProductDigitisationService" },
+        { "issueId": "ISSUE-204", "verifiedAt": "536b8442", "guardType": "resolveStockForSku check in syncProductsToOffline before SQLite write" },
+        { "issueId": "ISSUE-042", "verifiedAt": "9fd8f714", "guardType": "SkuItem array update + stockRefreshTick after stock edit" }
       ],
-      "knownIssues": ["ISSUE-051", "ISSUE-066", "ISSUE-068"]
+
+      "knownIssues": ["ISSUE-051", "ISSUE-066", "ISSUE-068", "ISSUE-204", "ISSUE-042"]
+    },
+
+    "JOURNEY-05": {
+      "id": "JOURNEY-05",
+      "name": "Stock Management — Manual Edit Persistence",
+      "cluster": "C1/C4",
+      "description": "Retailer on POS manually edits stock → background sync fires → stock does NOT revert → SQLite matches server → catalog UI shows correct count → subsequent sale decrements from correct count",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "seededStateLock": {
+        "required": true,
+        "confirmed": false,
+        "confirmedAt": null,
+        "requiredData": ["test product with known barcode", "known initial stock count (e.g. 10)", "enrolled device with catalog loaded"],
+        "resetScriptNote": "Set stock to 10 via API before testing. Verify SQLite reads 10 before edit."
+      },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/SellScanScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/stockService.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/offlineDb.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha. If newer commit exists, set reauditRequired=true.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
+      "scope": {
+        "posScreens": ["SellScanScreen (stock edit modal)"],
+        "webScreens": ["retailer-admin/InventoryPage"],
+        "posServices": ["src/services/stockService.ts", "src/services/offlineDb.ts", "src/services/api/posApi.ts"],
+        "backendRoutes": ["backend/services/pos-service/src/routes/storeProducts.ts (PATCH stock)"],
+        "dbTables": ["store_products", "stock_balances"],
+        "portals": ["retailer-admin"],
+        "invariants": ["INV-S3", "INV-S4", "INV-I1", "INV-I2", "INV-I3"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [
+        { "trigger": "manual stock edit", "dbWrite": "store_products.current_stock UPDATE", "table": "store_products", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null }
+      ],
+      "regressionLocks": [
+        { "issueId": "ISSUE-204", "verifiedAt": "536b8442", "guardType": "resolveStockForSku check in syncProductsToOffline — DB write uses pinned value" },
+        { "issueId": "ISSUE-042", "verifiedAt": "9fd8f714", "guardType": "SkuItem array update + stockRefreshTick after manual edit" }
+      ],
+      "knownIssues": ["ISSUE-204", "ISSUE-042"]
     },
 
     "JOURNEY-03": {
@@ -225,24 +649,44 @@
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": {
+        "required": true,
+        "confirmed": false,
+        "confirmedAt": null,
+        "requiredData": ["UPI gateway configured in test env", "test product with stock", "enrolled device"],
+        "resetScriptNote": "Verify UPI gateway mock is active before runtime evidence collection"
+      },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/screens/SellScanScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/screens/SuccessPrintScreenV2.tsx", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
         "posScreens": ["SellScanScreen", "PaymentScreen", "SuccessPrintScreenV2"],
         "webScreens": ["retailer-admin/SalesPage", "retailer-admin/InventoryPage"],
         "posServices": ["src/services/api/posApi.ts", "src/services/stockService.ts", "src/store/cartStore.ts"],
-        "backendRoutes": [
-          "backend/services/pos-service/src/routes/sales.ts",
-          "backend/services/pos-service/src/routes/payment.ts",
-          "backend/services/order-service/src/routes/orders.ts",
-          "backend/services/inventory-service/src/handlers/decrementStock.ts"
-        ],
+        "backendRoutes": ["backend/services/pos-service/src/routes/sales.ts", "backend/services/pos-service/src/routes/payment.ts", "backend/services/order-service/src/routes/orders.ts", "backend/services/inventory-service/src/handlers/decrementStock.ts"],
         "dbTables": ["sales", "orders", "order_items", "stock_balances", "payments", "ledger_entries"],
         "portals": ["retailer-admin"],
-        "invariants": ["INV-S1", "INV-S2", "INV-P1", "INV-P2", "INV-P3", "INV-P6", "INV-L1", "INV-O1", "INV-O3", "INV-I1", "INV-I3", "INV-C1", "INV-SN1", "INV-PR1", "INV-PR2"]
+        "invariants": ["INV-S1","INV-S2","INV-P1","INV-P2","INV-P3","INV-P6","INV-L1","INV-O1","INV-O3","INV-I1","INV-I3","INV-C1","INV-SN1","INV-PR1","INV-PR2"]
       },
       "actions": [],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        { "issueId": "ISSUE-051", "verifiedAt": "b3b5bf6c", "guardType": "createSaleInFlightRef" },
+        { "issueId": "ISSUE-066", "verifiedAt": "b3b5bf6c", "guardType": "same as ISSUE-051" },
+        { "issueId": "ISSUE-068", "verifiedAt": "e9ee6592", "guardType": "productId mapping fix" }
+      ],
       "knownIssues": ["ISSUE-051", "ISSUE-066", "ISSUE-068"]
     },
 
@@ -250,13 +694,26 @@
       "id": "JOURNEY-04",
       "name": "UPI Payment Failure Recovery",
       "cluster": "C1/C3",
-      "description": "UPI payment initiated → network drops → app backgrounded → network returns → pending payment detected → status auto-checked → confirmed or manual UTR entry → order completes with no duplicate charge",
+      "description": "UPI payment initiated → network drops → app backgrounded → network returns → pending payment detected → auto-checked → confirmed or manual UTR → order completes with no duplicate charge",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["UPI payment in flight state", "network drop simulation capability"], "resetScriptNote": "Requires ability to simulate network drop during UPI flow" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
         "posScreens": ["PaymentScreen"],
         "webScreens": [],
@@ -272,50 +729,33 @@
       "knownIssues": []
     },
 
-    "JOURNEY-05": {
-      "id": "JOURNEY-05",
-      "name": "Stock Management — Manual Edit Persistence",
-      "cluster": "C1/C4",
-      "description": "Retailer on POS manually edits stock → background sync fires → stock does NOT revert → SQLite matches server → catalog UI shows correct count → subsequent sale decrements from correct count",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "openGaps": [],
-      "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
-      "scope": {
-        "posScreens": ["SellScanScreen (stock edit modal)"],
-        "webScreens": ["retailer-admin/InventoryPage"],
-        "posServices": ["src/services/stockService.ts", "src/services/offlineDb.ts", "src/services/api/posApi.ts"],
-        "backendRoutes": ["backend/services/pos-service/src/routes/storeProducts.ts (PATCH stock)"],
-        "dbTables": ["store_products", "stock_balances"],
-        "portals": ["retailer-admin"],
-        "invariants": ["INV-S3", "INV-S4", "INV-I1", "INV-I2", "INV-I3"]
-      },
-      "actions": [],
-      "crossPortalMatrix": [
-        { "dbWrite": "store_products.current_stock update", "table": "store_products", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false }
-      ],
-      "regressionLocks": [
-        { "issueId": "ISSUE-204", "verifiedAt": "536b8442", "guardType": "resolveStockForSku check in syncProductsToOffline before SQLite write" },
-        { "issueId": "ISSUE-042", "verifiedAt": "9fd8f714", "guardType": "SkuItem array update + stockRefreshTick after stock edit" }
-      ],
-      "knownIssues": ["ISSUE-204", "ISSUE-042"]
-    },
-
     "JOURNEY-06": {
       "id": "JOURNEY-06",
       "name": "Split Payment Flow",
       "cluster": "C3",
-      "description": "Cart → PaymentScreen → split mode → enter cash portion + UPI portion → both legs confirmed → sale completes with full amount recorded",
+      "description": "Cart → PaymentScreen → split mode → cash portion + UPI portion → both confirmed → sale completes with full amount",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["test product", "UPI gateway", "enrolled device"], "resetScriptNote": "" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/components/sell/SplitPaymentModal.tsx", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
-        "posScreens": ["PaymentScreen", "SplitPaymentModal", "SuccessPrintScreenV2"],
+        "posScreens": ["PaymentScreen", "SplitPaymentModal"],
         "webScreens": [],
         "posServices": ["src/services/api/posApi.ts"],
         "backendRoutes": ["backend/services/pos-service/src/routes/payment.ts"],
@@ -329,21 +769,74 @@
       "knownIssues": []
     },
 
-    "JOURNEY-07": {
-      "id": "JOURNEY-07",
-      "name": "Force Update Flow",
+    "JOURNEY-01": {
+      "id": "JOURNEY-01",
+      "name": "Device Enrollment Lifecycle",
       "cluster": "C5",
-      "description": "SuperAdmin bumps min_app_version → POS next open shows ForceUpdate screen → no navigation possible → user updates APK → returns to normal flow",
+      "description": "SuperAdmin creates store → QR → POS scans → enrolls → badge USED in SuperAdmin → catalog loads → POS ready",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["unenrolled device", "SuperAdmin access", "test store"], "resetScriptNote": "Revoke device enrollment via SuperAdmin before testing" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/EnrollDeviceScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/screens/PosRootLayout.tsx", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
+      "scope": {
+        "posScreens": ["EnrollDeviceScreen", "SellScanScreen (post-enroll)"],
+        "webScreens": ["superadmin/DeviceManagement"],
+        "posServices": ["src/services/api/enrollmentApi.ts", "src/services/authService.ts"],
+        "backendRoutes": ["backend/services/pos-service/src/routes/enrollment.ts", "backend/services/auth-service/src/routes/deviceAuth.ts"],
+        "dbTables": ["device_enrollments", "devices", "stores"],
+        "portals": ["superadmin"],
+        "invariants": ["INV-I5", "INV-SN2"]
+      },
+      "actions": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": []
+    },
+
+    "JOURNEY-07": {
+      "id": "JOURNEY-07",
+      "name": "Force Update Flow",
+      "cluster": "C5",
+      "description": "SuperAdmin bumps min_app_version → POS shows ForceUpdate → no navigation → user updates → normal flow",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["ability to set min_app_version higher than installed APK version"], "resetScriptNote": "Reset min_app_version to current APK version after testing" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/ForceUpdateScreen.tsx", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
         "posScreens": ["ForceUpdateScreen", "SplashScreen"],
         "webScreens": ["superadmin/AppVersionManagement"],
-        "posServices": ["src/services/api/authApi.ts"],
+        "posServices": [],
         "backendRoutes": ["backend/services/pos-service/src/routes/appVersion.ts"],
         "dbTables": ["app_versions"],
         "portals": ["superadmin"],
@@ -359,15 +852,29 @@
       "id": "JOURNEY-08",
       "name": "Session Expiry Mid-Flow Recovery",
       "cluster": "C5",
-      "description": "User in PaymentScreen → 8h JWT expires → Complete Payment tapped → 401 returned → graceful re-login prompt, not crash → after re-login returns to correct screen with cart intact",
+      "description": "User in PaymentScreen → JWT expires → Complete Payment → 401 → graceful re-login, not crash → cart intact after re-login",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["way to force 401 response — expired or revoked JWT"], "resetScriptNote": "Use short-lived test JWT or revoke session via admin API" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/api/apiClient.ts", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
-        "posScreens": ["PaymentScreen", "SellScanScreen (after re-auth)"],
+        "posScreens": ["PaymentScreen"],
         "webScreens": [],
         "posServices": ["src/services/api/apiClient.ts", "src/services/authService.ts"],
         "backendRoutes": ["api-gateway JWT middleware"],
@@ -383,24 +890,34 @@
 
     "JOURNEY-09": {
       "id": "JOURNEY-09",
-      "name": "Admin Session Lifecycle (SuperAdmin Web)",
+      "name": "Admin Session Lifecycle",
       "cluster": "SA-GOLIVE",
-      "description": "Admin logs in with master token → gets session JWT → uses admin APIs → session refreshed → logout revokes session → subsequent requests rejected",
+      "description": "Admin logs in → session JWT → uses APIs → refresh → logout revokes → subsequent requests rejected",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["ADMIN_TOKEN env var set", "superadmin web portal running"], "resetScriptNote": "" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "backend/services/api-gateway/src/routes/adminAuth.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/api-gateway/src/middleware/adminAuth.ts", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
         "posScreens": [],
-        "webScreens": ["superadmin/LoginPage", "superadmin/* (all protected routes)"],
+        "webScreens": ["superadmin/LoginPage", "superadmin/* (protected routes)"],
         "posServices": [],
-        "backendRoutes": [
-          "api-gateway/src/routes/adminAuth.ts",
-          "api-gateway/src/middleware/adminAuth.ts",
-          "api-gateway/src/services/adminSessionService.ts"
-        ],
+        "backendRoutes": ["api-gateway/src/routes/adminAuth.ts", "api-gateway/src/middleware/adminAuth.ts", "api-gateway/src/services/adminSessionService.ts"],
         "dbTables": [],
         "portals": ["superadmin"],
         "invariants": ["INV-SN3"]
@@ -415,21 +932,31 @@
       "id": "JOURNEY-10",
       "name": "Supplier Order Lifecycle",
       "cluster": "C12",
-      "description": "Retailer raises reorder on POS → supplier portal shows pending order → supplier confirms → stock updated in catalog → retailer admin sees status change",
+      "description": "Retailer raises reorder → supplier portal shows order → supplier confirms → stock updates → retailer admin sees status",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["supplier account", "retailer account", "linked supplier-retailer relationship", "product in catalog"], "resetScriptNote": "" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [
+        { "path": "src/screens/PurchaseScreen.tsx", "auditedAtSha": null, "reauditRequired": false }
+      ],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
-        "posScreens": ["PurchaseScreen (reorder)"],
+        "posScreens": ["PurchaseScreen"],
         "webScreens": ["supplier-portal/OrdersPage", "retailer-admin/PurchaseOrdersPage"],
         "posServices": [],
-        "backendRoutes": [
-          "backend/services/reorder-service/src/routes/reorders.ts",
-          "backend/services/supplier-service/src/routes/orders.ts"
-        ],
+        "backendRoutes": ["backend/services/reorder-service/src/routes/reorders.ts", "backend/services/supplier-service/src/routes/orders.ts"],
         "dbTables": ["purchase_orders", "po_items", "stock_balances"],
         "portals": ["supplier-portal", "retailer-admin"],
         "invariants": ["INV-I1", "INV-I3"]
@@ -444,21 +971,29 @@
       "id": "JOURNEY-11",
       "name": "Retailer Admin Daily Reports",
       "cluster": "C11",
-      "description": "Sales created via POS → appear in daily/weekly reports → correct amounts → filtered by store → CSV export correct",
+      "description": "Sales via POS → daily/weekly reports correct → store-filtered → CSV export correct",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["known sales data for today", "known amounts", "retailer admin access"], "resetScriptNote": "Create known test sales before checking reports" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
         "posScreens": [],
         "webScreens": ["retailer-admin/ReportsPage", "retailer-admin/SalesPage"],
         "posServices": [],
-        "backendRoutes": [
-          "backend/services/analytics-service/src/routes/reports.ts",
-          "backend/services/order-service/src/routes/orders.ts"
-        ],
+        "backendRoutes": ["backend/services/analytics-service/src/routes/reports.ts", "backend/services/order-service/src/routes/orders.ts"],
         "dbTables": ["orders", "order_items", "daily_summary", "ledger_entries"],
         "portals": ["retailer-admin"],
         "invariants": ["INV-L3", "INV-O2", "INV-I1", "INV-I4"]
@@ -473,13 +1008,24 @@
       "id": "JOURNEY-12",
       "name": "SuperAdmin Platform Overview",
       "cluster": "SA-GOLIVE",
-      "description": "POS sale → appears in platform analytics → store-level breakdown correct → cross-store data NOT leaking → SuperAdmin can manage stores, users, products",
+      "description": "POS sale → platform analytics → store-level correct → no cross-store leakage → SuperAdmin manages stores/users/products",
       "status": "CERT-PENDING",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
       "openGaps": [],
       "cccBlocker": null,
-      "sixGuarantees": { "G1": false, "G2": false, "G3": false, "G4": false, "G5": false, "G6": false },
+      "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["two test stores with separate sales", "superadmin access"], "resetScriptNote": "Verify cross-store isolation by checking Store A's analytics don't show Store B's sales" },
+      "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
+      "scopeFiles": [],
+      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "sixGuarantees": {
+        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
+        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+      },
       "scope": {
         "posScreens": [],
         "webScreens": ["superadmin/Dashboard", "superadmin/StoreManagement", "superadmin/UserManagement"],

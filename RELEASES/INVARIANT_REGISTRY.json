@@ -1,10 +1,16 @@
 {
   "_meta": {
-    "version": "1.0",
+    "version": "2.0",
     "createdAt": "2026-03-07",
+    "hardenedAt": "2026-03-07",
     "purpose": "Machine-readable registry of all business invariants. Every invariant must be verified (code + test) before a journey that touches it reaches CERT-SEALED.",
     "statusValues": ["VERIFIED", "UNVERIFIED", "GAP", "PARTIAL"],
-    "claudeRule": "For every invariant with status != VERIFIED in a journey's scope: find enforcement code, cite file:line, or raise as GAP. Never mark VERIFIED without a citation."
+
+    "blockingRule": "Any invariant with blockingForSeal=true and currentStatus != VERIFIED BLOCKS CERT-SEALED for every journey that lists it in invariants[]. Claude must find enforcement code and cite file:line to set status=VERIFIED. PARTIAL counts as blocking unless explicitly downgraded with documented justification.",
+
+    "verificationRule": "To set currentStatus=VERIFIED: Claude must provide verifiedInFiles as [file:line] references where the invariant is enforced in code. A description is not a citation. If enforcement exists in DB (constraint) only, cite the migration file.",
+
+    "claudeRule": "For every invariant with status != VERIFIED in a journey's scope: find enforcement code, cite file:line, or raise as GAP. Never mark VERIFIED without citations. PARTIAL means partially verified — describe exactly what is unverified in auditNote."
   },
 
   "invariants": {
@@ -17,6 +23,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04", "JOURNEY-05"],
       "auditNote": ""
     },
@@ -29,6 +36,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04"],
       "auditNote": ""
     },
@@ -41,6 +49,7 @@
       "verifiedAt": "536b8442",
       "verifiedInFiles": ["src/screens/SellScanScreen.tsx:151-156"],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-05"],
       "auditNote": "Fixed in ISSUE-204 (commit 536b8442). Test still needed."
     },
@@ -53,6 +62,7 @@
       "verifiedAt": "536b8442",
       "verifiedInFiles": ["src/services/stockService.ts", "src/screens/SellScanScreen.tsx"],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-05"],
       "auditNote": "In-memory pin verified. SQLite write fixed. Cross-session persistence (app restart after pin) not yet verified."
     },
@@ -65,6 +75,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04"],
       "auditNote": "Frontend submitting guard exists (PaymentScreen). Backend idempotency not yet read."
     },
@@ -77,6 +88,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -89,6 +101,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-03", "JOURNEY-04"],
       "auditNote": ""
     },
@@ -101,6 +114,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02"],
       "auditNote": ""
     },
@@ -113,6 +127,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-06"],
       "auditNote": ""
     },
@@ -125,6 +140,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-04"],
       "auditNote": ""
     },
@@ -137,6 +153,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -149,6 +166,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-07"],
       "auditNote": ""
     },
@@ -161,6 +179,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-11"],
       "auditNote": ""
     },
@@ -173,6 +192,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-07"],
       "auditNote": ""
     },
@@ -185,6 +205,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -197,6 +218,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-11"],
       "auditNote": ""
     },
@@ -209,6 +231,7 @@
       "verifiedAt": "b3b5bf6c",
       "verifiedInFiles": ["src/screens/PaymentScreen.tsx:157"],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": "Frontend in-flight guard verified (ISSUE-051/066 fix). Backend idempotency check not yet read."
     },
@@ -221,6 +244,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-07"],
       "auditNote": ""
     },
@@ -233,6 +257,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-05", "JOURNEY-11", "JOURNEY-12"],
       "auditNote": "Critical invariant. Every data query in every service must be verified."
     },
@@ -245,6 +270,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-05"],
       "auditNote": ""
     },
@@ -257,6 +283,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-05", "JOURNEY-12"],
       "auditNote": ""
     },
@@ -269,6 +296,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-11", "JOURNEY-12"],
       "auditNote": ""
     },
@@ -281,6 +309,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-01"],
       "auditNote": ""
     },
@@ -293,6 +322,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -305,6 +335,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -317,6 +348,7 @@
       "verifiedAt": null,
       "verifiedInFiles": ["src/screens/SellScanScreen.tsx (addToCart zero-stock check)"],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": "Frontend zero-stock guard exists but file:line not yet cited. Backend check not yet read."
     },
@@ -329,6 +361,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -341,6 +374,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03", "JOURNEY-08"],
       "auditNote": ""
     },
@@ -353,6 +387,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-01", "JOURNEY-02"],
       "auditNote": ""
     },
@@ -365,6 +400,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-09"],
       "auditNote": ""
     },
@@ -377,6 +413,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -389,6 +426,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     },
@@ -401,6 +439,7 @@
       "verifiedAt": null,
       "verifiedInFiles": [],
       "testExists": false,
+      "blockingForSeal": true,
       "journeysTouching": ["JOURNEY-02", "JOURNEY-03"],
       "auditNote": ""
     }

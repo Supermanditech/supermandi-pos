@@ -39,10 +39,34 @@
       "Claude NEVER requests a deploy or APK build until current cluster journeys are CERT-SEALED",
       "Claude NEVER skips updating JOURNEY_MAP.json after each action audit",
       "Claude NEVER treats 'TypeScript compiles' as production grade certification",
-      "Claude NEVER audits by assumption — every claim requires a file:line citation"
+      "Claude NEVER audits by assumption — every claim requires a file:line citation",
+      "Claude NEVER signs a guarantee without citations[] populated with file:line references",
+      "Claude NEVER marks an invariant VERIFIED without verifiedInFiles[] containing file:line",
+      "Claude NEVER marks regressionGuardStatus=PASS without a test or structural proof reference",
+      "Claude NEVER seals a journey if any scopeFile has reauditRequired=true"
     ]
   },
 
+  "executionModel": {
+    "version": "CCC_v2.0",
+    "sourceOfTruth": "CCC_FRAMEWORK",
+    "executionDrivenBy": [
+      "RELEASES/CCC_FRAMEWORK.md — methodology and rules",
+      "RELEASES/JOURNEY_MAP.json — audit progress and action spine",
+      "RELEASES/SCREEN_CERT_MANIFEST.json — screen cert status and deploy gate",
+      "RELEASES/INVARIANT_REGISTRY.json — invariant verification state"
+    ],
+    "legacyWaveSections": {
+      "status": "READ_ONLY_HISTORICAL_REFERENCE",
+      "nonExecutable": ["wave19", "wave20", "g6BaselineResults"],
+      "superseded": ["productionGradeCertificationModel — superseded by CCC_FRAMEWORK.md"],
+      "rule": "Claude reads wave19/wave20 for cluster definitions and issue counts ONLY. No execution decisions come from these sections. All execution is driven by cccFramework.currentJourney and JOURNEY_MAP.json.",
+      "clusterDefinitionsNote": "wave20.executionClusters defines which issues belong to which cluster. Reference only — not executable."
+    },
+    "deployDecisionSource": "RELEASES/SCREEN_CERT_MANIFEST.json deployGate",
+    "invariantSource": "RELEASES/INVARIANT_REGISTRY.json",
+    "auditProgressSource": "RELEASES/JOURNEY_MAP.json per-journey actions array"
+  },
 
   "controlGate": {
     "passed": true,
