@@ -146,9 +146,14 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
           variantMrpMinor: null,
         });
 
-        // Store in offline DB (with productId and stock)
+        // Store in offline DB (with productId and stock).
+        // ISSUE-204: If the user has a manual pin on this product (stock was just edited),
+        // write the pinned value instead of the stale server value so the DB stays
+        // consistent with the manual edit and setCatalogItems(fresh) shows the correct value.
+        const pinnedStock = resolveStockForSku({ productId: product.productId, barcode });
+        const effectiveStock = pinnedStock !== null ? pinnedStock : stock;
         if (barcode) {
-          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, stock, product.storeProductId ?? null);
+          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null);
           if (product.sellPrice !== null) {
             await setLocalPrice(barcode, product.sellPrice);
           }
