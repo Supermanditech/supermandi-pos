@@ -1,7 +1,7 @@
 {
-  "version": "135.0",
-  "lastUpdated": "2026-03-08T06:00:00Z",
-  "currentPhase": "WAVE_20_C1_INTERNALLY_STABLE_AWAITING_ARTIFACT_BUILD",
+  "version": "136.0",
+  "lastUpdated": "2026-03-08T07:30:00Z",
+  "currentPhase": "WAVE_20_C1_CODE_FIXES_COMPLETE_AWAITING_ARTIFACT_BUILD",
   "currentTicket": null,
   "ticketQueue": [],
   "controlGate": {
@@ -206,15 +206,19 @@
       },
       "currentApkOnDevice": {"sha": "3b021a53", "installedAt": "2026-03-07T23:13:00Z"},
       "c1ImplementationBlocked": false,
-      "c1Status": "INTERNALLY_STABLE_AWAITING_ARTIFACT_BUILD",
-      "c1InternallyStableAt": "2026-03-08T06:00:00Z",
-      "c1InternallyStableSha": "5708b242",
+      "c1Status": "CODE_FIXES_COMPLETE_AWAITING_ARTIFACT_BUILD",
+      "c1InternallyStableAt": "2026-03-08T07:30:00Z",
+      "c1InternallyStableSha": "536b8442",
+      "c1RootCauseRefinements": {
+        "ISSUE-051-066": "Original fix (8dff43c2: saleItemsSnapshot lazy-init) addressed wrong symptom. True root cause: loadingSale in useEffect deps caused effect to cancel itself via setLoadingSale(true). Fix b3b5bf6c: createSaleInFlightRef replaces loadingSale guard, removed from deps.",
+        "ISSUE-204": "Original fix (5708b242: cache pin) protected in-memory cache but not SQLite DB. syncProductsToOffline could still write server-stale stock to DB, then setCatalogItems(fresh) loaded those rows. Fix 536b8442: resolveStockForSku check in syncProductsToOffline writes pinned value to DB too."
+      },
       "c1Summary": {
         "ISSUE-068": {"action": "CODE_FIX", "commit": "e9ee6592", "scope": "backend+frontend", "description": "Fixed productId mapping in productsApi + storeProductDigitisationService for createSale variant resolution"},
         "ISSUE-042": {"action": "CODE_FIX", "commit": "9fd8f714", "scope": "frontend-only", "description": "Added SkuItem array update after stock edit + stockRefreshTick bump"},
-        "ISSUE-051": {"action": "CODE_FIX", "commit": "8dff43c2", "scope": "frontend-only", "description": "Fixed saleItemsSnapshot lazy-init race that cancelled createSale and left loadingSale stuck"},
-        "ISSUE-066": {"action": "CODE_FIX", "commit": "8dff43c2", "scope": "frontend-only", "description": "Same root fix as ISSUE-051 — payment chain unblocked"},
-        "ISSUE-204": {"action": "CODE_FIX", "commit": "5708b242", "scope": "frontend-only", "description": "Pin stock cache 60s after manual edit; background sync skips protected entries. Regression guard added to stockService.integration.test.js."},
+        "ISSUE-051": {"action": "CODE_FIX", "commit": "b3b5bf6c", "scope": "frontend-only", "description": "REVISED: createSaleInFlightRef replaces loadingSale in deps — effect no longer cancels itself"},
+        "ISSUE-066": {"action": "CODE_FIX", "commit": "b3b5bf6c", "scope": "frontend-only", "description": "Same root fix as ISSUE-051 — payment chain unblocked"},
+        "ISSUE-204": {"action": "CODE_FIX", "commit": "536b8442", "scope": "frontend-only", "description": "REVISED: write pinned stock to SQLite in syncProductsToOffline so fresh DB rows also carry the correct value, not just the in-memory cache."},
         "ISSUE-043": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Stale-cache bypass was caused by wrong cache keys (068) + stale UI arrays (042). Both now fixed."},
         "ISSUE-046": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Zero-stock race condition was same root cause - stock guard couldn't find correct cache entries due to wrong keys."},
         "ISSUE-039": {"action": "ALREADY_FIXED", "fixedIn": "prior wave (line 1678 SellScanScreen.tsx)", "description": "Barcode-only guard already prevents VALIDATION_ERROR on text search input."},
@@ -230,7 +234,7 @@
         "typecheckPass": "pnpm -r typecheck — CLEAN",
         "noUnresolvedRegressionInCluster": true
       },
-      "c1NextStep": "Redeploy staging at 5708b242 (backend ISSUE-068 changed) + rebuild APK + full C1 runtime verification on Redmi."
+      "c1NextStep": "APK-only rebuild at 536b8442 (all C1 fixes are frontend-only) + install on Redmi + full C1 runtime certification pass (ISSUE-204, ISSUE-051/066, ISSUE-068)."
     },
     "g6BaselineResults": {
       "sha": "3b021a53",
