@@ -1,7 +1,7 @@
 {
-  "version": "137.0",
+  "version": "137.1",
   "lastUpdated": "2026-03-07T00:00:00Z",
-  "currentPhase": "CCC_AUDIT_IN_PROGRESS_JOURNEY02",
+  "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
 

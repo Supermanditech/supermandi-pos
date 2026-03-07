@@ -16,7 +16,9 @@
       "B3_regressionGuardBlock": "Journey cannot reach CERT-SEALED if any knownIssue in any screen in scope has regressionGuardStatus != PASS in SCREEN_CERT_MANIFEST.json.",
       "B4_unsignedGuaranteeBlock": "Journey cannot reach CERT-SEALED if any of G1-G6 has signed=false.",
       "B5_unseededStateBlock": "Runtime evidence cannot be collected if seededStateLock.confirmed=false.",
-      "B6_incompleteLevelsBlock": "Journey cannot reach CERT-SEALED if any action has any level with status=GAP and gap is not documented as ACCEPTED_RISK with explicit justification."
+      "B6_incompleteLevelsBlock": "Journey cannot reach CERT-SEALED if any action has any level with status=GAP and gap is not documented as ACCEPTED_RISK with explicit justification.",
+      "B7_issueOmissionBlock": "Journey cannot reach CERT-SEALED if any known issue in the project (LIVE_TESTING_ISSUES, SCREEN_CERT_MANIFEST knownIssues) touching any file in scopeFiles is absent from the journey's knownIssues array. Every scoped-file issue must be explicitly present and have a regressionLock entry.",
+      "B8_incompleteActionSpineBlock": "No journey may move to CERT-IN-PROGRESS unless actions.length > 0 with real action decomposition. No journey may reach CERT-SEALED unless every declared action has result=PASS."
     },
 
     "falseSealprevention": [
@@ -26,8 +28,42 @@
       "G4 cannot be signed until every touched invariant entry is VERIFIED with file:line.",
       "runtimeEvidence must contain at least one OPERATOR_CONFIRMED entry per action before journey is eligible for CERT-SEALED.",
       "No action can be result=PASS without L2 citations (code path trace) completed.",
-      "No journey can be CERT-SEALED without crossPortalMatrix fully verified (all rows have verified=true)."
-    ]
+      "No journey can be CERT-SEALED without crossPortalMatrix fully verified (all rows have verified=true).",
+      "Every runtimeEvidence entry MUST contain all 9 immutable fields in runtimeEvidenceSchema. Entries missing capturedSha, seedVersion, deviceId, or storeId are INVALID.",
+      "Every accepted-risk waiver MUST be a formal acceptedRisk object with all 8 fields. A freeform notes string is NOT a valid waiver."
+    ],
+
+    "runtimeEvidenceSchema": {
+      "_comment": "Every runtimeEvidence entry must conform exactly to this schema. Partial entries are INVALID and block sealing.",
+      "requiredFields": ["evidenceType", "step", "capturedAt", "capturedSha", "seedVersion", "deviceId", "storeId", "artifactPath", "summary", "result", "actualOutcome", "operatorConfirmed"],
+      "fieldDefs": {
+        "evidenceType": "OPERATOR_CONFIRMED | AUTOMATED_TEST | SCREENSHOT | LOG_EXTRACT",
+        "step": "ACT-XX-NN identifier",
+        "capturedAt": "ISO 8601 timestamp — when evidence was captured",
+        "capturedSha": "git SHA of HEAD at time of capture — prevents reuse of stale evidence",
+        "seedVersion": "identifier of the seeded test data state (e.g. seed-v1, resetAt=2026-03-07T10:00:00Z)",
+        "deviceId": "physical or emulator device ID used during evidence collection",
+        "storeId": "storeId of the test store used — must match seededStateLock.requiredData",
+        "artifactPath": "relative path to screenshot/log/recording, or 'none' if type=OPERATOR_CONFIRMED",
+        "summary": "one-line description of what was observed",
+        "result": "PASS | FAIL",
+        "actualOutcome": "exact description of what actually happened (not expected — actual)",
+        "operatorConfirmed": "true if an operator physically confirmed this evidence (not AI-inferred)"
+      },
+      "staleness": "Evidence captured at SHA X is INVALID for a journey whose scopeFiles contain any commit newer than SHA X. Must recapture."
+    },
+
+    "_acceptedRiskTemplate": {
+      "_comment": "Copy this for every accepted-risk waiver. All 8 fields required. Claude cannot waive a gap without a complete acceptedRisk object.",
+      "riskId": "AR-XX-NN (journey-action sequence)",
+      "severity": "CRITICAL | HIGH | MEDIUM | LOW",
+      "reason": "Why the gap cannot be closed at this time (specific, not vague)",
+      "approvedBy": "CLAUDE_AUDIT | OPERATOR | CTO — who approved this waiver",
+      "approvedAt": "ISO 8601 timestamp",
+      "expiresAt": "ISO 8601 — after this date the risk must be re-evaluated or closed",
+      "scope": "Exactly which action(s) and level(s) this waiver covers",
+      "mitigation": "Compensating control that reduces risk while gap exists"
+    }
   },
 
   "currentAuditJourney": "JOURNEY-02",
@@ -69,7 +105,23 @@
     "expectedCrossPortalEffect": [
       { "portal": "retailer-admin|superadmin|supplier-portal", "screen": "PageName", "expectedChange": "description", "mechanism": "polling|websocket|manual-refresh", "verified": false }
     ],
-    "runtimeEvidence": [],
+    "runtimeEvidence": [
+      {
+        "_schemaRef": "See _meta.runtimeEvidenceSchema for all required fields",
+        "evidenceType": "OPERATOR_CONFIRMED",
+        "step": "ACT-XX-NN",
+        "capturedAt": null,
+        "capturedSha": null,
+        "seedVersion": null,
+        "deviceId": null,
+        "storeId": null,
+        "artifactPath": "none",
+        "summary": "",
+        "result": "PENDING",
+        "actualOutcome": "",
+        "operatorConfirmed": false
+      }
+    ],
     "levels": {
       "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
       "L1": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
@@ -82,6 +134,7 @@
       "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
     },
     "gaps": [],
+    "acceptedRisks": [],
     "scenariosVerified": [],
     "knownIssueLinks": []
   },
@@ -139,9 +192,17 @@
         { "path": "src/services/stockService.ts", "auditedAtSha": null, "reauditRequired": false },
         { "path": "src/services/offlineDb.ts", "auditedAtSha": null, "reauditRequired": false },
         { "path": "src/store/cartStore.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "src/services/printerService.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "src/services/printerService.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/pos-service/src/routes/storeProducts.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/pos-service/src/routes/sales.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/order-service/src/routes/orders.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/inventory-service/src/handlers/decrementStock.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/analytics-service/src/handlers/recordSale.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/ledger-service/src/handlers/createLedgerEntry.ts", "auditedAtSha": null, "reauditRequired": false, "pathNote": "Exact filename to be confirmed during L3 audit — update path from code reading" },
+        { "path": "retailer-admin/src/pages/SalesPage.tsx", "auditedAtSha": null, "reauditRequired": false, "pathNote": "Path to be confirmed during L5 audit — update from actual file glob" },
+        { "path": "retailer-admin/src/pages/InventoryPage.tsx", "auditedAtSha": null, "reauditRequired": false, "pathNote": "Path to be confirmed during L5 audit — update from actual file glob" }
       ],
-      "scopeFilesReauditRule": "At session start: for each file in scopeFiles, run git log --oneline -1 -- <path>. If returned SHA is newer than auditedAtSha, set reauditRequired=true and journey status=NEEDS-REAUDIT.",
+      "scopeFilesReauditRule": "At session start: for each file in scopeFiles, run git log --oneline -1 -- <path>. If returned SHA != auditedAtSha (not 'newer than' — exact mismatch), set reauditRequired=true and journey status=NEEDS-REAUDIT. Files with pathNote must have their paths confirmed and updated during first G1 audit.",
 
       "sixGuarantees": {
         "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "Cannot sign until every file in scopeFiles is read in current session." },
@@ -608,9 +669,11 @@
         { "path": "src/screens/SellScanScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
         { "path": "src/services/stockService.ts", "auditedAtSha": null, "reauditRequired": false },
         { "path": "src/services/offlineDb.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/pos-service/src/routes/storeProducts.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/InventoryPage.tsx", "auditedAtSha": null, "reauditRequired": false, "pathNote": "Confirm exact path during L5 audit" }
       ],
-      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha. If newer commit exists, set reauditRequired=true.",
+      "scopeFilesReauditRule": "At session start: for each file in scopeFiles, run git log --oneline -1 -- <path>. If returned SHA != auditedAtSha (exact mismatch), set reauditRequired=true and journey status=NEEDS-REAUDIT.",
       "sixGuarantees": {
         "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
         "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
@@ -660,9 +723,17 @@
       "scopeFiles": [
         { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
         { "path": "src/screens/SellScanScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "src/screens/SuccessPrintScreenV2.tsx", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "src/screens/SuccessPrintScreenV2.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/store/cartStore.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/pos-service/src/routes/sales.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/pos-service/src/routes/payment.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/order-service/src/routes/orders.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/inventory-service/src/handlers/decrementStock.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/SalesPage.tsx", "auditedAtSha": null, "reauditRequired": false, "pathNote": "Confirm exact path during L5 audit" },
+        { "path": "retailer-admin/src/pages/InventoryPage.tsx", "auditedAtSha": null, "reauditRequired": false, "pathNote": "Confirm exact path during L5 audit" }
       ],
-      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "scopeFilesReauditRule": "At session start: for each file in scopeFiles, run git log --oneline -1 -- <path>. If returned SHA != auditedAtSha (exact mismatch), set reauditRequired=true and journey status=NEEDS-REAUDIT.",
       "sixGuarantees": {
         "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
         "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
@@ -703,9 +774,11 @@
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["UPI payment in flight state", "network drop simulation capability"], "resetScriptNote": "Requires ability to simulate network drop during UPI flow" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
-        { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/pos-service/src/routes/payment.ts", "auditedAtSha": null, "reauditRequired": false }
       ],
-      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "scopeFilesReauditRule": "At session start: for each file in scopeFiles, run git log --oneline -1 -- <path>. If returned SHA != auditedAtSha (exact mismatch), set reauditRequired=true and journey status=NEEDS-REAUDIT.",
       "sixGuarantees": {
         "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
         "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
@@ -743,9 +816,11 @@
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
         { "path": "src/screens/PaymentScreen.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "src/components/sell/SplitPaymentModal.tsx", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "src/components/sell/SplitPaymentModal.tsx", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "src/services/api/posApi.ts", "auditedAtSha": null, "reauditRequired": false },
+        { "path": "backend/services/pos-service/src/routes/payment.ts", "auditedAtSha": null, "reauditRequired": false }
       ],
-      "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
+      "scopeFilesReauditRule": "At session start: for each file in scopeFiles, run git log --oneline -1 -- <path>. If returned SHA != auditedAtSha (exact mismatch), set reauditRequired=true and journey status=NEEDS-REAUDIT.",
       "sixGuarantees": {
         "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
         "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
