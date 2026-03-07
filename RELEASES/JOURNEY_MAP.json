@@ -180,7 +180,7 @@
       "cluster": "C1",
       "description": "SellScan idle → scan barcode → item added to cart → cart reviewed → PaymentScreen (cash) → Complete Payment → SuccessScreen with saleId + billRef → receipt prints → inventory decremented → order visible in retailer admin",
       "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": "ACT-02-02",
+      "lastAuditedAction": "ACT-02-03",
       "lastAuditedAt": "2026-03-07",
       "openGaps": [
         {
@@ -390,7 +390,7 @@
         {
           "id": "ACT-02-03",
           "label": "Item added to cart — quantity increases, stock display updates",
-          "result": "PENDING",
+          "result": "PASS",
           "expectedUi": {
             "beforeAction": "Product found from scan/search",
             "immediateResponse": "Cart count badge increments, item appears in cart list",
@@ -405,24 +405,24 @@
           "expectedDbEffect": {
             "writes": [],
             "reads": [
-              { "table": "stockService in-memory cache", "whereCondition": "resolveStockForSku(productId, barcode)", "isolationVerified": false }
+              { "table": "stockService in-memory cache", "whereCondition": "resolveStockForCartItem(id, barcode)", "isolationVerified": true }
             ]
           },
           "expectedCrossPortalEffect": [],
           "runtimeEvidence": [],
           "levels": {
-            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
-            "L1": { "status": "PENDING", "completedAt": null, "notes": "addToCart() is synchronous. No API call.", "citations": [] },
-            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read addToCart in SellScanScreen or cartStore. Verify zero-stock guard (INV-C3).", "citations": [] },
-            "L3": { "status": "PENDING", "completedAt": null, "notes": "No backend call. Verify no API is fired on add-to-cart.", "citations": [] },
-            "L4": { "status": "PENDING", "completedAt": null, "notes": "No DB write. In-memory only.", "citations": [] },
-            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect at this step.", "citations": [] },
-            "L6": { "status": "PENDING", "completedAt": null, "notes": "Zero stock add, add same item twice (quantity increment), max quantity", "citations": [] },
-            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-C3 (qty <= stock), INV-C4 (total >= 0)", "citations": [] },
-            "L8": { "status": "PENDING", "completedAt": null, "notes": "ISSUE-042: SkuItem array update after stock edit", "citations": [] }
+            "L0": { "status": "DONE", "completedAt": "2026-03-07", "notes": "Journey step fully defined. addToSellCart → cartStore.addItem is the canonical code path.", "citations": ["handleScan.ts:491","cartStore.ts:287"] },
+            "L1": { "status": "DONE", "completedAt": "2026-03-07", "notes": "Synchronous Zustand mutation — no loading state. Success: items array updated, recalculate() runs, UI re-renders. Error: stockLimitEvent set (outOfStock/unknownStock/capped) with reason; item not added.", "citations": ["cartStore.ts:287-385","cartStore.ts:780-791"] },
+            "L2": { "status": "DONE", "completedAt": "2026-03-07", "notes": "cartStore.addItem: (1) locked guard L288, (2) resolveItemAvailableStock→getCachedStock L300, (3) capAddQuantity(currentQty, qty, availableStock) L301, (4) if addedQty<=0 → stockLimitEvent L322-326, else update items L336-371 → recalculate() L376. null-stock guard: stockCap.ts:42-50 returns unknownStock=true, addedQty=0 → item blocked. INV-C3: enforced via capAddQuantity. INV-C4: calculateCartTotals L141 safePrice*safeQty.", "citations": ["cartStore.ts:287-385","stockCap.ts:32-76","cartStore.ts:132-165"] },
+            "L3": { "status": "DONE", "completedAt": "2026-03-07", "notes": "No backend API call at add-to-cart time. Cart is fully client-side until checkout.", "citations": [] },
+            "L4": { "status": "DONE", "completedAt": "2026-03-07", "notes": "Cart persisted to AsyncStorage only via Zustand persist middleware (storeScopedStorage). No server DB write until order confirmed.", "citations": ["cartStore.ts:793-805"] },
+            "L5": { "status": "DONE", "completedAt": "2026-03-07", "notes": "No cross-portal reflection at add-to-cart time. Inventory decremented only at checkout completion.", "citations": [] },
+            "L6": { "status": "DONE", "completedAt": "2026-03-07", "notes": "null stock → unknownStock=true → item NOT added, stockLimitEvent raised. stock<=0 → outOfStock=true → blocked. stock>0, qty>stock → capped → partial add with stockLimitEvent. locked=true → silent return. Rehydration: normalizeItemsForStock clamps persisted quantities to current cache stock via capRequestedQuantity.", "citations": ["stockCap.ts:42-50","stockCap.ts:53-61","cartStore.ts:288","cartStore.ts:807-827"] },
+            "L7": { "status": "DONE", "completedAt": "2026-03-07", "notes": "INV-C3 VERIFIED: capAddQuantity enforces qty<=availableStock at stockCap.ts:64 (min(requested,stock)). INV-C4 VERIFIED: calculateCartTotals L141 lineSubtotal=safePrice*safeQty; total=max(0,subtotal-discounts) at L156 — non-negative guaranteed.", "citations": ["stockCap.ts:64","cartStore.ts:141","cartStore.ts:156"] },
+            "L8": { "status": "DONE", "completedAt": "2026-03-07", "notes": "ISSUE-042 regression guard covers stock pin→resolveStockForSku path. stockCap.ts pure logic has no dedicated guard (low regression risk — no external deps). capAddQuantity null-stock behavior is a structural deterministic branch.", "citations": ["src/__tests__/services/stockCache.regression.test.ts"] }
           },
           "gaps": [],
-          "scenariosVerified": [],
+          "scenariosVerified": ["Scenario-C3-StockCapEnforced","Scenario-C4-TotalsCorrect","Scenario-UnknownStock-Blocked","Scenario-Rehydration-Normalize"],
           "knownIssueLinks": ["ISSUE-042"]
         },
         {
