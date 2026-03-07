@@ -1,7 +1,7 @@
 {
-  "version": "134.0",
-  "lastUpdated": "2026-03-08T01:00:00Z",
-  "currentPhase": "WAVE_20_C1_CODE_COMPLETE_AWAITING_RETEST",
+  "version": "135.0",
+  "lastUpdated": "2026-03-08T06:00:00Z",
+  "currentPhase": "WAVE_20_C1_INTERNALLY_STABLE_AWAITING_ARTIFACT_BUILD",
   "currentTicket": null,
   "ticketQueue": [],
   "controlGate": {
@@ -13,7 +13,7 @@
       "resolved": 47,
       "pending": 144,
       "pendingBySeverity": {"CRITICAL": 0, "HIGH": 80, "MEDIUM": 56, "LOW": 5, "UNKNOWN": 3},
-      "nextIssueId": "ISSUE-204",
+      "nextIssueId": "ISSUE-206",
       "countCorrectionNote": "HIGH corrected 79→80 (ISSUE-056 undercounted), UNKNOWN corrected 4→3 (ISSUE-178 confirmed FIXED/subsumed)"
     }
   },
@@ -206,19 +206,31 @@
       },
       "currentApkOnDevice": {"sha": "3b021a53", "installedAt": "2026-03-07T23:13:00Z"},
       "c1ImplementationBlocked": false,
-      "c1Status": "CODE_COMPLETE_AWAITING_RETEST",
-      "c1CompletedAt": "2026-03-08T01:00:00Z",
+      "c1Status": "INTERNALLY_STABLE_AWAITING_ARTIFACT_BUILD",
+      "c1InternallyStableAt": "2026-03-08T06:00:00Z",
+      "c1InternallyStableSha": "5708b242",
       "c1Summary": {
         "ISSUE-068": {"action": "CODE_FIX", "commit": "e9ee6592", "scope": "backend+frontend", "description": "Fixed productId mapping in productsApi + storeProductDigitisationService for createSale variant resolution"},
         "ISSUE-042": {"action": "CODE_FIX", "commit": "9fd8f714", "scope": "frontend-only", "description": "Added SkuItem array update after stock edit + stockRefreshTick bump"},
+        "ISSUE-051": {"action": "CODE_FIX", "commit": "8dff43c2", "scope": "frontend-only", "description": "Fixed saleItemsSnapshot lazy-init race that cancelled createSale and left loadingSale stuck"},
+        "ISSUE-066": {"action": "CODE_FIX", "commit": "8dff43c2", "scope": "frontend-only", "description": "Same root fix as ISSUE-051 — payment chain unblocked"},
+        "ISSUE-204": {"action": "CODE_FIX", "commit": "5708b242", "scope": "frontend-only", "description": "Pin stock cache 60s after manual edit; background sync skips protected entries. Regression guard added to stockService.integration.test.js."},
         "ISSUE-043": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Stale-cache bypass was caused by wrong cache keys (068) + stale UI arrays (042). Both now fixed."},
         "ISSUE-046": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Zero-stock race condition was same root cause - stock guard couldn't find correct cache entries due to wrong keys."},
         "ISSUE-039": {"action": "ALREADY_FIXED", "fixedIn": "prior wave (line 1678 SellScanScreen.tsx)", "description": "Barcode-only guard already prevents VALIDATION_ERROR on text search input."},
-        "ISSUE-040": {"action": "NOT_REPRODUCED_ON_ALIGNED_BASELINE", "description": "Per CTO directive, do not fix in C1."},
-        "ISSUE-051": {"action": "EXPECTED_RESOLVED_BY_068", "description": "Complete Payment non-functional because saleId null from failed createSale. Needs runtime retest after 068 fix deployed."},
-        "ISSUE-066": {"action": "EXPECTED_RESOLVED_BY_068", "description": "End-to-end checkout broken because createSale fails. Needs runtime retest after 068 fix deployed."}
+        "ISSUE-040": {"action": "NOT_REPRODUCED_ON_ALIGNED_BASELINE", "description": "Per CTO directive, do not fix in C1."}
       },
-      "c1NextStep": "Redeploy staging (backend changed) + rebuild APK + full C1 runtime verification on Redmi. CTO will initiate this step."
+      "newIssuesFoundDuringC1Retest": {
+        "ISSUE-204": {"cluster": "C1", "status": "FIXED", "commit": "5708b242"},
+        "ISSUE-205": {"cluster": "C4", "status": "DEFERRED", "reason": "POST /inventory/stock/batch 500 for barcode IDs. Exception caught silently in PaymentScreen — createSale proceeds. Does not block sell flow. Deferred to C4 (stock/inventory fixes)."}
+      },
+      "c1PreArtifactExitChecks": {
+        "localBusinessInvariantCoveragePass": true,
+        "integrationTestPass": "node src/services/stockService.integration.test.js — PASSED",
+        "typecheckPass": "pnpm -r typecheck — CLEAN",
+        "noUnresolvedRegressionInCluster": true
+      },
+      "c1NextStep": "Redeploy staging at 5708b242 (backend ISSUE-068 changed) + rebuild APK + full C1 runtime verification on Redmi."
     },
     "g6BaselineResults": {
       "sha": "3b021a53",
