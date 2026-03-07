@@ -6,9 +6,10 @@
     "purpose": "Tracks per-screen CCC certification status. Every screen in any journey must appear here. Claude updates after every action audit touching a screen.",
     "statusValues": ["CERT-PENDING", "CERT-IN-PROGRESS", "CERT-PASS", "NEEDS-REAUDIT"],
 
-    "regressionGuardBlockingRule": "A screen CANNOT reach CERT-PASS if any entry in its knownIssues array has regressionGuardStatus != PASS. regressionGuardStatus=MISSING means no guard exists — must add test, invariant, or documented structural proof before CERT-PASS.",
+    "regressionGuardBlockingRule": "A screen CANNOT reach CERT-PASS if any entry in its knownIssues array has regressionGuardStatus != PASS. regressionGuardStatus=MISSING means no guard exists and blocks CERT-PASS.",
+    "regressionGuardSeverityRule": "For issues with severity=CRITICAL or severity=HIGH: regressionGuardType MUST be one of UNIT_TEST | API_INTEGRATION | E2E | RUNTIME_ASSERTION_WITH_LOG_CHECK. 'Structural proof only' or 'documented in notes' does NOT satisfy guard requirements for CRITICAL/HIGH issues. For MEDIUM/LOW: documented structural proof is acceptable only with explicit auditNote explaining why automation is not feasible.",
 
-    "scopeLockRule": "At session start: for each file in scopeLock.files, run git log --oneline -1 -- <path>. If returned SHA is newer than auditedAtSha, set reauditRequired=true on that file and screen status=NEEDS-REAUDIT. List reason in reauditReasons.",
+    "scopeLockRule": "At session start: for each file in scopeLock.files, run git log --oneline -1 -- <path>. If returned SHA != auditedAtSha (exact mismatch, not 'newer than'), set reauditRequired=true on that file and screen status=NEEDS-REAUDIT. List reason in reauditReasons. Null auditedAtSha means never audited — treat as requiring audit, not as 'no change'.",
 
     "claudeRule": "When a journey action for a screen is audited, update cccLevelsCompleted. When all journey actions for a screen are result=PASS, set screen status=CERT-PASS only if: (a) no knownIssue has regressionGuardStatus != PASS, (b) all sixGuarantees for all journeys using this screen are signed."
   },
@@ -34,6 +35,7 @@
       "knownIssues": [
         {
           "issueId": "ISSUE-204",
+          "severity": "HIGH",
           "status": "FIXED",
           "sha": "536b8442",
           "rootCause": "syncProductsToOffline wrote server-stale stock to SQLite even when in-memory cache was pinned. setCatalogItems(fresh) then loaded stale rows, overwriting React state with currentStock: 0.",
@@ -41,10 +43,11 @@
           "regressionGuardStatus": "MISSING",
           "regressionGuardType": null,
           "regressionGuardRef": null,
-          "regressionGuardNote": "Structural fix exists. Automated test required: edit stock to N, trigger sync, assert stock still N."
+          "regressionGuardNote": "HIGH severity — requires executable test (UNIT_TEST | API_INTEGRATION | E2E). Structural proof alone is NOT sufficient. Test must: edit stock to N, trigger sync, assert stock still N."
         },
         {
           "issueId": "ISSUE-042",
+          "severity": "HIGH",
           "status": "FIXED",
           "sha": "9fd8f714",
           "rootCause": "SkuItem array in state not updated after manual stock edit; stockRefreshTick not bumped.",
@@ -52,10 +55,11 @@
           "regressionGuardStatus": "MISSING",
           "regressionGuardType": null,
           "regressionGuardRef": null,
-          "regressionGuardNote": "Structural fix exists. Test required: verify UI re-renders correct stock after edit."
+          "regressionGuardNote": "HIGH severity — requires executable test. Test must: perform stock edit, verify UI re-renders correct stock immediately."
         },
         {
           "issueId": "ISSUE-039",
+          "severity": "MEDIUM",
           "status": "ALREADY_FIXED",
           "sha": "prior wave",
           "rootCause": "Barcode-only guard at line 1678 prevents VALIDATION_ERROR on text search input.",
@@ -63,7 +67,7 @@
           "regressionGuardStatus": "MISSING",
           "regressionGuardType": null,
           "regressionGuardRef": null,
-          "regressionGuardNote": "Guard exists in code. Test required: submit text string via barcode path, assert no VALIDATION_ERROR."
+          "regressionGuardNote": "MEDIUM severity — structural proof acceptable if guard is cited at file:line. Still requires auditNote with citation."
         }
       ],
       "sixGuaranteesStatus": {
@@ -95,6 +99,7 @@
       "knownIssues": [
         {
           "issueId": "ISSUE-051",
+          "severity": "CRITICAL",
           "status": "FIXED",
           "sha": "b3b5bf6c",
           "rootCause": "loadingSale in useEffect deps caused React to run cleanup (cancelled=true) and re-run the effect every time setLoadingSale(true) was called. In-flight async work then bailed on if (cancelled) return, so setSaleId/setBillRef were never called.",
@@ -102,10 +107,11 @@
           "regressionGuardStatus": "MISSING",
           "regressionGuardType": null,
           "regressionGuardRef": null,
-          "regressionGuardNote": "Structural fix exists. Test required: mount PaymentScreen with items, assert Complete Payment button enables within 3s without any user action."
+          "regressionGuardNote": "CRITICAL severity — executable test mandatory (E2E or API_INTEGRATION). Test must: mount PaymentScreen with items, assert Complete Payment button enables within 3s without user action. Structural proof alone rejected."
         },
         {
           "issueId": "ISSUE-066",
+          "severity": "CRITICAL",
           "status": "FIXED",
           "sha": "b3b5bf6c",
           "rootCause": "Same as ISSUE-051 — payment chain unblocked by same fix.",
@@ -113,10 +119,11 @@
           "regressionGuardStatus": "MISSING",
           "regressionGuardType": null,
           "regressionGuardRef": null,
-          "regressionGuardNote": "Same test as ISSUE-051 covers this."
+          "regressionGuardNote": "CRITICAL severity — same test as ISSUE-051 must cover this path explicitly."
         },
         {
           "issueId": "ISSUE-068",
+          "severity": "HIGH",
           "status": "FIXED",
           "sha": "e9ee6592",
           "rootCause": "productId mapping wrong in productsApi + storeProductDigitisationService for createSale variant resolution.",
@@ -124,7 +131,7 @@
           "regressionGuardStatus": "MISSING",
           "regressionGuardType": null,
           "regressionGuardRef": null,
-          "regressionGuardNote": "Test required: createSale with a product that has storeProductId set. Assert saleId returned (not error). Covers productId mapping path."
+          "regressionGuardNote": "HIGH severity — executable test required. Test must: createSale with storeProductId-mapped product, assert saleId returned. API_INTEGRATION or E2E."
         }
       ],
       "sixGuaranteesStatus": {
@@ -355,14 +362,21 @@
     "structuredScriptFormat": "Each step: precondition + action + expectedOutcome. Operator logs: actualOutcome + PASS|FAIL.",
     "noExplorationBeforeScriptedPass": true,
     "operatorIsLastLineNotFirstLine": "Operator testing confirms what Claude certified. It does not discover basic flow breakage. If operator finds basic breakage, that is a CCC audit failure — fix the audit, not just the code.",
-    "runtimeEvidenceRequired": "Operator fills runtimeEvidence[] in JOURNEY_MAP.json for each action tested. Claude verifies evidence completeness before CERT-SEALED.",
+    "runtimeEvidenceRequired": "Operator fills runtimeEvidence[] in JOURNEY_MAP.json for each action tested. Claude verifies all 12 required fields are present before CERT-SEALED. Entries with missing fields are INVALID and block sealing.",
     "runtimeEvidenceFormat": {
-      "type": "OPERATOR_CONFIRMED | AUTOMATED_TEST | SCREENSHOT | LOG_EXTRACT",
-      "step": "ACT-02-NN",
+      "_ref": "Canonical schema is in RELEASES/JOURNEY_MAP.json _meta.runtimeEvidenceSchema. All 12 fields below are REQUIRED.",
+      "evidenceType": "OPERATOR_CONFIRMED | AUTOMATED_TEST | SCREENSHOT | LOG_EXTRACT",
+      "step": "ACT-XX-NN",
+      "capturedAt": "ISO 8601 timestamp — when evidence was captured",
+      "capturedSha": "git SHA of HEAD at capture time — prevents stale evidence reuse",
+      "seedVersion": "e.g. 'seed-v1' or 'resetAt=2026-03-07T10:00:00Z' — matches seededStateLock",
+      "deviceId": "physical or emulator device ID",
+      "storeId": "test store ID — must match seededStateLock.requiredData",
+      "artifactPath": "path to screenshot/log, or 'none' for OPERATOR_CONFIRMED",
+      "summary": "one-line description of what was observed",
       "result": "PASS | FAIL",
-      "actualOutcome": "description of what actually happened",
-      "timestamp": "ISO timestamp",
-      "notes": ""
+      "actualOutcome": "exact description of what happened — not expected, actual",
+      "operatorConfirmed": "true if operator physically confirmed this"
     }
   }
 }

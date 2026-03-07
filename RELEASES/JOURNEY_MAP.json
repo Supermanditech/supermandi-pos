@@ -18,7 +18,8 @@
       "B5_unseededStateBlock": "Runtime evidence cannot be collected if seededStateLock.confirmed=false.",
       "B6_incompleteLevelsBlock": "Journey cannot reach CERT-SEALED if any action has any level with status=GAP and gap is not documented as ACCEPTED_RISK with explicit justification.",
       "B7_issueOmissionBlock": "Journey cannot reach CERT-SEALED if any known issue in the project (LIVE_TESTING_ISSUES, SCREEN_CERT_MANIFEST knownIssues) touching any file in scopeFiles is absent from the journey's knownIssues array. Every scoped-file issue must be explicitly present and have a regressionLock entry.",
-      "B8_incompleteActionSpineBlock": "No journey may move to CERT-IN-PROGRESS unless actions.length > 0 with real action decomposition. No journey may reach CERT-SEALED unless every declared action has result=PASS."
+      "B8_incompleteActionSpineBlock": "No journey may move to CERT-IN-PROGRESS unless actions.length > 0 with real action decomposition. No journey may reach CERT-SEALED unless every declared action has result=PASS.",
+      "B9_weakCrossPortalBlock": "Journey cannot reach CERT-SEALED if any crossPortalMatrix row has verified=true but is missing verifiedSha, citations[], or at least one runtimeEvidence entry. A row may be marked verified=true only when all four of: verifiedAt, verifiedSha, citations[], and runtimeEvidence[] are populated."
     },
 
     "falseSealprevention": [
@@ -29,8 +30,9 @@
       "runtimeEvidence must contain at least one OPERATOR_CONFIRMED entry per action before journey is eligible for CERT-SEALED.",
       "No action can be result=PASS without L2 citations (code path trace) completed.",
       "No journey can be CERT-SEALED without crossPortalMatrix fully verified (all rows have verified=true).",
-      "Every runtimeEvidence entry MUST contain all 9 immutable fields in runtimeEvidenceSchema. Entries missing capturedSha, seedVersion, deviceId, or storeId are INVALID.",
-      "Every accepted-risk waiver MUST be a formal acceptedRisk object with all 8 fields. A freeform notes string is NOT a valid waiver."
+      "Every runtimeEvidence entry MUST contain all 12 immutable fields in runtimeEvidenceSchema (evidenceType, step, capturedAt, capturedSha, seedVersion, deviceId, storeId, artifactPath, summary, result, actualOutcome, operatorConfirmed). Entries missing capturedSha, seedVersion, deviceId, or storeId are INVALID.",
+      "Every accepted-risk waiver MUST be a formal acceptedRisk object with all 8 fields. A freeform notes string is NOT a valid waiver.",
+      "Claude CANNOT self-approve (approvedBy=CLAUDE_AUDIT) any waiver where severity=HIGH or severity=CRITICAL. These require approvedBy=OPERATOR or approvedBy=CTO before sealing is permitted."
     ],
 
     "runtimeEvidenceSchema": {
@@ -53,12 +55,28 @@
       "staleness": "Evidence captured at SHA X is INVALID for a journey whose scopeFiles contain any commit newer than SHA X. Must recapture."
     },
 
+    "_crossPortalMatrixRowTemplate": {
+      "_comment": "Every crossPortalMatrix row must conform to this schema. Boolean UNVERIFIED strings are NOT valid for verified=true. verifiedAt + verifiedSha + citations[] required before any row can be marked verified=true.",
+      "trigger": "user action that causes the DB write",
+      "dbWrite": "table + operation (e.g. orders INSERT)",
+      "table": "db table name",
+      "retailerAdminView": "UNVERIFIED | VERIFIED | NOT_APPLICABLE",
+      "superAdminView": "UNVERIFIED | VERIFIED | NOT_APPLICABLE",
+      "realTimeOrPolling": "UNKNOWN | REAL_TIME_WEBSOCKET | POLLING | MANUAL_REFRESH | NOT_APPLICABLE",
+      "isolationVerified": false,
+      "queryFilePath": null,
+      "verifiedAt": null,
+      "verifiedSha": null,
+      "citations": [],
+      "runtimeEvidence": []
+    },
+
     "_acceptedRiskTemplate": {
       "_comment": "Copy this for every accepted-risk waiver. All 8 fields required. Claude cannot waive a gap without a complete acceptedRisk object.",
       "riskId": "AR-XX-NN (journey-action sequence)",
       "severity": "CRITICAL | HIGH | MEDIUM | LOW",
       "reason": "Why the gap cannot be closed at this time (specific, not vague)",
-      "approvedBy": "CLAUDE_AUDIT | OPERATOR | CTO — who approved this waiver",
+      "approvedBy": "OPERATOR | CTO — who approved this waiver. CLAUDE_AUDIT is NOT a valid approver for HIGH or CRITICAL severity. Claude may only self-document waivers for LOW/MEDIUM severity with explicit operator acknowledgement required before sealing.",
       "approvedAt": "ISO 8601 timestamp",
       "expiresAt": "ISO 8601 — after this date the risk must be re-evaluated or closed",
       "scope": "Exactly which action(s) and level(s) this waiver covers",
@@ -631,9 +649,9 @@
       ],
 
       "crossPortalMatrix": [
-        { "trigger": "sale completed", "dbWrite": "orders INSERT", "table": "orders", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null },
-        { "trigger": "sale completed", "dbWrite": "stock_balances UPDATE", "table": "stock_balances", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null },
-        { "trigger": "sale completed", "dbWrite": "ledger_entries INSERT x2", "table": "ledger_entries", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null }
+        { "trigger": "sale completed", "dbWrite": "orders INSERT", "table": "orders", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null, "verifiedAt": null, "verifiedSha": null, "citations": [], "runtimeEvidence": [] },
+        { "trigger": "sale completed", "dbWrite": "stock_balances UPDATE", "table": "stock_balances", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null, "verifiedAt": null, "verifiedSha": null, "citations": [], "runtimeEvidence": [] },
+        { "trigger": "sale completed", "dbWrite": "ledger_entries INSERT x2", "table": "ledger_entries", "retailerAdminView": "UNVERIFIED", "superAdminView": "NOT_APPLICABLE", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null, "verifiedAt": null, "verifiedSha": null, "citations": [], "runtimeEvidence": [] }
       ],
 
       "regressionLocks": [
@@ -693,7 +711,7 @@
       },
       "actions": [],
       "crossPortalMatrix": [
-        { "trigger": "manual stock edit", "dbWrite": "store_products.current_stock UPDATE", "table": "store_products", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null }
+        { "trigger": "manual stock edit", "dbWrite": "store_products.current_stock UPDATE", "table": "store_products", "retailerAdminView": "UNVERIFIED", "superAdminView": "UNVERIFIED", "realTimeOrPolling": "UNKNOWN", "isolationVerified": false, "queryFilePath": null, "verifiedAt": null, "verifiedSha": null, "citations": [], "runtimeEvidence": [] }
       ],
       "regressionLocks": [
         { "issueId": "ISSUE-204", "verifiedAt": "536b8442", "guardType": "resolveStockForSku check in syncProductsToOffline — DB write uses pinned value" },
