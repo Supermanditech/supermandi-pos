@@ -270,7 +270,7 @@ describe("ISSUE-051/066: createSaleInFlightRef prevents self-cancelling useEffec
 
     // saleId is a stable UUID from pendingSaleIdRef (idempotency key — INV-O3)
     expect(typeof callArg.saleId).toBe("string");
-    expect(callArg.saleId.length).toBeGreaterThan(0);
+    expect((callArg.saleId as string).length).toBeGreaterThan(0);
 
     expect(callArg.items).toHaveLength(1);
     expect(callArg.items[0]).toMatchObject({
