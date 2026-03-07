@@ -66,6 +66,21 @@
       "artifactParityLayer": "Trust only artifacts that prove identical SHA and seeded-state compatibility.",
       "operatorExplorationLayer": "Use operator time for edge cases, UX friction, and real-device behavior after deterministic gates pass."
     },
+    "artifactBuildAndDeployPolicy": {
+      "status": "ACTIVE",
+      "principle": "Issue-level rigor, cluster-level artifact certification.",
+      "issueLevelRule": "Fix and commit one issue at a time when practical, with a regression guard attached to that issue.",
+      "artifactLevelRule": "Do not rebuild the APK or redeploy staging for every single issue. Build and deploy once per validated cluster of related fixes on the same surface.",
+      "clusterDefinition": "A bounded set of 5-15 closely related issues in one subsystem or dependency chain, such as payment, stock, enrollment, or auth.",
+      "preArtifactExitCriteria": [
+        "local business invariant coverage passes",
+        "API integration checks for touched backend flows pass",
+        "scripted UI or deterministic interaction checks for touched surfaces pass",
+        "no unresolved regression in the active cluster"
+      ],
+      "artifactPromotionRule": "Create a new staging deploy or APK only after the current cluster is internally stable. Use runtime testing to certify the cluster, not to discover every individual bug from scratch.",
+      "exceptionRule": "An early deploy or APK rebuild is allowed only when a single blocker must be proven live to unlock the rest of the active cluster."
+    },
     "screenLockedExecutionContract": {
       "screenLockRequired": true,
       "modalAndSubpageLockRequired": true,
@@ -160,6 +175,8 @@
       {"id": "C13", "name": "Web portal detection", "issues": 1, "scope": "moved_to_resolved_ISSUE-178"}
     ],
     "rebuildCadence": "One APK rebuild per 2-3 clusters (8-15 issues). Estimated 4-5 rebuilds total.",
+    "batchingMode": "CLUSTER_LEVEL_ARTIFACT_CERTIFICATION",
+    "batchingRule": "Do not rebuild or redeploy per issue. Complete the active cluster with local deterministic verification first, then create one staging/APK candidate for runtime certification.",
     "queueFile": "scripts/wave20_high_queue.json",
     "environmentAlignment": {
       "status": "G6_COMPLETE",
