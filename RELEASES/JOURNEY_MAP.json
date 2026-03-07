@@ -179,10 +179,22 @@
       "name": "Daily Sell Flow — Cash Payment",
       "cluster": "C1",
       "description": "SellScan idle → scan barcode → item added to cart → cart reviewed → PaymentScreen (cash) → Complete Payment → SuccessScreen with saleId + billRef → receipt prints → inventory decremented → order visible in retailer admin",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "openGaps": [],
+      "status": "CERT-IN-PROGRESS",
+      "lastAuditedAction": "ACT-02-01",
+      "lastAuditedAt": "2026-03-07",
+      "openGaps": [
+        {
+          "gapId": "GAP-02-01-L1",
+          "action": "ACT-02-01",
+          "level": "L1",
+          "severity": "LOW",
+          "description": "Catalog load failure (SQLite exception or first-launch+no-network) shows identical 'No recent products' empty state instead of a distinct error banner with retry. User cannot distinguish load failure from a genuinely empty catalog.",
+          "regressionRisk": true,
+          "happyPathAffected": false,
+          "requiredFix": "Add catch block in loadCatalog (SellScanScreen.tsx:1756); set catalogError state; render error banner with retry button when catalogError is set and catalogItems is empty.",
+          "acceptedRisk": null
+        }
+      ],
       "cccBlocker": null,
 
       "seededStateLock": {
@@ -257,7 +269,7 @@
         {
           "id": "ACT-02-01",
           "label": "User opens SellScanScreen (app launch or tab switch)",
-          "result": "PENDING",
+          "result": "FAIL",
           "expectedUi": {
             "beforeAction": "App launched and enrolled device authenticated. POS tab visible.",
             "immediateResponse": "SellScanScreen renders — scan button visible, catalog loaded or loading",
@@ -267,7 +279,7 @@
           },
           "expectedApi": {
             "calls": [
-              { "method": "GET", "path": "/api/v1/pos/store-products", "triggeredBy": "loadCatalog() on mount", "requestShape": { "headers": { "Authorization": "Bearer <JWT>" } }, "responseShape": { "products": [] }, "errorCodes": [401, 500] }
+              { "method": "GET", "path": "/api/v1/pos/store-products", "triggeredBy": "loadCatalog() on mount via syncProductsToOffline()", "requestShape": { "headers": { "Authorization": "Bearer <JWT>" } }, "responseShape": { "products": [] }, "errorCodes": [401, 500] }
             ],
             "errorHandling": [
               { "httpStatus": 401, "expectedUiBehavior": "re-login redirect or error banner", "codeVerified": false },
@@ -285,18 +297,28 @@
           "expectedCrossPortalEffect": [],
           "runtimeEvidence": [],
           "levels": {
-            "L0": { "status": "PENDING", "completedAt": null, "notes": "Journey = user wants to sell an item for cash", "citations": [] },
-            "L1": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
-            "L2": { "status": "PENDING", "completedAt": null, "notes": "Must read SellScanScreen.tsx mount logic, useEffect hooks, loadCatalog", "citations": [] },
-            "L3": { "status": "PENDING", "completedAt": null, "notes": "Must read GET /store-products backend handler", "citations": [] },
-            "L4": { "status": "PENDING", "completedAt": null, "notes": "SQLite upsert + INV-S4 compliance", "citations": [] },
-            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect on mount", "citations": [] },
-            "L6": { "status": "PENDING", "completedAt": null, "notes": "Network fail, 401, SQLite empty", "citations": [] },
-            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-S4 (stock shown = available), INV-I3 (storeId from JWT)", "citations": [] },
-            "L8": { "status": "PENDING", "completedAt": null, "notes": "Check for ISSUE-204 regression path in syncProductsToOffline", "citations": [] }
+            "L0": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Journey = user wants to sell goods for cash. Entry: enrolled device + valid JWT session. Exit: product grid visible, scan button active, cart empty.", "citations": ["SellScanScreen.tsx:727-735"] },
+            "L1": { "status": "GAP", "completedAt": "2026-03-07", "notes": "GAP-02-01-L1: Error state for catalog load failure shows identical empty state ('No recent products') instead of error banner with retry. Loading=true → ActivityIndicator footer (L3228). Success=gridItems in FlatList (L3213). Empty=L3221-3224. storeActive=false → canPay=false (L1290), canEditCart=false (L1292). scanDisabled → scan button disabled (L2721).", "citations": ["SellScanScreen.tsx:3221-3232","SellScanScreen.tsx:1290","SellScanScreen.tsx:1292","SellScanScreen.tsx:2721"] },
+            "L2": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Full mount sequence traced: autoUnlockIfExpired (L771), startStockAutoRefresh+cleanup (L863-866), failedOutboxCount (L826), setCorruptedEventsCallback+cleanup (L848-858), loadProducts (L871), subscribeStockUpdates+cleanup (L1067-1070), checkFreshness+AppState+cleanup (L1100-1115), initialLoadRef guard+loadCatalog(true) once (L1862-1867). loadCatalog: SQLite read → if empty sync → if data show+bg-sync → finally setCatalogLoading=false (L1722-1779). ISSUE-204 fix confirmed: resolveStockForSku check before SQLite write (L153-154). All useEffects have cleanup.", "citations": ["SellScanScreen.tsx:770-1116","SellScanScreen.tsx:1722-1779","SellScanScreen.tsx:1862-1868","SellScanScreen.tsx:150-156"] },
+            "L3": { "status": "PENDING", "completedAt": null, "notes": "Must read sellSearchApi.listStoreProducts → backend pos-service/storeProducts route handler", "citations": [] },
+            "L4": { "status": "PENDING", "completedAt": null, "notes": "Must trace upsertLocalProduct SQLite write path + stock cache population", "citations": [] },
+            "L5": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Screen open is read-only (catalog fetch + SQLite write to local_products only). No writes to server DB tables. No cross-portal effect.", "citations": [] },
+            "L6": { "status": "GAP", "completedAt": "2026-03-07", "notes": "GAP-02-01-L1 applies here: SQLite exception → finally fires → catalogLoading=false → empty state (no error, no retry). First-launch+no-network: SQLite empty + syncProductsToOffline returns [] silently → 'No recent products' with no explanation. Network fail during background sync: syncProductsToOffline has own catch (L224-228) returns [] → silent empty. App resume: checkFreshness errors caught silently (L1094-1096). Session expiry (401) in syncProductsToOffline: not yet verified — see L3 pending.", "citations": ["SellScanScreen.tsx:1756-1778","SellScanScreen.tsx:224-228","SellScanScreen.tsx:1094-1096"] },
+            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-S4 (stock shown = available): pin check at L153-154 covers sync overwrite case. Cross-session persistence (app restart after pin) still unverified per INVARIANT_REGISTRY. INV-I3 (storeId from JWT for catalog): must verify in backend route (L3 pending).", "citations": ["SellScanScreen.tsx:153-154"] },
+            "L8": { "status": "PASS", "completedAt": "2026-03-07", "notes": "ISSUE-204: root cause comment at L150-152 ✓. Fix structural: resolveStockForSku called before upsertLocalProduct — pinnedStock used if non-null (L153-156). Cannot revert silently. regressionGuardStatus still MISSING in SCREEN_CERT_MANIFEST — tracked as blocker B3.", "citations": ["SellScanScreen.tsx:150-156"] }
           },
-          "gaps": [],
-          "scenariosVerified": [],
+          "gaps": [
+            {
+              "gapId": "GAP-02-01-L1",
+              "level": "L1",
+              "type": "MISSING_ERROR_STATE",
+              "severity": "LOW",
+              "happyPathAffected": false,
+              "description": "loadCatalog (SellScanScreen.tsx:1756) has no catch for offlineDb.all exceptions. On failure: finally sets catalogLoading=false, catalogItems stays [], user sees 'No recent products' — identical to genuine empty catalog. No retry button. First-launch+no-network path also silently shows empty state.",
+              "requiredFix": "Add catch in loadCatalog body; add catalogError boolean state; render error banner with retry when catalogError=true and catalogItems=[]. File: SellScanScreen.tsx:1756."
+            }
+          ],
+          "scenariosVerified": ["Scenario-F-LoadingStatePresent","Scenario-J-OfflinePartiallyHandled"],
           "knownIssueLinks": ["ISSUE-204"]
         },
         {
