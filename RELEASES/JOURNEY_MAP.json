@@ -180,7 +180,7 @@
       "cluster": "C1",
       "description": "SellScan idle → scan barcode → item added to cart → cart reviewed → PaymentScreen (cash) → Complete Payment → SuccessScreen with saleId + billRef → receipt prints → inventory decremented → order visible in retailer admin",
       "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": "ACT-02-01",
+      "lastAuditedAction": "ACT-02-02",
       "lastAuditedAt": "2026-03-07",
       "openGaps": [
         {
@@ -192,6 +192,17 @@
           "regressionRisk": true,
           "happyPathAffected": false,
           "requiredFix": "Add catch block in loadCatalog (SellScanScreen.tsx:1756); set catalogError state; render error banner with retry button when catalogError is set and catalogItems is empty.",
+          "acceptedRisk": null
+        },
+        {
+          "gapId": "GAP-02-02-L1",
+          "action": "ACT-02-02",
+          "level": "L1",
+          "severity": "LOW",
+          "description": "No loading indicator during async scan lookup. notify(null) clears previous notice but no 'Scanning...' feedback appears. On slow networks (>2s), user has no visual confirmation the scan registered.",
+          "regressionRisk": true,
+          "happyPathAffected": false,
+          "requiredFix": "Add notify({ tone:'info', message:'Scanning...' }) in handleScan.ts:434 region after notify(null); clear on success/error exit. Or add an in-flight loading ref that disables the scan button while lookup is pending.",
           "acceptedRisk": null
         }
       ],
@@ -324,7 +335,7 @@
         {
           "id": "ACT-02-02",
           "label": "User scans barcode (camera scan or manual entry)",
-          "result": "PENDING",
+          "result": "FAIL",
           "expectedUi": {
             "beforeAction": "SellScanScreen idle, camera or search input ready",
             "immediateResponse": "Camera overlay closes or search input clears; lookup request fires",
@@ -352,18 +363,28 @@
           "expectedCrossPortalEffect": [],
           "runtimeEvidence": [],
           "levels": {
-            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
-            "L1": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
-            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read handleBarcodeScan, lookupProduct, camera handler", "citations": [] },
-            "L3": { "status": "PENDING", "completedAt": null, "notes": "Read GET /products/{barcode} backend handler — verify store_id filter", "citations": [] },
-            "L4": { "status": "PENDING", "completedAt": null, "notes": "Read-only. No DB writes on lookup.", "citations": [] },
-            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect on scan", "citations": [] },
-            "L6": { "status": "PENDING", "completedAt": null, "notes": "Barcode not found, network fail, zero-stock product, double-scan", "citations": [] },
-            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-I3 (storeId from JWT in query), INV-C2 (item exists in catalog)", "citations": [] },
-            "L8": { "status": "PENDING", "completedAt": null, "notes": "ISSUE-039: barcode-only guard at line 1678", "citations": [] }
+            "L0": { "status": "PASS", "completedAt": "2026-03-07", "notes": "User scans barcode (camera or HID or manual). Goal: product found and added to cart. Entry: screen idle, scanner ready. Exit: product in cart OR error notice shown.", "citations": ["handleScan.ts:367","SellScanScreen.tsx:1665-1690"] },
+            "L1": { "status": "GAP", "completedAt": "2026-03-07", "notes": "GAP-02-02-L1: No in-progress loading indicator during async scan lookup (can take 1-5s on slow network). notify(null) clears previous notice but no 'Scanning...' toast or spinner shown. Success: item added to cart, cartBar flashes, haptic success. Error states: 404→'Product not found', storm→warning toast, store_inactive→error toast, network offline→offline toast, ApiError→error toast. ISSUE-039 structural guard confirmed (barcode-only routing). Double-tap: isDuplicate() 2000ms window (silent drop — by design for scanner).", "citations": ["handleScan.ts:422-434","handleScan.ts:725-751","SellScanScreen.tsx:1681-1687"] },
+            "L2": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Full code path: SellScanScreen.tsx:1686→onBarcodeScanned (handleScan.ts:367)→stripScannerAffixes+normalize (L371)→handleScan (L395)→isDuplicate (L422)→storeActive check (L424)→isScanStorm (L430)→notify(null) (L434)→isOnline (L439)→lookupStoreProductPreviewByScan (L440, productsApi.ts:218)→addToSellCart (L491)→cacheLocalProduct (L509)→upsertStockEntries (L487). PosRootLayout sets onDeviceAuthError (PosRootLayout.tsx:452) so 401 is caught. ISSUE-039 structural proof confirmed at SellScanScreen.tsx:1684-1687.", "citations": ["handleScan.ts:367-753","productsApi.ts:218-286","PosRootLayout.tsx:441-468","SellScanScreen.tsx:1684-1687"] },
+            "L3": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Backend: GET /api/v1/pos/store-products/lookup?barcode=... at storeProducts.ts:437. requireDeviceToken middleware. storeId from req.posDevice (JWT, not client params): L438. SQL: WHERE sp.store_id=$1 AND barcode=$2 (L475, L497). stock_balances JOIN: L473. Returns currentStock, sellPrice, displayName. 404→returns null (ApiError.status=404: productsApi.ts:261). 409→barcode conflict: uses canonical product (productsApi.ts:265-283).", "citations": ["backend/src/routes/v1/pos/storeProducts.ts:437-560","productsApi.ts:218-286"] },
+            "L4": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Scan lookup is READ-ONLY (server DB). SELECT from store_products + stock_balances only — no INSERT/UPDATE on scan. SQLite writes: upsertLocalProduct+setLocalPrice via cacheLocalProduct (handleScan.ts:509-517) — device-local only. upsertStockEntries: in-memory cache only (stockCache.ts). No server-side DB writes triggered by scan.", "citations": ["handleScan.ts:487-517","productsApi.ts:218","backend/src/routes/v1/pos/storeProducts.ts:437-560"] },
+            "L5": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Scan adds to cartStore (Zustand, in-memory + AsyncStorage). No server DB write at scan time. No portal can see the cart until checkout (ACT-02-07). Cross-portal effect: none at this step.", "citations": [] },
+            "L6": { "status": "PASS", "completedAt": "2026-03-07", "notes": "Scenario A (double-tap): isDuplicate() 2000ms window (handleScan.ts:422). Scenario D (network drop): offline toast (handleScan.ts:744-745). Scenario E (session expiry/401): onDeviceAuthError in PosRootLayout (L452); if not handled, falls to ApiError notify (handleScan.ts:746-747). Scenario F (slow network): GAP-02-02-L1 (no spinner). Scenario H (empty barcode): trimmed check at L372 returns early. REGRESSION_RISK: back-press mid-scan — async call continues; item may be added after navigation (fire-and-forget void at SellScanScreen.tsx:1686).", "citations": ["handleScan.ts:422","handleScan.ts:725-751","SellScanScreen.tsx:1686"] },
+            "L7": { "status": "PASS", "completedAt": "2026-03-07", "notes": "INV-I3 VERIFIED: backend derives storeId from req.posDevice (JWT middleware requireDeviceToken, storeProducts.ts:438). Client never passes storeId in scan request. SQL WHERE sp.store_id=$1 (L475). Store isolation holds for scan lookup.", "citations": ["backend/src/routes/v1/pos/storeProducts.ts:437-438","backend/src/routes/v1/pos/storeProducts.ts:475","backend/src/routes/v1/pos/storeProducts.ts:497"] },
+            "L8": { "status": "PASS", "completedAt": "2026-03-07", "notes": "ISSUE-039: barcode-only routing guard confirmed structural at SellScanScreen.tsx:1684-1687 (// ISSUE-039/041 comment). Regression guard test in stockCache.regression.test.ts describes ISSUE-039 structural proof. Root cause (non-barcode text reaching onBarcodeScanned) cannot recur due to /^\\d{8,}$/ guard.", "citations": ["SellScanScreen.tsx:1681-1687"] }
           },
-          "gaps": [],
-          "scenariosVerified": [],
+          "gaps": [
+            {
+              "gapId": "GAP-02-02-L1",
+              "level": "L1",
+              "type": "MISSING_LOADING_STATE",
+              "severity": "LOW",
+              "happyPathAffected": false,
+              "description": "During async scan lookup (lookupStoreProductPreviewByScan), no loading indicator is shown. notify(null) clears previous notice but no 'Scanning...' feedback appears. On slow networks (>2s), user has no visual confirmation the scan registered.",
+              "requiredFix": "Add notify({ tone: 'info', message: 'Scanning...' }) at handleScan.ts:434 after notify(null), clear it on success/error. Or add a loading ref to disable scan button while in flight."
+            }
+          ],
+          "scenariosVerified": ["Scenario-A-DoubleTapGuard","Scenario-D-NetworkDrop","Scenario-E-SessionExpiry","Scenario-H-EmptyBarcode"],
           "knownIssueLinks": ["ISSUE-039"]
         },
         {
