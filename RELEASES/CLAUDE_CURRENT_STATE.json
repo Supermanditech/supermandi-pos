@@ -17,6 +17,87 @@
       "countCorrectionNote": "HIGH corrected 79→80 (ISSUE-056 undercounted), UNKNOWN corrected 4→3 (ISSUE-178 confirmed FIXED/subsumed)"
     }
   },
+  "productionGradeCertificationModel": {
+    "status": "ACTIVE_LOCKED_POLICY",
+    "purpose": "Drive Claude under a single production-grade execution model: fix and verify issues screen-by-screen, interaction-by-interaction, with deterministic gates before any deploy candidate is trusted.",
+    "nonNegotiableRules": [
+      "Do not deploy staging merely to discover basic flow breakage.",
+      "Do not treat manual operator testing as the primary discovery engine for known business invariants.",
+      "Do not pass a screen, modal, or flow until every user interaction, tap, click, submit path, failure state, recovery path, and end-to-end dependency chain in scope has been executed or explicitly blocked with evidence.",
+      "Do not close a fix without adding or updating a regression guard: business invariant, API integration coverage, scripted UI flow, or documented runtime assertion.",
+      "Do not trust a build unless backend, web, and APK artifacts are proven to be on the same SHA."
+    ],
+    "releaseCertificationGates": {
+      "GateA_shaParity": {
+        "required": true,
+        "rule": "backend, web portals, and installed APK must all prove the same release SHA before live verification begins"
+      },
+      "GateB_cleanSeededState": {
+        "required": true,
+        "rule": "use one deterministic seeded state with known retailer, supplier, store, device, products, stock, customer, payment mode, and test identities"
+      },
+      "GateC_automatedCriticalFlowSuite": {
+        "required": true,
+        "rule": "run critical business flows before operator exploratory testing",
+        "flows": [
+          "Retailer register/login",
+          "Supplier register/login",
+          "SuperAdmin login/approval",
+          "POS enroll/login",
+          "SellScan add/edit stock",
+          "Payment complete",
+          "Receipt/WhatsApp",
+          "Core admin toggles"
+        ]
+      },
+      "GateD_regressionSuiteForFixedIssues": {
+        "required": true,
+        "rule": "every fixed issue must be protected by a regression artifact: unit/business invariant, API integration coverage, scripted UI path, or runtime assertion"
+      },
+      "GateE_operatorExploratoryPass": {
+        "required": true,
+        "rule": "operator exploratory testing runs only on an already-certified build that passed Gates A-D"
+      }
+    },
+    "testArchitecture": {
+      "unitAndBusinessInvariantLayer": "Encode business rules such as stock non-negativity, createSale saleId creation, device/session invariants, and role/allowlist enforcement before relying on manual retest.",
+      "apiIntegrationLayer": "Run real API integration tests against staging-like backend state for enrollment, sale creation, payment init, approvals, and registration resume flows.",
+      "deterministicUiE2eLayer": "Use scripted E2E for critical web and POS flows. Manual taps must confirm, not discover, repeated breakage.",
+      "artifactParityLayer": "Trust only artifacts that prove identical SHA and seeded-state compatibility.",
+      "operatorExplorationLayer": "Use operator time for edge cases, UX friction, and real-device behavior after deterministic gates pass."
+    },
+    "screenLockedExecutionContract": {
+      "screenLockRequired": true,
+      "modalAndSubpageLockRequired": true,
+      "interactionCoverageRequired": true,
+      "interactionCoverageDefinition": [
+        "all primary taps and clicks",
+        "all secondary menus, long-presses, and keyboard submit paths",
+        "all validation and empty/error/loading states",
+        "all retries, back navigation, foreground/background resumes, and repeated submits",
+        "all end-to-end transitions into dependent screens or APIs"
+      ],
+      "passCondition": "A screen or flow is production-grade only when runtime layers, business edge cases, deterministic flow checks, and affected end-to-end paths all pass on a parity-verified artifact."
+    },
+    "seededStateRequirements": {
+      "goldenRetailer": true,
+      "goldenSupplier": true,
+      "goldenStore": true,
+      "goldenDevice": true,
+      "goldenProducts": true,
+      "goldenStock": true,
+      "goldenCustomer": true,
+      "goldenPaymentMode": true,
+      "singleResetScriptRequired": true
+    },
+    "highestRoiImprovements": [
+      "maintain a single staging reset/seed script for store, device, products, stock, customer, supplier, and test identities",
+      "automate the 8 POS critical checks: enroll, login, stock edit, add to cart, payment screen open, complete payment, success screen, history entry visible",
+      "add backend assertions for saleId creation, stock non-negativity, device/session invariants, and role/allowlist enforcement",
+      "add release telemetry: correlation ID per request, build SHA in every UI, structured createSale/payment logs, and easier ADB/runtime tracing"
+    ],
+    "deployCandidateRule": "A release candidate is eligible for staging promotion only after Gates A-D pass. Gate E may discover follow-up issues, but it must not be used as the first line of defense for already known critical flows."
+  },
   "wave19": {
     "scope": "HIGH-only, non-POS, non-device-dependent",
     "implementableNow": [],
@@ -603,7 +684,8 @@
       "accessibility",
       "responsive_behavior"
     ],
-    "resultRule": "Implement every actionable finding with evidence-backed fixes. Record newly discovered or impacted regressions as ISSUE-152+ with runtime proof."
+    "resultRule": "Implement every actionable finding with evidence-backed fixes. Every closed issue must leave behind a regression guard (business invariant, API integration coverage, scripted UI coverage, or runtime assertion). Record newly discovered or impacted regressions as ISSUE-152+ with runtime proof.",
+    "layeredAndEdgeCaseRule": "A screen or flow may only pass after the full 17-layer runtime checklist, the business-logic edge-case checklist, deterministic critical-flow coverage, and any affected end-to-end dependency chains are completed or explicitly blocked with evidence."
   },
   "firebaseProductionAudit": {
     "status": "REPO_HARDENED_OPERATOR_VERIFICATION_DEFERRED",

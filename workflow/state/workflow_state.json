@@ -62,6 +62,60 @@
     },
     "implementationDirective": "Implement one issue at a time with strict git discipline, reiterate after each batch, then deploy-gate."
   },
+  "productionGradeCertificationModel": {
+    "status": "ACTIVE_LOCKED_POLICY",
+    "goal": "Replace repeated ad hoc staging discovery with a deterministic production-grade certification pipeline that Claude must follow before trusting a deploy candidate.",
+    "releaseCertificationGates": {
+      "GateA_shaParity": "backend, web portals, and installed APK must prove the same SHA before live verification begins",
+      "GateB_cleanSeededState": "use one deterministic seeded state with known retailer, supplier, store, device, products, stock, customer, payment mode, and test identities",
+      "GateC_automatedCriticalFlowSuite": [
+        "Retailer register/login",
+        "Supplier register/login",
+        "SuperAdmin login/approval",
+        "POS enroll/login",
+        "SellScan add/edit stock",
+        "Payment complete",
+        "Receipt/WhatsApp",
+        "Core admin toggles"
+      ],
+      "GateD_regressionSuiteForFixedIssues": "every fixed issue must gain a regression guard: business invariant, API integration check, scripted UI path, or runtime assertion",
+      "GateE_operatorExploratoryPass": "operator exploratory testing runs only on a build that already passed Gates A-D"
+    },
+    "executionPolicy": {
+      "screenLocked": true,
+      "modalLocked": true,
+      "subpageLocked": true,
+      "allInteractionsRequired": true,
+      "allDependentEndToEndPathsRequired": true,
+      "doNotDeployToDiscoverBasicBreakage": true,
+      "manualTestingIsFinalConfirmationNotPrimaryDiscoveryEngine": true
+    },
+    "deterministicLayers": {
+      "businessInvariantTests": true,
+      "apiIntegrationTestsAgainstStagingLikeBackend": true,
+      "deterministicUiE2eTests": true,
+      "artifactParityGates": true,
+      "operatorExploratoryPassAfterCertification": true
+    },
+    "seededStateRequirements": {
+      "singleResetScriptRequired": true,
+      "goldenRetailer": true,
+      "goldenSupplier": true,
+      "goldenStore": true,
+      "goldenDevice": true,
+      "goldenProducts": true,
+      "goldenStock": true,
+      "goldenCustomer": true,
+      "goldenPaymentMode": true
+    },
+    "telemetryRequirements": {
+      "correlationIdPerRequest": true,
+      "buildShaInEveryUi": true,
+      "structuredPaymentAndCreateSaleLogs": true,
+      "adbAndRuntimeTracingEasyToEnable": true
+    },
+    "deployCandidateRule": "A staging or production candidate is trustworthy only after Gates A-D pass. Gate E may append issues, but it must not be the first detector of basic critical-flow regressions."
+  },
   "finalTwoStageGcpSignoff": {
     "status": "WAVE_20_ENVIRONMENT_ALIGNMENT",
     "deployedAppCodeSha": "610cbc39",
@@ -69,6 +123,7 @@
     "mode": "WAVE_20_ENVIRONMENT_ALIGNMENT",
     "currentExecutionOrder": [
       "Read machine-state and locked manifests before edits",
+      "Enforce production-grade certification model: Gate A SHA parity, Gate B seeded state, Gate C automated critical flows, Gate D regression guards, then Gate E operator exploration",
       "Reconcile authoritative issue counts and status buckets before any deploy claims",
       "Reiterate all implemented fixes with impacted retest and runtime evidence",
       "Classify remaining pending issues by severity, deploy surface, and operator dependency",
@@ -200,8 +255,8 @@
       "accessibility",
       "responsive_behavior"
     ],
-    "resultRule": "Implement every actionable finding with evidence-backed fixes. Record newly discovered or impacted regressions as ISSUE-152+ with runtime proof.",
-    "layeredAndEdgeCaseRule": "A screen or flow may only pass after both the full 17-layer runtime checklist and the business-logic edge-case checklist are completed or explicitly blocked with evidence.",
+    "resultRule": "Implement every actionable finding with evidence-backed fixes. Every closed issue must leave behind a regression guard (business invariant, API integration coverage, scripted UI coverage, or runtime assertion). Record newly discovered or impacted regressions as ISSUE-152+ with runtime proof.",
+    "layeredAndEdgeCaseRule": "A screen or flow may only pass after the full 17-layer runtime checklist, the business-logic edge-case checklist, deterministic critical-flow coverage, and any affected end-to-end dependency chains are completed or explicitly blocked with evidence.",
     "activeScreenOrFlow": "Issue implementation queue (highest severity first), then mandatory reiteration",
     "businessLogicEdgeCaseChecklist": [
       "empty_or_missing_required_inputs",
@@ -2639,4 +2694,3 @@
     "nextPhaseIfPassed": "STAGING_DEPLOY_SHA_aa898b65_THEN_GATE_3_POST_DEPLOY_VERIFICATION"
   }
 }
-
