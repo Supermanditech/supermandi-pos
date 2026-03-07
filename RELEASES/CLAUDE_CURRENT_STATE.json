@@ -1,7 +1,7 @@
 {
-  "version": "133.0",
-  "lastUpdated": "2026-03-07T23:45:00Z",
-  "currentPhase": "WAVE_20_G6_COMPLETE_AWAITING_CTO",
+  "version": "134.0",
+  "lastUpdated": "2026-03-08T01:00:00Z",
+  "currentPhase": "WAVE_20_C1_CODE_COMPLETE_AWAITING_RETEST",
   "currentTicket": null,
   "ticketQueue": [],
   "controlGate": {
@@ -107,8 +107,20 @@
         "G6_staff": "Raju Manager (7737914383)"
       },
       "currentApkOnDevice": {"sha": "3b021a53", "installedAt": "2026-03-07T23:13:00Z"},
-      "c1ImplementationBlocked": true,
-      "blockReason": "Awaiting CTO instruction to open C1 implementation"
+      "c1ImplementationBlocked": false,
+      "c1Status": "CODE_COMPLETE_AWAITING_RETEST",
+      "c1CompletedAt": "2026-03-08T01:00:00Z",
+      "c1Summary": {
+        "ISSUE-068": {"action": "CODE_FIX", "commit": "e9ee6592", "scope": "backend+frontend", "description": "Fixed productId mapping in productsApi + storeProductDigitisationService for createSale variant resolution"},
+        "ISSUE-042": {"action": "CODE_FIX", "commit": "9fd8f714", "scope": "frontend-only", "description": "Added SkuItem array update after stock edit + stockRefreshTick bump"},
+        "ISSUE-043": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Stale-cache bypass was caused by wrong cache keys (068) + stale UI arrays (042). Both now fixed."},
+        "ISSUE-046": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Zero-stock race condition was same root cause - stock guard couldn't find correct cache entries due to wrong keys."},
+        "ISSUE-039": {"action": "ALREADY_FIXED", "fixedIn": "prior wave (line 1678 SellScanScreen.tsx)", "description": "Barcode-only guard already prevents VALIDATION_ERROR on text search input."},
+        "ISSUE-040": {"action": "NOT_REPRODUCED_ON_ALIGNED_BASELINE", "description": "Per CTO directive, do not fix in C1."},
+        "ISSUE-051": {"action": "EXPECTED_RESOLVED_BY_068", "description": "Complete Payment non-functional because saleId null from failed createSale. Needs runtime retest after 068 fix deployed."},
+        "ISSUE-066": {"action": "EXPECTED_RESOLVED_BY_068", "description": "End-to-end checkout broken because createSale fails. Needs runtime retest after 068 fix deployed."}
+      },
+      "c1NextStep": "Redeploy staging (backend changed) + rebuild APK + full C1 runtime verification on Redmi. CTO will initiate this step."
     },
     "g6BaselineResults": {
       "sha": "3b021a53",
