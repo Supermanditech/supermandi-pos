@@ -240,6 +240,101 @@ Claude signs the 6 guarantees → updates JOURNEY_MAP.json → updates SCREEN_CE
 
 ---
 
+## SECTION 4A: LIVE TESTING LIFECYCLE (MANDATORY ORDER)
+
+Live testing exists in this framework, but only as part of a strict lifecycle.
+Claude may not blur these phases together.
+
+```
+PHASE 1 — STATIC CCC AUDIT
+  Purpose:
+    Read the full journey scope, trace all 8 levels, identify gaps from code and architecture.
+  Allowed:
+    file reading, action decomposition, invariant tracing, known-issue linking.
+  Forbidden:
+    deploy requests, APK rebuild requests, operator exploratory testing.
+  Exit:
+    current journey/action is either CERT-BLOCKED or ready for baseline/runtime planning.
+
+PHASE 2 — BASELINE LIVE DISCOVERY
+  Purpose:
+    Confirm the real runtime baseline of the current journey/cluster on parity-verified staging/APK.
+  Preconditions:
+    Gate A SHA parity
+    Gate B seeded state
+    enough code understanding to run a structured script
+  Allowed:
+    operator follows a pre-written script step-by-step
+    collect runtimeEvidence for actual current behavior
+    confirm or narrow issues
+  Forbidden:
+    freestyle exploratory clicking
+    repeated setup loops without environment change
+    declaring a fix from baseline evidence alone
+  Exit:
+    baseline matrix recorded: reproduces / not reproduced / partial / blocked
+
+PHASE 3 — CODE FIX CLUSTER
+  Purpose:
+    Fix the active cluster issue-by-issue under deterministic verification.
+  Allowed:
+    CODE_FIX commits only
+    executable regression guards
+    local business invariant / API / deterministic UI checks
+  Forbidden:
+    operator certification
+    deploy/APK per issue
+    jumping to another cluster before current cluster stabilizes
+  Exit:
+    active cluster satisfies preArtifactExitCriteria
+
+PHASE 4 — POST-FIX RUNTIME CERTIFICATION
+  Purpose:
+    Certify the stabilized cluster on one deploy/APK candidate.
+  Preconditions:
+    cluster internally stable
+    candidate SHA pushed
+    machine-state/framework SHA pushed
+  Allowed:
+    one staging deploy and/or one APK build for the active cluster candidate
+    one structured runtime certification pass
+  Forbidden:
+    using runtime certification to rediscover basic known breakage that should have been caught in PHASE 3
+  Exit:
+    cluster runtime pass/fail truth-synced
+
+PHASE 5 — OPERATOR EXPLORATORY PASS
+  Purpose:
+    Find edge cases, UX friction, device/browser quirks on an already-certified candidate.
+  Preconditions:
+    Gates A-D passed
+  Allowed:
+    exploration beyond the scripted path
+    new issue discovery
+  Forbidden:
+    replacing deterministic certification with operator memory or vague "looks ok"
+  Exit:
+    final release-candidate confidence assessment
+
+PHASE 6 — DEPLOY ELIGIBILITY
+  Purpose:
+    Decide whether the certified cluster/release candidate may promote.
+  Preconditions:
+    all cluster deploy blockers cleared
+    no open CRITICAL/HIGH release blocker in target scope
+  Allowed:
+    staging/prod promotion decision
+  Forbidden:
+    promotion while any prior phase is incomplete
+```
+
+Strict rule:
+- PHASE 2 and PHASE 4 are the only live runtime phases.
+- PHASE 5 is exploratory only after certification.
+- Operator testing must never be the first line of defense for known flows.
+
+---
+
 ## SECTION 5: DEPLOY GATE RULES
 
 ```

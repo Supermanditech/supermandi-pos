@@ -126,6 +126,74 @@
         "rule": "operator exploratory testing runs only on an already-certified build that passed Gates A-D"
       }
     },
+    "liveTestingLifecycle": {
+      "canonicalOrder": [
+        "PHASE_1_STATIC_CCC_AUDIT",
+        "PHASE_2_BASELINE_LIVE_DISCOVERY",
+        "PHASE_3_CODE_FIX_CLUSTER",
+        "PHASE_4_POST_FIX_RUNTIME_CERTIFICATION",
+        "PHASE_5_OPERATOR_EXPLORATORY_PASS",
+        "PHASE_6_DEPLOY_ELIGIBILITY"
+      ],
+      "currentLifecyclePhase": "PHASE_1_STATIC_CCC_AUDIT",
+      "phaseRules": {
+        "PHASE_1_STATIC_CCC_AUDIT": {
+          "purpose": "Code-and-architecture tracing before any live runtime certification.",
+          "allowsOperatorTesting": false,
+          "allowsDeployOrApk": false,
+          "exitCondition": "Journey or cluster is understood well enough to run a structured baseline script or is blocked by code gap."
+        },
+        "PHASE_2_BASELINE_LIVE_DISCOVERY": {
+          "purpose": "Confirm current runtime baseline on parity-verified staging/APK.",
+          "allowsOperatorTesting": true,
+          "allowsDeployOrApk": true,
+          "requires": ["GateA_shaParity", "GateB_cleanSeededState"],
+          "operatorMode": "scripted-only",
+          "forbidden": [
+            "freestyle exploration before scripted baseline is complete",
+            "repeated setup without environment change",
+            "declaring fixes from baseline evidence alone"
+          ],
+          "exitCondition": "Baseline matrix recorded as reproduces / not reproduced / partial / blocked."
+        },
+        "PHASE_3_CODE_FIX_CLUSTER": {
+          "purpose": "Fix the active cluster under deterministic local verification.",
+          "allowsOperatorTesting": false,
+          "allowsDeployOrApk": false,
+          "requires": ["active cluster selected", "baseline matrix recorded if runtime baseline was needed"],
+          "exitCondition": "preArtifactExitCriteria satisfied for the active cluster."
+        },
+        "PHASE_4_POST_FIX_RUNTIME_CERTIFICATION": {
+          "purpose": "Certify the stabilized cluster on one deploy/APK candidate.",
+          "allowsOperatorTesting": true,
+          "allowsDeployOrApk": true,
+          "requires": ["preArtifactExitCriteria", "candidate SHA pushed", "machine-state SHA pushed"],
+          "operatorMode": "scripted-certification-only",
+          "exitCondition": "Cluster runtime pass/fail truth-synced."
+        },
+        "PHASE_5_OPERATOR_EXPLORATORY_PASS": {
+          "purpose": "Explore edge cases and UX/device/browser behavior on an already-certified candidate.",
+          "allowsOperatorTesting": true,
+          "allowsDeployOrApk": false,
+          "requires": ["GateA_shaParity", "GateB_cleanSeededState", "GateC_automatedCriticalFlowSuite", "GateD_regressionSuiteForFixedIssues"],
+          "operatorMode": "exploratory",
+          "exitCondition": "Exploratory findings triaged into release blocker or backlog."
+        },
+        "PHASE_6_DEPLOY_ELIGIBILITY": {
+          "purpose": "Final go/no-go for candidate promotion.",
+          "allowsOperatorTesting": false,
+          "allowsDeployOrApk": false,
+          "requires": ["all target-scope CRITICAL/HIGH blockers closed", "all mandatory clusters certified"],
+          "exitCondition": "Promote or hold candidate."
+        }
+      },
+      "hardRules": [
+        "PHASE_2 and PHASE_4 are the only live runtime certification phases.",
+        "PHASE_5 is exploratory only after certification, never instead of certification.",
+        "Claude must state the active lifecycle phase before requesting any operator action.",
+        "Claude must not request deploy/APK outside PHASE_2 baseline alignment or PHASE_4 post-fix certification."
+      ]
+    },
     "testArchitecture": {
       "unitAndBusinessInvariantLayer": "Encode business rules such as stock non-negativity, createSale saleId creation, device/session invariants, and role/allowlist enforcement before relying on manual retest.",
       "apiIntegrationLayer": "Run real API integration tests against staging-like backend state for enrollment, sale creation, payment init, approvals, and registration resume flows.",

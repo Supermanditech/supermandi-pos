@@ -9,6 +9,7 @@
     "levelStatusValues": ["PENDING", "PASS", "GAP", "SKIPPED"],
 
     "claudeSessionRule": "On session start: find first journey where status != CERT-SEALED. Check scopeFiles for reaudit triggers (git log). Resume from lastAuditedAction + 1. Update this file after EVERY action. Never end session without updating.",
+    "lifecycleRule": "Before asking for any operator action or artifact build, Claude must state which lifecycle phase is active from CLAUDE_CURRENT_STATE.productionGradeCertificationModel.liveTestingLifecycle. Baseline live discovery and post-fix runtime certification are different phases and may not be conflated.",
 
     "sealingBlockers": {
       "B1_openGapsBlock": "Journey cannot reach CERT-SEALED if openGaps array is non-empty.",
@@ -21,7 +22,8 @@
       "B8_incompleteActionSpineBlock": "No journey may move to CERT-IN-PROGRESS unless actions.length > 0 with real action decomposition. No journey may reach CERT-SEALED unless every declared action has result=PASS.",
       "B9_weakCrossPortalBlock": "Journey cannot reach CERT-SEALED if any crossPortalMatrix row has verified=true but is missing verifiedSha, citations[], or at least one runtimeEvidence entry. A row may be marked verified=true only when all four of: verifiedAt, verifiedSha, citations[], and runtimeEvidence[] are populated.",
       "B10_mixedCommitBoundaryBlock": "Journey cannot reach CERT-SEALED if any known issue in scope was fixed by a code commit that also modified RELEASES/, workflow/state/, or RELEASES/LIVE_TESTING_ISSUES.md, unless an explicit cluster-level exception is documented in CLAUDE_CURRENT_STATE.gitDisciplineEnforcement and approved by operator or CTO.",
-      "B11_unpushedCandidateBlock": "Journey cannot collect operator certification runtimeEvidence or reach CERT-SEALED if the candidate code SHA or active machine-state/framework SHA is not present on origin/main."
+      "B11_unpushedCandidateBlock": "Journey cannot collect operator certification runtimeEvidence or reach CERT-SEALED if the candidate code SHA or active machine-state/framework SHA is not present on origin/main.",
+      "B12_wrongLifecyclePhaseBlock": "Journey cannot collect runtimeEvidence, request deploy/APK, or claim certification if the action is being performed in the wrong liveTestingLifecycle phase. Baseline live discovery belongs to PHASE_2. Post-fix runtime certification belongs to PHASE_4. Exploratory testing belongs to PHASE_5 only."
     },
 
     "falseSealprevention": [
