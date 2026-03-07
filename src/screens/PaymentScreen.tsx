@@ -156,6 +156,10 @@ const PaymentScreen = () => {
   // GL-CRIT-0086: Track when loading started for minimum display time
   const loadingSaleStartRef = useRef<number>(0);
   const loadingUpiStartRef = useRef<number>(0);
+  // ISSUE-051/066: Ref-based in-flight guard — prevents loadingSale state change from
+  // cancelling its own effect via the dependency array, which caused setSaleId/setBillRef
+  // to never be called and the Complete Payment button to stay permanently disabled.
+  const createSaleInFlightRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [upiVpa, setUpiVpa] = useState<string | null>(null);
@@ -364,9 +368,12 @@ const PaymentScreen = () => {
 
   useEffect(() => {
     // ISSUE-076: Guard against infinite retry — stop if saleError is set
-    if (saleId || saleItems.length === 0 || loadingSale || saleError) return;
+    // ISSUE-051/066: Use ref (not loadingSale state) so this effect is not cancelled
+    // by its own setLoadingSale(true) call triggering a dependency-array re-run.
+    if (saleId || saleItems.length === 0 || createSaleInFlightRef.current || saleError) return;
 
     let cancelled = false;
+    createSaleInFlightRef.current = true;
     setLoadingSale(true);
     setSaleError(null);
     // GL-CRIT-0086: Track start time for minimum display
@@ -495,6 +502,7 @@ const PaymentScreen = () => {
       // ISSUE-076: Set error state to prevent infinite retry loop
       setSaleError("Unable to start payment. Please try again.");
     }).finally(() => {
+      createSaleInFlightRef.current = false;
       if (cancelled) return;
       // GL-CRIT-0086: Ensure minimum display time to prevent flash
       const elapsed = Date.now() - loadingSaleStartRef.current;
@@ -514,7 +522,7 @@ const PaymentScreen = () => {
     currency,
     discountMinor,
     itemCount,
-    loadingSale,
+    // loadingSale intentionally omitted — ISSUE-051/066: using createSaleInFlightRef instead
     saleError,
     saleId,
     saleItems,
