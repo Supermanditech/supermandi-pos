@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "updatedAt": "2026-03-07T21:00:00Z",
-  "workflowMode": "WAVE_20_ENVIRONMENT_ALIGNMENT",
+  "workflowMode": "LIVE_FIX",
   "stagingBrowserTestWave": {
     "status": "CLOSED_IN_GIT",
     "baselineSha": "940e0832",
@@ -577,7 +577,7 @@
       "shaParity": "CONFIRMED"
     },
     "impactedRuntimeRecheck": {
-      "status": "COMPLETE — 29/29 PASS",
+      "status": "COMPLETE \u00e2\u20ac\u201d 29/29 PASS",
       "p2Checks": "8/8 PASS",
       "p3Checks": "21/21 PASS",
       "verdict": "PRODUCTION-READY"
@@ -626,7 +626,7 @@
       "regressions": 0
     },
     "productionGoLiveVerdict": "BLOCKED_PENDING_FINAL_TWO_STAGE_GCP_SIGNOFF",
-    "nextPhase": "Two-stage final GCP sign-off (76 views across 5 platforms) → fix wave if needed → production go-live",
+    "nextPhase": "Two-stage final GCP sign-off (76 views across 5 platforms) \u00e2\u2020\u2019 fix wave if needed \u00e2\u2020\u2019 production go-live",
     "twoStageFinalSignoff": {
       "status": "IN_PROGRESS",
       "activePlatform": "POS",
@@ -686,8 +686,8 @@
       }
     ],
     "minorNotes": [
-      "SuppliersPage: htmlFor='sup-categories' targets a div (non-labelable) — pre-existing pattern, not functional regression",
-      "ResetPasswordPage: tabIndex={-1} removed from toggle buttons — a11y improvement (buttons now keyboard-accessible)"
+      "SuppliersPage: htmlFor='sup-categories' targets a div (non-labelable) \u00e2\u20ac\u201d pre-existing pattern, not functional regression",
+      "ResetPasswordPage: tabIndex={-1} removed from toggle buttons \u00e2\u20ac\u201d a11y improvement (buttons now keyboard-accessible)"
     ],
     "operatorReviewAllowed": true,
     "newStgIdsCreated": 0
@@ -2475,7 +2475,7 @@
         "STG-432"
       ],
       "blockerReason": "NONE. STG-431 FIXED in consolidated fix wave 2 (commit 91929249, deployed at f080d982). All POS findings resolved.",
-      "pendingMigrations": "NONE (all 171 applied — confirmed from Cloud Run startup logs)",
+      "pendingMigrations": "NONE (all 171 applied \u00e2\u20ac\u201d confirmed from Cloud Run startup logs)",
       "endpointsTested": 35,
       "endpointsCorrectAuth": 34,
       "endpointsAnomaly": 1,
@@ -2564,7 +2564,7 @@
       ],
       "deployedSha": "f080d982",
       "runtimeVerified": true,
-      "nextAction": "NONE — all findings closed. Production promotion eligible."
+      "nextAction": "NONE \u00e2\u20ac\u201d all findings closed. Production promotion eligible."
     },
     "singlePlatformLock": true,
     "singleScreenLock": true,
@@ -2673,7 +2673,7 @@
       "OP1_GitHubSecrets": "RESOLVED",
       "OP2_DNS": "RESOLVED",
       "OP3_FirebaseConsole": "RESOLVED",
-      "shaProgression": "132eb8ff → 0e161261 → 07cec20b → aa898b65"
+      "shaProgression": "132eb8ff \u00e2\u2020\u2019 0e161261 \u00e2\u2020\u2019 07cec20b \u00e2\u2020\u2019 aa898b65"
     },
     "sourceOfTruthOrder": [
       "origin_main_sha_aa898b65",
