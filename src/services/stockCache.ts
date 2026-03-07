@@ -5,10 +5,14 @@ const STOCK_CACHE_KEY = "supermandi.stock.cache.v1";
 // Previous 6h TTL caused issues where sold-out items still showed as available.
 // Offline safety is maintained by allowing cart operations when stock is unknown (null).
 const STOCK_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+// ISSUE-204: Duration to protect a manually-edited cache entry from background refresh overwrites
+const STOCK_CACHE_PIN_MS = 60 * 1000; // 60 seconds
 
 type StockCacheEntry = {
   stock: number;
   updatedAt: number;
+  // ISSUE-204: If set, background refresh must not overwrite this entry until epoch ms has passed
+  protectedUntil?: number;
 };
 
 type StockCacheState = {
@@ -106,7 +110,10 @@ export function getOldestEntryAge(): number | null {
 // GL-CRIT-0013: Export TTL for use in refresh logic
 export const STOCK_TTL_MS = STOCK_CACHE_TTL_MS;
 
-export function updateStockCacheEntries(entries: Array<{ key: string; stock: number }>): void {
+export function updateStockCacheEntries(
+  entries: Array<{ key: string; stock: number }>,
+  opts?: { pin?: boolean }
+): void {
   const state = getState();
   const now = Date.now();
   let changed = false;
@@ -116,7 +123,15 @@ export function updateStockCacheEntries(entries: Array<{ key: string; stock: num
     if (!key) continue;
     const normalized = normalizeStock(entry.stock);
     if (normalized === null) continue;
-    state.entries[key] = { stock: normalized, updatedAt: now };
+
+    // ISSUE-204: Skip background-refresh writes if the entry is pin-protected
+    if (!opts?.pin) {
+      const existing = state.entries[key];
+      if (existing?.protectedUntil && now < existing.protectedUntil) continue;
+    }
+
+    const protectedUntil = opts?.pin ? now + STOCK_CACHE_PIN_MS : undefined;
+    state.entries[key] = { stock: normalized, updatedAt: now, protectedUntil };
     changed = true;
   }
 

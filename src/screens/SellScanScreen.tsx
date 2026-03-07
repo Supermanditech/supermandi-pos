@@ -45,6 +45,7 @@ import {
   resolveStockForSku,
   subscribeStockUpdates,
   upsertStockEntries,
+  pinStockEntries, // ISSUE-204
   startStockAutoRefresh, // GL-CRIT-0013
   stopStockAutoRefresh // GL-CRIT-0013
 } from "../services/stockService";
@@ -2097,7 +2098,8 @@ export default function SellScanScreen({
       if (stockResult?.productId) stockUpdates.push({ key: stockResult.productId, stock: confirmedStock });
       else if (detailItem.productId) stockUpdates.push({ key: detailItem.productId, stock: confirmedStock });
       if (detailItem.barcode) stockUpdates.push({ key: detailItem.barcode, stock: confirmedStock });
-      if (stockUpdates.length > 0) upsertStockEntries(stockUpdates);
+      // ISSUE-204: Pin the edited entry so background sync cannot overwrite it for 60s
+      if (stockUpdates.length > 0) pinStockEntries(stockUpdates);
       // ISSUE-042: Update stock in SkuItem arrays so search/list show correct value
       const updateStock = (items: SkuItem[]) =>
         items.map(i =>

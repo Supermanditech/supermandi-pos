@@ -28,6 +28,10 @@ moduleMocks.set("./networkStatus", { isOnline: async () => online });
 moduleMocks.set("./api/productsApi", {
   listProducts: async () => listProductsResponse
 });
+moduleMocks.set("./api/inventoryApi", {
+  getStock: async () => ({ currentQty: 0 }),
+  getStockBatch: async () => ({})
+});
 moduleMocks.set("./storeScope", {
   normalizeStoreScope: (storeId) => (storeId ? String(storeId) : "unassigned"),
   storeScopedStorage: memoryStorage
@@ -144,6 +148,53 @@ async function run() {
   online = false;
   const skipped = await stockService.refreshStockSnapshot();
   assert.strictEqual(skipped, false);
+
+  // ISSUE-204: Pin protection — background refresh must not overwrite a manually-pinned entry
+  stockService.upsertStockEntries([{ key: "pin-guard-key", stock: 10 }]);
+  assert.strictEqual(
+    stockService.resolveStockForCartItem({ id: "pin-guard-key", barcode: null }),
+    10
+  );
+
+  // User manually edits stock to 7 — pin it
+  stockService.pinStockEntries([{ key: "pin-guard-key", stock: 7 }]);
+  assert.strictEqual(
+    stockService.resolveStockForCartItem({ id: "pin-guard-key", barcode: null }),
+    7
+  );
+
+  // Background sync tries to overwrite with stale value 0 — pin must block this
+  stockService.upsertStockEntries([{ key: "pin-guard-key", stock: 0 }]);
+  assert.strictEqual(
+    stockService.resolveStockForCartItem({ id: "pin-guard-key", barcode: null }),
+    7,
+    "ISSUE-204: pin must block background overwrite within protection window"
+  );
+
+  // A forced pin-over-pin update must still work (explicit manual edit can override)
+  stockService.pinStockEntries([{ key: "pin-guard-key", stock: 3 }]);
+  assert.strictEqual(
+    stockService.resolveStockForCartItem({ id: "pin-guard-key", barcode: null }),
+    3,
+    "ISSUE-204: pin-over-pin must succeed"
+  );
+
+  // Background sync still blocked after pin-over-pin
+  stockService.upsertStockEntries([{ key: "pin-guard-key", stock: 0 }]);
+  assert.strictEqual(
+    stockService.resolveStockForCartItem({ id: "pin-guard-key", barcode: null }),
+    3,
+    "ISSUE-204: background overwrite must still be blocked after pin-over-pin"
+  );
+
+  // Unprotected key must still be overwriteable by background sync
+  stockService.upsertStockEntries([{ key: "unprotected-key", stock: 5 }]);
+  stockService.upsertStockEntries([{ key: "unprotected-key", stock: 2 }]);
+  assert.strictEqual(
+    stockService.resolveStockForCartItem({ id: "unprotected-key", barcode: null }),
+    2,
+    "ISSUE-204: unprotected entries must remain overwriteable"
+  );
 
   console.log("stock service integration tests passed");
 }

@@ -49,6 +49,13 @@ export function upsertStockEntries(entries: StockEntry[]): void {
   notifyStockUpdated();
 }
 
+// ISSUE-204: Pin stock entries after a manual edit to prevent background refresh overwrites for 60s
+export function pinStockEntries(entries: StockEntry[]): void {
+  if (!entries.length) return;
+  updateStockCacheEntries(entries, { pin: true });
+  notifyStockUpdated();
+}
+
 export function upsertStockFromProducts(products: StockProduct[]): void {
   upsertStockEntries(buildStockEntriesFromProducts(products));
 }
