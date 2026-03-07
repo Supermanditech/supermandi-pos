@@ -180,7 +180,7 @@
       "cluster": "C1",
       "description": "SellScan idle → scan barcode → item added to cart → cart reviewed → PaymentScreen (cash) → Complete Payment → SuccessScreen with saleId + billRef → receipt prints → inventory decremented → order visible in retailer admin",
       "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": "ACT-02-03",
+      "lastAuditedAction": "ACT-02-04",
       "lastAuditedAt": "2026-03-07",
       "openGaps": [
         {
@@ -428,7 +428,7 @@
         {
           "id": "ACT-02-04",
           "label": "User taps Proceed to Payment",
-          "result": "PENDING",
+          "result": "PASS",
           "expectedUi": {
             "beforeAction": "Cart has at least 1 item. Proceed button visible and enabled.",
             "immediateResponse": "Navigation to PaymentScreen begins",
@@ -447,18 +447,18 @@
           "expectedCrossPortalEffect": [],
           "runtimeEvidence": [],
           "levels": {
-            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
-            "L1": { "status": "PENDING", "completedAt": null, "notes": "Navigation action. Verify cart state is passed correctly as params.", "citations": [] },
-            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read navigation call site. Verify saleItems snapshot is taken correctly. INV-C1.", "citations": [] },
-            "L3": { "status": "PENDING", "completedAt": null, "notes": "No backend call on navigation.", "citations": [] },
-            "L4": { "status": "PENDING", "completedAt": null, "notes": "No DB effect.", "citations": [] },
-            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect.", "citations": [] },
-            "L6": { "status": "PENDING", "completedAt": null, "notes": "Empty cart navigation blocked, back-press from PaymentScreen returns to correct state", "citations": [] },
-            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-C1 (cart total passed = displayed total)", "citations": [] },
-            "L8": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] }
+            "L0": { "status": "DONE", "completedAt": "2026-03-07", "notes": "Navigation from SellScanScreen to PaymentScreen via React Navigation. canPay guard controls button.", "citations": ["SellScanScreen.tsx:2894-2902","SellScanScreen.tsx:3489-3497"] },
+            "L1": { "status": "DONE", "completedAt": "2026-03-07", "notes": "canPay=itemCount>0 && storeActive!==false && !locked && !hasUnresolvedPriceError. Button disabled+silent return if false. No loading state — navigation is immediate.", "citations": ["SellScanScreen.tsx:1290"] },
+            "L2": { "status": "DONE", "completedAt": "2026-03-07", "notes": "handleCheckout L2894: canPay guard → ISSUE-130 voice cancel → setCartExpanded(false) → navigation.navigate('Payment'). NO navigation params — PaymentScreen reads from Zustand store directly. Back-press guard at L776-791 prevents accidental back when items.length>0.", "citations": ["SellScanScreen.tsx:2894-2902","SellScanScreen.tsx:776-792"] },
+            "L3": { "status": "DONE", "completedAt": "2026-03-07", "notes": "No backend API call at navigation time.", "citations": [] },
+            "L4": { "status": "DONE", "completedAt": "2026-03-07", "notes": "No DB writes/reads at navigation time.", "citations": [] },
+            "L5": { "status": "DONE", "completedAt": "2026-03-07", "notes": "No cross-portal effect.", "citations": [] },
+            "L6": { "status": "DONE", "completedAt": "2026-03-07", "notes": "Empty cart: canPay=false → button disabled, handleCheckout returns early. Store inactive: canPay=false. Cart locked: canPay=false. Price resolution error (STG-441): canPay=false. Voice recording: cancelled before navigate (ISSUE-130).", "citations": ["SellScanScreen.tsx:1289-1290","SellScanScreen.tsx:2895-2898"] },
+            "L7": { "status": "DONE", "completedAt": "2026-03-07", "notes": "INV-C1 VERIFIED: No navigation params — PaymentScreen reads same Zustand store state as SellScanScreen. No snapshot copy means total shown in PaymentScreen is identical to what SellScanScreen displayed.", "citations": ["SellScanScreen.tsx:2901"] },
+            "L8": { "status": "DONE", "completedAt": "2026-03-07", "notes": "No regression guards specific to checkout navigation; canPay formula is deterministic. ISSUE-130 fix in code at L2897.", "citations": [] }
           },
           "gaps": [],
-          "scenariosVerified": [],
+          "scenariosVerified": ["Scenario-EmptyCart-Blocked","Scenario-StoreLocked-Blocked","Scenario-INV-C1-SingleSource","Scenario-ISSUE130-VoiceCancel"],
           "knownIssueLinks": []
         },
         {
