@@ -1,6 +1,6 @@
 {
-  "version": "137.1",
-  "lastUpdated": "2026-03-07T00:00:00Z",
+  "version": "137.2",
+  "lastUpdated": "2026-03-07T15:28:22.9755369Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -26,12 +26,12 @@
       "8. Continue audit from lastAuditedAction + 1"
     ],
     "currentJourney": "JOURNEY-02",
-    "currentPhase": "AUDIT_NOT_STARTED",
-    "auditProgressNote": "JOURNEY-02 (Daily Sell Flow - Cash) not yet started. First action: ACT-02-01 (SellScanScreen opens). Must read SellScanScreen.tsx completely before starting.",
+    "currentPhase": "JOURNEY_02_PHASE4_PREP",
+    "auditProgressNote": "JOURNEY-02 STATIC AUDIT COMPLETE (2026-03-07). All 10 actions PASS. B1/B2/B6/B8 cleared. G4 signed. staticAuditComplete=true in JOURNEY_MAP.json. Remaining blockers: B3 (SCREEN_CERT_MANIFEST regressionGuardStatus), B4 partial (G1-G3,G5-G6 need scopeFiles complete read), B5/B9/B11/B12 require PHASE_4 (runtime evidence, push, live test). Next session: (1) read remaining scopeFiles (posApi.ts, printerService.ts, localDb.ts, retailer-admin DashboardPage) to sign G1, then sign G2/G3/G5/G6; (2) check SCREEN_CERT_MANIFEST for B3; (3) push all commits to origin/main for B11.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "JOURNEY-02, JOURNEY-03, JOURNEY-04, JOURNEY-05 all CERT-PENDING",
-      "nextUnblock": "Complete CCC audit for all C1 cluster journeys. All screens CERT-PASS. Then ONE APK build + ONE staging deploy."
+      "blockedBy": "JOURNEY-02 static audit complete but CERT-SEALED requires PHASE_4 runtime evidence. G1-G3,G5-G6 unsigned. B3 (regression guards) unchecked. Commits not yet pushed to origin/main.",
+      "nextUnblock": "Next session: (1) Read remaining scopeFiles to sign G1 and chain guarantees. (2) Check SCREEN_CERT_MANIFEST.json for B3. (3) Push commits to origin/main (B11). (4) After all static work done: schedule PHASE_4 runtime evidence collection with operator."
     },
     "antiDriftRules": [
       "Claude NEVER decides what to work on from conversation memory alone",
@@ -46,7 +46,9 @@
       "Claude NEVER seals a journey if any scopeFile has reauditRequired=true",
       "Claude NEVER mix commits code changes with RELEASES/ or workflow/state/ changes except in FRAMEWORK_ONLY commits",
       "Claude NEVER truth-sync a fix while any affected HIGH/CRITICAL issue still has regressionGuardStatus != PASS",
-      "Claude NEVER request operator certification while HEAD or active machine-state commits are unpushed"
+      "Claude NEVER request operator certification while HEAD or active machine-state commits are unpushed",
+      "Claude NEVER switch away from the active journey because a round feels short or because breadth seems efficient; depth-first completion is mandatory",
+      "Claude NEVER leave the current journey partially audited when remaining sealing blockers are still auditable in the current session"
     ]
   },
 
@@ -194,6 +196,22 @@
         "Claude must not request deploy/APK outside PHASE_2 baseline alignment or PHASE_4 post-fix certification."
       ]
     },
+    "journeyDepthDiscipline": {
+      "status": "ACTIVE_HARD_BLOCK",
+      "mode": "ONE_JOURNEY_AT_A_TIME_100_PERCENT",
+      "rule": "Claude keeps the active journey locked until it is CERT-SEALED or explicitly CERT-BLOCKED by a real code gap. No partial breadth-first auditing across multiple journeys.",
+      "ifRoundEnds": "Update machine state with exact remaining blockers and next action, then resume the same journey next session.",
+      "forbidden": [
+        "switching journeys because the session budget feels too small",
+        "sampling future journeys while the current journey still has auditable sealing blockers",
+        "calling a journey 'mostly done' and moving on"
+      ],
+      "switchAllowedOnlyWhen": [
+        "current journey reaches CERT-SEALED",
+        "current journey reaches CERT-BLOCKED with exact requiredFix documented",
+        "operator explicitly changes currentJourney in repo truth"
+      ]
+    },
     "testArchitecture": {
       "unitAndBusinessInvariantLayer": "Encode business rules such as stock non-negativity, createSale saleId creation, device/session invariants, and role/allowlist enforcement before relying on manual retest.",
       "apiIntegrationLayer": "Run real API integration tests against staging-like backend state for enrollment, sale creation, payment init, approvals, and registration resume flows.",
@@ -249,6 +267,8 @@
     "screenLockedExecutionContract": {
       "screenLockRequired": true,
       "modalAndSubpageLockRequired": true,
+      "journeyCompletionRequired": true,
+      "journeyDepthFirstRequired": true,
       "interactionCoverageRequired": true,
       "interactionCoverageDefinition": [
         "all primary taps and clicks",
@@ -257,7 +277,8 @@
         "all retries, back navigation, foreground/background resumes, and repeated submits",
         "all end-to-end transitions into dependent screens or APIs"
       ],
-      "passCondition": "A screen or flow is production-grade only when runtime layers, business edge cases, deterministic flow checks, and affected end-to-end paths all pass on a parity-verified artifact."
+      "journeySwitchRule": "Move to the next journey only after the current journey is CERT-SEALED or explicitly CERT-BLOCKED with repo-truth blocker details.",
+      "passCondition": "A screen or flow is production-grade only when runtime layers, business edge cases, deterministic flow checks, and affected end-to-end paths all pass on a parity-verified artifact. Partial audits do not count; the active journey must be finished end-to-end before Claude moves on."
     },
     "seededStateRequirements": {
       "goldenRetailer": true,

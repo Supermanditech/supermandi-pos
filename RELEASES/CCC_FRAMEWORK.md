@@ -635,6 +635,24 @@ Rule E: After any code fix in a CERT-SEALED journey's file scope:
         - Set journey.reauditLevels = [affected levels]
         - Set screen.status = NEEDS-REAUDIT in SCREEN_CERT_MANIFEST.json
         - Re-run only the affected levels (not full audit unless Level 2 changes)
+
+Rule F: Depth-first journey execution is mandatory.
+        Once a journey becomes the current audit target, Claude stays on that
+        journey until it is either CERT-SEALED or explicitly CERT-BLOCKED by a
+        real code gap with requiredFix documented. Claude does NOT switch to a
+        different journey because "this round is short", to sample breadth, or
+        to trace blockers "efficiently" across multiple journeys.
+
+Rule G: If a session ends before the active journey is complete, Claude updates
+        machine state with the exact remaining blockers, next required action,
+        and next file/action to resume from. Next session resumes the SAME
+        journey. Claude does not pre-scan the next journey while the current
+        journey is still auditable.
+
+Rule H: "Finish the journey" means close the entire sealing surface for that
+        journey: remaining invariants, open gaps, regression guards,
+        cross-portal verification rows, guarantee signatures, and runtime
+        evidence planning. Partial blocker sweeps are not completion.
 ```
 
 ---
