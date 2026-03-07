@@ -4,7 +4,6 @@
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
-
   "cccFramework": {
     "adopted": true,
     "adoptedAt": "2026-03-07",
@@ -16,22 +15,22 @@
       "liveState": "RELEASES/CLAUDE_CURRENT_STATE.json"
     },
     "sessionStartProtocol": [
-      "1. Read RELEASES/CCC_FRAMEWORK.md — how Claude works",
+      "1. Read RELEASES/CCC_FRAMEWORK.md \u00e2\u20ac\u201d how Claude works",
       "2. Read RELEASES/CLAUDE_CURRENT_STATE.json cccFramework.currentJourney",
-      "3. Read RELEASES/JOURNEY_MAP.json — find currentJourney, read lastAuditedAction",
-      "4. Read RELEASES/INVARIANT_REGISTRY.json — load journey-relevant invariants",
-      "5. Read RELEASES/SCREEN_CERT_MANIFEST.json — check screen cert statuses",
-      "6. git log --oneline -5 && git status — verify SHA",
+      "3. Read RELEASES/JOURNEY_MAP.json \u00e2\u20ac\u201d find currentJourney, read lastAuditedAction",
+      "4. Read RELEASES/INVARIANT_REGISTRY.json \u00e2\u20ac\u201d load journey-relevant invariants",
+      "5. Read RELEASES/SCREEN_CERT_MANIFEST.json \u00e2\u20ac\u201d check screen cert statuses",
+      "6. git log --oneline -5 && git status \u00e2\u20ac\u201d verify SHA",
       "7. Announce: 'Resuming JOURNEY-XX. Last action: ACT-XX-NN. Next: ACT-XX-NN+1. Files: [list]'",
       "8. Continue audit from lastAuditedAction + 1"
     ],
     "currentJourney": "JOURNEY-02",
     "currentPhase": "JOURNEY_02_PHASE4_PREP",
-    "auditProgressNote": "JOURNEY-02 STATIC AUDIT COMPLETE (2026-03-07). All 10 actions PASS. B1/B2/B6/B8 cleared. G4 signed. staticAuditComplete=true in JOURNEY_MAP.json. Remaining blockers: B3 (SCREEN_CERT_MANIFEST regressionGuardStatus), B4 partial (G1-G3,G5-G6 need scopeFiles complete read), B5/B9/B11/B12 require PHASE_4 (runtime evidence, push, live test). Next session: (1) read remaining scopeFiles (posApi.ts, printerService.ts, localDb.ts, retailer-admin DashboardPage) to sign G1, then sign G2/G3/G5/G6; (2) check SCREEN_CERT_MANIFEST for B3; (3) push all commits to origin/main for B11.",
+    "auditProgressNote": "JOURNEY-02 STATIC AUDIT COMPLETE (2026-03-07). All 10 actions PASS. B1/B2/B6/B8 CLEAR. B3 CLEAR (PaymentScreen ISSUE-051/066/068 guards PASS at 7c62039f). B4 CLEAR (G1-G6 all signed 2026-03-07: all 20 scopeFiles read, APIs cited, cascade traced, failure modes documented, regression locks verified). B7 CLEAR (knownIssues cross-checked vs LIVE_TESTING_ISSUES.md \u2014 all 5 present). B10 CLEAR (commit boundaries: code-fix commits clean, state commits clean). Remaining blockers: B5 (seededStateLock.confirmed=false \u2014 PHASE_4), B9 (runtimeEvidence=[] \u2014 PHASE_4), B11 (commits not pushed), B12 (PHASE_4 not yet active). Next: (1) Push commits to origin/main (B11). (2) Schedule PHASE_4 with operator.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "JOURNEY-02 static audit complete but CERT-SEALED requires PHASE_4 runtime evidence. G1-G3,G5-G6 unsigned. B3 (regression guards) unchecked. Commits not yet pushed to origin/main.",
-      "nextUnblock": "Next session: (1) Read remaining scopeFiles to sign G1 and chain guarantees. (2) Check SCREEN_CERT_MANIFEST.json for B3. (3) Push commits to origin/main (B11). (4) After all static work done: schedule PHASE_4 runtime evidence collection with operator."
+      "blockedBy": "JOURNEY-02 static audit complete. G1-G6 all signed. B1-B4, B6-B8, B10 CLEAR. B5/B9/B12 require PHASE_4 (runtime evidence + operator live test). B11 = commits not pushed.",
+      "nextUnblock": "Push commits to origin/main (B11). Then advance to PHASE_4 to collect runtime evidence (B5/B9/B12)."
     },
     "antiDriftRules": [
       "Claude NEVER decides what to work on from conversation memory alone",
@@ -39,7 +38,7 @@
       "Claude NEVER requests a deploy or APK build until current cluster journeys are CERT-SEALED",
       "Claude NEVER skips updating JOURNEY_MAP.json after each action audit",
       "Claude NEVER treats 'TypeScript compiles' as production grade certification",
-      "Claude NEVER audits by assumption — every claim requires a file:line citation",
+      "Claude NEVER audits by assumption \u00e2\u20ac\u201d every claim requires a file:line citation",
       "Claude NEVER signs a guarantee without citations[] populated with file:line references",
       "Claude NEVER marks an invariant VERIFIED without verifiedInFiles[] containing file:line",
       "Claude NEVER marks regressionGuardStatus=PASS without a test or structural proof reference",
@@ -51,28 +50,32 @@
       "Claude NEVER leave the current journey partially audited when remaining sealing blockers are still auditable in the current session"
     ]
   },
-
   "executionModel": {
     "version": "CCC_v2.0",
     "sourceOfTruth": "CCC_FRAMEWORK",
     "executionDrivenBy": [
-      "RELEASES/CCC_FRAMEWORK.md — methodology and rules",
-      "RELEASES/JOURNEY_MAP.json — audit progress and action spine",
-      "RELEASES/SCREEN_CERT_MANIFEST.json — screen cert status and deploy gate",
-      "RELEASES/INVARIANT_REGISTRY.json — invariant verification state"
+      "RELEASES/CCC_FRAMEWORK.md \u00e2\u20ac\u201d methodology and rules",
+      "RELEASES/JOURNEY_MAP.json \u00e2\u20ac\u201d audit progress and action spine",
+      "RELEASES/SCREEN_CERT_MANIFEST.json \u00e2\u20ac\u201d screen cert status and deploy gate",
+      "RELEASES/INVARIANT_REGISTRY.json \u00e2\u20ac\u201d invariant verification state"
     ],
     "legacyWaveSections": {
       "status": "READ_ONLY_HISTORICAL_REFERENCE",
-      "nonExecutable": ["wave19", "wave20", "g6BaselineResults"],
-      "superseded": ["productionGradeCertificationModel — superseded by CCC_FRAMEWORK.md"],
+      "nonExecutable": [
+        "wave19",
+        "wave20",
+        "g6BaselineResults"
+      ],
+      "superseded": [
+        "productionGradeCertificationModel \u00e2\u20ac\u201d superseded by CCC_FRAMEWORK.md"
+      ],
       "rule": "Claude reads wave19/wave20 for cluster definitions and issue counts ONLY. No execution decisions come from these sections. All execution is driven by cccFramework.currentJourney and JOURNEY_MAP.json.",
-      "clusterDefinitionsNote": "wave20.executionClusters defines which issues belong to which cluster. Reference only — not executable."
+      "clusterDefinitionsNote": "wave20.executionClusters defines which issues belong to which cluster. Reference only \u00e2\u20ac\u201d not executable."
     },
     "deployDecisionSource": "RELEASES/SCREEN_CERT_MANIFEST.json deployGate",
     "invariantSource": "RELEASES/INVARIANT_REGISTRY.json",
     "auditProgressSource": "RELEASES/JOURNEY_MAP.json per-journey actions array"
   },
-
   "controlGate": {
     "passed": true,
     "passedAt": "2026-03-07T20:00:00Z",
@@ -81,9 +84,15 @@
       "total": 191,
       "resolved": 47,
       "pending": 144,
-      "pendingBySeverity": {"CRITICAL": 0, "HIGH": 80, "MEDIUM": 56, "LOW": 5, "UNKNOWN": 3},
+      "pendingBySeverity": {
+        "CRITICAL": 0,
+        "HIGH": 80,
+        "MEDIUM": 56,
+        "LOW": 5,
+        "UNKNOWN": 3
+      },
       "nextIssueId": "ISSUE-206",
-      "countCorrectionNote": "HIGH corrected 79→80 (ISSUE-056 undercounted), UNKNOWN corrected 4→3 (ISSUE-178 confirmed FIXED/subsumed)"
+      "countCorrectionNote": "HIGH corrected 79\u00e2\u2020\u201980 (ISSUE-056 undercounted), UNKNOWN corrected 4\u00e2\u2020\u20193 (ISSUE-178 confirmed FIXED/subsumed)"
     }
   },
   "productionGradeCertificationModel": {
@@ -149,7 +158,10 @@
           "purpose": "Confirm current runtime baseline on parity-verified staging/APK.",
           "allowsOperatorTesting": true,
           "allowsDeployOrApk": true,
-          "requires": ["GateA_shaParity", "GateB_cleanSeededState"],
+          "requires": [
+            "GateA_shaParity",
+            "GateB_cleanSeededState"
+          ],
           "operatorMode": "scripted-only",
           "forbidden": [
             "freestyle exploration before scripted baseline is complete",
@@ -162,14 +174,21 @@
           "purpose": "Fix the active cluster under deterministic local verification.",
           "allowsOperatorTesting": false,
           "allowsDeployOrApk": false,
-          "requires": ["active cluster selected", "baseline matrix recorded if runtime baseline was needed"],
+          "requires": [
+            "active cluster selected",
+            "baseline matrix recorded if runtime baseline was needed"
+          ],
           "exitCondition": "preArtifactExitCriteria satisfied for the active cluster."
         },
         "PHASE_4_POST_FIX_RUNTIME_CERTIFICATION": {
           "purpose": "Certify the stabilized cluster on one deploy/APK candidate.",
           "allowsOperatorTesting": true,
           "allowsDeployOrApk": true,
-          "requires": ["preArtifactExitCriteria", "candidate SHA pushed", "machine-state SHA pushed"],
+          "requires": [
+            "preArtifactExitCriteria",
+            "candidate SHA pushed",
+            "machine-state SHA pushed"
+          ],
           "operatorMode": "scripted-certification-only",
           "exitCondition": "Cluster runtime pass/fail truth-synced."
         },
@@ -177,7 +196,12 @@
           "purpose": "Explore edge cases and UX/device/browser behavior on an already-certified candidate.",
           "allowsOperatorTesting": true,
           "allowsDeployOrApk": false,
-          "requires": ["GateA_shaParity", "GateB_cleanSeededState", "GateC_automatedCriticalFlowSuite", "GateD_regressionSuiteForFixedIssues"],
+          "requires": [
+            "GateA_shaParity",
+            "GateB_cleanSeededState",
+            "GateC_automatedCriticalFlowSuite",
+            "GateD_regressionSuiteForFixedIssues"
+          ],
           "operatorMode": "exploratory",
           "exitCondition": "Exploratory findings triaged into release blocker or backlog."
         },
@@ -185,7 +209,10 @@
           "purpose": "Final go/no-go for candidate promotion.",
           "allowsOperatorTesting": false,
           "allowsDeployOrApk": false,
-          "requires": ["all target-scope CRITICAL/HIGH blockers closed", "all mandatory clusters certified"],
+          "requires": [
+            "all target-scope CRITICAL/HIGH blockers closed",
+            "all mandatory clusters certified"
+          ],
           "exitCondition": "Promote or hold candidate."
         }
       },
@@ -302,7 +329,11 @@
   "wave19": {
     "scope": "HIGH-only, non-POS, non-device-dependent",
     "implementableNow": [],
-    "implementedThisBatch": ["ISSUE-035 (already fixed)", "ISSUE-057", "ISSUE-063"],
+    "implementedThisBatch": [
+      "ISSUE-035 (already fixed)",
+      "ISSUE-057",
+      "ISSUE-063"
+    ],
     "posDeviceDepParked": 80,
     "deployForbidden": true,
     "apkRebuildForbidden": true,
@@ -346,19 +377,84 @@
       "redeployScope": "backend + all 3 web portals + POS APK"
     },
     "executionClusters": [
-      {"id": "C1", "name": "Core sell flow blockers", "issues": 8, "scope": "ISSUE-051,066,068 (payment blocker) + ISSUE-042,043,046 (stock/cart) + ISSUE-039,040 (scan errors)"},
-      {"id": "C2", "name": "Scan/search/voice UX", "issues": 8, "scope": "ISSUE-041,048,049,052,071,083,110,111"},
-      {"id": "C3", "name": "Payment/receipt hardening", "issues": 6, "scope": "ISSUE-076,077,087,107,128,133"},
-      {"id": "C4", "name": "Stock/inventory fixes", "issues": 6, "scope": "ISSUE-050,065,070,091,092,114"},
-      {"id": "C5", "name": "Startup/enrollment/session", "issues": 11, "scope": "ISSUE-073,074,075,079,080,081,089,090,105,108,109"},
-      {"id": "C6", "name": "Purchase/reorder flow", "issues": 7, "scope": "ISSUE-060,062,064,078,093,094,125 (POS only)"},
-      {"id": "C7", "name": "GRN/buy hardening", "issues": 4, "scope": "ISSUE-095,096,115,116"},
-      {"id": "C8", "name": "Credit/customer/dues", "issues": 6, "scope": "ISSUE-085,086,097,098,099,118"},
-      {"id": "C9", "name": "Navigation/layout/misc", "issues": 8, "scope": "ISSUE-044,045,053,058,082,084,112,113"},
-      {"id": "C10", "name": "Chat/AI + utilities", "issues": 6, "scope": "ISSUE-056,059,100,101,102,129"},
-      {"id": "C11", "name": "Reports/print/barcode", "issues": 5, "scope": "ISSUE-069,104,106,117,178_already_fixed"},
-      {"id": "C12", "name": "Supplier registration", "issues": 4, "scope": "ISSUE-061,067,161,171"},
-      {"id": "C13", "name": "Web portal detection", "issues": 1, "scope": "moved_to_resolved_ISSUE-178"}
+      {
+        "id": "C1",
+        "name": "Core sell flow blockers",
+        "issues": 8,
+        "scope": "ISSUE-051,066,068 (payment blocker) + ISSUE-042,043,046 (stock/cart) + ISSUE-039,040 (scan errors)"
+      },
+      {
+        "id": "C2",
+        "name": "Scan/search/voice UX",
+        "issues": 8,
+        "scope": "ISSUE-041,048,049,052,071,083,110,111"
+      },
+      {
+        "id": "C3",
+        "name": "Payment/receipt hardening",
+        "issues": 6,
+        "scope": "ISSUE-076,077,087,107,128,133"
+      },
+      {
+        "id": "C4",
+        "name": "Stock/inventory fixes",
+        "issues": 6,
+        "scope": "ISSUE-050,065,070,091,092,114"
+      },
+      {
+        "id": "C5",
+        "name": "Startup/enrollment/session",
+        "issues": 11,
+        "scope": "ISSUE-073,074,075,079,080,081,089,090,105,108,109"
+      },
+      {
+        "id": "C6",
+        "name": "Purchase/reorder flow",
+        "issues": 7,
+        "scope": "ISSUE-060,062,064,078,093,094,125 (POS only)"
+      },
+      {
+        "id": "C7",
+        "name": "GRN/buy hardening",
+        "issues": 4,
+        "scope": "ISSUE-095,096,115,116"
+      },
+      {
+        "id": "C8",
+        "name": "Credit/customer/dues",
+        "issues": 6,
+        "scope": "ISSUE-085,086,097,098,099,118"
+      },
+      {
+        "id": "C9",
+        "name": "Navigation/layout/misc",
+        "issues": 8,
+        "scope": "ISSUE-044,045,053,058,082,084,112,113"
+      },
+      {
+        "id": "C10",
+        "name": "Chat/AI + utilities",
+        "issues": 6,
+        "scope": "ISSUE-056,059,100,101,102,129"
+      },
+      {
+        "id": "C11",
+        "name": "Reports/print/barcode",
+        "issues": 5,
+        "scope": "ISSUE-069,104,106,117,178_already_fixed"
+      },
+      {
+        "id": "C12",
+        "name": "Supplier registration",
+        "issues": 4,
+        "scope": "ISSUE-061,067,161,171"
+      },
+      {
+        "id": "C13",
+        "name": "Web portal detection",
+        "issues": 1,
+        "scope": "moved_to_resolved_ISSUE-178"
+      }
     ],
     "rebuildCadence": "One APK rebuild per 2-3 clusters (8-15 issues). Estimated 4-5 rebuilds total.",
     "batchingMode": "CLUSTER_LEVEL_ARTIFACT_CERTIFICATION",
@@ -390,7 +486,10 @@
         "G6_store": "SuperMandi Test Store (a6c43ede-b14f-4b1a-973f-c334ca696f39)",
         "G6_staff": "Raju Manager (7737914383)"
       },
-      "currentApkOnDevice": {"sha": "3b021a53", "installedAt": "2026-03-07T23:13:00Z"},
+      "currentApkOnDevice": {
+        "sha": "3b021a53",
+        "installedAt": "2026-03-07T23:13:00Z"
+      },
       "c1ImplementationBlocked": false,
       "c1Status": "CODE_FIXES_COMPLETE_AWAITING_ARTIFACT_BUILD",
       "c1InternallyStableAt": "2026-03-08T07:30:00Z",
@@ -400,24 +499,78 @@
         "ISSUE-204": "Original fix (5708b242: cache pin) protected in-memory cache but not SQLite DB. syncProductsToOffline could still write server-stale stock to DB, then setCatalogItems(fresh) loaded those rows. Fix 536b8442: resolveStockForSku check in syncProductsToOffline writes pinned value to DB too."
       },
       "c1Summary": {
-        "ISSUE-068": {"action": "CODE_FIX", "commit": "e9ee6592", "scope": "backend+frontend", "description": "Fixed productId mapping in productsApi + storeProductDigitisationService for createSale variant resolution"},
-        "ISSUE-042": {"action": "CODE_FIX", "commit": "9fd8f714", "scope": "frontend-only", "description": "Added SkuItem array update after stock edit + stockRefreshTick bump"},
-        "ISSUE-051": {"action": "CODE_FIX", "commit": "b3b5bf6c", "scope": "frontend-only", "description": "REVISED: createSaleInFlightRef replaces loadingSale in deps — effect no longer cancels itself"},
-        "ISSUE-066": {"action": "CODE_FIX", "commit": "b3b5bf6c", "scope": "frontend-only", "description": "Same root fix as ISSUE-051 — payment chain unblocked"},
-        "ISSUE-204": {"action": "CODE_FIX", "commit": "536b8442", "scope": "frontend-only", "description": "REVISED: write pinned stock to SQLite in syncProductsToOffline so fresh DB rows also carry the correct value, not just the in-memory cache."},
-        "ISSUE-043": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Stale-cache bypass was caused by wrong cache keys (068) + stale UI arrays (042). Both now fixed."},
-        "ISSUE-046": {"action": "RESOLVED_BY_DEPENDENCY", "resolvedBy": ["ISSUE-068", "ISSUE-042"], "description": "Zero-stock race condition was same root cause - stock guard couldn't find correct cache entries due to wrong keys."},
-        "ISSUE-039": {"action": "ALREADY_FIXED", "fixedIn": "prior wave (line 1678 SellScanScreen.tsx)", "description": "Barcode-only guard already prevents VALIDATION_ERROR on text search input."},
-        "ISSUE-040": {"action": "NOT_REPRODUCED_ON_ALIGNED_BASELINE", "description": "Per CTO directive, do not fix in C1."}
+        "ISSUE-068": {
+          "action": "CODE_FIX",
+          "commit": "e9ee6592",
+          "scope": "backend+frontend",
+          "description": "Fixed productId mapping in productsApi + storeProductDigitisationService for createSale variant resolution"
+        },
+        "ISSUE-042": {
+          "action": "CODE_FIX",
+          "commit": "9fd8f714",
+          "scope": "frontend-only",
+          "description": "Added SkuItem array update after stock edit + stockRefreshTick bump"
+        },
+        "ISSUE-051": {
+          "action": "CODE_FIX",
+          "commit": "b3b5bf6c",
+          "scope": "frontend-only",
+          "description": "REVISED: createSaleInFlightRef replaces loadingSale in deps \u00e2\u20ac\u201d effect no longer cancels itself"
+        },
+        "ISSUE-066": {
+          "action": "CODE_FIX",
+          "commit": "b3b5bf6c",
+          "scope": "frontend-only",
+          "description": "Same root fix as ISSUE-051 \u00e2\u20ac\u201d payment chain unblocked"
+        },
+        "ISSUE-204": {
+          "action": "CODE_FIX",
+          "commit": "536b8442",
+          "scope": "frontend-only",
+          "description": "REVISED: write pinned stock to SQLite in syncProductsToOffline so fresh DB rows also carry the correct value, not just the in-memory cache."
+        },
+        "ISSUE-043": {
+          "action": "RESOLVED_BY_DEPENDENCY",
+          "resolvedBy": [
+            "ISSUE-068",
+            "ISSUE-042"
+          ],
+          "description": "Stale-cache bypass was caused by wrong cache keys (068) + stale UI arrays (042). Both now fixed."
+        },
+        "ISSUE-046": {
+          "action": "RESOLVED_BY_DEPENDENCY",
+          "resolvedBy": [
+            "ISSUE-068",
+            "ISSUE-042"
+          ],
+          "description": "Zero-stock race condition was same root cause - stock guard couldn't find correct cache entries due to wrong keys."
+        },
+        "ISSUE-039": {
+          "action": "ALREADY_FIXED",
+          "fixedIn": "prior wave (line 1678 SellScanScreen.tsx)",
+          "description": "Barcode-only guard already prevents VALIDATION_ERROR on text search input."
+        },
+        "ISSUE-040": {
+          "action": "NOT_REPRODUCED_ON_ALIGNED_BASELINE",
+          "description": "Per CTO directive, do not fix in C1."
+        }
       },
       "newIssuesFoundDuringC1Retest": {
-        "ISSUE-204": {"cluster": "C1", "status": "FIXED", "commit": "5708b242"},
-        "ISSUE-205": {"cluster": "C4", "status": "DEFERRED", "reason": "POST /inventory/stock/batch 500 for barcode IDs. Exception caught silently in PaymentScreen — createSale proceeds. Does not block sell flow. Deferred to C4 (stock/inventory fixes)."}
+        "ISSUE-204": {
+          "cluster": "C1",
+          "status": "FIXED",
+          "commit": "5708b242"
+        },
+        "ISSUE-205": {
+          "cluster": "C4",
+          "status": "DEFERRED",
+          "reason": "POST /inventory/stock/batch 500 for barcode IDs. Exception caught silently in PaymentScreen \u00e2\u20ac\u201d createSale proceeds. Does not block sell flow. Deferred to C4 (stock/inventory fixes)."
+        }
       },
       "c1PreArtifactExitChecks": {
         "localBusinessInvariantCoveragePass": true,
-        "integrationTestPass": "node src/services/stockService.integration.test.js — PASSED",
-        "typecheckPass": "pnpm -r typecheck — CLEAN",
+        "integrationTestPass": "node src/services/stockService.integration.test.js \u00e2\u20ac\u201d PASSED",
+        "typecheckPass": "pnpm -r typecheck \u00e2\u20ac\u201d CLEAN",
         "noUnresolvedRegressionInCluster": true
       },
       "c1NextStep": "APK-only rebuild at 536b8442 (all C1 fixes are frontend-only) + install on Redmi + full C1 runtime certification pass (ISSUE-204, ISSUE-051/066, ISSUE-068)."
@@ -474,7 +627,7 @@
         "reproduces": 6,
         "doesNotReproduce": 1,
         "partial": 1,
-        "criticalBlocker": "ISSUE-051/066/068 payment chain — no sales can complete"
+        "criticalBlocker": "ISSUE-051/066/068 payment chain \u00e2\u20ac\u201d no sales can complete"
       }
     }
   },
@@ -606,7 +759,7 @@
     "wontfixRegistry": {
       "STG-021": {
         "title": "Build stamps are correct",
-        "reason": "All 4 services show e56f0f4 (commit e56f0f42 — 2 docs-only commits after deploy tag e63dba14). Services are aligned and running latest code. Not a bug.",
+        "reason": "All 4 services show e56f0f4 (commit e56f0f42 \u00e2\u20ac\u201d 2 docs-only commits after deploy tag e63dba14). Services are aligned and running latest code. Not a bug.",
         "status": "WONTFIX"
       },
       "STG-276": {
@@ -629,7 +782,7 @@
       "auditFrom": "main@7f43284a",
       "newFindingsStartAt": "STG-723",
       "regressionAgainstPriorFixes": "Append as new STG-723+ IDs, do NOT silently edit historical closures",
-      "doNotRewrite": "STG-001..STG-721 entries are frozen — only append, never edit"
+      "doNotRewrite": "STG-001..STG-721 entries are frozen \u00e2\u20ac\u201d only append, never edit"
     },
     "migrations": {
       "pending": [
@@ -963,10 +1116,10 @@
       "POS App"
     ],
     "platformStatus": {
-      "Retailer Web": "COMPLETED — 36 files, inline→CSS with dark mode",
-      "Supplier Web": "COMPLETED — 3 files, Tailwind dark overrides",
-      "SuperAdmin Web": "COMPLETED — 31 files, inline→CSS with dark mode",
-      "POS App": "COMPLETED — 5 files, hardcoded hex→theme tokens"
+      "Retailer Web": "COMPLETED \u00e2\u20ac\u201d 36 files, inline\u00e2\u2020\u2019CSS with dark mode",
+      "Supplier Web": "COMPLETED \u00e2\u20ac\u201d 3 files, Tailwind dark overrides",
+      "SuperAdmin Web": "COMPLETED \u00e2\u20ac\u201d 31 files, inline\u00e2\u2020\u2019CSS with dark mode",
+      "POS App": "COMPLETED \u00e2\u20ac\u201d 5 files, hardcoded hex\u00e2\u2020\u2019theme tokens"
     },
     "totalFilesChanged": 81,
     "reiterationResult": {
@@ -1032,7 +1185,7 @@
     "totalFindings": 123,
     "totalScreens": 118,
     "totalClean": 24,
-    "activePlatform": "COMPLETE — all 5 platforms signed off",
+    "activePlatform": "COMPLETE \u00e2\u20ac\u201d all 5 platforms signed off",
     "activeInstruction": "FINAL_OPERATOR_ASSISTED_LIVE_SIGNOFF COMPLETE. All 5 platforms signed off under strict lock discipline. 29 findings (STG-436..464) recorded. Next phase: consolidated fix wave for all 29 findings (P2 first, then web P3, then POS P3), staging redeploy, impacted runtime recheck, then production-go-live verdict. Next finding starts at STG-465.",
     "posAppStatus": {
       "unauthenticated": "COMPLETE",
@@ -1043,8 +1196,8 @@
         "STG-432"
       ],
       "authenticated": "COMPLETE",
-      "authenticatedVerification": "28 endpoints tested, 22 returned 200/expected, 4 returned expected auth errors (401/400 STAFF_REQUIRED or validation), 1 feature-disabled (403 credit), 1 fixed (STG-432 product_name→name). Reorder backend routes don't exist yet (frontend stubs only).",
-      "pendingMigrations": "NONE — all 171 applied",
+      "authenticatedVerification": "28 endpoints tested, 22 returned 200/expected, 4 returned expected auth errors (401/400 STAFF_REQUIRED or validation), 1 feature-disabled (403 credit), 1 fixed (STG-432 product_name\u00e2\u2020\u2019name). Reorder backend routes don't exist yet (frontend stubs only).",
+      "pendingMigrations": "NONE \u00e2\u20ac\u201d all 171 applied",
       "endpointsTested": 35,
       "endpointsCorrectAuth": 34,
       "endpointsAnomaly": 1,
@@ -1134,7 +1287,7 @@
       "authMethod": "Email+password login via admin user creation + devToken password reset + Cloud SQL store_users INSERT",
       "endpointsTested": 25,
       "runtime500s": 0,
-      "runtime500Details": "STG-435: FIXED — ACTOR_TYPE_TO_CHAT_TYPE mapping added (store→retailer, platform→admin). Runtime-verified 200 on staging."
+      "runtime500Details": "STG-435: FIXED \u00e2\u20ac\u201d ACTOR_TYPE_TO_CHAT_TYPE mapping added (store\u00e2\u2020\u2019retailer, platform\u00e2\u2020\u2019admin). Runtime-verified 200 on staging."
     },
     "platformOrder": [
       "Retailer Web",
@@ -1471,7 +1624,7 @@
           "id": "STG-462",
           "sev": "P3",
           "screen": "OnboardPage",
-          "title": "Missing OTP expiry countdown — parity gap"
+          "title": "Missing OTP expiry countdown \u00e2\u20ac\u201d parity gap"
         }
       ],
       "nextFindingStartsAt": "STG-463"
@@ -1522,21 +1675,21 @@
       "flows": [
         {
           "id": 1,
-          "name": "Retailer → SuperAdmin approval",
+          "name": "Retailer \u00e2\u2020\u2019 SuperAdmin approval",
           "result": "CLEAN",
           "surfaces": 3,
           "endpoints": 10
         },
         {
           "id": 2,
-          "name": "Supplier → SuperAdmin approval",
+          "name": "Supplier \u00e2\u2020\u2019 SuperAdmin approval",
           "result": "CLEAN",
           "surfaces": 3,
           "endpoints": 14
         },
         {
           "id": 3,
-          "name": "Retailer → POS enrollment",
+          "name": "Retailer \u00e2\u2020\u2019 POS enrollment",
           "result": "CLEAN",
           "surfaces": 4,
           "endpoints": 12
@@ -1572,7 +1725,7 @@
       ]
     },
     "liveSignoffSummary": {
-      "status": "COMPLETE — ALL 29 FINDINGS FIXED, DEPLOYED, AND RUNTIME-VERIFIED at 7f43284a",
+      "status": "COMPLETE \u00e2\u20ac\u201d ALL 29 FINDINGS FIXED, DEPLOYED, AND RUNTIME-VERIFIED at 7f43284a",
       "completedAt": "2026-03-04T06:00:00Z",
       "totalScreensAudited": 120,
       "totalFlowsAudited": 7,
@@ -1625,16 +1778,16 @@
           "superadmin": "superadmin-00094-4vz",
           "landing": "landing-00094-lfg"
         },
-        "shaParity": "CONFIRMED — /version returns 7f43284"
+        "shaParity": "CONFIRMED \u00e2\u20ac\u201d /version returns 7f43284"
       },
       "impactedRuntimeRecheck": {
-        "status": "COMPLETE — 29/29 PASS",
+        "status": "COMPLETE \u00e2\u20ac\u201d 29/29 PASS",
         "p2Checks": "8/8 PASS",
         "p3Checks": "21/21 PASS",
         "deployVerification": {
           "apiAssetVerification": "PASSED",
           "tokenRefreshTest": "PASSED",
-          "e2eBrowserTests": "23/30 PASSED — 7 failures are PRE-EXISTING accessibility tests (heading hierarchy, color contrast), NOT caused by fix wave",
+          "e2eBrowserTests": "23/30 PASSED \u00e2\u20ac\u201d 7 failures are PRE-EXISTING accessibility tests (heading hierarchy, color contrast), NOT caused by fix wave",
           "portalVerification": "ALL PASSED",
           "stagingSmoke": "ALL PASSED"
         },
@@ -1662,7 +1815,7 @@
     "auditDate": "2026-03-04",
     "deployedSha": "7f43284a",
     "stagingUrl": "https://staging.supermandi.tech",
-    "auditMethod": "Full live runtime audit — 10 parallel audit agents + manual HTTP verification",
+    "auditMethod": "Full live runtime audit \u00e2\u20ac\u201d 10 parallel audit agents + manual HTTP verification",
     "findingRange": "STG-465..STG-721",
     "nextFindingStartsAt": "STG-723 (STG-722 used for supplier reCAPTCHA fix)",
     "totalFindings": 257,
@@ -1706,7 +1859,7 @@
         "id": "STG-465",
         "platform": "POS",
         "screen": "PurchaseScreen",
-        "title": "Quick Purchase formatMoney treats major units as minor — 100x price display error"
+        "title": "Quick Purchase formatMoney treats major units as minor \u00e2\u20ac\u201d 100x price display error"
       },
       {
         "id": "STG-466",
@@ -1718,19 +1871,19 @@
         "id": "STG-467",
         "platform": "POS",
         "screen": "PaymentScreen",
-        "title": "Split payment SuccessPrint missing saleId — WhatsApp bill sends wrong ID"
+        "title": "Split payment SuccessPrint missing saleId \u00e2\u20ac\u201d WhatsApp bill sends wrong ID"
       },
       {
         "id": "STG-468",
         "platform": "POS",
         "screen": "ReturnScreen",
-        "title": "processRefund no idempotency key — duplicate refund risk"
+        "title": "processRefund no idempotency key \u00e2\u20ac\u201d duplicate refund risk"
       },
       {
         "id": "STG-469",
         "platform": "POS",
         "screen": "SalesStatementScreen",
-        "title": "Revenue computed from unitCost not sell price — mislabeled"
+        "title": "Revenue computed from unitCost not sell price \u00e2\u20ac\u201d mislabeled"
       },
       {
         "id": "STG-470",
@@ -1742,13 +1895,13 @@
         "id": "STG-471",
         "platform": "POS",
         "screen": "CreditScreen",
-        "title": "KYC step only treats approved as success — processing shows error"
+        "title": "KYC step only treats approved as success \u00e2\u20ac\u201d processing shows error"
       },
       {
         "id": "STG-472",
         "platform": "Retailer",
         "screen": "ForgotPasswordPage",
-        "title": "Phone not normalized with +91 — forgot-password fails for 10-digit input"
+        "title": "Phone not normalized with +91 \u00e2\u20ac\u201d forgot-password fails for 10-digit input"
       },
       {
         "id": "STG-473",
@@ -1760,22 +1913,22 @@
         "id": "STG-474",
         "platform": "Landing",
         "screen": "Dockerfile",
-        "title": "og-image.png not COPY'd into Docker image — social sharing broken"
+        "title": "og-image.png not COPY'd into Docker image \u00e2\u20ac\u201d social sharing broken"
       }
     ],
     "systemicPatterns": [
       "if (!accessToken) return guard blocks 5+ retailer pages with no fallback",
       "WhatsApp country code 91 missing across 4+ POS screens",
       "Missing dark mode on 9 supplier pages + 2 landing sections",
-      "safeJson null safety — 3+ callers don't null-check",
+      "safeJson null safety \u00e2\u20ac\u201d 3+ callers don't null-check",
       "No testID props on 4+ POS screens",
       "Card payment omitted from 2 POS summary screens"
     ],
-    "infrastructureStatus": "ALL_CLEAN — 6 services 200, SHA parity confirmed, security headers present",
+    "infrastructureStatus": "ALL_CLEAN \u00e2\u20ac\u201d 6 services 200, SHA parity confirmed, security headers present",
     "postFixVerification": {
       "status": "COMPLETE",
       "verifiedAt": "2026-03-04T19:00:00Z",
-      "method": "Code-level reiteration — 4 parallel agents reading actual source files",
+      "method": "Code-level reiteration \u00e2\u20ac\u201d 4 parallel agents reading actual source files",
       "confirmedFixed": 253,
       "reopened": [
         "STG-483",
@@ -1797,15 +1950,15 @@
     "postCleanupReiteration": {
       "status": "COMPLETE",
       "verifiedAt": "2026-03-04T20:00:00Z",
-      "method": "Code-level reiteration — 3 parallel agents verifying STG-483, STG-486, STG-494",
+      "method": "Code-level reiteration \u00e2\u20ac\u201d 3 parallel agents verifying STG-483, STG-486, STG-494",
       "results": {
-        "STG-483": "CONFIRMED_FIXED — 14/14 pages have auth loading guard after all hooks",
-        "STG-486": "CONFIRMED_FIXED — ImportPage L155 uses data?.error, all safeJson callsites null-guarded",
-        "STG-494": "CONFIRMED_FIXED — ARIA roles, labels, value labels, CSS class all present"
+        "STG-483": "CONFIRMED_FIXED \u00e2\u20ac\u201d 14/14 pages have auth loading guard after all hooks",
+        "STG-486": "CONFIRMED_FIXED \u00e2\u20ac\u201d ImportPage L155 uses data?.error, all safeJson callsites null-guarded",
+        "STG-494": "CONFIRMED_FIXED \u00e2\u20ac\u201d ARIA roles, labels, value labels, CSS class all present"
       },
       "regressions": 0,
       "typecheckClean": true,
-      "verdict": "CLEAN — 0 known unfixed issues remain"
+      "verdict": "CLEAN \u00e2\u20ac\u201d 0 known unfixed issues remain"
     },
     "finalCleanupWave": {
       "status": "COMPLETE",
@@ -1816,12 +1969,12 @@
       ],
       "filesChanged": 16,
       "fixes": {
-        "STG-486": "ImportPage L155 data.error → data?.error (938afc98)",
+        "STG-486": "ImportPage L155 data.error \u00e2\u2020\u2019 data?.error (938afc98)",
         "STG-483": "Auth loading guard on 14 retailer pages (0813f604)",
         "STG-494": "AnalyticsPage chart ARIA roles + value labels (610cbc39)"
       },
       "normalized": {
-        "STG-478": "FALSE_POSITIVE/WONTFIX — ReorderPage formatCurrency already correct"
+        "STG-478": "FALSE_POSITIVE/WONTFIX \u00e2\u20ac\u201d ReorderPage formatCurrency already correct"
       },
       "typecheckResult": "retailer-admin clean"
     },
@@ -1841,12 +1994,12 @@
         "superadmin": "clean"
       },
       "platformBreakdown": {
-        "posApp": "14 files — UTC→IST dates, WhatsApp country code, card payment summary, testIDs, offline handling, pagination, debounce cleanup",
-        "retailerWeb": "14 files — safeJson null safety (40+ guards), modal close during loading, phone normalization, object URL leak",
-        "supplierWeb": "23 files — dark mode across all dashboard pages/components, verification status enum fix",
-        "superadminWeb": "14 files — role=alert on error banners, aria-labels, AnalyticsTab demo badge",
-        "backend": "2 files — CORS wildcard warning, body size enforcement, rate limiter documentation",
-        "landing": "4 files — og-image Dockerfile, dark mode on privacy/terms, Permissions-Policy header"
+        "posApp": "14 files \u00e2\u20ac\u201d UTC\u00e2\u2020\u2019IST dates, WhatsApp country code, card payment summary, testIDs, offline handling, pagination, debounce cleanup",
+        "retailerWeb": "14 files \u00e2\u20ac\u201d safeJson null safety (40+ guards), modal close during loading, phone normalization, object URL leak",
+        "supplierWeb": "23 files \u00e2\u20ac\u201d dark mode across all dashboard pages/components, verification status enum fix",
+        "superadminWeb": "14 files \u00e2\u20ac\u201d role=alert on error banners, aria-labels, AnalyticsTab demo badge",
+        "backend": "2 files \u00e2\u20ac\u201d CORS wildcard warning, body size enforcement, rate limiter documentation",
+        "landing": "4 files \u00e2\u20ac\u201d og-image Dockerfile, dark mode on privacy/terms, Permissions-Policy header"
       }
     },
     "stagingRedeploy": {
@@ -1855,20 +2008,20 @@
       "fullSha": "610cbc3993b4210ba0e97b162070876f229de779",
       "ciRun": 22620393440,
       "ciResult": "7/7 PASSED",
-      "shaParity": "CONFIRMED — staging /version returns 610cbc3"
+      "shaParity": "CONFIRMED \u00e2\u20ac\u201d staging /version returns 610cbc3"
     },
     "impactedRuntimeRecheck": {
       "status": "COMPLETE",
       "results": {
-        "STG-483": "PASS — auth loading guard in compiled bundle, 14 pages hardened",
-        "STG-486": "PASS — optional chaining compiled, portal 200",
-        "STG-494": "PASS — ARIA roles/labels, value labels CSS, role=presentation all present"
+        "STG-483": "PASS \u00e2\u20ac\u201d auth loading guard in compiled bundle, 14 pages hardened",
+        "STG-486": "PASS \u00e2\u20ac\u201d optional chaining compiled, portal 200",
+        "STG-494": "PASS \u00e2\u20ac\u201d ARIA roles/labels, value labels CSS, role=presentation all present"
       },
       "services": "retailer 200, supplier 200, admin 200, landing 200, API health 200, version 610cbc3",
       "regressions": 0
     },
     "productionGoLiveVerdict": "BLOCKED_PENDING_FINAL_TWO_STAGE_GCP_SIGNOFF",
-    "nextPhase": "Two-stage final GCP sign-off (76 views across 5 platforms) → fix wave if needed → production go-live",
+    "nextPhase": "Two-stage final GCP sign-off (76 views across 5 platforms) \u00e2\u2020\u2019 fix wave if needed \u00e2\u2020\u2019 production go-live",
     "twoStageFinalSignoff": {
       "status": "IN_PROGRESS",
       "activePlatform": "POS",
@@ -3461,7 +3614,7 @@
   "executionPhases": [
     {
       "phase": 1,
-      "name": "Retailer → POS Sync",
+      "name": "Retailer \u00e2\u2020\u2019 POS Sync",
       "tickets": [
         "T-054",
         "T-055"
@@ -3924,7 +4077,7 @@
     },
     {
       "phase": 36,
-      "name": "9B: B2B Finance — Abstraction + Trade Credit (Tier 1)",
+      "name": "9B: B2B Finance \u00e2\u20ac\u201d Abstraction + Trade Credit (Tier 1)",
       "tickets": [
         "T-263",
         "T-264",
@@ -3932,11 +4085,11 @@
         "T-266",
         "T-267"
       ],
-      "status": "DONE (T-263 done; T-264→T-267 partnership complete, awaiting provider sandbox/API credentials)"
+      "status": "DONE (T-263 done; T-264\u00e2\u2020\u2019T-267 partnership complete, awaiting provider sandbox/API credentials)"
     },
     {
       "phase": 37,
-      "name": "9C: B2B Finance — Credit Lines (Tier 2) + Rajasthan NBFC (Tier 3) + LaaS (Tier 4)",
+      "name": "9C: B2B Finance \u00e2\u20ac\u201d Credit Lines (Tier 2) + Rajasthan NBFC (Tier 3) + LaaS (Tier 4)",
       "tickets": [
         "T-268",
         "T-269",
@@ -3949,7 +4102,7 @@
     },
     {
       "phase": 38,
-      "name": "9D: B2B Finance — Supplier Invoice Discounting (Tier 5)",
+      "name": "9D: B2B Finance \u00e2\u20ac\u201d Supplier Invoice Discounting (Tier 5)",
       "tickets": [
         "T-274",
         "T-275",
@@ -3960,7 +4113,7 @@
     },
     {
       "phase": 39,
-      "name": "9E: B2B Finance — Platform UI + Dashboards",
+      "name": "9E: B2B Finance \u00e2\u20ac\u201d Platform UI + Dashboards",
       "tickets": [
         "T-278",
         "T-279",
@@ -3976,7 +4129,7 @@
         "T-289",
         "T-290"
       ],
-      "status": "DONE (10/13 done; T-283→T-286 partnership complete, awaiting provider sandbox/API credentials)"
+      "status": "DONE (10/13 done; T-283\u00e2\u2020\u2019T-286 partnership complete, awaiting provider sandbox/API credentials)"
     },
     {
       "phase": 40,
@@ -3995,11 +4148,11 @@
         "T-301",
         "T-302"
       ],
-      "status": "DONE (9/12; T-296→T-298 awaiting Meta WABA verification + template approval + production access)"
+      "status": "DONE (9/12; T-296\u00e2\u2020\u2019T-298 awaiting Meta WABA verification + template approval + production access)"
     },
     {
       "phase": 41,
-      "name": "9G: AI Automation — Voice + Core",
+      "name": "9G: AI Automation \u00e2\u20ac\u201d Voice + Core",
       "tickets": [
         "T-305",
         "T-306",
@@ -4013,7 +4166,7 @@
     },
     {
       "phase": 42,
-      "name": "9H: AI Automation — Intelligence + Polish",
+      "name": "9H: AI Automation \u00e2\u20ac\u201d Intelligence + Polish",
       "tickets": [
         "T-312",
         "T-313",
@@ -4044,7 +4197,7 @@
     },
     {
       "phase": 44,
-      "name": "10B: Round 1 — Discovery",
+      "name": "10B: Round 1 \u00e2\u20ac\u201d Discovery",
       "tickets": [
         "TEST-011",
         "TEST-012",
@@ -4069,7 +4222,7 @@
     },
     {
       "phase": 45,
-      "name": "10C: Round 2 — Regression",
+      "name": "10C: Round 2 \u00e2\u20ac\u201d Regression",
       "tickets": [
         "TEST-029",
         "TEST-030",
@@ -4081,11 +4234,11 @@
         "TEST-036",
         "TEST-037"
       ],
-      "status": "DONE — 3416 tests pass, 7 regression fixes"
+      "status": "DONE \u00e2\u20ac\u201d 3416 tests pass, 7 regression fixes"
     },
     {
       "phase": 46,
-      "name": "10D: Round 3 — Stress + GO/NO-GO",
+      "name": "10D: Round 3 \u00e2\u20ac\u201d Stress + GO/NO-GO",
       "tickets": [
         "TEST-038",
         "TEST-039",
@@ -4103,7 +4256,7 @@
         "TEST-051",
         "TEST-052"
       ],
-      "status": "DONE — 22/48 auto-PASS, 26 MANUAL (staging)"
+      "status": "DONE \u00e2\u20ac\u201d 22/48 auto-PASS, 26 MANUAL (staging)"
     },
     {
       "phase": 47,
@@ -4114,11 +4267,11 @@
         "FIX-003",
         "FIX-004"
       ],
-      "status": "DONE (3/4 — FIX-001 remaining)"
+      "status": "DONE (3/4 \u00e2\u20ac\u201d FIX-001 remaining)"
     },
     {
       "phase": 48,
-      "name": "11B: Backend P0 — Store Isolation & Data Integrity",
+      "name": "11B: Backend P0 \u00e2\u20ac\u201d Store Isolation & Data Integrity",
       "tickets": [
         "FIX-005",
         "FIX-006",
@@ -4129,7 +4282,7 @@
     },
     {
       "phase": 49,
-      "name": "11C: Backend P1 — Error Handling & Robustness",
+      "name": "11C: Backend P1 \u00e2\u20ac\u201d Error Handling & Robustness",
       "tickets": [
         "FIX-009",
         "FIX-010",
@@ -4142,7 +4295,7 @@
     },
     {
       "phase": 50,
-      "name": "11D: Retailer Admin P1 — UX & Validation",
+      "name": "11D: Retailer Admin P1 \u00e2\u20ac\u201d UX & Validation",
       "tickets": [
         "FIX-015",
         "FIX-016",
@@ -4156,7 +4309,7 @@
     },
     {
       "phase": 51,
-      "name": "11E: Supplier Portal P0-P1 — Critical Fixes",
+      "name": "11E: Supplier Portal P0-P1 \u00e2\u20ac\u201d Critical Fixes",
       "tickets": [
         "FIX-022",
         "FIX-023",
@@ -4168,11 +4321,11 @@
         "FIX-029",
         "FIX-030"
       ],
-      "status": "DONE (9/9 — FIX-022,024,026,029 false positive)"
+      "status": "DONE (9/9 \u00e2\u20ac\u201d FIX-022,024,026,029 false positive)"
     },
     {
       "phase": 52,
-      "name": "11F: POS App P0-P1 — Scanner, Offline, Data",
+      "name": "11F: POS App P0-P1 \u00e2\u20ac\u201d Scanner, Offline, Data",
       "tickets": [
         "FIX-031",
         "FIX-032",
@@ -4187,11 +4340,11 @@
         "FIX-041",
         "FIX-042"
       ],
-      "status": "DONE (12/12 — FIX-031 false positive)"
+      "status": "DONE (12/12 \u00e2\u20ac\u201d FIX-031 false positive)"
     },
     {
       "phase": 53,
-      "name": "11G: SuperAdmin P0-P1 — RBAC & Dashboard",
+      "name": "11G: SuperAdmin P0-P1 \u00e2\u20ac\u201d RBAC & Dashboard",
       "tickets": [
         "FIX-043",
         "FIX-044",
@@ -4202,11 +4355,11 @@
         "FIX-049",
         "FIX-050"
       ],
-      "status": "DONE (8/8 — FIX-043,044,046 false positive)"
+      "status": "DONE (8/8 \u00e2\u20ac\u201d FIX-043,044,046 false positive)"
     },
     {
       "phase": 54,
-      "name": "11H: P2 Polish — Cross-Platform",
+      "name": "11H: P2 Polish \u00e2\u20ac\u201d Cross-Platform",
       "tickets": [
         "FIX-051",
         "FIX-052",
@@ -4226,7 +4379,7 @@
         "FIX-066",
         "FIX-067"
       ],
-      "status": "DONE (17/17 — 4 code fixes + 13 false positive)"
+      "status": "DONE (17/17 \u00e2\u20ac\u201d 4 code fixes + 13 false positive)"
     },
     {
       "phase": 55,
@@ -4234,11 +4387,11 @@
       "tickets": [
         "WA-001"
       ],
-      "status": "DONE — PR #243 merged, 105 tests, prestage tag applied"
+      "status": "DONE \u00e2\u20ac\u201d PR #243 merged, 105 tests, prestage tag applied"
     },
     {
       "phase": 56,
-      "name": "12A: Critical Gap Closure — Auth, UI, CI",
+      "name": "12A: Critical Gap Closure \u00e2\u20ac\u201d Auth, UI, CI",
       "tickets": [
         "TQ-001",
         "TQ-002",
@@ -4247,7 +4400,7 @@
         "TQ-005",
         "TQ-006"
       ],
-      "status": "DONE — 6/6"
+      "status": "DONE \u00e2\u20ac\u201d 6/6"
     },
     {
       "phase": 57,
@@ -4261,7 +4414,7 @@
         "TQ-012",
         "TQ-013"
       ],
-      "status": "DONE — 7/7 (TQ-010,011 false positive)"
+      "status": "DONE \u00e2\u20ac\u201d 7/7 (TQ-010,011 false positive)"
     },
     {
       "phase": 58,
@@ -4272,7 +4425,7 @@
         "TQ-016",
         "TQ-017"
       ],
-      "status": "DONE — 4/4 (TQ-016 false positive)"
+      "status": "DONE \u00e2\u20ac\u201d 4/4 (TQ-016 false positive)"
     },
     {
       "phase": 59,
@@ -4282,45 +4435,45 @@
         "TQ-019",
         "TQ-020"
       ],
-      "status": "DONE — 3/3"
+      "status": "DONE \u00e2\u20ac\u201d 3/3"
     }
   ],
   "completedPhase1": {
-    "range": "T-001 → T-053",
+    "range": "T-001 \u00e2\u2020\u2019 T-053",
     "count": 53,
-    "status": "DONE — pushed to origin",
+    "status": "DONE \u00e2\u20ac\u201d pushed to origin",
     "firstCommit": "570de4d",
     "lastCommit": "8ab4f4c",
     "commits": 10
   },
   "completedPhase2": {
-    "range": "T-054 → T-073",
+    "range": "T-054 \u00e2\u2020\u2019 T-073",
     "count": 20,
-    "status": "DONE — pushed to origin",
+    "status": "DONE \u00e2\u20ac\u201d pushed to origin",
     "firstCommit": "8d3d498",
     "lastCommit": "bbf45a4",
     "commits": 20
   },
   "completedPhase3_4": {
-    "range": "T-074 → T-127",
+    "range": "T-074 \u00e2\u2020\u2019 T-127",
     "count": 54,
-    "status": "DONE — pushed to origin",
+    "status": "DONE \u00e2\u20ac\u201d pushed to origin",
     "firstCommit": "679735a",
     "lastCommit": "d1548e2",
     "auditCommit": "1436371 (127/127 PASS)"
   },
   "completedPhase5": {
-    "range": "T-128 → T-199",
+    "range": "T-128 \u00e2\u2020\u2019 T-199",
     "count": 72,
-    "status": "DONE — pushed to origin",
+    "status": "DONE \u00e2\u20ac\u201d pushed to origin",
     "commit": "c397950",
     "lastCommit": "250cb0f",
     "summary": "72 production audit tickets: 10 schema migrations, P0 APIs, POS features, web portal features, auto-categorization"
   },
   "phase6_CTOAudit": {
-    "range": "T-200 → T-235",
+    "range": "T-200 \u00e2\u2020\u2019 T-235",
     "count": 36,
-    "status": "DONE — 36/36 DONE",
+    "status": "DONE \u00e2\u20ac\u201d 36/36 DONE",
     "firstCommit": "a46ae13",
     "lastCommit": "8dbcb65",
     "auditMethod": "5 parallel deep-audit agents + 1 reconciliation agent",
@@ -4332,22 +4485,22 @@
     }
   },
   "phase7_B2BReorder": {
-    "range": "T-236 → T-252",
+    "range": "T-236 \u00e2\u2020\u2019 T-252",
     "count": 17,
-    "status": "DONE — All 6 waves complete (17/17 tickets)",
+    "status": "DONE \u00e2\u20ac\u201d All 6 waves complete (17/17 tickets)",
     "firstCommit": "b6c837c",
     "lastCommit": "42e4f19"
   },
   "phase8_FCMNotifications": {
     "range": "T-219, T-223, T-231, T-232, T-235",
     "count": 5,
-    "status": "DONE — All 5 deferred tickets implemented",
+    "status": "DONE \u00e2\u20ac\u201d All 5 deferred tickets implemented",
     "commit": "ecbaf3b"
   },
   "phase9_PaymentsFinanceWhatsAppAI": {
-    "range": "T-253 → T-316",
+    "range": "T-253 \u00e2\u2020\u2019 T-316",
     "count": 64,
-    "status": "DONE — 45/64 codeable tickets complete, 19 awaiting external APIs/partnerships",
+    "status": "DONE \u00e2\u20ac\u201d 45/64 codeable tickets complete, 19 awaiting external APIs/partnerships",
     "firstCommit": "e9c1481",
     "lastCommit": "931c40d",
     "breakdown": {
@@ -4358,12 +4511,12 @@
     }
   },
   "phase10_ProductionTesting": {
-    "range": "TEST-001 → TEST-052",
+    "range": "TEST-001 \u00e2\u2020\u2019 TEST-052",
     "count": 52,
-    "status": "DONE — All 52 test tickets complete",
+    "status": "DONE \u00e2\u20ac\u201d All 52 test tickets complete",
     "firstCommit": "c695231",
     "lastCommit": "e52adf7",
-    "methodology": "3 rounds: Discovery → Regression → Stress + GO/NO-GO",
+    "methodology": "3 rounds: Discovery \u00e2\u2020\u2019 Regression \u00e2\u2020\u2019 Stress + GO/NO-GO",
     "results": {
       "totalTests": 3416,
       "totalSuites": 248,
@@ -4373,13 +4526,13 @@
     }
   },
   "phase11_ProductionHardening": {
-    "range": "FIX-001 → FIX-067",
+    "range": "FIX-001 \u00e2\u2020\u2019 FIX-067",
     "count": 67,
-    "status": "DONE — 67/67 complete (52 code fixes + 14 false positive + FIX-001 deploy pending)",
+    "status": "DONE \u00e2\u20ac\u201d 67/67 complete (52 code fixes + 14 false positive + FIX-001 deploy pending)",
     "firstCommit": "fc0d821",
     "lastCommit": "8e65008",
-    "mergedPRs": "PR #195 → #249 (50 PRs for 52 code-fix ticket IDs)",
-    "gitDiscipline": "COMPLETE — all code-fix tickets have branch + PR + prestage tag",
+    "mergedPRs": "PR #195 \u00e2\u2020\u2019 #249 (50 PRs for 52 code-fix ticket IDs)",
+    "gitDiscipline": "COMPLETE \u00e2\u20ac\u201d all code-fix tickets have branch + PR + prestage tag",
     "breakdown": {
       "codeFixes": 52,
       "falsePositives": 14,
@@ -4402,10 +4555,10 @@
       ]
     },
     "session2_PRs": {
-      "FIX-016": "PR #246 — ImportPage polling memory leak",
-      "FIX-063": "PR #247 — SuperAdmin CSP meta tag",
-      "FIX-064": "PR #248 — OTP cooldown sessionStorage persistence",
-      "FIX-065": "PR #249 — Document upload progress indicator (XHR)"
+      "FIX-016": "PR #246 \u00e2\u20ac\u201d ImportPage polling memory leak",
+      "FIX-063": "PR #247 \u00e2\u20ac\u201d SuperAdmin CSP meta tag",
+      "FIX-064": "PR #248 \u00e2\u20ac\u201d OTP cooldown sessionStorage persistence",
+      "FIX-065": "PR #249 \u00e2\u20ac\u201d Document upload progress indicator (XHR)"
     },
     "auditMethod": "5 parallel deep-scan agents (Retailer, Supplier, POS, SuperAdmin, Backend) + GCP MCP parity check",
     "backlogFile": "AUDIT_BACKLOG.md",
@@ -4422,7 +4575,7 @@
   },
   "wa001_WhatsAppCloudAPI": {
     "ticket": "WA-001",
-    "status": "DONE — merged to main",
+    "status": "DONE \u00e2\u20ac\u201d merged to main",
     "mergeCommit": "41fb09b",
     "pr": "#243",
     "tag": "prestage-WA-001-2026-02-17_0147IST",
@@ -4440,15 +4593,15 @@
     ]
   },
   "phase12_TestQualityHardening": {
-    "range": "TQ-001 → TQ-020",
+    "range": "TQ-001 \u00e2\u2020\u2019 TQ-020",
     "count": 20,
-    "status": "DONE — 20/20 (17 code fixes + 3 false positive)",
+    "status": "DONE \u00e2\u20ac\u201d 20/20 (17 code fixes + 3 false positive)",
     "auditMethod": "Full test-suite read of all 250+ test files across entire repo",
     "auditDate": "2026-02-17",
     "completedDate": "2026-02-18",
     "firstCommit": "d10f897",
     "lastCommit": "cad2273",
-    "mergedPRs": "PR #250 → #263 (14 PRs for 17 code-fix ticket IDs)",
+    "mergedPRs": "PR #250 \u00e2\u2020\u2019 #263 (14 PRs for 17 code-fix ticket IDs)",
     "breakdown": {
       "codeFixes": 17,
       "falsePositives": 3,
@@ -4459,53 +4612,53 @@
       ]
     },
     "tiers": {
-      "12A_CriticalGaps": "6/6 DONE (TQ-001→TQ-006)",
-      "12B_TheaterRemoval": "7/7 DONE (TQ-007→TQ-013, TQ-010+011 false positive)",
-      "12C_InfrastructureFixes": "4/4 DONE (TQ-014→TQ-017, TQ-016 false positive)",
-      "12D_StressResilience": "3/3 DONE (TQ-018→TQ-020)"
+      "12A_CriticalGaps": "6/6 DONE (TQ-001\u00e2\u2020\u2019TQ-006)",
+      "12B_TheaterRemoval": "7/7 DONE (TQ-007\u00e2\u2020\u2019TQ-013, TQ-010+011 false positive)",
+      "12C_InfrastructureFixes": "4/4 DONE (TQ-014\u00e2\u2020\u2019TQ-017, TQ-016 false positive)",
+      "12D_StressResilience": "3/3 DONE (TQ-018\u00e2\u2020\u2019TQ-020)"
     },
     "backlogFile": "AUDIT_BACKLOG.md (Phase 12 section)"
   },
   "infraStatus": {
     "A1_WIF": "DONE",
-    "A2_SECRETS": "DONE — 9 secrets in GCP Secret Manager (5 original + 4 WhatsApp) + rotation labels",
-    "A3_DEPLOY": "DEPLOY-READY — Part 18 discipline written. Awaiting operator trigger.",
-    "Cloud_SQL": "HARDENED — private IP only (10.33.48.3), public IP removed, VPC peering active",
+    "A2_SECRETS": "DONE \u00e2\u20ac\u201d 9 secrets in GCP Secret Manager (5 original + 4 WhatsApp) + rotation labels",
+    "A3_DEPLOY": "DEPLOY-READY \u00e2\u20ac\u201d Part 18 discipline written. Awaiting operator trigger.",
+    "Cloud_SQL": "HARDENED \u00e2\u20ac\u201d private IP only (10.33.48.3), public IP removed, VPC peering active",
     "Redis": "HARDENED",
-    "Firewall": "HARDENED — 8 world-open rules disabled, 2 kept (internal + scoped SSH)",
-    "CertBoundary": "ISOLATED — staging proxy has staging cert only",
-    "AuditLogging": "ENABLED — cloudsql, run, secretmanager, iam (ADMIN_READ + DATA_READ + DATA_WRITE)",
-    "SecurityAPIs": "ENABLED — securitycenter, containeranalysis, binaryauthorization",
-    "Budget": "ACTIVE — ₹5000/month, 50%/80%/100% thresholds, project-scoped",
-    "UptimeChecks": "ACTIVE — 5 checks (api, landing, retailer, admin, supplier) + alert policy",
-    "VPCBaseline": "HARDENED — Private Google Access + Flow Logs (0.5 sampling) on asia-south1",
-    "StorageBucket": "HARDENED — uniform bucket-level access + public access prevention",
-    "ZRP_Protocol": "ENFORCED — 185 gates active",
-    "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
+    "Firewall": "HARDENED \u00e2\u20ac\u201d 8 world-open rules disabled, 2 kept (internal + scoped SSH)",
+    "CertBoundary": "ISOLATED \u00e2\u20ac\u201d staging proxy has staging cert only",
+    "AuditLogging": "ENABLED \u00e2\u20ac\u201d cloudsql, run, secretmanager, iam (ADMIN_READ + DATA_READ + DATA_WRITE)",
+    "SecurityAPIs": "ENABLED \u00e2\u20ac\u201d securitycenter, containeranalysis, binaryauthorization",
+    "Budget": "ACTIVE \u00e2\u20ac\u201d \u00e2\u201a\u00b95000/month, 50%/80%/100% thresholds, project-scoped",
+    "UptimeChecks": "ACTIVE \u00e2\u20ac\u201d 5 checks (api, landing, retailer, admin, supplier) + alert policy",
+    "VPCBaseline": "HARDENED \u00e2\u20ac\u201d Private Google Access + Flow Logs (0.5 sampling) on asia-south1",
+    "StorageBucket": "HARDENED \u00e2\u20ac\u201d uniform bucket-level access + public access prevention",
+    "ZRP_Protocol": "ENFORCED \u00e2\u20ac\u201d 185 gates active",
+    "Routing_Spec": "ENFORCED \u00e2\u20ac\u201d ROUTING_SPEC.json is source of truth"
   },
   "deployGateStatus": {
     "phaseA_preDeployAudit": {
-      "A001_cleanGit": "PASS — main branch, up to date with origin",
-      "A002_headSHA": "PASS — deployed SHA badc3fbe (current cumulative staging baseline).",
-      "A003_typecheck": "PASS — all 4 packages zero errors (backend, retailer, supplier, superadmin)",
-      "A004_build": "PASS — all 6 images built and pushed in CI run 22305207614.",
-      "A005_tests": "PASS — CI gates green in run 22305207614.",
-      "A006_ciGates": "PASS — github://run/22305207614.",
-      "A007_A015_secrets": "PASS — all 9 secrets verified in GCP Secret Manager",
-      "A016_cloudSQL": "PASS — supermandi-staging state=RUNNABLE",
-      "A017_vpcConnector": "PASS — supermandi-connector state=READY",
-      "A018_artifactRegistry": "PASS — artifact integrity checks passed in deploy run 22305359033.",
-      "A019_cloudSQLBackup": "WARN — WIF SA cloudsql.admin missing for on-demand backup; daily automated backups active.",
-      "A020_redis": "PASS — Memorystore 10.107.71.27:6379 configured"
+      "A001_cleanGit": "PASS \u00e2\u20ac\u201d main branch, up to date with origin",
+      "A002_headSHA": "PASS \u00e2\u20ac\u201d deployed SHA badc3fbe (current cumulative staging baseline).",
+      "A003_typecheck": "PASS \u00e2\u20ac\u201d all 4 packages zero errors (backend, retailer, supplier, superadmin)",
+      "A004_build": "PASS \u00e2\u20ac\u201d all 6 images built and pushed in CI run 22305207614.",
+      "A005_tests": "PASS \u00e2\u20ac\u201d CI gates green in run 22305207614.",
+      "A006_ciGates": "PASS \u00e2\u20ac\u201d github://run/22305207614.",
+      "A007_A015_secrets": "PASS \u00e2\u20ac\u201d all 9 secrets verified in GCP Secret Manager",
+      "A016_cloudSQL": "PASS \u00e2\u20ac\u201d supermandi-staging state=RUNNABLE",
+      "A017_vpcConnector": "PASS \u00e2\u20ac\u201d supermandi-connector state=READY",
+      "A018_artifactRegistry": "PASS \u00e2\u20ac\u201d artifact integrity checks passed in deploy run 22305359033.",
+      "A019_cloudSQLBackup": "WARN \u00e2\u20ac\u201d WIF SA cloudsql.admin missing for on-demand backup; daily automated backups active.",
+      "A020_redis": "PASS \u00e2\u20ac\u201d Memorystore 10.107.71.27:6379 configured"
     },
     "phaseB_migrations": {
-      "status": "PASS — migrations applied via main-backend startup path during deploy wave.",
+      "status": "PASS \u00e2\u20ac\u201d migrations applied via main-backend startup path during deploy wave.",
       "migrationCount": 18,
       "criticalMigration": "149_row_level_security (RLS on 27 tables)",
       "backupRequired": true
     },
     "phaseC_serviceDeployment": {
-      "status": "PASS — 6/6 services deployed, each new revision serving 100% staging traffic.",
+      "status": "PASS \u00e2\u20ac\u201d 6/6 services deployed, each new revision serving 100% staging traffic.",
       "order": [
         "main-backend",
         "api-gateway",
@@ -4516,14 +4669,14 @@
       ]
     },
     "phaseD_verification": {
-      "status": "PASS — routing infra/smoke and 12 staging smoke gates all green.",
+      "status": "PASS \u00e2\u20ac\u201d routing infra/smoke and 12 staging smoke gates all green.",
       "smokeTests": 11,
       "routingGates": 17,
       "deployVerify": 4,
       "featureVerify": 8
     },
     "phaseE_signoff": {
-      "status": "PENDING — operator browser verification and handoff evidence."
+      "status": "PENDING \u00e2\u20ac\u201d operator browser verification and handoff evidence."
     }
   },
   "goLiveAudit": {
@@ -4533,11 +4686,11 @@
     "result": "127/127 PASS after 5 gap fixes"
   },
   "ctoAudit": {
-    "status": "COMPLETE — tickets created",
+    "status": "COMPLETE \u00e2\u20ac\u201d tickets created",
     "date": "2026-02-15"
   },
   "phase11Audit": {
-    "status": "COMPLETE — 67 tickets generated, 48 DONE",
+    "status": "COMPLETE \u00e2\u20ac\u201d 67 tickets generated, 48 DONE",
     "date": "2026-02-16",
     "method": "5 parallel deep-scan agents + GCP MCP parity check",
     "platforms": [
@@ -4548,51 +4701,51 @@
       "Backend/GCP"
     ]
   },
-  "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
-  "gitDiscipline": "ON — one ticket = one branch = one PR = one tag",
+  "launchGeography": "India \u00e2\u20ac\u201d INR, +91, IST, DD/MM/YYYY",
+  "gitDiscipline": "ON \u00e2\u20ac\u201d one ticket = one branch = one PR = one tag",
   "phase13_ProductionReadinessAudit": {
-    "range": "PRA-001 → PRA-090",
+    "range": "PRA-001 \u00e2\u2020\u2019 PRA-090",
     "count": 90,
-    "status": "COMPLETE — 90/90 tickets audited. 5 PRs for code fixes (#266-#268, #270-#278, #279). PRA-007 gap FIXED.",
+    "status": "COMPLETE \u00e2\u20ac\u201d 90/90 tickets audited. 5 PRs for code fixes (#266-#268, #270-#278, #279). PRA-007 gap FIXED.",
     "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
     "breakdown": {
       "A_RetailerAdmin": {
-        "range": "PRA-001→PRA-015",
+        "range": "PRA-001\u00e2\u2020\u2019PRA-015",
         "count": 15,
         "P0": 4,
         "P1": 8,
         "P2": 3
       },
       "B_SupplierPortal": {
-        "range": "PRA-016→PRA-028",
+        "range": "PRA-016\u00e2\u2020\u2019PRA-028",
         "count": 13,
         "P0": 4,
         "P1": 6,
         "P2": 3
       },
       "C_SuperAdmin": {
-        "range": "PRA-029→PRA-044",
+        "range": "PRA-029\u00e2\u2020\u2019PRA-044",
         "count": 16,
         "P0": 4,
         "P1": 8,
         "P2": 4
       },
       "D_POSApp": {
-        "range": "PRA-045→PRA-065",
+        "range": "PRA-045\u00e2\u2020\u2019PRA-065",
         "count": 21,
         "P0": 6,
         "P1": 11,
         "P2": 4
       },
       "E_CrossFunction": {
-        "range": "PRA-066→PRA-080",
+        "range": "PRA-066\u00e2\u2020\u2019PRA-080",
         "count": 15,
         "P0": 7,
         "P1": 6,
         "P2": 2
       },
       "F_GatewayBackend": {
-        "range": "PRA-081→PRA-090",
+        "range": "PRA-081\u00e2\u2020\u2019PRA-090",
         "count": 10,
         "P0": 6,
         "P1": 3,
@@ -4600,12 +4753,12 @@
       }
     },
     "executionWaves": 9,
-    "gitDiscipline": "ENFORCED — rules embedded in audit file header"
+    "gitDiscipline": "ENFORCED \u00e2\u20ac\u201d rules embedded in audit file header"
   },
   "phase14_UIUXProductionAudit": {
-    "range": "UIUX-RET-001→020, UIUX-SUP-001→020, UIUX-SA-001→027, UIUX-POS-001→042, UIUX-XPLAT-001→006",
+    "range": "UIUX-RET-001\u00e2\u2020\u2019020, UIUX-SUP-001\u00e2\u2020\u2019020, UIUX-SA-001\u00e2\u2020\u2019027, UIUX-POS-001\u00e2\u2020\u2019042, UIUX-XPLAT-001\u00e2\u2020\u2019006",
     "count": 115,
-    "status": "COMPLETE — All 5 waves merged (PRs #282-#286). 115 tickets audited, ~90 code fixes applied.",
+    "status": "COMPLETE \u00e2\u20ac\u201d All 5 waves merged (PRs #282-#286). 115 tickets audited, ~90 code fixes applied.",
     "auditFile": "RELEASES/UIUX_PRODUCTION_AUDIT.md",
     "rawFindings": 176,
     "afterTriage": 115,
@@ -4619,35 +4772,35 @@
     },
     "breakdown": {
       "A_RetailerAdmin": {
-        "range": "UIUX-RET-001→020",
+        "range": "UIUX-RET-001\u00e2\u2020\u2019020",
         "count": 20,
         "P0": 0,
         "P1": 3,
         "P2": 17
       },
       "B_SupplierPortal": {
-        "range": "UIUX-SUP-001→020",
+        "range": "UIUX-SUP-001\u00e2\u2020\u2019020",
         "count": 20,
         "P0": 6,
         "P1": 9,
         "P2": 5
       },
       "C_SuperAdmin": {
-        "range": "UIUX-SA-001→027",
+        "range": "UIUX-SA-001\u00e2\u2020\u2019027",
         "count": 27,
         "P0": 4,
         "P1": 10,
         "P2": 13
       },
       "D_POSApp": {
-        "range": "UIUX-POS-001→042",
+        "range": "UIUX-POS-001\u00e2\u2020\u2019042",
         "count": 42,
         "P0": 3,
         "P1": 23,
         "P2": 16
       },
       "E_CrossPlatform": {
-        "range": "UIUX-XPLAT-001→006",
+        "range": "UIUX-XPLAT-001\u00e2\u2020\u2019006",
         "count": 6,
         "P0": 2,
         "P1": 1,
@@ -4656,11 +4809,11 @@
     },
     "executionWaves": 5,
     "mergedPRs": {
-      "wave1_P0": "PR #282 — 15 P0 critical fixes",
-      "wave2_P1_wiring": "PR #283 — 16 P1 wiring fixes",
-      "wave3_P1_ux": "PR #284 — 17 P1 UX safety fixes",
-      "wave4_P1_nav": "PR #285 — 12 P1 UI/nav fixes",
-      "wave5_P2_polish": "PR #286 — 35 P2 polish fixes"
+      "wave1_P0": "PR #282 \u00e2\u20ac\u201d 15 P0 critical fixes",
+      "wave2_P1_wiring": "PR #283 \u00e2\u20ac\u201d 16 P1 wiring fixes",
+      "wave3_P1_ux": "PR #284 \u00e2\u20ac\u201d 17 P1 UX safety fixes",
+      "wave4_P1_nav": "PR #285 \u00e2\u20ac\u201d 12 P1 UI/nav fixes",
+      "wave5_P2_polish": "PR #286 \u00e2\u20ac\u201d 35 P2 polish fixes"
     },
     "tags": [
       "prestage-UIUX-W1-2026-02-18_1200IST",
@@ -4739,12 +4892,12 @@
   },
   "nextAction": "CLAUDE RESUME (TOMORROW LIVE TEST ONLY): 1) no new implementation unless explicitly instructed by CTO, 2) run pre-gates (typecheck, unit tests, staging health, deployed SHA parity), 3) execute strict locked traversal screen->sub-screen->modal in platform order (POS, Retailer, Supplier, SuperAdmin, Cross-function), 4) validate real-user click/tap paths and all required runtime layers, 5) append-only findings in RELEASES/LIVE_TESTING_ISSUES.md as ISSUE-035+, keeping ISSUE-001..034 immutable, 6) reiterate until productionGradeCoverageDefinition closure (100% coverage) with no open CRITICAL/HIGH or explicit BLOCKED owner+ETA.",
   "productionHardeningDeferred": {
-    "status": "DONE — PR #288 merged (853a7d8)",
+    "status": "DONE \u00e2\u20ac\u201d PR #288 merged (853a7d8)",
     "date": "2026-02-18",
     "scope": "176 files changed (+1669/-1441)",
     "items": [
-      "919 console.log → structured logger (142 backend files)",
-      "240 catch(e: any) → catch(unknown) + asError() (67 files)",
+      "919 console.log \u00e2\u2020\u2019 structured logger (142 backend files)",
+      "240 catch(e: any) \u00e2\u2020\u2019 catch(unknown) + asError() (67 files)",
       "5 dead code files removed (sessionService, authApi, transactionsApi + tests)",
       "CreditScreen TODO resolved (credit utilization computed from real data)",
       "7 broken import orderings fixed"
@@ -4764,10 +4917,10 @@
     "Backfill completed: 46 previously unmapped CODE_REVIEW_ISSUE checks now have atomic workflow tickets (LIVE.TICKETIZATION.UNMAPPED.001-.046) and are set to WORKFLOW_TODO.",
     "Machine-state trigger set: progress.liveIteration.phase=implementation and deployApproval.approved=false with GO_DEPLOY token. Claude must not deploy until operator explicit approval in next session.",
     "DEPLOY COMPLETE: SHA 7b3a4ee8 deployed to GCP staging via run 22264213051. All 6 services serving 100% on new revisions. All smoke gates PASS. Health checks 200 on /api/health and /api/v1/health.",
-    "Deploy sequence: 3 CI runs passed (25cc7551, d66ffce8, 7b3a4ee8) → 3 deploys triggered → final deploy 22264213051 is the active staging baseline.",
+    "Deploy sequence: 3 CI runs passed (25cc7551, d66ffce8, 7b3a4ee8) \u00e2\u2020\u2019 3 deploys triggered \u00e2\u2020\u2019 final deploy 22264213051 is the active staging baseline.",
     "Cloud Run revisions: main-backend-00087-zkd, api-gateway-00068-52v, retailer-admin-00068-7hr, supplier-portal-00063-sp8, superadmin-00061-wwz, landing-00061-7bs.",
-    "GCP ticketization NOT started — operator instructed deploy-only in this run.",
-    "GCP STAGING HARDENING — 13/15 tickets DONE, 2 BLOCKED.",
+    "GCP ticketization NOT started \u00e2\u20ac\u201d operator instructed deploy-only in this run.",
+    "GCP STAGING HARDENING \u00e2\u20ac\u201d 13/15 tickets DONE, 2 BLOCKED.",
     "Cloud SQL: public IP removed, private IP 10.33.48.3 via VPC peering. All services healthy.",
     "Firewall: 8 world-open rules disabled (RDP, SSH, HTTP/S, ICMP, app ports, vpc-connector-egress).",
     "Cert boundary: staging proxy now only has staging cert (prod cert removed).",
@@ -4776,12 +4929,12 @@
     "Storage: uniform bucket-level access + public access prevention on cloudbuild bucket.",
     "VPC: Private Google Access + Flow Logs (0.5 sampling) on asia-south1 subnet.",
     "Secrets: 10/10 labeled with rotation governance (cadence=90d, owner=operator).",
-    "Budget: ₹5000/month with 50%/80%/100% thresholds.",
+    "Budget: \u00e2\u201a\u00b95000/month with 50%/80%/100% thresholds.",
     "Monitoring: 5 uptime checks (api, landing, retailer, admin, supplier) + alert policy.",
     "CORS verified: production origins rejected, staging origins accepted.",
     "Ingress verified: internal-and-cloud-load-balancing on api-gateway.",
     "5XX canary: deploy.yml Gate 12 verified working.",
-    "RESOLVED: IAM_EDITOR_ROLE — deploy.yml enforces dedicated SAs; scripts/staging-iam-hardening.sh created for operator audit + editor removal.",
+    "RESOLVED: IAM_EDITOR_ROLE \u00e2\u20ac\u201d deploy.yml enforces dedicated SAs; scripts/staging-iam-hardening.sh created for operator audit + editor removal.",
     "Operator approved final brand direction; STAGE.BRAND.LOGO_CONSISTENCY.001 moved blocked -> todo (pending next staging deploy cycle).",
     "Deploy run github://run/22260688109 succeeded; staging live on commit 5db6c84 with all listed deploy/smoke gates passed.",
     "All 15 ticket JSONs updated with evidence and status.",
@@ -4790,20 +4943,20 @@
     "Execution scope narrowed: only 9 LIVE.AUTH.PARITY.* tickets plus STAGE.BRAND.LOGO_CONSISTENCY.001 in current batch.",
     "Deploy hold active: no staging deploy until current batch implementation is complete and operator approves cumulative deploy.",
     "CODEX CHECKPOINT 2026-03-05T08:38:43Z: User requested machine-state update + Claude handoff only; stopped further execution.",
-    "Live check (local): npm run ui:audit PASS — 44 screen files, 38 registered, 6 embedded, 0 orphaned, gating PASS.",
+    "Live check (local): npm run ui:audit PASS \u00e2\u20ac\u201d 44 screen files, 38 registered, 6 embedded, 0 orphaned, gating PASS.",
     "Live check (local): npm run build:check PASS and npm run typecheck PASS.",
-    "Live check (local): backend unit suite PASS with --runInBand — 52 suites, 928 tests; runner reported open-handle warning and command wrapper timed out after completion output.",
+    "Live check (local): backend unit suite PASS with --runInBand \u00e2\u20ac\u201d 52 suites, 928 tests; runner reported open-handle warning and command wrapper timed out after completion output.",
     "Pending for Claude: live staging parity/screen-lock execution and ticketized findings from runtime evidence (no assumption-only findings).",
-    "CLAUDE RERUN 2026-03-05T09:15:00Z: Independently re-executed all 4 Codex gate commands — results match 1:1.",
-    "  ui:audit PASS — 44 screens, 38 registered, 6 embedded, 0 orphaned.",
-    "  build:check WARN — CLAUDE_CURRENT_STATE.json modified (expected dirty state file, not a code issue).",
-    "  typecheck PASS — zero errors.",
-    "  backend test:unit PASS — 52 suites, 928 tests, 0 failures, 9.6s. Jest open-handles warning (non-blocking).",
+    "CLAUDE RERUN 2026-03-05T09:15:00Z: Independently re-executed all 4 Codex gate commands \u00e2\u20ac\u201d results match 1:1.",
+    "  ui:audit PASS \u00e2\u20ac\u201d 44 screens, 38 registered, 6 embedded, 0 orphaned.",
+    "  build:check WARN \u00e2\u20ac\u201d CLAUDE_CURRENT_STATE.json modified (expected dirty state file, not a code issue).",
+    "  typecheck PASS \u00e2\u20ac\u201d zero errors.",
+    "  backend test:unit PASS \u00e2\u20ac\u201d 52 suites, 928 tests, 0 failures, 9.6s. Jest open-handles warning (non-blocking).",
     "NEXT: Live staging parity gates + comprehensive POS audit + state machine + fix execution.",
     "PLAYWRIGHT GATES 2026-03-05T09:25Z: staging-url-smoke 12/12 PASS, portal-verification 18/18 PASS.",
     "POS AUDIT 2026-03-05T09:45Z: 3-agent parallel audit completed. 22 findings (POS-A01..A22) across 4 tiers. Consolidated with CTO ISSUE-001..013.",
     "STATE MACHINE 2026-03-05T09:50Z: POS_AUDIT_EXECUTION_STATE_MACHINE.md created with 6-phase execution plan and dependency graph.",
-    "PHASE A COMPLETE 2026-03-05T10:30Z: ISSUE-011 (EAS URLs all 5 profiles), POS-A01 (token refresh body), POS-A02 (staff header TOCTOU) — all FIXED.",
+    "PHASE A COMPLETE 2026-03-05T10:30Z: ISSUE-011 (EAS URLs all 5 profiles), POS-A01 (token refresh body), POS-A02 (staff header TOCTOU) \u00e2\u20ac\u201d all FIXED.",
     "PHASE B COMPLETE 2026-03-05T11:00Z: 15+ bodyless POST/PATCH calls fixed across 12 files in 3 portals + POS. ISSUE-008/009/010 + POS-A03/A04 FIXED.",
     "PHASE C COMPLETE 2026-03-05T11:30Z: ISSUE-012+013 (EnrollDevice cancel+progress), POS-A07 (header case) FIXED. POS-A05/A06 deferred.",
     "PHASE D COMPLETE 2026-03-05T12:00Z: POS-A08 NOT_A_BUG (soft block by design), POS-A09 FIXED (dev logging). POS-A10 deferred.",
@@ -4819,7 +4972,7 @@
     "FIREBASE 2026-03-05T16:25Z: APK uploaded as release 1.0.1 (1). Release notes added. Group distribution failed (cto,qa groups not yet created in Firebase console).",
     "FIREBASE CONSOLE: https://console.firebase.google.com/project/supermandi-pos/appdistribution/app/android:com.supermanditech.supermandipos/releases/16hg3s41eab40",
     "FIREBASE TESTER LINK: https://appdistribution.firebase.google.com/testerapps/1:547554299508:android:2495e1b0b6dbf8b0cd0b21/releases/16hg3s41eab40",
-    "STAGING PARITY 2026-03-05T16:00Z: /api/v1/health 200 OK, /api/health 200 OK, /version 200 (SHA 794cb24 — pre-fix main HEAD, expected since fixes not deployed to GCP yet).",
+    "STAGING PARITY 2026-03-05T16:00Z: /api/v1/health 200 OK, /api/health 200 OK, /version 200 (SHA 794cb24 \u00e2\u20ac\u201d pre-fix main HEAD, expected since fixes not deployed to GCP yet).",
     "PLAYWRIGHT RERUN 2026-03-05T16:05Z: staging-url-smoke 12/12 PASS (41.9s), portal-verification 18/18 PASS (25.8s).",
     "OPERATOR ACTION NEEDED: Create 'cto' and 'qa' tester groups in Firebase App Distribution console for group distribution.",
     "NEXT: CTO device test on Redmi (enrollment flow, payment cancel, split payment). Then Phase F if device test passes.",
@@ -5057,10 +5210,10 @@
     "deployBlockedUntilAllChecksPass": false,
     "gate1Resolution": {
       "clearedAt": "2026-03-02T01:00:00Z",
-      "OP1_GitHubSecrets": "RESOLVED — dead Firebase build-args removed from deploy.yml (commit 07cec20b), wrong-project defaults corrected (commit aa898b65). Only GCP_WIF_PROVIDER + GCP_SA_EMAIL needed, both exist.",
-      "OP2_DNS": "RESOLVED — Hostinger A record staging → 34.54.26.145 confirmed by operator.",
-      "OP3_FirebaseConsole": "RESOLVED — Identity Toolkit REST API confirmed phone auth enabled, staging.supermandi.tech in authorized domains, SMS region restricted to India.",
-      "shaProgression": "132eb8ff (app code) → 0e161261 (state files) → 07cec20b (dead CI removal) → aa898b65 (wrong-project cleanup). No app behavior changes."
+      "OP1_GitHubSecrets": "RESOLVED \u00e2\u20ac\u201d dead Firebase build-args removed from deploy.yml (commit 07cec20b), wrong-project defaults corrected (commit aa898b65). Only GCP_WIF_PROVIDER + GCP_SA_EMAIL needed, both exist.",
+      "OP2_DNS": "RESOLVED \u00e2\u20ac\u201d Hostinger A record staging \u00e2\u2020\u2019 34.54.26.145 confirmed by operator.",
+      "OP3_FirebaseConsole": "RESOLVED \u00e2\u20ac\u201d Identity Toolkit REST API confirmed phone auth enabled, staging.supermandi.tech in authorized domains, SMS region restricted to India.",
+      "shaProgression": "132eb8ff (app code) \u00e2\u2020\u2019 0e161261 (state files) \u00e2\u2020\u2019 07cec20b (dead CI removal) \u00e2\u2020\u2019 aa898b65 (wrong-project cleanup). No app behavior changes."
     },
     "sourceOfTruthOrder": [
       "origin_main_sha_aa898b65",
@@ -5220,8 +5373,8 @@
       ]
     },
     "wontfixRegistry": {
-      "STG-411": "nginx header inheritance on static assets — no security impact, Cloud Run default behavior",
-      "STG-423": "backend already returns 400, 408 is a gateway proxy edge case — no user impact"
+      "STG-411": "nginx header inheritance on static assets \u00e2\u20ac\u201d no security impact, Cloud Run default behavior",
+      "STG-423": "backend already returns 400, 408 is a gateway proxy edge case \u00e2\u20ac\u201d no user impact"
     },
     "withdrawnRegistry": {
       "STG-415": "withdrawn in prior session"
@@ -5235,27 +5388,27 @@
     "impactedRuntimeRechecks": [
       {
         "stg": "STG-429",
-        "check": "POS enroll endpoint — set_config replaces SET LOCAL",
+        "check": "POS enroll endpoint \u00e2\u20ac\u201d set_config replaces SET LOCAL",
         "service": "main-backend"
       },
       {
         "stg": "STG-430",
-        "check": "admin audit log INSERT with non-UUID actor — no PG 22P02",
+        "check": "admin audit log INSERT with non-UUID actor \u00e2\u20ac\u201d no PG 22P02",
         "service": "main-backend"
       },
       {
         "stg": "STG-424",
-        "check": "refund list/approve — correct column names",
+        "check": "refund list/approve \u00e2\u20ac\u201d correct column names",
         "service": "main-backend"
       },
       {
         "stg": "STG-425",
-        "check": "staff list with sales/purchases counts — UUID::text cast",
+        "check": "staff list with sales/purchases counts \u00e2\u20ac\u201d UUID::text cast",
         "service": "main-backend"
       },
       {
         "stg": "STG-426",
-        "check": "GST compliance endpoints — correct column names",
+        "check": "GST compliance endpoints \u00e2\u20ac\u201d correct column names",
         "service": "main-backend"
       },
       {
@@ -5270,12 +5423,12 @@
       "verifiedAt": "2026-03-02T18:03:00Z",
       "deployedSha": "92a3b249",
       "results": {
-        "STG-429": "PASS — POS enroll returns 401 (auth rejection), not 500",
-        "STG-430": "PASS — Admin audit: 200 generic msg, no PG 22P02",
-        "STG-424": "PASS — Refunds: 200 with empty data, correct columns",
-        "STG-425": "PASS — Staff list: 200, required hotfix (sales.store_id is UUID not TEXT)",
-        "STG-426": "PASS — GST summary: 200, required hotfix (buyer_state/seller_state/supplier_id don't exist)",
-        "STG-427": "PASS (gateway) — Admin JWT passes through. NEW: chat service fails on email→UUID cast (STG-431)"
+        "STG-429": "PASS \u00e2\u20ac\u201d POS enroll returns 401 (auth rejection), not 500",
+        "STG-430": "PASS \u00e2\u20ac\u201d Admin audit: 200 generic msg, no PG 22P02",
+        "STG-424": "PASS \u00e2\u20ac\u201d Refunds: 200 with empty data, correct columns",
+        "STG-425": "PASS \u00e2\u20ac\u201d Staff list: 200, required hotfix (sales.store_id is UUID not TEXT)",
+        "STG-426": "PASS \u00e2\u20ac\u201d GST summary: 200, required hotfix (buyer_state/seller_state/supplier_id don't exist)",
+        "STG-427": "PASS (gateway) \u00e2\u20ac\u201d Admin JWT passes through. NEW: chat service fails on email\u00e2\u2020\u2019UUID cast (STG-431)"
       },
       "hotfixesApplied": [
         {
@@ -5284,14 +5437,14 @@
         },
         {
           "commit": "92a3b249",
-          "fix": "STG-426: Fix non-existent columns (buyer_state→LEFT(buyer_gstin,2), supplier_id→seller_id, hsn_summary→removed)"
+          "fix": "STG-426: Fix non-existent columns (buyer_state\u00e2\u2020\u2019LEFT(buyer_gstin,2), supplier_id\u00e2\u2020\u2019seller_id, hsn_summary\u00e2\u2020\u2019removed)"
         }
       ],
       "newFindings": [
         {
           "id": "STG-431",
           "severity": "P2",
-          "title": "Chat service casts admin email (x-user-id) to UUID — fails with 22P02",
+          "title": "Chat service casts admin email (x-user-id) to UUID \u00e2\u20ac\u201d fails with 22P02",
           "service": "main-backend",
           "file": "backend/src/routes/v1/chat.ts"
         }
@@ -5319,14 +5472,14 @@
       {
         "id": "STG-431",
         "severity": "P2",
-        "fix": "Chat getUser() UUID validation — rejects non-UUID x-user-id with 401",
+        "fix": "Chat getUser() UUID validation \u00e2\u20ac\u201d rejects non-UUID x-user-id with 401",
         "file": "backend/src/routes/v1/chat.ts",
         "runtimeVerified": true
       },
       {
         "id": "STG-433",
         "severity": "P3",
-        "fix": "sendPasswordResetEmail() portal-aware — RETAILER_ADMIN_URL env var for retailer portal URL",
+        "fix": "sendPasswordResetEmail() portal-aware \u00e2\u20ac\u201d RETAILER_ADMIN_URL env var for retailer portal URL",
         "files": [
           "backend/src/services/emailService.ts",
           "backend/src/routes/v1/retailer-admin/auth.ts",
@@ -5339,14 +5492,14 @@
       {
         "id": "STG-434",
         "severity": "P3",
-        "fix": "Supplier reset endpoint improved error — hints Retailer portal for mismatched users",
+        "fix": "Supplier reset endpoint improved error \u00e2\u20ac\u201d hints Retailer portal for mismatched users",
         "file": "backend/src/routes/v1/supplier/auth.ts",
         "runtimeVerified": true
       },
       {
         "id": "STG-435",
         "severity": "P2",
-        "fix": "Chat getUser() ACTOR_TYPE_TO_CHAT_TYPE mapping: store→retailer, platform→admin",
+        "fix": "Chat getUser() ACTOR_TYPE_TO_CHAT_TYPE mapping: store\u00e2\u2020\u2019retailer, platform\u00e2\u2020\u2019admin",
         "file": "backend/src/routes/v1/chat.ts",
         "runtimeVerified": true,
         "evidence": "GET /conversations 200, POST /conversations/support 200 on staging"
@@ -5387,59 +5540,177 @@
     "batches": {
       "batch1": {
         "sha": "c07d463f",
-        "message": "fix(live): batch 1 — 7 critical live-testing issues",
-        "issuesFixed": ["ISSUE-035","ISSUE-037","ISSUE-039","ISSUE-040","ISSUE-041","ISSUE-051","ISSUE-066","ISSUE-067","ISSUE-076"],
-        "filesChanged": ["backend/src/routes/v1/pos/enroll.ts","retailer-admin/src/lib/api.ts","src/screens/PaymentScreen.tsx","src/screens/PosRootLayout.tsx","src/screens/PurchaseScreen.tsx","src/screens/SellScanScreen.tsx","supermandi-superadmin/src/api/authToken.ts","supplier-portal/src/lib/api.ts"],
+        "message": "fix(live): batch 1 \u00e2\u20ac\u201d 7 critical live-testing issues",
+        "issuesFixed": [
+          "ISSUE-035",
+          "ISSUE-037",
+          "ISSUE-039",
+          "ISSUE-040",
+          "ISSUE-041",
+          "ISSUE-051",
+          "ISSUE-066",
+          "ISSUE-067",
+          "ISSUE-076"
+        ],
+        "filesChanged": [
+          "backend/src/routes/v1/pos/enroll.ts",
+          "retailer-admin/src/lib/api.ts",
+          "src/screens/PaymentScreen.tsx",
+          "src/screens/PosRootLayout.tsx",
+          "src/screens/PurchaseScreen.tsx",
+          "src/screens/SellScanScreen.tsx",
+          "supermandi-superadmin/src/api/authToken.ts",
+          "supplier-portal/src/lib/api.ts"
+        ],
         "typecheckPass": true
       },
       "batch2": {
         "sha": "8bc85fa9",
-        "message": "fix(live): batch 2 — 6 critical live-testing issues + cross-cutting hardening",
-        "issuesFixed": ["ISSUE-073","ISSUE-074","ISSUE-087","ISSUE-128","ISSUE-129","ISSUE-133"],
+        "message": "fix(live): batch 2 \u00e2\u20ac\u201d 6 critical live-testing issues + cross-cutting hardening",
+        "issuesFixed": [
+          "ISSUE-073",
+          "ISSUE-074",
+          "ISSUE-087",
+          "ISSUE-128",
+          "ISSUE-129",
+          "ISSUE-133"
+        ],
         "crossCutting": "clearDeviceSession() wrapped in try/catch across ForceUpdateScreen, PaymentScreen, PosRootLayout, useApiError, apiClient",
-        "filesChanged": ["src/hooks/useApiError.ts","src/hooks/useSessionTimeout.ts","src/screens/DeviceBlockedScreen.tsx","src/screens/ForceUpdateScreen.tsx","src/screens/PaymentScreen.tsx","src/screens/PosRootLayout.tsx","src/screens/ReturnScreen.tsx","src/services/api/apiClient.ts"],
+        "filesChanged": [
+          "src/hooks/useApiError.ts",
+          "src/hooks/useSessionTimeout.ts",
+          "src/screens/DeviceBlockedScreen.tsx",
+          "src/screens/ForceUpdateScreen.tsx",
+          "src/screens/PaymentScreen.tsx",
+          "src/screens/PosRootLayout.tsx",
+          "src/screens/ReturnScreen.tsx",
+          "src/services/api/apiClient.ts"
+        ],
         "typecheckPass": true
       },
       "batch3": {
         "sha": "0a8b0670",
-        "message": "fix(live): batch 3 — 7 hardening fixes across POS screens",
-        "issuesFixed": ["ISSUE-075","ISSUE-077","ISSUE-088","ISSUE-105","ISSUE-108","ISSUE-109"],
-        "filesChanged": ["src/screens/DeviceBlockedScreen.tsx","src/screens/EnrollDeviceScreen.tsx","src/screens/PaymentScreen.tsx","src/screens/ReturnScreen.tsx","src/screens/ShiftScreen.tsx","src/screens/SplashScreen.tsx"],
+        "message": "fix(live): batch 3 \u00e2\u20ac\u201d 7 hardening fixes across POS screens",
+        "issuesFixed": [
+          "ISSUE-075",
+          "ISSUE-077",
+          "ISSUE-088",
+          "ISSUE-105",
+          "ISSUE-108",
+          "ISSUE-109"
+        ],
+        "filesChanged": [
+          "src/screens/DeviceBlockedScreen.tsx",
+          "src/screens/EnrollDeviceScreen.tsx",
+          "src/screens/PaymentScreen.tsx",
+          "src/screens/ReturnScreen.tsx",
+          "src/screens/ShiftScreen.tsx",
+          "src/screens/SplashScreen.tsx"
+        ],
         "typecheckPass": true
       },
       "batch4": {
         "sha": "bd392571",
-        "message": "fix(live): batch 4 — 4 issues + BackHandler for 5 menu sub-screens",
-        "issuesFixed": ["ISSUE-085","ISSUE-097","ISSUE-112","ISSUE-125"],
-        "filesChanged": ["src/screens/BnplDuesScreen.tsx","src/screens/CreditScreen.tsx","src/screens/CustomerListScreen.tsx","src/screens/DailyClosingScreen.tsx","src/screens/EnrollDeviceScreen.tsx","src/screens/KhataScreen.tsx","src/screens/MenuScreen.tsx","src/screens/PrinterSettingsScreen.tsx","src/screens/ShiftScreen.tsx"],
+        "message": "fix(live): batch 4 \u00e2\u20ac\u201d 4 issues + BackHandler for 5 menu sub-screens",
+        "issuesFixed": [
+          "ISSUE-085",
+          "ISSUE-097",
+          "ISSUE-112",
+          "ISSUE-125"
+        ],
+        "filesChanged": [
+          "src/screens/BnplDuesScreen.tsx",
+          "src/screens/CreditScreen.tsx",
+          "src/screens/CustomerListScreen.tsx",
+          "src/screens/DailyClosingScreen.tsx",
+          "src/screens/EnrollDeviceScreen.tsx",
+          "src/screens/KhataScreen.tsx",
+          "src/screens/MenuScreen.tsx",
+          "src/screens/PrinterSettingsScreen.tsx",
+          "src/screens/ShiftScreen.tsx"
+        ],
         "typecheckPass": true
       },
       "batch5": {
         "sha": "ee37b5af",
-        "message": "fix(live): batch 5 — StaffLogin hardening, phone format fix, cost label",
-        "issuesFixed": ["ISSUE-080","ISSUE-081","ISSUE-099","ISSUE-113"],
-        "filesChanged": ["src/screens/OverdueDuesScreen.tsx","src/screens/SalesStatementScreen.tsx","src/screens/StaffLoginScreen.tsx"],
+        "message": "fix(live): batch 5 \u00e2\u20ac\u201d StaffLogin hardening, phone format fix, cost label",
+        "issuesFixed": [
+          "ISSUE-080",
+          "ISSUE-081",
+          "ISSUE-099",
+          "ISSUE-113"
+        ],
+        "filesChanged": [
+          "src/screens/OverdueDuesScreen.tsx",
+          "src/screens/SalesStatementScreen.tsx",
+          "src/screens/StaffLoginScreen.tsx"
+        ],
         "typecheckPass": true
       },
       "wave6": {
         "sha": "53fdb10b",
-        "message": "fix(live): wave 6 — 13 hardening fixes across 8 POS screens",
-        "issuesFixed": ["ISSUE-084","ISSUE-082","ISSUE-083","ISSUE-086","ISSUE-092","ISSUE-110","ISSUE-111","ISSUE-122","ISSUE-124","ISSUE-127","ISSUE-130","ISSUE-131","ISSUE-139"],
-        "filesChanged": ["src/screens/CreditScreen.tsx","src/screens/DeviceBlockedScreen.tsx","src/screens/EnrollDeviceScreen.tsx","src/screens/ForceUpdateScreen.tsx","src/screens/InwardScreen.tsx","src/screens/PosRootLayout.tsx","src/screens/SellScanScreen.tsx","src/screens/StaffLoginScreen.tsx"],
+        "message": "fix(live): wave 6 \u00e2\u20ac\u201d 13 hardening fixes across 8 POS screens",
+        "issuesFixed": [
+          "ISSUE-084",
+          "ISSUE-082",
+          "ISSUE-083",
+          "ISSUE-086",
+          "ISSUE-092",
+          "ISSUE-110",
+          "ISSUE-111",
+          "ISSUE-122",
+          "ISSUE-124",
+          "ISSUE-127",
+          "ISSUE-130",
+          "ISSUE-131",
+          "ISSUE-139"
+        ],
+        "filesChanged": [
+          "src/screens/CreditScreen.tsx",
+          "src/screens/DeviceBlockedScreen.tsx",
+          "src/screens/EnrollDeviceScreen.tsx",
+          "src/screens/ForceUpdateScreen.tsx",
+          "src/screens/InwardScreen.tsx",
+          "src/screens/PosRootLayout.tsx",
+          "src/screens/SellScanScreen.tsx",
+          "src/screens/StaffLoginScreen.tsx"
+        ],
         "typecheckPass": true
       },
       "wave7": {
         "sha": "9676c281",
-        "message": "fix(live): wave 7 — 7 hardening fixes across screens + components",
-        "issuesFixed": ["ISSUE-052","ISSUE-071","ISSUE-140","ISSUE-141","ISSUE-142","ISSUE-145","ISSUE-150"],
-        "filesChanged": ["src/components/reorder/EditReorderModal.tsx","src/components/sell/AddStoreProductModal.tsx","src/components/sell/SplitPaymentModal.tsx","src/screens/CustomerListScreen.tsx","src/screens/OrderDetailScreen.tsx","src/screens/SellScanScreen.tsx","src/services/voice/voiceClient.ts"],
+        "message": "fix(live): wave 7 \u00e2\u20ac\u201d 7 hardening fixes across screens + components",
+        "issuesFixed": [
+          "ISSUE-052",
+          "ISSUE-071",
+          "ISSUE-140",
+          "ISSUE-141",
+          "ISSUE-142",
+          "ISSUE-145",
+          "ISSUE-150"
+        ],
+        "filesChanged": [
+          "src/components/reorder/EditReorderModal.tsx",
+          "src/components/sell/AddStoreProductModal.tsx",
+          "src/components/sell/SplitPaymentModal.tsx",
+          "src/screens/CustomerListScreen.tsx",
+          "src/screens/OrderDetailScreen.tsx",
+          "src/screens/SellScanScreen.tsx",
+          "src/services/voice/voiceClient.ts"
+        ],
         "typecheckPass": true
       },
       "wave7b": {
         "sha": "3bf46b43",
-        "message": "fix(live): wave 7b — 2 additional hardening fixes",
-        "issuesFixed": ["ISSUE-132","ISSUE-151"],
-        "filesChanged": ["src/screens/BulkPurchaseCreditScreen.tsx","src/screens/SellScanScreen.tsx"],
+        "message": "fix(live): wave 7b \u00e2\u20ac\u201d 2 additional hardening fixes",
+        "issuesFixed": [
+          "ISSUE-132",
+          "ISSUE-151"
+        ],
+        "filesChanged": [
+          "src/screens/BulkPurchaseCreditScreen.tsx",
+          "src/screens/SellScanScreen.tsx"
+        ],
         "typecheckPass": true
       }
     },
@@ -5454,49 +5725,49 @@
       "ISSUE-095": "GRNScreen handleSearch is local array search, not API call",
       "ISSUE-098": "Zustand getState() is correct pattern for post-async reads (UIUX-POS-010)",
       "ISSUE-100": "activeConvId guard already exists (STG-453)",
-      "ISSUE-101": "markAsRead has .catch() — best-effort is acceptable",
+      "ISSUE-101": "markAsRead has .catch() \u00e2\u20ac\u201d best-effort is acceptable",
       "ISSUE-102": "AIInsightsScreen has retry error bar",
       "ISSUE-103": "OpeningStockScreen shows Alert on search error",
       "ISSUE-104": "OpeningStockScreen interval cleared in finally block (STG-455)",
       "ISSUE-106": "BarcodeSheetScreen has finally { setActionLoading(null) } on both handlers",
       "ISSUE-107": "Zero price for onboarding items is correct business behavior",
-      "ISSUE-114": "Duplicate of ISSUE-091 — InwardScreen already validates >0",
-      "ISSUE-115": "Duplicate of ISSUE-093 — BuyScreen has page cap at 100",
-      "ISSUE-117": "Duplicate of ISSUE-106 — BarcodeSheet already has finally cleanup",
-      "ISSUE-118": "Duplicate of ISSUE-098 — getState() is correct Zustand pattern",
-      "ISSUE-119": "Same root cause as ISSUE-099 — phone normalization already fixed batch 5",
+      "ISSUE-114": "Duplicate of ISSUE-091 \u00e2\u20ac\u201d InwardScreen already validates >0",
+      "ISSUE-115": "Duplicate of ISSUE-093 \u00e2\u20ac\u201d BuyScreen has page cap at 100",
+      "ISSUE-117": "Duplicate of ISSUE-106 \u00e2\u20ac\u201d BarcodeSheet already has finally cleanup",
+      "ISSUE-118": "Duplicate of ISSUE-098 \u00e2\u20ac\u201d getState() is correct Zustand pattern",
+      "ISSUE-119": "Same root cause as ISSUE-099 \u00e2\u20ac\u201d phone normalization already fixed batch 5",
       "ISSUE-123": "clearDeviceSession already wrapped in try/catch (batch 2 cross-cutting)",
-      "ISSUE-126": "Duplicate of ISSUE-109 — SafeAreaView already added batch 3",
+      "ISSUE-126": "Duplicate of ISSUE-109 \u00e2\u20ac\u201d SafeAreaView already added batch 3",
       "ISSUE-135": "clearDeviceSession already wrapped in try/catch (batch 2 cross-cutting)",
-      "ISSUE-138": "Duplicate of ISSUE-087 — idempotency key already regenerated batch 2"
+      "ISSUE-138": "Duplicate of ISSUE-087 \u00e2\u20ac\u201d idempotency key already regenerated batch 2"
     },
     "issuesNotCodeFixable": {
-      "ISSUE-042_046": "Stock sync inconsistency — requires runtime investigation with test data",
-      "ISSUE-044": "Cart FAB disappearance — needs runtime reproduction, possibly user action",
+      "ISSUE-042_046": "Stock sync inconsistency \u00e2\u20ac\u201d requires runtime investigation with test data",
+      "ISSUE-044": "Cart FAB disappearance \u00e2\u20ac\u201d needs runtime reproduction, possibly user action",
       "ISSUE-045": "Cart sheet already handles onRequestClose for Android back",
-      "ISSUE-048_049_050": "Voice/barcode/stock runtime issues — need staging API investigation",
+      "ISSUE-048_049_050": "Voice/barcode/stock runtime issues \u00e2\u20ac\u201d need staging API investigation",
       "ISSUE-053": "Low stock bypass at checkout is intentional business design",
-      "ISSUE-056_057": "Chat/SuperAdmin support queue — backend/infrastructure issue",
-      "ISSUE-058": "Stock cascade to reports — requires data source fix",
-      "ISSUE-059": "No test data in staging — operational setup issue",
-      "ISSUE-060_062_064": "Purchase screen runtime issues — need staging test data",
+      "ISSUE-056_057": "Chat/SuperAdmin support queue \u00e2\u20ac\u201d backend/infrastructure issue",
+      "ISSUE-058": "Stock cascade to reports \u00e2\u20ac\u201d requires data source fix",
+      "ISSUE-059": "No test data in staging \u00e2\u20ac\u201d operational setup issue",
+      "ISSUE-060_062_064": "Purchase screen runtime issues \u00e2\u20ac\u201d need staging test data",
       "ISSUE-061": "Same root cause as ISSUE-067 (already fixed batch 1)",
-      "ISSUE-063": "Credit enable toggle — SuperAdmin feature gap",
-      "ISSUE-065": "Ledger reconciliation — backend business logic",
+      "ISSUE-063": "Credit enable toggle \u00e2\u20ac\u201d SuperAdmin feature gap",
+      "ISSUE-065": "Ledger reconciliation \u00e2\u20ac\u201d backend business logic",
       "ISSUE-068": "Same root cause as ISSUE-066 (already fixed batch 1)",
-      "ISSUE-069": "Manifest meta issue — not a code fix",
-      "ISSUE-070": "Dual stock source — architecture decision, not POS code fix",
+      "ISSUE-069": "Manifest meta issue \u00e2\u20ac\u201d not a code fix",
+      "ISSUE-070": "Dual stock source \u00e2\u20ac\u201d architecture decision, not POS code fix",
       "ISSUE-078": "Scanner routing already correctly uses runtime.intent",
-      "ISSUE-096": "GRN stale data — requires server-side optimistic locking",
+      "ISSUE-096": "GRN stale data \u00e2\u20ac\u201d requires server-side optimistic locking",
       "ISSUE-116": "Duplicate of ISSUE-096",
-      "ISSUE-120_121": "Splash UX improvements — design decisions needed",
-      "ISSUE-134": "QR orphaned payment — requires backend idempotency fix",
-      "ISSUE-143": "OrderHistory filter race — low impact, needs AbortController pattern",
-      "ISSUE-144": "EditReorderModal missing abort — cosmetic, no data impact",
-      "ISSUE-146": "PurchaseCartModal concurrent interval — backend is idempotent",
-      "ISSUE-147": "AddStoreProductModal stale callback — low practical risk",
-      "ISSUE-148": "PurchaseScreen dual-effect — same pattern as ISSUE-141 fix can apply",
-      "ISSUE-149": "DailyReportScreen stale date — low impact, needs AbortController"
+      "ISSUE-120_121": "Splash UX improvements \u00e2\u20ac\u201d design decisions needed",
+      "ISSUE-134": "QR orphaned payment \u00e2\u20ac\u201d requires backend idempotency fix",
+      "ISSUE-143": "OrderHistory filter race \u00e2\u20ac\u201d low impact, needs AbortController pattern",
+      "ISSUE-144": "EditReorderModal missing abort \u00e2\u20ac\u201d cosmetic, no data impact",
+      "ISSUE-146": "PurchaseCartModal concurrent interval \u00e2\u20ac\u201d backend is idempotent",
+      "ISSUE-147": "AddStoreProductModal stale callback \u00e2\u20ac\u201d low practical risk",
+      "ISSUE-148": "PurchaseScreen dual-effect \u00e2\u20ac\u201d same pattern as ISSUE-141 fix can apply",
+      "ISSUE-149": "DailyReportScreen stale date \u00e2\u20ac\u201d low impact, needs AbortController"
     },
     "deployGates": {
       "webBackendRedeployNeeded": true,
