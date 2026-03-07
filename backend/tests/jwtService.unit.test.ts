@@ -172,7 +172,7 @@ describe('jwtService', () => {
       const token = jwt.sign(
         { sub: 'user-1', actorType: 'staff', permissions: [] },
         'test-secret-key-for-unit-tests-minimum-32-chars',
-        { expiresIn: -10, issuer: 'supermandi-auth' }
+        { expiresIn: -60, issuer: 'supermandi-auth' }
       );
 
       const result = verifyAccessTokenWithError(token);

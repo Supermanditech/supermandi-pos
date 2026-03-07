@@ -308,13 +308,14 @@ describe("sendBillReceipt", () => {
     });
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    const text = body.text.body;
-
-    expect(text).toContain("Fresh Mart");
-    expect(text).toContain("BILL-001");
-    expect(text).toContain("₹150.00");
-    expect(text).toContain("UPI");
-    expect(text).toContain("SuperMandi POS");
+    // sendBillReceipt sends a template message first (not a text message)
+    expect(body.type).toBe("template");
+    expect(body.template.name).toBe("bill_receipt");
+    const params = body.template.components[0].parameters;
+    expect(params[0].text).toBe("Fresh Mart");
+    expect(params[1].text).toBe("BILL-001");
+    expect(params[2].text).toBe("₹150.00");
+    expect(params[3].text).toBe("UPI");
   });
 });
 
