@@ -523,10 +523,13 @@ const PaymentScreen = () => {
     discountMinor,
     itemCount,
     // loadingSale intentionally omitted — ISSUE-051/066: using createSaleInFlightRef instead
+    // selectedMode intentionally omitted — only read in logPaymentEvent telemetry after createSale
+    //   returns. Including it caused the UPI-mode effect (which sets selectedMode="CASH" on mount
+    //   when upiVpa is null) to cancel the in-flight createSale IIFE before createSale was called.
+    //   Sale creation is payment-mode-agnostic; the closure captures the initial mode for telemetry.
     saleError,
     saleId,
     saleItems,
-    selectedMode,
     transactionId
   ]);
 
