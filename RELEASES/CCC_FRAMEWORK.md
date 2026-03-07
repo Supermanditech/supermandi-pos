@@ -290,6 +290,83 @@ Every fix to a previously known issue MUST include:
 
 ---
 
+## SECTION 6A: GIT DISCIPLINE AND TRUTH-SYNC BOUNDARIES
+
+These rules are mandatory. A technically-correct fix is still NOT production-grade
+if the commit history makes the fix impossible to audit, attribute, or certify.
+
+```
+ALLOWED COMMIT TYPES
+
+1. CODE_FIX
+   Purpose:
+     One issue fix, or one same-subsystem cluster fix when explicitly declared.
+   May touch:
+     src/, backend/, retailer-admin/, supplier-portal/, supermandi-superadmin/,
+     tests/, e2e/, scripts/ needed for executable regression guards.
+   Must NOT touch:
+     RELEASES/CLAUDE_CURRENT_STATE.json
+     RELEASES/JOURNEY_MAP.json
+     RELEASES/SCREEN_CERT_MANIFEST.json
+     RELEASES/INVARIANT_REGISTRY.json
+     RELEASES/LIVE_TESTING_ISSUES.md
+     workflow/state/
+   Exception:
+     A cluster fix may touch multiple same-subsystem files and multiple issue IDs,
+     but the commit message must name the cluster or enumerate the issue IDs.
+
+2. STATE_ONLY
+   Purpose:
+     truth-sync, certification progress, issue ledger updates, deploy gate updates.
+   May touch:
+     RELEASES/*
+     workflow/state/*
+   Must NOT touch:
+     src/, backend/, retailer-admin/, supplier-portal/, supermandi-superadmin/
+
+3. FRAMEWORK_ONLY
+   Purpose:
+     change CCC methodology or machine-state schema itself.
+   May touch:
+     RELEASES/CCC_FRAMEWORK.md
+     RELEASES/CLAUDE_CURRENT_STATE.json
+     RELEASES/JOURNEY_MAP.json
+     RELEASES/SCREEN_CERT_MANIFEST.json
+     RELEASES/INVARIANT_REGISTRY.json
+     workflow/state/*
+   Must NOT include:
+     product code changes
+
+TRUTH-SYNC BLOCKERS
+
+A state/truth-sync commit is FORBIDDEN if any of the following is true:
+  [ ] Any FIXED/ALREADY_FIXED/HARDENED issue in scope still has regressionGuardStatus != PASS
+  [ ] The immediately preceding code commit mixed code files with RELEASES/ or workflow/state/
+  [ ] The code fix has not passed the required deterministic verification for its severity
+  [ ] Operator/runtime certification is being claimed while HEAD is not pushed to origin/main
+
+OPERATOR-CERTIFICATION PRECONDITIONS
+
+Operator runtime testing is FORBIDDEN unless:
+  [ ] The code candidate SHA is pushed to origin/main
+  [ ] The active machine-state/framework commits are also pushed
+  [ ] The active cluster is internally stable per preArtifactExitCriteria
+  [ ] Runtime testing is certifying a cluster candidate, not rediscovering basic known breakage
+
+SCRATCH / ARTIFACT FILES
+
+The following are NEVER committed:
+  local screenshots
+  temporary shell scripts
+  ADB/logcat dumps
+  Gradle caches
+  ad hoc parse outputs
+
+These may exist locally for evidence collection, but they are not part of git truth.
+```
+
+---
+
 ## SECTION 7: REAL USER BEHAVIOR — MANDATORY TEST SCENARIOS
 
 Every journey audit MUST enumerate and verify these scenario classes:

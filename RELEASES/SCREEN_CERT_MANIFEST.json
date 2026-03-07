@@ -8,7 +8,9 @@
 
     "regressionGuardBlockingRule": "A screen CANNOT reach CERT-PASS if any entry in its knownIssues array has regressionGuardStatus != PASS. regressionGuardStatus=MISSING means no guard exists and blocks CERT-PASS.",
     "regressionGuardSeverityRule": "For issues with severity=CRITICAL or severity=HIGH: regressionGuardType MUST be one of UNIT_TEST | API_INTEGRATION | E2E | RUNTIME_ASSERTION_WITH_LOG_CHECK. 'Structural proof only' or 'documented in notes' does NOT satisfy guard requirements for CRITICAL/HIGH issues. For MEDIUM/LOW: documented structural proof is acceptable only with explicit auditNote explaining why automation is not feasible.",
-
+    "fixClosureRule": "A knownIssue may be recorded as code-fixed in history, but it is NOT closure-eligible for screen certification, truth-sync, or deploy gating until regressionGuardStatus=PASS and regressionGuardRef points to the executable or cited guard.",
+    "codeStateBoundaryRule": "A code-fix commit touching this screen's files must not also modify RELEASES/, workflow/state/, or RELEASES/LIVE_TESTING_ISSUES.md. State/tracker updates belong in a separate STATE_ONLY commit.",
+    "operatorCertificationRule": "Operator runtime certification for a screen is invalid if the candidate SHA or the governing machine-state SHA is not pushed to origin/main at time of certification.",
     "scopeLockRule": "At session start: for each file in scopeLock.files, run git log --oneline -1 -- <path>. If returned SHA != auditedAtSha (exact mismatch, not 'newer than'), set reauditRequired=true on that file and screen status=NEEDS-REAUDIT. List reason in reauditReasons. Null auditedAtSha means never audited — treat as requiring audit, not as 'no change'.",
 
     "claudeRule": "When a journey action for a screen is audited, update cccLevelsCompleted. When all journey actions for a screen are result=PASS, set screen status=CERT-PASS only if: (a) no knownIssue has regressionGuardStatus != PASS, (b) all sixGuarantees for all journeys using this screen are signed."

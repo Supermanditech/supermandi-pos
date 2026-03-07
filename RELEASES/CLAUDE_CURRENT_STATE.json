@@ -43,7 +43,10 @@
       "Claude NEVER signs a guarantee without citations[] populated with file:line references",
       "Claude NEVER marks an invariant VERIFIED without verifiedInFiles[] containing file:line",
       "Claude NEVER marks regressionGuardStatus=PASS without a test or structural proof reference",
-      "Claude NEVER seals a journey if any scopeFile has reauditRequired=true"
+      "Claude NEVER seals a journey if any scopeFile has reauditRequired=true",
+      "Claude NEVER mix commits code changes with RELEASES/ or workflow/state/ changes except in FRAMEWORK_ONLY commits",
+      "Claude NEVER truth-sync a fix while any affected HIGH/CRITICAL issue still has regressionGuardStatus != PASS",
+      "Claude NEVER request operator certification while HEAD or active machine-state commits are unpushed"
     ]
   },
 
@@ -144,6 +147,36 @@
       ],
       "artifactPromotionRule": "Create a new staging deploy or APK only after the current cluster is internally stable. Use runtime testing to certify the cluster, not to discover every individual bug from scratch.",
       "exceptionRule": "An early deploy or APK rebuild is allowed only when a single blocker must be proven live to unlock the rest of the active cluster."
+    },
+    "gitDisciplineEnforcement": {
+      "status": "ACTIVE_HARD_BLOCK",
+      "codeFixCommitRule": "A CODE_FIX commit may touch only product code + executable test/guard files for the active issue or same-subsystem cluster. It must NOT touch RELEASES/, workflow/state/, or RELEASES/LIVE_TESTING_ISSUES.md.",
+      "stateOnlyCommitRule": "A STATE_ONLY commit may touch only RELEASES/* and workflow/state/*. It must NOT touch src/, backend/, retailer-admin/, supplier-portal/, or supermandi-superadmin/.",
+      "frameworkOnlyCommitRule": "A FRAMEWORK_ONLY commit may change CCC/machine-state files only. It must not include product code changes.",
+      "clusterCommitRule": "Multi-issue code commits are allowed only when the issues belong to the active cluster and same subsystem/root-cause family. The commit message must name the cluster or enumerate the issue IDs.",
+      "truthSyncBlockers": [
+        "Any affected FIXED or ALREADY_FIXED issue still has regressionGuardStatus != PASS",
+        "The immediately preceding code commit mixed code files with RELEASES/ or workflow/state/ files",
+        "Deterministic verification for the touched severity class has not passed",
+        "HEAD is not pushed to origin/main",
+        "Active machine-state/framework commits are not pushed"
+      ],
+      "operatorCertificationPreconditions": [
+        "code candidate SHA is on origin/main",
+        "active machine-state/framework SHA is on origin/main",
+        "active cluster satisfies preArtifactExitCriteria",
+        "operator is certifying a stabilized cluster candidate, not rediscovering basic known breakage"
+      ],
+      "scratchFilesForbiddenInGit": [
+        "*.png",
+        "*.jpg",
+        "*.jpeg",
+        "*.log",
+        "_*.ps1",
+        ".gradle-local/",
+        "cloud-sql-proxy.exe",
+        "workflow/state/freeze_manifest.runtime.json"
+      ]
     },
     "screenLockedExecutionContract": {
       "screenLockRequired": true,

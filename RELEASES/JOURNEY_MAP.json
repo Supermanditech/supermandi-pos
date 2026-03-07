@@ -19,7 +19,9 @@
       "B6_incompleteLevelsBlock": "Journey cannot reach CERT-SEALED if any action has any level with status=GAP and gap is not documented as ACCEPTED_RISK with explicit justification.",
       "B7_issueOmissionBlock": "Journey cannot reach CERT-SEALED if any known issue in the project (LIVE_TESTING_ISSUES, SCREEN_CERT_MANIFEST knownIssues) touching any file in scopeFiles is absent from the journey's knownIssues array. Every scoped-file issue must be explicitly present and have a regressionLock entry.",
       "B8_incompleteActionSpineBlock": "No journey may move to CERT-IN-PROGRESS unless actions.length > 0 with real action decomposition. No journey may reach CERT-SEALED unless every declared action has result=PASS.",
-      "B9_weakCrossPortalBlock": "Journey cannot reach CERT-SEALED if any crossPortalMatrix row has verified=true but is missing verifiedSha, citations[], or at least one runtimeEvidence entry. A row may be marked verified=true only when all four of: verifiedAt, verifiedSha, citations[], and runtimeEvidence[] are populated."
+      "B9_weakCrossPortalBlock": "Journey cannot reach CERT-SEALED if any crossPortalMatrix row has verified=true but is missing verifiedSha, citations[], or at least one runtimeEvidence entry. A row may be marked verified=true only when all four of: verifiedAt, verifiedSha, citations[], and runtimeEvidence[] are populated.",
+      "B10_mixedCommitBoundaryBlock": "Journey cannot reach CERT-SEALED if any known issue in scope was fixed by a code commit that also modified RELEASES/, workflow/state/, or RELEASES/LIVE_TESTING_ISSUES.md, unless an explicit cluster-level exception is documented in CLAUDE_CURRENT_STATE.gitDisciplineEnforcement and approved by operator or CTO.",
+      "B11_unpushedCandidateBlock": "Journey cannot collect operator certification runtimeEvidence or reach CERT-SEALED if the candidate code SHA or active machine-state/framework SHA is not present on origin/main."
     },
 
     "falseSealprevention": [
@@ -32,7 +34,9 @@
       "No journey can be CERT-SEALED without crossPortalMatrix fully verified (all rows have verified=true).",
       "Every runtimeEvidence entry MUST contain all 12 immutable fields in runtimeEvidenceSchema (evidenceType, step, capturedAt, capturedSha, seedVersion, deviceId, storeId, artifactPath, summary, result, actualOutcome, operatorConfirmed). Entries missing capturedSha, seedVersion, deviceId, or storeId are INVALID.",
       "Every accepted-risk waiver MUST be a formal acceptedRisk object with all 8 fields. A freeform notes string is NOT a valid waiver.",
-      "Claude CANNOT self-approve (approvedBy=CLAUDE_AUDIT) any waiver where severity=HIGH or severity=CRITICAL. These require approvedBy=OPERATOR or approvedBy=CTO before sealing is permitted."
+      "Claude CANNOT self-approve (approvedBy=CLAUDE_AUDIT) any waiver where severity=HIGH or severity=CRITICAL. These require approvedBy=OPERATOR or approvedBy=CTO before sealing is permitted.",
+      "A code-fix commit that mixed product code with RELEASES/, workflow/state/, or RELEASES/LIVE_TESTING_ISSUES.md is NOT closure-eligible until separated or explicitly waived as a cluster exception.",
+      "Operator-confirmed runtime evidence is INVALID unless both the candidate code SHA and active machine-state/framework SHA are pushed to origin/main."
     ],
 
     "runtimeEvidenceSchema": {
