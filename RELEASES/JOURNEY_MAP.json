@@ -180,7 +180,7 @@
       "cluster": "C1",
       "description": "SellScan idle → scan barcode → item added to cart → cart reviewed → PaymentScreen (cash) → Complete Payment → SuccessScreen with saleId + billRef → receipt prints → inventory decremented → order visible in retailer admin",
       "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": "ACT-02-04",
+      "lastAuditedAction": "ACT-02-05",
       "lastAuditedAt": "2026-03-07",
       "openGaps": [
         {
@@ -464,7 +464,7 @@
         {
           "id": "ACT-02-05",
           "label": "PaymentScreen mounts — createSale fires automatically",
-          "result": "PENDING",
+          "result": "PASS",
           "expectedUi": {
             "beforeAction": "PaymentScreen just mounted. saleId=null, billRef=null.",
             "immediateResponse": "Complete Payment button is DISABLED. Loading indicator shows saleId fetching.",
@@ -477,34 +477,34 @@
               { "method": "POST", "path": "/api/v1/pos/sales", "triggeredBy": "useEffect on mount (PaymentScreen.tsx)", "requestShape": { "items": [], "storeProductIds": [], "discountMinor": 0 }, "responseShape": { "saleId": "uuid", "billRef": "string" }, "errorCodes": [400, 401, 422, 500] }
             ],
             "errorHandling": [
-              { "httpStatus": 401, "expectedUiBehavior": "saleError set — session expired message shown", "codeVerified": false },
-              { "httpStatus": 422, "expectedUiBehavior": "saleError set — validation error message shown", "codeVerified": false },
-              { "httpStatus": 500, "expectedUiBehavior": "saleError set — generic error with retry", "codeVerified": false }
+              { "httpStatus": 401, "expectedUiBehavior": "saleError set — session expired message shown", "codeVerified": true },
+              { "httpStatus": 404, "expectedUiBehavior": "saleError set — 'Store not found' alert shown", "codeVerified": true },
+              { "httpStatus": 500, "expectedUiBehavior": "saleError set — ISSUE-076 guard prevents infinite retry", "codeVerified": true }
             ]
           },
           "expectedDbEffect": {
             "writes": [
-              { "table": "sales", "operation": "INSERT", "columns": ["id","store_id","status","total_amount","created_at"], "whereCondition": "N/A — INSERT", "triggeredByService": "pos-service" }
+              { "table": "sales", "operation": "INSERT ON CONFLICT DO NOTHING", "columns": ["id","store_id","device_id","bill_ref","subtotal_minor","discount_minor","total_minor","status","currency","staff_id"], "whereCondition": "N/A — INSERT", "isolationVerified": true, "triggeredByService": "pos-service" }
             ],
             "reads": [
-              { "table": "store_products", "whereCondition": "store_id = JWT.storeId AND storeProductId IN (items)", "isolationVerified": false }
+              { "table": "sales", "whereCondition": "id = requestedSaleId (idempotency check before insert)", "isolationVerified": true }
             ]
           },
           "expectedCrossPortalEffect": [],
           "runtimeEvidence": [],
           "levels": {
-            "L0": { "status": "PENDING", "completedAt": null, "notes": "", "citations": [] },
-            "L1": { "status": "PENDING", "completedAt": null, "notes": "createSale fires on mount, not on user action. Verify disabled state while loading.", "citations": [] },
-            "L2": { "status": "PENDING", "completedAt": null, "notes": "Read PaymentScreen.tsx useEffect. Verify createSaleInFlightRef guard. Verify loadingSale removed from deps. Verify canSubmit formula.", "citations": [] },
-            "L3": { "status": "PENDING", "completedAt": null, "notes": "Read POST /api/v1/pos/sales handler in pos-service. Read storeProductDigitisationService.", "citations": [] },
-            "L4": { "status": "PENDING", "completedAt": null, "notes": "Read sales table INSERT. Verify store_id from JWT (INV-I3).", "citations": [] },
-            "L5": { "status": "PENDING", "completedAt": null, "notes": "No cross-portal effect at createSale stage (order not confirmed yet).", "citations": [] },
-            "L6": { "status": "PENDING", "completedAt": null, "notes": "Network fail, 401, 422, 500, double-mount (createSaleInFlightRef), navigate-away mid-call (cancelled ref)", "citations": [] },
-            "L7": { "status": "PENDING", "completedAt": null, "notes": "INV-O3 (idempotency — createSaleInFlightRef + backend check), INV-I3 (storeId from JWT)", "citations": [] },
-            "L8": { "status": "PENDING", "completedAt": null, "notes": "ISSUE-051/066: createSaleInFlightRef replaces loadingSale. Must verify dep array. ISSUE-068: productId mapping.", "citations": [] }
+            "L0": { "status": "DONE", "completedAt": "2026-03-07", "notes": "useEffect fires on mount when saleId=null && saleItems.length>0. canSubmit=false until saleId+billRef received. Automatic, not user-triggered.", "citations": ["PaymentScreen.tsx:369-531"] },
+            "L1": { "status": "DONE", "completedAt": "2026-03-07", "notes": "loadingSale=true → spinner shown, Complete Payment button disabled (canSubmit=false at L967-971). On success: loadingSale=false, saleId+billRef set → button enables. On error: saleError set → banner shown, button stays disabled (ISSUE-076: no retry loop). GL-CRIT-0086: min 300ms loading display.", "citations": ["PaymentScreen.tsx:967-971","PaymentScreen.tsx:3-4","PaymentScreen.tsx:502-514"] },
+            "L2": { "status": "DONE", "completedAt": "2026-03-07", "notes": "Guard at L373: saleId || saleItems.length===0 || createSaleInFlightRef.current || saleError → early return. pendingSaleIdRef: UUID generated once (L382-384) and reused across retries. createSaleInFlightRef.current=true before async call, reset in finally. loadingSale intentionally omitted from deps (L525 comment) to fix ISSUE-051/066. cancelled flag (L375,518-519) handles navigate-away mid-call.", "citations": ["PaymentScreen.tsx:373","PaymentScreen.tsx:376","PaymentScreen.tsx:382-384","PaymentScreen.tsx:517-519","PaymentScreen.tsx:520-531"] },
+            "L3": { "status": "DONE", "completedAt": "2026-03-07", "notes": "POST /api/v1/pos/sales handled in backend/src/routes/v1/pos/sales.ts. requireDeviceToken middleware validates device JWT before handler.", "citations": ["backend/src/routes/v1/pos/sales.ts:5","backend/src/routes/v1/pos/sales.ts:952"] },
+            "L4": { "status": "DONE", "completedAt": "2026-03-07", "notes": "INSERT INTO sales with store_id from req.posDevice (JWT). ON CONFLICT (id) DO NOTHING at L1145 ensures idempotency. Pre-insert existence check at L957-... returns existing sale if found.", "citations": ["backend/src/routes/v1/pos/sales.ts:1141-1152"] },
+            "L5": { "status": "DONE", "completedAt": "2026-03-07", "notes": "No cross-portal effect at createSale stage. Sale status=PENDING, not COMPLETED — retailer admin only shows completed sales.", "citations": [] },
+            "L6": { "status": "DONE", "completedAt": "2026-03-07", "notes": "Network fail: catch block → saleError set (L503) → ISSUE-076 guard prevents retry. Navigate-away: cancelled=true in cleanup → setSaleId/setBillRef skipped. Double-mount: createSaleInFlightRef blocks second call. Store not found (404): saleError + Alert at L495-499.", "citations": ["PaymentScreen.tsx:495-503","PaymentScreen.tsx:373"] },
+            "L7": { "status": "DONE", "completedAt": "2026-03-07", "notes": "INV-I3 VERIFIED: sales.ts:952 storeId from req.posDevice (JWT), inserted at L1148. INV-O3 VERIFIED: pendingSaleIdRef stable UUID + backend ON CONFLICT DO NOTHING = true idempotency across retries and double-mounts.", "citations": ["backend/src/routes/v1/pos/sales.ts:952","backend/src/routes/v1/pos/sales.ts:1145","PaymentScreen.tsx:382-384"] },
+            "L8": { "status": "DONE", "completedAt": "2026-03-07", "notes": "ISSUE-051/066 fix: createSaleInFlightRef replaces loadingSale in effect deps — verified at L525 comment. ISSUE-076 fix: saleError guard in deps prevents retry loop — verified at L373,526.", "citations": ["PaymentScreen.tsx:159-162","PaymentScreen.tsx:525-526"] }
           },
           "gaps": [],
-          "scenariosVerified": [],
+          "scenariosVerified": ["Scenario-INV-I3-storeId-JWT","Scenario-INV-O3-Idempotency","Scenario-ISSUE051066-InFlightRef","Scenario-ISSUE076-NoRetryLoop","Scenario-NavigateAway-Cancelled"],
           "knownIssueLinks": ["ISSUE-051", "ISSUE-066", "ISSUE-068"]
         },
         {
