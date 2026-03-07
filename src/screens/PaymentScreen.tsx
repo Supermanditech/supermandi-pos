@@ -174,7 +174,12 @@ const PaymentScreen = () => {
     () => partitionSaleItems(items, saleItemIds),
     [items, saleItemIds]
   );
-  const [saleItemsSnapshot, setSaleItemsSnapshot] = useState<CartItem[] | null>(null);
+  // ISSUE-051/066: Lazy-init snapshot synchronously to prevent reference change on first render.
+  // Without this, setSaleItemsSnapshot fires on mount causing saleItems reference to change,
+  // which cancels the in-flight createSale useEffect and leaves loadingSale stuck at true.
+  const [saleItemsSnapshot, setSaleItemsSnapshot] = useState<CartItem[] | null>(
+    () => computedSaleItems.length > 0 ? computedSaleItems : null
+  );
 
   useEffect(() => {
     if (!saleItemsSnapshot && computedSaleItems.length > 0) {
