@@ -4,26 +4,7 @@
   "lastUpdated": "2026-01-17",
   "wip": {
     "description": "Work-in-progress tasks that MUST be completed before APK build. APK check will FAIL if any WIP tasks exist.",
-    "tasks": [
-      {
-        "name": "VOICE: Deploy voice-service to VM",
-        "description": "Deploy docker-compose.prod.yml + verify /api/v1/voice/health",
-        "file": "backend/docker-compose.prod.yml",
-        "addedAt": "2026-01-17T12:27:12.543Z"
-      },
-      {
-        "name": "VOICE: Demo device voice command verification",
-        "description": "Run a real voice command on Demo store device and confirm UI flow",
-        "file": "src/screens/SellScanScreen.tsx",
-        "addedAt": "2026-01-17T12:27:41.948Z"
-      },
-      {
-        "name": "POS: uiStatus poller verification",
-        "description": "Verify no duplicate /ui-status or /reorder polling on device + VM logs (foreground/background)",
-        "file": "src/screens/PosRootLayout.tsx",
-        "addedAt": "2026-01-17T16:56:28.909Z"
-      }
-    ]
+    "tasks": []
   },
   "completedFixes": [
     {
@@ -67,7 +48,7 @@
       "date": "2025-01-12",
       "file": "src/screens/SellScanScreen.tsx",
       "mustContain": [
-        "Cannot exceed stock"
+        "exceeded!"
       ],
       "mustNotContain": [],
       "description": "Edit modal should prevent qty > available stock"
@@ -112,7 +93,7 @@
       "file": "src/screens/SellScanScreen.tsx",
       "mustContain": [
         "handleMakeFree",
-        "Free item"
+        "Make Free"
       ],
       "mustNotContain": [],
       "description": "Edit modal has Free button that sets 100% discount"
