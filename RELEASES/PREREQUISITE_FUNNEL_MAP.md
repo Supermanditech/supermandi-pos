@@ -171,7 +171,7 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 
 | ID | Blocker | Evidence | Root Cause | Fix |
 |----|---------|----------|------------|-----|
-| BLK-H1 | OpeningStockScreen crash on search | Screenshot 2026-03-07: "Something went wrong" | response.data vs response.products shape mismatch | CODE FIXED on wip branch (daba5ad2), PARKED — needs APK rebuild after stock parity investigation |
+| BLK-H1 | OpeningStockScreen crash on search | Screenshot 2026-03-07: "Something went wrong" | response.data vs response.products shape mismatch | **CODE MERGED** to main (PR #470, commit a8b7767f). Pending APK rebuild + operator runtime confirmation. |
 
 ---
 
@@ -201,12 +201,12 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 | -- | BLK-A2 | A (reg) | Firebase verify-otp | Was blocking OTP step | **RESOLVED** (PR #463) |
 | -- | BLK-F1 | F (approval) | Approval INSERT missing retailer_portal_phone | First login always 404 | **RUNTIME CONFIRMED FIXED** (2026-03-08): PR #466 deployed, fresh reg+approval+login succeeded on wiped DB |
 | -- | BLK-B1 | B (login) | Retailer login blocked | Blocked by BLK-F1 | **RUNTIME CONFIRMED CLEARED** (2026-03-08): Full login flow succeeded post-BLK-F1 fix |
-| **P0** | **BLK-SP1** | **G,H** | **Stock parity: portal=10, POS=0** | **Blocks sell-scan (no stock on POS device)** | **NEW BLOCKER** — retailer portal shows stock qty 10, POS shows Stock: 0 for same product. Root cause unknown. |
-| P1 | BLK-H1 | H (stock) | OpeningStock response shape | Blocks stock seeding via POS | CODE FIXED on wip branch, PARKED until BLK-SP1 investigated |
+| **P0** | **BLK-SP1** | **G,H** | **Stock parity: portal=10, POS=0** | **Blocks sell-scan (no stock on POS device)** | **CODE MERGED** (PR #469, commit 10ca3be6). Root cause: syncProductsToOffline() treated any cached stock as a manual pin, blocking server updates to SQLite. 4 regression tests. Pending APK rebuild + runtime confirmation. |
+| P1 | BLK-H1 | H (stock) | OpeningStock response shape | Blocks stock seeding via POS | **CODE MERGED** (PR #470, commit a8b7767f). Pending APK rebuild + runtime confirmation. |
 | P2 | BLK-SUP1 | D (supplier) | Supplier register Step 3 fields | May block supplier KYC upload | Needs PR-2 |
 | -- | BLK-N1 | A (reg) | WhatsApp welcome notification | Non-blocking — email works | Needs investigation |
 
-**Critical path**: ~~BLK-A1~~ -> ~~BLK-F1~~ -> ~~BLK-B1~~ -> **BLK-SP1 (stock parity)** -> BLK-H1 -> JOURNEY-02
+**Critical path**: ~~BLK-A1~~ -> ~~BLK-F1~~ -> ~~BLK-B1~~ -> ~~BLK-SP1 (code-merged)~~ -> ~~BLK-H1 (code-merged)~~ -> **APK REBUILD + RUNTIME CONFIRM** -> JOURNEY-02
 
 ---
 
@@ -323,17 +323,20 @@ Test: MIME type validation (only JPEG/PNG/PDF)
 
 ---
 
-## NEXT ACTIONS (strict order, updated 2026-03-08)
+## NEXT ACTIONS (strict order, updated 2026-03-08 19:10 IST)
 
 1. ~~BLK-A1 fix~~ — DONE
 2. ~~BLK-F1 fix~~ — DONE (PR #466 deployed)
 3. ~~BLK-B1 unblock~~ — DONE (runtime confirmed)
 4. ~~Full retailer funnel test~~ — DONE (operator completed on staging)
-5. **THIS COMMIT**: Truth-sync BLK-F1/BLK-B1 as RUNTIME_CONFIRMED, persist 24 micro-issues
-6. **NEXT**: PR-3 — stock parity investigation (BLK-SP1)
-7. PR-1 — retailer comms/onboarding email fixes (Critical + High)
-8. PR-2 — supplier register Step 3 field fix
-9. Revisit BLK-H1 (OpeningStock) after PR-3 clarifies stock root cause
-10. APK rebuild with accumulated fixes
-11. Supplier registration/login full audit
-12. Return to JOURNEY-02 PHASE_4 certification
+5. ~~Truth-sync BLK-F1/BLK-B1~~ — DONE
+6. ~~BLK-SP1 investigation + fix~~ — DONE (PR #469 merged, root cause: sync pinning bug)
+7. ~~BLK-H1 fix to main~~ — DONE (PR #470 merged, OpeningStock search shape)
+8. ~~PR #468 backend Opening Stock dual-write~~ — DONE (deployed to staging)
+9. **NEXT**: Merge PR #471 (build gate fix), run pre-build gates
+10. **NEXT**: APK rebuild from clean main with BLK-SP1 + BLK-H1 fixes
+11. **NEXT**: Operator runtime retest (stock parity + Opening Stock flow)
+12. PR-1 — retailer comms/onboarding email fixes (Critical + High)
+13. PR-2 — supplier register Step 3 field fix
+14. Supplier registration/login full audit
+15. Return to JOURNEY-02 PHASE_4 certification
