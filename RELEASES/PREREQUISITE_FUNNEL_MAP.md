@@ -37,7 +37,7 @@ FLOW-E: Supplier Login
 
 ---
 
-## RUNTIME STATUS (updated 2026-03-08, post-staging-wipe + funnel test)
+## RUNTIME STATUS (updated 2026-03-09, PARK-READY state sync)
 
 Evidence source: Operator ran full retailer funnel on staging after DB wipe.
 Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
@@ -47,14 +47,14 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 - Step 2 (Business Details): WORKS
 - Step 3 (KYC Documents): WORKS — GCS IAM fix applied (BLK-A1)
 - Step 4 (Submit KYC): WORKS — "Application Submitted" screen confirmed
-- Email notification: WORKS but has copy/content issues (see MICRO-ISSUE LOG)
+- Email notification: WORKS — copy/content issues FIXED (PR #481)
 
 ### FLOW-F: SuperAdmin Approval — RUNTIME CONFIRMED WORKING
 - Login: WORKS
 - Application review + approve: WORKS
 - Store created with retailer_portal_phone: WORKS (BLK-F1 fix, PR #466)
 - Activation code generated: WORKS (SM-EF3MYR)
-- Approval email sent: WORKS but has copy/content issues (see MICRO-ISSUE LOG)
+- Approval email sent: WORKS — content issues FIXED (PR #481, activation code + direct link + no iOS)
 
 ### FLOW-B: Retailer Login — RUNTIME CONFIRMED WORKING
 - Lookup returns LOGIN_ALLOWED: WORKS
@@ -67,13 +67,18 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 - Store name + ID visible: WORKS (SU260308-001)
 - Product visible after adding via portal: WORKS (dal masala appears)
 
-### Stock Sync — NEW BLOCKER
-- Retailer portal shows stock qty = 10
-- POS app shows Stock: 0 for same product in same store
-- Root cause: UNKNOWN — needs investigation (PR-3)
+### Stock Sync — CODE-FIXED (PARK-READY)
+- Retailer portal shows stock qty = 10, POS showed 0 (2026-03-08)
+- Root cause 1: syncProductsToOffline() treated cached stock as pinned (PR #469)
+- Root cause 2: PostgreSQL NUMERIC serialized as string, not parsed to number (PR #477)
+- Fix: parseStock() on backend (7 locations), Number() coercion on client (7 locations)
+- 17 regression tests (stockNumericCoercion + stockCache.regression)
+- PENDING: APK rebuild + operator runtime confirmation
 
-### FLOW-D/E: Supplier Registration/Login — UNTESTED
+### FLOW-D/E: Supplier Registration/Login — CODE-FIXED, UNTESTED ON STAGING
+- BLK-SUP-KYC1 fixed: address_proof + cancelled_cheque upload fields added (PR #480)
 - Not yet tested on staging — assume broken until proven working
+- Needs backend deploy + runtime e2e test
 
 ---
 
@@ -188,26 +193,29 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 | E2 | POST | /api/v1/supplier/auth/firebase-login | Firebase idToken |
 
 ### Known Issues
-- supplier-portal register Step 3: address_proof + cancelled_cheque upload fields may not render (needs PR-2)
-- Full end-to-end: UNTESTED on staging
+- ~~supplier-portal register Step 3: address_proof + cancelled_cheque upload fields~~ — **FIXED** (PR #480)
+- Full end-to-end: UNTESTED on staging — needs backend deploy + runtime test
 
 ---
 
-## ORDERED BLOCKER LEDGER (updated 2026-03-08)
+## ORDERED BLOCKER LEDGER (updated 2026-03-09 — ALL CODE BLOCKERS RESOLVED)
 
 | Priority | ID | Flow | Blocker | Impact | Status |
 |----------|----|------|---------|--------|--------|
-| -- | BLK-A1 | A (reg) | GCS document upload 500 | Blocks ALL registration | **RESOLVED** (2026-03-08): IAM binding added, runtime confirmed via full registration |
+| -- | BLK-A1 | A (reg) | GCS document upload 500 | Blocks ALL registration | **RESOLVED** (2026-03-08): IAM binding added, runtime confirmed |
 | -- | BLK-A2 | A (reg) | Firebase verify-otp | Was blocking OTP step | **RESOLVED** (PR #463) |
-| -- | BLK-F1 | F (approval) | Approval INSERT missing retailer_portal_phone | First login always 404 | **RUNTIME CONFIRMED FIXED** (2026-03-08): PR #466 deployed, fresh reg+approval+login succeeded on wiped DB |
-| -- | BLK-B1 | B (login) | Retailer login blocked | Blocked by BLK-F1 | **RUNTIME CONFIRMED CLEARED** (2026-03-08): Full login flow succeeded post-BLK-F1 fix |
-| **P0** | **BLK-SP1** | **G,H** | **Stock parity: portal=10, POS=0** | **Blocks sell-scan (no stock on POS device)** | **CODE MERGED** (PR #469, commit 10ca3be6). Root cause: syncProductsToOffline() treated any cached stock as a manual pin, blocking server updates to SQLite. 4 regression tests. Pending APK rebuild + runtime confirmation. |
-| P1 | BLK-H1 | H (stock) | OpeningStock response shape | Blocks stock seeding via POS | **CODE MERGED** (PR #470, commit a8b7767f). Pending APK rebuild + runtime confirmation. |
-| **P0** | **BUILD-BLK-01** | **Build** | **Clean APK build not reproducible** | **Blocks ALL APK rebuilds from clean main** | **ACTIVE** — expo-linear-gradient ^14.0.2 resolves to 14.1.5 (requires expo-module-gradle-plugin not in SDK 52); pnpm-lock.yaml stale (--frozen-lockfile fails); ExpoModulesCorePlugin.gradle components.release AGP 8.6 incompatibility. Fix: pin exact version, regenerate lockfile, patch gradle. |
-| P2 | BLK-SUP1 | D (supplier) | Supplier register Step 3 fields | May block supplier KYC upload | Needs PR-2 |
-| -- | BLK-N1 | A (reg) | WhatsApp welcome notification | Non-blocking — email works | Needs investigation |
+| -- | BLK-F1 | F (approval) | Approval INSERT missing retailer_portal_phone | First login always 404 | **RUNTIME CONFIRMED FIXED** (PR #466) |
+| -- | BLK-B1 | B (login) | Retailer login blocked | Blocked by BLK-F1 | **RUNTIME CONFIRMED CLEARED** |
+| -- | BLK-SP1 | G,H | Stock parity: portal=10, POS=0 | Blocks sell-scan | **CODE FIXED** (PRs #469, #477). parseStock() + Number() coercion. 17 regression tests. Runtime pending. |
+| -- | BLK-H1 | H (stock) | OpeningStock response shape | Blocks stock seeding via POS | **CODE FIXED** (PR #470). Runtime pending. |
+| -- | BUILD-BLK-01 | Build | Clean APK build not reproducible | Blocked APK rebuilds | **RESOLVED** (eddb9c61). Expo deps pinned, lockfile regenerated. |
+| -- | BLK-POSSTAFF1 | C (POS setup) | No staff after enrollment | Blocks POS staff login | **CODE FIXED** (PR #478). Auto-creates MANAGER. 6 regression tests. Runtime pending. |
+| -- | BLK-POS-UX1/UX2 | C (POS setup) | No back button / no pull-to-refresh | UX dead end on staff login | **CODE FIXED** (PR #479). Runtime pending. |
+| -- | BLK-SUP-KYC1 | D (supplier) | Supplier register Step 3 fields missing | Blocks supplier KYC upload | **CODE FIXED** (PR #480). Runtime pending. |
+| -- | PR-1 | A,F (comms) | Approval email content issues | Dead links, iOS refs, no activation code | **CODE FIXED** (PR #481). 19 regression tests. Runtime pending. |
+| -- | BLK-N1 | A (reg) | WhatsApp welcome notification | Non-blocking — SMS + email work | Deferred — not blocking any journey |
 
-**Critical path**: ~~BLK-A1~~ -> ~~BLK-F1~~ -> ~~BLK-B1~~ -> ~~BLK-SP1 (code-merged)~~ -> ~~BLK-H1 (code-merged)~~ -> **BUILD-BLK-01 (ACTIVE)** -> APK REBUILD + RUNTIME CONFIRM -> JOURNEY-02
+**Critical path**: ~~ALL CODE BLOCKERS RESOLVED~~ -> Backend staging deploy -> APK rebuild -> RUNTIME CONFIRM -> JOURNEY-02 PHASE_4
 
 ---
 
@@ -216,29 +224,30 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 Discovered during end-to-end retailer funnel test on staging (post-wipe).
 24 issues total: 2 critical, 4 high, 5 medium, 4 low, 4 OK, 1 N/A.
 
-### IMPLEMENT NOW — PR-1: fix/retailer-comms-onboarding (from clean main)
-| # | Screen | Issue | Severity |
-|---|--------|-------|----------|
-| 3 | Registration email | "Dear supermandi retailer test store" — uses STORE NAME not contact name | Copy - High |
-| 4 | Registration email | "contact support" has no link/email — should be hello@supermandi.tech | Copy - Medium |
-| 5 | Registration email | Steps don't mention POS app, inconsistent with registration page | Copy - Low |
-| 8 | Approval email | **"Google Play Store → Search for SuperMandi"** — app NOT on Play Store | Copy - CRITICAL |
-| 9 | Approval email | **"Download for Android" link** — dead or wrong link | Link - CRITICAL |
-| 10 | Approval email | **iOS mentioned** — no iOS app exists, remove references | Copy - High |
-| 11 | Approval email | **No activation code in email** — if POS auto-fetch fails, no fallback | Content - High |
-| 12 | Approval email | Name inconsistency — "Dear raju-retailer" vs registration's "Dear supermandi retailer test store" | Copy - Medium |
-| 13 | Approval email | "enter the phone number you registered with" — doesn't show which phone | UX - Medium |
-| 2 | Registration page | Text says "WhatsApp and Email" but WhatsApp not implemented | Copy - Medium |
+### RESOLVED — PR-1: fix/retailer-comms-onboarding (PR #481, merged 2026-03-09)
+| # | Screen | Issue | Status |
+|---|--------|-------|--------|
+| 8 | Approval email | "Google Play Store → Search for SuperMandi" | **FIXED** — direct download link |
+| 9 | Approval email | "Download for Android" link dead | **FIXED** — uses POS_DOWNLOAD_URL env var |
+| 10 | Approval email | iOS mentioned — no iOS app | **FIXED** — removed entirely |
+| 11 | Approval email | No activation code in email | **FIXED** — included in WhatsApp/SMS/Email |
+| 13 | Approval email | "enter phone" — doesn't show which phone | **FIXED** — masked phone shown |
+| 4 | Registration email | "contact support" has no link | **FIXED** — hello@supermandi.tech added |
+| 2 | Registration page | "WhatsApp and Email" inaccurate | **FIXED** — changed to "SMS and Email" |
+| 3 | Registration email | Uses store name not contact name | Test data issue — code uses ownerName correctly |
+| 12 | Approval email | Name inconsistency | Test data issue — code uses owner_name with business_name fallback |
+| 5 | Registration email | Steps don't mention POS app | Low — registration email already has "Download POS App" step |
+19 contract tests: backend/tests/contracts/welcomeEmailTemplate.unit.test.ts
 
-### IMPLEMENT NOW — PR-2: fix/supplier-register-step3 (from clean main)
-Scope: address_proof + cancelled_cheque upload fields not rendering
+### RESOLVED — PR-2 / BLK-SUP-KYC1: fix/supplier-register-step3 (PR #480, merged 2026-03-09)
+Scope: address_proof + cancelled_cheque upload fields added to supplier registration
 File: supplier-portal/src/app/register/page.tsx
+Status: **CODE FIXED** — runtime verification pending
 
-### IMPLEMENT NOW — PR-3: fix/stock-parity-investigation (from clean main)
-| # | Screen | Issue | Severity |
-|---|--------|-------|----------|
-| 23 | POS sell screen | **Stock: 0 on POS but 10 on Retailer Portal** — sync broken | Data - High |
-Scope: trace portal stock source vs POS stock source, compare APIs, sync timing, refresh, cache
+### RESOLVED — PR-3 / BLK-SP1: stock parity (PRs #469, #477, merged 2026-03-08/09)
+| # | Screen | Issue | Status |
+|---|--------|-------|--------|
+| 23 | POS sell screen | Stock: 0 on POS but 10 on Retailer Portal | **CODE FIXED** — two root causes: sync pinning bug (#469) + NUMERIC coercion (#477). 17 regression tests. Runtime pending. |
 
 ### PARKED — Post go-live polish (do NOT implement now)
 | # | Screen | Issue | Severity |
@@ -324,22 +333,27 @@ Test: MIME type validation (only JPEG/PNG/PDF)
 
 ---
 
-## NEXT ACTIONS (strict order, updated 2026-03-08 21:30 IST)
+## NEXT ACTIONS (strict order, updated 2026-03-09 14:00 IST — ALL CODE BLOCKERS RESOLVED)
 
 1. ~~BLK-A1 fix~~ — DONE
 2. ~~BLK-F1 fix~~ — DONE (PR #466 deployed)
 3. ~~BLK-B1 unblock~~ — DONE (runtime confirmed)
 4. ~~Full retailer funnel test~~ — DONE (operator completed on staging)
 5. ~~Truth-sync BLK-F1/BLK-B1~~ — DONE
-6. ~~BLK-SP1 investigation + fix~~ — DONE (PR #469 merged, root cause: sync pinning bug)
-7. ~~BLK-H1 fix to main~~ — DONE (PR #470 merged, OpeningStock search shape)
+6. ~~BLK-SP1 investigation + fix~~ — DONE (PRs #469, #477 merged)
+7. ~~BLK-H1 fix to main~~ — DONE (PR #470 merged)
 8. ~~PR #468 backend Opening Stock dual-write~~ — DONE (deployed to staging)
-9. ~~Merge PR #471 (build gate fix)~~ — DONE (merged, CI green)
-10. ~~Truth-sync PR #473~~ — DONE (merged, CI green)
-11. **NEXT**: Fix BUILD-BLK-01 — pin expo-linear-gradient to exact 14.0.2, regenerate pnpm-lock.yaml, patch ExpoModulesCorePlugin.gradle components.release (CODE_FIX PR from main)
-12. **NEXT**: Create clean worktree from updated main, pnpm install --frozen-lockfile, expo prebuild, build APK
-13. **NEXT**: Operator runtime retest (stock parity + Opening Stock flow)
-14. PR-1 — retailer comms/onboarding email fixes (Critical + High)
-15. PR-2 — supplier register Step 3 field fix
-16. Supplier registration/login full audit
-17. Return to JOURNEY-02 PHASE_4 certification
+9. ~~Merge PR #471 (build gate fix)~~ — DONE
+10. ~~Truth-sync PR #473~~ — DONE
+11. ~~BUILD-BLK-01 fix~~ — DONE (eddb9c61, expo deps pinned)
+12. ~~BLK-SP1 NUMERIC coercion fix~~ — DONE (PR #477, 13 regression tests)
+13. ~~BLK-POSSTAFF1 staff auto-create~~ — DONE (PR #478, 6 regression tests)
+14. ~~BLK-POS-UX1/UX2 login UX~~ — DONE (PR #479)
+15. ~~BLK-SUP-KYC1 supplier docs~~ — DONE (PR #480)
+16. ~~PR-1 email content fixes~~ — DONE (PR #481, 19 regression tests)
+17. ~~PARK-READY state truth-sync~~ — THIS COMMIT
+18. **NEXT**: Deploy backend to staging (PRs #477-481 not yet on staging Cloud Run)
+19. **NEXT**: Build single APK from main HEAD (b20d41a6 or later after this state-sync)
+20. **NEXT**: Operator runtime retest: stock parity, Opening Stock, POS enrollment+staff, supplier e2e
+21. **NEXT**: Truth-sync runtime confirmation results
+22. **NEXT**: Advance to JOURNEY-02 PHASE_4 certification

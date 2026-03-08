@@ -1,6 +1,6 @@
 {
-  "version": "139.0",
-  "lastUpdated": "2026-03-08T21:30:00Z",
+  "version": "140.0",
+  "lastUpdated": "2026-03-09T14:00:00Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -25,39 +25,51 @@
       "8. Continue audit from lastAuditedAction + 1"
     ],
     "currentJourney": "JOURNEY-02",
-    "currentPhase": "JOURNEY_02_PHASE3_STABILIZATION",
-    "auditProgressNote": "PHASE_3 STABILIZATION UPDATE (2026-03-08 21:30 IST). Code-fix PRs #468-#471 and state-sync PR #473 all merged to main (HEAD=2f66c054). BLK-SP1 and BLK-H1 code-merged, NOT runtime-confirmed. NEW BLOCKER: BUILD-BLK-01 — clean APK candidate build path is not reproducible. Root cause: (1) expo-linear-gradient uses ^14.0.2 caret range, fresh pnpm install resolves to 14.1.5 which requires expo-module-gradle-plugin not available in Expo SDK 52; (2) pnpm-lock.yaml is stale (--frozen-lockfile fails due to overrides mismatch); (3) expo-modules-core ExpoModulesCorePlugin.gradle line 95 components.release incompatible with AGP 8.6. Root workspace node_modules has correct 14.0.2 from old install but is not reproducible. Fix required: pin expo-linear-gradient to exact 14.0.2, regenerate lockfile, patch components.release.",
+    "currentPhase": "JOURNEY_02_PHASE3_PARK_READY",
+    "auditProgressNote": "PHASE_3 PARK-READY (2026-03-09 14:00 IST). ALL code-level blockers resolved. HEAD=b20d41a6. Merged since last state-sync: BUILD-BLK-01 (eddb9c61), BLK-SP1 (#477), BLK-POSSTAFF1 (#478), BLK-POS-UX1/UX2 (#479), BLK-SUP-KYC1 (#480), PR-1 email fixes (#481). All 6 MVP journeys are code-complete. Runtime confirmation pending: backend staging deploy + single APK rebuild + operator device testing.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "PHASE_3 stabilization active. BLK-SP1 and BLK-H1 code-merged but NOT runtime-confirmed. BUILD-BLK-01: clean APK candidate build is blocked — expo-linear-gradient ^14.0.2 resolves to 14.1.5 (requires expo-module-gradle-plugin, not in SDK 52), pnpm-lock.yaml stale, ExpoModulesCorePlugin.gradle AGP incompatibility. Supplier funnel untested. 24 micro-issues need clean PRs.",
-      "nextUnblock": "(1) Fix BUILD-BLK-01: pin expo-linear-gradient to exact 14.0.2, regenerate pnpm-lock.yaml, patch ExpoModulesCorePlugin.gradle components.release (separate CODE_FIX PR from main). (2) Create clean worktree from updated main, pnpm install --frozen-lockfile, expo prebuild, build APK. (3) Operator retest: dal masala stock parity, Opening Stock search+submit. (4) If runtime-confirmed: truth-sync BLK-SP1 + BLK-H1 as RESOLVED. (5) Fix retailer comms (PR-1). (6) Fix supplier Step 3 (PR-2). (7) Test supplier funnel. (8) Only after stock path and prerequisite funnel are fully stable may lifecycle advance to PHASE_4."
+      "blockedBy": "PHASE_3 PARK-READY: all code blockers resolved, but runtime confirmation not yet collected. Backend staging deploy needed (PRs #477-481 not deployed). APK rebuild needed from main@b20d41a6. Supplier funnel untested on staging.",
+      "nextUnblock": "(1) Deploy backend to staging from current main HEAD. (2) Build single APK from main@b20d41a6. (3) Operator runtime tests: stock parity, Opening Stock, POS enrollment+staff login, supplier registration. (4) Truth-sync runtime confirmation results. (5) Advance to PHASE_4 only after runtime confirmation."
+    },
+    "parkReadyDiscipline": {
+      "rule": "PARK-READY means all code-level fixes for a journey are merged to main with regression guards. Journey is safe to defer until the single bounded artifact build. PARK-READY is NOT CERT-SEALED — runtime gates and operator confirmation are still required.",
+      "artifactLastRule": "APK and portal builds happen ONLY after the active journey cluster is PARK-READY at code level. No speculative builds. No 'try and see' builds.",
+      "operatorDiscoveryLoopBlock": "Claude NEVER requests a deploy/APK build to discover failures that should already be modeled in repo truth. All known blockers must be code-fixed and regression-guarded before any artifact is built."
     },
     "resumeDirective": {
-      "mode": "PREREQUISITE_FUNNEL_STABILIZATION_FIRST",
-      "rule": "BLK-SP1 and BLK-H1 are code-merged (PRs #469, #470). PR #471 (build gate fix) merged. NEW BLOCKER BUILD-BLK-01: clean APK build path not reproducible due to dependency drift. Fix dependency pinning first, then build APK, then operator retest. Do not jump to PHASE_4 until runtime confirmation on rebuilt APK.",
+      "mode": "PARK_READY_ARTIFACT_PENDING",
+      "rule": "All code-level blockers resolved. BUILD-BLK-01 FIXED (eddb9c61). BLK-SP1 FIXED (#477). BLK-H1 FIXED (#470). BLK-POSSTAFF1 FIXED (#478). BLK-POS-UX1/UX2 FIXED (#479). BLK-SUP-KYC1 FIXED (#480). PR-1 FIXED (#481). Next: deploy backend, build APK, runtime verify. Do not jump to PHASE_4 until runtime confirmation on rebuilt APK.",
       "firstProgram": "productionGradeCertificationModel.realUserAuthAndOnboardingProgram",
       "completedPrerequisites": [
         "full real-user map saved in repo truth (RELEASES/PREREQUISITE_FUNNEL_MAP.md)",
         "scenario matrix saved in repo truth (PREREQUISITE_FUNNEL_MAP.md Flow-A scenarios)",
         "earliest prerequisite blockers fixed: BLK-A1 (RESOLVED), BLK-A2 (RESOLVED), BLK-F1 (RUNTIME CONFIRMED FIXED), BLK-B1 (RUNTIME CONFIRMED CLEARED)",
-        "retailer registration -> approval -> login path runtime-confirmed stable on staging"
+        "retailer registration -> approval -> login path runtime-confirmed stable on staging",
+        "BUILD-BLK-01 RESOLVED: expo deps pinned, lockfile regenerated, build reproducible (eddb9c61)",
+        "BLK-SP1 RESOLVED: parseStock() coercion on backend + Number() on client (#477, 13 regression tests)",
+        "BLK-H1 RESOLVED: OpeningStock search response shape fixed (#470)",
+        "BLK-POSSTAFF1 RESOLVED: auto-create MANAGER staff on first enrollment (#478, 6 regression tests)",
+        "BLK-POS-UX1/UX2 RESOLVED: back button + pull-to-refresh on StaffLoginScreen (#479)",
+        "BLK-SUP-KYC1 RESOLVED: address_proof + cancelled_cheque fields added (#480)",
+        "PR-1 RESOLVED: email content fixes — iOS removed, direct download link, activation code, masked phone, support email (#481, 19 regression tests)"
       ],
       "remainingBeforePhase4": [
-        "BUILD-BLK-01: fix dependency pinning for reproducible APK build (expo-linear-gradient exact version, lockfile regeneration, ExpoModulesCorePlugin AGP patch)",
-        "BLK-SP1: code-merged (PR #469), pending runtime confirmation on rebuilt APK",
-        "BLK-H1: code-merged (PR #470), pending runtime confirmation on rebuilt APK",
-        "APK rebuild with BLK-SP1 + BLK-H1 fixes (blocked by BUILD-BLK-01)",
-        "PR-1: retailer comms/onboarding email fixes (2 critical issues)",
-        "PR-2: supplier register Step 3 field fix",
-        "supplier funnel tested end-to-end",
+        "deploy backend to staging (PRs #477-481 changes not yet on staging)",
+        "single APK rebuild from main@b20d41a6",
+        "runtime confirmation: stock parity (dal masala shows 10 not 0)",
+        "runtime confirmation: Opening Stock search + submit on device",
+        "runtime confirmation: POS enrollment + staff auto-create + staff login",
+        "runtime confirmation: supplier registration e2e on staging",
         "seededStateLock data created via stable stock-add path"
       ],
       "forbidden": [
-        "starting PHASE_4 before stock parity is resolved",
+        "starting PHASE_4 before runtime confirmation on rebuilt APK",
         "mining the dirty wip branch for mixed PRs",
         "treating private memory as canonical repo truth",
         "requesting deploy/APK just to probe unmodeled failures",
-        "committing local artifacts or sensitive files"
+        "committing local artifacts or sensitive files",
+        "claiming PARK-READY in conversation without canonical repo truth agreement"
       ]
     },
     "antiDriftRules": [
