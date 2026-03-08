@@ -1178,7 +1178,9 @@ export default function PosRootLayout() {
   const { resetTimer: resetSessionTimer } = useSessionTimeout(clearStaffSession, isFocused);
 
   if (!staffSession) {
-    return <StaffLoginScreen storeName={storeName} />;
+    return <StaffLoginScreen storeName={storeName} onSwitchStore={() => {
+      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+    }} />;
   }
 
   const indicatorLayout = tabLayouts[effectiveMode];
