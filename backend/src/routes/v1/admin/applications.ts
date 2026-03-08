@@ -319,16 +319,23 @@ adminApplicationsRouter.post(
           });
         }
 
+        // BLK-B1 FIX: Include retailer_portal_phone so firebase-otp-login can find the store.
+        // Without this, first login always fails with 404 USER_NOT_FOUND because the login
+        // handler queries: WHERE retailer_portal_phone = $phone AND retailer_portal_enabled = true.
+        // retailer_portal_enabled defaults to true (migration 028), but retailer_portal_phone
+        // must be explicitly set to the applicant's phone.
         const storeResult = await client.query(
           `INSERT INTO platform.stores (
             id, name, code, phone, email,
             address_line1, address_line2, city, state, pincode,
             gst_number, upi_vpa, contact_name, contact_phone, contact_email,
+            retailer_portal_phone,
             status, created_at, updated_at
           ) VALUES (
             $1::uuid, $2, $3, $4, $5,
             $6, $7, $8, $9, $10,
             $11, $12, $13, $14, $15,
+            $16,
             'ACTIVE', NOW(), NOW()
           )
           RETURNING id`,
@@ -348,6 +355,7 @@ adminApplicationsRouter.post(
             app.owner_name,
             app.phone,
             app.email,
+            app.phone, // retailer_portal_phone — must match for firebase-otp-login lookup
           ]
         );
         approvedEntityId = storeResult.rows[0].id;
