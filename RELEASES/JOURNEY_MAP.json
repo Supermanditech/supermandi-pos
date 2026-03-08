@@ -347,18 +347,18 @@
       "staticAuditComplete": true,
       "staticAuditCompletedAt": "2026-03-07",
       "remainingSealingBlockers": {
-        "B1": "BLOCKED \u2014 GAP-02-SEED-OPENING-STOCK and GAP-C1-REAL-USER-PREREQUISITE-FUNNEL are open. OpeningStockScreen is the first confirmed crash, and the broader real-user prerequisite funnel into JOURNEY-02 is not yet fully mapped and stabilized.",
+        "B1": "BLOCKED \u2014 GAP-02-SEED-OPENING-STOCK still open (OpeningStockScreen fix on wip branch, not main). GAP-C1-REAL-USER-PREREQUISITE-FUNNEL partially resolved: retailer registration/approval/login runtime-confirmed stable (2026-03-08), but stock parity (BLK-SP1: portal=10, POS=0) and supplier funnel remain unresolved. NEW: GAP-SP1-STOCK-PARITY added.",
         "B2": "CLEAR \u00e2\u20ac\u201d all 22 invariants VERIFIED or nonBlockingForJourneys:JOURNEY-02",
         "B3": "CLEAR \u2014 SCREEN_CERT_MANIFEST.json verified 2026-03-07 at 7c62039f: PaymentScreen ISSUE-051/066 (CRITICAL) and ISSUE-068 (HIGH) all regressionGuardStatus=PASS. SellScanScreen ISSUE-204/042/039 all PASS. No knownIssue has MISSING or FAIL guard.",
         "B4": "CLEAR \u2014 G1 signed 2026-03-07 (all 20 scopeFiles read). G2/G3/G5/G6 signed 2026-03-07. G4 already signed. All six guarantees now signed.",
-        "B5": "BLOCKED \u2014 seededStateLock.confirmed=false. GateB cannot be completed because the current device build crashes on Menu -> Opening Stock -> product search before stock can be seeded, and no stable prerequisite stock-add path is yet proven for a real user on the candidate.",
+        "B5": "BLOCKED \u2014 seededStateLock.confirmed=false. GateB blocked by two issues: (1) stock parity (BLK-SP1) \u2014 retailer portal shows stock but POS shows 0, root cause unknown; (2) OpeningStockScreen crash (BLK-H1) \u2014 code fixed on wip branch but not on main, APK not rebuilt. Stock cannot be seeded via a stable real-user path until both are resolved.",
         "B6": "CLEAR \u00e2\u20ac\u201d all action levels PASS or GAP with documented acceptedRisk",
         "B7": "CLEAR \u2014 knownIssues cross-checked against LIVE_TESTING_ISSUES.md (2026-03-07): ISSUE-051, ISSUE-066, ISSUE-068, ISSUE-204, ISSUE-042 all present and documented. No omission found. Cross-check feasible in PHASE_1 without runtime.",
         "B8": "CLEAR \u00e2\u20ac\u201d all 10 actions now result=PASS",
-        "B9": "BLOCKED \u2014 runtimeEvidence remains empty because operator certification is paused until Claude stabilizes both the immediate GateB setup path and the broader real-user prerequisite funnel into JOURNEY-02.",
+        "B9": "BLOCKED \u2014 runtimeEvidence remains empty. Operator certification is paused. Prerequisite funnel progress: retailer registration/approval/login confirmed stable (BLK-F1 fixed, BLK-B1 cleared). Remaining: stock parity (BLK-SP1), OpeningStock crash (BLK-H1), supplier funnel untested, comms fixes needed.",
         "B10": "CLEAR \u2014 commit boundary audit (2026-03-07): code-fix commits (b3b5bf6c ISSUE-051/066, 536b8442 ISSUE-204) and test commit (e9bf825f) have zero RELEASES/ file touches. State commits (7c62039f etc.) touch only RELEASES/ \u2014 no src/ overlap. Boundary respected.",
         "B11": "CLEAR \u2014 pushed to origin/main 2026-03-07: bd81f502..73d46ea1 (code ac67afac, state commits through 73d46ea1). HEAD on origin/main = 73d46ea1.",
-        "B12": "BLOCKED \u2014 PHASE_4 runtime certification was suspended after the operator hit a basic setup-path crash before certification could begin. Lifecycle is now PHASE_3_CODE_FIX_CLUSTER until the prerequisite funnel and OpeningStock setup blocker are fixed, rebuilt, and restabilized."
+        "B12": "BLOCKED \u2014 Still PHASE_3_CODE_FIX_CLUSTER. Prerequisite funnel partially stabilized (retailer path confirmed). Remaining: stock parity investigation (BLK-SP1), OpeningStock fix to main (BLK-H1), supplier funnel audit, comms fixes. Cannot advance to PHASE_4 until stock-add path is stable and APK rebuilt."
       },
       "openGaps": [
         {
@@ -373,11 +373,20 @@
         {
           "gapId": "GAP-C1-REAL-USER-PREREQUISITE-FUNNEL",
           "level": "PHASE_3_PREREQUISITE_STABILIZATION",
-          "type": "REAL_USER_FUNNEL_UNMAPPED_OR_UNSTABLE",
+          "type": "REAL_USER_FUNNEL_PARTIALLY_STABLE",
+          "severity": "MEDIUM",
+          "happyPathAffected": true,
+          "description": "PARTIALLY RESOLVED (2026-03-08). Retailer registration/approval/login runtime-confirmed stable on staging after BLK-F1 fix (PR #466) and DB wipe. Full funnel map built and persisted to RELEASES/PREREQUISITE_FUNNEL_MAP.md with scenario matrix and 24 micro-issues classified. REMAINING: stock parity (BLK-SP1), supplier registration/login untested, retailer comms have 2 critical + 3 high copy/content issues, OpeningStock fix not on main.",
+          "requiredFix": "Investigate stock parity root cause (BLK-SP1). Fix retailer comms (PR-1). Fix supplier Step 3 (PR-2). Test supplier funnel end-to-end. Merge OpeningStock fix to main after stock parity understood. Rebuild APK. Then resume JOURNEY-02 certification."
+        },
+        {
+          "gapId": "GAP-SP1-STOCK-PARITY",
+          "level": "PHASE_3_PREREQUISITE_STABILIZATION",
+          "type": "DATA_SYNC_BLOCKER",
           "severity": "HIGH",
           "happyPathAffected": true,
-          "description": "JOURNEY-02 depends on upstream real-user flows that are still unstable or unverified in practice: retailer registration/login, supplier registration/login, superadmin approval/provisioning handoff, and stock-add entry paths. Repeated symptom fixes are not accepted as permanent until these prerequisite flows are mapped scenario-by-scenario and stabilized from the earliest blocker outward.",
-          "requiredFix": "Build the full real-user map and scenario matrix across retailer, supplier, superadmin, and POS prerequisite flows; verify repo facts vs runtime evidence; fix the earliest blocker first; add deterministic anti-regression gates per touched surface; then resume JOURNEY-02 certification on a stable candidate."
+          "description": "NEW (2026-03-08). Retailer portal shows stock qty=10 for 'dal masala' (barcode 12458493843435) in store SU260308-001, but POS app shows Stock: 0 for the same product. This blocks sell-scan certification because POS cannot sell products with zero stock. Root cause unknown \u2014 could be API source difference, sync timing, cache, or POS refresh behavior.",
+          "requiredFix": "Trace and compare portal stock API source vs POS stock API source. Check if portal reads from inventory tables while POS reads from store_products.current_stock or a different source. Check sync timing and POS catalog refresh. Produce root-cause note before implementing fix. Do not assume BLK-H1 is the cause."
         }
       ],
       "acceptedRisks": [
@@ -404,9 +413,9 @@
       ],
       "cccBlocker": {
         "file": "src/screens/OpeningStockScreen.tsx",
-        "description": "GateB seeded-state setup crashes on device during product search in Opening Stock, and the broader prerequisite funnel into JOURNEY-02 is not yet mapped/stable enough for operator certification.",
-        "requiredFix": "Normalize grouped search response data in OpeningStockScreen, build the full prerequisite user-flow map, stabilize the earliest upstream blockers with regression guards, re-establish artifact parity on the fixed candidate, and verify the seeded-state setup path end-to-end before re-entering PHASE_4.",
-        "nextResumeCondition": "Resume JOURNEY-02 after the prerequisite funnel map exists in repo truth, the earliest prerequisite blockers are fixed, a new parity candidate is installed, and Menu -> Opening Stock -> search -> submit succeeds without crash."
+        "description": "Two active blockers on the GateB setup path: (1) BLK-SP1 stock parity \u2014 portal shows stock but POS shows 0, root cause unknown; (2) BLK-H1 OpeningStockScreen crash \u2014 code fixed on wip branch (daba5ad2) but not merged to main. Upstream retailer funnel is now stable (BLK-F1/BLK-B1 runtime-confirmed). Prerequisite funnel map exists in RELEASES/PREREQUISITE_FUNNEL_MAP.md with 24 classified micro-issues.",
+        "requiredFix": "Investigate stock parity (BLK-SP1) first. Then merge OpeningStock fix to main. Rebuild APK. Fix comms (PR-1) and supplier Step 3 (PR-2). Test supplier funnel. Verify seeded-state setup end-to-end before re-entering PHASE_4.",
+        "nextResumeCondition": "Resume JOURNEY-02 PHASE_4 after: stock parity root-caused and fixed, OpeningStock fix on main, APK rebuilt and installed, stock seeded via stable path, and Menu -> Opening Stock -> search -> submit succeeds without crash."
       },
       "seededStateLock": {
         "required": true,

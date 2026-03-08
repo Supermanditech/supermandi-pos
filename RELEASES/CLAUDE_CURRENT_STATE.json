@@ -1,6 +1,6 @@
 {
-  "version": "137.4",
-  "lastUpdated": "2026-03-08T00:30:00Z",
+  "version": "137.5",
+  "lastUpdated": "2026-03-08T14:00:00Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -26,26 +26,36 @@
     ],
     "currentJourney": "JOURNEY-02",
     "currentPhase": "JOURNEY_02_PHASE3_STABILIZATION",
-    "auditProgressNote": "JOURNEY-02 PHASE_4 SUSPENDED (2026-03-08). Operator hit a basic setup-path crash while trying to seed GateB state through Menu -> Opening Stock; typing product search caused the POS app to crash on device before runtime certification could begin. Operator also reported that upstream prerequisite paths remain unstable in real use: retailer registration/login, retailer-admin access after superadmin-driven setup, supplier registration/login, and stock-add entry paths are not yet mapped and stabilized end to end. Lifecycle is rolled back to PHASE_3_CODE_FIX_CLUSTER until Claude stabilizes the candidate. OpeningStockScreen is the first confirmed blocker, but Claude must now treat the full real-user prerequisite funnel as part of the blocking surface. The required OpeningStockScreen fix is identified, but it is not yet part of a certified candidate on main. Remaining blockers now: B1 (setup-path and prerequisite-funnel gaps documented), B5 (seededStateLock.confirmed=false because stock cannot yet be seeded through a stable real-user path on the current candidate), B9 (runtimeEvidence=[] because operator certification is paused), B12 (wrong lifecycle phase until the stabilized candidate is ready to re-enter PHASE_4). Operator testing is paused; Claude must own real-user funnel mapping, deterministic/live-assisted stabilization, clean commit boundaries, and candidate preparation before asking the operator to certify again.",
+    "auditProgressNote": "PHASE_3 PREREQUISITE STABILIZATION UPDATE (2026-03-08 14:00 IST). Prerequisite funnel map built and persisted to RELEASES/PREREQUISITE_FUNNEL_MAP.md. Operator ran full end-to-end retailer funnel on staging after DB wipe: registration (+917737914383) -> OTP -> KYC upload -> submit -> SuperAdmin approval (store SU260308-001, activation code SM-EF3MYR) -> POS enrollment -> retailer portal login. BLK-F1 (retailer_portal_phone missing) is RUNTIME CONFIRMED FIXED via PR #466. BLK-B1 (retailer login blocked) is RUNTIME CONFIRMED CLEARED — auth.store_users auto-created on first login, dashboard loaded. BLK-A1 (GCS upload) was already RUNTIME CONFIRMED FIXED. NEW BLOCKER: BLK-SP1 (stock parity) — retailer portal shows stock qty=10, POS shows Stock: 0 for same product in same store. Root cause unknown; this is now the highest active blocker on the JOURNEY-02 critical path. 24 micro-issues discovered during funnel audit (2 critical, 4 high, 5 medium, 4 low) — classified and persisted in PREREQUISITE_FUNNEL_MAP.md. BLK-H1 (OpeningStock crash) remains PARKED until stock parity root cause is understood. Remaining sealing blockers: B1 (GAP-02-SEED-OPENING-STOCK still open, GAP-C1 partially resolved — retailer funnel confirmed but stock path and supplier path remain), B5 (seededStateLock.confirmed=false — stock cannot be seeded until BLK-SP1 + BLK-H1 resolved), B9 (runtimeEvidence empty — operator certification still paused), B12 (still PHASE_3).",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "PHASE_3 stabilization active. Operator certification is paused because the current candidate is not yet operator-testable: OpeningStockScreen crashes during GateB seeded-state setup, and the broader real-user prerequisite funnel (retailer/supplier registration and login, admin approval handoff, stock-add entry paths) is not yet mapped and stabilized end to end.",
-      "nextUnblock": "(1) Claude builds the full real-user prerequisite funnel map across retailer, supplier, superadmin, and POS entry paths. (2) Claude enumerates the scenario matrix for registration/login/auth/session/approval/stock-setup edge cases. (3) Claude fixes the earliest broken prerequisite step first, adds deterministic regression guards, and continues outward until a real user can reach GateB/JOURNEY-02 entry without basic breakage. (4) Clean CODE_FIX and STATE_ONLY commits are pushed. (5) Only after the prerequisite funnel and GateB setup path are stable may lifecycle advance back to PHASE_4 and the operator run the scripted certification pass."
+      "blockedBy": "PHASE_3 stabilization active. Retailer registration/approval/login funnel is now runtime-confirmed stable (BLK-F1 fixed, BLK-B1 cleared). However, stock parity blocker (BLK-SP1: portal=10, POS=0) prevents sell-scan certification, OpeningStockScreen fix (BLK-H1) is still on wip branch not main, and supplier funnel is untested. 24 micro-issues in communications/UX need clean PRs.",
+      "nextUnblock": "(1) Investigate stock parity root cause (BLK-SP1) — trace portal vs POS stock source, APIs, sync timing. (2) Fix retailer comms/onboarding emails (2 critical, 3 high issues). (3) Fix supplier register Step 3 upload fields. (4) Revisit BLK-H1 after stock parity is understood. (5) Rebuild APK with accumulated fixes. (6) Test supplier funnel end-to-end. (7) Only after stock path and prerequisite funnel are fully stable may lifecycle advance to PHASE_4."
     },
     "resumeDirective": {
       "mode": "PREREQUISITE_FUNNEL_STABILIZATION_FIRST",
-      "rule": "Tomorrow's resume starts from the full real-user prerequisite funnel, not from the nearest isolated symptom fix.",
+      "rule": "Resume starts from stock parity investigation (BLK-SP1), then retailer comms fixes (PR-1), then supplier Step 3 (PR-2). Do not jump to PHASE_4 or BLK-H1 until stock root cause is understood.",
       "firstProgram": "productionGradeCertificationModel.realUserAuthAndOnboardingProgram",
-      "forbidden": [
-        "asking the operator to keep discovering basic breakage",
-        "requesting deploy/APK just to probe unmodeled prerequisite failures",
-        "treating OpeningStockScreen as the only blocker until upstream auth/onboarding paths are mapped"
+      "completedPrerequisites": [
+        "full real-user map saved in repo truth (RELEASES/PREREQUISITE_FUNNEL_MAP.md)",
+        "scenario matrix saved in repo truth (PREREQUISITE_FUNNEL_MAP.md Flow-A scenarios)",
+        "earliest prerequisite blockers fixed: BLK-A1 (RESOLVED), BLK-A2 (RESOLVED), BLK-F1 (RUNTIME CONFIRMED FIXED), BLK-B1 (RUNTIME CONFIRMED CLEARED)",
+        "retailer registration -> approval -> login path runtime-confirmed stable on staging"
       ],
-      "requiredBeforeOperatorReturn": [
-        "full real-user map saved in repo truth",
-        "scenario matrix saved in repo truth",
-        "earliest prerequisite blockers fixed with regression guards",
-        "candidate path into JOURNEY-02 entry proven stable enough for scripted certification"
+      "remainingBeforePhase4": [
+        "BLK-SP1: stock parity root cause identified and fixed",
+        "BLK-H1: OpeningStock fix merged to main + APK rebuilt (after BLK-SP1)",
+        "PR-1: retailer comms/onboarding email fixes (2 critical issues)",
+        "PR-2: supplier register Step 3 field fix",
+        "supplier funnel tested end-to-end",
+        "seededStateLock data created via stable stock-add path"
+      ],
+      "forbidden": [
+        "starting PHASE_4 before stock parity is resolved",
+        "mining the dirty wip branch for mixed PRs",
+        "treating private memory as canonical repo truth",
+        "requesting deploy/APK just to probe unmodeled failures",
+        "committing local artifacts or sensitive files"
       ]
     },
     "antiDriftRules": [
