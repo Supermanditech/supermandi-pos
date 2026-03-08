@@ -369,6 +369,12 @@ WEB/PORTAL DEPLOY FORBIDDEN for any touched surface unless ALL of the following:
 POS APK BUILD FORBIDDEN unless, in addition to the normal APK rules, ALL of the following:
   [ ] The POS prerequisite funnel from enrollment/login/store binding into the
       target journey entry is stable
+  [ ] EVERY POS journey in the locked suite order has reached PARK-READY or an
+      explicit CERT-BLOCKED state with blocker truth documented in repo truth
+      (JOURNEY-01, JOURNEY-07, JOURNEY-08, JOURNEY-05, JOURNEY-02,
+      JOURNEY-03, JOURNEY-04, JOURNEY-06)
+  [ ] Each POS journey above has been internally verified first; operator/device
+      runtime must confirm, not discover, basic breakage
   [ ] Any required stock-setup path (Opening Stock, Stock Inward, or portal-led
       stock setup) is proven on the candidate or explicitly replaced by a
       deterministic seeded-state path
@@ -380,6 +386,78 @@ OTA UPDATE (preferred for JS-only fixes):
   [ ] No permission changes
   [ ] No app.json / app.config.js changes affecting native build
   → Use Expo OTA update instead of full APK rebuild
+```
+
+---
+
+## SECTION 5A: POS-FIRST EXECUTION LOCK
+
+```
+UNTIL REPO TRUTH EXPLICITLY CHANGES THIS LOCK:
+
+  POS app is the ONLY active implementation surface.
+
+  Claude MUST complete the POS suite in this order:
+    1. JOURNEY-01 Device Enrollment Lifecycle
+    2. JOURNEY-07 Force Update Flow
+    3. JOURNEY-08 Session Expiry Mid-Flow Recovery
+    4. JOURNEY-05 Stock Management / stock setup path
+    5. JOURNEY-02 Cash Sell Flow
+    6. JOURNEY-03 UPI Sell Flow
+    7. JOURNEY-04 UPI Failure Recovery
+    8. JOURNEY-06 Split Payment Flow
+
+  For EACH POS journey, Claude MUST trace and stabilize:
+    [ ] user entry point and exit point
+    [ ] UI elements and UX states
+    [ ] navigation / back / dead-end handling
+    [ ] wiring / handlers / local state transitions
+    [ ] business logic and invariants
+    [ ] edge cases and recovery paths
+    [ ] API contracts and error handling
+    [ ] DB tables / writes / reads / isolation
+    [ ] migration dependencies
+    [ ] GCP staging/runtime dependencies
+    [ ] cross-platform effects into retailer, supplier, and superadmin
+
+  Claude MUST internally verify and regression-guard one POS journey before
+  moving to the next.
+
+  Claude MUST NOT switch primary implementation focus to retailer, supplier,
+  or superadmin while any POS journey in the locked suite still has unresolved
+  code-level findings.
+
+  Retailer, supplier, and superadmin may be read only as dependency or
+  cross-platform surfaces for the active POS journey. Their standalone
+  implementation passes begin only after the full POS suite is PARK-READY.
+
+  Even after the full POS suite is PARK-READY, artifact/build/deploy/runtime
+  remain LOCKED until the declared post-POS execution passes (retailer,
+  supplier, superadmin) are also PARK-READY or explicitly CERT-BLOCKED in
+  repo truth.
+```
+
+---
+
+## SECTION 5B: ENFORCED ARTIFACT LOCK
+
+```
+Artifact policy is not documentation-only.
+
+The following gates MUST enforce canonical repo truth:
+  - local APK pre-build gate
+  - local release gate
+  - staging deploy workflow
+
+If productionGradeCertificationModel.artifactExecutionLock.artifactPhaseEligible != true in
+RELEASES/CLAUDE_CURRENT_STATE.json:
+  -> local APK build MUST fail
+  -> release gate MUST fail
+  -> staging deploy MUST fail
+
+No "close enough" SHA language.
+No building from a candidate while claiming a different SHA/branch.
+No bypass through stale root workspaces, copied dependencies, or dirty builds.
 ```
 
 ---

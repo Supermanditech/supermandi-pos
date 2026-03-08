@@ -11,6 +11,25 @@ blocker, and the regression gates required before deploy.
 
 ---
 
+## POS-FIRST EXECUTION LOCK (2026-03-09)
+
+Canonical execution is now POS-first.
+
+- Claude must complete the POS suite before switching primary implementation
+  focus to retailer, supplier, or superadmin.
+- POS journey order is locked to:
+  `JOURNEY-01 -> JOURNEY-07 -> JOURNEY-08 -> JOURNEY-05 -> JOURNEY-02 -> JOURNEY-03 -> JOURNEY-04 -> JOURNEY-06`
+- This funnel map remains required dependency truth for POS journeys, but it is
+  not permission to jump straight to APK build/runtime.
+- For every active POS journey, Claude must trace:
+  UI, UX states, navigation, wiring, business logic, edge cases/recovery, API,
+  DB tables, migrations, GCP staging dependencies, and cross-platform effects.
+- Internal deterministic verification happens before the next POS journey.
+- APK build, deploy, and operator runtime are deferred until the full POS suite
+  is internally stabilized and marked PARK-READY in repo truth.
+
+---
+
 ## FUNNEL DEPENDENCY CHAIN
 
 ```
@@ -215,7 +234,7 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 | -- | PR-1 | A,F (comms) | Approval email content issues | Dead links, iOS refs, no activation code | **CODE FIXED** (PR #481). 19 regression tests. Runtime pending. |
 | -- | BLK-N1 | A (reg) | WhatsApp welcome notification | Non-blocking — SMS + email work | Deferred — not blocking any journey |
 
-**Critical path**: ~~ALL CODE BLOCKERS RESOLVED~~ -> Backend staging deploy -> APK rebuild -> RUNTIME CONFIRM -> JOURNEY-02 PHASE_4
+**Critical path**: POS journey-by-journey internal stabilization -> full POS suite `PARK-READY` -> retailer/supplier/superadmin post-POS passes -> single bounded deploy/APK/runtime phase -> later JOURNEY-02 PHASE_4 certification
 
 ---
 
@@ -352,8 +371,8 @@ Test: MIME type validation (only JPEG/PNG/PDF)
 15. ~~BLK-SUP-KYC1 supplier docs~~ — DONE (PR #480)
 16. ~~PR-1 email content fixes~~ — DONE (PR #481, 19 regression tests)
 17. ~~PARK-READY state truth-sync~~ — THIS COMMIT
-18. **NEXT**: Deploy backend to staging (PRs #477-481 not yet on staging Cloud Run)
-19. **NEXT**: Build single APK from main HEAD (261dfc00)
-20. **NEXT**: Operator runtime retest: stock parity, Opening Stock, POS enrollment+staff, supplier e2e
-21. **NEXT**: Truth-sync runtime confirmation results
-22. **NEXT**: Advance to JOURNEY-02 PHASE_4 certification
+18. **LOCKED NEXT**: Continue `JOURNEY-01` under the canonical POS-first execution lock
+19. **LOCKED NEXT**: Trace and stabilize `JOURNEY-01` end-to-end across UI, UX, navigation, wiring, business logic, edge cases, API, DB/tables, migrations, staging, and cross-platform effects
+20. **LOCKED NEXT**: Mark `JOURNEY-01` `PARK-READY`, then move to `JOURNEY-07` and continue the locked POS journey order through `JOURNEY-06`
+21. **LOCKED NEXT**: After the full POS suite is `PARK-READY`, execute retailer, supplier, and superadmin post-POS passes with the same journey-first discipline
+22. **LOCKED NEXT**: Only after all targeted journeys are `PARK-READY` may the single bounded deploy/APK/runtime phase begin

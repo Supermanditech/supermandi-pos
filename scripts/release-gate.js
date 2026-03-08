@@ -19,7 +19,7 @@ const path = require('path');
 // =============================================================================
 
 const ROOT_DIR = path.join(__dirname, '..');
-const CHECKS = ['git', 'branch', 'fingerprint', 'urls', 'flags', 'boundaries', 'build', 'ui-reachability', 'workflow'];
+const CHECKS = ['artifact-phase', 'git', 'branch', 'fingerprint', 'urls', 'flags', 'boundaries', 'build', 'ui-reachability', 'workflow'];
 
 // Colors
 const COLORS = {
@@ -65,7 +65,7 @@ function readFile(filePath) {
 // =============================================================================
 
 function checkGit(verbose) {
-  console.log(colorize('\n[1/9] Git Status Check', 'blue'));
+  console.log(colorize('\n[2/10] Git Status Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -108,7 +108,7 @@ function checkGit(verbose) {
 }
 
 function checkFingerprint(verbose) {
-  console.log(colorize('\n[3/9] Build Fingerprint Check', 'blue'));
+  console.log(colorize('\n[4/10] Build Fingerprint Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -192,7 +192,7 @@ function checkFingerprint(verbose) {
 }
 
 function checkBranch(verbose) {
-  console.log(colorize('\n[2/9] Branch & Tag Check', 'blue'));
+  console.log(colorize('\n[3/10] Branch & Tag Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -225,7 +225,7 @@ function checkBranch(verbose) {
 }
 
 function checkUrls(verbose) {
-  console.log(colorize('\n[4/9] Backend URL Check', 'blue'));
+  console.log(colorize('\n[5/10] Backend URL Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -403,7 +403,7 @@ function checkUiReachability(verbose) {
 }
 
 function checkWorkflow(verbose) {
-  console.log(colorize('\n[9/9] Workflow Governance Check', 'blue'));
+  console.log(colorize('\n[10/10] Workflow Governance Check', 'blue'));
 
   const results = { pass: true, messages: [] };
   const guardScript = path.join(__dirname, 'workflow', 'guard.js');
@@ -436,7 +436,7 @@ function checkWorkflow(verbose) {
 }
 
 function checkBuild(verbose) {
-  console.log(colorize('\n[7/9] Build Readiness Check', 'blue'));
+  console.log(colorize('\n[8/10] Build Readiness Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -475,6 +475,41 @@ function checkBuild(verbose) {
   return results;
 }
 
+function checkArtifactPhase(verbose) {
+  console.log(colorize('\n[1/10] Artifact Phase Lock Check', 'blue'));
+
+  const results = { pass: true, messages: [] };
+  const guardScript = path.join(__dirname, 'enforce-artifact-phase-lock.js');
+
+  if (!fs.existsSync(guardScript)) {
+    results.pass = false;
+    results.messages.push('Artifact phase lock guard not configured');
+    return results;
+  }
+
+  try {
+    execSync(`node "${guardScript}" --mode=release`, {
+      cwd: ROOT_DIR,
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    });
+  } catch (err) {
+    results.pass = false;
+    const combinedOutput = `${err.stdout || ''}\n${err.stderr || ''}`.trim();
+    if (combinedOutput) {
+      combinedOutput.split('\n').forEach(line => {
+        if (line.trim()) results.messages.push(line.trim());
+      });
+    } else {
+      results.messages.push('Artifact phase lock failed without output');
+    }
+    return results;
+  }
+
+  results.messages.push('Artifact phase explicitly unlocked in canonical machine state');
+  return results;
+}
+
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -501,6 +536,9 @@ async function main() {
   for (const check of checksToRun) {
     let result;
     switch (check) {
+      case 'artifact-phase':
+        result = checkArtifactPhase(verbose);
+        break;
       case 'git':
         result = checkGit(verbose);
         break;
