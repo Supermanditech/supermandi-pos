@@ -71,7 +71,8 @@
     "live:manifest:freeze": "node scripts/workflow/generate-live-page-manifest.js && node scripts/live-testing/freeze-screen-manifest.js",
     "live:mcp:check": "node scripts/live-testing/mcp-config-check.js",
     "live:detox:check": "node scripts/live-testing/detox-check.js",
-    "live:testlab:matrix": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File scripts/live-testing/firebase-testlab-matrix.ps1"
+    "live:testlab:matrix": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File scripts/live-testing/firebase-testlab-matrix.ps1",
+    "postinstall": "node scripts/postinstall-patch-expo-gradle.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
@@ -91,8 +92,8 @@
     "expo-device": "~7.0.3",
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.0",
-    "expo-linear-gradient": "^14.0.2",
-    "expo-localization": "^16.0.1",
+    "expo-linear-gradient": "14.0.2",
+    "expo-localization": "16.0.1",
     "expo-notifications": "~0.29.14",
     "expo-print": "~14.0.0",
     "expo-secure-store": "~14.0.1",
