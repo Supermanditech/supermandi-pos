@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "crypto";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import bcrypt from "bcryptjs";
 import { getPool } from "../../../db/client";
 import { isDemoStoreCode } from "../../../services/storeCodeService";
 import { validateDeviceFingerprint } from "@supermandi/common";
@@ -571,6 +572,68 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
         // Expected to fail if store is already past DRAFT (e.g., ENROLLED, ACTIVE)
         log.info(`[Enroll] DR-005: Store status transition skipped for ${store.id}:`, err?.message);
       });
+
+      // BLK-POSSTAFF1: Auto-create default MANAGER staff on first device enrollment
+      // If the store has no active staff, create one using the store owner's phone.
+      // This ensures the POS is usable immediately after enrollment without requiring
+      // a separate SuperAdmin staff-creation step.
+      // Non-blocking: enrollment succeeds even if staff creation fails.
+      (async () => {
+        try {
+          const staffPool = getPool();
+          if (!staffPool) return;
+
+          // Check if store already has any active staff
+          const existingStaff = await staffPool.query(
+            `SELECT id FROM platform.store_staff WHERE store_id = $1::uuid AND is_active = true LIMIT 1`,
+            [enrollment.store_id]
+          );
+
+          if (existingStaff.rows.length > 0) {
+            log.info(`[Enroll] BLK-POSSTAFF1: Store ${store.id} already has active staff, skipping auto-create`);
+            return;
+          }
+
+          // Get the store owner's phone number
+          const storePhoneRes = await staffPool.query(
+            `SELECT COALESCE(contact_phone, phone) as owner_phone, name as store_name
+             FROM platform.stores WHERE id = $1::uuid`,
+            [enrollment.store_id]
+          );
+
+          const ownerPhone = storePhoneRes.rows[0]?.owner_phone;
+          const storeName = storePhoneRes.rows[0]?.store_name || "Store";
+
+          if (!ownerPhone) {
+            log.warn(`[Enroll] BLK-POSSTAFF1: No owner phone found for store ${store.id}, cannot auto-create staff`);
+            return;
+          }
+
+          // Normalize phone to 10 digits
+          const digits = ownerPhone.replace(/\D/g, "");
+          const phone10 = digits.length > 10 ? digits.slice(-10) : digits;
+
+          if (phone10.length !== 10) {
+            log.warn(`[Enroll] BLK-POSSTAFF1: Invalid owner phone for store ${store.id}: ${phone10.length} digits`);
+            return;
+          }
+
+          // Default PIN is "1234" — owner should change via SuperAdmin
+          const defaultPin = "1234";
+          const pinHash = await bcrypt.hash(defaultPin, 10);
+
+          await staffPool.query(
+            `INSERT INTO platform.store_staff (store_id, name, phone, pin_hash, role)
+             VALUES ($1::uuid, $2, $3, $4, 'MANAGER')
+             ON CONFLICT DO NOTHING`,
+            [enrollment.store_id, `${storeName} Manager`, phone10, pinHash]
+          );
+
+          log.info(`[Enroll] BLK-POSSTAFF1: Auto-created default MANAGER staff for store ${store.id} (phone: ***${phone10.slice(-4)})`);
+        } catch (err) {
+          log.warn("[Enroll] BLK-POSSTAFF1: Auto-create staff failed (non-blocking):", err);
+        }
+      })();
     }
 
     // STG-096: Query active device count for multi-device warning in frontend
