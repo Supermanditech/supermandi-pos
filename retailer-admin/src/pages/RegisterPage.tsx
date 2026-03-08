@@ -984,7 +984,7 @@ export default function RegisterPage() {
                   <strong>What happens next?</strong>
                   <ol className="reg-next-steps">
                     <li>We review your documents (usually 1-2 business days)</li>
-                    <li>Once approved, you'll receive a <strong>welcome message</strong> via WhatsApp and Email</li>
+                    <li>Once approved, you'll receive a <strong>welcome message</strong> via SMS and Email</li>
                     <li><a href="/pos" target="_blank" rel="noopener noreferrer" className="reg-pos-link">Download the SuperMandi POS app</a>, enter your phone number, and your store activates automatically</li>
                   </ol>
                 </div>

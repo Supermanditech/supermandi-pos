@@ -361,13 +361,14 @@ adminDeviceEnrollmentRouter.post("/device-enrollments/:code/resend", requireAdmi
       return res.status(400).json({ error: "No phone number found for this store" });
     }
 
-    // Resend welcome message (code NOT included — POS fetches via phone lookup)
+    // Resend welcome message — includes enrollment code as fallback
     const notifResult = await sendWelcomeNotification({
       phone: enrollment.store_phone,
       email: enrollment.store_email || undefined,
       ownerName: enrollment.contact_name || enrollment.store_name || "Retailer",
       storeName: enrollment.store_name || "Your Store",
       storeCode: enrollment.store_code || "",
+      activationCode: code,
     });
 
     const channels: string[] = [];
