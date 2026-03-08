@@ -159,7 +159,7 @@ export default function LoginPage() {
         return;
       }
       if (action === 'PENDING_APPROVAL') {
-        setError('Your application is under review (usually 1-2 business days). You will be notified via WhatsApp and email once approved.');
+        setError('Your application is under review (usually 1-2 business days). You will be notified via SMS and email once approved.');
         return;
       }
       if (action === 'ACCOUNT_SUSPENDED') {

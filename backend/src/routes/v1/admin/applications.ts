@@ -435,13 +435,14 @@ adminApplicationsRouter.post(
 
           log.info(`[admin/applications] Activation code ${enrollment.code} generated for store ${storeCode}`);
 
-          // Send welcome message (non-blocking) — code NOT included, POS fetches via phone lookup
+          // Send welcome message (non-blocking) — includes activation code as fallback
           sendWelcomeNotification({
             phone: app.phone,
             email: app.email || undefined,
             ownerName: app.owner_name || app.business_name,
             storeName: app.business_name,
             storeCode,
+            activationCode: enrollment.code,
           }).then((result) => {
             if (result.whatsappSent) codeSentVia.push('whatsapp');
             if (result.smsSent) codeSentVia.push('sms');
