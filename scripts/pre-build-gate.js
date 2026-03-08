@@ -65,12 +65,14 @@ try {
   fail('TypeScript has errors - fix before building');
 }
 
-// CHECK 2: Scan debounce
+// CHECK 2: Scan debounce (GL-CRIT-0045: unified duplicate detection window)
 console.log('Check 2: Scan debounce window...');
 const handleScanPath = path.join(__dirname, '..', 'src/services/scan/handleScan.ts');
 if (fs.existsSync(handleScanPath)) {
   const content = fs.readFileSync(handleScanPath, 'utf8');
-  const match = content.match(/DEFAULT_DUPLICATE_GUARD_MS\s*=\s*(\d+)/);
+  // GL-CRIT-0045: Duplicate detection was consolidated into DUPLICATE_WINDOW_MS
+  // (previously split across DEFAULT_DUPLICATE_GUARD_MS and other windows)
+  const match = content.match(/DUPLICATE_WINDOW_MS\s*=\s*(\d+)/);
   if (match) {
     const ms = parseInt(match[1]);
     if (ms >= 800) {
@@ -79,7 +81,7 @@ if (fs.existsSync(handleScanPath)) {
       fail(`Scan debounce ${ms}ms is too low - must be >= 800ms`);
     }
   } else {
-    fail('Cannot find DEFAULT_DUPLICATE_GUARD_MS in handleScan.ts');
+    fail('Cannot find DUPLICATE_WINDOW_MS in handleScan.ts');
   }
 } else {
   fail('handleScan.ts not found');
