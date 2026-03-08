@@ -203,10 +203,11 @@ Phone: +917737914383 | Store: SU260308-001 | Application: 571e3cf5
 | -- | BLK-B1 | B (login) | Retailer login blocked | Blocked by BLK-F1 | **RUNTIME CONFIRMED CLEARED** (2026-03-08): Full login flow succeeded post-BLK-F1 fix |
 | **P0** | **BLK-SP1** | **G,H** | **Stock parity: portal=10, POS=0** | **Blocks sell-scan (no stock on POS device)** | **CODE MERGED** (PR #469, commit 10ca3be6). Root cause: syncProductsToOffline() treated any cached stock as a manual pin, blocking server updates to SQLite. 4 regression tests. Pending APK rebuild + runtime confirmation. |
 | P1 | BLK-H1 | H (stock) | OpeningStock response shape | Blocks stock seeding via POS | **CODE MERGED** (PR #470, commit a8b7767f). Pending APK rebuild + runtime confirmation. |
+| **P0** | **BUILD-BLK-01** | **Build** | **Clean APK build not reproducible** | **Blocks ALL APK rebuilds from clean main** | **ACTIVE** — expo-linear-gradient ^14.0.2 resolves to 14.1.5 (requires expo-module-gradle-plugin not in SDK 52); pnpm-lock.yaml stale (--frozen-lockfile fails); ExpoModulesCorePlugin.gradle components.release AGP 8.6 incompatibility. Fix: pin exact version, regenerate lockfile, patch gradle. |
 | P2 | BLK-SUP1 | D (supplier) | Supplier register Step 3 fields | May block supplier KYC upload | Needs PR-2 |
 | -- | BLK-N1 | A (reg) | WhatsApp welcome notification | Non-blocking — email works | Needs investigation |
 
-**Critical path**: ~~BLK-A1~~ -> ~~BLK-F1~~ -> ~~BLK-B1~~ -> ~~BLK-SP1 (code-merged)~~ -> ~~BLK-H1 (code-merged)~~ -> **APK REBUILD + RUNTIME CONFIRM** -> JOURNEY-02
+**Critical path**: ~~BLK-A1~~ -> ~~BLK-F1~~ -> ~~BLK-B1~~ -> ~~BLK-SP1 (code-merged)~~ -> ~~BLK-H1 (code-merged)~~ -> **BUILD-BLK-01 (ACTIVE)** -> APK REBUILD + RUNTIME CONFIRM -> JOURNEY-02
 
 ---
 
@@ -323,7 +324,7 @@ Test: MIME type validation (only JPEG/PNG/PDF)
 
 ---
 
-## NEXT ACTIONS (strict order, updated 2026-03-08 19:10 IST)
+## NEXT ACTIONS (strict order, updated 2026-03-08 21:30 IST)
 
 1. ~~BLK-A1 fix~~ — DONE
 2. ~~BLK-F1 fix~~ — DONE (PR #466 deployed)
@@ -333,10 +334,12 @@ Test: MIME type validation (only JPEG/PNG/PDF)
 6. ~~BLK-SP1 investigation + fix~~ — DONE (PR #469 merged, root cause: sync pinning bug)
 7. ~~BLK-H1 fix to main~~ — DONE (PR #470 merged, OpeningStock search shape)
 8. ~~PR #468 backend Opening Stock dual-write~~ — DONE (deployed to staging)
-9. **NEXT**: Merge PR #471 (build gate fix), run pre-build gates
-10. **NEXT**: APK rebuild from clean main with BLK-SP1 + BLK-H1 fixes
-11. **NEXT**: Operator runtime retest (stock parity + Opening Stock flow)
-12. PR-1 — retailer comms/onboarding email fixes (Critical + High)
-13. PR-2 — supplier register Step 3 field fix
-14. Supplier registration/login full audit
-15. Return to JOURNEY-02 PHASE_4 certification
+9. ~~Merge PR #471 (build gate fix)~~ — DONE (merged, CI green)
+10. ~~Truth-sync PR #473~~ — DONE (merged, CI green)
+11. **NEXT**: Fix BUILD-BLK-01 — pin expo-linear-gradient to exact 14.0.2, regenerate pnpm-lock.yaml, patch ExpoModulesCorePlugin.gradle components.release (CODE_FIX PR from main)
+12. **NEXT**: Create clean worktree from updated main, pnpm install --frozen-lockfile, expo prebuild, build APK
+13. **NEXT**: Operator runtime retest (stock parity + Opening Stock flow)
+14. PR-1 — retailer comms/onboarding email fixes (Critical + High)
+15. PR-2 — supplier register Step 3 field fix
+16. Supplier registration/login full audit
+17. Return to JOURNEY-02 PHASE_4 certification
