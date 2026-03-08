@@ -11,6 +11,16 @@ import { asError } from "../../../lib/errorUtils";
 
 export const posInventoryRouter = Router();
 
+/**
+ * BLK-SP1: PostgreSQL NUMERIC type serializes as string in JSON (e.g. "10.000").
+ * This helper ensures stock values are always returned as JS numbers in API responses.
+ */
+function parseStock(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  const n = Number(value);
+  return isNaN(n) ? 0 : n;
+}
+
 // =============================================================================
 // GO-LIVE-100: STOCK CACHE WITH TTL
 // In-memory cache for stock queries with configurable TTL
@@ -303,7 +313,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
         [storeId, productId]
       );
 
-      const currentStock = stockResult.rows[0]?.current_stock ?? 0;
+      const currentStock = parseStock(stockResult.rows[0]?.current_stock);
 
       // Calculate delta based on transaction type
       let deltaQty = quantity;
@@ -628,9 +638,9 @@ posInventoryRouter.get("/inventory/statement", requireDeviceToken, async (req: R
       barcode: row.barcode || row.productId,
       sellPrice: row.sellPrice ?? 0,
       purchasePrice: row.purchasePrice ?? 0,
-      currentStock: row.currentStock ?? 0,
+      currentStock: parseStock(row.currentStock),
       // STG-129: Use purchasePrice (cost) for stock valuation, fallback to sellPrice
-      stockValue: (row.currentStock ?? 0) * (row.purchasePrice || row.sellPrice || 0),
+      stockValue: parseStock(row.currentStock) * (row.purchasePrice || row.sellPrice || 0),
       mrp: row.mrp ?? 0,
       unit: row.unit || 'pcs',
     }));
@@ -704,7 +714,7 @@ posInventoryRouter.get("/inventory/statement/export", requireDeviceToken, async 
     const header = "Product Name,Barcode,Unit,Current Stock,Sell Price,Purchase Price,MRP,Stock Value\n";
     const escCsv = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const rows = result.rows.map((r: any) => {
-      const stock = r.currentStock ?? 0;
+      const stock = parseStock(r.currentStock);
       const sellPrice = r.sellPrice ?? 0;
       return [
         escCsv(r.displayName),

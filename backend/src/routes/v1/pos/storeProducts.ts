@@ -17,6 +17,16 @@ import {
 
 export const posStoreProductsRouter = Router();
 
+/**
+ * BLK-SP1: PostgreSQL NUMERIC type serializes as string in JSON (e.g. "10.000").
+ * This helper ensures stock values are always returned as JS numbers in API responses.
+ */
+function parseStock(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  const n = Number(value);
+  return isNaN(n) ? 0 : n;
+}
+
 // ITER3-003: Stock drift detection threshold (5 units or 10% difference triggers warning)
 const STOCK_DRIFT_THRESHOLD = 5;
 const STOCK_DRIFT_PERCENT = 0.1;
@@ -412,7 +422,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         sellPrice: row.sell_price,
         mrp: row.mrp || undefined,
         purchasePrice: row.purchase_price || undefined,
-        currentStock: row.current_stock,
+        currentStock: parseStock(row.current_stock),
         unit: row.unit || "pcs",
         mode: row.product_mode || undefined,
         displayName: row.sp_display_name || undefined,
@@ -526,7 +536,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
           sellPrice: canonical.sell_price,
           mrp: canonical.mrp || undefined,
           purchasePrice: canonical.purchase_price || undefined,
-          currentStock: canonical.current_stock,
+          currentStock: parseStock(canonical.current_stock),
           displayName: canonical.display_name || undefined,
           mode: canonical.product_mode || undefined,
           metadataUpdatedAt: canonical.metadata_updated_at || undefined,
@@ -559,7 +569,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         sellPrice: row.sell_price,
         mrp: row.mrp || undefined,
         purchasePrice: row.purchase_price || undefined,
-        currentStock: row.current_stock,
+        currentStock: parseStock(row.current_stock),
         displayName: row.display_name || undefined,
         mode: row.product_mode || undefined,
         metadataUpdatedAt: row.metadata_updated_at || undefined,
@@ -650,7 +660,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       sellPrice: row.sell_price,
       mrp: row.mrp || null,
       purchasePrice: row.purchase_price || null,
-      currentStock: row.current_stock,
+      currentStock: parseStock(row.current_stock),
       brand: row.brand || null,
       unit: row.unit || "pcs",
       category: row.category || null,
@@ -1570,7 +1580,7 @@ posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToke
 
     return res.json({
       success: true,
-      data: substitutesResult.rows,
+      data: substitutesResult.rows.map((r: any) => ({ ...r, currentStock: parseStock(r.currentStock) })),
     });
   } catch (error) {
     log.error("[storeProducts] Substitutes error:", error);
@@ -1607,7 +1617,7 @@ posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToke
         LIMIT 4`,
         [storeId, category, productId]
       );
-      return res.json({ success: true, data: fallbackResult.rows });
+      return res.json({ success: true, data: fallbackResult.rows.map((r: any) => ({ ...r, currentStock: parseStock(r.currentStock) })) });
     } catch (fallbackError) {
       log.error("[storeProducts] Substitutes fallback error:", fallbackError);
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch substitutes" });

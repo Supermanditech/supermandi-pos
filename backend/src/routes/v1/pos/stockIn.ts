@@ -238,7 +238,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
 
       if (productResult.rows.length > 0) {
         productId = productResult.rows[0].product_id;
-        currentStock = productResult.rows[0].current_stock ?? 0;
+        currentStock = Number(productResult.rows[0].current_stock ?? 0);
       } else {
         // Product not in store catalog — skip (can't stock-in unknown product)
         log.info(`[stock-in] Skipping unknown barcode ${barcode} for store ${storeId}`);
