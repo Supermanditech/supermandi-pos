@@ -158,6 +158,62 @@ describe("ISSUE-042: confirmed stock is readable via resolveStockForSku after pi
   });
 });
 
+// --- BLK-SP1: isEntryPinProtected prevents stale-cache-as-pin bug ---
+
+describe("BLK-SP1: isEntryPinProtected distinguishes pins from regular cache", () => {
+  it("non-pinned cache entry is NOT pin-protected", () => {
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { updateStockCacheEntries, isEntryPinProtected } = require("../../services/stockCache");
+
+      // Regular cache write (background sync)
+      updateStockCacheEntries([{ key: "product-sp1", stock: 0 }]);
+
+      // Must NOT be pin-protected — server updates should override this
+      expect(isEntryPinProtected("product-sp1")).toBe(false);
+    });
+  });
+
+  it("pinned cache entry IS pin-protected", () => {
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { updateStockCacheEntries, isEntryPinProtected } = require("../../services/stockCache");
+
+      // Manual edit pins the entry
+      updateStockCacheEntries([{ key: "product-sp1-pin", stock: 7 }], { pin: true });
+
+      // Must be pin-protected within 60s window
+      expect(isEntryPinProtected("product-sp1-pin")).toBe(true);
+    });
+  });
+
+  it("isSkuStockPinned returns false for non-pinned entries (BLK-SP1 fix path)", () => {
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { upsertStockEntries, isSkuStockPinned } = require("../../services/stockService");
+
+      // Simulates first sync caching stock=0
+      upsertStockEntries([{ key: "dal-masala-id", stock: 0 }]);
+
+      // Must NOT be pinned — sync should write server value (10) to SQLite
+      expect(isSkuStockPinned({ productId: "dal-masala-id", barcode: null })).toBe(false);
+    });
+  });
+
+  it("isSkuStockPinned returns true for pinned entries (ISSUE-204 protection preserved)", () => {
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { pinStockEntries, isSkuStockPinned } = require("../../services/stockService");
+
+      // Simulates manual stock edit
+      pinStockEntries([{ key: "edited-product-id", stock: 7 }]);
+
+      // Must be pinned — sync should preserve manual edit value
+      expect(isSkuStockPinned({ productId: "edited-product-id", barcode: null })).toBe(true);
+    });
+  });
+});
+
 // --- ISSUE-039: Structural proof guard (MEDIUM severity) ---
 
 describe("ISSUE-039: barcode-only routing guard in search submit handler", () => {

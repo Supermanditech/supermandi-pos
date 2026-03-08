@@ -43,6 +43,7 @@ import {
   refreshStockSnapshot,
   resolveStockForCartItem,
   resolveStockForSku,
+  isSkuStockPinned, // BLK-SP1
   subscribeStockUpdates,
   upsertStockEntries,
   pinStockEntries, // ISSUE-204
@@ -147,10 +148,12 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
         });
 
         // Store in offline DB (with productId and stock).
-        // ISSUE-204: If the user has a manual pin on this product (stock was just edited),
-        // write the pinned value instead of the stale server value so the DB stays
-        // consistent with the manual edit and setCatalogItems(fresh) shows the correct value.
-        const pinnedStock = resolveStockForSku({ productId: product.productId, barcode });
+        // BLK-SP1-FIX: Only prefer cached stock over server stock when the entry is
+        // actively pin-protected (manual edit within 60s window). Previously, ANY cached
+        // value was treated as a pin, which blocked server stock updates from reaching
+        // SQLite and caused stock parity bugs (portal shows 10, POS shows 0).
+        const isPinned = isSkuStockPinned({ productId: product.productId, barcode });
+        const pinnedStock = isPinned ? resolveStockForSku({ productId: product.productId, barcode }) : null;
         const effectiveStock = pinnedStock !== null ? pinnedStock : stock;
         if (barcode) {
           await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null);
