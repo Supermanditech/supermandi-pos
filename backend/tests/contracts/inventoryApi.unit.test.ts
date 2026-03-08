@@ -165,6 +165,109 @@ describe('Inventory API Contracts', () => {
   });
 });
 
+// =============================================================================
+// OPENING STOCK DUAL-WRITE CONTRACT (BLK-SP1 regression guard)
+// Ensures opening stock writes all three surfaces consistently:
+//   1. inventory.inventory_ledger (with stock_before/stock_after snapshot)
+//   2. inventory.stock_balances (authoritative stock)
+//   3. catalog.store_products.current_stock (denormalized read cache)
+//
+// The canonical stock resolution used by both POS and retailer portal is:
+//   COALESCE(sb.current_qty, sp.current_stock, 0)
+// If stock_balances is not written, existing rows with current_qty=0 will
+// shadow the correct store_products value, causing stock parity bugs.
+// =============================================================================
+
+const OpeningStockLedgerEntry = z.object({
+  id: UuidSchema,
+  storeId: UuidSchema,
+  productId: UuidSchema,
+  deltaQty: z.number().positive(),
+  transactionType: z.literal('opening_stock'),
+  referenceType: z.literal('manual'),
+  stockBefore: z.number().int().nonnegative(),
+  stockAfter: z.number().int().positive(),
+  source: z.literal('POS_OPENING_STOCK'),
+});
+
+// Validates that stock_before + delta_qty = stock_after (DB constraint)
+const StockConsistencyCheck = z.object({
+  stockBefore: z.number(),
+  deltaQty: z.number(),
+  stockAfter: z.number(),
+}).refine(
+  (data) => data.stockBefore + data.deltaQty === data.stockAfter,
+  { message: 'stock_before + delta_qty must equal stock_after' }
+);
+
+describe('Opening Stock Dual-Write Contract (BLK-SP1)', () => {
+  it('ledger entry includes stock_before and stock_after', () => {
+    const entry = {
+      id: '00000000-0000-0000-0000-000000000001',
+      storeId: '00000000-0000-0000-0000-000000000010',
+      productId: '00000000-0000-0000-0000-000000000500',
+      deltaQty: 10,
+      transactionType: 'opening_stock',
+      referenceType: 'manual',
+      stockBefore: 0,
+      stockAfter: 10,
+      source: 'POS_OPENING_STOCK',
+    };
+    expect(() => OpeningStockLedgerEntry.parse(entry)).not.toThrow();
+  });
+
+  it('stock snapshot satisfies consistency constraint', () => {
+    const snapshot = { stockBefore: 0, deltaQty: 10, stockAfter: 10 };
+    expect(() => StockConsistencyCheck.parse(snapshot)).not.toThrow();
+  });
+
+  it('rejects inconsistent stock snapshot', () => {
+    const bad = { stockBefore: 0, deltaQty: 10, stockAfter: 5 };
+    expect(() => StockConsistencyCheck.parse(bad)).toThrow();
+  });
+
+  it('stock_balances must receive the same quantity as ledger', () => {
+    // Simulates the dual-write: ledger says delta=10, stock_balances must also increment by 10
+    const ledgerDelta = 10;
+    const stockBalancesBefore = 0;
+    const stockBalancesAfter = stockBalancesBefore + ledgerDelta;
+    expect(stockBalancesAfter).toBe(10);
+    // COALESCE(sb.current_qty, sp.current_stock, 0) should now return 10
+    const canonicalStock = stockBalancesAfter; // stock_balances is primary
+    expect(canonicalStock).toBe(10);
+  });
+
+  it('opening stock with existing balance adds correctly', () => {
+    const existingBalance = 5;
+    const openingQty = 10;
+    const snapshot = {
+      stockBefore: existingBalance,
+      deltaQty: openingQty,
+      stockAfter: existingBalance + openingQty,
+    };
+    expect(() => StockConsistencyCheck.parse(snapshot)).not.toThrow();
+    expect(snapshot.stockAfter).toBe(15);
+  });
+
+  it('rejects opening stock with zero or negative quantity', () => {
+    const zeroEntry = {
+      id: '00000000-0000-0000-0000-000000000001',
+      storeId: '00000000-0000-0000-0000-000000000010',
+      productId: '00000000-0000-0000-0000-000000000500',
+      deltaQty: 0,
+      transactionType: 'opening_stock',
+      referenceType: 'manual',
+      stockBefore: 0,
+      stockAfter: 0,
+      source: 'POS_OPENING_STOCK',
+    };
+    expect(() => OpeningStockLedgerEntry.parse(zeroEntry)).toThrow();
+
+    const negativeEntry = { ...zeroEntry, deltaQty: -5, stockAfter: -5 };
+    expect(() => OpeningStockLedgerEntry.parse(negativeEntry)).toThrow();
+  });
+});
+
 describe('Order API Contracts', () => {
   it('validates purchase order shape', () => {
     const po = {

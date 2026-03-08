@@ -1,5 +1,7 @@
 // T-198: Opening Stock — set initial stock levels for products
+// BLK-SP1-FIX: Dual-write to inventory_ledger + stock_balances + store_products
 import { Router, Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
@@ -38,19 +40,46 @@ posOpeningStockRouter.post(
           continue;
         }
 
-        // STG-123: Insert into inventory.inventory_ledger (correct table)
+        const deltaQty = item.quantity;
+
+        // 1. Lock and read current stock_balances for accurate snapshot
+        const balanceResult = await client.query(
+          `SELECT current_qty FROM inventory.stock_balances
+           WHERE store_id = $1 AND product_id = $2
+           FOR UPDATE`,
+          [storeId, item.productId]
+        );
+        const stockBefore = Number(balanceResult.rows[0]?.current_qty ?? 0);
+        const stockAfter = stockBefore + deltaQty;
+
+        // 2. Insert ledger entry with stock snapshot (satisfies NOT NULL + consistency check)
+        const ledgerId = randomUUID();
         await client.query(
-          `INSERT INTO inventory.inventory_ledger (store_id, product_id, delta_qty, transaction_type, reference_type, notes, created_at)
-           VALUES ($1, $2, $3, 'opening_stock', 'manual', 'Opening stock entry', NOW())`,
-          [storeId, item.productId, item.quantity]
+          `INSERT INTO inventory.inventory_ledger
+           (id, store_id, product_id, delta_qty, transaction_type, reference_type,
+            stock_before, stock_after, unit_cost, source, notes, created_at)
+           VALUES ($1, $2, $3, $4, 'opening_stock', 'manual',
+                   $5, $6, $7, 'POS_OPENING_STOCK', 'Opening stock entry', NOW())`,
+          [ledgerId, storeId, item.productId, deltaQty, stockBefore, stockAfter, item.costPriceMinor || null]
         );
 
-        // STG-123: Update catalog.store_products.current_stock (correct table/column)
+        // 3. Upsert stock_balances (matches pattern from stockIn.ts)
+        await client.query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             current_qty = inventory.stock_balances.current_qty + $5,
+             last_ledger_id = $4,
+             updated_at = NOW()`,
+          [storeId, item.productId, stockAfter, ledgerId, deltaQty]
+        );
+
+        // 4. Update store_products denormalized stock
         await client.query(
           `UPDATE catalog.store_products
            SET current_stock = current_stock + $3, updated_at = NOW()
            WHERE store_id = $1 AND product_id = $2`,
-          [storeId, item.productId, item.quantity]
+          [storeId, item.productId, deltaQty]
         );
 
         processedCount++;
