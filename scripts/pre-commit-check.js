@@ -104,7 +104,8 @@ const handleScanPath = path.join(process.cwd(), 'src/services/scan/handleScan.ts
 if (fs.existsSync(handleScanPath)) {
   const content = fs.readFileSync(handleScanPath, 'utf8');
 
-  const guardMatch = content.match(/DEFAULT_DUPLICATE_GUARD_MS\s*=\s*(\d+)/);
+  // GL-CRIT-0045: Duplicate detection consolidated into DUPLICATE_WINDOW_MS
+  const guardMatch = content.match(/DUPLICATE_WINDOW_MS\s*=\s*(\d+)/);
   if (guardMatch) {
     const guardMs = parseInt(guardMatch[1]);
     if (guardMs < 800) {
