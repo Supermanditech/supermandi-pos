@@ -1,4 +1,6 @@
 // SA-P1-001: Staff PIN login screen
+// BLK-POS-UX1: Added back/switch-store button
+// BLK-POS-UX2: Added pull-to-refresh
 import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
   ActivityIndicator,
@@ -6,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,17 +22,20 @@ import { theme, useThemeColors } from "../theme";
 import { staffLogin } from "../services/api/staffApi";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
 import type { StaffRole } from "../stores/staffSessionStore";
+import { clearDeviceSession } from "../services/deviceSession";
 import BrandShortmark from "../components/BrandShortmark";
 
 type Props = {
   storeName: string | null;
+  onSwitchStore?: () => void;
 };
 
-export default function StaffLoginScreen({ storeName }: Props) {
+export default function StaffLoginScreen({ storeName, onSwitchStore }: Props) {
   const colors = useThemeColors();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const pinRef = useRef<TextInput>(null);
   const setSession = useStaffSessionStore((s) => s.setSession);
 
@@ -38,6 +44,38 @@ export default function StaffLoginScreen({ storeName }: Props) {
   const failCountRef = useRef(0);
   // ISSUE-127: Ref-based guard to prevent double submission via keyboard onSubmitEditing
   const loginInFlightRef = useRef(false);
+
+  // BLK-POS-UX2: Pull-to-refresh — resets error state and cooldown
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    failCountRef.current = 0;
+    setCooldown(false);
+    // Brief visual feedback
+    setTimeout(() => setRefreshing(false), 500);
+  }, []);
+
+  // BLK-POS-UX1: Switch store / re-enroll
+  const handleSwitchStore = useCallback(() => {
+    Alert.alert(
+      "Switch Store?",
+      "This will sign you out and clear device enrollment. You'll need a new enrollment code.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Switch Store",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearDeviceSession();
+              onSwitchStore?.();
+            } catch {
+              Alert.alert("Error", "Failed to clear session. Please restart the app.");
+            }
+          },
+        },
+      ]
+    );
+  }, [onSwitchStore]);
 
   const handleLogin = useCallback(async () => {
     if (loginInFlightRef.current) return; // ISSUE-127: Block re-entry during active login
@@ -187,6 +225,16 @@ export default function StaffLoginScreen({ storeName }: Props) {
       ...theme.typography.button,
       color: colors.textInverse,
     },
+    switchStoreButton: {
+      marginTop: theme.spacing.lg,
+      paddingVertical: theme.spacing.sm,
+      alignItems: "center" as const,
+    },
+    switchStoreText: {
+      ...theme.typography.caption,
+      color: colors.textSecondary,
+      textDecorationLine: "underline" as const,
+    },
   }), [colors]);
 
   return (
@@ -199,6 +247,14 @@ export default function StaffLoginScreen({ storeName }: Props) {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
       <View style={styles.card} testID="staff-login-card">
         <View style={styles.brandLockup}>
@@ -281,6 +337,17 @@ export default function StaffLoginScreen({ storeName }: Props) {
           ) : (
             <Text style={styles.loginButtonText}>Login</Text>
           )}
+        </Pressable>
+
+        {/* BLK-POS-UX1: Switch store / back navigation */}
+        <Pressable
+          style={styles.switchStoreButton}
+          onPress={handleSwitchStore}
+          testID="staff-login-switch-store"
+          accessibilityLabel="Switch store or re-enroll"
+          accessibilityRole="button"
+        >
+          <Text style={styles.switchStoreText}>Switch Store / Re-enroll</Text>
         </Pressable>
       </View>
       </ScrollView>
