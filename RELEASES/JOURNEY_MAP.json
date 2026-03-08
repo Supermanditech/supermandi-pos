@@ -413,9 +413,9 @@
       ],
       "cccBlocker": {
         "file": "src/screens/OpeningStockScreen.tsx",
-        "description": "Both GateB setup blockers are CODE-MERGED to main: (1) BLK-SP1 stock parity — PR #469 merged (sync pinning fix). (2) BLK-H1 OpeningStockScreen search — PR #470 merged (response shape fix). PR #468 (backend Opening Stock dual-write) deployed to staging. Upstream retailer funnel is stable. PENDING: APK rebuild + operator runtime confirmation.",
-        "requiredFix": "Merge build gate fix (PR #471). Run pre-build gates. Build APK from clean main. Operator retests stock parity + Opening Stock on device. Then fix comms (PR-1) and supplier Step 3 (PR-2). Test supplier funnel.",
-        "nextResumeCondition": "Resume JOURNEY-02 PHASE_4 after: APK rebuilt and installed, stock parity runtime-confirmed (dal masala shows 10 not 0), Opening Stock search+submit succeeds without crash, stock seeded via stable path."
+        "description": "BLK-SP1 and BLK-H1 code-merged. PR #471 (build gate fix) merged. PR #473 (state sync) merged. NEW BLOCKER BUILD-BLK-01: clean APK build path is not reproducible. Root cause: expo-linear-gradient ^14.0.2 resolves to 14.1.5 on fresh install (requires expo-module-gradle-plugin not in SDK 52); pnpm-lock.yaml stale (--frozen-lockfile fails); ExpoModulesCorePlugin.gradle components.release incompatible with AGP 8.6. Must fix dependency pinning before APK can be built from clean main.",
+        "requiredFix": "Fix BUILD-BLK-01: (1) Pin expo-linear-gradient to exact 14.0.2 in package.json. (2) Regenerate pnpm-lock.yaml so --frozen-lockfile succeeds. (3) Patch ExpoModulesCorePlugin.gradle components.release for AGP 8.6. (4) Build APK from clean main worktree. (5) Operator retests stock parity + Opening Stock on device. (6) Fix comms (PR-1) and supplier Step 3 (PR-2). (7) Test supplier funnel.",
+        "nextResumeCondition": "Resume JOURNEY-02 PHASE_4 after: BUILD-BLK-01 resolved, APK rebuilt from clean main and installed, stock parity runtime-confirmed (dal masala shows 10 not 0), Opening Stock search+submit succeeds without crash, stock seeded via stable path."
       },
       "seededStateLock": {
         "required": true,
