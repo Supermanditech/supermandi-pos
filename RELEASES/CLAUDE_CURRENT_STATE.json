@@ -1,6 +1,6 @@
 {
-  "version": "137.5",
-  "lastUpdated": "2026-03-08T14:00:00Z",
+  "version": "138.0",
+  "lastUpdated": "2026-03-08T19:10:00Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -26,15 +26,15 @@
     ],
     "currentJourney": "JOURNEY-02",
     "currentPhase": "JOURNEY_02_PHASE3_STABILIZATION",
-    "auditProgressNote": "PHASE_3 PREREQUISITE STABILIZATION UPDATE (2026-03-08 14:00 IST). Prerequisite funnel map built and persisted to RELEASES/PREREQUISITE_FUNNEL_MAP.md. Operator ran full end-to-end retailer funnel on staging after DB wipe: registration (+917737914383) -> OTP -> KYC upload -> submit -> SuperAdmin approval (store SU260308-001, activation code SM-EF3MYR) -> POS enrollment -> retailer portal login. BLK-F1 (retailer_portal_phone missing) is RUNTIME CONFIRMED FIXED via PR #466. BLK-B1 (retailer login blocked) is RUNTIME CONFIRMED CLEARED — auth.store_users auto-created on first login, dashboard loaded. BLK-A1 (GCS upload) was already RUNTIME CONFIRMED FIXED. NEW BLOCKER: BLK-SP1 (stock parity) — retailer portal shows stock qty=10, POS shows Stock: 0 for same product in same store. Root cause unknown; this is now the highest active blocker on the JOURNEY-02 critical path. 24 micro-issues discovered during funnel audit (2 critical, 4 high, 5 medium, 4 low) — classified and persisted in PREREQUISITE_FUNNEL_MAP.md. BLK-H1 (OpeningStock crash) remains PARKED until stock parity root cause is understood. Remaining sealing blockers: B1 (GAP-02-SEED-OPENING-STOCK still open, GAP-C1 partially resolved — retailer funnel confirmed but stock path and supplier path remain), B5 (seededStateLock.confirmed=false — stock cannot be seeded until BLK-SP1 + BLK-H1 resolved), B9 (runtimeEvidence empty — operator certification still paused), B12 (still PHASE_3).",
+    "auditProgressNote": "PHASE_3 STABILIZATION UPDATE (2026-03-08 19:10 IST). Three code-fix PRs merged to main: PR #468 (Opening Stock backend dual-write — DEPLOYED to staging, commit 8c13cdba), PR #469 (BLK-SP1 stock parity fix — merged commit 10ca3be6, POS-only), PR #470 (BLK-H1 OpeningStock search response shape — merged commit a8b7767f, POS-only). BLK-SP1 ROOT CAUSE IDENTIFIED: syncProductsToOffline() in SellScanScreen.tsx treated any cached stock value as a manual pin (ISSUE-204 protection), preventing server stock updates from reaching local SQLite. After cache TTL (5min), display fell back to SQLite which still had 0. Fix: added isEntryPinProtected() to stockCache.ts and isSkuStockPinned() to stockService.ts to distinguish genuine manual-edit pins from regular cached values. BLK-H1 ROOT CAUSE: OpeningStockScreen searchProducts() expected flat {products:[]} but API returns grouped {data:SearchApiGroup[]} — fixed response mapping. BOTH FIXES ARE CODE-MERGED BUT NOT RUNTIME-CONFIRMED — require APK rebuild + operator device retest. PR #471 (build gate regex fix) in CI. Remaining sealing blockers: B1 (GAP-02 code-fixed pending runtime confirmation), B5 (seededStateLock.confirmed=false pending APK rebuild), B9 (runtimeEvidence empty pending device retest), B12 (still PHASE_3).",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "PHASE_3 stabilization active. Retailer registration/approval/login funnel is now runtime-confirmed stable (BLK-F1 fixed, BLK-B1 cleared). However, stock parity blocker (BLK-SP1: portal=10, POS=0) prevents sell-scan certification, OpeningStockScreen fix (BLK-H1) is still on wip branch not main, and supplier funnel is untested. 24 micro-issues in communications/UX need clean PRs.",
-      "nextUnblock": "(1) Investigate stock parity root cause (BLK-SP1) — trace portal vs POS stock source, APIs, sync timing. (2) Fix retailer comms/onboarding emails (2 critical, 3 high issues). (3) Fix supplier register Step 3 upload fields. (4) Revisit BLK-H1 after stock parity is understood. (5) Rebuild APK with accumulated fixes. (6) Test supplier funnel end-to-end. (7) Only after stock path and prerequisite funnel are fully stable may lifecycle advance to PHASE_4."
+      "blockedBy": "PHASE_3 stabilization active. BLK-SP1 (stock parity) and BLK-H1 (OpeningStock search) are CODE-MERGED to main (PRs #469, #470) but NOT RUNTIME-CONFIRMED — APK rebuild required. PR #468 (Opening Stock backend dual-write) is DEPLOYED to staging. Build gate fix PR #471 in CI. Supplier funnel untested. 24 micro-issues in communications/UX need clean PRs.",
+      "nextUnblock": "(1) Merge PR #471 (build gate fix). (2) Run pre-build gates on clean main. (3) Build guarded APK from clean main. (4) Operator retest: dal masala stock parity, Opening Stock search+submit. (5) If runtime-confirmed: truth-sync BLK-SP1 + BLK-H1 as RESOLVED. (6) Fix retailer comms (PR-1). (7) Fix supplier Step 3 (PR-2). (8) Test supplier funnel. (9) Only after stock path and prerequisite funnel are fully stable may lifecycle advance to PHASE_4."
     },
     "resumeDirective": {
       "mode": "PREREQUISITE_FUNNEL_STABILIZATION_FIRST",
-      "rule": "Resume starts from stock parity investigation (BLK-SP1), then retailer comms fixes (PR-1), then supplier Step 3 (PR-2). Do not jump to PHASE_4 or BLK-H1 until stock root cause is understood.",
+      "rule": "BLK-SP1 and BLK-H1 are code-merged (PRs #469, #470). Next: merge build gate fix (PR #471), run pre-build gates, build APK, operator retest. Do not jump to PHASE_4 until runtime confirmation on rebuilt APK.",
       "firstProgram": "productionGradeCertificationModel.realUserAuthAndOnboardingProgram",
       "completedPrerequisites": [
         "full real-user map saved in repo truth (RELEASES/PREREQUISITE_FUNNEL_MAP.md)",
@@ -43,8 +43,9 @@
         "retailer registration -> approval -> login path runtime-confirmed stable on staging"
       ],
       "remainingBeforePhase4": [
-        "BLK-SP1: stock parity root cause identified and fixed",
-        "BLK-H1: OpeningStock fix merged to main + APK rebuilt (after BLK-SP1)",
+        "BLK-SP1: code-merged (PR #469), pending runtime confirmation on rebuilt APK",
+        "BLK-H1: code-merged (PR #470), pending runtime confirmation on rebuilt APK",
+        "APK rebuild with BLK-SP1 + BLK-H1 fixes",
         "PR-1: retailer comms/onboarding email fixes (2 critical issues)",
         "PR-2: supplier register Step 3 field fix",
         "supplier funnel tested end-to-end",
