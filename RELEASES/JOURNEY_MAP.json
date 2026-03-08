@@ -383,8 +383,8 @@
           "type": "SETUP_PATH_RUNTIME_CRASH",
           "severity": "HIGH",
           "happyPathAffected": true,
-          "description": "CODE-FIXED (PARK-READY). OpeningStockScreen searchProducts() shape mismatch fixed (PR #470). Stock NUMERIC coercion fixed (PR #477). BUILD-BLK-01 resolved (eddb9c61). All code merged to main@ab1f3252. PENDING: APK rebuild + operator runtime confirmation.",
-          "requiredFix": "Deploy backend to staging. Rebuild APK from main@ab1f3252. Operator retests Menu -> Opening Stock -> search -> submit on device. If successful, mark GAP as RESOLVED."
+          "description": "CODE-FIXED (PARK-READY). OpeningStockScreen searchProducts() shape mismatch fixed (PR #470). Stock NUMERIC coercion fixed (PR #477). BUILD-BLK-01 resolved (eddb9c61). All code merged to main@261dfc00. PENDING: APK rebuild + operator runtime confirmation.",
+          "requiredFix": "Deploy backend to staging. Rebuild APK from main@261dfc00. Operator retests Menu -> Opening Stock -> search -> submit on device. If successful, mark GAP as RESOLVED."
         },
         {
           "gapId": "GAP-C1-REAL-USER-PREREQUISITE-FUNNEL",
@@ -393,7 +393,7 @@
           "severity": "MEDIUM",
           "happyPathAffected": true,
           "description": "CODE-COMPLETE (PARK-READY). All code blockers resolved: BLK-SP1 (#477), BLK-H1 (#470), BLK-POSSTAFF1 (#478), BLK-POS-UX1/UX2 (#479), BLK-SUP-KYC1 (#480), PR-1 (#481), BUILD-BLK-01 (eddb9c61). Retailer funnel runtime-confirmed stable (2026-03-08). REMAINING: backend staging deploy, APK rebuild, runtime confirmation of stock parity + Opening Stock + POS enrollment + supplier funnel.",
-          "requiredFix": "Deploy backend to staging. Rebuild APK from main@ab1f3252. Operator retests: stock parity, Opening Stock, POS enrollment + staff login, supplier registration e2e. Mark GAP RESOLVED when runtime-confirmed."
+          "requiredFix": "Deploy backend to staging. Rebuild APK from main@261dfc00. Operator retests: stock parity, Opening Stock, POS enrollment + staff login, supplier registration e2e. Mark GAP RESOLVED when runtime-confirmed."
         },
         {
           "gapId": "GAP-SP1-STOCK-PARITY",
@@ -402,7 +402,7 @@
           "severity": "HIGH",
           "happyPathAffected": true,
           "description": "CODE-FIXED (PARK-READY). Two root causes fixed: (1) syncProductsToOffline() pin protection bug (PR #469), (2) PostgreSQL NUMERIC string serialization (PR #477 — parseStock() on backend, Number() coercion on client). 17 regression tests total. PENDING: APK rebuild + backend deploy + operator runtime confirmation.",
-          "requiredFix": "Deploy backend to staging. Rebuild APK from main@ab1f3252. Operator retests: verify stock shows correct numbers on POS (not 0 or string). If confirmed, mark GAP as RESOLVED."
+          "requiredFix": "Deploy backend to staging. Rebuild APK from main@261dfc00. Operator retests: verify stock shows correct numbers on POS (not 0 or string). If confirmed, mark GAP as RESOLVED."
         }
       ],
       "acceptedRisks": [
@@ -430,7 +430,7 @@
       "cccBlocker": {
         "file": null,
         "description": "PARK-READY: All code blockers resolved. BUILD-BLK-01 FIXED (eddb9c61). BLK-SP1 FIXED (#477). BLK-H1 FIXED (#470). BLK-POSSTAFF1 FIXED (#478). BLK-POS-UX1/UX2 FIXED (#479). BLK-SUP-KYC1 FIXED (#480). PR-1 FIXED (#481). No code work remaining. Blocked on artifact build + runtime confirmation only.",
-        "requiredFix": "Deploy backend to staging (PRs #477-481). Build single APK from main@ab1f3252. Operator runtime tests on device.",
+        "requiredFix": "Deploy backend to staging (PRs #477-481). Build single APK from main@261dfc00. Operator runtime tests on device.",
         "nextResumeCondition": "Resume JOURNEY-02 PHASE_4 after: backend deployed to staging, APK rebuilt and installed, stock parity runtime-confirmed, Opening Stock search+submit succeeds, POS enrollment+staff login verified, supplier funnel tested."
       },
       "seededStateLock": {

@@ -26,11 +26,11 @@
     ],
     "currentJourney": "JOURNEY-02",
     "currentPhase": "JOURNEY_02_PHASE3_PARK_READY",
-    "auditProgressNote": "PHASE_3 PARK-READY (2026-03-09 14:00 IST). ALL code-level blockers resolved. HEAD=ab1f3252. Merged since last state-sync: BUILD-BLK-01 (eddb9c61), BLK-SP1 (#477), BLK-POSSTAFF1 (#478), BLK-POS-UX1/UX2 (#479), BLK-SUP-KYC1 (#480), PR-1 email fixes (#481). All 6 MVP journeys are code-complete. Runtime confirmation pending: backend staging deploy + single APK rebuild + operator device testing.",
+    "auditProgressNote": "PHASE_3 PARK-READY (2026-03-09 14:00 IST). ALL code-level blockers resolved. HEAD=261dfc00. Merged since last state-sync: BUILD-BLK-01 (eddb9c61), BLK-SP1 (#477), BLK-POSSTAFF1 (#478), BLK-POS-UX1/UX2 (#479), BLK-SUP-KYC1 (#480), PR-1 email fixes (#481). All 6 MVP journeys are code-complete. Runtime confirmation pending: backend staging deploy + single APK rebuild + operator device testing.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "PHASE_3 PARK-READY: all code blockers resolved, but runtime confirmation not yet collected. Backend staging deploy needed (PRs #477-481 not deployed). APK rebuild needed from main@ab1f3252. Supplier funnel untested on staging.",
-      "nextUnblock": "(1) Deploy backend to staging from current main HEAD. (2) Build single APK from main@ab1f3252. (3) Operator runtime tests: stock parity, Opening Stock, POS enrollment+staff login, supplier registration. (4) Truth-sync runtime confirmation results. (5) Advance to PHASE_4 only after runtime confirmation."
+      "blockedBy": "PHASE_3 PARK-READY: all code blockers resolved, but runtime confirmation not yet collected. Backend staging deploy needed (PRs #477-481 not deployed). APK rebuild needed from main@261dfc00. Supplier funnel untested on staging.",
+      "nextUnblock": "(1) Deploy backend to staging from current main HEAD. (2) Build single APK from main@261dfc00. (3) Operator runtime tests: stock parity, Opening Stock, POS enrollment+staff login, supplier registration. (4) Truth-sync runtime confirmation results. (5) Advance to PHASE_4 only after runtime confirmation."
     },
     "parkReadyDiscipline": {
       "rule": "PARK-READY means all code-level fixes for a journey are merged to main with regression guards. Journey is safe to defer until the single bounded artifact build. PARK-READY is NOT CERT-SEALED — runtime gates and operator confirmation are still required.",
@@ -56,7 +56,7 @@
       ],
       "remainingBeforePhase4": [
         "deploy backend to staging (PRs #477-481 changes not yet on staging)",
-        "single APK rebuild from main@ab1f3252",
+        "single APK rebuild from main@261dfc00",
         "runtime confirmation: stock parity (dal masala shows 10 not 0)",
         "runtime confirmation: Opening Stock search + submit on device",
         "runtime confirmation: POS enrollment + staff auto-create + staff login",
