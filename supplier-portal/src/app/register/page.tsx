@@ -161,9 +161,12 @@ function RegisterPage() {
   const [agreement, setAgreement] = useState(false);
 
   // Step 3: Documents
+  // BLK-SUP-KYC1: Include address_proof and cancelled_cheque (required by backend)
   const [documents, setDocuments] = useState<Record<string, DocumentUpload>>({
     gstin_certificate: { file: null, preview: null, status: 'pending' },
     pan_card: { file: null, preview: null, status: 'pending' },
+    address_proof: { file: null, preview: null, status: 'pending' },
+    cancelled_cheque: { file: null, preview: null, status: 'pending' },
     business_license: { file: null, preview: null, status: 'pending' },
     owner_photo: { file: null, preview: null, status: 'pending' },
   });
@@ -652,8 +655,8 @@ function RegisterPage() {
     submittingDocsRef.current = true;
     setError('');
 
-    // Validate required documents
-    const requiredDocs = ['pan_card', 'business_license', 'owner_photo'];
+    // BLK-SUP-KYC1: Validate all backend-required documents
+    const requiredDocs = ['pan_card', 'address_proof', 'cancelled_cheque', 'business_license', 'owner_photo'];
     if (gstin.trim()) {
       requiredDocs.unshift('gstin_certificate');
     }
@@ -1335,6 +1338,42 @@ function RegisterPage() {
               docType="pan_card"
               document={documents.pan_card}
               onSelect={(file) => handleDocumentSelect('pan_card', file)}
+              accept="image/*,application/pdf"
+              disabled={isLoading}
+              hideLabelSpace
+            />
+          </div>
+
+          {/* BLK-SUP-KYC1: Address Proof (required by backend) */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Address Proof *</h3>
+            <p className="text-slate-600 text-sm mb-6">
+              Upload a utility bill, rent agreement, or any official document showing your business address
+            </p>
+
+            <DocumentUploadField
+              label=""
+              docType="address_proof"
+              document={documents.address_proof}
+              onSelect={(file) => handleDocumentSelect('address_proof', file)}
+              accept="image/*,application/pdf"
+              disabled={isLoading}
+              hideLabelSpace
+            />
+          </div>
+
+          {/* BLK-SUP-KYC1: Cancelled Cheque (required by backend for bank verification) */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Cancelled Cheque / Bank Passbook *</h3>
+            <p className="text-slate-600 text-sm mb-6">
+              Upload a cancelled cheque or first page of bank passbook for payment verification
+            </p>
+
+            <DocumentUploadField
+              label=""
+              docType="cancelled_cheque"
+              document={documents.cancelled_cheque}
+              onSelect={(file) => handleDocumentSelect('cancelled_cheque', file)}
               accept="image/*,application/pdf"
               disabled={isLoading}
               hideLabelSpace
