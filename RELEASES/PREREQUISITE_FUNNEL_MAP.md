@@ -353,7 +353,7 @@ Test: MIME type validation (only JPEG/PNG/PDF)
 16. ~~PR-1 email content fixes~~ — DONE (PR #481, 19 regression tests)
 17. ~~PARK-READY state truth-sync~~ — THIS COMMIT
 18. **NEXT**: Deploy backend to staging (PRs #477-481 not yet on staging Cloud Run)
-19. **NEXT**: Build single APK from main HEAD (ab1f3252)
+19. **NEXT**: Build single APK from main HEAD (261dfc00)
 20. **NEXT**: Operator runtime retest: stock parity, Opening Stock, POS enrollment+staff, supplier e2e
 21. **NEXT**: Truth-sync runtime confirmation results
 22. **NEXT**: Advance to JOURNEY-02 PHASE_4 certification
