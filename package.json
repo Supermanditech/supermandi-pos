@@ -71,8 +71,7 @@
     "live:manifest:freeze": "node scripts/workflow/generate-live-page-manifest.js && node scripts/live-testing/freeze-screen-manifest.js",
     "live:mcp:check": "node scripts/live-testing/mcp-config-check.js",
     "live:detox:check": "node scripts/live-testing/detox-check.js",
-    "live:testlab:matrix": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File scripts/live-testing/firebase-testlab-matrix.ps1",
-    "postinstall": "node scripts/postinstall-patch-expo-gradle.js"
+    "live:testlab:matrix": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File scripts/live-testing/firebase-testlab-matrix.ps1"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
