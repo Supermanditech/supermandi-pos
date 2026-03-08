@@ -47,11 +47,31 @@ interface OpeningStockSubmitItem {
 // API
 // =============================================================================
 
+interface SearchApiMatch {
+  productId: string;
+  barcode?: string;
+  currentStock: number;
+}
+
+interface SearchApiGroup {
+  groupId: string;
+  displayName: string;
+  matches: SearchApiMatch[];
+}
+
 async function searchProducts(query: string): Promise<ProductSearchResult[]> {
-  const response = await apiClient.get<{ products: ProductSearchResult[] }>(
-    `/api/v1/pos/store-products/search?q=${encodeURIComponent(query)}&stockCheck=true`
+  const response = await apiClient.get<{ success: boolean; data: SearchApiGroup[] }>(
+    `/api/v1/pos/store-products/search?q=${encodeURIComponent(query)}&includeZeroStock=true`
   );
-  return response.products;
+  const groups = response.data ?? [];
+  return groups.flatMap((group) =>
+    group.matches.map((match) => ({
+      id: match.productId,
+      name: group.displayName,
+      barcode: match.barcode ?? null,
+      hasExistingStock: match.currentStock > 0,
+    }))
+  );
 }
 
 async function submitOpeningStock(
