@@ -27,8 +27,10 @@ const notifyStockUpdated = (): void => {
 const buildStockEntriesFromProducts = (products: StockProduct[]): StockEntry[] => {
   const entries: StockEntry[] = [];
   for (const product of products) {
-    const stock = typeof product.stock === "number" && Number.isFinite(product.stock)
-      ? Math.max(0, Math.floor(product.stock))
+    // BLK-SP1: Parse stock defensively (NUMERIC may arrive as string from API)
+    const parsedStock = Number(product.stock);
+    const stock = Number.isFinite(parsedStock)
+      ? Math.max(0, Math.floor(parsedStock))
       : null;
     if (stock === null) continue;
     const idKey = normalizeKey(product.id);

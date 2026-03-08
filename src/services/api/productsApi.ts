@@ -72,7 +72,8 @@ const mapStoreProductToApiProduct = (item: StoreProductsListItem): ApiProduct =>
     sku: null,
     price,
     currency: "INR",
-    stock: typeof item.currentStock === "number" ? item.currentStock : 0,
+    // BLK-SP1: Parse stock defensively (NUMERIC may arrive as string)
+    stock: (item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : 0,
     inventory: price !== null ? { selling_price: price } : null
   };
 };

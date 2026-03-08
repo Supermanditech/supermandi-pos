@@ -134,7 +134,9 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
       const stockEntries: Array<{ key: string; stock: number }> = [];
       for (const product of allProducts) {
         const barcode = product.barcode?.trim() || "";
-        const stock = typeof product.currentStock === "number" ? product.currentStock : null;
+        // BLK-SP1: Backend may return NUMERIC as string (e.g. "10.000"). Parse defensively.
+        const rawStock = product.currentStock;
+        const stock = (rawStock !== null && rawStock !== undefined && !isNaN(Number(rawStock))) ? Number(rawStock) : null;
 
         items.push({
           productId: product.productId,
@@ -190,7 +192,8 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
           const barcode = match.barcode?.trim() || "";
           const displayName = match.displayName || group.displayName;
           const sellPrice = match.sellPrice ?? null;
-          const stock = typeof match.currentStock === "number" ? match.currentStock : null;
+          // BLK-SP1: Parse stock defensively (NUMERIC may arrive as string)
+          const stock = (match.currentStock !== null && match.currentStock !== undefined && !isNaN(Number(match.currentStock))) ? Number(match.currentStock) : null;
 
           items.push({
             productId: match.productId,
@@ -2428,7 +2431,7 @@ export default function SellScanScreen({
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
     const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
-    const stockValue = resolveStockForSku(item) ?? (typeof item.currentStock === "number" ? item.currentStock : null);
+    const stockValue = resolveStockForSku(item) ?? ((item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : null);
     const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
 
     return (
@@ -2533,7 +2536,7 @@ export default function SellScanScreen({
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
     const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
-    const stockValue = resolveStockForSku(item) ?? (typeof item.currentStock === "number" ? item.currentStock : null);
+    const stockValue = resolveStockForSku(item) ?? ((item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : null);
     const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
     const isOutOfStock = stockValue !== null && stockValue <= 0;
     const productId = item.productId ?? "";
@@ -3111,7 +3114,7 @@ export default function SellScanScreen({
     const qty = parseInt(bulkQtyValue, 10);
     if (!Number.isFinite(qty) || qty <= 0) return;
 
-    const stockValue = resolveStockForSku(bulkQtyItem) ?? (typeof bulkQtyItem.currentStock === "number" ? bulkQtyItem.currentStock : null);
+    const stockValue = resolveStockForSku(bulkQtyItem) ?? ((bulkQtyItem.currentStock != null && !isNaN(Number(bulkQtyItem.currentStock))) ? Number(bulkQtyItem.currentStock) : null);
     if (stockValue !== null && qty > stockValue) {
       showToast(`Only ${stockValue} in stock`);
       return;
