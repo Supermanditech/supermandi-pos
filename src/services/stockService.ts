@@ -1,6 +1,6 @@
 import * as productsApi from "./api/productsApi";
 import { getStock, getStockBatch } from "./api/inventoryApi";
-import { getCachedStock, updateStockCacheEntries, hasStaleEntries, STOCK_TTL_MS } from "./stockCache";
+import { getCachedStock, updateStockCacheEntries, hasStaleEntries, isEntryPinProtected, STOCK_TTL_MS } from "./stockCache";
 import { isOnline } from "./networkStatus";
 
 type StockEntry = { key: string; stock: number };
@@ -80,6 +80,16 @@ export function resolveStockForCartItem(item: { id?: string | null; barcode?: st
 
 export function resolveStockForSku(item: { productId?: string | null; barcode?: string | null }): number | null {
   return resolveStockForKeys({ primary: item.productId ?? null, secondary: item.barcode ?? null });
+}
+
+// BLK-SP1: Check if a product's stock is pin-protected (manual edit within 60s window).
+// Returns true only if the entry was explicitly pinned via pinStockEntries(), not just cached.
+export function isSkuStockPinned(item: { productId?: string | null; barcode?: string | null }): boolean {
+  const productId = item.productId?.trim();
+  const barcode = item.barcode?.trim();
+  if (productId && isEntryPinProtected(productId)) return true;
+  if (barcode && isEntryPinProtected(barcode)) return true;
+  return false;
 }
 
 let refreshInFlight: Promise<boolean> | null = null;

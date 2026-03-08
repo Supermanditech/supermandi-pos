@@ -84,6 +84,19 @@ export function getCachedStock(key: string): number | null {
   return Math.max(0, Math.floor(entry.stock));
 }
 
+// BLK-SP1: Check if a specific cache entry is pin-protected (manual edit in progress).
+// Used by sync code to distinguish "server-cached stock" from "user-edited stock".
+// Only pin-protected entries should block server stock updates to the local SQLite DB.
+export function isEntryPinProtected(key: string): boolean {
+  const state = getState();
+  if (!state.loaded) return false;
+  const trimmed = key?.trim();
+  if (!trimmed) return false;
+  const entry = state.entries[trimmed];
+  if (!entry?.protectedUntil) return false;
+  return Date.now() < entry.protectedUntil;
+}
+
 // GL-CRIT-0013: Check if any cache entries are stale (for triggering refresh)
 export function hasStaleEntries(): boolean {
   const state = getState();
