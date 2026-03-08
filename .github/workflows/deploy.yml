@@ -46,6 +46,14 @@ jobs:
         with:
           ref: ${{ github.event.inputs.sha || github.event.workflow_run.head_sha || github.sha }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enforce artifact phase lock
+        run: node scripts/enforce-artifact-phase-lock.js --mode=deploy
+
       - name: Determine SHA
         id: sha
         run: |

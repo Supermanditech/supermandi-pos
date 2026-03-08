@@ -23,6 +23,17 @@
 - Current execution order, active journey, lifecycle phase, and blocker truth always come from those canonical files.
 - If this file conflicts with canonical repo truth, canonical repo truth wins.
 
+### POS-First Override (2026-03-09)
+
+- Canonical repo truth now locks the execution order to POS first.
+- POS suite order is:
+  `JOURNEY-01 -> JOURNEY-07 -> JOURNEY-08 -> JOURNEY-05 -> JOURNEY-02 -> JOURNEY-03 -> JOURNEY-04 -> JOURNEY-06`
+- Retailer, supplier, and superadmin remain dependency and cross-platform
+  surfaces during this phase, but they are not the primary implementation
+  focus until the full POS suite is PARK-READY.
+- No APK build, deploy request, or operator runtime pass is allowed until the
+  full POS suite is internally stabilized journey-by-journey.
+
 ---
 
 ## THE 8 GATES
@@ -40,9 +51,10 @@
 
 ---
 
-## MVP JOURNEYS (Priority Order)
+## MVP JOURNEYS (Reference Inventory)
 
-These are the minimum journeys needed for a working system. Each depends on prior ones.
+These are the minimum journeys needed for a working system. Canonical repo truth
+may temporarily override the implementation order; current override is POS-first.
 
 ### LAYER 1: Foundation (must work first)
 
@@ -97,15 +109,16 @@ Canonical status still lives in `RELEASES/JOURNEY_MAP.json`.
 
 | Journey | G1 UI | G2 UX | G3 Nav | G4 Wire | G5 Logic | G6 API | G7 DB | G8 Cross | Status |
 |---------|-------|-------|--------|---------|----------|--------|-------|----------|--------|
-| J1: SA Login | ? | ? | ? | ? | ? | ? | ? | N/A | **PARK-READY_RUNTIME_PENDING** |
-| J2: Retailer Reg→Login | ? | ? | ? | ? | ? | ? | ? | ? | **PARK-READY_RUNTIME_PENDING** |
-| J3: POS Setup | ? | ? | ? | ? | ? | ? | ? | ? | **PARK-READY_RUNTIME_PENDING** |
-| J4: POS Sell | ? | ? | ? | ? | ? | ? | ? | ? | **PARK-READY_RUNTIME_PENDING (CERT-BLOCKED in canonical)** |
-| J5: Opening Stock | ? | ? | ? | ? | ? | ? | ? | ? | **PARK-READY_RUNTIME_PENDING** |
-| J6: Supplier Reg→Login | ? | ? | ? | ? | ? | ? | ? | ? | **PARK-READY_RUNTIME_PENDING** |
+| J1: SA Login | ? | ? | ? | ? | ? | ? | ? | N/A | **OVERLAY ONLY — SEE JOURNEY_MAP** |
+| J2: Retailer Reg→Login | ? | ? | ? | ? | ? | ? | ? | ? | **OVERLAY ONLY — SEE JOURNEY_MAP** |
+| J3: POS Setup | ? | ? | ? | ? | ? | ? | ? | ? | **OVERLAY ONLY — SEE JOURNEY_MAP** |
+| J4: POS Sell | ? | ? | ? | ? | ? | ? | ? | ? | **OVERLAY ONLY — SEE JOURNEY_MAP** |
+| J5: Opening Stock | ? | ? | ? | ? | ? | ? | ? | ? | **OVERLAY ONLY — SEE JOURNEY_MAP** |
+| J6: Supplier Reg→Login | ? | ? | ? | ? | ? | ? | ? | ? | **OVERLAY ONLY — SEE JOURNEY_MAP** |
 
 Legend: ✅ = passed, ❌ = failed (ticket filed), ? = not tested, N/A = not applicable.
 `PARK-READY` = code-stable and safe to defer for artifact batching, but not yet runtime-certified.
+This table must NOT be used to claim a journey is PARK-READY by itself. Gate cells need evidence and `RELEASES/JOURNEY_MAP.json` remains authoritative.
 
 ---
 
@@ -357,8 +370,8 @@ Fix all blockers for each journey, run gate checks at code level, and reach `PAR
 Order shown here is a dependency model, not a permission to override canonical active-journey lock.
 
 ### Phase B: Build Candidates
-- One APK build (POS app) — after the active POS journey cluster is `PARK-READY`
-- Portal builds are automatic (Cloud Run deploy from main)
+- One APK build (POS app) — only after the full locked POS suite and the declared post-POS journey passes are `PARK-READY`
+- Portal/runtime artifact phase is also deferred until the full targeted journey scope is `PARK-READY`
 
 ### Phase C: Runtime Certification
 - Install artifact, run each journey gate checklist on real device
@@ -371,16 +384,18 @@ Order shown here is a dependency model, not a permission to override canonical a
 
 ---
 
-## IMMEDIATE EXECUTION QUEUE (updated 2026-03-09 — PHASE A COMPLETE)
+## IMMEDIATE EXECUTION QUEUE (historical overlay — see canonical POS-first lock)
 
 Important:
 - This queue must not override the active-journey lock in canonical repo truth.
-- Canonical state is locked on `JOURNEY-02`, phase `JOURNEY_02_PHASE3_PARK_READY`.
+- Canonical state is now locked to the POS-first suite on `JOURNEY-01`, phase `POS_SUITE_PHASE3_EXHAUSTIVE_STABILIZATION`.
 - Actual next step must come from `CLAUDE_CURRENT_STATE.json` and `JOURNEY_MAP.json`.
 
-### Phase A: COMPLETE — All Code Blockers Resolved
+### Current Warning
 
-All 6 MVP journeys have reached code-level PARK-READY:
+The historical note below about all MVP journeys being code-complete must not
+be used to justify an APK build now. Canonical repo truth requires exhaustive
+POS-suite completion first.
 
 | Blocker | PR | Tests | Status |
 |---------|-----|-------|--------|

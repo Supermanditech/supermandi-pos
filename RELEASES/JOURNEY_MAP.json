@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "2.0",
+    "version": "2.1",
     "createdAt": "2026-03-07",
     "hardenedAt": "2026-03-07",
     "purpose": "Defines all user journeys and their CCC audit state. Single source of truth for audit progress. Claude reads and updates every session.",
@@ -8,6 +8,7 @@
       "CERT-PENDING",
       "CERT-IN-PROGRESS",
       "CERT-BLOCKED",
+      "PARK-READY",
       "CERT-SEALED",
       "NEEDS-REAUDIT"
     ],
@@ -23,12 +24,13 @@
       "GAP",
       "SKIPPED"
     ],
-    "claudeSessionRule": "On session start: start with currentAuditJourney. If that journey is not CERT-SEALED and not explicitly CERT-BLOCKED by a documented code gap, continue that same journey from lastAuditedAction + 1 or from the recorded remaining sealing blocker. Do not switch to another journey for breadth, convenience, or timeboxing. Update this file after EVERY action. Never end session without updating.",
+    "claudeSessionRule": "On session start: start with currentAuditJourney. If that journey is not CERT-SEALED and not explicitly CERT-BLOCKED by a documented code gap, continue that same journey from lastAuditedAction + 1 or from the recorded remaining sealing blocker. If posSuiteLock.status=LOCKED, stay inside posSuiteLock.journeyOrder and do not switch to non-POS journeys. Update this file after EVERY action. Never end session without updating.",
     "lifecycleRule": "Before asking for any operator action or artifact build, Claude must state which lifecycle phase is active from CLAUDE_CURRENT_STATE.productionGradeCertificationModel.liveTestingLifecycle. Baseline live discovery and post-fix runtime certification are different phases and may not be conflated.",
-    "depthFirstAuditRule": "One journey at a time, to 100% completion. Claude may move currentAuditJourney only when the current journey is CERT-SEALED, or when it is CERT-BLOCKED with exact blocker, requiredFix, and next-resume conditions documented in repo truth. 'Round not enough' is not a valid reason to switch journeys.",
+    "depthFirstAuditRule": "One journey at a time, to 100% completion. Claude may move currentAuditJourney only when the current journey is CERT-SEALED, PARK-READY, or when it is CERT-BLOCKED with exact blocker, requiredFix, and next-resume conditions documented in repo truth. If posSuiteLock.status=LOCKED, Claude may move only to the next POS journey in posSuiteLock.journeyOrder until the full POS suite is complete. 'Round not enough' is not a valid reason to switch journeys.",
     "roundBudgetRule": "If a session ends mid-journey, Claude records exact remaining blockers and next action, then resumes the same journey next session. Claude does not start sampling the next journey while the active one is still auditable.",
     "prerequisiteFunnelRule": "If a journey depends on upstream registration, login, approval/provisioning, enrollment, or stock-setup flows, Claude must map and stabilize that full real-user prerequisite funnel before asking the operator to certify the downstream journey.",
     "surfaceDeployGateRule": "A touched surface (retailer-admin, supplier-portal, superadmin, POS) cannot request deploy/APK until its real-user auth/onboarding matrix and deterministic regression gates pass on the candidate.",
+    "posSuiteFirstRule": "POS app is the locked primary surface. Exhaustively complete JOURNEY-01, JOURNEY-07, JOURNEY-08, JOURNEY-05, JOURNEY-02, JOURNEY-03, JOURNEY-04, and JOURNEY-06 before moving primary implementation focus to retailer, supplier, or superadmin journeys.",
     "sealingBlockers": {
       "B1_openGapsBlock": "Journey cannot reach CERT-SEALED if openGaps array is non-empty.",
       "B2_invariantBlock": "Journey cannot reach CERT-SEALED if any touched invariant with blockingForSeal=true has status != VERIFIED in INVARIANT_REGISTRY.json.",
@@ -117,44 +119,79 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-02",
+  "currentAuditJourney": "JOURNEY-01",
   "auditOrder": [
-    "JOURNEY-02",
-    "JOURNEY-05",
-    "JOURNEY-03",
-    "JOURNEY-04",
-    "JOURNEY-06",
     "JOURNEY-01",
     "JOURNEY-07",
     "JOURNEY-08",
-    "JOURNEY-09",
-    "JOURNEY-10",
+    "JOURNEY-05",
+    "JOURNEY-02",
+    "JOURNEY-03",
+    "JOURNEY-04",
+    "JOURNEY-06",
     "JOURNEY-11",
+    "JOURNEY-10",
+    "JOURNEY-09",
     "JOURNEY-12"
   ],
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-02",
-    "status": "LOCKED_UNTIL_CERT_SEALED_OR_EXPLICIT_CERT_BLOCKED",
-    "reason": "Depth-first execution is mandatory. Finish JOURNEY-02 end-to-end before moving to the next journey in auditOrder.",
+    "journeyId": "JOURNEY-01",
+    "status": "LOCKED_TO_POS_SUITE_UNTIL_POS_COMPLETION_OR_EXPLICIT_CERT_BLOCKED",
+    "reason": "POS-first execution is mandatory. Finish each POS journey end-to-end in the locked order before moving to retailer, supplier, or superadmin journeys.",
     "switchAllowedOnlyWhen": [
-      "JOURNEY-02 status becomes CERT-SEALED",
-      "JOURNEY-02 status becomes CERT-BLOCKED with exact code gap and requiredFix documented in openGaps/cccBlocker",
+      "Current POS journey becomes PARK-READY, CERT-SEALED, or CERT-BLOCKED with exact blocker truth, then switch only to the next POS journey in posSuiteLock.journeyOrder",
+      "All POS journeys in posSuiteLock.journeyOrder are PARK-READY, CERT-SEALED, or explicitly CERT-BLOCKED",
       "Operator explicitly changes currentAuditJourney in repo truth"
     ],
     "forbidden": [
       "sampling the next journey because the current round feels short",
       "breadth-first sweeps of remaining invariants across multiple journeys",
-      "leaving JOURNEY-02 partially traced while it still has auditable sealing blockers"
+      "switching primary implementation focus away from POS before the full POS suite is complete",
+      "leaving the current POS journey partially traced while it still has auditable sealing blockers"
     ],
-    "ifSessionEndsMidJourney": "Update lastAuditedAction, openGaps, blocker notes, and the exact next action to resume. Next session resumes JOURNEY-02."
+    "ifSessionEndsMidJourney": "Update lastAuditedAction, openGaps, blocker notes, and the exact next action to resume. Next session resumes the same POS journey."
+  },
+  "posSuiteLock": {
+    "status": "LOCKED",
+    "primarySurface": "POS App",
+    "journeyOrder": [
+      "JOURNEY-01",
+      "JOURNEY-07",
+      "JOURNEY-08",
+      "JOURNEY-05",
+      "JOURNEY-02",
+      "JOURNEY-03",
+      "JOURNEY-04",
+      "JOURNEY-06"
+    ],
+    "entryRule": "Start from real user POS entry, then progress through setup, stock, sell, payment branches, and recovery.",
+    "requiredLayersPerJourney": [
+      "UI/UX",
+      "navigation",
+      "wiring",
+      "business logic",
+      "edge cases and recovery",
+      "API contracts",
+      "DB/tables",
+      "migration dependencies",
+      "GCP staging/runtime interactions",
+      "cross-platform effects"
+    ],
+    "artifactRule": "No APK build or deploy request until every POS journey in journeyOrder is internally verified and marked PARK-READY or explicitly CERT-BLOCKED with blocker truth, and the declared post-POS execution passes are also PARK-READY or explicitly CERT-BLOCKED.",
+    "postPosExecutionOrder": [
+      "JOURNEY-11",
+      "JOURNEY-10",
+      "JOURNEY-09",
+      "JOURNEY-12"
+    ]
   },
   "prerequisitePrograms": {
     "C1_REAL_USER_FUNNEL": {
-      "status": "CODE_COMPLETE_RUNTIME_PENDING",
+      "status": "READ_ONLY_DEPENDENCY_REFERENCE_UNDER_POS_LOCK",
       "owner": "CLAUDE",
       "blocks": [
-        "JOURNEY-02 operator certification (until runtime confirmed)",
-        "PHASE_4 advancement (until APK rebuilt + runtime tested)"
+        "Use as dependency truth for active POS journeys while posSuiteLock.status=LOCKED",
+        "Does not authorize artifact/runtime while the POS-first execution lock remains active"
       ],
       "scope": [
         "retailer registration",
@@ -195,7 +232,7 @@
         "BLK-SUP-KYC1 (supplier docs): RESOLVED — PR #480",
         "PR-1 (email content): RESOLVED — PR #481, 19 regression tests"
       ],
-      "resumeRule": "All code blockers resolved. Next: deploy backend, build APK, runtime verify. Do not skip to PHASE_4 until runtime confirmation collected."
+      "resumeRule": "Historical dependency program only. While the POS-first lock is active, do not use this program to justify deploy/APK/runtime. Resume standalone retailer/supplier/superadmin execution only after the locked POS suite is PARK-READY and repo truth explicitly moves into postPosExecutionOrder."
     }
   },
   "_actionTemplate": {
@@ -363,18 +400,18 @@
       "staticAuditComplete": true,
       "staticAuditCompletedAt": "2026-03-07",
       "remainingSealingBlockers": {
-        "B1": "BLOCKED \u2014 All code fixes merged. GAP-02-SEED-OPENING-STOCK code-fixed (PR #470). GAP-SP1-STOCK-PARITY code-fixed (PRs #469, #477). GAP-C1 substantially resolved: retailer funnel stable, email fixes merged (#481), supplier KYC fixed (#480), POS staff auto-create (#478), POS UX (#479). Supplier funnel untested on staging. All pending runtime confirmation on rebuilt APK.",
+        "B1": "BLOCKED \u2014 POS suite lock active. JOURNEY-02 fixes are saved, but the broader POS suite is not yet journey-complete. Do not enter artifact/runtime for the sell flow until the locked POS journey order is fully internally stabilized.",
         "B2": "CLEAR \u00e2\u20ac\u201d all 22 invariants VERIFIED or nonBlockingForJourneys:JOURNEY-02",
         "B3": "CLEAR \u2014 SCREEN_CERT_MANIFEST.json verified 2026-03-07 at 7c62039f: PaymentScreen ISSUE-051/066 (CRITICAL) and ISSUE-068 (HIGH) all regressionGuardStatus=PASS. SellScanScreen ISSUE-204/042/039 all PASS. No knownIssue has MISSING or FAIL guard.",
         "B4": "CLEAR \u2014 G1 signed 2026-03-07 (all 20 scopeFiles read). G2/G3/G5/G6 signed 2026-03-07. G4 already signed. All six guarantees now signed.",
-        "B5": "BLOCKED \u2014 seededStateLock.confirmed=false. All code fixes merged: BLK-SP1 (#469 sync fix + #477 parseStock), BLK-H1 (#470 OpeningStock shape), BUILD-BLK-01 (eddb9c61 expo deps), BLK-POSSTAFF1 (#478 staff auto-create), BLK-POS-UX1/UX2 (#479 login UX), BLK-SUP-KYC1 (#480 supplier docs), PR-1 (#481 email content). Pending: backend staging deploy + APK rebuild + operator runtime confirmation.",
+        "B5": "BLOCKED \u2014 seededStateLock.confirmed=false. Artifact/runtime remain forbidden while the POS suite lock is active. JOURNEY-02 may not use APK/runtime as the discovery engine for unfinished POS journeys.",
         "B6": "CLEAR \u00e2\u20ac\u201d all action levels PASS or GAP with documented acceptedRisk",
         "B7": "CLEAR \u2014 knownIssues cross-checked against LIVE_TESTING_ISSUES.md (2026-03-07): ISSUE-051, ISSUE-066, ISSUE-068, ISSUE-204, ISSUE-042 all present and documented. No omission found. Cross-check feasible in PHASE_1 without runtime.",
         "B8": "CLEAR \u00e2\u20ac\u201d all 10 actions now result=PASS",
-        "B9": "BLOCKED \u2014 runtimeEvidence remains empty. All code blockers resolved (PRs #469, #470, #477-#481, eddb9c61). APK rebuild + backend deploy required before operator runtime retest.",
+        "B9": "BLOCKED \u2014 runtimeEvidence remains empty. That is expected while the POS suite is still in internal stabilization. Runtime evidence will only be collected after the full POS suite reaches PARK-READY.",
         "B10": "CLEAR \u2014 commit boundary audit (2026-03-07): code-fix commits (b3b5bf6c ISSUE-051/066, 536b8442 ISSUE-204) and test commit (e9bf825f) have zero RELEASES/ file touches. State commits (7c62039f etc.) touch only RELEASES/ \u2014 no src/ overlap. Boundary respected.",
         "B11": "CLEAR \u2014 pushed to origin/main 2026-03-07: bd81f502..73d46ea1 (code ac67afac, state commits through 73d46ea1). HEAD on origin/main = 73d46ea1.",
-        "B12": "BLOCKED \u2014 PHASE_3_PARK_READY. All code blockers resolved. Remaining: backend staging deploy, APK rebuild, operator runtime confirmation. Cannot advance to PHASE_4 until stock parity + Opening Stock + POS enrollment are runtime-confirmed on rebuilt APK."
+        "B12": "BLOCKED \u2014 PHASE_3 POS_SUITE_LOCK. Build/deploy/runtime are intentionally deferred. Cannot advance to PHASE_4 until the full POS suite is internally completed and later runtime-confirmed on one bounded candidate."
       },
       "openGaps": [
         {
@@ -383,8 +420,8 @@
           "type": "SETUP_PATH_RUNTIME_CRASH",
           "severity": "HIGH",
           "happyPathAffected": true,
-          "description": "CODE-FIXED (PARK-READY). OpeningStockScreen searchProducts() shape mismatch fixed (PR #470). Stock NUMERIC coercion fixed (PR #477). BUILD-BLK-01 resolved (eddb9c61). All code merged to main@261dfc00. PENDING: APK rebuild + operator runtime confirmation.",
-          "requiredFix": "Deploy backend to staging. Rebuild APK from main@261dfc00. Operator retests Menu -> Opening Stock -> search -> submit on device. If successful, mark GAP as RESOLVED."
+          "description": "CODE-FIXED. OpeningStockScreen searchProducts() shape mismatch fixed (PR #470). Stock NUMERIC coercion fixed (PR #477). BUILD-BLK-01 resolved (eddb9c61). Artifact/runtime are deferred until the full POS suite is internally stabilized.",
+          "requiredFix": "Complete the locked POS journey order first. Then include Menu -> Opening Stock -> search -> submit in the single bounded runtime matrix."
         },
         {
           "gapId": "GAP-C1-REAL-USER-PREREQUISITE-FUNNEL",
@@ -392,8 +429,8 @@
           "type": "REAL_USER_FUNNEL_PARK_READY",
           "severity": "MEDIUM",
           "happyPathAffected": true,
-          "description": "CODE-COMPLETE (PARK-READY). All code blockers resolved: BLK-SP1 (#477), BLK-H1 (#470), BLK-POSSTAFF1 (#478), BLK-POS-UX1/UX2 (#479), BLK-SUP-KYC1 (#480), PR-1 (#481), BUILD-BLK-01 (eddb9c61). Retailer funnel runtime-confirmed stable (2026-03-08). REMAINING: backend staging deploy, APK rebuild, runtime confirmation of stock parity + Opening Stock + POS enrollment + supplier funnel.",
-          "requiredFix": "Deploy backend to staging. Rebuild APK from main@261dfc00. Operator retests: stock parity, Opening Stock, POS enrollment + staff login, supplier registration e2e. Mark GAP RESOLVED when runtime-confirmed."
+          "description": "CODE-COMPLETE historical prerequisite program. The funnel findings remain saved, but artifact/runtime are deferred because the POS suite lock now requires exhaustive POS-journey completion before any build/deploy/operator pass.",
+          "requiredFix": "Use this funnel as dependency truth while completing the POS suite. Do not request runtime for the funnel until the POS suite lock is released."
         },
         {
           "gapId": "GAP-SP1-STOCK-PARITY",
@@ -401,8 +438,8 @@
           "type": "DATA_SYNC_BLOCKER",
           "severity": "HIGH",
           "happyPathAffected": true,
-          "description": "CODE-FIXED (PARK-READY). Two root causes fixed: (1) syncProductsToOffline() pin protection bug (PR #469), (2) PostgreSQL NUMERIC string serialization (PR #477 — parseStock() on backend, Number() coercion on client). 17 regression tests total. PENDING: APK rebuild + backend deploy + operator runtime confirmation.",
-          "requiredFix": "Deploy backend to staging. Rebuild APK from main@261dfc00. Operator retests: verify stock shows correct numbers on POS (not 0 or string). If confirmed, mark GAP as RESOLVED."
+          "description": "CODE-FIXED. Two root causes fixed: (1) syncProductsToOffline() pin protection bug (PR #469), (2) PostgreSQL NUMERIC string serialization (PR #477 — parseStock() on backend, Number() coercion on client). 17 regression tests total. Runtime proof is deferred until the full POS suite is internally complete.",
+          "requiredFix": "Keep this fix parked in repo truth while completing the remaining POS journeys. Verify stock display in the single bounded POS runtime matrix at the end of the POS suite."
         }
       ],
       "acceptedRisks": [
@@ -429,9 +466,9 @@
       ],
       "cccBlocker": {
         "file": null,
-        "description": "PARK-READY: All code blockers resolved. BUILD-BLK-01 FIXED (eddb9c61). BLK-SP1 FIXED (#477). BLK-H1 FIXED (#470). BLK-POSSTAFF1 FIXED (#478). BLK-POS-UX1/UX2 FIXED (#479). BLK-SUP-KYC1 FIXED (#480). PR-1 FIXED (#481). No code work remaining. Blocked on artifact build + runtime confirmation only.",
-        "requiredFix": "Deploy backend to staging (PRs #477-481). Build single APK from main@261dfc00. Operator runtime tests on device.",
-        "nextResumeCondition": "Resume JOURNEY-02 PHASE_4 after: backend deployed to staging, APK rebuilt and installed, stock parity runtime-confirmed, Opening Stock search+submit succeeds, POS enrollment+staff login verified, supplier funnel tested."
+        "description": "POS-suite deferred. JOURNEY-02 fixes remain saved, but no artifact/runtime is allowed until the full POS suite is internally stabilized one journey at a time.",
+        "requiredFix": "Continue the locked POS journey order. Return to JOURNEY-02 runtime only after JOURNEY-01, JOURNEY-07, JOURNEY-08, and JOURNEY-05 are PARK-READY and the rest of the POS suite is ready for one bounded candidate.",
+        "nextResumeCondition": "Resume JOURNEY-02 runtime only after the POS suite lock is released by repo truth."
       },
       "seededStateLock": {
         "required": true,
@@ -2914,9 +2951,9 @@
       "name": "Device Enrollment Lifecycle",
       "cluster": "C5",
       "description": "SuperAdmin creates store \u00e2\u2020\u2019 QR \u00e2\u2020\u2019 POS scans \u00e2\u2020\u2019 enrolls \u00e2\u2020\u2019 badge USED in SuperAdmin \u00e2\u2020\u2019 catalog loads \u00e2\u2020\u2019 POS ready",
-      "status": "CERT-PENDING",
+      "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "lastAuditedAt": "2026-03-09",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": {

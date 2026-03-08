@@ -1,6 +1,6 @@
 {
-  "version": "140.0",
-  "lastUpdated": "2026-03-09T14:00:00Z",
+  "version": "141.0",
+  "lastUpdated": "2026-03-09T19:15:00Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -12,7 +12,8 @@
       "invariantRegistry": "RELEASES/INVARIANT_REGISTRY.json",
       "journeyMap": "RELEASES/JOURNEY_MAP.json",
       "screenCertManifest": "RELEASES/SCREEN_CERT_MANIFEST.json",
-      "liveState": "RELEASES/CLAUDE_CURRENT_STATE.json"
+      "liveState": "RELEASES/CLAUDE_CURRENT_STATE.json",
+      "journeyCertificationOverlay": "RELEASES/JOURNEY_CERTIFICATION.md"
     },
     "sessionStartProtocol": [
       "1. Read RELEASES/CCC_FRAMEWORK.md \u00e2\u20ac\u201d how Claude works",
@@ -20,51 +21,51 @@
       "3. Read RELEASES/JOURNEY_MAP.json \u00e2\u20ac\u201d find currentJourney, read lastAuditedAction",
       "4. Read RELEASES/INVARIANT_REGISTRY.json \u00e2\u20ac\u201d load journey-relevant invariants",
       "5. Read RELEASES/SCREEN_CERT_MANIFEST.json \u00e2\u20ac\u201d check screen cert statuses",
-      "6. git log --oneline -5 && git status \u00e2\u20ac\u201d verify SHA",
-      "7. Announce: 'Resuming JOURNEY-XX. Last action: ACT-XX-NN. Next: ACT-XX-NN+1. Files: [list]'",
-      "8. Continue audit from lastAuditedAction + 1"
+      "6. Read RELEASES/JOURNEY_CERTIFICATION.md \u00e2\u20ac\u201d supplemental overlay only after canonical files",
+      "7. git log --oneline -5 && git status \u00e2\u20ac\u201d verify SHA",
+      "8. Announce: 'Resuming JOURNEY-XX. Last action: ACT-XX-NN. Next: ACT-XX-NN+1. Files: [list]'",
+      "9. Continue audit from lastAuditedAction + 1"
     ],
-    "currentJourney": "JOURNEY-02",
-    "currentPhase": "JOURNEY_02_PHASE3_PARK_READY",
-    "auditProgressNote": "PHASE_3 PARK-READY (2026-03-09 14:00 IST). ALL code-level blockers resolved. HEAD=261dfc00. Merged since last state-sync: BUILD-BLK-01 (eddb9c61), BLK-SP1 (#477), BLK-POSSTAFF1 (#478), BLK-POS-UX1/UX2 (#479), BLK-SUP-KYC1 (#480), PR-1 email fixes (#481). All 6 MVP journeys are code-complete. Runtime confirmation pending: backend staging deploy + single APK rebuild + operator device testing.",
+    "currentJourney": "JOURNEY-01",
+    "currentPhase": "POS_SUITE_PHASE3_EXHAUSTIVE_STABILIZATION",
+    "auditProgressNote": "PHASE_3 POS-SUITE LOCK (2026-03-09 IST). Artifact phase is suspended. Claude must exhaustively complete POS journeys first: entry, UI/UX, navigation, wiring, business logic, edge cases, API contract, DB/tables/migrations, GCP staging interactions, and cross-platform effects. No APK build, deploy request, or operator runtime loop is allowed until the full POS suite is internally stabilized journey-by-journey.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
-      "blockedBy": "PHASE_3 PARK-READY: all code blockers resolved, but runtime confirmation not yet collected. Backend staging deploy needed (PRs #477-481 not deployed). APK rebuild needed from main@261dfc00. Supplier funnel untested on staging.",
-      "nextUnblock": "(1) Deploy backend to staging from current main HEAD. (2) Build single APK from main@261dfc00. (3) Operator runtime tests: stock parity, Opening Stock, POS enrollment+staff login, supplier registration. (4) Truth-sync runtime confirmation results. (5) Advance to PHASE_4 only after runtime confirmation."
+      "blockedBy": "POS_SUITE_NOT_COMPLETE. APK/deploy/operator runtime are forbidden until all POS journeys are mapped and internally stabilized one-by-one: JOURNEY-01, JOURNEY-07, JOURNEY-08, JOURNEY-05, JOURNEY-02, JOURNEY-03, JOURNEY-04, JOURNEY-06. Retailer, supplier, and superadmin implementation work is deferred except where they must be read as cross-platform effects of the active POS journey.",
+      "nextUnblock": "(1) Start JOURNEY-01 from canonical repo truth. (2) Trace the full POS user path end-to-end: UI/UX, navigation, wiring, business logic, failure/recovery, API, DB/tables, migrations, staging, and cross-platform reflection. (3) Fix and regression-guard every blocker in that journey. (4) Internally verify the journey. (5) Mark it PARK-READY, then move to the next POS journey in the locked order. (6) After the full POS suite is PARK-READY, execute retailer, supplier, and superadmin journey passes in the declared post-POS order. (7) Only after all targeted journeys are PARK-READY may artifact/build/deploy/runtime begin."
     },
     "parkReadyDiscipline": {
-      "rule": "PARK-READY means all code-level fixes for a journey are merged to main with regression guards. Journey is safe to defer until the single bounded artifact build. PARK-READY is NOT CERT-SEALED — runtime gates and operator confirmation are still required.",
-      "artifactLastRule": "APK and portal builds happen ONLY after the active journey cluster is PARK-READY at code level. No speculative builds. No 'try and see' builds.",
-      "operatorDiscoveryLoopBlock": "Claude NEVER requests a deploy/APK build to discover failures that should already be modeled in repo truth. All known blockers must be code-fixed and regression-guarded before any artifact is built."
+      "rule": "PARK-READY means a journey is internally stabilized end-to-end: actor-correct entry, UI/UX, navigation, wiring, business logic, edge cases, API contract, DB/tables, migrations, staging impact, and cross-platform effects are traced and guarded. PARK-READY is NOT CERT-SEALED — runtime gates and operator confirmation are still required later.",
+      "artifactLastRule": "APK and portal builds happen ONLY after the full active execution scope is PARK-READY at code level: first the locked POS suite, then the declared post-POS journey passes. No speculative builds. No 'try and see' builds. No artifact loop while any journey-level stabilization work remains.",
+      "operatorDiscoveryLoopBlock": "Claude NEVER requests a deploy/APK build to discover failures that should already be modeled in repo truth. All known blockers must be code-fixed, regression-guarded, and internally verified before any artifact is built.",
+      "posSuiteExhaustivenessRule": "POS app is locked as the active surface. Claude must not miss a single POS user journey from entry to exit, including edge cases and cross-platform effects, before switching to retailer, supplier, or superadmin implementation work."
     },
     "resumeDirective": {
-      "mode": "PARK_READY_ARTIFACT_PENDING",
-      "rule": "All code-level blockers resolved. BUILD-BLK-01 FIXED (eddb9c61). BLK-SP1 FIXED (#477). BLK-H1 FIXED (#470). BLK-POSSTAFF1 FIXED (#478). BLK-POS-UX1/UX2 FIXED (#479). BLK-SUP-KYC1 FIXED (#480). PR-1 FIXED (#481). Next: deploy backend, build APK, runtime verify. Do not jump to PHASE_4 until runtime confirmation on rebuilt APK.",
-      "firstProgram": "productionGradeCertificationModel.realUserAuthAndOnboardingProgram",
+      "mode": "POS_SUITE_LOCKED_NO_ARTIFACTS",
+      "rule": "Do not start APK build, deploy, or operator runtime certification now. First exhaustively stabilize the entire POS suite one journey at a time. For each POS journey, trace user entry through exit and every cross-surface consequence: UI, UX states, navigation, handler wiring, services, API shape, DB tables, migrations, business invariants, failure/recovery, and GCP staging implications. Fix and regression-guard all findings before moving to the next POS journey. Only after the full POS suite is PARK-READY may retailer, supplier, and superadmin implementation move forward as primary surfaces.",
+      "firstProgram": "posSuiteExecutionLock",
       "completedPrerequisites": [
-        "full real-user map saved in repo truth (RELEASES/PREREQUISITE_FUNNEL_MAP.md)",
-        "scenario matrix saved in repo truth (PREREQUISITE_FUNNEL_MAP.md Flow-A scenarios)",
-        "earliest prerequisite blockers fixed: BLK-A1 (RESOLVED), BLK-A2 (RESOLVED), BLK-F1 (RUNTIME CONFIRMED FIXED), BLK-B1 (RUNTIME CONFIRMED CLEARED)",
-        "retailer registration -> approval -> login path runtime-confirmed stable on staging",
+        "prior blocker findings and fixes are preserved in repo truth for reuse during POS journey tracing",
+        "POS prerequisite funnel findings remain available as historical inputs, not permission to skip remaining POS journeys",
         "BUILD-BLK-01 RESOLVED: expo deps pinned, lockfile regenerated, build reproducible (eddb9c61)",
         "BLK-SP1 RESOLVED: parseStock() coercion on backend + Number() on client (#477, 13 regression tests)",
         "BLK-H1 RESOLVED: OpeningStock search response shape fixed (#470)",
         "BLK-POSSTAFF1 RESOLVED: auto-create MANAGER staff on first enrollment (#478, 6 regression tests)",
         "BLK-POS-UX1/UX2 RESOLVED: back button + pull-to-refresh on StaffLoginScreen (#479)",
-        "BLK-SUP-KYC1 RESOLVED: address_proof + cancelled_cheque fields added (#480)",
-        "PR-1 RESOLVED: email content fixes — iOS removed, direct download link, activation code, masked phone, support email (#481, 19 regression tests)"
+        "historical retailer/supplier/superadmin fixes remain saved for later cross-platform and post-POS passes"
       ],
       "remainingBeforePhase4": [
-        "deploy backend to staging (PRs #477-481 changes not yet on staging)",
-        "single APK rebuild from main@261dfc00",
-        "runtime confirmation: stock parity (dal masala shows 10 not 0)",
-        "runtime confirmation: Opening Stock search + submit on device",
-        "runtime confirmation: POS enrollment + staff auto-create + staff login",
-        "runtime confirmation: supplier registration e2e on staging",
-        "seededStateLock data created via stable stock-add path"
+        "complete POS journey inventory in locked order: JOURNEY-01, JOURNEY-07, JOURNEY-08, JOURNEY-05, JOURNEY-02, JOURNEY-03, JOURNEY-04, JOURNEY-06",
+        "for each POS journey: trace UI/UX, navigation, wiring, business logic, edge cases, API, DB/tables, migrations, staging effects, cross-platform reflections",
+        "for each POS journey: fix all findings and add regression guards",
+        "for each POS journey: perform deterministic internal verification and mark PARK-READY in repo truth",
+        "after all POS journeys PARK-READY: start retailer journey pass, then supplier, then superadmin",
+        "only after all targeted journeys are PARK-READY: artifact build/deploy/runtime phase"
       ],
       "forbidden": [
-        "starting PHASE_4 before runtime confirmation on rebuilt APK",
+        "starting PHASE_4 before full POS-suite completion and later runtime confirmation",
+        "starting APK/deploy/runtime while any POS journey still has code-level findings",
+        "switching primary implementation focus to retailer, supplier, or superadmin before the POS suite is complete",
         "mining the dirty wip branch for mixed PRs",
         "treating private memory as canonical repo truth",
         "requesting deploy/APK just to probe unmodeled failures",
@@ -75,7 +76,7 @@
     "antiDriftRules": [
       "Claude NEVER decides what to work on from conversation memory alone",
       "Claude NEVER declares CERT-SEALED without signing all 6 guarantees with file:line citations",
-      "Claude NEVER requests a deploy or APK build until current cluster journeys are CERT-SEALED",
+      "Claude NEVER requests a deploy or APK build until productionGradeCertificationModel.artifactExecutionLock.artifactPhaseEligible=true in canonical repo truth",
       "Claude NEVER skips updating JOURNEY_MAP.json after each action audit",
       "Claude NEVER treats 'TypeScript compiles' as production grade certification",
       "Claude NEVER audits by assumption \u00e2\u20ac\u201d every claim requires a file:line citation",
@@ -90,7 +91,10 @@
       "Claude NEVER switch away from the active journey because a round feels short or because breadth seems efficient; depth-first completion is mandatory",
       "Claude NEVER leave the current journey partially audited when remaining sealing blockers are still auditable in the current session",
       "Claude NEVER call an auth/onboarding fix permanent until the full real-user prerequisite funnel and scenario matrix for the touched surfaces are mapped and regression-guarded",
-      "Claude NEVER request a new deploy/build to rediscover retailer, supplier, superadmin, or POS prerequisite breakage that should already be modeled in repo truth"
+      "Claude NEVER request a new deploy/build to rediscover retailer, supplier, superadmin, or POS prerequisite breakage that should already be modeled in repo truth",
+      "Claude NEVER request a POS APK build until every POS journey in productionGradeCertificationModel.posSuiteExecutionLock.journeyOrder is internally verified and PARK-READY, and the declared post-POS execution passes are also PARK-READY or explicitly CERT-BLOCKED",
+      "Claude NEVER leave the POS surface early because a downstream retailer/supplier/superadmin issue is easier; POS-first lock remains until repo truth explicitly changes it",
+      "Claude NEVER treat previously merged POS blocker fixes as proof the full POS suite is complete; every POS journey must still be traced end-to-end from entry to exit"
     ]
   },
   "executionModel": {
@@ -186,13 +190,12 @@
       }
     },
     "realUserAuthAndOnboardingProgram": {
-      "status": "ACTIVE_HARD_BLOCK",
+      "status": "READ_ONLY_DEPENDENCY_REFERENCE_UNDER_POS_LOCK",
       "owner": "CLAUDE",
-      "purpose": "Stabilize the full real-user prerequisite funnel before more operator certification time is consumed. Repeated one-off auth/onboarding fixes are not accepted as permanent without this program.",
+      "purpose": "Historical dependency truth for registration/login/approval/enrollment handoffs. While posSuiteExecutionLock.status=LOCKED, this program may inform the active POS journey but does not define the primary implementation order.",
       "blocks": [
-        "operator certification handoff",
-        "deploy requests for retailer-admin, supplier-portal, superadmin, or shared auth/backend surfaces",
-        "APK build requests whose only purpose is to discover upstream prerequisite breakage"
+        "Use as dependency and cross-platform reference only while POS-first lock is active",
+        "Does not authorize artifact work, retailer-first execution, or standalone non-POS implementation during the POS lock"
       ],
       "touchedSurfaces": [
         "retailer registration",
@@ -215,7 +218,7 @@
         "Retailer OTP login path is /api/v1/retailer-admin/auth/firebase-otp-login (separate from email/password /auth/login).",
         "Supplier portal supports both phone OTP login via /api/v1/supplier/auth/firebase-login and password login via /api/v1/supplier/auth/login; runtime status is unverified, not auto-broken by absence of recent evidence.",
         "Unified document upload route is /api/v1/documents/upload and uses GCS uploadBuffer with a backend 10MB limit; a runtime 500 does not by itself prove bucket permissions or missing env vars without logs.",
-        "OpeningStockScreen required fix is identified, but it is not yet merged into a certified candidate on main."
+        "OpeningStockScreen required fix was merged to main in PR #470; runtime remains deferred under the POS-first execution lock."
       ],
       "unverifiedRuntimeClaims": [
         "exact root cause of retailer/supplier document upload 500",
@@ -223,20 +226,81 @@
         "whether any additional prerequisite blocker exists between retailer activation and retailer dashboard beyond documented first-login user/store_user creation"
       ],
       "implementationOrder": [
-        "retailer registration end to end",
-        "retailer login/session persistence/recovery",
-        "supplier registration and login end to end",
-        "superadmin approval/provisioning dependencies and role handoffs",
-        "POS enrollment/login/store binding",
-        "stock-add path through real UI",
-        "JOURNEY-02 entry and downstream certification path"
+        "Historical prerequisite order retained for later post-POS execution only",
+        "While posSuiteExecutionLock.status=LOCKED, use this program only to understand dependency and cross-platform effects of the active POS journey",
+        "Do not use this order to override cccFramework.currentJourney or currentAuditJourney while the POS suite lock is active"
       ],
-      "resumeRule": "Fix the earliest broken prerequisite step first. Do not skip ahead to downstream flows while an upstream prerequisite still prevents a real user from reaching that stage.",
+      "resumeRule": "While the POS-first lock is active, use this program as dependency truth only. Resume standalone retailer/supplier/superadmin implementation only after the full POS suite is PARK-READY and repo truth explicitly moves into postPosExecutionOrder.",
       "doneWhen": [
         "real-user map is saved in repo truth",
         "scenario matrix is saved in repo truth",
         "deterministic guards exist for the highest-risk prerequisite paths",
         "a real retailer and supplier can reach the stock-add/JOURNEY-02 entry path without basic breakage on the candidate"
+      ]
+    },
+    "posSuiteExecutionLock": {
+      "status": "LOCKED",
+      "owner": "CLAUDE",
+      "primarySurface": "POS App",
+      "rule": "POS app is the only active implementation surface until the full POS suite is journey-complete. Retailer, supplier, and superadmin may be read only as dependency/cross-platform surfaces for the active POS journey, not as separate implementation streams.",
+      "journeyOrder": [
+        "JOURNEY-01",
+        "JOURNEY-07",
+        "JOURNEY-08",
+        "JOURNEY-05",
+        "JOURNEY-02",
+        "JOURNEY-03",
+        "JOURNEY-04",
+        "JOURNEY-06"
+      ],
+      "entryRule": "Start where a real POS user starts: app launch, update gate if present, enrollment/login, stock setup, sell flows, payment branches, and recovery flows.",
+      "requiredLayersPerJourney": [
+        "UI elements",
+        "UX states",
+        "navigation",
+        "wiring and handlers",
+        "business logic and invariants",
+        "edge cases and recovery",
+        "API contracts",
+        "DB tables and write/read paths",
+        "migration dependencies",
+        "GCP staging/runtime dependencies",
+        "cross-platform effects into retailer/supplier/superadmin"
+      ],
+      "internalVerificationRule": "After code fixes, Claude must run deterministic internal verification and regression guards before moving to the next POS journey.",
+      "artifactRule": "No APK build, no deploy request, and no operator runtime pass until every journey in journeyOrder is PARK-READY or explicitly CERT-BLOCKED with blocker truth documented, and every declared post-POS journey pass is also PARK-READY or explicitly CERT-BLOCKED.",
+      "postPosExecutionOrder": [
+        "JOURNEY-11",
+        "JOURNEY-10",
+        "JOURNEY-09",
+        "JOURNEY-12"
+      ]
+    },
+    "artifactExecutionLock": {
+      "status": "LOCKED",
+      "artifactPhaseEligible": false,
+      "owner": "CLAUDE",
+      "appliesTo": [
+        "local APK build",
+        "release gate",
+        "staging deploy",
+        "operator runtime certification"
+      ],
+      "currentReason": "Artifact phase is forbidden while the POS suite lock is active and before the declared post-POS journey passes are PARK-READY. Build/deploy/runtime are last-stage actions, not discovery tools.",
+      "unlockCondition": "artifactPhaseEligible may be set to true only after every journey in posSuiteExecutionLock.journeyOrder and every declared post-POS journey pass is PARK-READY or explicitly CERT-BLOCKED, and the operator explicitly starts the bounded artifact/runtime phase in repo truth.",
+      "requiredStagingParityEvidence": [
+        "exact build SHA captured from the clean candidate",
+        "Cloud Run revision per touched service",
+        "image digest per touched service",
+        "migration parity confirmation",
+        "config/secret parity confirmation",
+        "runtime evidence captured against that exact deployed/build provenance"
+      ],
+      "forbiddenWhileLocked": [
+        "local APK build",
+        "release candidate generation",
+        "staging deploy of the current implementation batch",
+        "operator runtime matrix execution"
       ]
     },
     "liveTestingLifecycle": {
@@ -273,14 +337,14 @@
           "exitCondition": "Baseline matrix recorded as reproduces / not reproduced / partial / blocked."
         },
         "PHASE_3_CODE_FIX_CLUSTER": {
-          "purpose": "Fix the active cluster under deterministic local verification.",
+          "purpose": "Fix the active locked surface cluster under deterministic internal verification. Current lock: POS-first exhaustive stabilization.",
           "allowsOperatorTesting": false,
           "allowsDeployOrApk": false,
           "requires": [
             "active cluster selected",
             "baseline matrix recorded if runtime baseline was needed"
           ],
-          "exitCondition": "preArtifactExitCriteria satisfied for the active cluster."
+          "exitCondition": "All journeys in the active locked surface cluster are PARK-READY with deterministic internal verification completed and repo truth updated."
         },
         "PHASE_4_POST_FIX_RUNTIME_CERTIFICATION": {
           "purpose": "Certify the stabilized cluster on one deploy/APK candidate.",

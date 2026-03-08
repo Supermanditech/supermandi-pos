@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
@@ -44,6 +45,21 @@ console.log('\n' + '='.repeat(60));
 console.log(`${CYAN}  APK READINESS CHECK${RESET}`);
 console.log(`${CYAN}  Expo Go vs APK Build Compatibility${RESET}`);
 console.log('='.repeat(60) + '\n');
+
+// ============================================================
+// CHECK 0: Artifact phase lock
+// ============================================================
+console.log('--- CHECK 0: Artifact Phase Lock ---\n');
+
+try {
+  execSync('node scripts/enforce-artifact-phase-lock.js --mode=apk', {
+    cwd: projectRoot,
+    stdio: 'inherit',
+  });
+  pass('Artifact phase explicitly unlocked');
+} catch (err) {
+  fail('Artifact phase lock is active - APK readiness is informational only until canonical machine state unlocks artifact phase');
+}
 
 // ============================================================
 // CHECK 1: Font Loading (CRITICAL - Icons won't show without this)
@@ -273,8 +289,6 @@ requiredDeps.forEach(dep => {
 // CHECK 9: TypeScript Compilation
 // ============================================================
 console.log('\n--- CHECK 9: TypeScript ---\n');
-
-const { execSync } = require('child_process');
 try {
   execSync('npx tsc --noEmit', { cwd: projectRoot, stdio: 'pipe' });
   pass('TypeScript compiles without errors');

@@ -7,12 +7,13 @@
  *
  * Checks:
  * 0. WIP GATE - All work must be committed to git (MOST IMPORTANT)
- * 1. TypeScript must compile
- * 2. Scan debounce must be >= 800ms
- * 3. Cart must start expanded (not collapsed)
- * 4. Menu text must always be visible
- * 5. Button sizes must be >= 26px
- * 6. Sell price check in onboarding
+ * 1. Artifact phase must be explicitly unlocked in machine state
+ * 2. TypeScript must compile
+ * 3. Scan debounce must be >= 800ms
+ * 4. Cart must start expanded (not collapsed)
+ * 5. Menu text must always be visible
+ * 6. Button sizes must be >= 26px
+ * 7. Sell price check in onboarding
  */
 
 const fs = require('fs');
@@ -56,8 +57,24 @@ try {
 
 console.log('\n--- Code Quality Checks ---\n');
 
-// CHECK 1: TypeScript
-console.log('Check 1: TypeScript compilation...');
+// CHECK 1: Artifact lock
+console.log('Check 1: Artifact phase lock...');
+try {
+  execSync('node scripts/enforce-artifact-phase-lock.js --mode=apk', {
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..'),
+  });
+  pass('Artifact phase explicitly unlocked');
+} catch (e) {
+  fail('Artifact phase lock is active - APK build forbidden by canonical machine state');
+  console.log('\n========================================');
+  console.log(`${RED}  BUILD BLOCKED - Artifact phase locked${RESET}`);
+  console.log('========================================\n');
+  process.exit(1);
+}
+
+// CHECK 2: TypeScript
+console.log('Check 2: TypeScript compilation...');
 try {
   execSync('npx tsc --noEmit', { stdio: 'pipe', cwd: path.join(__dirname, '..') });
   pass('TypeScript compiles');
@@ -65,8 +82,8 @@ try {
   fail('TypeScript has errors - fix before building');
 }
 
-// CHECK 2: Scan debounce (GL-CRIT-0045: unified duplicate detection window)
-console.log('Check 2: Scan debounce window...');
+// CHECK 3: Scan debounce (GL-CRIT-0045: unified duplicate detection window)
+console.log('Check 3: Scan debounce window...');
 const handleScanPath = path.join(__dirname, '..', 'src/services/scan/handleScan.ts');
 if (fs.existsSync(handleScanPath)) {
   const content = fs.readFileSync(handleScanPath, 'utf8');
@@ -87,8 +104,8 @@ if (fs.existsSync(handleScanPath)) {
   fail('handleScan.ts not found');
 }
 
-// CHECK 3: Cart starts expanded
-console.log('Check 3: Cart expansion state...');
+// CHECK 4: Cart starts expanded
+console.log('Check 4: Cart expansion state...');
 const sellScanPath = path.join(__dirname, '..', 'src/screens/SellScanScreen.tsx');
 if (fs.existsSync(sellScanPath)) {
   const content = fs.readFileSync(sellScanPath, 'utf8');
@@ -110,8 +127,8 @@ if (fs.existsSync(sellScanPath)) {
   fail('SellScanScreen.tsx not found');
 }
 
-// CHECK 4: Menu text visibility
-console.log('Check 4: Menu text visibility...');
+// CHECK 5: Menu text visibility
+console.log('Check 5: Menu text visibility...');
 const posRootPath = path.join(__dirname, '..', 'src/screens/PosRootLayout.tsx');
 if (fs.existsSync(posRootPath)) {
   const content = fs.readFileSync(posRootPath, 'utf8');
@@ -127,8 +144,8 @@ if (fs.existsSync(posRootPath)) {
   fail('PosRootLayout.tsx not found');
 }
 
-// CHECK 5: Button sizes
-console.log('Check 5: Button touch target sizes...');
+// CHECK 6: Button sizes
+console.log('Check 6: Button touch target sizes...');
 if (fs.existsSync(sellScanPath)) {
   const content = fs.readFileSync(sellScanPath, 'utf8');
 
@@ -158,8 +175,8 @@ if (fs.existsSync(sellScanPath)) {
   }
 }
 
-// CHECK 6: Sell price validation in onboarding
-console.log('Check 6: Stock onboarding sell price check...');
+// CHECK 7: Sell price validation in onboarding
+console.log('Check 7: Stock onboarding sell price check...');
 if (fs.existsSync(handleScanPath)) {
   const content = fs.readFileSync(handleScanPath, 'utf8');
 
