@@ -150,12 +150,11 @@
   },
   "prerequisitePrograms": {
     "C1_REAL_USER_FUNNEL": {
-      "status": "ACTIVE_HARD_BLOCK",
+      "status": "CODE_COMPLETE_RUNTIME_PENDING",
       "owner": "CLAUDE",
       "blocks": [
-        "JOURNEY-02 operator certification",
-        "deploy/APK requests for touched auth/onboarding surfaces",
-        "operator-led discovery of basic prerequisite failures"
+        "JOURNEY-02 operator certification (until runtime confirmed)",
+        "PHASE_4 advancement (until APK rebuilt + runtime tested)"
       ],
       "scope": [
         "retailer registration",
@@ -177,9 +176,26 @@
         "Retailer portal init enables the portal and stores the phone but does not pre-create auth.store_users; first successful login creates the user linkage.",
         "Retailer OTP login path is firebase-otp-login, not the email/password login route.",
         "Supplier portal has both phone OTP and password login paths in code; runtime status is unverified.",
-        "Unified document upload route uses GCS-backed uploadBuffer; exact 500 root cause is not yet proven."
+        "Unified document upload route uses GCS-backed uploadBuffer; GCS IAM fix applied (BLK-A1 RESOLVED).",
+        "POS enrollment auto-creates MANAGER staff if store has no active staff (BLK-POSSTAFF1 #478).",
+        "StaffLoginScreen has back button (Switch Store) and pull-to-refresh (BLK-POS-UX1/UX2 #479).",
+        "Supplier registration form includes address_proof + cancelled_cheque upload fields (BLK-SUP-KYC1 #480).",
+        "Welcome/approval emails use direct download link, include activation code, no iOS references (PR-1 #481)."
       ],
-      "resumeRule": "Fix the earliest prerequisite blocker first. Do not skip to downstream sell-flow fixes while a real retailer or supplier cannot reach that stage through stable entry paths."
+      "resolvedBlockers": [
+        "BLK-A1 (GCS upload 500): RESOLVED — IAM binding added",
+        "BLK-A2 (Firebase verify-otp): RESOLVED — PR #463",
+        "BLK-F1 (retailer_portal_phone): RESOLVED — PR #466, runtime confirmed",
+        "BLK-B1 (retailer login): RESOLVED — unblocked after BLK-F1, runtime confirmed",
+        "BLK-SP1 (stock NUMERIC coercion): RESOLVED — PRs #469, #477, 17 regression tests",
+        "BLK-H1 (OpeningStock shape): RESOLVED — PR #470",
+        "BUILD-BLK-01 (build reproducibility): RESOLVED — eddb9c61",
+        "BLK-POSSTAFF1 (staff auto-create): RESOLVED — PR #478, 6 regression tests",
+        "BLK-POS-UX1/UX2 (login UX): RESOLVED — PR #479",
+        "BLK-SUP-KYC1 (supplier docs): RESOLVED — PR #480",
+        "PR-1 (email content): RESOLVED — PR #481, 19 regression tests"
+      ],
+      "resumeRule": "All code blockers resolved. Next: deploy backend, build APK, runtime verify. Do not skip to PHASE_4 until runtime confirmation collected."
     }
   },
   "_actionTemplate": {
@@ -347,18 +363,18 @@
       "staticAuditComplete": true,
       "staticAuditCompletedAt": "2026-03-07",
       "remainingSealingBlockers": {
-        "B1": "BLOCKED \u2014 GAP-02-SEED-OPENING-STOCK code-fixed (PR #470 merged to main). GAP-SP1-STOCK-PARITY code-fixed (PR #469 merged to main). Both pending runtime confirmation on rebuilt APK. GAP-C1 partially resolved: retailer funnel stable, supplier funnel untested.",
+        "B1": "BLOCKED \u2014 All code fixes merged. GAP-02-SEED-OPENING-STOCK code-fixed (PR #470). GAP-SP1-STOCK-PARITY code-fixed (PRs #469, #477). GAP-C1 substantially resolved: retailer funnel stable, email fixes merged (#481), supplier KYC fixed (#480), POS staff auto-create (#478), POS UX (#479). Supplier funnel untested on staging. All pending runtime confirmation on rebuilt APK.",
         "B2": "CLEAR \u00e2\u20ac\u201d all 22 invariants VERIFIED or nonBlockingForJourneys:JOURNEY-02",
         "B3": "CLEAR \u2014 SCREEN_CERT_MANIFEST.json verified 2026-03-07 at 7c62039f: PaymentScreen ISSUE-051/066 (CRITICAL) and ISSUE-068 (HIGH) all regressionGuardStatus=PASS. SellScanScreen ISSUE-204/042/039 all PASS. No knownIssue has MISSING or FAIL guard.",
         "B4": "CLEAR \u2014 G1 signed 2026-03-07 (all 20 scopeFiles read). G2/G3/G5/G6 signed 2026-03-07. G4 already signed. All six guarantees now signed.",
-        "B5": "BLOCKED \u2014 seededStateLock.confirmed=false. BLK-SP1 root cause identified and code-fixed (PR #469: syncProductsToOffline treated cached stock as pinned, blocking server updates). BLK-H1 code-fixed (PR #470: OpeningStock search response shape). Both merged to main, pending APK rebuild + operator runtime confirmation.",
+        "B5": "BLOCKED \u2014 seededStateLock.confirmed=false. All code fixes merged: BLK-SP1 (#469 sync fix + #477 parseStock), BLK-H1 (#470 OpeningStock shape), BUILD-BLK-01 (eddb9c61 expo deps), BLK-POSSTAFF1 (#478 staff auto-create), BLK-POS-UX1/UX2 (#479 login UX), BLK-SUP-KYC1 (#480 supplier docs), PR-1 (#481 email content). Pending: backend staging deploy + APK rebuild + operator runtime confirmation.",
         "B6": "CLEAR \u00e2\u20ac\u201d all action levels PASS or GAP with documented acceptedRisk",
         "B7": "CLEAR \u2014 knownIssues cross-checked against LIVE_TESTING_ISSUES.md (2026-03-07): ISSUE-051, ISSUE-066, ISSUE-068, ISSUE-204, ISSUE-042 all present and documented. No omission found. Cross-check feasible in PHASE_1 without runtime.",
         "B8": "CLEAR \u00e2\u20ac\u201d all 10 actions now result=PASS",
-        "B9": "BLOCKED \u2014 runtimeEvidence remains empty. BLK-SP1 and BLK-H1 code-fixed and merged to main (PRs #469, #470). APK rebuild required before operator runtime retest. Remaining after retest: supplier funnel untested, comms fixes needed.",
+        "B9": "BLOCKED \u2014 runtimeEvidence remains empty. All code blockers resolved (PRs #469, #470, #477-#481, eddb9c61). APK rebuild + backend deploy required before operator runtime retest.",
         "B10": "CLEAR \u2014 commit boundary audit (2026-03-07): code-fix commits (b3b5bf6c ISSUE-051/066, 536b8442 ISSUE-204) and test commit (e9bf825f) have zero RELEASES/ file touches. State commits (7c62039f etc.) touch only RELEASES/ \u2014 no src/ overlap. Boundary respected.",
         "B11": "CLEAR \u2014 pushed to origin/main 2026-03-07: bd81f502..73d46ea1 (code ac67afac, state commits through 73d46ea1). HEAD on origin/main = 73d46ea1.",
-        "B12": "BLOCKED \u2014 Still PHASE_3_CODE_FIX_CLUSTER. BLK-SP1 and BLK-H1 code-merged to main. Remaining: APK rebuild, operator runtime confirmation, supplier funnel audit, comms fixes. Cannot advance to PHASE_4 until stock-add path is runtime-confirmed on rebuilt APK."
+        "B12": "BLOCKED \u2014 PHASE_3_PARK_READY. All code blockers resolved. Remaining: backend staging deploy, APK rebuild, operator runtime confirmation. Cannot advance to PHASE_4 until stock parity + Opening Stock + POS enrollment are runtime-confirmed on rebuilt APK."
       },
       "openGaps": [
         {
@@ -367,17 +383,17 @@
           "type": "SETUP_PATH_RUNTIME_CRASH",
           "severity": "HIGH",
           "happyPathAffected": true,
-          "description": "OpeningStockScreen searchProducts() expected flat {products:[]} but API returns grouped {data:SearchApiGroup[]}. CODE-FIXED: PR #470 merged (commit a8b7767f) adds proper interfaces and flatMaps grouped response. PENDING: APK rebuild + operator runtime confirmation that Opening Stock search + submit works on device.",
-          "requiredFix": "Rebuild APK from current main (includes PR #470). Operator retests Menu -> Opening Stock -> search -> submit on device. If successful, mark GAP as RESOLVED."
+          "description": "CODE-FIXED (PARK-READY). OpeningStockScreen searchProducts() shape mismatch fixed (PR #470). Stock NUMERIC coercion fixed (PR #477). BUILD-BLK-01 resolved (eddb9c61). All code merged to main@b20d41a6. PENDING: APK rebuild + operator runtime confirmation.",
+          "requiredFix": "Deploy backend to staging. Rebuild APK from main@b20d41a6. Operator retests Menu -> Opening Stock -> search -> submit on device. If successful, mark GAP as RESOLVED."
         },
         {
           "gapId": "GAP-C1-REAL-USER-PREREQUISITE-FUNNEL",
           "level": "PHASE_3_PREREQUISITE_STABILIZATION",
-          "type": "REAL_USER_FUNNEL_PARTIALLY_STABLE",
+          "type": "REAL_USER_FUNNEL_PARK_READY",
           "severity": "MEDIUM",
           "happyPathAffected": true,
-          "description": "PARTIALLY RESOLVED (2026-03-08). Retailer funnel runtime-confirmed stable. BLK-SP1 root-caused and code-fixed (PR #469). BLK-H1 code-fixed (PR #470). PR #468 (backend dual-write) deployed. REMAINING: APK rebuild + operator runtime confirmation of stock parity and Opening Stock flow. Supplier registration/login untested. Retailer comms have 2 critical + 3 high copy/content issues.",
-          "requiredFix": "Rebuild APK with accumulated fixes (PRs #469, #470). Operator retests stock parity + Opening Stock. Fix retailer comms (PR-1). Fix supplier Step 3 (PR-2). Test supplier funnel end-to-end."
+          "description": "CODE-COMPLETE (PARK-READY). All code blockers resolved: BLK-SP1 (#477), BLK-H1 (#470), BLK-POSSTAFF1 (#478), BLK-POS-UX1/UX2 (#479), BLK-SUP-KYC1 (#480), PR-1 (#481), BUILD-BLK-01 (eddb9c61). Retailer funnel runtime-confirmed stable (2026-03-08). REMAINING: backend staging deploy, APK rebuild, runtime confirmation of stock parity + Opening Stock + POS enrollment + supplier funnel.",
+          "requiredFix": "Deploy backend to staging. Rebuild APK from main@b20d41a6. Operator retests: stock parity, Opening Stock, POS enrollment + staff login, supplier registration e2e. Mark GAP RESOLVED when runtime-confirmed."
         },
         {
           "gapId": "GAP-SP1-STOCK-PARITY",
@@ -385,8 +401,8 @@
           "type": "DATA_SYNC_BLOCKER",
           "severity": "HIGH",
           "happyPathAffected": true,
-          "description": "ROOT CAUSE IDENTIFIED (2026-03-08). syncProductsToOffline() in SellScanScreen.tsx lines 150-155 treated ANY cached stock value as a manual pin (ISSUE-204 protectedUntil check), preventing server stock=10 from reaching local SQLite. After cache TTL (5min), display fell back to SQLite which still had 0. Backend DB was correct on all 3 surfaces (stock_balances=10, store_products=10, ledger delta=10). CODE-FIXED: PR #469 (commit af04eb6b) adds isEntryPinProtected() to stockCache.ts and isSkuStockPinned() to stockService.ts. 4 regression tests added. PENDING: APK rebuild + operator runtime confirmation.",
-          "requiredFix": "Rebuild APK from current main (includes PR #469). Operator retests: background/foreground POS, verify dal masala stock updates from 0 to 10. If confirmed, mark GAP as RESOLVED."
+          "description": "CODE-FIXED (PARK-READY). Two root causes fixed: (1) syncProductsToOffline() pin protection bug (PR #469), (2) PostgreSQL NUMERIC string serialization (PR #477 — parseStock() on backend, Number() coercion on client). 17 regression tests total. PENDING: APK rebuild + backend deploy + operator runtime confirmation.",
+          "requiredFix": "Deploy backend to staging. Rebuild APK from main@b20d41a6. Operator retests: verify stock shows correct numbers on POS (not 0 or string). If confirmed, mark GAP as RESOLVED."
         }
       ],
       "acceptedRisks": [
@@ -412,10 +428,10 @@
         }
       ],
       "cccBlocker": {
-        "file": "src/screens/OpeningStockScreen.tsx",
-        "description": "BLK-SP1 and BLK-H1 code-merged. PR #471 (build gate fix) merged. PR #473 (state sync) merged. NEW BLOCKER BUILD-BLK-01: clean APK build path is not reproducible. Root cause: expo-linear-gradient ^14.0.2 resolves to 14.1.5 on fresh install (requires expo-module-gradle-plugin not in SDK 52); pnpm-lock.yaml stale (--frozen-lockfile fails); ExpoModulesCorePlugin.gradle components.release incompatible with AGP 8.6. Must fix dependency pinning before APK can be built from clean main.",
-        "requiredFix": "Fix BUILD-BLK-01: (1) Pin expo-linear-gradient to exact 14.0.2 in package.json. (2) Regenerate pnpm-lock.yaml so --frozen-lockfile succeeds. (3) Patch ExpoModulesCorePlugin.gradle components.release for AGP 8.6. (4) Build APK from clean main worktree. (5) Operator retests stock parity + Opening Stock on device. (6) Fix comms (PR-1) and supplier Step 3 (PR-2). (7) Test supplier funnel.",
-        "nextResumeCondition": "Resume JOURNEY-02 PHASE_4 after: BUILD-BLK-01 resolved, APK rebuilt from clean main and installed, stock parity runtime-confirmed (dal masala shows 10 not 0), Opening Stock search+submit succeeds without crash, stock seeded via stable path."
+        "file": null,
+        "description": "PARK-READY: All code blockers resolved. BUILD-BLK-01 FIXED (eddb9c61). BLK-SP1 FIXED (#477). BLK-H1 FIXED (#470). BLK-POSSTAFF1 FIXED (#478). BLK-POS-UX1/UX2 FIXED (#479). BLK-SUP-KYC1 FIXED (#480). PR-1 FIXED (#481). No code work remaining. Blocked on artifact build + runtime confirmation only.",
+        "requiredFix": "Deploy backend to staging (PRs #477-481). Build single APK from main@b20d41a6. Operator runtime tests on device.",
+        "nextResumeCondition": "Resume JOURNEY-02 PHASE_4 after: backend deployed to staging, APK rebuilt and installed, stock parity runtime-confirmed, Opening Stock search+submit succeeds, POS enrollment+staff login verified, supplier funnel tested."
       },
       "seededStateLock": {
         "required": true,
