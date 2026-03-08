@@ -193,9 +193,9 @@ Legend: ✅ = passed, ❌ = failed (ticket filed), ? = not tested, N/A = not app
 | BLK-A2 | Firebase verify-otp | ✅ RESOLVED |
 | BLK-F1 | Missing retailer_portal_phone | ✅ RESOLVED |
 | BLK-B1 | Login blocked | ✅ RESOLVED |
-| PR-1 | Email content issues (dead links, iOS refs) | ❌ NOT FIXED |
+| PR-1 | Email content issues (dead links, iOS refs) | ✅ CODE FIXED (PR #481). 19 regression tests. Runtime pending. |
 
-#### Runtime Status: Flows A/F/B RUNTIME CONFIRMED on 2026-03-08. Email content issues remain.
+#### Runtime Status: Flows A/F/B RUNTIME CONFIRMED on 2026-03-08. Email content FIXED (PR #481).
 
 ---
 
