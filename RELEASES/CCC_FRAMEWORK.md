@@ -9,11 +9,11 @@
 ```
 STEP 1: Read RELEASES/CLAUDE_CURRENT_STATE.json
          → Find: cccFramework.currentJourney, cccFramework.currentPhase
-         → Find: wave20.environmentAlignment.c1NextStep or current cluster
+         → Find: journeyExecutionMachineState.activeAction, auditMode, nextLayer, nextBlocker
 
 STEP 2: Read RELEASES/JOURNEY_MAP.json
          → Find the currentJourney entry
-         → Find its auditStatus and lastAuditedAction
+         → Find its auditStatus, lastAuditedAction, actions[], auditNote, and scopeFiles
 
 STEP 3: Read RELEASES/INVARIANT_REGISTRY.json
          → Load all invariants relevant to currentJourney
@@ -26,11 +26,15 @@ STEP 5: git log --oneline -5 && git status
 
 STEP 6: Announce exactly:
          "Resuming JOURNEY-XX [name]. Status: [CERT-SEALED|CERT-PENDING|NEEDS-REAUDIT].
-          Last audited action: [ACTION-NN: description].
-          Next action: [ACTION-NN+1: description].
+          Audit mode: [USER_ACTION_ENUMERATION|FULL_LAYER_TRACE|EDGE_CASE_AUDIT|BLOCKER_IMPLEMENTATION|REGRESSION_GUARDS|CERT_DELTA_REVIEW|PARK_READY_CHECK].
+          Active action: [state.activeAction].
+          Next layer: [state.nextLayer].
           Files in scope: [list]."
 
-STEP 7: Continue audit from lastAuditedAction + 1. Never restart from scratch.
+STEP 7: If actions[] is empty or auditMode=USER_ACTION_ENUMERATION:
+         reiterate the journey, enumerate every real user click/action,
+         build the cross-layer map, and build the edge-case matrix before code changes.
+         Otherwise continue audit from lastAuditedAction + 1. Never restart from scratch.
 ```
 
 **Anti-Drift Rule**: Claude NEVER decides what to work on from conversation memory.
@@ -57,6 +61,117 @@ enrollment, stock setup, or session recovery, that prerequisite funnel is part
 of the production surface. Repeatedly fixing the same downstream symptom
 without mapping and stabilizing the full prerequisite funnel is NOT
 production-grade work.
+
+---
+
+## SECTION 1A: JOURNEY MACHINE STATE (Mandatory Per Journey)
+
+Before Claude starts or resumes any journey, the live machine state in
+`RELEASES/CLAUDE_CURRENT_STATE.json` must be updated to reflect the exact audit
+mode and next implementation focus.
+
+Required fields:
+
+```
+activeJourney
+activeJourneyStatus
+activeAction
+auditMode
+enumerationCoverage
+nextBlocker
+nextLayer
+remainingCertificationDelta
+```
+
+Allowed audit modes:
+
+```
+USER_ACTION_ENUMERATION
+FULL_LAYER_TRACE
+EDGE_CASE_AUDIT
+BLOCKER_IMPLEMENTATION
+REGRESSION_GUARDS
+CERT_DELTA_REVIEW
+PARK_READY_CHECK
+```
+
+Declared primary-surface journey inventory in repo truth:
+
+```
+POS app       = 15 currently declared journeys
+                (JOURNEY-01, 07, 08, 05, 02, 03, 04, 06, 13, 14, 15, 16, 17, 18, 19)
+Retailer web  = 1 currently declared journey   (JOURNEY-11)
+Supplier web  = 1 currently declared journey   (JOURNEY-10)
+SuperAdmin web= 2 currently declared journeys  (JOURNEY-09, 12)
+TOTAL         = 19 currently declared journeys
+```
+
+Important:
+
+```
+The declared POS count is NOT automatically final.
+If repo truth marks POS exhaustive rediscovery as active, the currently declared
+POS journeys are a moving baseline only. Claude must pause retailer/supplier/
+superadmin implementation, return to the active POS rediscovery journey in repo
+truth, and expand the POS inventory before any new non-POS work.
+```
+
+Inventory omission guard:
+
+```
+If Claude discovers a real user journey missing from this inventory:
+  1. STOP implementation.
+  2. Update JOURNEY_MAP.json first (new journey or expanded action spine).
+  3. Reset machine state auditMode = USER_ACTION_ENUMERATION.
+  4. Resume from enumeration, not from the old blocker.
+
+If Claude skips, forgets, or drifts from a declared journey:
+  - any PARK-READY / CERT coverage claim for that surface becomes invalid
+  - restore the missed journey to execution order
+  - resume from the earliest missed action or missed journey
+
+POS closure proof rule:
+  - exhaustive rediscovery CANNOT be marked COMPLETE while any repo-visible POS
+    screen, modal, sheet, dialog, menu entry, tab, deep link, background
+    recovery surface, or infrastructure-triggered user-visible route is still
+    unmapped, only implied, or justified only in conversation instead of repo truth
+```
+
+POS exhaustive rediscovery protocol:
+
+```
+If operator or repo truth reopens exhaustive POS discovery:
+  1. Pause retailer/supplier/superadmin execution immediately.
+  2. Reset currentJourney/currentAuditJourney to JOURNEY-01.
+  3. Treat the currently declared POS journeys as a baseline minimum only.
+  4. Enumerate the full POS journey inventory from real user entry through every
+     exit, recovery path, background/resume path, and support/admin detour that
+     affects POS continuity.
+  5. Declare every newly discovered POS journey in JOURNEY_MAP before code
+     changes continue.
+  6. Re-lock execution to the expanded POS journey order and only then continue
+     journey-by-journey implementation.
+```
+
+Required new-journey order:
+
+```
+1. Reiterate the journey from repo truth.
+2. Enumerate every real user click, tap, type, scan, back action, cancel path,
+   background/resume path, retry path, and recovery path.
+3. Build the full cross-layer map:
+   UI/UX → navigation → wiring → API → backend → DB/tables → migrations
+   → GCP/runtime parity → cross-portal effects.
+4. Build the edge-case matrix:
+   what the user does, preconditions, expected response, next state,
+   what can go wrong, and the business invariant at risk.
+5. Only after steps 1-4 are captured may Claude choose the first blocker.
+6. Implement fixes in cascading layer order, starting from the earliest real
+   blocker in the active path.
+```
+
+Claude may decide one action at a time and one layer at a time, but only after
+the journey-wide enumeration and edge-case audit exist in repo truth.
 
 ---
 
@@ -431,10 +546,30 @@ UNTIL REPO TRUTH EXPLICITLY CHANGES THIS LOCK:
   cross-platform surfaces for the active POS journey. Their standalone
   implementation passes begin only after the full POS suite is PARK-READY.
 
-  Even after the full POS suite is PARK-READY, artifact/build/deploy/runtime
-  remain LOCKED until the declared post-POS execution passes (retailer,
-  supplier, superadmin) are also PARK-READY or explicitly CERT-BLOCKED in
-  repo truth.
+Even after the full POS suite is PARK-READY, artifact/build/deploy/runtime
+remain LOCKED until the declared post-POS execution passes (retailer,
+operator-directed pending POS audit pack if queued, supplier, superadmin)
+are also PARK-READY or explicitly CERT-BLOCKED in repo truth.
+```
+
+Post-POS platform rediscovery rule:
+
+```
+After the POS suite is COMPLETE:
+  1. Do NOT assume retailer, supplier, or superadmin journey counts are final.
+  2. Treat the currently declared journeys on each non-POS platform as a
+     baseline minimum only until that platform is re-explored from real user entry.
+  3. Restart platform execution in locked order:
+       retailer -> operator-directed pending POS audit pack (if queued in repo truth) -> supplier -> superadmin
+  4. For the active platform:
+       - enumerate every real user journey and hidden subjourney
+       - map every page, route, tab, modal, sheet, dialog, and recovery path
+       - declare any missing journeys in JOURNEY_MAP before code changes continue
+  5. Preserve historical platform work as repo truth, but suspend exhaustive
+     coverage claims for that platform until rediscovery completes.
+  6. Only after retailer rediscovery, any queued operator-directed POS audit
+     packs, supplier rediscovery, and superadmin rediscovery are complete
+     may artifact/build/deploy/runtime become eligible for explicit operator review.
 ```
 
 ---
@@ -741,16 +876,18 @@ Rule E: After any code fix in a CERT-SEALED journey's file scope:
 
 Rule F: Depth-first journey execution is mandatory.
         Once a journey becomes the current audit target, Claude stays on that
-        journey until it is either CERT-SEALED or explicitly CERT-BLOCKED by a
-        real code gap with requiredFix documented. Claude does NOT switch to a
-        different journey because "this round is short", to sample breadth, or
-        to trace blockers "efficiently" across multiple journeys.
+        journey until it is PARK-READY, CERT-SEALED, or explicitly
+        CERT-BLOCKED by a real code gap with requiredFix documented. Claude
+        does NOT switch to a different journey because "this round is short",
+        to sample breadth, or to trace blockers "efficiently" across multiple
+        journeys.
 
 Rule G: If a session ends before the active journey is complete, Claude updates
         machine state with the exact remaining blockers, next required action,
-        and next file/action to resume from. Next session resumes the SAME
-        journey. Claude does not pre-scan the next journey while the current
-        journey is still auditable.
+        activeAction, auditMode, nextLayer, remainingCertificationDelta, and
+        next file/action to resume from. Next session resumes the SAME journey.
+        Claude does not pre-scan the next journey while the current journey is
+        still auditable.
 
 Rule H: "Finish the journey" means close the entire sealing surface for that
         journey: remaining invariants, open gaps, regression guards,
