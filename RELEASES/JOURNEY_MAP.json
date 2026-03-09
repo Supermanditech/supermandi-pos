@@ -10895,17 +10895,8 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
-      "auditNote": "Deep J20 auth/onboarding trace is in progress. J20-TEST-001 DONE (PR #486, fa84806b, 55 tests). J20-TEST-002 DONE (PR #489, 1d84bab0, 61 tests). Current locked blocker is J20-TEST-003 route-guard redirect coverage before PARK-READY can be claimed.",
+      "auditNote": "Deep J20 auth/onboarding trace is in progress. J20-TEST-001 DONE (PR #486, fa84806b, 55 tests). J20-TEST-002 DONE (PR #489, 1d84bab0, 61 tests). J20-TEST-003 DONE (PR #492, ee61ed5c, 40 tests). Current locked blocker is J20-TEST-004 token refresh/revocation coverage before PARK-READY can be claimed.",
       "openGaps": [
-        {
-          "id": "J20-TEST-003",
-          "description": "Route-guard redirect behavior is not protected for authenticated navigation to /retailer/login and unauthenticated navigation to protected routes.",
-          "severity": "HIGH",
-          "layer": "TEST_REGRESSION",
-          "affectedAction": "AUTH_GUARD_REDIRECTS",
-          "fix": "Add App/AuthContext routing tests for login redirect and protected route redirect behavior.",
-          "status": "OPEN"
-        },
         {
           "id": "J20-TEST-004",
           "description": "AuthContext token refresh, JTI revocation handling, and bulk revocation are under-tested at the auth orchestration layer.",
@@ -10926,10 +10917,10 @@
         }
       ],
       "cccBlocker": {
-        "file": "retailer-admin/src/__tests__/App.test.tsx",
-        "description": "J20-TEST-003 is the current blocker to PARK-READY. Route-guard redirect behavior is not covered for authenticated navigation to /retailer/login and unauthenticated navigation to protected routes.",
-        "requiredFix": "Add App/AuthContext routing tests for login redirect and protected route redirect behavior. Commit as CODE_FIX with tests only.",
-        "nextResumeCondition": "After route-guard redirect coverage lands, continue remaining J20 auth test backlog in locked order: token refresh/revocation (J20-TEST-004), idle-timeout timing (J20-TEST-005)."
+        "file": "retailer-admin/src/__tests__/AuthContext.test.tsx",
+        "description": "J20-TEST-004 is the current blocker to PARK-READY. AuthContext token refresh, JTI revocation handling, and bulk revocation are under-tested.",
+        "requiredFix": "Expand AuthContext tests for refresh timing, revocation responses, and re-auth or logout transitions. Commit as CODE_FIX with tests only.",
+        "nextResumeCondition": "After token refresh/revocation coverage lands, continue to J20-TEST-005 idle-timeout timing."
       },
       "seededStateLock": {
         "required": true,
