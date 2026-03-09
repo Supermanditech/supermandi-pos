@@ -11178,10 +11178,10 @@
       "name": "Retailer Inventory & Stock Ledger",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer opens the stock ledger, filters transaction history, inspects date ranges, and validates inventory movement continuity.",
-      "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": "J22_USER_ACTION_ENUMERATION",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J22_PARK_READY_SIGNED",
       "lastAuditedAt": "2026-03-10",
-      "auditNote": "J22 enumeration complete: 16 user actions, 12 edge cases. J22-TEST-001 DONE: InventoryPage expanded from 8 to 44 tests (PR #515, 5aad2466). All declared blockers resolved. Evaluating PARK-READY.",
+      "auditNote": "JOURNEY-22 PARK-READY. 16 actions, 12 edge cases, 44 tests (8→44 via J22-TEST-001 PR #515). G1-G6 signed with file:line citations. Single-page inventory ledger journey fully stabilized.",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with stock transactions or empty-state coverage"], "resetScriptNote": "" },
@@ -11195,12 +11195,12 @@
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "77e47bcc", "citations": ["inventory.ts:35-37 getStoreId from x-actor-id", "inventory.ts:54,109,242,383,458,606,785,899,969,1041 every endpoint calls getStoreId", "inventory.ts:131,147,163,268,285,300,490,527,614,672,800-801,810-811,831 all SQL WHERE store_id=$1", "api.ts:70-71 Authorization Bearer from in-memory token", "InventoryPage.tsx:66,88 useAuth guard"], "notes": "Store isolation verified: storeId derived from JWT x-actor-id header only, all 12+ SQL queries include WHERE store_id." },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "77e47bcc", "citations": ["InventoryPage.test.tsx: 44 tests — smoke(8) + filters(5) + dates(4) + emptyStates(4) + refresh(2) + retry(1) + entryRendering(11) + freshness(2) + polling(2) + headers(1) + stats(2) + auth(1) + 401(1)"], "notes": "44 tests covering all 16 enumerated actions and 12 edge cases." },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "77e47bcc", "citations": ["InventoryPage.tsx:325-347 EmptyState per filter", "InventoryPage.tsx:339 date range empty message", "InventoryPage.tsx:259,270 min/max date constraints", "InventoryPage.tsx:186 auth loading guard", "InventoryPage.tsx:113 401 silent exit", "InventoryPage.tsx:132-135,316-322 error+retry", "InventoryPage.tsx:155,167-179 visibility gating", "InventoryPage.tsx:366-370 delta qty color+sign"], "notes": "All 12 enumerated edge cases verified with code citations." },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "77e47bcc", "citations": ["api.ts:9-13 HTTPS enforcement", "api.ts:75 X-Requested-With CSRF", "api.ts:95 credentials include HttpOnly", "InventoryPage.tsx:106-110 encodeURIComponent on dates", "inventory.ts:35-37 storeId from header only"], "notes": "HTTPS enforcement, CSRF header, HttpOnly cookies, input encoding, no client-sent storeId." },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "77e47bcc", "citations": ["App.tsx:310 Route path=inventory with LimitedModeGuard", "App.tsx:24 lazy loading", "InventoryPage.tsx:191-193 Breadcrumb Home→Inventory"], "notes": "Route guarded by LimitedModeGuard, lazy-loaded, breadcrumb navigation present." },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "77e47bcc", "citations": ["InventoryPage.tsx:305-310 loading state", "InventoryPage.tsx:348-379 success/data rows", "InventoryPage.tsx:325-347 empty state per filter+dates", "InventoryPage.tsx:311-324 error+retry"], "notes": "All 4 UX states verified: loading, success, empty (contextual), error with retry." }
       },
       "scope": {
         "posScreens": [],
