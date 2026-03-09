@@ -931,3 +931,216 @@ describe('Refresh skips when no auth cookie', () => {
     });
   });
 });
+
+// ── Idle Timeout Warning and Logout (J20-TEST-005) ───────────────────────
+
+describe('Idle timeout warning and logout (J20-TEST-005)', () => {
+  // Constants matching AuthContext.tsx
+  const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  const WARNING_BEFORE_MS = 5 * 60 * 1000; // 5 minutes before timeout
+  const IDLE_CHECK_INTERVAL = 30_000; // 30 seconds
+
+  async function loginFirst() {
+    mockedHasAuthCookie.mockReturnValue(false);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(JSON.stringify({ accessToken: 'refreshed-token' }), { status: 200 })
+    );
+    renderWithProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+    });
+    mockedHasAuthCookie.mockReturnValue(true);
+    await act(async () => {
+      screen.getByTestId('login-btn').click();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('true');
+    });
+  }
+
+  it('shows session warning when idle time exceeds warning threshold', async () => {
+    await loginFirst();
+
+    // Verify warning is initially false
+    expect(screen.getByTestId('session-warning').textContent).toBe('false');
+
+    // Simulate 26 minutes of idle by backdating last_activity
+    const twentySixMinAgo = Date.now() - (IDLE_TIMEOUT_MS - WARNING_BEFORE_MS + 60_000);
+    localStorage.setItem('retailer_s1_last_activity', String(twentySixMinAgo));
+
+    // Advance past one idle check interval to trigger the warning check
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-warning').textContent).toBe('true');
+    });
+  });
+
+  it('does not show warning when idle time is below warning threshold', async () => {
+    await loginFirst();
+
+    // Simulate 20 minutes of idle (below 25-min warning threshold)
+    const twentyMinAgo = Date.now() - 20 * 60 * 1000;
+    localStorage.setItem('retailer_s1_last_activity', String(twentyMinAgo));
+
+    // Advance past one idle check interval
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL);
+    });
+
+    expect(screen.getByTestId('session-warning').textContent).toBe('false');
+  });
+
+  it('logs out when idle time exceeds full timeout', async () => {
+    await loginFirst();
+
+    // Simulate 31 minutes of idle (past 30-min timeout)
+    const thirtyOneMinAgo = Date.now() - (IDLE_TIMEOUT_MS + 60_000);
+    localStorage.setItem('retailer_s1_last_activity', String(thirtyOneMinAgo));
+
+    // Advance past one idle check interval
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('false');
+    });
+  });
+
+  it('dismissSessionWarning resets warning and refreshes activity timestamp', async () => {
+    await loginFirst();
+
+    // Trigger warning by backdating activity
+    const twentySixMinAgo = Date.now() - (IDLE_TIMEOUT_MS - WARNING_BEFORE_MS + 60_000);
+    localStorage.setItem('retailer_s1_last_activity', String(twentySixMinAgo));
+
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-warning').textContent).toBe('true');
+    });
+
+    // Dismiss the warning
+    await act(async () => {
+      screen.getByTestId('dismiss-warning').click();
+    });
+
+    expect(screen.getByTestId('session-warning').textContent).toBe('false');
+
+    // Verify last_activity was refreshed (should be recent, not 26 min ago)
+    const lastActivity = parseInt(localStorage.getItem('retailer_s1_last_activity')!, 10);
+    expect(Date.now() - lastActivity).toBeLessThan(5000); // within 5 seconds
+  });
+
+  it('clears idle timeout warning on logout', async () => {
+    await loginFirst();
+
+    // Trigger warning
+    const twentySixMinAgo = Date.now() - (IDLE_TIMEOUT_MS - WARNING_BEFORE_MS + 60_000);
+    localStorage.setItem('retailer_s1_last_activity', String(twentySixMinAgo));
+
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL);
+    });
+
+    // Trigger full timeout
+    const thirtyOneMinAgo = Date.now() - (IDLE_TIMEOUT_MS + 60_000);
+    localStorage.setItem('retailer_s1_last_activity', String(thirtyOneMinAgo));
+
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL);
+    });
+
+    // Should be logged out and warning cleared
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('false');
+    });
+    expect(screen.getByTestId('session-warning').textContent).toBe('false');
+  });
+
+  it('does not start idle check when not authenticated', async () => {
+    mockedHasAuthCookie.mockReturnValue(false);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 401 })
+    );
+
+    renderWithProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+    });
+
+    // Even with stale activity data, no warning or logout should fire
+    localStorage.setItem('retailer_active_store_id', 'fake');
+    localStorage.setItem('retailer_fake_last_activity', String(Date.now() - IDLE_TIMEOUT_MS - 60_000));
+
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL * 3);
+    });
+
+    expect(screen.getByTestId('session-warning').textContent).toBe('false');
+    expect(screen.getByTestId('authenticated').textContent).toBe('false');
+  });
+
+  it('activity events throttle localStorage writes to once per minute', async () => {
+    await loginFirst();
+
+    // First click writes (lastWrite starts at 0, so Date.now() - 0 > 60000 is always true)
+    await act(async () => {
+      window.dispatchEvent(new Event('click'));
+    });
+
+    // Record timestamp after first click (which writes)
+    const afterFirstClick = parseInt(localStorage.getItem('retailer_s1_last_activity')!, 10);
+
+    // Subsequent clicks within 60s should NOT update localStorage (throttled)
+    await act(async () => {
+      window.dispatchEvent(new Event('click'));
+      window.dispatchEvent(new Event('click'));
+    });
+
+    const afterMoreClicks = parseInt(localStorage.getItem('retailer_s1_last_activity')!, 10);
+    expect(afterMoreClicks).toBe(afterFirstClick);
+
+    // Advance past 60s throttle window
+    await act(async () => {
+      vi.advanceTimersByTime(61_000);
+    });
+
+    // Now a click should write again (throttle window has passed)
+    await act(async () => {
+      window.dispatchEvent(new Event('click'));
+    });
+
+    const afterThrottle = parseInt(localStorage.getItem('retailer_s1_last_activity')!, 10);
+    expect(afterThrottle).toBeGreaterThan(afterFirstClick);
+  });
+
+  it('clears idle check interval on logout', async () => {
+    await loginFirst();
+
+    // Logout
+    await act(async () => {
+      screen.getByTestId('logout-btn').click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('false');
+    });
+
+    // Set stale activity data — should NOT trigger warning or logout since intervals were cleared
+    localStorage.setItem('retailer_active_store_id', 's1');
+    localStorage.setItem('retailer_s1_last_activity', String(Date.now() - IDLE_TIMEOUT_MS - 60_000));
+
+    await act(async () => {
+      vi.advanceTimersByTime(IDLE_CHECK_INTERVAL * 3);
+    });
+
+    // Should remain logged out with no warning (interval was cleared)
+    expect(screen.getByTestId('session-warning').textContent).toBe('false');
+  });
+});
