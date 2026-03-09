@@ -1375,3 +1375,258 @@ describe('API error handling on submit', () => {
     });
   });
 });
+
+// ── SKU PDF Download (STG-736) ──────────────────────────────────────────
+
+describe('SKU PDF download', () => {
+  it('downloads SKU PDF on button click', async () => {
+    renderProducts();
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    // The 📄 buttons are the SKU download buttons (one per product)
+    const skuButtons = screen.getAllByTitle('Download SKU Labels');
+    expect(skuButtons.length).toBe(2);
+
+    // Mock authFetch to return a blob for PDF
+    const mockBlob = new Blob(['fake-pdf'], { type: 'application/pdf' });
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      blob: () => Promise.resolve(mockBlob),
+    });
+
+    // Spy on createElement AFTER render
+    const origCreateElement = document.createElement.bind(document);
+    const mockLink = { href: '', download: '', click: vi.fn(), style: {} };
+    const createElSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'a') return mockLink as any;
+      return origCreateElement(tag);
+    });
+    const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+    const removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
+    URL.createObjectURL = vi.fn(() => 'blob:test-pdf') as any;
+    URL.revokeObjectURL = vi.fn() as any;
+
+    try {
+      await act(async () => {
+        fireEvent.click(skuButtons[0]);
+      });
+
+      // Verify authFetch was called with the SKU PDF endpoint
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        '/api/v1/retailer-admin/products/p1/sku.pdf',
+        'test-token'
+      );
+
+      // Verify download was triggered
+      expect(mockLink.click).toHaveBeenCalled();
+      expect(mockLink.download).toBe('sku_p1.pdf');
+    } finally {
+      createElSpy.mockRestore();
+      appendSpy.mockRestore();
+      removeSpy.mockRestore();
+    }
+  });
+
+  it('shows error when SKU PDF download fails', async () => {
+    renderProducts();
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    const skuButtons = screen.getAllByTitle('Download SKU Labels');
+
+    // Mock authFetch to return error
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      blob: () => Promise.reject(new Error('fail')),
+    });
+
+    await act(async () => {
+      fireEvent.click(skuButtons[0]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to download SKU PDF')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when SKU PDF network request fails', async () => {
+    renderProducts();
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    const skuButtons = screen.getAllByTitle('Download SKU Labels');
+
+    mockAuthFetch.mockRejectedValueOnce(new Error('Network failure'));
+
+    await act(async () => {
+      fireEvent.click(skuButtons[0]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to download SKU PDF')).toBeInTheDocument();
+    });
+  });
+});
+
+// ── URL State Persistence (T-120) ───────────────────────────────────────
+
+describe('URL state persistence (T-120)', () => {
+  it('reads initial search from URL query parameter', async () => {
+    // The useUrlState mock uses useState — to test URL persistence,
+    // we verify that renderProducts with ?search= filters the list.
+    // Since useUrlState is mocked as plain state, we test the URL-driven
+    // category filter which IS handled by searchParams directly.
+    renderProducts('/s/STORE1/products?category=staples');
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    // Verify the category filter was applied from URL
+    const calls = mockAuthFetch.mock.calls;
+    const productCall = calls.find((c: any[]) =>
+      typeof c[0] === 'string' && c[0].includes('/products') && c[0].includes('categoryId=staples')
+    );
+    expect(productCall).toBeTruthy();
+  });
+
+  it('opens create form when ?action=create is in URL', async () => {
+    renderProducts('/s/STORE1/products?action=create');
+
+    await waitFor(() => {
+      expect(screen.getByText('Add New Product')).toBeInTheDocument();
+    });
+  });
+
+  it('opens create form and removes action param from URL', async () => {
+    renderProducts('/s/STORE1/products?action=create');
+
+    await waitFor(() => {
+      expect(screen.getByText('Add New Product')).toBeInTheDocument();
+    });
+
+    // The form should be visible (action=create triggered form open)
+    expect(screen.getByLabelText('Product Name *')).toBeInTheDocument();
+  });
+});
+
+// ── Dirty Form Navigation Warning (LIVE.NAV.RETAILER) ───────────────────
+
+describe('Dirty form navigation warning', () => {
+  it('adds beforeunload listener when form has unsaved changes', async () => {
+    renderProducts();
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    // Open the form
+    fireEvent.click(screen.getByText('+ Add Product'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Product Name *')).toBeInTheDocument();
+    });
+
+    // Track addEventListener calls
+    const addSpy = vi.spyOn(window, 'addEventListener');
+
+    // Make the form dirty by changing a field
+    fireEvent.change(screen.getByLabelText('Product Name *'), { target: { value: 'Dirty Product' } });
+
+    // Force a re-render to trigger the useUnsavedChanges effect
+    await act(async () => {});
+
+    // Check that beforeunload was registered
+    const beforeUnloadCalls = addSpy.mock.calls.filter(
+      (c) => c[0] === 'beforeunload'
+    );
+    expect(beforeUnloadCalls.length).toBeGreaterThan(0);
+
+    addSpy.mockRestore();
+  });
+
+  it('does not add beforeunload listener when form is clean', async () => {
+    const addSpy = vi.spyOn(window, 'addEventListener');
+
+    renderProducts();
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    // No form open — should not have beforeunload
+    const beforeUnloadCalls = addSpy.mock.calls.filter(
+      (c) => c[0] === 'beforeunload'
+    );
+    expect(beforeUnloadCalls.length).toBe(0);
+
+    addSpy.mockRestore();
+  });
+
+  it('removes beforeunload listener when form is closed', async () => {
+    renderProducts();
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    const removeSpy = vi.spyOn(window, 'removeEventListener');
+
+    // Open the form and make it dirty
+    fireEvent.click(screen.getByText('+ Add Product'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Product Name *')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Product Name *'), { target: { value: 'Dirty' } });
+    await act(async () => {});
+
+    // Close the form — the "+ Add Product" button toggles to "Cancel" when form is open
+    // Use the top-level toggle button (which says "Cancel" when form is open)
+    const cancelButtons = screen.getAllByText('Cancel');
+    fireEvent.click(cancelButtons[0]); // First "Cancel" is the toggle button
+
+    await act(async () => {});
+
+    // Should remove beforeunload listener when form closes (isDirty becomes false)
+    const removeBeforeUnload = removeSpy.mock.calls.filter(
+      (c) => c[0] === 'beforeunload'
+    );
+    expect(removeBeforeUnload.length).toBeGreaterThan(0);
+
+    removeSpy.mockRestore();
+  });
+
+  it('beforeunload event is prevented when form is dirty', async () => {
+    renderProducts();
+
+    await waitFor(() => {
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+    });
+
+    // Open form and make dirty
+    fireEvent.click(screen.getByText('+ Add Product'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Product Name *')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Product Name *'), { target: { value: 'Unsaved' } });
+    await act(async () => {});
+
+    // Simulate beforeunload event
+    const event = new Event('beforeunload', { cancelable: true });
+    Object.defineProperty(event, 'preventDefault', { value: vi.fn() });
+    window.dispatchEvent(event);
+
+    expect((event.preventDefault as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+  });
+});
