@@ -11031,7 +11031,7 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": "J21_USER_ACTION_ENUMERATION",
       "lastAuditedAt": "2026-03-10",
-      "auditNote": "J21 enumeration complete: 33 user actions across 4 surfaces (Dashboard, Products, Import, Variants), 12 edge cases, 4 test blockers identified. Existing coverage: 155 tests (31 Dashboard, 69 Products, 6 Import, 8 Variant, 41 store API). First blocker: J21-TEST-001 (ImportPage).",
+      "auditNote": "J21 enumeration complete: 33 user actions across 4 surfaces (Dashboard, Products, Import, Variants), 12 edge cases, 4 test blockers identified. J21-TEST-001 DONE (ImportPage 6→39 tests, PR #502, cb86d9f8). Next blocker: J21-TEST-002 (VariantManager).",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with products or empty-state catalog", "permission to create and update products"], "resetScriptNote": "" },
@@ -11126,7 +11126,19 @@
         { "id": "J21-TEST-003", "target": "DashboardPage.test.tsx", "severity": "MEDIUM", "reason": "31 tests but missing category rename flow, category hide/show toggle, CSV export with formula protection, search result click navigation." },
         { "id": "J21-TEST-004", "target": "ProductsPage.test.tsx", "severity": "LOW", "reason": "69 tests is solid. Missing: URL state persistence (T-120), SKU PDF download, dirty form navigation warning." }
       ],
-      "knownIssues": []
+      "knownIssues": [
+        {
+          "issueId": "J21-TEST-001",
+          "severity": "CRITICAL",
+          "status": "FIXED",
+          "sha": "cb86d9f8",
+          "rootCause": "ImportPage had only 6 smoke tests for a 573-line 5-step CSV import workflow. Missing: file upload, validation, review, commit with polling, done summary, error handling, timeout, drag-and-drop.",
+          "fix": "PR #502 — expanded from 6 to 39 tests covering full 5-step workflow, error handling, drag-and-drop, file size rejection, timeout, and error truncation.",
+          "regressionGuardStatus": "PASS",
+          "regressionGuardType": "COMPONENT_TEST_EXPANSION",
+          "regressionGuardRef": "retailer-admin/src/__tests__/ImportPage.test.tsx"
+        }
+      ]
     },
     "JOURNEY-22": {
       "id": "JOURNEY-22",
