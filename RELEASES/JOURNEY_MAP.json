@@ -11028,10 +11028,10 @@
       "name": "Retailer Product Management",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer manages catalog via dashboard inventory sections, quick search, category editing, product CRUD, variants, and CSV import.",
-      "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": "J21_USER_ACTION_ENUMERATION",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J21_PARK_READY_EVALUATION",
       "lastAuditedAt": "2026-03-10",
-      "auditNote": "J21 enumeration complete: 33 user actions across 4 surfaces (Dashboard, Products, Import, Variants), 12 edge cases, 4 test blockers identified. All 4 resolved: J21-TEST-001 DONE (ImportPage 6→39, PR #502), J21-TEST-002 DONE (VariantManager 8→39, PR #504), J21-TEST-003 DONE (DashboardPage 31→50, PR #506), J21-TEST-004 DONE (ProductsPage 62→72, PR #508, b400c9b1). All J21 test blockers resolved. Ready for PARK-READY evaluation.",
+      "auditNote": "PARK-READY. 33 actions, 12 edge cases, 4 test blockers all resolved: J21-TEST-001 (ImportPage 6→39, PR #502), J21-TEST-002 (VariantManager 8→39, PR #504), J21-TEST-003 (DashboardPage 31→50, PR #506), J21-TEST-004 (ProductsPage 62→72, PR #508). 201 J21-scope tests, 892 total suite, 0 failures. G1-G6 signed. Store isolation verified across all 5 backend routes (requireStoreContext middleware + WHERE store_id clauses). Frontend uses authFetch exclusively. No hardcoded secrets. No test.skip.",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with products or empty-state catalog", "permission to create and update products"], "resetScriptNote": "" },
@@ -11053,12 +11053,12 @@
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "9af4336a", "citations": ["backend/src/routes/v1/retailer-admin/products.ts:64 (req.storeId from JWT)", "backend/src/routes/v1/retailer-admin/products.ts:72 (WHERE store_id=$1)", "backend/src/routes/v1/retailer-admin/search.ts:29-31 (getStoreId+401)", "backend/src/routes/v1/retailer-admin/search.ts:63,88,116 (3x WHERE store_id=$1)", "backend/src/routes/v1/retailer-admin/csvImport.ts:127-130 (getStoreId)", "backend/src/routes/v1/retailer-admin/variants.ts:17 (requireStoreContext)", "backend/src/routes/v1/retailer-admin/variants.ts:51,163,294,393 (4x WHERE store_id)", "backend/src/routes/v1/retailer-admin/inventory.ts:54,131 (storeId from JWT)", "backend/src/middleware/retailerStoreContext.ts:31-34 (x-actor-type=STORE)", "retailer-admin/src/lib/api.ts:70-71,92-96 (Authorization+credentials:include)", "retailer-admin/src/App.tsx:163 (URL storeCode validation)"], "notes": "Store isolation: all backend routes derive storeId from JWT. All SQL includes WHERE store_id. Frontend uses authFetch exclusively." },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "9af4336a", "citations": ["retailer-admin/src/__tests__/ImportPage.test.tsx (39 tests)", "retailer-admin/src/__tests__/VariantManager.test.tsx (39 tests)", "retailer-admin/src/__tests__/pages/DashboardPage.test.tsx (51 tests)", "retailer-admin/src/__tests__/pages/ProductsPage.test.tsx (72 tests)"], "notes": "201 J21-scope tests across 4 files. 892 total suite, 0 failures, 0 skips." },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "9af4336a", "citations": ["retailer-admin/src/pages/DashboardPage.tsx:27-28 (race guard)", "retailer-admin/src/pages/DashboardPage.tsx:135-202 (unmount guard)", "retailer-admin/src/pages/ImportPage.tsx:189-197 (mountedRef)", "retailer-admin/src/pages/ImportPage.tsx:207-261 (polling timeout 10min)", "retailer-admin/src/lib/api.ts:84-86 (30s AbortController)", "retailer-admin/src/components/VariantManager.tsx:94-96 (FIX-018 string price)"], "notes": "Edge cases: race conditions, unmount guards, polling timeouts, float safety, file size limits, CSV formula injection." },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "9af4336a", "citations": ["retailer-admin/src/lib/api.ts:9-13 (HTTPS enforcement)", "retailer-admin/src/lib/api.ts:75 (X-Requested-With CSRF)", "backend/src/routes/v1/retailer-admin/csvImport.ts:25-33 (rate limiter 10/hr)", "backend/src/routes/v1/retailer-admin/csvImport.ts:120-121 (5MB+10K limits)", "backend/src/routes/v1/retailer-admin/search.ts:38-44 (100 char limit)", "backend/src/routes/v1/retailer-admin/variants.ts:115,149 (20 variant+price cap)"], "notes": "Security: HTTPS enforced, CSRF headers, rate limiting, input caps, DoS guards. No hardcoded secrets." },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "9af4336a", "citations": ["retailer-admin/src/App.tsx:139-170 (ProtectedRoute)", "retailer-admin/src/App.tsx:172-227 (AdminRoute role check)", "retailer-admin/src/App.tsx:231-267 (LimitedModeGuard)", "retailer-admin/src/components/ProtectedLayout.tsx:121-132 (limited-mode redirect)"], "notes": "Navigation: ProtectedRoute URL validation, role gating, limited-mode enforcement on all routes." },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "9af4336a", "citations": ["retailer-admin/src/pages/DashboardPage.tsx:97-99 (user error messages)", "retailer-admin/src/pages/ImportPage.tsx:154-167 (row-level error feedback)", "retailer-admin/src/lib/logger.ts:8-13 (safeDetail hides stack in prod)", "retailer-admin/src/hooks/useNavigationSafety.ts (beforeunload dirty form guard)"], "notes": "UX 4-state verified. Loading/success/empty/error tested across all 4 surfaces. Dirty form guard. Prod logger strips stacks." }
       },
       "scope": {
         "posScreens": [],
