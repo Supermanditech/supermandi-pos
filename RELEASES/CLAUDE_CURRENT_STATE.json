@@ -103,11 +103,11 @@
   },
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-21",
-    "activeJourneyStatus": "CERT-PENDING",
-    "activeAction": "J21_USER_ACTION_ENUMERATION",
-    "auditMode": "USER_ACTION_ENUMERATION",
-    "nextLayer": "ENUMERATION",
-    "nextBlocker": "JOURNEY-20 is PARK-READY (177 tests, 6/6 guarantees signed). Begin JOURNEY-21 (Retailer Product Management) user action enumeration.",
+    "activeJourneyStatus": "CERT-IN-PROGRESS",
+    "activeAction": "J21_IMPORT_PAGE_COVERAGE",
+    "auditMode": "BLOCKER_IMPLEMENTATION",
+    "nextLayer": "TESTS",
+    "nextBlocker": "J21-TEST-001: ImportPage has only 6 smoke tests for a 573-line 5-step CSV import workflow. Expand to cover file upload, validation, review, commit with polling, done summary, error report, file size rejection, and timeout.",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -5454,7 +5454,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "JOURNEY-20 is PARK-READY (177 tests, 6/6 guarantees signed, 799-test suite green). Begin JOURNEY-21 (Retailer Product Management) user action enumeration. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
+  "nextAction": "JOURNEY-21 enumeration complete (33 actions, 12 edge cases, 4 blockers). Begin J21-TEST-001: expand ImportPage from 6 smoke tests to full 5-step workflow coverage. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -6342,7 +6342,7 @@
     }
   },
   "currentAuditJourney": "JOURNEY-21",
-  "machineStateVersion": 185,
+  "machineStateVersion": 186,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,
