@@ -102,12 +102,12 @@
     ]
   },
   "journeyExecutionMachineState": {
-    "activeJourney": "JOURNEY-20",
-    "activeJourneyStatus": "CERT-IN-PROGRESS",
-    "activeAction": "J20_PARK_READY_EVALUATION",
-    "auditMode": "BLOCKER_IMPLEMENTATION",
-    "nextLayer": "TESTS",
-    "nextBlocker": "All 5 identified J20 test blockers are DONE. Evaluate JOURNEY-20 for PARK-READY or identify remaining gaps.",
+    "activeJourney": "JOURNEY-21",
+    "activeJourneyStatus": "CERT-PENDING",
+    "activeAction": "J21_USER_ACTION_ENUMERATION",
+    "auditMode": "USER_ACTION_ENUMERATION",
+    "nextLayer": "ENUMERATION",
+    "nextBlocker": "JOURNEY-20 is PARK-READY (177 tests, 6/6 guarantees signed). Begin JOURNEY-21 (Retailer Product Management) user action enumeration.",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -5454,7 +5454,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "JOURNEY-20 all 5 test blockers DONE. Evaluate for PARK-READY or identify remaining gaps before advancing to JOURNEY-21. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
+  "nextAction": "JOURNEY-20 is PARK-READY (177 tests, 6/6 guarantees signed, 799-test suite green). Begin JOURNEY-21 (Retailer Product Management) user action enumeration. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -6341,8 +6341,8 @@
       "reiterationStatus": "COMPLETE_AFTER_WAVE6"
     }
   },
-  "currentAuditJourney": "JOURNEY-20",
-  "machineStateVersion": 183,
+  "currentAuditJourney": "JOURNEY-21",
+  "machineStateVersion": 184,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,
