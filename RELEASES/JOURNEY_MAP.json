@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-20",
+  "currentAuditJourney": "JOURNEY-21",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
@@ -278,7 +278,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-20",
+    "journeyId": "JOURNEY-21",
     "status": "RETAILER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Retailer-web surface rediscovery proved the historical J11-only inventory was incomplete. Canonical retailer-web inventory is now expanded to 15 journeys. Active standalone execution restarts from JOURNEY-20 (Retailer Auth & Onboarding) as the earliest retailer entrypoint. Historical J11 remains preserved but no longer defines retailer platform completeness.",
     "switchAllowedOnlyWhen": [
@@ -10892,10 +10892,10 @@
       "name": "Retailer Auth & Onboarding",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer reaches web entry -> login, registration, password reset, session bootstrap, store selection or validation, protected-route access, session warning, logout, and recovery paths.",
-      "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "Deep J20 auth/onboarding trace is in progress. J20-TEST-001 DONE (PR #486, fa84806b, 55 tests). J20-TEST-002 DONE (PR #489, 1d84bab0, 61 tests). J20-TEST-003 DONE (PR #492, ee61ed5c, 40 tests). J20-TEST-004 DONE (PR #494, 6d98c3dd, 13 tests). J20-TEST-005 DONE (PR #497, 61ad1889, 8 tests). All 5 identified test blockers resolved. Evaluate for PARK-READY.",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J20_PARK_READY_EVALUATION",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "JOURNEY-20 PARK-READY. All 5 test blockers resolved (177 tests total): J20-TEST-001 (PR #486, 55 tests), J20-TEST-002 (PR #489, 61 tests), J20-TEST-003 (PR #492, 40 tests), J20-TEST-004 (PR #494, 13 tests), J20-TEST-005 (PR #497, 8 tests). Full retailer-admin suite: 799 tests, 48 files, 0 failures. No open gaps, no unsigned guarantees.",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": {
@@ -10918,27 +10918,27 @@
         "B6_incompleteLevelsBlock": true
       },
       "scopeFiles": [
-        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/components/ProtectedLayout.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/lib/AuthContext.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/LoginPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/RegisterPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/ForgotPasswordPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/ResetPasswordPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/auth.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/registration.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer/register.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer/me.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "retailer-admin/src/components/ProtectedLayout.tsx", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "retailer-admin/src/lib/AuthContext.tsx", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/LoginPage.tsx", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/RegisterPage.tsx", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/ForgotPasswordPage.tsx", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/ResetPasswordPage.tsx", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/auth.ts", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/registration.ts", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer/register.ts", "auditedAtSha": "aa815fb5", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer/me.ts", "auditedAtSha": "aa815fb5", "reauditRequired": false }
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "aa815fb5", "citations": ["PR #486 (55 tests)", "PR #489 (61 tests)", "PR #492 (40 tests)", "PR #494 (13 tests)", "PR #497 (8 tests)"], "notes": "All 5 auth/onboarding test blockers resolved with 177 regression tests" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "aa815fb5", "citations": ["retailer-admin 799 tests, 48 files, 0 failures"], "notes": "Full suite green at PARK-READY evaluation" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "aa815fb5", "citations": ["J20-TEST-001 through J20-TEST-005 all regressionGuardStatus=PASS"], "notes": "Every identified gap has a regression guard" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "aa815fb5", "citations": ["openGaps=[]", "cccBlocker=null"], "notes": "No open gaps or blockers remain" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "aa815fb5", "citations": ["RegisterPage KYC flow", "ForgotPasswordPage reset/recovery", "App route guards", "AuthContext refresh/revocation", "AuthContext idle timeout"], "notes": "All auth/onboarding user paths have regression coverage" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "aa815fb5", "citations": ["No cross-portal regressions introduced"], "notes": "J20 scope is retailer-admin only; no supplier/superadmin changes" }
       },
       "scope": {
         "posScreens": [],
@@ -10980,22 +10980,22 @@
         {
           "issueId": "J20-TEST-002",
           "severity": "CRITICAL",
-          "status": "OPEN",
-          "sha": null,
+          "status": "FIXED",
+          "sha": "1d84bab0",
           "rootCause": "ForgotPasswordPage covers only shallow UI choices and does not protect reset submission or recovery states.",
-          "fix": null,
-          "regressionGuardStatus": "NEEDED",
+          "fix": "PR #489 — 61 tests covering dual-channel reset, recovery states, error handling, and submission flows.",
+          "regressionGuardStatus": "PASS",
           "regressionGuardType": "COMPONENT_TEST_EXPANSION",
           "regressionGuardRef": "retailer-admin/src/__tests__/ForgotPasswordPage.test.tsx"
         },
         {
           "issueId": "J20-TEST-003",
           "severity": "HIGH",
-          "status": "OPEN",
-          "sha": null,
+          "status": "FIXED",
+          "sha": "ee61ed5c",
           "rootCause": "App-level route guard redirects are not covered by regression tests for authenticated or unauthenticated navigation.",
-          "fix": null,
-          "regressionGuardStatus": "NEEDED",
+          "fix": "PR #492 — 40 tests covering route-guard redirects, authenticated/unauthenticated navigation, and access control.",
+          "regressionGuardStatus": "PASS",
           "regressionGuardType": "ROUTING_TEST_EXPANSION",
           "regressionGuardRef": "retailer-admin/src/__tests__/App.test.tsx"
         },
