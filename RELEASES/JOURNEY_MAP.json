@@ -10895,17 +10895,8 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
-      "auditNote": "Deep J20 auth/onboarding trace is in progress. Preserved findings indicate the full implementation path is coded across all traced layers, but production-grade regression coverage is insufficient. First locked blocker is RegisterPage 5-step KYC test expansion before PARK-READY can be claimed.",
+      "auditNote": "Deep J20 auth/onboarding trace is in progress. Preserved findings indicate the full implementation path is coded across all traced layers, but production-grade regression coverage is insufficient. J20-TEST-001 is complete on main at fa84806b. Current locked blocker is J20-TEST-002 ForgotPasswordPage reset/recovery coverage before PARK-READY can be claimed.",
       "openGaps": [
-        {
-          "id": "J20-TEST-001",
-          "description": "RegisterPage has only smoke coverage and lacks regression coverage for the 5-step KYC flow: phone, OTP, business details, document upload, and submit. UX 4-state, wiring, and error handling are not protected.",
-          "severity": "CRITICAL",
-          "layer": "TEST_REGRESSION",
-          "affectedAction": "REGISTER_PAGE_END_TO_END_KYC_FLOW",
-          "fix": "Expand RegisterPage tests to cover the 5-step onboarding flow, success/error transitions, and handler wiring.",
-          "status": "OPEN"
-        },
         {
           "id": "J20-TEST-002",
           "description": "ForgotPasswordPage lacks regression coverage for OTP send/verify, email reset, password reset submission, and recovery/error states.",
@@ -10944,10 +10935,10 @@
         }
       ],
       "cccBlocker": {
-        "file": "retailer-admin/src/__tests__/RegisterPage.test.tsx",
-        "description": "J20-TEST-001 is the first blocker to PARK-READY. RegisterPage only has smoke tests and does not protect the 5-step KYC onboarding flow or its failure states.",
-        "requiredFix": "Expand RegisterPage regression coverage for phone, OTP, business details, document upload, submit, and UX 4-state/error handling. Commit as CODE_FIX with tests only.",
-        "nextResumeCondition": "After RegisterPage regression coverage lands, continue the remaining J20 auth test backlog in locked order: ForgotPasswordPage, auth redirects, token refresh/revocation, idle-timeout timing."
+        "file": "retailer-admin/src/__tests__/ForgotPasswordPage.test.tsx",
+        "description": "J20-TEST-002 is the current blocker to PARK-READY. ForgotPasswordPage still lacks production-grade regression coverage for OTP send/verify, email reset, submission, and recovery/error paths.",
+        "requiredFix": "Expand ForgotPasswordPage regression coverage for channel selection, OTP send/verify, password reset submission, success/error transitions, and recovery behavior. Commit as CODE_FIX with tests only.",
+        "nextResumeCondition": "After ForgotPasswordPage regression coverage lands, continue the remaining J20 auth test backlog in locked order: auth redirects, token refresh/revocation, idle-timeout timing."
       },
       "seededStateLock": {
         "required": true,
@@ -11020,11 +11011,11 @@
         {
           "issueId": "J20-TEST-001",
           "severity": "CRITICAL",
-          "status": "OPEN",
-          "sha": null,
-          "rootCause": "RegisterPage has only smoke tests and does not protect the 5-step KYC flow or its UX/error transitions.",
-          "fix": null,
-          "regressionGuardStatus": "NEEDED",
+          "status": "FIXED",
+          "sha": "fa84806b",
+          "rootCause": "RegisterPage had only smoke tests and did not protect the 5-step KYC flow or its UX/error transitions.",
+          "fix": "Expanded RegisterPage coverage from 4 to 55 tests covering the full 5-step KYC flow, validation, error handling, and recovery paths.",
+          "regressionGuardStatus": "PASS",
           "regressionGuardType": "COMPONENT_TEST_EXPANSION",
           "regressionGuardRef": "retailer-admin/src/__tests__/RegisterPage.test.tsx"
         },

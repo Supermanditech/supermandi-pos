@@ -1,6 +1,6 @@
 {
-  "version": "178.0",
-  "lastUpdated": "2026-03-09T22:00:00.000Z",
+  "version": "179.0",
+  "lastUpdated": "2026-03-09T22:15:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -133,7 +133,7 @@
       "identifiedIssues": [
         "POS_APP exhaustive rediscovery COMPLETE at 15 PARK-READY journeys",
         "JOURNEY-20 implementation is present across all traced auth/onboarding layers; current blockers are regression and coverage gaps, not missing product code",
-        "J20-TEST-001 RegisterPage 5-step KYC flow lacks production-grade regression coverage",
+        "J20-TEST-001 DONE: RegisterPage 5-step KYC flow regression coverage landed on main at fa84806b (PR #486, 55 tests)",
         "J20-TEST-002 ForgotPasswordPage reset and recovery flows lack production-grade regression coverage",
         "J20-TEST-003 route-guard redirect behavior is not covered for authenticated and unauthenticated navigation",
         "J20-TEST-004 AuthContext token refresh and revocation flows are under-tested",
@@ -5414,7 +5414,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "JOURNEY-20 is now in BLOCKER_IMPLEMENTATION mode. Land J20-TEST-001 by expanding RegisterPage regression coverage for the 5-step KYC flow, then continue the remaining J20 auth test backlog before advancing to JOURNEY-21. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
+  "nextAction": "JOURNEY-20 remains in BLOCKER_IMPLEMENTATION mode. Land J20-TEST-002 by expanding ForgotPasswordPage reset/recovery regression coverage, then continue the remaining J20 auth test backlog before advancing to JOURNEY-21. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -6302,7 +6302,7 @@
     }
   },
   "currentAuditJourney": "JOURNEY-20",
-  "machineStateVersion": 178,
+  "machineStateVersion": 179,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,
