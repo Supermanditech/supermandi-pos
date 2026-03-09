@@ -1,5 +1,5 @@
 {
-  "version": "188.0",
+  "version": "189.0",
   "lastUpdated": "2026-03-10T12:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
@@ -104,10 +104,10 @@
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-21",
     "activeJourneyStatus": "CERT-IN-PROGRESS",
-    "activeAction": "J21_DASHBOARD_PAGE_COVERAGE",
+    "activeAction": "J21_PRODUCTS_PAGE_COVERAGE",
     "auditMode": "BLOCKER_IMPLEMENTATION",
     "nextLayer": "TESTS",
-    "nextBlocker": "J21-TEST-003: DashboardPage has 31 tests but missing category rename flow, category hide/show toggle, CSV export with formula protection, search result click navigation.",
+    "nextBlocker": "J21-TEST-004: ProductsPage has 69 tests but missing URL state persistence (T-120), SKU PDF download, dirty form navigation warning.",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -171,6 +171,15 @@
         "mergedSHA": "80273d18",
         "testCount": 31,
         "regressions": 0
+      },
+      {
+        "id": "J21-TEST-003",
+        "title": "DashboardPage category rename, hide/show, CSV export, search navigation coverage",
+        "status": "DONE",
+        "mergedPR": 506,
+        "mergedSHA": "bbd7c8fa",
+        "testCount": 19,
+        "regressions": 0
       }
     ],
     "enumerationCoverage": {
@@ -194,6 +203,7 @@
         "J20-TEST-005 DONE: AuthContext idle timeout warning and auto-logout timing coverage landed on main at 61ad1889 (PR #497, 8 tests)",
         "J21-TEST-001 DONE: ImportPage 5-step CSV import workflow full coverage landed on main at cb86d9f8 (PR #502, 33 net new tests, 6→39 total)",
         "J21-TEST-002 DONE: VariantManager full CRUD coverage landed on main at 80273d18 (PR #504, 31 net new tests, 8→39 total)",
+        "J21-TEST-003 DONE: DashboardPage category rename, hide/show, CSV export, search navigation coverage landed on main at bbd7c8fa (PR #506, 19 net new tests, 31→50 total)",
         "RETAILER_WEB historical JOURNEY-11 is preserved, but 14 missing retailer journeys were discovered and declared; retailer platform truth now restarts from JOURNEY-20",
         "SUPPLIER_WEB historical JOURNEY-10 is preserved but not yet accepted as exhaustive platform truth",
         "SUPERADMIN_WEB historical JOURNEY-09 is preserved, JOURNEY-12 remains pending, and the full superadmin platform inventory is not yet exhaustive"
@@ -5474,7 +5484,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "J21-TEST-002 DONE (VariantManager 8→39 tests, PR #504, 80273d18). Begin J21-TEST-003: expand DashboardPage.test.tsx to cover category rename, category hide/show toggle, CSV export formula protection, and search result click navigation. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
+  "nextAction": "J21-TEST-003 DONE (DashboardPage 31→50 tests, PR #506, bbd7c8fa). Begin J21-TEST-004: expand ProductsPage.test.tsx to cover URL state persistence (T-120), SKU PDF download, dirty form navigation warning. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -6362,7 +6372,7 @@
     }
   },
   "currentAuditJourney": "JOURNEY-21",
-  "machineStateVersion": 188,
+  "machineStateVersion": 189,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,

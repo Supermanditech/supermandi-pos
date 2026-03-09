@@ -11031,7 +11031,7 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": "J21_USER_ACTION_ENUMERATION",
       "lastAuditedAt": "2026-03-10",
-      "auditNote": "J21 enumeration complete: 33 user actions across 4 surfaces (Dashboard, Products, Import, Variants), 12 edge cases, 4 test blockers identified. J21-TEST-001 DONE (ImportPage 6→39 tests, PR #502, cb86d9f8). J21-TEST-002 DONE (VariantManager 8→39 tests, PR #504, 80273d18). Next blocker: J21-TEST-003 (DashboardPage).",
+      "auditNote": "J21 enumeration complete: 33 user actions across 4 surfaces (Dashboard, Products, Import, Variants), 12 edge cases, 4 test blockers identified. J21-TEST-001 DONE (ImportPage 6→39 tests, PR #502, cb86d9f8). J21-TEST-002 DONE (VariantManager 8→39 tests, PR #504, 80273d18). J21-TEST-003 DONE (DashboardPage 31→50 tests, PR #506, bbd7c8fa). Next blocker: J21-TEST-004 (ProductsPage).",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with products or empty-state catalog", "permission to create and update products"], "resetScriptNote": "" },
@@ -11148,6 +11148,17 @@
           "regressionGuardStatus": "PASS",
           "regressionGuardType": "COMPONENT_TEST_EXPANSION",
           "regressionGuardRef": "retailer-admin/src/__tests__/VariantManager.test.tsx"
+        },
+        {
+          "issueId": "J21-TEST-003",
+          "severity": "MEDIUM",
+          "status": "FIXED",
+          "sha": "bbd7c8fa",
+          "rootCause": "DashboardPage had 31 tests but missing category rename flow, category hide/show toggle, CSV export formula protection (STG-735), and search result click navigation.",
+          "fix": "PR #506 — expanded from 31 to 50 tests covering category rename modal lifecycle (PATCH success/error/network), hide/show toggle (DELETE + Show hidden), CSV export with STG-735 formula injection protection, and search result navigation (product/supplier/barcode click → navigate).",
+          "regressionGuardStatus": "PASS",
+          "regressionGuardType": "COMPONENT_TEST_EXPANSION",
+          "regressionGuardRef": "retailer-admin/src/__tests__/pages/DashboardPage.test.tsx"
         }
       ]
     },
