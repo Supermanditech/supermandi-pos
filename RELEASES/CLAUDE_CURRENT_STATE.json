@@ -27,7 +27,7 @@
       "9. Announce: 'Resuming JOURNEY-XX. Audit mode: [mode]. Active action: [action]. Next layer: [layer]. Files: [list]'",
       "10. If actions[] is empty or journeyExecutionMachineState.auditMode=USER_ACTION_ENUMERATION: reiterate the journey, enumerate every real user click/action, build the cross-layer map and edge-case matrix, then choose the first blocker. Otherwise resume from lastAuditedAction + 1 or the recorded blocker."
     ],
-    "currentJourney": "JOURNEY-20",
+    "currentJourney": "JOURNEY-21",
     "currentPhase": "POST_POS_PLATFORM_PHASE3_EXHAUSTIVE_REDISCOVERY",
     "auditProgressNote": "POS exhaustive stabilization is COMPLETE and preserved at 15 PARK-READY journeys. Retailer-web surface rediscovery has now proven the platform inventory was severely undercounted: 14 missing retailer journeys were found beyond historical J11. Canonical retailer-web inventory is expanded to 15 journeys total, and active execution restarts from the earliest retailer entrypoint at JOURNEY-20 (Retailer Auth & Onboarding). After retailer-web rediscovery completes, activate POS_FEATURE_AUDIT_PACK_01, then continue supplier-web and superadmin-web.",
     "deployGateStatus": {
@@ -6342,7 +6342,7 @@
     }
   },
   "currentAuditJourney": "JOURNEY-21",
-  "machineStateVersion": 184,
+  "machineStateVersion": 185,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,
