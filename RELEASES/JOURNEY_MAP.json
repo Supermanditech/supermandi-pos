@@ -11181,7 +11181,7 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": "J22_USER_ACTION_ENUMERATION",
       "lastAuditedAt": "2026-03-10",
-      "auditNote": "J22 enumeration complete: 16 user actions on single InventoryPage surface, 12 edge cases. Single-page journey with ledger table, 4 filter tabs, date range, manual + auto-refresh (30s visibility-gated), contextual empty states, retry on error, URL state persistence. 1 test blocker identified: J22-TEST-001 (InventoryPage 8 smoke tests → comprehensive coverage).",
+      "auditNote": "J22 enumeration complete: 16 user actions, 12 edge cases. J22-TEST-001 DONE: InventoryPage expanded from 8 to 44 tests (PR #515, 5aad2466). All declared blockers resolved. Evaluating PARK-READY.",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with stock transactions or empty-state coverage"], "resetScriptNote": "" },
@@ -11250,7 +11250,9 @@
         { "id": "J22-TEST-001", "target": "retailer-admin/src/__tests__/InventoryPage.test.tsx", "severity": "HIGH", "reason": "8 smoke tests for 394-line page with 16 actions. Missing: filter tab switching with correct API params, date range filter, manual refresh, contextual empty states per filter, auto-refresh polling, entry row rendering (type badge, delta color, reference truncation), retry re-fetch, URL state persistence, freshness indicator." }
       ],
       "regressionLocks": [],
-      "knownIssues": []
+      "knownIssues": [
+        { "id": "J22-TEST-001", "status": "FIXED", "fixedAt": "5aad2466", "fixedPR": 515, "title": "InventoryPage comprehensive coverage — filters, dates, refresh, entry rendering, URL state, freshness (8→44 tests)" }
+      ]
     },
     "JOURNEY-23": {
       "id": "JOURNEY-23",
