@@ -10895,24 +10895,9 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
-      "auditNote": "Deep J20 auth/onboarding trace is in progress. J20-TEST-001 DONE (PR #486, fa84806b, 55 tests). J20-TEST-002 DONE (PR #489, 1d84bab0, 61 tests). J20-TEST-003 DONE (PR #492, ee61ed5c, 40 tests). J20-TEST-004 DONE (PR #494, 6d98c3dd, 13 tests). Current locked blocker is J20-TEST-005 idle timeout warning and logout timing coverage.",
-      "openGaps": [
-        {
-          "id": "J20-TEST-005",
-          "description": "Idle timeout warning and auto-logout timing are only partially covered in ProtectedLayout and need AuthContext-level timer coverage.",
-          "severity": "MEDIUM",
-          "layer": "TEST_REGRESSION",
-          "affectedAction": "IDLE_TIMEOUT_WARNING_AND_LOGOUT",
-          "fix": "Add AuthContext-level timer tests for warning display, dismiss, and logout expiration behavior.",
-          "status": "OPEN"
-        }
-      ],
-      "cccBlocker": {
-        "file": "retailer-admin/src/__tests__/lib/AuthContext.test.tsx",
-        "description": "J20-TEST-005 is the current blocker to PARK-READY. Idle timeout warning and auto-logout timing are only partially covered.",
-        "requiredFix": "Add AuthContext-level timer tests for warning display, dismiss, and logout expiration behavior. Commit as CODE_FIX with tests only.",
-        "nextResumeCondition": "After idle-timeout timing coverage lands, evaluate JOURNEY-20 for PARK-READY."
-      },
+      "auditNote": "Deep J20 auth/onboarding trace is in progress. J20-TEST-001 DONE (PR #486, fa84806b, 55 tests). J20-TEST-002 DONE (PR #489, 1d84bab0, 61 tests). J20-TEST-003 DONE (PR #492, ee61ed5c, 40 tests). J20-TEST-004 DONE (PR #494, 6d98c3dd, 13 tests). J20-TEST-005 DONE (PR #497, 61ad1889, 8 tests). All 5 identified test blockers resolved. Evaluate for PARK-READY.",
+      "openGaps": [],
+      "cccBlocker": null,
       "seededStateLock": {
         "required": true,
         "confirmed": false,
@@ -11028,11 +11013,11 @@
         {
           "issueId": "J20-TEST-005",
           "severity": "MEDIUM",
-          "status": "OPEN",
-          "sha": null,
+          "status": "DONE",
+          "sha": "61ad1889",
           "rootCause": "Idle-timeout behavior is only partially covered at component level, leaving auth-timer logic weakly protected.",
-          "fix": null,
-          "regressionGuardStatus": "NEEDED",
+          "fix": "PR #497 — 8 tests covering warning threshold, auto-logout, dismiss/reset, activity throttling, timer cleanup",
+          "regressionGuardStatus": "PASS",
           "regressionGuardType": "AUTH_CONTEXT_TEST_EXPANSION",
           "regressionGuardRef": "retailer-admin/src/__tests__/lib/AuthContext.test.tsx"
         }
