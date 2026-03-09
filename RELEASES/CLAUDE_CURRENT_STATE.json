@@ -1,6 +1,6 @@
 {
-  "version": "190.0",
-  "lastUpdated": "2026-03-10T14:00:00.000Z",
+  "version": "191.0",
+  "lastUpdated": "2026-03-10T15:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,10 +104,10 @@
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-21",
     "activeJourneyStatus": "CERT-IN-PROGRESS",
-    "activeAction": "J21_ALL_TEST_BLOCKERS_DONE",
-    "auditMode": "BLOCKER_IMPLEMENTATION",
-    "nextLayer": "TESTS",
-    "nextBlocker": "NONE — all 4 J21 test blockers resolved. Evaluate JOURNEY-21 for PARK-READY or identify remaining gaps.",
+    "activeAction": "J21_PARK_READY_EVALUATION",
+    "auditMode": "PARK_READY_EVALUATION",
+    "nextLayer": "EVALUATION",
+    "nextBlocker": "NONE — evaluate JOURNEY-21 for PARK-READY or identify remaining gaps.",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
