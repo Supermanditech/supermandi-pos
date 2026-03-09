@@ -1,6 +1,6 @@
 {
-  "version": "183.0",
-  "lastUpdated": "2026-03-10T00:35:00.000Z",
+  "version": "187.0",
+  "lastUpdated": "2026-03-10T12:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,10 +104,10 @@
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-21",
     "activeJourneyStatus": "CERT-IN-PROGRESS",
-    "activeAction": "J21_IMPORT_PAGE_COVERAGE",
+    "activeAction": "J21_VARIANT_MANAGER_COVERAGE",
     "auditMode": "BLOCKER_IMPLEMENTATION",
     "nextLayer": "TESTS",
-    "nextBlocker": "J21-TEST-001: ImportPage has only 6 smoke tests for a 573-line 5-step CSV import workflow. Expand to cover file upload, validation, review, commit with polling, done summary, error report, file size rejection, and timeout.",
+    "nextBlocker": "J21-TEST-002: VariantManager has only 8 tests for a 456-line CRUD component. Expand to cover add submit, edit-in-place, remove confirmation, floating-point price safety, and validation errors.",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -153,6 +153,15 @@
         "mergedSHA": "61ad1889",
         "testCount": 8,
         "regressions": 0
+      },
+      {
+        "id": "J21-TEST-001",
+        "title": "ImportPage 5-step CSV import workflow full coverage",
+        "status": "DONE",
+        "mergedPR": 502,
+        "mergedSHA": "cb86d9f8",
+        "testCount": 33,
+        "regressions": 0
       }
     ],
     "enumerationCoverage": {
@@ -174,6 +183,7 @@
         "J20-TEST-003 DONE: App route-guard redirect and access control regression coverage landed on main at ee61ed5c (PR #492, 40 tests)",
         "J20-TEST-004 DONE: AuthContext token refresh timing, revocation, and re-auth coverage landed on main at 6d98c3dd (PR #494, 13 tests)",
         "J20-TEST-005 DONE: AuthContext idle timeout warning and auto-logout timing coverage landed on main at 61ad1889 (PR #497, 8 tests)",
+        "J21-TEST-001 DONE: ImportPage 5-step CSV import workflow full coverage landed on main at cb86d9f8 (PR #502, 33 net new tests, 6→39 total)",
         "RETAILER_WEB historical JOURNEY-11 is preserved, but 14 missing retailer journeys were discovered and declared; retailer platform truth now restarts from JOURNEY-20",
         "SUPPLIER_WEB historical JOURNEY-10 is preserved but not yet accepted as exhaustive platform truth",
         "SUPERADMIN_WEB historical JOURNEY-09 is preserved, JOURNEY-12 remains pending, and the full superadmin platform inventory is not yet exhaustive"
@@ -5454,7 +5464,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "JOURNEY-21 enumeration complete (33 actions, 12 edge cases, 4 blockers). Begin J21-TEST-001: expand ImportPage from 6 smoke tests to full 5-step workflow coverage. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
+  "nextAction": "J21-TEST-001 DONE (ImportPage 6→39 tests, PR #502, cb86d9f8). Begin J21-TEST-002: expand VariantManager from 8 tests to full CRUD coverage (add submit, edit-in-place, remove confirmation, float price safety, validation errors). After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -6342,7 +6352,7 @@
     }
   },
   "currentAuditJourney": "JOURNEY-21",
-  "machineStateVersion": 186,
+  "machineStateVersion": 187,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,
