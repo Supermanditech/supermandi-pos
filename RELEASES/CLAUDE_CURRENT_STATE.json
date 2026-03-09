@@ -1,6 +1,6 @@
 {
-  "version": "189.0",
-  "lastUpdated": "2026-03-10T12:00:00.000Z",
+  "version": "190.0",
+  "lastUpdated": "2026-03-10T14:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,10 +104,10 @@
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-21",
     "activeJourneyStatus": "CERT-IN-PROGRESS",
-    "activeAction": "J21_PRODUCTS_PAGE_COVERAGE",
+    "activeAction": "J21_ALL_TEST_BLOCKERS_DONE",
     "auditMode": "BLOCKER_IMPLEMENTATION",
     "nextLayer": "TESTS",
-    "nextBlocker": "J21-TEST-004: ProductsPage has 69 tests but missing URL state persistence (T-120), SKU PDF download, dirty form navigation warning.",
+    "nextBlocker": "NONE — all 4 J21 test blockers resolved. Evaluate JOURNEY-21 for PARK-READY or identify remaining gaps.",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -180,6 +180,15 @@
         "mergedSHA": "bbd7c8fa",
         "testCount": 19,
         "regressions": 0
+      },
+      {
+        "id": "J21-TEST-004",
+        "title": "ProductsPage SKU PDF download, URL state persistence, dirty form navigation warning",
+        "status": "DONE",
+        "mergedPR": 508,
+        "mergedSHA": "b400c9b1",
+        "testCount": 10,
+        "regressions": 0
       }
     ],
     "enumerationCoverage": {
@@ -204,6 +213,8 @@
         "J21-TEST-001 DONE: ImportPage 5-step CSV import workflow full coverage landed on main at cb86d9f8 (PR #502, 33 net new tests, 6→39 total)",
         "J21-TEST-002 DONE: VariantManager full CRUD coverage landed on main at 80273d18 (PR #504, 31 net new tests, 8→39 total)",
         "J21-TEST-003 DONE: DashboardPage category rename, hide/show, CSV export, search navigation coverage landed on main at bbd7c8fa (PR #506, 19 net new tests, 31→50 total)",
+        "J21-TEST-004 DONE: ProductsPage SKU PDF download, URL state persistence, dirty form navigation warning landed on main at b400c9b1 (PR #508, 10 net new tests, 62→72 total)",
+        "All 4 J21 test blockers resolved. JOURNEY-21 ready for PARK-READY evaluation.",
         "RETAILER_WEB historical JOURNEY-11 is preserved, but 14 missing retailer journeys were discovered and declared; retailer platform truth now restarts from JOURNEY-20",
         "SUPPLIER_WEB historical JOURNEY-10 is preserved but not yet accepted as exhaustive platform truth",
         "SUPERADMIN_WEB historical JOURNEY-09 is preserved, JOURNEY-12 remains pending, and the full superadmin platform inventory is not yet exhaustive"
@@ -215,8 +226,9 @@
       "J20-TEST-003 DONE: App route-guard redirect and access control regression coverage landed (PR #492, ee61ed5c, 40 tests)",
       "J20-TEST-004 DONE: AuthContext token refresh timing, revocation, and re-auth coverage landed (PR #494, 6d98c3dd, 13 tests)",
       "J20-TEST-005 DONE: AuthContext idle timeout warning and auto-logout timing coverage landed (PR #497, 61ad1889, 8 tests)",
-      "All 5 identified J20 test blockers resolved. Evaluate JOURNEY-20 for PARK-READY.",
-      "after JOURNEY-20 reaches PARK-READY, continue the expanded retailer-web journey inventory through JOURNEY-21 to JOURNEY-33 plus preserved JOURNEY-11",
+      "All 5 identified J20 test blockers resolved. JOURNEY-20 PARK-READY.",
+      "All 4 identified J21 test blockers resolved. Evaluate JOURNEY-21 for PARK-READY.",
+      "after JOURNEY-21 reaches PARK-READY, continue the expanded retailer-web journey inventory through JOURNEY-22 to JOURNEY-33 plus preserved JOURNEY-11",
       "after retailer-web completion, activate POS_FEATURE_AUDIT_PACK_01 and audit/fix the deferred POS product/search/payment/supplier/cart pack",
       "after the pending POS audit pack, repeat exhaustive rediscovery for supplier-web, then superadmin-web",
       "only after retailer-web, POS_FEATURE_AUDIT_PACK_01, supplier-web, and superadmin-web are PARK-READY or explicitly CERT-BLOCKED may artifact/build/deploy/runtime be considered by explicit operator instruction"

@@ -11031,7 +11031,7 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": "J21_USER_ACTION_ENUMERATION",
       "lastAuditedAt": "2026-03-10",
-      "auditNote": "J21 enumeration complete: 33 user actions across 4 surfaces (Dashboard, Products, Import, Variants), 12 edge cases, 4 test blockers identified. J21-TEST-001 DONE (ImportPage 6→39 tests, PR #502, cb86d9f8). J21-TEST-002 DONE (VariantManager 8→39 tests, PR #504, 80273d18). J21-TEST-003 DONE (DashboardPage 31→50 tests, PR #506, bbd7c8fa). Next blocker: J21-TEST-004 (ProductsPage).",
+      "auditNote": "J21 enumeration complete: 33 user actions across 4 surfaces (Dashboard, Products, Import, Variants), 12 edge cases, 4 test blockers identified. All 4 resolved: J21-TEST-001 DONE (ImportPage 6→39, PR #502), J21-TEST-002 DONE (VariantManager 8→39, PR #504), J21-TEST-003 DONE (DashboardPage 31→50, PR #506), J21-TEST-004 DONE (ProductsPage 62→72, PR #508, b400c9b1). All J21 test blockers resolved. Ready for PARK-READY evaluation.",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with products or empty-state catalog", "permission to create and update products"], "resetScriptNote": "" },
@@ -11159,6 +11159,17 @@
           "regressionGuardStatus": "PASS",
           "regressionGuardType": "COMPONENT_TEST_EXPANSION",
           "regressionGuardRef": "retailer-admin/src/__tests__/pages/DashboardPage.test.tsx"
+        },
+        {
+          "issueId": "J21-TEST-004",
+          "severity": "LOW",
+          "status": "FIXED",
+          "sha": "b400c9b1",
+          "rootCause": "ProductsPage had 62 tests but missing URL state persistence (T-120 useUrlState hook), SKU PDF download (authFetch blob workflow), and dirty form navigation warning (useUnsavedChanges beforeunload).",
+          "fix": "PR #508 — expanded from 62 to 72 tests covering SKU PDF download (authFetch → blob → anchor click), URL state persistence (?action=create, ?category= sync), and beforeunload dirty form guard.",
+          "regressionGuardStatus": "PASS",
+          "regressionGuardType": "COMPONENT_TEST_EXPANSION",
+          "regressionGuardRef": "retailer-admin/src/__tests__/pages/ProductsPage.test.tsx"
         }
       ]
     },
