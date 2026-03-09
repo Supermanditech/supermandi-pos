@@ -5444,7 +5444,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "JOURNEY-20 remains in BLOCKER_IMPLEMENTATION mode. Land J20-TEST-004 by expanding AuthContext token refresh and revocation regression coverage, then J20-TEST-005 idle-timeout timing, before advancing to JOURNEY-21. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
+  "nextAction": "JOURNEY-20 remains in BLOCKER_IMPLEMENTATION mode. Land J20-TEST-005 by expanding AuthContext idle-timeout warning and auto-logout timing coverage, before advancing to JOURNEY-21. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -6332,7 +6332,7 @@
     }
   },
   "currentAuditJourney": "JOURNEY-20",
-  "machineStateVersion": 181,
+  "machineStateVersion": 182,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,
