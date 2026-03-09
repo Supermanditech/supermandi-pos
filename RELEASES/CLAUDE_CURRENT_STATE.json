@@ -1,5 +1,5 @@
 {
-  "version": "180.0",
+  "version": "181.0",
   "lastUpdated": "2026-03-09T23:30:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
@@ -104,10 +104,10 @@
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-20",
     "activeJourneyStatus": "CERT-IN-PROGRESS",
-    "activeAction": "J20_AUTH_REDIRECT_COVERAGE",
+    "activeAction": "J20_TOKEN_REFRESH_REVOCATION_COVERAGE",
     "auditMode": "BLOCKER_IMPLEMENTATION",
     "nextLayer": "TESTS",
-    "nextBlocker": "J20-TEST-003: Route-guard redirect behavior is not covered for authenticated and unauthenticated navigation. This is the third blocker to PARK-READY.",
+    "nextBlocker": "J20-TEST-004: AuthContext token refresh and revocation flows are under-tested. This is the fourth blocker to PARK-READY.",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -125,6 +125,15 @@
         "mergedPR": 489,
         "mergedSHA": "1d84bab0",
         "testCount": 61,
+        "regressions": 0
+      },
+      {
+        "id": "J20-TEST-003",
+        "title": "App route-guard redirect and access control regression tests",
+        "status": "DONE",
+        "mergedPR": 492,
+        "mergedSHA": "ee61ed5c",
+        "testCount": 40,
         "regressions": 0
       }
     ],
@@ -144,7 +153,7 @@
         "JOURNEY-20 implementation is present across all traced auth/onboarding layers; current blockers are regression and coverage gaps, not missing product code",
         "J20-TEST-001 DONE: RegisterPage 5-step KYC flow regression coverage landed on main at fa84806b (PR #486, 55 tests)",
         "J20-TEST-002 DONE: ForgotPasswordPage dual-channel reset/recovery regression coverage landed on main at 1d84bab0 (PR #489, 61 tests)",
-        "J20-TEST-003 route-guard redirect behavior is not covered for authenticated and unauthenticated navigation",
+        "J20-TEST-003 DONE: App route-guard redirect and access control regression coverage landed on main at ee61ed5c (PR #492, 40 tests)",
         "J20-TEST-004 AuthContext token refresh and revocation flows are under-tested",
         "J20-TEST-005 idle timeout warning and logout timing are only partially covered at component level",
         "RETAILER_WEB historical JOURNEY-11 is preserved, but 14 missing retailer journeys were discovered and declared; retailer platform truth now restarts from JOURNEY-20",
@@ -155,7 +164,8 @@
     "remainingCertificationDelta": [
       "J20-TEST-001 DONE: RegisterPage 5-step KYC regression coverage landed (PR #486, fa84806b, 55 tests)",
       "J20-TEST-002 DONE: ForgotPasswordPage dual-channel reset/recovery regression coverage landed (PR #489, 1d84bab0, 61 tests)",
-      "next: J20-TEST-003 route-guard redirects, then token refresh/revocation, and auth idle-timeout timing",
+      "J20-TEST-003 DONE: App route-guard redirect and access control regression coverage landed (PR #492, ee61ed5c, 40 tests)",
+      "next: J20-TEST-004 token refresh/revocation, then auth idle-timeout timing",
       "after JOURNEY-20 reaches PARK-READY, continue the expanded retailer-web journey inventory through JOURNEY-21 to JOURNEY-33 plus preserved JOURNEY-11",
       "after retailer-web completion, activate POS_FEATURE_AUDIT_PACK_01 and audit/fix the deferred POS product/search/payment/supplier/cart pack",
       "after the pending POS audit pack, repeat exhaustive rediscovery for supplier-web, then superadmin-web",
@@ -5424,7 +5434,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "JOURNEY-20 remains in BLOCKER_IMPLEMENTATION mode. Land J20-TEST-003 by expanding route-guard redirect regression coverage, then continue the remaining J20 auth test backlog before advancing to JOURNEY-21. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
+  "nextAction": "JOURNEY-20 remains in BLOCKER_IMPLEMENTATION mode. Land J20-TEST-004 by expanding AuthContext token refresh and revocation regression coverage, then J20-TEST-005 idle-timeout timing, before advancing to JOURNEY-21. After retailer-web completes, activate POS_FEATURE_AUDIT_PACK_01 before supplier-web.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
@@ -6312,7 +6322,7 @@
     }
   },
   "currentAuditJourney": "JOURNEY-20",
-  "machineStateVersion": 180,
+  "machineStateVersion": 181,
   "posAppCertification": {
     "parkReady": 15,
     "certPending": 0,
