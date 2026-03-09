@@ -10895,17 +10895,8 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
-      "auditNote": "Deep J20 auth/onboarding trace is in progress. Preserved findings indicate the full implementation path is coded across all traced layers, but production-grade regression coverage is insufficient. J20-TEST-001 is complete on main at fa84806b. Current locked blocker is J20-TEST-002 ForgotPasswordPage reset/recovery coverage before PARK-READY can be claimed.",
+      "auditNote": "Deep J20 auth/onboarding trace is in progress. J20-TEST-001 DONE (PR #486, fa84806b, 55 tests). J20-TEST-002 DONE (PR #489, 1d84bab0, 61 tests). Current locked blocker is J20-TEST-003 route-guard redirect coverage before PARK-READY can be claimed.",
       "openGaps": [
-        {
-          "id": "J20-TEST-002",
-          "description": "ForgotPasswordPage lacks regression coverage for OTP send/verify, email reset, password reset submission, and recovery/error states.",
-          "severity": "CRITICAL",
-          "layer": "TEST_REGRESSION",
-          "affectedAction": "FORGOT_PASSWORD_RECOVERY_FLOW",
-          "fix": "Add ForgotPasswordPage tests for channel selection, send, verify, submit, success, and failure states.",
-          "status": "OPEN"
-        },
         {
           "id": "J20-TEST-003",
           "description": "Route-guard redirect behavior is not protected for authenticated navigation to /retailer/login and unauthenticated navigation to protected routes.",
@@ -10935,10 +10926,10 @@
         }
       ],
       "cccBlocker": {
-        "file": "retailer-admin/src/__tests__/ForgotPasswordPage.test.tsx",
-        "description": "J20-TEST-002 is the current blocker to PARK-READY. ForgotPasswordPage still lacks production-grade regression coverage for OTP send/verify, email reset, submission, and recovery/error paths.",
-        "requiredFix": "Expand ForgotPasswordPage regression coverage for channel selection, OTP send/verify, password reset submission, success/error transitions, and recovery behavior. Commit as CODE_FIX with tests only.",
-        "nextResumeCondition": "After ForgotPasswordPage regression coverage lands, continue the remaining J20 auth test backlog in locked order: auth redirects, token refresh/revocation, idle-timeout timing."
+        "file": "retailer-admin/src/__tests__/App.test.tsx",
+        "description": "J20-TEST-003 is the current blocker to PARK-READY. Route-guard redirect behavior is not covered for authenticated navigation to /retailer/login and unauthenticated navigation to protected routes.",
+        "requiredFix": "Add App/AuthContext routing tests for login redirect and protected route redirect behavior. Commit as CODE_FIX with tests only.",
+        "nextResumeCondition": "After route-guard redirect coverage lands, continue remaining J20 auth test backlog in locked order: token refresh/revocation (J20-TEST-004), idle-timeout timing (J20-TEST-005)."
       },
       "seededStateLock": {
         "required": true,
