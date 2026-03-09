@@ -11247,7 +11247,7 @@
         { "source": "POS_APP", "effect": "POS creates sale/purchase_received/opening_stock ledger entries visible on this page" }
       ],
       "blockerOrdering": [
-        { "id": "J22-TEST-001", "target": "InventoryPage.test.tsx", "severity": "HIGH", "reason": "8 smoke tests for 394-line page with 16 actions. Missing: filter tab switching with correct API params, date range filter, manual refresh, contextual empty states per filter, auto-refresh polling, entry row rendering (type badge, delta color, reference truncation), retry re-fetch, URL state persistence, freshness indicator." }
+        { "id": "J22-TEST-001", "target": "retailer-admin/src/__tests__/InventoryPage.test.tsx", "severity": "HIGH", "reason": "8 smoke tests for 394-line page with 16 actions. Missing: filter tab switching with correct API params, date range filter, manual refresh, contextual empty states per filter, auto-refresh polling, entry row rendering (type badge, delta color, reference truncation), retry re-fetch, URL state persistence, freshness indicator." }
       ],
       "regressionLocks": [],
       "knownIssues": []
