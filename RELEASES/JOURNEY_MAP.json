@@ -11545,31 +11545,31 @@
       "name": "Retailer Device Management",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer manages activation codes, device lists, deactivation, and no-device banner flows that gate POS activation continuity.",
-      "status": "CERT-IN-PROGRESS",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "J26 enumeration complete: 35 actions (24 DeviceActivationPage + 5 DeviceRequiredBanner + 2 ProtectedLayout + 4 backend admin), 16 edge cases, 1 test blocker (BLK-J26-001). DeviceRequiredBanner has adequate coverage (8 tests for 92-line component). DeviceActivationPage has 8 smoke tests for 407-line component — major gap.",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J26-A35",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "J26-TEST-001 DONE: DeviceActivationPage expanded 8→67 tests (PR #526, 1e9aa133). DeviceRequiredBanner has 8 adequate tests. Total J26-scope tests: 75 (67 + 8). G1-G6 signed.",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with device activation visibility"], "resetScriptNote": "" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
-        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/components/ProtectedLayout.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/DeviceActivationPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/components/DeviceRequiredBanner.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/devices.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/admin/devices.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": "1e9aa133", "reauditRequired": false },
+        { "path": "retailer-admin/src/components/ProtectedLayout.tsx", "auditedAtSha": "1e9aa133", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/DeviceActivationPage.tsx", "auditedAtSha": "1e9aa133", "reauditRequired": false },
+        { "path": "retailer-admin/src/components/DeviceRequiredBanner.tsx", "auditedAtSha": "1e9aa133", "reauditRequired": false },
+        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": "1e9aa133", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/devices.ts", "auditedAtSha": "1e9aa133", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/admin/devices.ts", "auditedAtSha": "1e9aa133", "reauditRequired": false }
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "1e9aa133", "citations": ["retailer-admin/src/pages/DeviceActivationPage.tsx:36-406", "retailer-admin/src/components/DeviceRequiredBanner.tsx:14-91"], "notes": "UI elements verified: activation form, code input, device list, status badges, confirmation modal, banner" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "1e9aa133", "citations": ["retailer-admin/src/pages/DeviceActivationPage.tsx:341-350", "retailer-admin/src/pages/DeviceActivationPage.tsx:225", "retailer-admin/src/components/DeviceRequiredBanner.tsx:51-57"], "notes": "UX 4-state: loading (line 341-344), empty (345-350), populated (351-401), error (271-276), auth guard (225), banner loading/hidden/shown/dismissed" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "1e9aa133", "citations": ["retailer-admin/src/components/ProtectedLayout.tsx:95", "retailer-admin/src/components/ProtectedLayout.tsx:114-119"], "notes": "Navigation: sidebar Devices item, limited mode allows /devices" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "1e9aa133", "citations": ["retailer-admin/src/pages/DeviceActivationPage.tsx:141-144", "retailer-admin/src/pages/DeviceActivationPage.tsx:201-204", "retailer-admin/src/pages/DeviceActivationPage.tsx:104"], "notes": "Wiring: activate POST, toggle PATCH, load GET all call authFetch with correct endpoints and payloads" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "1e9aa133", "citations": ["backend/src/routes/v1/retailer-admin/devices.ts:18-21", "backend/src/routes/v1/retailer-admin/devices.ts:291", "backend/src/routes/v1/admin/devices.ts:183-229"], "notes": "Business logic: store isolation via x-actor-id, activation code one-time-use, device limit enforcement on admin side" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "1e9aa133", "citations": ["retailer-admin/src/__tests__/DeviceActivationPage.test.tsx:67 tests", "retailer-admin/src/__tests__/DeviceRequiredBanner.test.tsx:8 tests"], "notes": "75 total J26-scope tests (67+8), 1227/1227 suite pass, 0 regressions" }
       },
       "scope": {
         "posScreens": [],
@@ -11641,7 +11641,8 @@
       ],
       "regressionLocks": [],
       "knownIssues": [
-        { "id": "BLK-J26-001", "title": "DeviceActivationPage.test.tsx needs expansion (8 smoke → comprehensive)", "status": "OPEN", "severity": "HIGH" }
+        { "id": "BLK-J26-001", "title": "DeviceActivationPage.test.tsx needs expansion (8 smoke → comprehensive)", "status": "DONE", "severity": "HIGH", "resolvedPR": 526, "resolvedSHA": "1e9aa133" },
+        { "id": "J26-TEST-001", "title": "DeviceActivationPage 8→67 comprehensive tests", "status": "DONE" }
       ]
     },
     "JOURNEY-27": {
