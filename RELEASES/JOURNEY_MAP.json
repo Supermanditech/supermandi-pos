@@ -11446,7 +11446,7 @@
       "status": "CERT-IN-PROGRESS",
       "lastAuditedAction": null,
       "lastAuditedAt": null,
-      "auditNote": "Enumerated 2026-03-11. 31 actions across RegisterPage (15), CompliancePage (9), backend-only (7). 18 edge cases. 2 test blockers identified: BLK-J25-001 (RegisterPage.test.tsx 62 failures from sessionStorage undefined), BLK-J25-002 (CompliancePage.test.tsx failures). No product code issues found.",
+      "auditNote": "Enumerated 2026-03-11. 31 actions across RegisterPage (15), CompliancePage (9), backend-only (7). 17 edge cases. BLK-J25-001/002 were false alarms (CWD mismatch, not real test failures). RegisterPage already has 55 tests from J20-TEST-001. Real gap: CompliancePage has only 7 smoke tests. Full suite 1129/1129 pass.",
       "openGaps": [],
       "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["registration or authenticated compliance access", "documents in pending, verified, or rejected state"], "resetScriptNote": "" },
@@ -11535,8 +11535,9 @@
       "crossPortalMatrix": [],
       "regressionLocks": [],
       "knownIssues": [
-        { "id": "BLK-J25-001", "title": "RegisterPage.test.tsx 62 failures — sessionStorage not defined", "status": "OPEN", "fixClass": "TEST_FIX" },
-        { "id": "BLK-J25-002", "title": "CompliancePage.test.tsx failures — needs investigation", "status": "OPEN", "fixClass": "TEST_FIX" }
+        { "id": "BLK-J25-001", "title": "RegisterPage.test.tsx 62 failures — sessionStorage not defined", "status": "CLOSED_FALSE_ALARM", "fixClass": "NONE", "resolution": "Tests pass 55/55 from retailer-admin/ workspace. Earlier failure was CWD mismatch (root dir lacks jsdom)." },
+        { "id": "BLK-J25-002", "title": "CompliancePage.test.tsx failures — needs investigation", "status": "CLOSED_FALSE_ALARM", "fixClass": "NONE", "resolution": "Tests pass 7/7 from retailer-admin/ workspace. Same CWD issue." },
+        { "id": "J25-TEST-001", "title": "CompliancePage.test.tsx has only 7 smoke tests — needs comprehensive expansion", "status": "OPEN", "fixClass": "TEST_FIX" }
       ]
     },
     "JOURNEY-26": {
