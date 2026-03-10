@@ -80,7 +80,7 @@ export function UsersTab({
             </div>
           )}
           <div className="sa-flex sa-gap-12 sa-mt-12">
-            <button onClick={requestCreateUser} disabled={createUserLoading} className="btnSuccess">
+            <button onClick={requestCreateUser} disabled={createUserLoading || !createUserForm.name.trim() || !createUserForm.email.trim()} className="btnSuccess">
               {createUserLoading ? "Creating..." : "Create User"}
             </button>
             {createUserError && <span className="errorText" role="alert">{createUserError}</span>}

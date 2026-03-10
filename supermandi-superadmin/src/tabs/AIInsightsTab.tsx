@@ -54,6 +54,8 @@ export function AIInsightsTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jobResult, setJobResult] = useState<string | null>(null);
+  const [jobRunning, setJobRunning] = useState(false);
+  const [pendingJob, setPendingJob] = useState<{ endpoint: string; name: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!storeId) return;
@@ -82,14 +84,18 @@ export function AIInsightsTab() {
     'admin/jobs/ai-anomaly-detection', 'admin/jobs/ai-recommendations',
   ]);
   const runJob = async (endpoint: string, name: string) => {
+    if (jobRunning) return;
     setJobResult(null);
     setError(null);
     if (!VALID_JOB_ENDPOINTS.has(endpoint)) { setError('Invalid job endpoint'); return; }
+    setJobRunning(true);
     try {
       const result = await apiFetch(`/api/v1/${endpoint}`, { method: 'POST' });
       setJobResult(`${name}: ${JSON.stringify(result)}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Job failed');
+    } finally {
+      setJobRunning(false);
     }
   };
 
@@ -228,8 +234,8 @@ export function AIInsightsTab() {
               { endpoint: 'admin/jobs/ai-anomaly-detection', name: 'Run Anomaly Detection' },
               { endpoint: 'admin/jobs/ai-recommendations', name: 'Run Recommendations' },
             ].map(job => (
-              <button key={job.endpoint} onClick={() => runJob(job.endpoint, job.name)} className="sa-btn-ghost-sm sa-radius-6 sa-text-left">
-                {job.name}
+              <button key={job.endpoint} onClick={() => setPendingJob(job)} disabled={jobRunning} className="sa-btn-ghost-sm sa-radius-6 sa-text-left">
+                {jobRunning ? 'Running...' : job.name}
               </button>
             ))}
           </div>
@@ -237,6 +243,18 @@ export function AIInsightsTab() {
             <pre className="sa-mt-16 sa-p-12 sa-bg-surface-alt sa-radius-6 sa-text-sm sa-overflow-auto">
               {jobResult}
             </pre>
+          )}
+          {pendingJob && (
+            <div className="sa-modal-overlay" onClick={() => setPendingJob(null)} onKeyDown={(e) => { if (e.key === "Escape") setPendingJob(null); }}>
+              <div className="sa-modal-lg" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+                <h3 style={{ margin: '0 0 12px' }}>Confirm Job Execution</h3>
+                <p className="sa-text-md">Run <strong>{pendingJob.name}</strong>? This triggers an expensive AI computation across all stores.</p>
+                <div className="sa-flex sa-gap-8 sa-mt-16" style={{ justifyContent: 'flex-end' }}>
+                  <button className="sa-btn-ghost-sm" onClick={() => setPendingJob(null)}>Cancel</button>
+                  <button className="sa-btn-sm" style={{ background: 'var(--color-primary-dark)', color: 'var(--color-text-inverse)' }} onClick={() => { const j = pendingJob; setPendingJob(null); runJob(j.endpoint, j.name); }}>Run Job</button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}

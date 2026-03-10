@@ -18,8 +18,8 @@ interface ConfirmDialogProps extends ConfirmDialogConfig {
 
 export function ConfirmDialog({ title, message, detail, confirmLabel, variant, onConfirm, onCancel, loading }: ConfirmDialogProps) {
   return (
-    <div className="modalOverlay" onClick={() => { if (!loading) onCancel(); }}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+    <div className="modalOverlay" onClick={() => { if (!loading) onCancel(); }} onKeyDown={(e) => { if (e.key === "Escape" && !loading) onCancel(); }}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="modalHeader"><h3>{title}</h3></div>
         <div className="modalBody">
           <p>{message}</p>
@@ -59,8 +59,8 @@ export function EnrollmentResultModal({ result, onClose }: EnrollmentResultModal
   };
 
   return (
-    <div className="modalOverlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+    <div className="modalOverlay" onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="modalHeader"><h3>Enrollment Code Sent</h3></div>
         <div className="modalBody">
           <div className="sa-enrollment-code-wrap">

@@ -1,0 +1,297 @@
+{
+  "audit_id": "SA-AUDIT-005",
+  "round": 5,
+  "date": "2026-03-11",
+  "status": "FINDINGS_PARKED",
+  "methodology": "Cross-platform user interaction audit: SuperAdmin → POS App, SuperAdmin → Supplier Portal, SuperAdmin → Retailer Admin. Traced every SA action that cascades to other platforms. Verified backend cascade chains, notification gaps, and race conditions between concurrent operations.",
+  "total_findings": 61,
+  "by_severity": {
+    "CRITICAL": 13,
+    "HIGH": 16,
+    "MEDIUM": 25,
+    "LOW": 7
+  },
+  "categories": {
+    "SA_to_POS": 12,
+    "SA_to_Supplier": 6,
+    "SA_to_Retailer": 11,
+    "Backend_Cascade": 12,
+    "Notification_Gaps": 10,
+    "Race_Conditions": 10
+  },
+  "critical_findings": [
+    {
+      "id": "R5-POS-001",
+      "title": "Store Suspension Does Not Immediately Revoke Active POS Sessions",
+      "description": "SA suspends store → POS polls ui-status every 60s. During lag, staff continues checkout. No session revocation, no forced logout, no transaction rollback.",
+      "files": ["supermandi-superadmin/src/tabs/StoresTab.tsx", "backend/src/routes/v1/admin/stores.ts", "backend/src/routes/v1/pos/uiStatus.ts", "src/screens/PosRootLayout.tsx", "src/services/api/uiStatusApi.ts"]
+    },
+    {
+      "id": "R5-POS-002",
+      "title": "Device Token Reset Does Not Force Re-enrollment; Offline Device Continues Operating",
+      "description": "SA resets device token → device_token = NULL in DB. Online device gets 401 but falls back to safe defaults. Offline device never learns about revocation, completes transactions offline.",
+      "files": ["supermandi-superadmin/src/tabs/DevicesTab.tsx", "backend/src/routes/v1/admin/devices.ts", "src/services/api/uiStatusApi.ts", "src/screens/DeviceBlockedScreen.tsx"]
+    },
+    {
+      "id": "R5-POS-010",
+      "title": "Staff Role Changes Not Propagated to Active POS Sessions",
+      "description": "SA changes staff role (CASHIER→MANAGER or vice versa). POS staffSessionStore caches role at login. Authorization checks use stale role until next logout/login.",
+      "files": ["supermandi-superadmin/src/tabs/StaffTab.tsx", "backend/src/routes/v1/pos/staff.ts", "src/stores/staffSessionStore.ts"]
+    },
+    {
+      "id": "R5-SUP-001",
+      "title": "Suspended Supplier Products Still Visible in POS/Retailer Catalogs",
+      "description": "SA suspends supplier → verification_status=SUSPENDED. But catalog queries filter on s.status='ACTIVE' (different column). Products remain visible, orderable.",
+      "files": ["backend/src/services/supplierStateMachine.ts", "backend/src/routes/v1/catalog.ts"]
+    },
+    {
+      "id": "R5-RET-001",
+      "title": "Store Suspension Not Detected by Retailer Admin Portal",
+      "description": "SA suspends store → retailer admin portal has NO mechanism to check store status. AuthContext only reads user auth state, not store status. Retailer continues operating.",
+      "files": ["supermandi-superadmin/src/tabs/StoresTab.tsx", "backend/src/routes/v1/admin/stores.ts", "retailer-admin/src/lib/AuthContext.tsx"]
+    },
+    {
+      "id": "R5-RET-002",
+      "title": "User Status Changes Not Synchronized to Retailer Sessions",
+      "description": "SA suspends user → auth.users.status=suspended. But retailer session remains active. No middleware check on user.status before allowing requests. Session persists until token expiry (24h).",
+      "files": ["supermandi-superadmin/src/tabs/UsersTab.tsx", "backend/src/routes/v1/admin/users.ts", "retailer-admin/src/lib/AuthContext.tsx"]
+    },
+    {
+      "id": "R5-CASCADE-001",
+      "title": "Store Suspension Does Not Invalidate POS Device Tokens",
+      "description": "transitionStore() in storeStateMachine.ts only updates store status. No cascade to pos_devices table. No device token revocation. No FCM notification.",
+      "files": ["backend/src/services/storeStateMachine.ts", "backend/src/routes/v1/admin/stores.ts"]
+    },
+    {
+      "id": "R5-CASCADE-002",
+      "title": "Store Deletion Does Not Cascade to Devices or Related Tables",
+      "description": "DELETE /stores/:storeId updates status='deleted' but does NOT deactivate devices, revoke tokens, or mark enrollment codes as revoked. Orphaned devices remain active.",
+      "files": ["backend/src/routes/v1/admin/stores.ts"]
+    },
+    {
+      "id": "R5-NOTIFY-001",
+      "title": "Store Suspension Has NO Notification to Store Owner",
+      "description": "SA suspends store → zero notifications sent. Owner discovers only when POS fails or portal access blocked. No email/SMS/WhatsApp.",
+      "files": ["backend/src/routes/v1/admin/stores.ts", "backend/src/services/storeStateMachine.ts"]
+    },
+    {
+      "id": "R5-NOTIFY-002",
+      "title": "Supplier Suspension Has NO Notification to Supplier",
+      "description": "SA suspends supplier → supplier status silently changes. No notification sent. Supplier unaware until next login attempt.",
+      "files": ["backend/src/routes/v1/admin/suppliers.ts", "backend/src/services/supplierStateMachine.ts"]
+    },
+    {
+      "id": "R5-RACE-001",
+      "title": "Store Suspension During Payment — Cache TTL Creates 30s Window",
+      "description": "storeStatusGate.ts caches store status with 30s TTL. If SA suspends store during cache window, POS can complete payment for suspended store. Ledger integrity violated.",
+      "files": ["backend/src/middleware/storeStatusGate.ts", "backend/src/routes/v1/pos/sales.ts"]
+    },
+    {
+      "id": "R5-RACE-002",
+      "title": "Store Status Cache Invalidation Gap",
+      "description": "No cache invalidation mechanism when store status changes. 30s window where POS sees stale ACTIVE status. Multiple concurrent requests see inconsistent state.",
+      "files": ["backend/src/middleware/storeStatusGate.ts"]
+    },
+    {
+      "id": "R5-RACE-003",
+      "title": "Sale Confirm + Invoice Void Ledger Conflict",
+      "description": "POS confirms payment (locks sale row FOR UPDATE) while SA voids invoice in parallel. No distributed lock. Double-entry ledger broken: debit recorded but invoice cancelled.",
+      "files": ["backend/src/routes/v1/pos/sales.ts", "backend/src/routes/v1/admin/invoices.ts"]
+    }
+  ],
+  "high_findings": [
+    {
+      "id": "R5-POS-003",
+      "title": "Deactivated Staff Can Complete In-Progress Transactions",
+      "description": "SA deactivates staff → POS session remains valid (stored locally). No per-transaction staff status check. Staff completes current transaction."
+    },
+    {
+      "id": "R5-POS-004",
+      "title": "Feature Flag Changes Have 60s Latency; Checkout Can Use Disabled Flag",
+      "description": "SA toggles flag → POS polls every 60s. During lag, customer can checkout with disabled flag."
+    },
+    {
+      "id": "R5-POS-011",
+      "title": "Device Hardware Config Changes Not Detected During Active Use",
+      "description": "SA changes printing mode → POS caches at startup. No real-time printer config polling."
+    },
+    {
+      "id": "R5-SUP-002",
+      "title": "Supplier Session Not Revoked on Suspension",
+      "description": "SA suspends supplier → tokens_revoked_at set but supplier portal auth doesn't check. Session valid until JWT expiry (24h)."
+    },
+    {
+      "id": "R5-SUP-003",
+      "title": "Supplier Application Rejection Not Notified",
+      "description": "SA rejects application → no WhatsApp/email sent. Supplier discovers rejection only on next login."
+    },
+    {
+      "id": "R5-SUP-004",
+      "title": "Supplier Bank Detail Rejection Not Cascaded to Payments",
+      "description": "SA rejects bank account → bank_verification_status=rejected but payout flow doesn't check. Supplier unaware."
+    },
+    {
+      "id": "R5-RET-003",
+      "title": "Device Deactivation by SA Has No Effect on Retailer Portal",
+      "description": "SA deactivates device → retailer admin has no device management UI. No status indication."
+    },
+    {
+      "id": "R5-RET-004",
+      "title": "Product Rejection Not Cascaded to Retailer Orders",
+      "description": "SA rejects product → existing retailer POs with that product NOT updated. ReorderPage doesn't check approval status."
+    },
+    {
+      "id": "R5-RET-010",
+      "title": "Suspended Store Device Tokens Still Active",
+      "description": "SA suspends store → device tokens NOT revoked. POS continues syncing, creating sales. Data integrity risk."
+    },
+    {
+      "id": "R5-CASCADE-003",
+      "title": "Admin User Suspension Does Not Terminate Sessions",
+      "description": "SA suspends user → auth.users.status=suspended but refresh tokens not revoked. Redis sessions not cleared. Access continues for hours."
+    },
+    {
+      "id": "R5-CASCADE-004",
+      "title": "Admin Deactivation Doesn't Clear Sessions",
+      "description": "SA deactivates admin → api_key_hash cleared but JWT sessions in Redis persist. Deactivated admin retains access."
+    },
+    {
+      "id": "R5-CASCADE-005",
+      "title": "Supplier Suspension Doesn't Hide Products or Block Orders",
+      "description": "transitionSupplier() updates only status. No product disabling. No order blocking. Retailers can order from suspended suppliers."
+    },
+    {
+      "id": "R5-CASCADE-006",
+      "title": "Application Approval Skips State Machine Transitions",
+      "description": "POST /applications/:id/approve creates store with status=ACTIVE directly. No DRAFT→ENROLLED→KYC→ACTIVE transition."
+    },
+    {
+      "id": "R5-NOTIFY-003",
+      "title": "Device Deactivation Has NO Notification to Device User",
+      "description": "SA deactivates device → no notification sent. Next POS sync fails silently."
+    },
+    {
+      "id": "R5-NOTIFY-004",
+      "title": "User/Staff Suspension Has NO Notification",
+      "description": "SA suspends user → no email/SMS. User discovers only on next login attempt (401)."
+    },
+    {
+      "id": "R5-NOTIFY-005",
+      "title": "Application Rejection Only Updates DB — No Email to Applicant",
+      "description": "Unlike approval (which has notification), rejection endpoint has NO notification code."
+    },
+    {
+      "id": "R5-NOTIFY-009",
+      "title": "Refund Rejection Has NO Communication to Requester",
+      "description": "SA rejects refund → status changes silently. No notification to retailer/customer."
+    },
+    {
+      "id": "R5-RACE-004",
+      "title": "Device Deactivation During Active Checkout Breaks Cart",
+      "description": "Staff mid-checkout → SA deactivates device → next API call fails 403. Cart locked. cancelSale() also requires active device. Must force-close app."
+    },
+    {
+      "id": "R5-RACE-005",
+      "title": "Feature Flag Toggle During Active Sale Creation",
+      "description": "Flag checked at sale creation vs confirmation. If flag changes between, mismatch: sale created with CASH but CASH no longer allowed."
+    },
+    {
+      "id": "R5-RACE-006",
+      "title": "Two Admins Conflicting Store Status Changes — No Optimistic Locking",
+      "description": "No ETag, version field, or FOR UPDATE on store status. Last-write-wins. Store ends in unexpected state."
+    }
+  ],
+  "medium_findings": [
+    {"id": "R5-POS-005", "title": "Payment Method Restrictions Not Enforced Mid-Checkout"},
+    {"id": "R5-POS-006", "title": "Device Active/Inactive Toggle Invisible to Offline Device"},
+    {"id": "R5-POS-007", "title": "Store Name Changes Not Reflected Until Next 60s Poll"},
+    {"id": "R5-POS-008", "title": "Force Update Not Enforced for Offline Devices"},
+    {"id": "R5-SUP-005", "title": "Supplier Pending-Approval Page Doesn't Auto-Refresh on Approval"},
+    {"id": "R5-SUP-006", "title": "Credit Provider Disable Not Communicated to Suppliers with Active Credit"},
+    {"id": "R5-RET-005", "title": "Feature Flags Cached at Login — No Polling or Invalidation"},
+    {"id": "R5-RET-006", "title": "Credit Provider Disablement Orphans In-Flight BNPL Orders"},
+    {"id": "R5-RET-007", "title": "Invoice Void by SA Not Visible to Retailer"},
+    {"id": "R5-RET-008", "title": "Store Settings Race — SA and Retailer Can Conflict"},
+    {"id": "R5-RET-009", "title": "Refund Processing by SA Not Notified to Retailer"},
+    {"id": "R5-CASCADE-007", "title": "Device Revocation Doesn't Update Store's pos_device_id Reference"},
+    {"id": "R5-CASCADE-008", "title": "Feature Flag Changes Not Broadcast to Connected Clients"},
+    {"id": "R5-CASCADE-009", "title": "Enrollment Code Revocation Doesn't Auto-Revoke Enrolled Devices"},
+    {"id": "R5-CASCADE-010", "title": "Staff Deactivation Doesn't Clear POS Login Sessions"},
+    {"id": "R5-NOTIFY-006", "title": "Refund Processing Has NO Retailer/Supplier Notification"},
+    {"id": "R5-NOTIFY-007", "title": "Feature Flag Changes Broadcast Nowhere (No Real-Time)"},
+    {"id": "R5-NOTIFY-008", "title": "Real-Time Update Latency Inconsistent Across Platforms"},
+    {"id": "R5-NOTIFY-010", "title": "Device Token Reset Has NO Notification to Store Owner"},
+    {"id": "R5-RACE-007", "title": "User Profile Save + Suspension Race Condition"},
+    {"id": "R5-RACE-008", "title": "Invoice Payment + Void Ledger Conflict"},
+    {"id": "R5-RACE-009", "title": "Supplier Suspension During Active Purchase Order"},
+    {"id": "R5-RACE-010", "title": "Store Cache 30s TTL Invalidation Gap"}
+  ],
+  "low_findings": [
+    {"id": "R5-POS-009", "title": "Enrollment Code Revocation Not Communicated to POS (Preventive Only)"},
+    {"id": "R5-POS-012", "title": "Scan Lookup V2 Toggle Takes 60s to Propagate"},
+    {"id": "R5-RET-011", "title": "No Audit Trail in Retailer Portal for SA Actions"},
+    {"id": "R5-CASCADE-011", "title": "Admin Auth Permissions Not Database-Backed"},
+    {"id": "R5-CASCADE-012", "title": "Inconsistent Transaction Handling Across Approval Endpoints"}
+  ],
+  "root_causes": [
+    "60-second polling cadence too coarse for security events (suspension, deactivation, token reset)",
+    "Offline-first POS design assumes token validity without server re-check",
+    "Client-side caching of roles/permissions without TTL or invalidation",
+    "No push notification (SSE/WebSocket/FCM) for critical security changes from SA",
+    "Fallback to safe defaults on API errors masks revocation/deactivation",
+    "State machines (store/supplier) update only primary table — no cascade to related entities",
+    "No distributed transaction or saga pattern between admin actions and in-flight operations",
+    "Notification infrastructure exists (FCM, email, SMS, WhatsApp, SSE) but NOT wired to admin action routes",
+    "No optimistic locking (ETag/version) on shared resources — last-write-wins",
+    "30-second cache TTL on storeStatusGate.ts with no invalidation mechanism"
+  ],
+  "notification_infrastructure_audit": {
+    "available_services": ["FCM (fcmService.ts)", "Email (emailService.ts)", "SMS (smsService.ts)", "WhatsApp (whatsappService.ts)", "SSE (sseClient.ts)", "Socket.io (socketManager.ts)"],
+    "currently_used_for": "Registration confirmations, onboarding, chat only",
+    "NOT_used_for": "Store suspension, supplier suspension, device deactivation, user suspension, refund processing, feature flag changes, token reset"
+  },
+  "polling_latency_by_client": {
+    "POS_app": "SSE + 30s polling fallback",
+    "retailer_portal": "HTTP fetch on page visit only (no polling)",
+    "supplier_portal": "EventSource exists but NOT hooked to admin events",
+    "superadmin": "HTTP response only (manual refresh)"
+  },
+  "implementation_priority_top_15": [
+    {"rank": 1, "id": "R5-CASCADE-001 + R5-POS-001 + R5-RET-010", "title": "Store suspension must cascade to device tokens + sessions", "severity": "CRITICAL"},
+    {"rank": 2, "id": "R5-RACE-001 + R5-RACE-002", "title": "Cache invalidation on store status change (storeStatusGate.ts)", "severity": "CRITICAL"},
+    {"rank": 3, "id": "R5-SUP-001 + R5-CASCADE-005", "title": "Supplier suspension must hide products from catalogs", "severity": "CRITICAL"},
+    {"rank": 4, "id": "R5-RET-002 + R5-CASCADE-003", "title": "User suspension must revoke sessions + tokens immediately", "severity": "CRITICAL"},
+    {"rank": 5, "id": "R5-POS-002", "title": "Device token reset must force DeviceBlockedScreen navigation", "severity": "CRITICAL"},
+    {"rank": 6, "id": "R5-RACE-003", "title": "Invoice void must check for in-flight payments (FOR UPDATE)", "severity": "CRITICAL"},
+    {"rank": 7, "id": "R5-POS-010", "title": "Staff role changes must be polled or pushed to POS", "severity": "CRITICAL"},
+    {"rank": 8, "id": "R5-NOTIFY-001 + R5-NOTIFY-002", "title": "Wire notification service to store/supplier suspension flows", "severity": "HIGH"},
+    {"rank": 9, "id": "R5-POS-003 + R5-CASCADE-010", "title": "Staff deactivation must revoke POS sessions", "severity": "HIGH"},
+    {"rank": 10, "id": "R5-SUP-002", "title": "Supplier portal must check verification_status on every API call", "severity": "HIGH"},
+    {"rank": 11, "id": "R5-RACE-006", "title": "Add optimistic locking (version/ETag) to store status updates", "severity": "HIGH"},
+    {"rank": 12, "id": "R5-CASCADE-002", "title": "Store deletion must cascade to devices + enrollment codes", "severity": "HIGH"},
+    {"rank": 13, "id": "R5-RACE-004", "title": "Device deactivation during checkout must gracefully unlock cart", "severity": "HIGH"},
+    {"rank": 14, "id": "R5-NOTIFY-005 + R5-SUP-003", "title": "Application rejection must trigger notification to applicant", "severity": "HIGH"},
+    {"rank": 15, "id": "R5-RET-001", "title": "Retailer portal AuthContext must check store status", "severity": "CRITICAL"}
+  ],
+  "cumulative_totals": {
+    "R1_found": 19,
+    "R1_fixed": 9,
+    "R2_found": 98,
+    "R2_fixed": 6,
+    "R3_found": 203,
+    "R3_fixed": 0,
+    "R4_found": 154,
+    "R4_fixed": 0,
+    "R5_found": 61,
+    "R5_fixed": 0,
+    "total_found": 535,
+    "total_fixed": 15,
+    "total_remaining": 520
+  },
+  "prior_rounds": {
+    "R1": "workflow/state/superadmin_audit_batch1.json",
+    "R2": "workflow/state/superadmin_audit_batch2_findings.json",
+    "R3": "workflow/state/superadmin_audit_batch3_findings.json",
+    "R4": "workflow/state/superadmin_audit_batch4_findings.json"
+  }
+}

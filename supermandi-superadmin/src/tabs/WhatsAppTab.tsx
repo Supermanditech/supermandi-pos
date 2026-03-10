@@ -227,7 +227,7 @@ export function WhatsAppTab() {
         recipientType: broadcastType,
       });
       setBroadcastResult(`Sent: ${result.sent}, Failed: ${result.failed}${result.errors.length > 0 ? ` — ${result.errors.join("; ")}` : ""}`);
-      if (result.sent > 0) loadData();
+      if (result.sent > 0) { setBroadcastPhones(""); setBroadcastMessage(""); loadData(); }
     } catch (err) {
       setBroadcastResult(err instanceof Error ? err.message : "Broadcast failed");
     } finally {
@@ -236,10 +236,13 @@ export function WhatsAppTab() {
   };
 
   // UIUX-SA-012: Show confirmation before sending broadcast (WhatsApp messages are irrevocable)
+  // R3-WA-002: Validate each phone number individually before broadcast
   const handleBroadcast = () => {
     const phones = broadcastPhones.split(/[,\n]/).map(p => p.trim()).filter(Boolean);
     if (phones.length === 0 || !broadcastMessage.trim()) return;
     if (phones.length > 50) { setBroadcastResult("Max 50 recipients"); return; }
+    const invalidPhones = phones.filter(p => !/^(\+?\d{10,15})$/.test(p));
+    if (invalidPhones.length > 0) { setBroadcastResult(`Invalid phone number(s): ${invalidPhones.slice(0, 3).join(", ")}${invalidPhones.length > 3 ? ` (+${invalidPhones.length - 3} more)` : ""}`); return; }
     setConfirmDialog({
       title: "Send WhatsApp Broadcast",
       message: `Send this message to ${phones.length} recipient${phones.length > 1 ? "s" : ""}? WhatsApp messages cannot be unsent.`,

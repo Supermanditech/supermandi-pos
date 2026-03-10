@@ -2,7 +2,7 @@
 // View and manage support conversations
 // T-302: Message template management UI
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 // UIUX-SA-001: Use centralized auth (getSessionToken + fetchWithTimeout) instead of wrong 'superadmin_token' key
 // P2-4: Use getAuthHeaders() to include X-Request-ID correlation tracing
 import { getAuthHeaders, fetchWithTimeout } from '../api/authToken';
@@ -77,6 +77,8 @@ export function SupportQueueTab() {
   // R2-FIX SQ-004: Per-action loading state for assign/resolve
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const selectConvRef = useRef(0);
 
   const fetchQueue = useCallback(async () => {
     setLoading(true);
@@ -113,16 +115,21 @@ export function SupportQueueTab() {
   }, [view, fetchQueue, fetchTemplates]);
 
   const selectConversation = async (convId: string) => {
+    const token = ++selectConvRef.current;
     setSelectedConvId(convId);
-    setMessages([]);
+    setMessagesLoading(true);
     setReplyText('');
     try {
       const result = await apiFetch(`/api/v1/chat/conversations/${convId}/messages?limit=100`);
+      if (selectConvRef.current !== token) return; // stale response guard
       // API returns messages newest-first; reverse to show chronological order (oldest at top)
       setMessages((result.messages || []).slice().reverse());
     } catch (err: unknown) {
+      if (selectConvRef.current !== token) return;
       setMessages([]);
       setError(err instanceof Error ? err.message : 'Failed to load messages');
+    } finally {
+      if (selectConvRef.current === token) setMessagesLoading(false);
     }
   };
 

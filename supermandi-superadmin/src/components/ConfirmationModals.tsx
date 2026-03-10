@@ -53,8 +53,8 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
     <>
       {/* GL-CRIT-0021: User Suspension Confirmation Modal */}
       {props.pendingStatusChange && props.pendingStatusChange.newStatus === "suspended" && (
-        <div className="modalOverlay" onClick={() => props.setPendingStatusChange(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modalOverlay" onClick={() => props.setPendingStatusChange(null)} onKeyDown={(e) => { if (e.key === "Escape") props.setPendingStatusChange(null); }}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modalHeader"><h3>Confirm User Suspension</h3></div>
             <div className="modalBody">
               <p>Are you sure you want to suspend user <strong>{props.pendingStatusChange.userName || props.pendingStatusChange.userId}</strong>?</p>
@@ -72,8 +72,8 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
 
       {/* GL-CRIT-0022 & GL-CRIT-0052: Device Action Confirmation Modal */}
       {props.pendingDeviceAction && (
-        <div className="modalOverlay" onClick={() => props.setPendingDeviceAction(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modalOverlay" onClick={() => props.setPendingDeviceAction(null)} onKeyDown={(e) => { if (e.key === "Escape" && !props.deviceActionLoading) props.setPendingDeviceAction(null); }}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modalHeader">
               <h3>{props.pendingDeviceAction.action === "deactivate" ? "Confirm Device Deactivation" : "Confirm Token Reset"}</h3>
             </div>
@@ -108,8 +108,8 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
 
       {/* GL-CRIT-0053: Admin User Verification Modal */}
       {props.pendingAdminUser && (
-        <div className="modalOverlay" onClick={() => props.setPendingAdminUser(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modalOverlay" onClick={() => props.setPendingAdminUser(null)} onKeyDown={(e) => { if (e.key === "Escape" && !props.createUserLoading) props.setPendingAdminUser(null); }}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modalHeader"><h3>Confirm Platform Admin Creation</h3></div>
             <div className="modalBody">
               <p>You are about to create a <strong>Platform Admin</strong> user:</p>
@@ -137,8 +137,8 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
 
       {/* SA-P1-005: Supplier Suspension/Reactivation Confirmation Modal */}
       {props.pendingSupplierSuspend && (
-        <div className="modalOverlay" onClick={() => { if (!props.supplierSuspendLoading) props.setPendingSupplierSuspend(null); }}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modalOverlay" onClick={() => { if (!props.supplierSuspendLoading) props.setPendingSupplierSuspend(null); }} onKeyDown={(e) => { if (e.key === "Escape" && !props.supplierSuspendLoading) props.setPendingSupplierSuspend(null); }}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modalHeader">
               <h3>{props.pendingSupplierSuspend.action === "suspend" ? "Confirm Supplier Suspension" : "Confirm Supplier Reactivation"}</h3>
             </div>
@@ -178,8 +178,8 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
 
       {/* SA-P0-001: Store Suspension/Reactivation Confirmation Modal */}
       {props.pendingStoreSuspend && (
-        <div className="modalOverlay" onClick={() => { if (!props.storeSuspendLoading) props.setPendingStoreSuspend(null); }}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modalOverlay" onClick={() => { if (!props.storeSuspendLoading) props.setPendingStoreSuspend(null); }} onKeyDown={(e) => { if (e.key === "Escape" && !props.storeSuspendLoading) props.setPendingStoreSuspend(null); }}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modalHeader">
               <h3>{props.pendingStoreSuspend.action === "suspend" ? "Confirm Store Suspension" : "Confirm Store Reactivation"}</h3>
             </div>

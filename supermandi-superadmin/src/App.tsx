@@ -345,6 +345,17 @@ export default function App() {
     return () => window.removeEventListener('supermandi-auth-expired', onAuthExpired);
   }, []);
 
+  // R3-APP-007: Cross-tab session sync — logout in one tab logs out all tabs
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'superadmin_token' && !e.newValue) {
+        setIsAuthenticated(false);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   // STAGING-FIX-008: Validate token server-side on startup to catch stale/invalid tokens
   // Prevents showing "Authenticated" with a token signed by a different JWT_SECRET
   useEffect(() => {
@@ -645,6 +656,8 @@ export default function App() {
   const [docRejectReason, setDocRejectReason] = useState<string>("");
   const [documentActionLoading, setDocumentActionLoading] = useState<string | null>(null);
   const documentsInFlightRef = useRef(false);
+  const regEventsInFlightRef = useRef(false);
+  const grnAlertsInFlightRef = useRef(false);
 
   // SA-P1-001: Staff management state
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
@@ -1349,6 +1362,8 @@ export default function App() {
 
   // RO-007: Fetch registration events
   async function refreshRegEvents() {
+    if (regEventsInFlightRef.current) return;
+    regEventsInFlightRef.current = true;
     setRegEventsLoading(true);
     setRegEventsError("");
     try {
@@ -1364,6 +1379,7 @@ export default function App() {
       setRegEventsError(e?.message ? String(e.message) : "Failed to fetch registration events");
     } finally {
       setRegEventsLoading(false);
+      regEventsInFlightRef.current = false;
     }
   }
 
@@ -1641,6 +1657,8 @@ export default function App() {
 
   // SA-P1-004: GRN excess alerts handlers
   async function refreshGrnAlerts() {
+    if (grnAlertsInFlightRef.current) return;
+    grnAlertsInFlightRef.current = true;
     setGrnAlertsLoading(true);
     setGrnAlertsError("");
     try {
@@ -1656,6 +1674,7 @@ export default function App() {
       setGrnAlertsError(e instanceof Error ? e.message : "Failed to load GRN alerts");
     } finally {
       setGrnAlertsLoading(false);
+      grnAlertsInFlightRef.current = false;
     }
   }
 
@@ -3009,7 +3028,7 @@ export default function App() {
 
         <div className="control">
           <label>Page size</label>
-          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+          <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}>
             <option value={50}>50</option>
             <option value={100}>100</option>
             <option value={200}>200</option>
