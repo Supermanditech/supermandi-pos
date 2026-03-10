@@ -1,6 +1,6 @@
 {
-  "version": "209.0",
-  "lastUpdated": "2026-03-11T07:30:00.000Z",
+  "version": "210.0",
+  "lastUpdated": "2026-03-11T08:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -296,7 +296,8 @@
       "All 1 identified J22 test blocker resolved. JOURNEY-22 PARK-READY (G1-G6 signed, 44 tests).",
       "All 2 identified J23 test blockers resolved. JOURNEY-23 PARK-READY (G1-G6 signed, 126 tests).",
       "All 2 identified J24 test blockers resolved. JOURNEY-24 PARK-READY (G1-G6 signed, 89 tests).",
-      "after JOURNEY-24 PARK-READY, continue the expanded retailer-web journey inventory through JOURNEY-25 to JOURNEY-33 plus preserved JOURNEY-11",
+      "J25-TEST-001 DONE. JOURNEY-25 PARK-READY (G1-G6 signed, 101 tests: 55 RegisterPage + 46 CompliancePage).",
+      "after JOURNEY-25 PARK-READY, continue the expanded retailer-web journey inventory through JOURNEY-26 to JOURNEY-33 plus preserved JOURNEY-11",
       "after retailer-web completion, activate POS_FEATURE_AUDIT_PACK_01 and audit/fix the deferred POS product/search/payment/supplier/cart pack",
       "after the pending POS audit pack, repeat exhaustive rediscovery for supplier-web, then superadmin-web",
       "only after retailer-web, POS_FEATURE_AUDIT_PACK_01, supplier-web, and superadmin-web are PARK-READY or explicitly CERT-BLOCKED may artifact/build/deploy/runtime be considered by explicit operator instruction"
@@ -463,11 +464,11 @@
         "coverageClaimsSuspended": false
       },
       "RETAILER_WEB": {
-        "parkReady": 5,
+        "parkReady": 6,
         "certSealed": 0,
         "certBlocked": 0,
         "certInProgress": 0,
-        "certPending": 10,
+        "certPending": 9,
         "needsReaudit": 0,
         "coverageClaimsSuspended": true
       },
@@ -5564,7 +5565,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "J24-TEST-002 DONE (PaymentsPage 6→33 tests, PR #524, 2c38c96f). JOURNEY-24 PARK-READY: G1-G6 signed, 89 J24-scope tests (56 SettingsPage + 33 PaymentsPage). Continue to JOURNEY-25 (Retailer Compliance & KYC).",
+  "nextAction": "J25-TEST-001 DONE (CompliancePage 7→46 tests, PR #525, e4f49841). JOURNEY-25 PARK-READY: G1-G6 signed, 101 J25-scope tests (55 RegisterPage + 46 CompliancePage). Continue to JOURNEY-26 (Retailer Device Management).",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
