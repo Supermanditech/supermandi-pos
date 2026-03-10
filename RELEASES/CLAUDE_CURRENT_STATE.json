@@ -1,6 +1,6 @@
 {
-  "version": "215.0",
-  "lastUpdated": "2026-03-10T11:30:00.000Z",
+  "version": "216.0",
+  "lastUpdated": "2026-03-10T12:15:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -103,11 +103,11 @@
   },
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-27",
-    "activeJourneyStatus": "CERT-PENDING",
-    "activeAction": "J27_BLOCKER_RESOLUTION",
-    "auditMode": "BLOCKER_RESOLUTION",
+    "activeJourneyStatus": "PARK-READY",
+    "activeAction": "J27_PARK_READY_EVALUATION",
+    "auditMode": "PARK_READY_CHECK",
     "nextLayer": null,
-    "nextBlocker": "BLK-J27-001",
+    "nextBlocker": null,
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -251,6 +251,15 @@
         "mergedPR": 526,
         "mergedSHA": "1e9aa133",
         "testCount": 67,
+        "regressions": 0
+      },
+      {
+        "id": "J27-TEST-001",
+        "title": "InvoicesPage expanded from 7 smoke tests to 64 comprehensive tests",
+        "status": "DONE",
+        "mergedPR": 527,
+        "mergedSHA": "0336f2ca",
+        "testCount": 64,
         "regressions": 0
       }
     ],
@@ -475,11 +484,11 @@
         "coverageClaimsSuspended": false
       },
       "RETAILER_WEB": {
-        "parkReady": 7,
+        "parkReady": 8,
         "certSealed": 0,
         "certBlocked": 0,
         "certInProgress": 0,
-        "certPending": 8,
+        "certPending": 7,
         "needsReaudit": 0,
         "coverageClaimsSuspended": true
       },
@@ -5576,7 +5585,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "J27 enumeration complete (40 actions, 18 edge cases). BLK-J27-001: InvoicesPage has no test file. Create test/J27-TEST-001-invoices-page-coverage branch, write comprehensive tests, push PR, merge, then PARK-READY.",
+  "nextAction": "J27-TEST-001 DONE (InvoicesPage 7→64 tests, PR #527, 0336f2ca). Evaluate JOURNEY-27 PARK-READY: 64 comprehensive tests cover all 40 actions and 18 edge cases. Sign G1-G6 and advance.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",

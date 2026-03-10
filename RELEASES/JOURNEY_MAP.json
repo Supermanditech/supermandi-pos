@@ -11650,31 +11650,31 @@
       "name": "Retailer Invoice Viewing",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer reviews invoice lists and invoice detail modal flows with line items, payment history, and share-ready metadata.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "Enumerated 2026-03-10: 40 actions, 18 edge cases across InvoicesPage.tsx (417 lines) and backend invoices.ts (104 lines). Covers page load, auth guard, status filter, pagination, table rendering, detail modal (open/close/escape/overlay), items/totals/payments, PDF download, WhatsApp share, breadcrumb. First blocker: BLK-J27-001 (no test file exists).",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J27-A40",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "PARK-READY: 64 comprehensive tests cover all 40 actions and 18 edge cases. BLK-J27-001 resolved (PR #527, 0336f2ca). Full suite: 49 files, 1284 tests, 0 regressions.",
       "openGaps": [],
-      "cccBlocker": "BLK-J27-001",
+      "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with invoices or invoice empty-state coverage"], "resetScriptNote": "" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
-        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/InvoicesPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/hooks/useUrlState.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/components/EmptyState.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/components/WhatsAppIcon.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/invoices.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": "0336f2ca", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/InvoicesPage.tsx", "auditedAtSha": "0336f2ca", "reauditRequired": false },
+        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": "0336f2ca", "reauditRequired": false },
+        { "path": "retailer-admin/src/hooks/useUrlState.ts", "auditedAtSha": "0336f2ca", "reauditRequired": false },
+        { "path": "retailer-admin/src/components/EmptyState.tsx", "auditedAtSha": "0336f2ca", "reauditRequired": false },
+        { "path": "retailer-admin/src/components/WhatsAppIcon.tsx", "auditedAtSha": "0336f2ca", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/invoices.ts", "auditedAtSha": "0336f2ca", "reauditRequired": false }
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0336f2ca", "citations": ["retailer-admin/src/pages/InvoicesPage.tsx:173 — auth guard early return", "retailer-admin/src/pages/InvoicesPage.tsx:91-125 — loadInvoices with accessToken guard"], "notes": "Auth guard verified: no accessToken → Loading placeholder, no API calls" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0336f2ca", "citations": ["retailer-admin/src/pages/InvoicesPage.tsx:197 — error alert", "retailer-admin/src/pages/InvoicesPage.tsx:200 — loading state", "retailer-admin/src/pages/InvoicesPage.tsx:203-209 — empty state", "retailer-admin/src/pages/InvoicesPage.tsx:211-254 — populated table"], "notes": "UX 4-state: loading, empty, error, populated all tested" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0336f2ca", "citations": ["retailer-admin/src/pages/InvoicesPage.tsx:258-270 — pagination", "retailer-admin/src/pages/InvoicesPage.tsx:183 — filter select", "retailer-admin/src/pages/InvoicesPage.tsx:273-413 — detail modal"], "notes": "Navigation: pagination, filter, modal lifecycle all tested" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0336f2ca", "citations": ["retailer-admin/src/pages/InvoicesPage.tsx:115 — GET /invoices", "retailer-admin/src/pages/InvoicesPage.tsx:137 — GET /invoices/:id", "retailer-admin/src/pages/InvoicesPage.tsx:152 — GET /invoices/:id/pdf", "backend/src/routes/v1/retailer-admin/invoices.ts:23 — store isolation"], "notes": "API wiring: list, detail, PDF with store isolation" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0336f2ca", "citations": ["retailer-admin/src/pages/InvoicesPage.tsx:339-353 — conditional tax rows", "retailer-admin/src/pages/InvoicesPage.tsx:73-75 — INR formatting", "retailer-admin/src/pages/InvoicesPage.tsx:234 — balance coloring"], "notes": "Business logic: currency, tax display, payment history, balance coloring" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0336f2ca", "citations": ["retailer-admin/src/__tests__/InvoicesPage.test.tsx — 64 tests", "retailer-admin/src/pages/InvoicesPage.tsx:158 — PDF filename sanitization", "retailer-admin/src/pages/InvoicesPage.tsx:396 — short phone guard"], "notes": "Edge cases: unknown status fallback, short phone no-op, PDF sanitization, auto-close on filter" }
       },
       "scope": {
         "posScreens": [],
@@ -11752,7 +11752,7 @@
       ],
       "regressionLocks": [],
       "knownIssues": [
-        { "id": "BLK-J27-001", "title": "InvoicesPage has no test file — 0 coverage for 417-line component", "status": "OPEN", "severity": "HIGH" }
+        { "id": "BLK-J27-001", "title": "InvoicesPage has no test file — 0 coverage for 417-line component", "status": "DONE", "severity": "HIGH", "resolution": "J27-TEST-001: 7→64 tests, PR #527, 0336f2ca" }
       ]
     },
     "JOURNEY-28": {
