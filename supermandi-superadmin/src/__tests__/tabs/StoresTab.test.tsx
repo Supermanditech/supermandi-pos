@@ -357,5 +357,262 @@ describe('StoresTab', () => {
       render(<StoresTab {...createDefaultProps({ stores })} />);
       expect(screen.getByText('42')).toBeTruthy();
     });
+
+    it('renders activity table headers', () => {
+      const stores = [{ storeId: 'store-1', eventCount: 10, lastSeen: '2024-01-15' }];
+      render(<StoresTab {...createDefaultProps({ stores })} />);
+      expect(screen.getByText('Event count')).toBeTruthy();
+      expect(screen.getByText('Last seen')).toBeTruthy();
+    });
+
+    it('renders multiple store activities', () => {
+      const stores = [
+        { storeId: 'store-a', eventCount: 10, lastSeen: '2024-01-10' },
+        { storeId: 'store-b', eventCount: 25, lastSeen: '2024-01-15' },
+      ];
+      render(<StoresTab {...createDefaultProps({ stores })} />);
+      expect(screen.getByText('store-a')).toBeTruthy();
+      expect(screen.getByText('store-b')).toBeTruthy();
+      expect(screen.getByText('25')).toBeTruthy();
+    });
+  });
+
+  // =========================================================================
+  // Additional coverage
+  // =========================================================================
+
+  describe('create store details', () => {
+    it('renders store ID optional input', () => {
+      render(<StoresTab {...createDefaultProps()} />);
+      // Two inputs with this placeholder (create store + barcode sheet)
+      expect(screen.getAllByPlaceholderText('UUID or store code').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders subtitle description', () => {
+      render(<StoresTab {...createDefaultProps()} />);
+      expect(screen.getByText('Generate a Store ID for new device enrollment.')).toBeTruthy();
+    });
+
+    it('disables create button when loading', () => {
+      render(<StoresTab {...createDefaultProps({ createStoreLoading: true })} />);
+      expect((screen.getByText('Creating...') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('shows create store error with role=alert', () => {
+      render(<StoresTab {...createDefaultProps({ createStoreError: 'Duplicate store' })} />);
+      expect(screen.getByRole('alert')).toBeTruthy();
+    });
+  });
+
+  describe('UPI VPA details', () => {
+    it('renders UPI VPA input placeholder', () => {
+      render(<StoresTab {...createDefaultProps()} />);
+      expect(screen.getByPlaceholderText('merchant@upi')).toBeTruthy();
+    });
+
+    it('renders store ID input for UPI section', () => {
+      render(<StoresTab {...createDefaultProps()} />);
+      expect(screen.getByPlaceholderText('e.g. store-1')).toBeTruthy();
+    });
+
+    it('shows store error with role=alert', () => {
+      render(<StoresTab {...createDefaultProps({ storeError: 'Not found' })} />);
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows store success message', () => {
+      render(<StoresTab {...createDefaultProps({ storeSuccess: 'VPA saved!' })} />);
+      expect(screen.getByText('VPA saved!')).toBeTruthy();
+    });
+
+    it('shows store record table headers', () => {
+      const storeRecord = makeStore();
+      render(<StoresTab {...createDefaultProps({ storeRecord })} />);
+      // "UPI VPA" appears as both label and table header
+      expect(screen.getAllByText('UPI VPA').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('UPI Updated')).toBeTruthy();
+    });
+
+    it('shows active status in store record', () => {
+      const storeRecord = makeStore({ active: true });
+      render(<StoresTab {...createDefaultProps({ storeRecord })} />);
+      expect(screen.getByText('true')).toBeTruthy();
+    });
+  });
+
+  describe('store directory details', () => {
+    it('renders directory subtitle', () => {
+      render(<StoresTab {...createDefaultProps()} />);
+      expect(screen.getByText('Edit store names and status')).toBeTruthy();
+    });
+
+    it('renders directory table headers', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores })} />);
+      expect(screen.getByText('Store Name')).toBeTruthy();
+      expect(screen.getByText('Contact')).toBeTruthy();
+    });
+
+    it('renders store name edit input', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores })} />);
+      expect(screen.getByPlaceholderText('Store name')).toBeTruthy();
+    });
+
+    it('renders QR button for enrollment', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores })} />);
+      expect(screen.getByText('QR')).toBeTruthy();
+    });
+
+    it('calls handleCreateEnrollmentForStore on QR click', () => {
+      const handleEnroll = vi.fn();
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, handleCreateEnrollmentForStore: handleEnroll })} />);
+      fireEvent.click(screen.getByText('QR'));
+      expect(handleEnroll).toHaveBeenCalledWith('store-1');
+    });
+
+    it('shows saving state on name save', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, storeNameSaving: { 'store-1': true } })} />);
+      expect(screen.getByText('Saving...')).toBeTruthy();
+    });
+
+    it('renders multiple stores in directory', () => {
+      const stores = [
+        makeStore({ id: 'store-a', name: 'Store Alpha' }),
+        makeStore({ id: 'store-b', name: 'Store Beta' }),
+      ];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores })} />);
+      expect(screen.getByText('store-a')).toBeTruthy();
+      expect(screen.getByText('store-b')).toBeTruthy();
+    });
+
+    it('renders select all checkbox', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores })} />);
+      expect(screen.getByLabelText('Select all stores')).toBeTruthy();
+    });
+
+    it('renders per-store checkbox', () => {
+      const stores = [makeStore({ name: 'Check Store' })];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores })} />);
+      expect(screen.getByLabelText('Select store Check Store')).toBeTruthy();
+    });
+
+    it('shows storeNameError with role=alert', () => {
+      render(<StoresTab {...createDefaultProps({ storeNameError: 'Name too short' })} />);
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('expanded store row', () => {
+    it('renders contact fields when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText('Contact Name')).toBeTruthy();
+      expect(screen.getByPlaceholderText('Contact name')).toBeTruthy();
+      expect(screen.getByPlaceholderText('email@example.com')).toBeTruthy();
+      expect(screen.getByPlaceholderText('Store address')).toBeTruthy();
+    });
+
+    it('renders payment method checkboxes when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText('Payment Methods')).toBeTruthy();
+      expect(screen.getByText('CASH')).toBeTruthy();
+      expect(screen.getByText('UPI')).toBeTruthy();
+      expect(screen.getByText('DUE')).toBeTruthy();
+    });
+
+    it('renders credit/BNPL section when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText('Credit / BNPL')).toBeTruthy();
+      expect(screen.getByText('Enable Credit')).toBeTruthy();
+    });
+
+    it('renders feature flags section when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText('Feature Flags')).toBeTruthy();
+    });
+
+    it('renders enrollment codes section when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText('Enrollment Codes')).toBeTruthy();
+      expect(screen.getByText('No enrollment codes yet')).toBeTruthy();
+    });
+
+    it('renders enrollment codes when available', () => {
+      const stores = [makeStore()];
+      const storeEnrollments = {
+        'store-1': [
+          { id: 'e1', code: 'ABC123', status: 'ACTIVE' as const, uses_count: 0, max_uses: 5, store_id: 'store-1', created_at: '2024-01-01', expires_at: '2024-12-31', created_by: 'admin', revoked_at: null, used_at: null, last_used_at: null },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeEnrollments })} />);
+      expect(screen.getByText('ABC123')).toBeTruthy();
+      // ACTIVE appears in both status badge for store and enrollment
+      expect(screen.getAllByText('ACTIVE').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('0/5 uses')).toBeTruthy();
+    });
+  });
+
+  describe('barcode sheet details', () => {
+    it('renders tier selector', () => {
+      render(<StoresTab {...createDefaultProps()} />);
+      expect(screen.getByLabelText('Tier')).toBeTruthy();
+    });
+
+    it('calls handleBarcodeSheetShare on click', () => {
+      const handleShare = vi.fn();
+      render(<StoresTab {...createDefaultProps({ handleBarcodeSheetShare: handleShare })} />);
+      fireEvent.click(screen.getByText('Share to WhatsApp'));
+      expect(handleShare).toHaveBeenCalled();
+    });
+
+    it('shows barcode sheet success', () => {
+      render(<StoresTab {...createDefaultProps({ barcodeSheetSuccess: 'PDF generated!' })} />);
+      expect(screen.getByText('PDF generated!')).toBeTruthy();
+    });
+
+    it('disables buttons when busy', () => {
+      render(<StoresTab {...createDefaultProps({ barcodeSheetBusy: true })} />);
+      const workingButtons = screen.getAllByText('Working...');
+      workingButtons.forEach(btn => {
+        expect((btn as HTMLButtonElement).disabled).toBe(true);
+      });
+    });
+  });
+
+  describe('bulk feature flags details', () => {
+    it('shows applying state', () => {
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']), bulkFlagLoading: true })} />);
+      expect(screen.getByText('Applying...')).toBeTruthy();
+    });
+
+    it('shows bulk result message', () => {
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']), bulkFlagResult: '2 stores updated' })} />);
+      expect(screen.getByText('2 stores updated')).toBeTruthy();
+    });
+
+    it('calls handleBulkFF on Apply click', () => {
+      const handleBulk = vi.fn();
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']), bulkFlagKey: 'test_flag', handleBulkFF: handleBulk })} />);
+      fireEvent.click(screen.getByText('Apply'));
+      expect(handleBulk).toHaveBeenCalled();
+    });
+
+    it('calls setSelectedStoreIds with empty set on Clear click', () => {
+      const setIds = vi.fn();
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']), setSelectedStoreIds: setIds })} />);
+      fireEvent.click(screen.getByText('Clear'));
+      expect(setIds).toHaveBeenCalled();
+    });
   });
 });
