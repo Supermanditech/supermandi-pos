@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-28",
+  "currentAuditJourney": "JOURNEY-29",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
@@ -11760,31 +11760,31 @@
       "name": "Retailer Credit & Finance Dashboard",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer views credit limits, providers, drawdowns, EMIs, and finance summaries connected to BNPL and store payment setup.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "Enumerated 2026-03-10: 48 actions, 20 edge cases across CreditDashboardPage.tsx (277 lines) and PaymentsPage.tsx (315 lines). CreditDashboardPage has 0 tests (blocker). PaymentsPage has 33 tests (590 lines, adequate). Backend: creditDashboard.ts (132 lines), bnpl.ts (160 lines).",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J28-A48",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "J28-TEST-001 DONE: CreditDashboardPage.test.tsx 49 tests landed at b3a047b1 (PR #528). PaymentsPage already had 33 tests. Full retailer-admin suite: 1333 tests, 50 files, 0 regressions. PARK-READY.",
       "openGaps": [],
-      "cccBlocker": "BLK-J28-001",
+      "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "credit or BNPL data, or known empty-state coverage"], "resetScriptNote": "" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
-        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/CreditDashboardPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/PaymentsPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/components/UpiInput.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/creditDashboard.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/bnpl.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": "b3a047b1", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/CreditDashboardPage.tsx", "auditedAtSha": "b3a047b1", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/PaymentsPage.tsx", "auditedAtSha": "b3a047b1", "reauditRequired": false },
+        { "path": "retailer-admin/src/components/UpiInput.tsx", "auditedAtSha": "b3a047b1", "reauditRequired": false },
+        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": "b3a047b1", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/creditDashboard.ts", "auditedAtSha": "b3a047b1", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/bnpl.ts", "auditedAtSha": "b3a047b1", "reauditRequired": false }
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "b3a047b1", "citations": ["CreditDashboardPage.tsx:99 auth guard", "CreditDashboardPage.tsx:64-91 fetchDashboard with token check", "PaymentsPage.tsx:175 auth loading guard"], "notes": "Auth guard blocks unauthenticated access, API calls require token" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "b3a047b1", "citations": ["CreditDashboardPage.tsx:118-125 loading/empty/data states", "CreditDashboardPage.tsx:111-116 error with retry", "CreditDashboardPage.test.tsx:49 tests cover all 4 UX states"], "notes": "Loading, empty (no balance), error+retry, success with full data — all tested" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "b3a047b1", "citations": ["CreditDashboardPage.tsx:79 authFetch to /reports/credit-summary", "creditDashboard.ts:17-131 backend endpoint with store isolation", "bnpl.ts:12-15 getStoreId from x-actor-id header"], "notes": "API wiring verified: frontend calls → backend responds with store-scoped data" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "b3a047b1", "citations": ["CreditDashboardPage.tsx:96 utilization clamped Math.min(…,100)", "CreditDashboardPage.tsx:44-46 fmt() INR formatting", "CreditDashboardPage.tsx:48-52 fmtDate() dd/mm/yyyy", "CreditDashboardPage.tsx:54-62 statusBadge with fallback"], "notes": "Business logic: utilization clamp, INR formatting, date formatting, status badge mapping all verified" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "b3a047b1", "citations": ["CreditDashboardPage.test.tsx:1-870 49 tests", "PaymentsPage.test.tsx 33 existing tests", "Full suite 1333 tests 0 regressions"], "notes": "49 new tests + 33 existing = 82 J28-scope tests, full suite green" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "b3a047b1", "citations": ["creditDashboard.ts:22 getStoreId(req) store isolation", "bnpl.ts:12-15 getStoreId from x-actor-id", "CreditDashboardPage.tsx:96 Math.max(totalCreditLimitMinor,1) div-by-zero guard"], "notes": "Store isolation enforced server-side, div-by-zero guarded, no cross-store data leakage" }
       },
       "scope": {
         "posScreens": [],
@@ -11872,7 +11872,7 @@
       ],
       "regressionLocks": [],
       "knownIssues": [
-        { "id": "BLK-J28-001", "title": "CreditDashboardPage has no test file — 0 coverage for 277-line component", "status": "OPEN", "severity": "HIGH" }
+        { "id": "BLK-J28-001", "title": "CreditDashboardPage has no test file — 0 coverage for 277-line component", "status": "DONE", "severity": "HIGH", "mergedPR": 528, "mergedSHA": "b3a047b1", "testCount": 49 }
       ]
     },
     "JOURNEY-29": {
