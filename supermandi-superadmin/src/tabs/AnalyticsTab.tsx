@@ -585,7 +585,7 @@ export function AnalyticsTab({
                   ) : (
                     analyticsDues.dues.map((d) => (
                       <tr key={d.sale_id}>
-                        <td className="mono">{d.sale_id.slice(0, 8)}</td>
+                        <td className="mono">{d.sale_id ? d.sale_id.slice(0, 8) : "-"}</td>
                         <td>{d.customer_name ?? "-"}</td>
                         <td className="mono">{formatCurrency(d.amount_minor)}</td>
                         <td className="mono">{formatDate(d.created_at)}</td>

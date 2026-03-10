@@ -30,7 +30,7 @@ export async function fetchStoreStaff(storeId: string): Promise<StaffListRespons
     cache: "no-store",
     headers: { Accept: "application/json", ...getAuthHeaders() },
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({ _parseError: true }));
   if (!res.ok) {
     if (res.status === 401) throw new Error("Unauthorized");
     throw new Error(sanitizeErrorMessage(data?.error ? String(data.error) : null, `Request failed (${res.status})`));
@@ -55,7 +55,7 @@ export async function createStaff(storeId: string, input: {
     },
     body: JSON.stringify(input),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({ _parseError: true }));
   if (!res.ok) {
     if (res.status === 401) throw new Error("Unauthorized");
     const msg = data?.error?.message || data?.error || `Request failed (${res.status})`;
@@ -80,7 +80,7 @@ export async function updateStaff(storeId: string, staffId: string, input: {
     },
     body: JSON.stringify(input),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({ _parseError: true }));
   if (!res.ok) {
     if (res.status === 401) throw new Error("Unauthorized");
     const msg = data?.error?.message || data?.error || `Request failed (${res.status})`;
@@ -102,7 +102,7 @@ export async function resetStaffPin(storeId: string, staffId: string, pin: strin
     body: JSON.stringify({ pin }),
   });
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({ _parseError: true }));
     if (res.status === 401) throw new Error("Unauthorized");
     const msg = data?.error?.message || data?.error || `Request failed (${res.status})`;
     throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));

@@ -1998,6 +1998,13 @@ export default function App() {
     }
   }, [regEventsPage, regEventsSourceFilter, regEventsOutcomeFilter, tab]);
 
+  // R4-DEP-004: Refresh GRN alerts when offset or filter changes
+  useEffect(() => {
+    if (tab === "grn-alerts") {
+      refreshRef.current.refreshGrnAlerts?.();
+    }
+  }, [grnAlertsOffset, grnAlertsFilter, tab]);
+
   // DR-010: Clear badge when admin views the registrations tab
   useEffect(() => {
     if (tab === "registrations") {
@@ -2208,12 +2215,14 @@ export default function App() {
     const header = ["createdAt", "deviceId", "storeId", "eventType", "payload"].join(",");
     const escape = (v: unknown) => {
       const s = typeof v === "string" ? v : JSON.stringify(v);
-      const safe = (s ?? "").replace(/\r?\n/g, " ").replace(/"/g, '""');
+      let safe = (s ?? "").replace(/\r?\n/g, " ").replace(/"/g, '""');
+      // R4-SANIT-001: Prevent CSV formula injection
+      if (/^[=+\-@\t\r]/.test(safe)) safe = "'" + safe;
       return `"${safe}"`;
     };
 
     const body = rows
-      .map((r) => [r.createdAt, r.deviceId, r.storeId, r.eventType, escape(r.payload)].join(","))
+      .map((r) => [escape(r.createdAt), escape(r.deviceId), escape(r.storeId), escape(r.eventType), escape(r.payload)].join(","))
       .join("\n");
     const csv = `${header}\n${body}\n`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
