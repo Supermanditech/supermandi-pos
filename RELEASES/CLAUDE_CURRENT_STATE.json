@@ -1,6 +1,6 @@
 {
-  "version": "206.0",
-  "lastUpdated": "2026-03-11T06:00:00.000Z",
+  "version": "207.0",
+  "lastUpdated": "2026-03-11T06:30:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -103,11 +103,11 @@
   },
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-25",
-    "activeJourneyStatus": "CERT-PENDING",
-    "activeAction": "J25_USER_ACTION_ENUMERATION",
-    "auditMode": "USER_ACTION_ENUMERATION",
+    "activeJourneyStatus": "CERT-IN-PROGRESS",
+    "activeAction": "J25-TEST-001",
+    "auditMode": "BLOCKER_RESOLUTION",
     "nextLayer": null,
-    "nextBlocker": null,
+    "nextBlocker": "BLK-J25-001",
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -242,11 +242,11 @@
       "realUserActionsEnumerated": true,
       "crossLayerMapComplete": true,
       "edgeCaseMatrixComplete": true,
-      "actionsWithFullLayerTrace": 52,
-      "actionsWithEdgeCaseAudit": 52,
+      "actionsWithFullLayerTrace": 55,
+      "actionsWithEdgeCaseAudit": 55,
       "scopeSource": "Retailer-web surface rediscovery proved the historical J11-only inventory was incomplete. Canonical retailer inventory is now expanded to 15 journeys (J20-J33 plus preserved J11). Active restart point is JOURNEY-20 as the earliest retailer entry journey.",
-      "totalActions": 104,
-      "totalEdgeCases": 30,
+      "totalActions": 135,
+      "totalEdgeCases": 48,
       "identifiedIssues": [
         "POS_APP exhaustive rediscovery COMPLETE at 15 PARK-READY journeys",
         "JOURNEY-20 implementation is present across all traced auth/onboarding layers; current blockers are regression and coverage gaps, not missing product code",
@@ -269,6 +269,7 @@
         "J24-TEST-001 DONE: SettingsPage comprehensive coverage landed on main at 867a4465 (PR #523, 56 new tests, 0→56 total)",
         "J24-TEST-002 DONE: PaymentsPage expanded from 6 to 33 tests landed on main at 2c38c96f (PR #524, 27 net new tests)",
         "JOURNEY-24 PARK-READY: G1-G6 signed, 89 J24-scope tests (56+33), two-page journey fully stabilized.",
+        "JOURNEY-25 enumeration complete: 31 actions (15 RegisterPage + 9 CompliancePage + 7 backend-only), 18 edge cases, 2 test blockers (BLK-J25-001 RegisterPage 62 test failures from sessionStorage undefined, BLK-J25-002 CompliancePage test failures)",
         "RETAILER_WEB historical JOURNEY-11 is preserved, but 14 missing retailer journeys were discovered and declared; retailer platform truth now restarts from JOURNEY-20",
         "SUPPLIER_WEB historical JOURNEY-10 is preserved but not yet accepted as exhaustive platform truth",
         "SUPERADMIN_WEB historical JOURNEY-09 is preserved, JOURNEY-12 remains pending, and the full superadmin platform inventory is not yet exhaustive"
