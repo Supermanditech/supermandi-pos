@@ -364,7 +364,16 @@ export function SuppliersTab({
                   </button>
                   <button
                     className="btnGhost"
-                    onClick={() => handleRejectSupplier(request.id)}
+                    onClick={() => {
+                      // R1-FIX: Confirm before rejecting supplier request
+                      setConfirmDialog({
+                        title: "Reject Supplier Request",
+                        message: `Reject supplier "${request.businessName || request.id}"? They will need to resubmit their application.`,
+                        confirmLabel: "Reject",
+                        variant: "danger",
+                        onConfirm: () => { setConfirmDialog(null); handleRejectSupplier(request.id); },
+                      });
+                    }}
                     disabled={supplierActionLoading[request.id]}
                     style={{ color: "var(--color-error)" }}
                   >
@@ -429,7 +438,16 @@ export function SuppliersTab({
                   />
                   <button
                     className="sa-btn-danger-sm"
-                    onClick={() => handleBankVerify(bc.id, "reject")}
+                    onClick={() => {
+                      // R1-FIX: Confirm before rejecting bank details
+                      setConfirmDialog({
+                        title: "Reject Bank Details",
+                        message: `Reject bank details for "${bc.businessName}"? Supplier payouts will be blocked until new details are submitted.`,
+                        confirmLabel: "Reject Bank Details",
+                        variant: "danger",
+                        onConfirm: () => { setConfirmDialog(null); handleBankVerify(bc.id, "reject"); },
+                      });
+                    }}
                     disabled={bankVerifyLoading[bc.id] || (bankRejectReason[bc.id]?.length || 0) < 10}
                   >
                     {bankVerifyLoading[bc.id] ? "..." : "Reject"}
@@ -521,7 +539,19 @@ export function SuppliersTab({
                   <td className="mono">{typeof s.rating === "number" ? s.rating.toFixed(1) : "-"}</td>
                   <td>
                     <button
-                      onClick={() => handleToggleAutoApprove(s.id, !!s.autoApproveProducts)}
+                      onClick={() => {
+                        // R1-FIX: Confirm auto-approve toggle (affects product pipeline)
+                        const newState = !s.autoApproveProducts;
+                        setConfirmDialog({
+                          title: newState ? "Enable Auto-Approve" : "Disable Auto-Approve",
+                          message: newState
+                            ? `Enable auto-approve for "${s.businessName}"? All new products from this supplier will be approved automatically.`
+                            : `Disable auto-approve for "${s.businessName}"? New products will require manual review.`,
+                          confirmLabel: newState ? "Enable" : "Disable",
+                          variant: newState ? "info" : "warning",
+                          onConfirm: () => { setConfirmDialog(null); handleToggleAutoApprove(s.id, !!s.autoApproveProducts); },
+                        });
+                      }}
                       disabled={autoApproveLoading[s.id]}
                       className={s.autoApproveProducts ? "sa-btn-success-sm" : "sa-btn-ghost-sm"}
                     >

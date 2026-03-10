@@ -1,5 +1,5 @@
 // T-073: SuperAdmin Invoices Tab — list, filter, detail, PDF download
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { InvoiceListItem, InvoiceDetail, InvoiceListFilters, InvoiceModel, InvoiceType, InvoiceStatus } from "../api/invoices";
 import { listInvoices, getInvoice, issueInvoice, cancelInvoice, downloadInvoicePdf } from "../api/invoices";
 import { formatDateTime } from "../lib/formatters";
@@ -37,8 +37,12 @@ export function InvoicesTab() {
   // UIUX-SA-008: Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  // R1-FIX: In-flight guard to prevent pagination race conditions
+  const inFlightRef = useRef(false);
 
   const refresh = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setLoading(true);
     setError("");
     try {
@@ -53,6 +57,7 @@ export function InvoicesTab() {
       setError(err.message || "Failed to load invoices");
     } finally {
       setLoading(false);
+      inFlightRef.current = false;
     }
   }, [offset, modelFilter, typeFilter, statusFilter]);
 

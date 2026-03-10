@@ -99,8 +99,15 @@ export function SupportQueueTab() {
   }, []);
 
   useEffect(() => {
-    if (view === 'queue') fetchQueue();
-    else fetchTemplates();
+    if (view === 'queue') {
+      // R1-FIX: Clear selected conversation when filter/view changes to avoid stale data
+      setSelectedConvId(null);
+      setMessages([]);
+      setReplyText('');
+      fetchQueue();
+    } else {
+      fetchTemplates();
+    }
   }, [view, fetchQueue, fetchTemplates]);
 
   const selectConversation = async (convId: string) => {
