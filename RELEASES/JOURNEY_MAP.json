@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-35",
+    "journeyId": "JOURNEY-36",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7449,9 +7449,9 @@
       "name": "Supplier Login (OTP + Password)",
       "cluster": "C13",
       "description": "Returning supplier → login page → phone OTP lookup → OTP send/verify → dashboard redirect. Alternate: email/password login. Alternate: forgot password → email reset → reset confirmation. Session resume via cookie.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J35-TEST-001",
+      "lastAuditedAt": "2026-03-11T01:00:00.000Z",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
@@ -7462,12 +7462,47 @@
         "supplier-portal/src/lib/firebase.ts",
         "supplier-portal/src/lib/auth.tsx"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        {"id": "J35-A01", "description": "Render login page with OTP mode (heading, phone input, Send OTP, firebase warning)"},
+        {"id": "J35-A02", "description": "Switch between OTP and password auth modes (clears errors on switch)"},
+        {"id": "J35-A03", "description": "Password mode: email/password fields, inline email validation, show/hide toggle"},
+        {"id": "J35-A04", "description": "Password login: validate → loginSupplier → refreshProfile → dashboard redirect"},
+        {"id": "J35-A05", "description": "Password errors: PASSWORD_NOT_SET, ACCOUNT_LOCKED, ACCOUNT_SUSPENDED, PENDING_APPROVAL"},
+        {"id": "J35-A06", "description": "OTP phone validation: empty, short, invalid format"},
+        {"id": "J35-A07", "description": "Lookup-first flow: lookupSupplierRegistration → route by status (not_onboarded, PENDING_APPROVAL, UPLOAD_DOCUMENTS, ACCOUNT_SUSPENDED, CONTACT_SUPPORT, LOGIN_ALLOWED)"},
+        {"id": "J35-A08", "description": "Not-onboarded UI: 'Account not found', Register link, 'Use a different phone number'"},
+        {"id": "J35-A09", "description": "Incomplete registration UI: 'Resume Registration' with phone+resume params"},
+        {"id": "J35-A10", "description": "OTP step: verification code input, digit-only/6-char limit, Verify & Sign In button disabled state"},
+        {"id": "J35-A11", "description": "OTP verify: success→dashboard, pending→pending-approval, inactive/locked→error"},
+        {"id": "J35-A12", "description": "OTP verify errors: PENDING_APPROVAL, ACCOUNT_SUSPENDED, USER_NOT_FOUND, 500 server error, non-ApiError"},
+        {"id": "J35-A13", "description": "Resend cooldown timer, code expiry countdown, Change Phone Number"},
+        {"id": "J35-A14", "description": "FIX-064: cooldown persistence to sessionStorage"},
+        {"id": "J35-A15", "description": "Phone normalization: 10-digit→+91 prefix, +91 passthrough"}
+      ],
+      "guarantees": [
+        {"id": "G1", "name": "UI elements", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/auth/login.test.tsx:95-110"]},
+        {"id": "G2", "name": "UX 4-state", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/auth/login.test.tsx:111-130 (firebase warning, error display, mode switching)"]},
+        {"id": "G3", "name": "Navigation", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/auth/login.test.tsx:295-380 (dashboard, pending-approval, register redirects)"]},
+        {"id": "G4", "name": "Wiring", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/auth/login.test.tsx:165-240 (loginSupplier, lookupSupplierRegistration, sendOtp, verifyOtp, phoneOtpLogin calls)"]},
+        {"id": "G5", "name": "Business logic", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/auth/login.test.tsx:241-380 (lookup-first flow, all 7 statuses, all error codes)"]},
+        {"id": "G6", "name": "Edge cases", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/auth/login.test.tsx:381-410 (phone normalization, cooldown persistence)"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"testFile": "supplier-portal/src/__tests__/pages/auth/login.test.tsx", "testCount": 59, "mergedPR": 535, "mergedSHA": "4041da05"},
+        {"testFile": "supplier-portal/src/__tests__/pages/auth/forgot-password.test.tsx", "testCount": 13, "note": "Pre-existing, verified passing"},
+        {"testFile": "supplier-portal/src/__tests__/pages/auth/reset-password.test.tsx", "testCount": 11, "note": "Pre-existing, verified passing"}
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Phone normalization: 10-digit→+91 prefix vs +91 passthrough",
+        "FIX-064: cooldown survives component remount via sessionStorage",
+        "Auth mode switching clears error state",
+        "Inline email validation on blur (REQ.AUTH.PARITY.LOGIN_FLOW)",
+        "OTP input: digit-only filter, 6-char limit",
+        "All 7 lookup statuses tested: not_onboarded, PENDING_APPROVAL, UPLOAD_DOCUMENTS, ACCOUNT_SUSPENDED, CONTACT_SUPPORT, unknown, LOGIN_ALLOWED",
+        "All verify error codes tested: PENDING_APPROVAL, ACCOUNT_SUSPENDED, USER_NOT_FOUND, 500, non-ApiError"
+      ]
     },
     "JOURNEY-36": {
       "id": "JOURNEY-36",
