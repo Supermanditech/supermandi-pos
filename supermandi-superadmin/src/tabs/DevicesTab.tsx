@@ -1,4 +1,5 @@
 // SA-001: Devices tab extracted from App.tsx
+import { useState } from "react";
 import type { DeviceRecord } from "../api/devices";
 import type { DeviceEnrollmentResponse } from "../api/deviceEnrollments";
 import { type DeviceType, DEVICE_TYPE_OPTIONS, DEVICE_TYPE_LABELS, PRINTING_MODE_LABELS } from "../types";
@@ -6,6 +7,8 @@ import { EnrollmentCountdown } from "../components/EnrollmentCountdown";
 import { isDeviceOnline, composeDeviceMessage, getDeviceTone } from "../ui/status";
 import { formatDateTime } from "../lib/formatters";
 import { QRCodeSVG } from "qrcode.react";
+// R1-FIX: Confirmation dialog for device config save
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 const DEVICE_PAGE_SIZE = 50;
 
@@ -65,8 +68,12 @@ export function DevicesTab({
   handleRevokeEnrollment,
   revokeLoading,
 }: DevicesTabProps) {
+  // R1-FIX: Confirm dialog state for device config save
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+
   return (
     <section className="card">
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
       <div className="cardHeader">
         <div>
           <div className="cardTitle">Add Device</div>
@@ -297,7 +304,21 @@ export function DevicesTab({
                       />
                     </label>
 
-                    <button onClick={() => requestDeviceSave(d.id)} disabled={deviceSaving[d.id]}>
+                    <button onClick={() => {
+                      // R1-FIX: Confirm if deactivating device or changing device type
+                      const activeChanged = draft.active !== Boolean(d.active);
+                      if (activeChanged && !draft.active) {
+                        setConfirmDialog({
+                          title: "Confirm Device Deactivation",
+                          message: `Deactivate device "${draft.label || d.id}"? The device will no longer be able to access the POS system.`,
+                          confirmLabel: "Deactivate & Save",
+                          variant: "danger",
+                          onConfirm: () => { setConfirmDialog(null); requestDeviceSave(d.id); },
+                        });
+                      } else {
+                        requestDeviceSave(d.id);
+                      }
+                    }} disabled={deviceSaving[d.id]}>
                       {deviceSaving[d.id] ? "Saving..." : "Save"}
                     </button>
                     <button className="btnGhost" onClick={() => requestDeviceReset(d.id)} disabled={deviceSaving[d.id]}>

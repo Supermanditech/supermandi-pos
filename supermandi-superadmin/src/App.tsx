@@ -263,6 +263,7 @@ export default function App() {
   };
 
   // T-114: Listen for browser back/forward navigation (popstate)
+  // R1-FIX: Abort in-flight requests and clear errors on popstate (same as performTabSwitch)
   useEffect(() => {
     const handlePopState = () => {
       const { tab: hashTab, params } = parseHashParams();
@@ -271,6 +272,8 @@ export default function App() {
         if (modalDirty) {
           showConfirm("Unsaved Changes", "You have unsaved changes. Discard?", "Discard", "warning", () => {
             setModalDirty(false);
+            abortActiveRequests();
+            setConfirmDialog(null);
             setTabRaw(hashTab);
             setHashParams(params);
           });
@@ -278,6 +281,9 @@ export default function App() {
           window.history.pushState(null, "", buildHash(tab));
           return;
         }
+        // R1-FIX: Abort active requests on back/forward navigation
+        abortActiveRequests();
+        setConfirmDialog(null);
         setTabRaw(hashTab);
         setHashParams(params);
       }
@@ -1803,7 +1809,12 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // T-119: Restore modal state from sessionStorage on mount
-  // This re-opens a modal if the user refreshed the page or navigated away
+  // R1-FIX: Use refs to access latest data in intervals (stale closure fix)
+  const pendingProductsRef = useRef(pendingProducts);
+  pendingProductsRef.current = pendingProducts;
+  const pendingDocumentsRef = useRef(pendingDocuments);
+  pendingDocumentsRef.current = pendingDocuments;
+
   const modalRestoredRef = useRef(false);
   useEffect(() => {
     if (modalRestoredRef.current) return;
@@ -1817,29 +1828,29 @@ export default function App() {
       return;
     }
     // Restore product edit modal — requires products to be loaded first
-    // We set a flag and check it after data loads
     if (saved.modal === "editProduct" && saved.id) {
-      // Products load asynchronously, so we use a short interval to wait
+      const targetId = saved.id;
       const checkInterval = setInterval(() => {
-        const product = pendingProducts.find((p) => p.id === saved.id);
+        const product = pendingProductsRef.current.find((p) => p.id === targetId);
         if (product) {
           clearInterval(checkInterval);
           handleOpenEditProduct(product);
         }
       }, 500);
       // Give up after 10 seconds if product not found
-      setTimeout(() => clearInterval(checkInterval), 10000);
+      setTimeout(() => { clearInterval(checkInterval); saveModalState(null); }, 10000);
     }
     // Restore document review modal — similar approach
     if (saved.modal === "viewDocument" && saved.id) {
+      const targetId = saved.id;
       const checkInterval = setInterval(() => {
-        const doc = pendingDocuments.find((d) => d.id === saved.id);
+        const doc = pendingDocumentsRef.current.find((d) => d.id === targetId);
         if (doc) {
           clearInterval(checkInterval);
           handleOpenDocument(doc);
         }
       }, 500);
-      setTimeout(() => clearInterval(checkInterval), 10000);
+      setTimeout(() => { clearInterval(checkInterval); saveModalState(null); }, 10000);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1881,6 +1892,7 @@ export default function App() {
     if (tab === "grn-alerts") r.refreshGrnAlerts?.(); // SA-P1-004
 
     // ISSUE-MICRO-024: Polling uses refreshRef to avoid stale closure
+    // R1-FIX: Include applications, staff, and grn-alerts in polling interval
     const id = setInterval(() => {
       const r = refreshRef.current;
       r.refreshHealth?.();
@@ -1893,6 +1905,9 @@ export default function App() {
       if (shouldRefreshAudit) r.refreshAuditLogs?.();
       if (shouldRefreshDocuments) r.refreshDocuments?.();
       if (shouldRefreshRegEvents) r.refreshRegEvents?.();
+      if (shouldRefreshApplications) r.refreshApplications?.();
+      if (tab === "staff" && staffStoreId) r.refreshStaff?.();
+      if (tab === "grn-alerts") r.refreshGrnAlerts?.();
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
     // LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001: Added isAuthenticated dependency

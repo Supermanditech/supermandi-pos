@@ -35,7 +35,11 @@ export function ApplicationsTab({
   onLoadMore,
 }: ApplicationsTabProps) {
   // SA.016: Refresh when entity filter changes instead of using setTimeout
-  useEffect(() => { refreshApplications(); }, [appEntityFilter]);
+  // R1-FIX: Clear stale rejection reasons when filter changes to prevent cross-application leakage
+  useEffect(() => {
+    setAppRejectReason(() => ({}));
+    refreshApplications();
+  }, [appEntityFilter]);
 
   return (
     <section className="card">
