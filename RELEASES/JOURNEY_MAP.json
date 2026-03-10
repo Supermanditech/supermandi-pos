@@ -255,7 +255,29 @@
       ],
       "SUPERADMIN_WEB": [
         "JOURNEY-09",
-        "JOURNEY-12"
+        "JOURNEY-12",
+        "JOURNEY-49",
+        "JOURNEY-50",
+        "JOURNEY-51",
+        "JOURNEY-52",
+        "JOURNEY-53",
+        "JOURNEY-54",
+        "JOURNEY-55",
+        "JOURNEY-56",
+        "JOURNEY-57",
+        "JOURNEY-58",
+        "JOURNEY-59",
+        "JOURNEY-60",
+        "JOURNEY-61",
+        "JOURNEY-62",
+        "JOURNEY-63",
+        "JOURNEY-64",
+        "JOURNEY-65",
+        "JOURNEY-66",
+        "JOURNEY-67",
+        "JOURNEY-68",
+        "JOURNEY-69",
+        "JOURNEY-70"
       ]
     },
     "inventoryCompletenessGuard": "If Claude discovers a real user journey missing from this inventory, Claude must stop implementation, update this inventory and JOURNEY_MAP first, then resume in USER_ACTION_ENUMERATION mode. Missing journeys invalidate coverage claims. This guard is actively in force for the current platform exhaustive rediscovery pass.",
@@ -283,23 +305,23 @@
         ]
       },
       "SUPPLIER_WEB": {
-        "status": "IN_PROGRESS",
+        "status": "COMPLETE",
         "declaredJourneyCountBaseline": 16,
-        "declaredJourneyCountExhaustive": false,
-        "coverageClaimsSuspended": true,
-        "reopenReason": "Supplier-web surface rediscovery found 15 missing journeys beyond historical J10. Canonical supplier inventory expanded to 16 journeys (J34-J48 plus preserved J10). Active restart from JOURNEY-34.",
-        "resumeFromJourney": "JOURNEY-34",
+        "declaredJourneyCountExhaustive": true,
+        "coverageClaimsSuspended": false,
+        "completionNote": "All 16 declared supplier-web journeys (J34-J48 plus preserved J10) PARK-READY. 816 tests, zero regressions. Platform closure at SHA c38ca20e.",
+        "completedAt": "2026-03-11T07:00:00.000Z",
         "historicalWorkPreserved": [
           "JOURNEY-10"
         ]
       },
       "SUPERADMIN_WEB": {
-        "status": "REOPENED_REQUIRED",
-        "declaredJourneyCountBaseline": 2,
-        "declaredJourneyCountExhaustive": false,
+        "status": "IN_PROGRESS",
+        "declaredJourneyCountBaseline": 25,
+        "declaredJourneyCountExhaustive": true,
         "coverageClaimsSuspended": true,
-        "reopenReason": "Historical JOURNEY-09 work is preserved and JOURNEY-12 remains pending, but superadmin-web has not yet undergone exhaustive rediscovery from real user entry.",
-        "resumeFromJourney": "JOURNEY-09",
+        "reopenReason": "Exhaustive rediscovery found 23 tabs + shared components. Historical J09 (PARK-READY) and J12 preserved. 23 new journeys (J49-J70) added for 1:1 tab coverage. Total: 25 journeys.",
+        "resumeFromJourney": "JOURNEY-49",
         "historicalWorkPreserved": [
           "JOURNEY-09",
           "JOURNEY-12"
