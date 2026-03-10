@@ -83,8 +83,8 @@ export function GrnAlertsTab({
                   <td>
                     {a.status === "OPEN" && (
                       <div className="sa-flex sa-gap-4">
-                        <button className="sa-btn-xs" onClick={() => handleGrnAlertAction(a.id, "ACKNOWLEDGED")} disabled={grnAlertActionLoading === a.id}>Acknowledge</button>
-                        <button className="sa-btn-ghost-sm sa-btn-xs" onClick={() => handleGrnAlertAction(a.id, "DISMISSED")} disabled={grnAlertActionLoading === a.id}>Dismiss</button>
+                        <button className="sa-btn-xs" onClick={() => handleGrnAlertAction(a.id, "ACKNOWLEDGED")} disabled={grnAlertActionLoading === a.id}>{grnAlertActionLoading === a.id ? "Updating..." : "Acknowledge"}</button>
+                        <button className="sa-btn-ghost-sm sa-btn-xs" onClick={() => handleGrnAlertAction(a.id, "DISMISSED")} disabled={grnAlertActionLoading === a.id}>{grnAlertActionLoading === a.id ? "Updating..." : "Dismiss"}</button>
                       </div>
                     )}
                     {a.status !== "OPEN" && a.acknowledged_at && (

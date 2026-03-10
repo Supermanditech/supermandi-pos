@@ -183,6 +183,8 @@ describe('SettingsTab', () => {
     const flags = [{ flag_key: 'test_flag', enabled: true, description: 'Test', updated_at: null }];
     render(<SettingsTab {...createProps({ featureFlags: flags as any, handleToggleGlobalFlag: handleToggle })} />);
     fireEvent.click(screen.getByText('KILL'));
+    // ConfirmDialog mock appears — click the Confirm button
+    fireEvent.click(screen.getByText('Confirm'));
     expect(handleToggle).toHaveBeenCalledWith('test_flag', false);
   });
 
@@ -191,6 +193,8 @@ describe('SettingsTab', () => {
     const flags = [{ flag_key: 'test_flag', enabled: false, description: 'Test', updated_at: null }];
     render(<SettingsTab {...createProps({ featureFlags: flags as any, handleToggleGlobalFlag: handleToggle })} />);
     fireEvent.click(screen.getByText('Enable'));
+    // ConfirmDialog mock appears — click the Confirm button
+    fireEvent.click(screen.getByText('Confirm'));
     expect(handleToggle).toHaveBeenCalledWith('test_flag', true);
   });
 

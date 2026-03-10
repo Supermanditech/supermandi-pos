@@ -1,4 +1,6 @@
 // SA-001: Staff management tab extracted from App.tsx
+import { useState } from "react";
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import type { StaffMember } from "../api/staff";
 import type { StoreRecord } from "../api/stores";
 import { formatDateTime } from "../lib/formatters";
@@ -44,6 +46,7 @@ export function StaffTab({
   refreshStaff, handleAddStaff, handleToggleStaffActive, handleResetPin,
   handleStaffRoleChange, staffSuccess,
 }: StaffTabProps) {
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   return (
     <section className="card">
       <div className="cardHeader">
@@ -128,7 +131,17 @@ export function StaffTab({
                     {/* #186.15: Inline role change dropdown */}
                     <select
                       value={s.role}
-                      onChange={(e) => handleStaffRoleChange(s.id, e.target.value as "CASHIER" | "STOCK_MANAGER" | "MANAGER")}
+                      onChange={(e) => {
+                        const newRole = e.target.value as "CASHIER" | "STOCK_MANAGER" | "MANAGER";
+                        if (newRole === s.role) return;
+                        setConfirmDialog({
+                          title: "Change Staff Role",
+                          message: `Change ${s.name}'s role from ${s.role} to ${newRole}?`,
+                          confirmLabel: "Change Role",
+                          variant: newRole === "MANAGER" ? "warning" : "info",
+                          onConfirm: () => { setConfirmDialog(null); handleStaffRoleChange(s.id, newRole); },
+                        });
+                      }}
                       disabled={staffActionLoading === s.id}
                       className="sa-text-xs sa-fw-600 sa-radius-6 sa-border"
                       style={{ padding: "2px 6px", background: s.role === "MANAGER" ? "var(--color-primary-light)" : s.role === "STOCK_MANAGER" ? "var(--color-warning-soft)" : "var(--color-surface-alt)", color: s.role === "MANAGER" ? "var(--color-primary-dark)" : s.role === "STOCK_MANAGER" ? "var(--color-warning-dark)" : "var(--color-text-secondary)", cursor: "pointer" }}
@@ -158,7 +171,7 @@ export function StaffTab({
                     {resetPinStaffId === s.id && (
                       <div className="sa-flex sa-gap-4 sa-mt-4">
                         <input type="password" inputMode="numeric" pattern="\d{4,6}" value={resetPinValue} onChange={(e) => setResetPinValue(e.target.value.replace(/\D/g, ''))} placeholder="New PIN" maxLength={6} className="sa-input--sm sa-radius-4 sa-border" style={{ width: 80 }} />
-                        <button className="btnSuccess sa-btn-xs" onClick={handleResetPin}>Save</button>
+                        <button className="btnSuccess sa-btn-xs" onClick={handleResetPin} disabled={!resetPinValue || resetPinValue.length < 4}>Save</button>
                         <button className="btnGhost sa-btn-xs" onClick={() => setResetPinStaffId(null)}>Cancel</button>
                       </div>
                     )}
@@ -175,6 +188,7 @@ export function StaffTab({
           No staff members found for this store. Click "Add Staff" to create one.
         </div>
       )}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
     </section>
   );
 }
