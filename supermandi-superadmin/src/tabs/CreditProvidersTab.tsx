@@ -73,14 +73,16 @@ export function CreditProvidersTab() {
     setLoading(true);
     setError(null);
     try {
-      const [provResult, dashResult, healthResult] = await Promise.all([
+      const [provResult, dashResult, healthResult] = await Promise.allSettled([
         apiFetch('/api/v1/admin/credit-providers'),
         apiFetch('/api/v1/admin/credit-providers/dashboard'),
         apiFetch('/api/v1/admin/credit-providers/health'),
       ]);
-      setProviders(provResult.providers || []);
-      setStats(dashResult.providerStats || []);
-      setHealth(healthResult.providers || []);
+      if (provResult.status === 'fulfilled') setProviders(provResult.value.providers || []);
+      if (dashResult.status === 'fulfilled') setStats(dashResult.value.providerStats || []);
+      if (healthResult.status === 'fulfilled') setHealth(healthResult.value.providers || []);
+      const failed = [provResult, dashResult, healthResult].filter(r => r.status === 'rejected');
+      if (failed.length > 0) throw new Error((failed[0] as PromiseRejectedResult).reason?.message || 'Partial load failure');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load');
     } finally {

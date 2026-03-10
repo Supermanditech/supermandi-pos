@@ -754,7 +754,9 @@ export function SuppliersTab({
                         variant: "warning",
                         onConfirm: async () => {
                           setConfirmDialog(null);
-                          await handleApproveProductDirect(product.id);
+                          try {
+                            await handleApproveProductDirect(product.id);
+                          } catch { return; }
                           await handlePublishProduct(product.id);
                         },
                       });

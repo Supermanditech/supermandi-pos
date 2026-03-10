@@ -65,10 +65,7 @@ export function GrnAlertsTab({
                   <td
                     className="sa-fw-600 sa-nowrap"
                     style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", cursor: "default" }}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Product: ${a.product_name}`}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); } }}
+                    title={a.product_name}
                   >{a.product_name}</td>
                   <td>{a.ordered_qty}</td>
                   <td className="sa-fw-600">{a.total_received_qty}</td>

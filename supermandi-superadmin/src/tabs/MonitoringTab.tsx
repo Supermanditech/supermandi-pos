@@ -53,6 +53,7 @@ export function MonitoringTab() {
         try {
           const result = await triggerTokenCleanup();
           setCleanupResult(result);
+          setTimeout(() => setCleanupResult(null), 10000);
         } catch (err) {
           setError(err instanceof Error ? err.message : "Token cleanup failed");
         } finally {

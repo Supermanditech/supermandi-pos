@@ -39,5 +39,7 @@ const currencyFmt = new Intl.NumberFormat(LOCALE, { style: 'currency', currency:
 
 /** Format minor-unit (paise) amount as INR: 12345 → "₹123.45" */
 export function formatCurrency(paise: number): string {
-  return currencyFmt.format((paise || 0) / 100);
+  const v = paise || 0;
+  if (!isFinite(v)) return '₹0.00';
+  return currencyFmt.format(v / 100);
 }
