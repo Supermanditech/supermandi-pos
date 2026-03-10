@@ -1,6 +1,6 @@
 {
-  "version": "236.0",
-  "lastUpdated": "2026-03-11T03:45:00.000Z",
+  "version": "237.0",
+  "lastUpdated": "2026-03-11T04:15:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,7 +104,7 @@
   "journeyExecutionMachineState": {
     "activeJourney": "SUPPLIER_WEB_REDISCOVERY",
     "activeJourneyStatus": "PENDING",
-    "activeAction": "J40_SUPPLIER_ORDERS_TESTS_DONE",
+    "activeAction": "J42_SUPPLIER_EARNINGS_TESTS_DONE",
     "auditMode": "EXHAUSTIVE_STABILIZATION",
     "nextLayer": null,
     "nextBlocker": null,
@@ -378,6 +378,24 @@
         "mergedSHA": "a6931cca",
         "testCount": 37,
         "regressions": 0
+      },
+      {
+        "id": "J41-SHARED-SCOPE",
+        "title": "Supplier shipment tracking covered by J40 orders page tests (shared scope: orders/page.tsx)",
+        "status": "DONE",
+        "mergedPR": 540,
+        "mergedSHA": "a6931cca",
+        "testCount": 37,
+        "regressions": 0
+      },
+      {
+        "id": "J42-TEST-001",
+        "title": "Supplier earnings page tests expanded (8→37): summary cards, KYC warning, payouts table, commission, info box",
+        "status": "DONE",
+        "mergedPR": 541,
+        "mergedSHA": "bc0173a0",
+        "testCount": 37,
+        "regressions": 0
       }
     ],
     "enumerationCoverage": {
@@ -440,6 +458,8 @@
         "J38-TEST-001 DONE: Supplier products page tests expanded (10→39) landed on main at c4972783 (PR #538, 39 tests). JOURNEY-38 PARK-READY.",
         "J39-TEST-001 DONE: Supplier CSV upload page tests expanded (10→50) landed on main at 6a08c272 (PR #539, 50 tests). JOURNEY-39 PARK-READY.",
         "J40-TEST-001 DONE: Supplier orders page tests expanded (5→37) landed on main at a6931cca (PR #540, 37 tests). JOURNEY-40 PARK-READY.",
+        "J41 PARK-READY: Shipment tracking covered by J40 shared orders/page.tsx scope (37 tests, PR #540).",
+        "J42-TEST-001 DONE: Supplier earnings page tests expanded (8→37) landed on main at bc0173a0 (PR #541, 37 tests). JOURNEY-42 PARK-READY.",
         "SUPERADMIN_WEB historical JOURNEY-09 is preserved, JOURNEY-12 remains pending, and the full superadmin platform inventory is not yet exhaustive"
       ]
     },
@@ -468,6 +488,8 @@
       "J38-TEST-001 DONE. JOURNEY-38 PARK-READY (G1-G6 signed, 39 tests: 39 ProductsPage).",
       "J39-TEST-001 DONE. JOURNEY-39 PARK-READY (G1-G6 signed, 50 tests: 50 UploadPage).",
       "J40-TEST-001 DONE. JOURNEY-40 PARK-READY (G1-G6 signed, 37 tests: 37 OrdersPage).",
+      "J41 PARK-READY (shared scope with J40: orders/page.tsx shipment tracking covered by 37 orders tests).",
+      "J42-TEST-001 DONE. JOURNEY-42 PARK-READY (G1-G6 signed, 37 tests: 37 EarningsPage).",
       "after JOURNEY-25 PARK-READY, continue the expanded retailer-web journey inventory through JOURNEY-26 to JOURNEY-33 plus preserved JOURNEY-11",
       "after retailer-web completion, activate POS_FEATURE_AUDIT_PACK_01 and audit/fix the deferred POS product/search/payment/supplier/cart pack",
       "after the pending POS audit pack, repeat exhaustive rediscovery for supplier-web, then superadmin-web",
@@ -659,11 +681,11 @@
         "coverageClaimsSuspended": true
       },
       "SUPPLIER_WEB": {
-        "parkReady": 8,
+        "parkReady": 10,
         "certSealed": 0,
         "certBlocked": 0,
         "certInProgress": 0,
-        "certPending": 8,
+        "certPending": 6,
         "needsReaudit": 1,
         "coverageClaimsSuspended": true
       },

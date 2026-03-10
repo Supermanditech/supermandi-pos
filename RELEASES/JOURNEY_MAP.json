@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-41",
+    "journeyId": "JOURNEY-43",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7766,19 +7766,26 @@
       "name": "Supplier Order Shipment Tracking",
       "cluster": "C13",
       "description": "Supplier opens confirmed order → adds shipment tracking (carrier name + tracking ID) → marks order shipped → delivery confirmation flow → retailer GRN receipt.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J41-SHARED-SCOPE",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
         "supplier-portal/src/app/(dashboard)/orders/page.tsx",
         "supplier-portal/src/lib/api.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "Shared scope with JOURNEY-40: shipment tracking is part of orders/page.tsx detail modal",
+        "Shipment form, carrier selection, tracking ID, delivery confirmation all live in the same component"
+      ],
+      "guarantees": [
+        {"id": "G1-G6", "name": "Shared with J40", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx:37-tests-cover-detail-modal"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"test": "supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx", "count": 37, "pr": 540, "sha": "a6931cca"}
+      ],
       "knownIssues": [],
       "edgeCases": []
     },
@@ -7787,21 +7794,53 @@
       "name": "Supplier Earnings & Payouts",
       "cluster": "C13",
       "description": "Supplier views earnings page → payout summary (total/pending/paid) → transaction history list → filters by date/status → payout detail → per-order breakdown.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J42-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
         "supplier-portal/src/app/(dashboard)/earnings/page.tsx",
         "supplier-portal/src/lib/api.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "A1: Render page heading, subtitle, breadcrumb",
+        "A2: View 4 summary cards (Total Revenue, Available Balance, Total Paid Out, Pending Payouts)",
+        "A3: View formatted currency amounts for all summary values",
+        "A4: View completed payouts count and pending payouts count",
+        "A5: View summary loading skeleton (4 cards)",
+        "A6: View summary error state with Retry",
+        "A7: View KYC warning when payoutReady is false, with Complete KYC link",
+        "A8: View Payout History section",
+        "A9: View payout table with columns (Date, Reference, Bank Account, Amount, Status)",
+        "A10: View UTR reference for completed payouts",
+        "A11: View bank account name, number, and IFSC",
+        "A12: View status badges (Pending, Processing, Completed, Failed)",
+        "A13: View failure reason for failed payouts",
+        "A14: View payout loading spinner and error with Retry",
+        "A15: View empty state when no payouts",
+        "A16: View Payout Information box (4 items)",
+        "A17: View Commission Breakdown when grossSales > 0"
+      ],
+      "guarantees": [
+        {"id": "G1", "name": "UI Elements", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/earnings.test.tsx:cards,table,info-box,commission"]},
+        {"id": "G2", "name": "UX 4-State", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/earnings.test.tsx:loading,error-retry,empty,success"]},
+        {"id": "G3", "name": "Navigation", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/earnings.test.tsx:breadcrumb,kyc-link"]},
+        {"id": "G4", "name": "Wiring", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/earnings.test.tsx:refetch-summary,refetch-payouts"]},
+        {"id": "G5", "name": "Business Logic", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/earnings.test.tsx:currency-format,pending+processing,kyc-gating,commission"]},
+        {"id": "G6", "name": "Edge Cases", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/earnings.test.tsx:null-summary,all-statuses,failure-reason"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"test": "supplier-portal/src/__tests__/pages/dashboard/earnings.test.tsx", "count": 37, "pr": 541, "sha": "bc0173a0"}
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Pending Payouts card shows sum of pending + processing paise",
+        "Commission Breakdown only shown when grossSalesPaise > 0",
+        "Desktop table and mobile cards both render for responsive layout",
+        "Failed payout shows failure reason text"
+      ]
     },
     "JOURNEY-43": {
       "id": "JOURNEY-43",
