@@ -15,6 +15,10 @@ vi.mock('../../api/errorSanitizer', () => ({
   parseError: vi.fn(async () => 'API Error'),
 }));
 
+vi.mock('../../lib/formatters', () => ({
+  formatDateTime: vi.fn((v: string) => v || '--'),
+}));
+
 function okResponse(data: unknown) {
   return { ok: true, json: () => Promise.resolve(data) };
 }
@@ -22,14 +26,17 @@ function okResponse(data: unknown) {
 describe('AIInsightsTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: no storeId so fetchData is a no-op
     mockFetchWithTimeout.mockResolvedValue(okResponse({ anomalies: [], alerts: [] }));
   });
+
+  // ── Header ────────────────────────────────────────────────
 
   it('renders header', () => {
     render(<AIInsightsTab />);
     expect(screen.getByText('AI Intelligence')).toBeInTheDocument();
   });
+
+  // ── View Toggle ───────────────────────────────────────────
 
   it('renders view toggle buttons', () => {
     render(<AIInsightsTab />);
@@ -38,30 +45,67 @@ describe('AIInsightsTab', () => {
     expect(screen.getByText('Jobs')).toBeInTheDocument();
   });
 
+  // ── Store ID Input ────────────────────────────────────────
+
   it('shows store ID input on anomalies view', () => {
     render(<AIInsightsTab />);
     expect(screen.getByPlaceholderText('Enter Store ID...')).toBeInTheDocument();
   });
 
-  it('shows empty state without store ID', () => {
+  it('shows store ID input on alerts view', () => {
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Alerts'));
+    expect(screen.getByPlaceholderText('Enter Store ID...')).toBeInTheDocument();
+  });
+
+  it('hides store ID input in jobs view', () => {
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Jobs'));
+    expect(screen.queryByPlaceholderText('Enter Store ID...')).not.toBeInTheDocument();
+  });
+
+  it('disables load button without store ID', () => {
+    render(<AIInsightsTab />);
+    const loadBtn = screen.getByText('Load');
+    expect(loadBtn).toBeDisabled();
+  });
+
+  it('enables load button with store ID', () => {
+    render(<AIInsightsTab />);
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 'store-1' } });
+    const loadBtn = screen.getByText('Load');
+    expect(loadBtn).not.toBeDisabled();
+  });
+
+  // ── Empty States ──────────────────────────────────────────
+
+  it('shows empty state without store ID on anomalies', () => {
     render(<AIInsightsTab />);
     expect(screen.getByText('Enter a Store ID to view anomalies')).toBeInTheDocument();
   });
+
+  it('shows empty state without store ID on alerts', () => {
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Alerts'));
+    expect(screen.getByText('Enter a Store ID to view alerts')).toBeInTheDocument();
+  });
+
+  // ── Loading State ─────────────────────────────────────────
 
   it('shows loading state when fetching', async () => {
     mockFetchWithTimeout.mockImplementation(
       () => new Promise(resolve => setTimeout(() => resolve(okResponse({ anomalies: [] })), 100))
     );
     render(<AIInsightsTab />);
-
     const input = screen.getByPlaceholderText('Enter Store ID...');
     fireEvent.change(input, { target: { value: 'store-1' } });
     fireEvent.click(screen.getByText('Load'));
-
     await waitFor(() => {
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
   });
+
+  // ── Anomalies View ────────────────────────────────────────
 
   it('renders anomalies table with data', async () => {
     const anomalies = [{
@@ -70,12 +114,10 @@ describe('AIInsightsTab', () => {
       detectedAt: '2026-01-15T10:00:00Z',
     }];
     mockFetchWithTimeout.mockResolvedValue(okResponse({ anomalies }));
-
     render(<AIInsightsTab />);
     const input = screen.getByPlaceholderText('Enter Store ID...');
     fireEvent.change(input, { target: { value: 'store-1' } });
     fireEvent.click(screen.getByText('Load'));
-
     await waitFor(() => {
       expect(screen.getByText('price spike')).toBeInTheDocument();
       expect(screen.getByText('warning')).toBeInTheDocument();
@@ -83,31 +125,51 @@ describe('AIInsightsTab', () => {
     });
   });
 
+  it('renders anomalies table column headers', async () => {
+    const anomalies = [{
+      id: 'a1', storeId: 's1', anomalyType: 'price_spike', severity: 'warning',
+      description: 'Test', metadata: {}, isReviewed: false,
+      detectedAt: '2026-01-15T10:00:00Z',
+    }];
+    mockFetchWithTimeout.mockResolvedValue(okResponse({ anomalies }));
+    render(<AIInsightsTab />);
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 's1' } });
+    fireEvent.click(screen.getByText('Load'));
+    await waitFor(() => {
+      expect(screen.getByText('Type')).toBeInTheDocument();
+      expect(screen.getByText('Severity')).toBeInTheDocument();
+      expect(screen.getByText('Description')).toBeInTheDocument();
+      expect(screen.getByText('Detected')).toBeInTheDocument();
+      expect(screen.getByText('Reviewed')).toBeInTheDocument();
+    });
+  });
+
+  it('replaces underscores with spaces in anomaly type', async () => {
+    const anomalies = [{
+      id: 'a1', storeId: 's1', anomalyType: 'stock_count_mismatch', severity: 'critical',
+      description: 'Mismatch', metadata: {}, isReviewed: true,
+      detectedAt: '2026-01-15T10:00:00Z',
+    }];
+    mockFetchWithTimeout.mockResolvedValue(okResponse({ anomalies }));
+    render(<AIInsightsTab />);
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 's1' } });
+    fireEvent.click(screen.getByText('Load'));
+    await waitFor(() => {
+      expect(screen.getByText('stock count mismatch')).toBeInTheDocument();
+    });
+  });
+
   it('shows no anomalies message with store ID', async () => {
     mockFetchWithTimeout.mockResolvedValue(okResponse({ anomalies: [] }));
-
     render(<AIInsightsTab />);
-    const input = screen.getByPlaceholderText('Enter Store ID...');
-    fireEvent.change(input, { target: { value: 'store-1' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 'store-1' } });
     fireEvent.click(screen.getByText('Load'));
-
     await waitFor(() => {
       expect(screen.getByText('No anomalies detected')).toBeInTheDocument();
     });
   });
 
-  it('shows error banner on fetch failure', async () => {
-    mockFetchWithTimeout.mockRejectedValue(new Error('Network error'));
-
-    render(<AIInsightsTab />);
-    const input = screen.getByPlaceholderText('Enter Store ID...');
-    fireEvent.change(input, { target: { value: 'store-1' } });
-    fireEvent.click(screen.getByText('Load'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
-    });
-  });
+  // ── Alerts View ───────────────────────────────────────────
 
   it('switches to alerts view', async () => {
     render(<AIInsightsTab />);
@@ -122,24 +184,60 @@ describe('AIInsightsTab', () => {
       isRead: false, createdAt: '2026-01-15T10:00:00Z',
     }];
     mockFetchWithTimeout.mockResolvedValue(okResponse({ alerts }));
-
     render(<AIInsightsTab />);
     fireEvent.click(screen.getByText('Alerts'));
-
-    const input = screen.getByPlaceholderText('Enter Store ID...');
-    fireEvent.change(input, { target: { value: 'store-1' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 'store-1' } });
     fireEvent.click(screen.getByText('Load'));
-
     await waitFor(() => {
       expect(screen.getByText('Low Stock Alert')).toBeInTheDocument();
       expect(screen.getByText('Tomatoes below threshold')).toBeInTheDocument();
     });
   });
 
+  it('shows no alerts message with store ID', async () => {
+    mockFetchWithTimeout.mockResolvedValue(okResponse({ alerts: [] }));
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Alerts'));
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 'store-1' } });
+    fireEvent.click(screen.getByText('Load'));
+    await waitFor(() => {
+      expect(screen.getByText('No alerts')).toBeInTheDocument();
+    });
+  });
+
+  it('renders multiple alert cards', async () => {
+    const alerts = [
+      { id: 'al1', storeId: 's1', alertType: 'stock_low', severity: 'critical', title: 'Low Stock', message: 'Tomatoes low', isRead: false, createdAt: '2026-01-15T10:00:00Z' },
+      { id: 'al2', storeId: 's1', alertType: 'price_change', severity: 'warning', title: 'Price Change', message: 'Rice price changed', isRead: true, createdAt: '2026-01-15T11:00:00Z' },
+    ];
+    mockFetchWithTimeout.mockResolvedValue(okResponse({ alerts }));
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Alerts'));
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 's1' } });
+    fireEvent.click(screen.getByText('Load'));
+    await waitFor(() => {
+      expect(screen.getByText('Low Stock')).toBeInTheDocument();
+      expect(screen.getByText('Price Change')).toBeInTheDocument();
+    });
+  });
+
+  // ── Error State ───────────────────────────────────────────
+
+  it('shows error banner on fetch failure', async () => {
+    mockFetchWithTimeout.mockRejectedValue(new Error('Network error'));
+    render(<AIInsightsTab />);
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 'store-1' } });
+    fireEvent.click(screen.getByText('Load'));
+    await waitFor(() => {
+      expect(screen.getByText('Network error')).toBeInTheDocument();
+    });
+  });
+
+  // ── Jobs View ─────────────────────────────────────────────
+
   it('switches to jobs view and shows job buttons', () => {
     render(<AIInsightsTab />);
     fireEvent.click(screen.getByText('Jobs'));
-
     expect(screen.getByText('Run Alert Analysis')).toBeInTheDocument();
     expect(screen.getByText('Run Demand Forecasting')).toBeInTheDocument();
     expect(screen.getByText('Run Smart Reorder')).toBeInTheDocument();
@@ -149,40 +247,44 @@ describe('AIInsightsTab', () => {
     expect(screen.getByText('Run Recommendations')).toBeInTheDocument();
   });
 
-  it('hides store ID input in jobs view', () => {
+  it('shows jobs description text', () => {
     render(<AIInsightsTab />);
     fireEvent.click(screen.getByText('Jobs'));
-    expect(screen.queryByPlaceholderText('Enter Store ID...')).not.toBeInTheDocument();
+    expect(screen.getByText(/Manually trigger AI computation jobs/)).toBeInTheDocument();
+    expect(screen.getByText(/Cloud Scheduler/)).toBeInTheDocument();
   });
 
   it('runs a job and shows result', async () => {
     mockFetchWithTimeout.mockResolvedValue(okResponse({ processed: 5 }));
-
     render(<AIInsightsTab />);
     fireEvent.click(screen.getByText('Jobs'));
     fireEvent.click(screen.getByText('Run Alert Analysis'));
-
     await waitFor(() => {
-      // Result shown in <pre>: "Run Alert Analysis: {"processed":5}"
       expect(screen.getByText(/processed.*5/)).toBeInTheDocument();
     });
   });
 
   it('shows error when job fails', async () => {
     mockFetchWithTimeout.mockRejectedValue(new Error('Job failed'));
-
     render(<AIInsightsTab />);
     fireEvent.click(screen.getByText('Jobs'));
     fireEvent.click(screen.getByText('Run Alert Analysis'));
-
     await waitFor(() => {
       expect(screen.getByText('Job failed')).toBeInTheDocument();
     });
   });
 
-  it('disables load button without store ID', () => {
+  it('has 7 job buttons total', () => {
     render(<AIInsightsTab />);
-    const loadBtn = screen.getByText('Load');
-    expect(loadBtn).toBeDisabled();
+    fireEvent.click(screen.getByText('Jobs'));
+    const jobButtons = screen.getAllByText(/^Run /);
+    expect(jobButtons.length).toBe(7);
+  });
+
+  // ── Store ID sr-only label ────────────────────────────────
+
+  it('has accessible label for store ID input', () => {
+    render(<AIInsightsTab />);
+    expect(screen.getByLabelText('Store ID')).toBeInTheDocument();
   });
 });

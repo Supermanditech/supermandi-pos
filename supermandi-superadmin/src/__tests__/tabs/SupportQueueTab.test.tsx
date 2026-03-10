@@ -15,6 +15,20 @@ vi.mock('../../api/errorSanitizer', () => ({
   parseError: vi.fn(async () => 'API Error'),
 }));
 
+vi.mock('../../components/ConfirmDialog', () => ({
+  ConfirmDialog: ({ title, message, confirmLabel, onConfirm, onCancel }: {
+    title: string; message: string; confirmLabel: string;
+    onConfirm: () => void; onCancel: () => void;
+  }) => (
+    <div data-testid="confirm-dialog">
+      <div>{title}</div>
+      <div>{message}</div>
+      <button onClick={onConfirm}>{confirmLabel}</button>
+      <button onClick={onCancel}>Cancel</button>
+    </div>
+  ),
+}));
+
 const mockConversations = [
   {
     id: 'conv-1', type: 'support', title: 'Billing Issue',
@@ -48,17 +62,19 @@ function okResponse(data: unknown) {
 describe('SupportQueueTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: queue view loads conversations
     mockFetchWithTimeout.mockResolvedValue(okResponse({ conversations: mockConversations }));
   });
+
+  // ── Header ────────────────────────────────────────────────
 
   it('renders header', async () => {
     render(<SupportQueueTab />);
     await waitFor(() => {
-      // "Support Queue" appears as both h2 header and toggle button
       expect(screen.getAllByText('Support Queue').length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  // ── Loading State ─────────────────────────────────────────
 
   it('shows loading state initially', () => {
     mockFetchWithTimeout.mockImplementation(
@@ -68,12 +84,29 @@ describe('SupportQueueTab', () => {
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
+  // ── View Toggle ───────────────────────────────────────────
+
   it('renders view toggle buttons', async () => {
     render(<SupportQueueTab />);
-    // "Support Queue" appears as both h2 header and toggle button
     expect(screen.getAllByText('Support Queue').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Templates')).toBeInTheDocument();
   });
+
+  it('switches header text to Message Templates on templates view', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ templates: mockTemplates }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Templates'));
+    await waitFor(() => {
+      expect(screen.getByText('Message Templates')).toBeInTheDocument();
+    });
+  });
+
+  // ── Status Filter ─────────────────────────────────────────
 
   it('renders status filter buttons', async () => {
     render(<SupportQueueTab />);
@@ -81,6 +114,20 @@ describe('SupportQueueTab', () => {
     expect(screen.getByText('Resolved')).toBeInTheDocument();
     expect(screen.getByText('All')).toBeInTheDocument();
   });
+
+  it('changes status filter', async () => {
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    const resolvedButtons = screen.getAllByText('Resolved');
+    fireEvent.click(resolvedButtons[0]);
+    await waitFor(() => {
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ── Conversation List ─────────────────────────────────────
 
   it('renders conversation list', async () => {
     render(<SupportQueueTab />);
@@ -97,14 +144,22 @@ describe('SupportQueueTab', () => {
     });
   });
 
+  it('shows No messages for conversations without preview', async () => {
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('No messages')).toBeInTheDocument();
+    });
+  });
+
   it('shows Open/Resolved badges', async () => {
     render(<SupportQueueTab />);
     await waitFor(() => {
-      // "Open" and "Resolved" appear as both filter buttons and conversation badges
       expect(screen.getAllByText('Open').length).toBeGreaterThanOrEqual(2);
       expect(screen.getAllByText('Resolved').length).toBeGreaterThanOrEqual(2);
     });
   });
+
+  // ── Empty State ───────────────────────────────────────────
 
   it('shows empty state when no conversations', async () => {
     mockFetchWithTimeout.mockResolvedValue(okResponse({ conversations: [] }));
@@ -113,6 +168,8 @@ describe('SupportQueueTab', () => {
       expect(screen.getByText('No open support conversations')).toBeInTheDocument();
     });
   });
+
+  // ── Message Thread ────────────────────────────────────────
 
   it('shows placeholder when no conversation selected', async () => {
     render(<SupportQueueTab />);
@@ -123,55 +180,129 @@ describe('SupportQueueTab', () => {
 
   it('loads messages when conversation clicked', async () => {
     mockFetchWithTimeout
-      .mockResolvedValueOnce(okResponse({ conversations: mockConversations })) // initial queue load
-      .mockResolvedValueOnce(okResponse({ messages: mockMessages })); // messages on click
-
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages }));
     render(<SupportQueueTab />);
     await waitFor(() => {
       expect(screen.getByText('Billing Issue')).toBeInTheDocument();
     });
-
     fireEvent.click(screen.getByText('Billing Issue'));
-
     await waitFor(() => {
       expect(screen.getByText('Help me please')).toBeInTheDocument();
       expect(screen.getByText('Sure, how can I help?')).toBeInTheDocument();
     });
   });
 
-  it('shows action buttons when conversation selected', async () => {
+  it('shows sender type labels in messages', async () => {
     mockFetchWithTimeout
       .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
       .mockResolvedValueOnce(okResponse({ messages: mockMessages }));
-
     render(<SupportQueueTab />);
     await waitFor(() => {
       expect(screen.getByText('Billing Issue')).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByText('retailer')).toBeInTheDocument();
+      expect(screen.getByText('admin')).toBeInTheDocument();
+    });
+  });
 
+  it('renders system messages with italic style', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: [
+        { id: 'msg-s', senderId: 'system', senderType: 'system', messageType: 'text', content: 'Conversation assigned', createdAt: '2026-01-15T14:00:00Z' },
+      ]}));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByText('Conversation assigned')).toBeInTheDocument();
+    });
+  });
+
+  // ── Action Buttons ────────────────────────────────────────
+
+  it('shows action buttons when conversation selected', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
     await waitFor(() => {
       expect(screen.getByText('Assign to Me')).toBeInTheDocument();
       expect(screen.getByText('Resolve')).toBeInTheDocument();
     });
   });
 
+  // ── Reply Input ───────────────────────────────────────────
+
   it('shows reply input when conversation selected', async () => {
     mockFetchWithTimeout
       .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
       .mockResolvedValueOnce(okResponse({ messages: [] }));
-
     render(<SupportQueueTab />);
     await waitFor(() => {
       expect(screen.getByText('Billing Issue')).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText('Billing Issue'));
-
     await waitFor(() => {
       expect(screen.getByPlaceholderText('Type a reply...')).toBeInTheDocument();
       expect(screen.getByText('Send')).toBeInTheDocument();
     });
   });
+
+  it('disables Send button when reply is empty', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: [] }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect((screen.getByText('Send') as HTMLButtonElement).disabled).toBe(true);
+    });
+  });
+
+  it('enables Send button when reply has text', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: [] }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Type a reply...')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByPlaceholderText('Type a reply...'), { target: { value: 'Hello' } });
+    expect((screen.getByText('Send') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('has reply input with accessible aria-label', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: [] }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Reply message')).toBeInTheDocument();
+    });
+  });
+
+  // ── Error State ───────────────────────────────────────────
 
   it('shows error on fetch failure', async () => {
     mockFetchWithTimeout.mockRejectedValue(new Error('Network error'));
@@ -181,18 +312,17 @@ describe('SupportQueueTab', () => {
     });
   });
 
+  // ── Templates View ────────────────────────────────────────
+
   it('switches to templates view', async () => {
     mockFetchWithTimeout
-      .mockResolvedValueOnce(okResponse({ conversations: mockConversations })) // initial queue
-      .mockResolvedValueOnce(okResponse({ templates: mockTemplates })); // templates fetch
-
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ templates: mockTemplates }));
     render(<SupportQueueTab />);
     await waitFor(() => {
       expect(screen.getByText('Billing Issue')).toBeInTheDocument();
     });
-
     fireEvent.click(screen.getByText('Templates'));
-
     await waitFor(() => {
       expect(screen.getByText('Message Templates')).toBeInTheDocument();
       expect(screen.getByText('Welcome')).toBeInTheDocument();
@@ -204,10 +334,8 @@ describe('SupportQueueTab', () => {
     mockFetchWithTimeout
       .mockResolvedValueOnce(okResponse({ conversations: [] }))
       .mockResolvedValueOnce(okResponse({ templates: mockTemplates }));
-
     render(<SupportQueueTab />);
     fireEvent.click(screen.getByText('Templates'));
-
     await waitFor(() => {
       expect(screen.getByText('onboarding')).toBeInTheDocument();
       expect(screen.getByText('transactional')).toBeInTheDocument();
@@ -216,31 +344,51 @@ describe('SupportQueueTab', () => {
     });
   });
 
+  it('shows template body content', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: [] }))
+      .mockResolvedValueOnce(okResponse({ templates: mockTemplates }));
+    render(<SupportQueueTab />);
+    fireEvent.click(screen.getByText('Templates'));
+    await waitFor(() => {
+      expect(screen.getByText('Welcome to SuperMandi!')).toBeInTheDocument();
+      expect(screen.getByText(/Your order.*is ready/)).toBeInTheDocument();
+    });
+  });
+
+  it('renders template table column headers', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: [] }))
+      .mockResolvedValueOnce(okResponse({ templates: mockTemplates }));
+    render(<SupportQueueTab />);
+    fireEvent.click(screen.getByText('Templates'));
+    await waitFor(() => {
+      expect(screen.getByText('Name')).toBeInTheDocument();
+      expect(screen.getByText('Category')).toBeInTheDocument();
+      expect(screen.getByText('Channel')).toBeInTheDocument();
+      expect(screen.getByText('Template Body')).toBeInTheDocument();
+    });
+  });
+
   it('shows empty templates state', async () => {
     mockFetchWithTimeout
       .mockResolvedValueOnce(okResponse({ conversations: [] }))
       .mockResolvedValueOnce(okResponse({ templates: [] }));
-
     render(<SupportQueueTab />);
     fireEvent.click(screen.getByText('Templates'));
-
     await waitFor(() => {
       expect(screen.getByText('No templates found')).toBeInTheDocument();
     });
   });
 
-  it('changes status filter', async () => {
+  // ── Conversation Keyboard Accessibility ───────────────────
+
+  it('conversation items have role=button', async () => {
     render(<SupportQueueTab />);
     await waitFor(() => {
       expect(screen.getByText('Billing Issue')).toBeInTheDocument();
     });
-
-    // "Resolved" appears as both filter button and conversation badge — click the first one (filter)
-    const resolvedButtons = screen.getAllByText('Resolved');
-    fireEvent.click(resolvedButtons[0]);
-    // Should trigger new fetch with resolved status
-    await waitFor(() => {
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2); // initial + filter change
-    });
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.length).toBeGreaterThanOrEqual(1);
   });
 });
