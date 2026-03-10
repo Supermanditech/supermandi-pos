@@ -7847,21 +7847,51 @@
       "name": "Supplier Invoices",
       "cluster": "C13",
       "description": "Supplier views invoice list → filters by status (issued/paid/overdue) → opens invoice detail → sees line items, totals, payment terms.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J43-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
         "supplier-portal/src/app/(dashboard)/invoices/page.tsx",
         "supplier-portal/src/lib/api.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "Render heading, subtitle, breadcrumb",
+        "Status filter dropdown (6 options: All/Draft/Issued/Paid/Overdue/Cancelled)",
+        "Invoice count display (singular/plural)",
+        "Empty state when no invoices",
+        "Loading skeleton when isLoading",
+        "Error state with Retry button calling refetch",
+        "Table with 8 columns (Invoice #, Date, Buyer, Type, Total, Balance, Status, Actions)",
+        "Invoice data rendering (number, buyer, type with underscore replacement, formatted amounts)",
+        "PDF download button with aria-label per invoice",
+        "Status badge variants (ISSUED, PAID, OVERDUE, DRAFT, CANCELLED)",
+        "Balance color coding (red for positive, green for zero)",
+        "Pagination (page count, Prev/Next, disabled state)"
+      ],
+      "guarantees": [
+        "All 5 status badge variants render correctly uppercase",
+        "Balance due color coding: red-600 for positive, green-600 for zero",
+        "PDF download button has accessible aria-label with invoice number",
+        "Status filter has ARIA label for accessibility",
+        "Pagination disabled state on first page"
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {
+          "testFile": "supplier-portal/src/__tests__/pages/dashboard/invoices.test.tsx",
+          "testCount": 35,
+          "mergedPR": 542,
+          "mergedSHA": "ffe68e3e"
+        }
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Invoice with zero total amount renders ₹0.00",
+        "Multiple invoice rows render simultaneously",
+        "Pagination hidden when total fits single page"
+      ]
     },
     "JOURNEY-44": {
       "id": "JOURNEY-44",

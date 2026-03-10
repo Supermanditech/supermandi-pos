@@ -1,6 +1,6 @@
 {
-  "version": "237.0",
-  "lastUpdated": "2026-03-11T04:15:00.000Z",
+  "version": "238.0",
+  "lastUpdated": "2026-03-11T05:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,7 +104,7 @@
   "journeyExecutionMachineState": {
     "activeJourney": "SUPPLIER_WEB_REDISCOVERY",
     "activeJourneyStatus": "PENDING",
-    "activeAction": "J42_SUPPLIER_EARNINGS_TESTS_DONE",
+    "activeAction": "J43_SUPPLIER_INVOICES_TESTS_DONE",
     "auditMode": "EXHAUSTIVE_STABILIZATION",
     "nextLayer": null,
     "nextBlocker": null,
@@ -396,6 +396,15 @@
         "mergedSHA": "bc0173a0",
         "testCount": 37,
         "regressions": 0
+      },
+      {
+        "id": "J43-TEST-001",
+        "title": "Supplier invoices page tests expanded (6→35): status filter, table columns, PDF download, status badges, balance colors, pagination",
+        "status": "DONE",
+        "mergedPR": 542,
+        "mergedSHA": "ffe68e3e",
+        "testCount": 35,
+        "regressions": 0
       }
     ],
     "enumerationCoverage": {
@@ -681,11 +690,11 @@
         "coverageClaimsSuspended": true
       },
       "SUPPLIER_WEB": {
-        "parkReady": 10,
+        "parkReady": 11,
         "certSealed": 0,
         "certBlocked": 0,
         "certInProgress": 0,
-        "certPending": 6,
+        "certPending": 5,
         "needsReaudit": 1,
         "coverageClaimsSuspended": true
       },
