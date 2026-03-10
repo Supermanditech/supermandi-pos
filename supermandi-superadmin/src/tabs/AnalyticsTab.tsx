@@ -1,4 +1,5 @@
 // SA-001: Analytics tab extracted from App.tsx
+import { useEffect } from "react";
 import type { AnalyticsTabKey } from "../types";
 import type {
   OverviewResponse,
@@ -57,6 +58,13 @@ export function AnalyticsTab({
   productsGroupBy,
   setProductsGroupBy,
 }: AnalyticsTabProps) {
+  // R3-ANA-005: Re-fetch products data when groupBy changes
+  useEffect(() => {
+    if (analyticsTab === "products") {
+      refreshAnalytics("products");
+    }
+  }, [productsGroupBy]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <section className="card">
       <div className="cardHeader">
@@ -90,8 +98,8 @@ export function AnalyticsTab({
           </div>
           <div className="control">
             <label>&nbsp;</label>
-            <button onClick={() => refreshAnalytics(analyticsTab)} disabled={analyticsLoading}>
-              {analyticsLoading ? "Refreshing..." : "Refresh"}
+            <button onClick={() => refreshAnalytics(analyticsTab)} disabled={analyticsLoading} aria-label="Refresh">
+              {analyticsLoading ? "Refreshing..." : "\u21BB Refresh"}
             </button>
           </div>
         </div>

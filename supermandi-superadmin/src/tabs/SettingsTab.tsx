@@ -132,7 +132,7 @@ export function SettingsTab({
           <h3 className="sa-text-lg sa-fw-700 sa-mb-12">Feature Kill Switch</h3>
           <div className="muted sa-mb-12">Disable features globally. POS respects changes on next ui-status fetch.</div>
           <button onClick={refreshFeatureFlags} disabled={featureFlagsLoading} className="sa-mb-12">{featureFlagsLoading ? "Loading..." : "Refresh Flags"}</button>
-          {featureFlagsError && <div className="banner sa-mb-8" role="alert">{featureFlagsError}</div>}
+          {featureFlagsError && <div className="banner sa-mb-8" role="alert">{featureFlagsError} <button onClick={refreshFeatureFlags} className="sa-btn-ghost-sm" style={{ marginLeft: 8 }}>Retry</button></div>}
           <div className="tableWrap">
             <table className="table">
               <thead>
@@ -182,7 +182,7 @@ export function SettingsTab({
               aria-label="Select store for feature flag overrides"
             >
               <option value="">-- Select a store --</option>
-              {storeDirectory.map((s) => (
+              {[...storeDirectory].sort((a, b) => ((a.name || a.storeName || a.id) as string).localeCompare((b.name || b.storeName || b.id) as string)).map((s) => (
                 <option key={s.id} value={s.id}>{s.name || s.storeName || s.id}</option>
               ))}
             </select>
@@ -214,21 +214,39 @@ export function SettingsTab({
                       <td className="sa-flex sa-gap-4 sa-flex-wrap">
                         {flag.store_override !== true && (
                           <button
-                            onClick={() => handleSetOverride(flag.flag_key, true)}
+                            onClick={() => setConfirmDialog({
+                              title: "Enable Store Override",
+                              message: `Enable "${flag.flag_key}" override for this store? This overrides the global setting.`,
+                              confirmLabel: "Enable",
+                              variant: "info",
+                              onConfirm: () => { setConfirmDialog(null); handleSetOverride(flag.flag_key, true); },
+                            })}
                             disabled={storeFlagSaving[flag.flag_key]}
                             className="sa-btn-success-sm sa-btn-xs"
                           >Enable</button>
                         )}
                         {flag.store_override !== false && (
                           <button
-                            onClick={() => handleSetOverride(flag.flag_key, false)}
+                            onClick={() => setConfirmDialog({
+                              title: "Disable Store Override",
+                              message: `Disable "${flag.flag_key}" override for this store? This overrides the global setting.`,
+                              confirmLabel: "Disable",
+                              variant: "danger",
+                              onConfirm: () => { setConfirmDialog(null); handleSetOverride(flag.flag_key, false); },
+                            })}
                             disabled={storeFlagSaving[flag.flag_key]}
                             className="sa-btn-danger-sm sa-btn-xs"
                           >Disable</button>
                         )}
                         {flag.store_override !== null && (
                           <button
-                            onClick={() => handleRemoveOverride(flag.flag_key)}
+                            onClick={() => setConfirmDialog({
+                              title: "Revert Store Override",
+                              message: `Remove the "${flag.flag_key}" override for this store? It will revert to the global setting.`,
+                              confirmLabel: "Revert",
+                              variant: "danger",
+                              onConfirm: () => { setConfirmDialog(null); handleRemoveOverride(flag.flag_key); },
+                            })}
                             disabled={storeFlagSaving[flag.flag_key]}
                             className="sa-btn-xs" style={{ background: "var(--color-text-secondary)", color: "var(--color-text-inverse)", border: "none" }}
                           >Revert</button>

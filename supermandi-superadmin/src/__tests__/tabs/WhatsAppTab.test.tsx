@@ -218,10 +218,12 @@ describe('WhatsAppTab', () => {
   // ── Error State ───────────────────────────────────────────
 
   it('shows error on fetch failure', async () => {
+    // R4-ERR-007: Component uses Promise.allSettled, so rejected fetches produce
+    // "Failed to load: <section>" instead of surfacing the raw error message
     mockFetchStatus.mockRejectedValue(new Error('Network error'));
     render(<WhatsAppTab />);
     await waitFor(() => {
-      expect(screen.getByText(/Network error/)).toBeInTheDocument();
+      expect(screen.getByText(/Failed to load: status/)).toBeInTheDocument();
     });
   });
 

@@ -80,7 +80,8 @@ export async function fetchApplications(params?: {
   if (params?.entityType) url.searchParams.set("entity_type", params.entityType);
   if (params?.status) url.searchParams.set("status", params.status);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
-  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) url.searchParams.set("offset", String(params.offset));
 
   const res = await fetchWithTimeout(url.toString(), {
     method: "GET",

@@ -80,7 +80,8 @@ describe('QualityDashboardTab', () => {
     qualityMock.fetchTestResults.mockRejectedValue(new Error('Failed'));
     render(<QualityDashboardTab />);
     await waitFor(() => {
-      expect(screen.getByText('Failed to connect')).toBeTruthy();
+      // R2/R3: Promise.allSettled joins all rejection messages with '; '
+      expect(screen.getByText('Failed to connect; Failed')).toBeTruthy();
     });
   });
 
@@ -98,7 +99,8 @@ describe('QualityDashboardTab', () => {
     qualityMock.fetchTestResults.mockRejectedValue('string error');
     render(<QualityDashboardTab />);
     await waitFor(() => {
-      expect(screen.getByText('Failed to load quality data')).toBeTruthy();
+      // R2/R3: Promise.allSettled uses reason?.message || 'Unknown error' per failure
+      expect(screen.getByText('Unknown error; Unknown error')).toBeTruthy();
     });
   });
 

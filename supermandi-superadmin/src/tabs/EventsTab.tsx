@@ -100,9 +100,10 @@ export function EventsTab({
         </div>
       </div>
 
-      {filteredEvents.length === 0 ? (
+      {/* R3-EVT-002: Don't show empty state while loading */}
+      {filteredEvents.length === 0 && !loading ? (
         <div className="empty">No events found for the current filters.</div>
-      ) : (
+      ) : filteredEvents.length === 0 ? null : (
         <div className="tableWrap">
           <table className="table">
             <thead>

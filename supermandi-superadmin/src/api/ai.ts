@@ -26,11 +26,13 @@ export async function askAi(question: string): Promise<{ answer: string }> {
     if (res.status === 401) {
       throw new Error("Unauthorized — session may have expired");
     }
-    const msg = (data && typeof data === "object" && "error" in data ? String((data as any).error) : `AI failed (${res.status})`);
+    // R4-TS-001: Type-safe narrowing instead of `as any`
+    const msg = (data && typeof data === "object" && "error" in data ? String((data as Record<string, unknown>).error) : `AI failed (${res.status})`);
     throw new Error(msg);
   }
 
-  return { answer: String((data as any).answer ?? "") };
+  // R4-TS-001: Type-safe narrowing instead of `as any`
+  return { answer: String(data && typeof data === "object" && "answer" in data ? (data as Record<string, unknown>).answer ?? "" : "") };
 }
 
 export async function fetchAiHealth(): Promise<{ configured: boolean }> {
@@ -48,9 +50,11 @@ export async function fetchAiHealth(): Promise<{ configured: boolean }> {
     if (res.status === 401) {
       throw new Error("Unauthorized — session may have expired");
     }
-    const msg = (data && typeof data === "object" && "error" in data ? String((data as any).error) : `AI health failed (${res.status})`);
+    // R4-TS-001: Type-safe narrowing instead of `as any`
+    const msg = (data && typeof data === "object" && "error" in data ? String((data as Record<string, unknown>).error) : `AI health failed (${res.status})`);
     throw new Error(msg);
   }
-  return { configured: Boolean((data as any).configured) };
+  // R4-TS-001: Type-safe narrowing instead of `as any`
+  return { configured: Boolean(data && typeof data === "object" && "configured" in data ? (data as Record<string, unknown>).configured : false) };
 }
 

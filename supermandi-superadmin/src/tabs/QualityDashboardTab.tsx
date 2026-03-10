@@ -1,5 +1,5 @@
 // Quality Dashboard Tab — SuperAdmin visibility hub for all 9 testing tools + GCP native tools + live system metrics
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchQualityOverview,
   fetchTestResults,
@@ -21,8 +21,13 @@ export function QualityDashboardTab() {
   const [resettingMetrics, setResettingMetrics] = useState(false);
   // UIUX-SA-010: Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  // R4-NET-007: In-flight guard to prevent overlapping refresh requests
+  const refreshInFlight = useRef(false);
 
   const loadData = useCallback(async () => {
+    // R4-NET-007: Skip if a refresh is already in progress
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -37,10 +42,11 @@ export function QualityDashboardTab() {
       if (failures.length > 0) {
         setError(failures.map(f => (f as PromiseRejectedResult).reason?.message || 'Unknown error').join('; '));
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load quality data");
     } finally {
       setLoading(false);
+      refreshInFlight.current = false;
     }
   }, []);
 
@@ -49,9 +55,12 @@ export function QualityDashboardTab() {
   }, [loadData]);
 
   // Auto-refresh every 60s when enabled
+  // R3-QUA-003: Skip refresh when tab is hidden (Page Visibility API)
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(loadData, 60000);
+    const interval = setInterval(() => {
+      if (!document.hidden) loadData();
+    }, 60000);
     return () => clearInterval(interval);
   }, [autoRefresh, loadData]);
 
@@ -68,7 +77,7 @@ export function QualityDashboardTab() {
         try {
           await resetMetrics();
           await loadData();
-        } catch (err) {
+        } catch (err: unknown) {
           setError(err instanceof Error ? err.message : "Metrics reset failed");
         } finally {
           setResettingMetrics(false);
@@ -159,7 +168,14 @@ export function QualityDashboardTab() {
     );
   }
 
-  if (!overview) return null;
+  // R3-QUA-002: Show empty state instead of blank screen when overview is null after loading
+  if (!overview) {
+    return (
+      <div className="sa-p-24 sa-text-center sa-text-muted">
+        No quality data available.
+      </div>
+    );
+  }
 
   const systemColor = statusColor(overview.database.status);
 

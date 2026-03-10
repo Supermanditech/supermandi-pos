@@ -106,17 +106,17 @@ export function StaffTab({
             </div>
           </div>
           <div className="sa-flex sa-gap-8 sa-mt-12">
-            <button className="btnSuccess" onClick={handleAddStaff} disabled={staffActionLoading === "add"}>
+            <button className="btnSuccess" onClick={handleAddStaff} disabled={staffActionLoading === "add" || !newStaffName.trim() || !newStaffPhone.trim() || !newStaffPin.trim() || !newStaffRole}>
               {staffActionLoading === "add" ? "Adding..." : "Add Staff"}
             </button>
-            <button className="btnGhost" onClick={() => setShowAddStaff(false)}>Cancel</button>
+            <button className="btnGhost" onClick={() => { setShowAddStaff(false); setNewStaffName(""); setNewStaffPhone(""); setNewStaffPin(""); setNewStaffRole("CASHIER"); }}>Cancel</button>
           </div>
         </div>
       )}
 
       {staffList.length > 0 && (
         <div className="tableWrap">
-          <table>
+          <table className="table">
             <thead>
               <tr>
                 <th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th>Sales</th><th>Stock-Ins</th><th>Created</th><th>Actions</th>
@@ -156,8 +156,8 @@ export function StaffTab({
                       {s.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td>{s.sales_count}</td>
-                  <td>{s.stock_in_count}</td>
+                  <td>{s.sales_count || 0}</td>
+                  <td>{s.stock_in_count || 0}</td>
                   <td className="sa-text-sm">{formatDateTime(s.created_at)}</td>
                   <td>
                     <div className="sa-flex sa-gap-6">

@@ -249,10 +249,11 @@ describe('RegistrationsTab', () => {
     expect(screen.getByText('Sending...')).toBeTruthy();
   });
 
-  it('disables Send Code when any enrollment is being sent', () => {
+  it('does not disable Send Code when a different store enrollment is being sent', () => {
     const events = [makeRegEvent({ storeId: 's1' })];
     render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1, sendingEnrollment: 'other-store' })} />);
-    expect((screen.getByText('Send Code') as HTMLButtonElement).disabled).toBe(true);
+    // R2-R5 audit: button is only disabled for its own storeId, not globally
+    expect((screen.getByText('Send Code') as HTMLButtonElement).disabled).toBe(false);
   });
 
   // ── Refresh ─────────────────────────────────────────────────

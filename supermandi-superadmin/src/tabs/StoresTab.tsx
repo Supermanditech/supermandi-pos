@@ -41,6 +41,7 @@ interface StoresTabProps {
   setExpandedStoreId: (id: string | null) => void;
   loadStoreFeatureFlags: (storeId: string) => void;
   requestStoreStatusChange: (storeId: string, storeName: string, action: "suspend" | "reactivate") => void;
+  storeSuspendLoading: boolean;
   // Contact editing
   getStoreContactDraft: (s: StoreRecord) => { address: string; contactName: string; contactPhone: string; contactEmail: string };
   updateStoreContactDraft: (storeId: string, patch: Partial<{ address: string; contactName: string; contactPhone: string; contactEmail: string }>) => void;
@@ -83,7 +84,7 @@ interface StoresTabProps {
   loadStoreEnrollments: (storeId: string) => void;
   storeEnrollmentsLoading: Record<string, boolean>;
   handleRevokeEnrollment: (code: string) => void;
-  revokeLoading: boolean;
+  revokeLoading: string | null;
   // #331: Resend welcome message (download links + activation instructions)
   handleResendCode?: (code: string) => void;
   resendLoading?: boolean;
@@ -123,6 +124,7 @@ export function StoresTab({
   setExpandedStoreId,
   loadStoreFeatureFlags,
   requestStoreStatusChange,
+  storeSuspendLoading,
   getStoreContactDraft,
   updateStoreContactDraft,
   getStorePaymentDraft,
@@ -427,6 +429,7 @@ export function StoresTab({
                           <button
                             className="sa-btn-danger-sm"
                             onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "suspend")}
+                            disabled={storeSuspendLoading}
                           >
                             Suspend
                           </button>
@@ -435,6 +438,7 @@ export function StoresTab({
                           <button
                             className="sa-btn-success-sm"
                             onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "reactivate")}
+                            disabled={storeSuspendLoading}
                           >
                             Reactivate
                           </button>
@@ -578,7 +582,7 @@ export function StoresTab({
                                         <>
                                           <button
                                             onClick={() => handleRevokeEnrollment(e.code)}
-                                            disabled={revokeLoading}
+                                            disabled={revokeLoading === e.code}
                                             className="sa-btn-text sa-text-danger" style={{ textDecoration: "underline", fontSize: 11 }}
                                             aria-label={`Revoke enrollment code ${e.code}`}
                                           >

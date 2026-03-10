@@ -42,7 +42,8 @@ export async function fetchRefunds(params?: {
   if (params?.status) qs.set("status", params.status);
   if (params?.storeId) qs.set("storeId", params.storeId);
   if (params?.limit) qs.set("limit", String(params.limit));
-  if (params?.offset) qs.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) qs.set("offset", String(params.offset));
   const qStr = qs.toString() ? `?${qs.toString()}` : "";
   const res = await fetchWithTimeout(`${base()}/api/v1/admin/refunds${qStr}`, {
     headers: getAuthHeaders(),

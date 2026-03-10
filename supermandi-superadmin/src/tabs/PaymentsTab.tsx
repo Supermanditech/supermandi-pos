@@ -9,12 +9,15 @@ interface PaymentsTabProps {
   // UIUX-SA-013: Accept loading/error from parent to avoid misleading empty state
   loading?: boolean;
   error?: string | null;
+  // R3-PAY-001: Total fetched event count and fetch limit to detect server-side truncation
+  totalEventCount?: number;
+  fetchLimit?: number;
 }
 
 // EVENTS-PAYMENTS-CLIENTSIDE-PAGINATION: page payment events to prevent rendering 1000+ rows
 const PAYMENTS_PAGE_SIZE = 50;
 
-export function PaymentsTab({ paymentEvents, loading, error }: PaymentsTabProps) {
+export function PaymentsTab({ paymentEvents, loading, error, totalEventCount, fetchLimit }: PaymentsTabProps) {
   const [page, setPage] = useState(0);
   // R2-FIX PAY-001: Reset page when payment events change (prevents out-of-bounds)
   useEffect(() => { setPage(0); }, [paymentEvents.length]);
@@ -27,6 +30,13 @@ export function PaymentsTab({ paymentEvents, loading, error }: PaymentsTabProps)
         <div className="cardTitle">Payments</div>
         <div className="muted">Events where eventType starts with PAYMENT_</div>
       </div>
+
+      {/* R3-PAY-001: Warn when server-side fetch limit may have truncated results */}
+      {typeof totalEventCount === "number" && typeof fetchLimit === "number" && totalEventCount >= fetchLimit && (
+        <div className="sa-text-sm sa-px-12 sa-py-8" style={{ background: "#fff3cd", color: "#856404", borderRadius: 4, margin: "8px 12px" }}>
+          Showing payment events from the first {fetchLimit} events fetched. Some events may not be displayed. Increase the fetch limit to see more.
+        </div>
+      )}
 
       {/* UIUX-SA-013: Show loading/error states instead of misleading empty state */}
       {loading ? (

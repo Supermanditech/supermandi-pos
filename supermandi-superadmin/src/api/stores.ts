@@ -49,7 +49,11 @@ export async function fetchStore(storeId: string): Promise<StoreRecord> {
   }
 
   const data = await res.json();
-  return (data?.store ?? {}) as StoreRecord;
+  // R4-AC-003: Validate response shape instead of returning {} as StoreRecord
+  if (!data?.store || typeof data.store !== "object") {
+    throw new Error("Invalid store response: missing store data");
+  }
+  return data.store as StoreRecord;
 }
 
 // ADMIN-PAGINATION-001: Paginated response type
@@ -60,7 +64,8 @@ export async function fetchStores(params?: { limit?: number; offset?: number }):
 
   const url = new URL(`${base}/api/v1/admin/stores`, window.location.origin);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
-  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) url.searchParams.set("offset", String(params.offset));
 
   const res = await fetchWithTimeout(url.toString(), {
     method: "GET",
@@ -105,7 +110,11 @@ export async function createStore(input: { storeName: string; storeId?: string }
   }
 
   const data = await res.json();
-  return (data?.store ?? {}) as StoreRecord;
+  // R4-AC-003: Validate response shape instead of returning {} as StoreRecord
+  if (!data?.store || typeof data.store !== "object") {
+    throw new Error("Invalid store response: missing store data");
+  }
+  return data.store as StoreRecord;
 }
 
 // P1-SADM-002: Extended store update input with contact fields
@@ -142,7 +151,11 @@ export async function updateStore(
   }
 
   const data = await res.json();
-  return (data?.store ?? {}) as StoreRecord;
+  // R4-AC-003: Validate response shape instead of returning {} as StoreRecord
+  if (!data?.store || typeof data.store !== "object") {
+    throw new Error("Invalid store response: missing store data");
+  }
+  return data.store as StoreRecord;
 }
 
 // =============================================================================

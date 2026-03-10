@@ -340,7 +340,7 @@ export async function sendAdminOtp(email: string): Promise<{ success: boolean; e
       success: true,
       expiresIn: data.expiresIn,
     };
-  } catch (err) {
+  } catch (err: unknown) {
     return {
       success: false,
       error: err instanceof Error ? err.message : "Network error",
@@ -398,7 +398,7 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
       token: data.token,
       admin: data.admin,
     };
-  } catch (err) {
+  } catch (err: unknown) {
     return {
       success: false,
       error: err instanceof Error ? err.message : "Network error",

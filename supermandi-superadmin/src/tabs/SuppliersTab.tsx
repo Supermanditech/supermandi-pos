@@ -206,8 +206,8 @@ export function SuppliersTab({
       setBatchProgress(`Done: ${result.succeeded} approved, ${result.failed} failed`);
       setSelectedProductIds(new Set());
       refreshSuppliers();
-    } catch (err: any) {
-      setBatchProgress(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setBatchProgress(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setBatchActionLoading(false);
       setTimeout(() => setBatchProgress(""), 5000);
@@ -227,8 +227,8 @@ export function SuppliersTab({
       setSelectedProductIds(new Set());
       setBatchRejectReason("");
       refreshSuppliers();
-    } catch (err: any) {
-      setBatchProgress(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setBatchProgress(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setBatchActionLoading(false);
       setTimeout(() => setBatchProgress(""), 5000);
@@ -240,9 +240,9 @@ export function SuppliersTab({
     try {
       await toggleAutoApproval(supplierId, !currentValue);
       refreshSuppliers();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // R2-FIX SUP-003: Surface auto-approve error to user
-      setConfirmDialog({ title: "Error", message: err?.message || "Failed to toggle auto-approve", confirmLabel: "OK", variant: "info", onConfirm: () => setConfirmDialog(null) });
+      setConfirmDialog({ title: "Error", message: err instanceof Error ? err.message : "Failed to toggle auto-approve", confirmLabel: "OK", variant: "info", onConfirm: () => setConfirmDialog(null) });
     } finally {
       setAutoApproveLoading(prev => ({ ...prev, [supplierId]: false }));
     }
@@ -255,8 +255,8 @@ export function SuppliersTab({
       const result = await publishProduct(productId);
       setPublishResult(prev => ({ ...prev, [productId]: `Published to ${result.publishedToStores} stores` }));
       refreshSuppliers();
-    } catch (err: any) {
-      setPublishResult(prev => ({ ...prev, [productId]: `Error: ${err.message}` }));
+    } catch (err: unknown) {
+      setPublishResult(prev => ({ ...prev, [productId]: `Error: ${err instanceof Error ? err.message : "Unknown error"}` }));
     } finally {
       setPublishLoading(prev => ({ ...prev, [productId]: false }));
     }

@@ -57,8 +57,8 @@ export function InvoicesTab() {
       const result = await listInvoices(filters);
       setInvoices(result.data);
       setTotal(result.total);
-    } catch (err: any) {
-      setError(err.message || "Failed to load invoices");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load invoices");
     } finally {
       setLoading(false);
       inFlightRef.current = false;
@@ -78,29 +78,39 @@ export function InvoicesTab() {
     try {
       const inv = await getInvoice(id);
       setDetail(inv);
-    } catch (err: any) {
-      setError(err.message || "Failed to load invoice");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load invoice");
     } finally {
       setDetailLoading(false);
       detailInFlightRef.current = false;
     }
   };
 
-  const handleIssue = async (id: string) => {
-    setError("");
-    setActionLoading(true);
-    try {
-      await issueInvoice(id);
-      await refresh();
-      if (detail?.id === id) {
-        const updated = await getInvoice(id);
-        setDetail(updated);
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to issue invoice");
-    } finally {
-      setActionLoading(false);
-    }
+  // R3-INV-001: Wrap issue action in confirmation dialog
+  const handleIssue = (id: string) => {
+    setConfirmDialog({
+      title: "Issue Invoice",
+      message: "Are you sure you want to issue this draft invoice? Once issued, it cannot be reverted to draft.",
+      confirmLabel: "Issue Invoice",
+      variant: "info",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setError("");
+        setActionLoading(true);
+        try {
+          await issueInvoice(id);
+          await refresh();
+          if (detail?.id === id) {
+            const updated = await getInvoice(id);
+            setDetail(updated);
+          }
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : "Failed to issue invoice");
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   const handleCancel = (id: string) => {
@@ -117,8 +127,8 @@ export function InvoicesTab() {
           await cancelInvoice(id);
           await refresh();
           if (detail?.id === id) setDetail(null);
-        } catch (err: any) {
-          setError(err.message || "Failed to cancel invoice");
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : "Failed to cancel invoice");
         } finally {
           setActionLoading(false);
         }
@@ -133,8 +143,8 @@ export function InvoicesTab() {
     setError("");
     try {
       await downloadInvoicePdf(id, invoiceNumber);
-    } catch (err: any) {
-      setError(err.message || "Failed to download PDF");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to download PDF");
     } finally {
       setDownloadingId(null);
     }
@@ -174,6 +184,7 @@ export function InvoicesTab() {
           <option value="paid">Paid</option>
           <option value="overdue">Overdue</option>
           <option value="cancelled">Cancelled</option>
+          <option value="void">Void</option>
         </select>
         <button className="btn" onClick={() => refresh()} disabled={loading}>
           {loading ? "Loading..." : "Refresh"}
@@ -202,7 +213,7 @@ export function InvoicesTab() {
                     <td className="sa-fw-600 sa-text-sm sa-text-brand" style={{ cursor: "pointer" }} tabIndex={0} role="button" onClick={() => openDetail(inv.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(inv.id); } }}>{inv.invoiceNumber}</td>
                     <td className="sa-text-sm">{formatDateTime(inv.invoiceDate)}</td>
                     <td className="sa-text-xs">{inv.invoiceModel === "buy_resell" ? "Buy-Resell" : "Platform Fee"}</td>
-                    <td className="sa-text-xs" style={{ textTransform: "capitalize" }}>{inv.invoiceType.replace("_", " ")}</td>
+                    <td className="sa-text-xs" style={{ textTransform: "capitalize" }}>{inv.invoiceType.replaceAll("_", " ")}</td>
                     <td className="sa-text-sm sa-nowrap" style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>{inv.sellerName}</td>
                     <td className="sa-text-sm sa-nowrap" style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>{inv.buyerName}</td>
                     <td className="sa-text-right sa-fw-600 sa-text-sm">{formatMinor(inv.totalAmountMinor)}</td>
@@ -247,7 +258,7 @@ export function InvoicesTab() {
                 <div className="sa-flex-between sa-mb-16">
                   <div>
                     <h3 style={{ margin: 0 }}>{detail.invoiceNumber}</h3>
-                    <div className="muted sa-text-sm">{detail.invoiceModel === "buy_resell" ? "Buy-Resell" : "Platform Fee"} &mdash; {detail.invoiceType.replace("_", " ")}</div>
+                    <div className="muted sa-text-sm">{detail.invoiceModel === "buy_resell" ? "Buy-Resell" : "Platform Fee"} &mdash; {detail.invoiceType.replaceAll("_", " ")}</div>
                   </div>
                   <div className="sa-flex sa-gap-8">
                     {detail.status === "draft" && (

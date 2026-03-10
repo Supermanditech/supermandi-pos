@@ -51,7 +51,8 @@ export async function fetchRegistrationEvents(
   const url = new URL(`${base}/api/v1/admin/registration-events`, window.location.origin);
 
   if (params.limit) url.searchParams.set("limit", String(params.limit));
-  if (params.offset) url.searchParams.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid — use != null check
+  if (params.offset != null) url.searchParams.set("offset", String(params.offset));
   if (params.source) url.searchParams.set("source", params.source);
   if (params.outcome) url.searchParams.set("outcome", params.outcome);
   if (params.storeId) url.searchParams.set("storeId", params.storeId);
@@ -95,7 +96,8 @@ export async function sendEnrollmentCodeToStore(
 ): Promise<SendEnrollmentCodeResponse> {
   const base = requireApiBase();
   const res = await fetchWithTimeout(
-    `${base}/api/v1/admin/stores/${storeId}/send-enrollment-code`,
+    // R3-SEC-005: Encode path params to prevent URL traversal
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/send-enrollment-code`,
     {
       method: "POST",
       headers: {

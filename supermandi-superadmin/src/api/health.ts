@@ -31,7 +31,8 @@ export async function fetchHealth(): Promise<HealthResponse> {
     throw new Error("Invalid health response");
   }
 
-  const status = (data as any).status;
+  // R4-TS-001: Type-safe narrowing — `data` already verified to have "status" in data
+  const status = (data as Record<string, unknown>).status;
   return { status: String(status) };
 }
 

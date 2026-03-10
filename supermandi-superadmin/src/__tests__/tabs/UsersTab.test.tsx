@@ -126,7 +126,7 @@ describe('UsersTab', () => {
 
   it('calls requestCreateUser on Create User click', () => {
     const create = vi.fn();
-    render(<UsersTab {...createProps({ showCreateUser: true, requestCreateUser: create })} />);
+    render(<UsersTab {...createProps({ showCreateUser: true, requestCreateUser: create, createUserForm: { name: 'Test User', email: 'test@example.com', phone: '', actor_type: 'store', actor_id: '' } })} />);
     fireEvent.click(screen.getByText('Create User'));
     expect(create).toHaveBeenCalled();
   });

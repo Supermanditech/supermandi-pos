@@ -184,7 +184,8 @@ describe('StaffTab', () => {
 
   it('calls handleAddStaff on Add Staff form submit', () => {
     const handleAdd = vi.fn();
-    render(<StaffTab {...createProps({ showAddStaff: true, handleAddStaff: handleAdd })} />);
+    // R2-R5 audit: button is disabled when form fields are empty, so provide valid values
+    render(<StaffTab {...createProps({ showAddStaff: true, handleAddStaff: handleAdd, newStaffName: 'Test', newStaffPhone: '9876543210', newStaffPin: '1234', newStaffRole: 'CASHIER' })} />);
     fireEvent.click(screen.getByText('Add Staff'));
     expect(handleAdd).toHaveBeenCalled();
   });

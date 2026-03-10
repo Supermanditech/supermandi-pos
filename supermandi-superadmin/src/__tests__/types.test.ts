@@ -211,10 +211,11 @@ describe('UPI_VPA_PATTERN', () => {
     expect(UPI_VPA_PATTERN.test('user@paytm@test')).toBe(false);
   });
 
-  it('rejects uppercase letters', () => {
-    expect(UPI_VPA_PATTERN.test('User@paytm')).toBe(false);
-    expect(UPI_VPA_PATTERN.test('user@Paytm')).toBe(false);
-    expect(UPI_VPA_PATTERN.test('USER@PAYTM')).toBe(false);
+  // R3-FMT-003: UPI VPAs are case-insensitive — uppercase is now accepted
+  it('accepts uppercase letters (case-insensitive)', () => {
+    expect(UPI_VPA_PATTERN.test('User@paytm')).toBe(true);
+    expect(UPI_VPA_PATTERN.test('user@Paytm')).toBe(true);
+    expect(UPI_VPA_PATTERN.test('USER@PAYTM')).toBe(true);
   });
 
   it('rejects special characters not allowed', () => {

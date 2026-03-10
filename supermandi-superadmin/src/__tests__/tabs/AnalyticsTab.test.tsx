@@ -102,13 +102,13 @@ describe('AnalyticsTab', () => {
 
   it('renders Refresh button', () => {
     render(<AnalyticsTab {...createProps()} />);
-    expect(screen.getByText('Refresh')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
   });
 
   it('calls refreshAnalytics on Refresh click', () => {
     const refresh = vi.fn();
     render(<AnalyticsTab {...createProps({ refreshAnalytics: refresh })} />);
-    fireEvent.click(screen.getByText('Refresh'));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refresh).toHaveBeenCalledWith('overview');
   });
 

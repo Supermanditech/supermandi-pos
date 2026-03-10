@@ -38,7 +38,7 @@ interface DevicesTabProps {
   storeDirectory: Array<{ id: string; name?: string | null; storeName?: string | null }>;
   // SA-ENROLL-UX G2: Code revocation
   handleRevokeEnrollment: (code: string) => void;
-  revokeLoading: boolean;
+  revokeLoading: string | null;
 }
 
 export function DevicesTab({
@@ -70,6 +70,10 @@ export function DevicesTab({
 }: DevicesTabProps) {
   // R1-FIX: Confirm dialog state for device config save
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  // R3-DEV-002: Clipboard copy feedback
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  // R3-DEV-008: Reset token loading indicator
+  const [resettingDevices, setResettingDevices] = useState<Record<string, boolean>>({});
 
   return (
     <section className="card">
@@ -124,26 +128,41 @@ export function DevicesTab({
                     className="tab"
                     onClick={() => {
                       if (navigator.clipboard?.writeText) {
-                        navigator.clipboard.writeText(enrollment.code).catch(() => { /* clipboard unavailable */ });
+                        navigator.clipboard.writeText(enrollment.code).then(() => {
+                          setCopiedField("code");
+                          setTimeout(() => setCopiedField((v) => v === "code" ? null : v), 1500);
+                        }).catch(() => { /* clipboard unavailable */ });
                       }
                     }}
                   >
-                    Copy code
+                    {copiedField === "code" ? "Copied!" : "Copy code"}
                   </button>
                   <button
                     className="btnGhost"
                     onClick={() => {
                       if (navigator.clipboard?.writeText) {
-                        navigator.clipboard.writeText(enrollment.qrPayload).catch(() => { /* clipboard unavailable */ });
+                        navigator.clipboard.writeText(enrollment.qrPayload).then(() => {
+                          setCopiedField("qr");
+                          setTimeout(() => setCopiedField((v) => v === "qr" ? null : v), 1500);
+                        }).catch(() => { /* clipboard unavailable */ });
                       }
                     }}
                   >
-                    Copy QR payload
+                    {copiedField === "qr" ? "Copied!" : "Copy QR payload"}
                   </button>
                   {/* GO-LIVE-012: QR code regenerate button */}
+                  {/* R3-DEV-003: Confirmation dialog before regenerating */}
                   <button
                     className="btnDanger"
-                    onClick={handleCreateEnrollment}
+                    onClick={() => {
+                      setConfirmDialog({
+                        title: "Regenerate QR Code",
+                        message: "This will invalidate the current enrollment code and generate a new one. Any device using the current code will no longer be able to enroll.",
+                        confirmLabel: "Regenerate",
+                        variant: "danger",
+                        onConfirm: () => { setConfirmDialog(null); handleCreateEnrollment(); },
+                      });
+                    }}
                     disabled={enrollLoading}
                     title="Regenerate QR code with new enrollment"
                   >
@@ -153,10 +172,10 @@ export function DevicesTab({
                   <button
                     className="btnGhost sa-text-danger"
                     onClick={() => handleRevokeEnrollment(enrollment.code)}
-                    disabled={revokeLoading}
+                    disabled={revokeLoading === enrollment.code}
                     title="Revoke this enrollment code so it can no longer be used"
                   >
-                    {revokeLoading ? "Revoking..." : "Revoke Code"}
+                    {revokeLoading === enrollment.code ? "Revoking..." : "Revoke Code"}
                   </button>
                 </div>
               </div>
@@ -321,8 +340,13 @@ export function DevicesTab({
                     }} disabled={deviceSaving[d.id]}>
                       {deviceSaving[d.id] ? "Saving..." : "Save"}
                     </button>
-                    <button className="btnGhost" onClick={() => requestDeviceReset(d.id)} disabled={deviceSaving[d.id]}>
-                      Reset Token
+                    <button className="btnGhost" onClick={() => {
+                      setResettingDevices((prev) => ({ ...prev, [d.id]: true }));
+                      requestDeviceReset(d.id);
+                      // Clear loading after a delay since parent doesn't signal completion
+                      setTimeout(() => setResettingDevices((prev) => ({ ...prev, [d.id]: false })), 3000);
+                    }} disabled={deviceSaving[d.id] || resettingDevices[d.id]}>
+                      {resettingDevices[d.id] ? "Resetting…" : "Reset Token"}
                     </button>
                   </div>
                 </div>

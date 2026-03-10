@@ -17,7 +17,8 @@ function escapeField(v: string | number | null | undefined): string {
 }
 
 function exportAuditCsv(logs: AuditLogRecord[]) {
-  const header = "Time,Action,Resource,ResourceID,Actor,Status,Error\n";
+  // R3-AUD-002: escape header row via escapeField (same as data rows)
+  const header = ["Time","Action","Resource","ResourceID","Actor","Status","Error"].map(escapeField).join(",") + "\n";
   const rows = logs.map(l =>
     [
       l.created_at,
@@ -35,7 +36,8 @@ function exportAuditCsv(logs: AuditLogRecord[]) {
   a.href = url;
   a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
-  URL.revokeObjectURL(url);
+  // R3-AUD-008: delay revokeObjectURL to allow download to start
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 interface AuditTabProps {
@@ -137,6 +139,11 @@ export function AuditTab({
             className="sa-input"
             title="To date"
           />
+
+          {/* R3-AUD-005: warn on inverted date range */}
+          {auditLogsFilter.from_date && auditLogsFilter.to_date && auditLogsFilter.from_date > auditLogsFilter.to_date && (
+            <span className="sa-text-error sa-text-sm" role="alert">"From" date is after "To" date — no results will match.</span>
+          )}
 
           {/* #186.11: CSV export */}
           <button

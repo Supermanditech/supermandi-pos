@@ -30,7 +30,7 @@ export function GrnAlertsTab({
       </div>
 
       <div className="sa-flex sa-gap-8 sa-mb-16">
-        <select value={grnAlertsFilter} onChange={(e) => { setGrnAlertsFilter(e.target.value as any); setGrnAlertsOffset(0); }} className="sa-select sa-radius-6">
+        <select value={grnAlertsFilter} onChange={(e) => { setGrnAlertsFilter(e.target.value as any); setGrnAlertsOffset(0); }} className="sa-select sa-radius-6" aria-label="Filter by alert status">
           <option value="">All Statuses</option>
           <option value="OPEN">Open</option>
           <option value="ACKNOWLEDGED">Acknowledged</option>
@@ -51,7 +51,7 @@ export function GrnAlertsTab({
 
       {grnAlerts.length > 0 && (
         <div className="tableWrap">
-          <table>
+          <table className="table">
             <thead>
               <tr>
                 <th>Store</th><th>Order #</th><th>Product</th><th>Ordered</th><th>Received</th><th>Excess</th><th>%</th><th>Status</th><th>Date</th><th>Actions</th>

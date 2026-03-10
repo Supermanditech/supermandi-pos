@@ -1,5 +1,5 @@
 // T-223: Cloud Monitoring Dashboard for SuperAdmin
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchHealthStatus, triggerTokenCleanup, type HealthResponse, type TokenCleanupResult } from "../api/monitoring";
 // UIUX-SA-009: Styled confirmation dialog instead of bare confirm()
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
@@ -14,26 +14,36 @@ export function MonitoringTab() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   // UIUX-SA-009: Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  // R4-NET-006: In-flight guard to prevent overlapping refresh requests
+  const refreshInFlight = useRef(false);
 
   const loadHealth = useCallback(async () => {
+    // R4-NET-006: Skip if a refresh is already in progress
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
     setLoading(true);
     setError(null);
     try {
       const data = await fetchHealthStatus();
       setHealth(data);
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch health status");
     } finally {
       setLoading(false);
+      refreshInFlight.current = false;
     }
   }, []);
 
   useEffect(() => { loadHealth(); }, [loadHealth]);
 
   // Auto-refresh every 30s when enabled
+  // R3-MON-003: Skip fetch when browser tab is hidden to avoid wasted API calls
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(loadHealth, 30000);
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      loadHealth();
+    }, 30000);
     return () => clearInterval(interval);
   }, [autoRefresh, loadHealth]);
 
@@ -54,7 +64,7 @@ export function MonitoringTab() {
           const result = await triggerTokenCleanup();
           setCleanupResult(result);
           setTimeout(() => setCleanupResult(null), 10000);
-        } catch (err) {
+        } catch (err: unknown) {
           setError(err instanceof Error ? err.message : "Token cleanup failed");
         } finally {
           setCleaningUp(false);
