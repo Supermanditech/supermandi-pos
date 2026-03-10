@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-38",
+    "journeyId": "JOURNEY-39",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7612,21 +7612,51 @@
       "name": "Supplier Product CRUD + Image Upload",
       "cluster": "C13",
       "description": "Supplier views product list → searches/filters by status → creates new product (name, price, image upload max 5MB) → edits existing product → deletes product → status tracking (pending/approved/rejected).",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J38-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
         "supplier-portal/src/app/(dashboard)/products/page.tsx",
         "supplier-portal/src/lib/api.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "A1: Render header with page title, Add Product button, product count",
+        "A2: Verified supplier sees enabled Add Product button",
+        "A3: Unverified supplier sees disabled Add Product button with tooltip",
+        "A4: Error state disables Add Product button",
+        "A5: Search products by name with debounce",
+        "A6: Filter products by status tabs (All/Pending/Approved/Rejected) with ARIA",
+        "A7: Open Add Product form dialog",
+        "A8: Fill product form (15 FMCG categories, 7 units, price, stock, barcode)",
+        "A9: Upload product image via drag-drop zone",
+        "A10: Submit new product form",
+        "A11: View product table with columns (name, category, price, stock, status, actions)",
+        "A12: Rejection reason truncated with ellipsis, full text on hover",
+        "A13: Resubmit rejected product via Resubmit button",
+        "A14: Open edit form pre-filled with product data",
+        "A15: Delete product via two-click confirmation modal",
+        "A16: Navigate product list via pagination controls"
+      ],
+      "guarantees": [
+        {"id": "G1", "name": "UI Elements", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/products.test.tsx:header,search,filters,form,table,pagination"]},
+        {"id": "G2", "name": "UX 4-State", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/products.test.tsx:loading,success,error,empty"]},
+        {"id": "G3", "name": "Navigation", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/products.test.tsx:status-tab-navigation,pagination"]},
+        {"id": "G4", "name": "Wiring", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/products.test.tsx:form-submit,delete-confirm,edit-prefill"]},
+        {"id": "G5", "name": "Business Logic", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/products.test.tsx:verified-gating,category-options,resubmit"]},
+        {"id": "G6", "name": "Edge Cases", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/products.test.tsx:rejection-truncation,unverified-tooltip,15-categories"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"test": "supplier-portal/src/__tests__/pages/dashboard/products.test.tsx", "count": 39, "pr": 538, "sha": "c4972783"}
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Category dropdown has 14 FMCG categories + 1 Select placeholder = 15 options",
+        "Rejection reason text truncated with ellipsis for long messages",
+        "Unverified supplier cannot add products (button disabled with tooltip)"
+      ]
     },
     "JOURNEY-39": {
       "id": "JOURNEY-39",
