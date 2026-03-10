@@ -1,84 +1,39 @@
 {
   "audit_id": "SA-AUDIT-001",
-  "pr": "#555",
-  "commit": "579c00fa",
+  "pr_original": "#555",
+  "pr_remaining": "fix/SA-AUDIT-R1-remaining",
   "date": "2026-03-11",
-  "status": "MERGED",
-  "fixes_shipped": [
-    {
-      "id": "AUD-001",
-      "severity": "CRITICAL",
-      "file": "SettingsTab.tsx",
-      "issue": "Global feature flag KILL button had no confirm dialog — one misclick disables features for ALL stores",
-      "fix": "Wrapped handleToggleGlobalFlag in ConfirmDialog with danger/info variant"
-    },
-    {
-      "id": "AUD-002",
-      "severity": "CRITICAL",
-      "file": "StaffTab.tsx",
-      "issue": "Staff role change dropdown had no confirmation — accidental touch changes MANAGER role",
-      "fix": "Wrapped role change in ConfirmDialog with warning/info variant"
-    },
-    {
-      "id": "AUD-003",
-      "severity": "CRITICAL",
-      "file": "UsersTab.tsx",
-      "issue": "User status change (suspend/deactivate) had no confirmation dialog",
-      "fix": "Wrapped status change in ConfirmDialog with danger/info variant"
-    },
-    {
-      "id": "AUD-004",
-      "severity": "HIGH",
-      "file": "SettingsTab.tsx",
-      "issue": "Stale store flags persisted when switching stores — old flags shown for new store",
-      "fix": "Added setStoreFlags([]); setStoreFlagsError('') in handleStoreSelect"
-    },
-    {
-      "id": "AUD-005",
-      "severity": "HIGH",
-      "file": "AIInsightsTab.tsx",
-      "issue": "Error and jobResult persisted across view switches (anomalies/alerts/jobs)",
-      "fix": "Added setError(null); setJobResult(null) on view switch"
-    },
-    {
-      "id": "AUD-006",
-      "severity": "HIGH",
-      "file": "GstComplianceTab.tsx",
-      "issue": "loadStoreDetail did not clear error before fetching — old error shown with new store data",
-      "fix": "Added setError('') at start of loadStoreDetail"
-    },
-    {
-      "id": "AUD-007",
-      "severity": "MEDIUM",
-      "file": "GrnAlertsTab.tsx",
-      "issue": "Acknowledge/Dismiss buttons showed no loading feedback during action",
-      "fix": "Added conditional 'Updating...' text when grnAlertActionLoading matches alert id"
-    },
-    {
-      "id": "AUD-008",
-      "severity": "MEDIUM",
-      "file": "RegistrationsTab.tsx",
-      "issue": "Disabled enrollment button visually identical to enabled — no disabled styling",
-      "fix": "Different border, background, cursor, opacity when sendingEnrollment is active"
-    },
-    {
-      "id": "AUD-009",
-      "severity": "MEDIUM",
-      "file": "StaffTab.tsx",
-      "issue": "Reset PIN Save button enabled with empty or <4 digit PIN",
-      "fix": "Added disabled={!resetPinValue || resetPinValue.length < 4}"
-    }
+  "status": "ALL_FIXED",
+  "total_issues": 19,
+  "fixed_in_pr555": 9,
+  "fixed_in_r2_pr556": 2,
+  "fixed_in_r1_remaining": 8,
+  "fixes_shipped_pr555": [
+    {"id": "AUD-001", "severity": "CRITICAL", "file": "SettingsTab.tsx", "issue": "Global feature flag KILL button had no confirm dialog", "fix": "Wrapped handleToggleGlobalFlag in ConfirmDialog"},
+    {"id": "AUD-002", "severity": "CRITICAL", "file": "StaffTab.tsx", "issue": "Staff role change dropdown had no confirmation", "fix": "Wrapped role change in ConfirmDialog"},
+    {"id": "AUD-003", "severity": "CRITICAL", "file": "UsersTab.tsx", "issue": "User status change had no confirmation dialog", "fix": "Wrapped status change in ConfirmDialog"},
+    {"id": "AUD-004", "severity": "HIGH", "file": "SettingsTab.tsx", "issue": "Stale store flags persisted when switching stores", "fix": "Clear flags on store select"},
+    {"id": "AUD-005", "severity": "HIGH", "file": "AIInsightsTab.tsx", "issue": "Error/jobResult persisted across view switches", "fix": "Clear on view switch"},
+    {"id": "AUD-006", "severity": "HIGH", "file": "GstComplianceTab.tsx", "issue": "loadStoreDetail did not clear error", "fix": "Clear error at start"},
+    {"id": "AUD-007", "severity": "MEDIUM", "file": "GrnAlertsTab.tsx", "issue": "No loading feedback on actions", "fix": "Added loading text"},
+    {"id": "AUD-008", "severity": "MEDIUM", "file": "RegistrationsTab.tsx", "issue": "Disabled button no visual difference", "fix": "Added disabled styling"},
+    {"id": "AUD-009", "severity": "MEDIUM", "file": "StaffTab.tsx", "issue": "Reset PIN Save enabled with empty PIN", "fix": "Added disabled guard"}
   ],
-  "remaining_known_issues": [
-    "DevicesTab: device config save without confirmation",
-    "WhatsAppTab: CTA config changes without confirmation",
-    "SuppliersTab: various destructive actions without confirmation",
-    "SupportQueueTab: sendReply double-submit possible",
-    "SupportQueueTab: stale conversation on filter change",
-    "InvoicesTab: pagination race condition on filter changes",
-    "ApplicationsTab: rejection reason persistence across reviews",
-    "App.tsx: modal restore race condition",
-    "App.tsx: tab switch does not abort in-flight requests",
-    "App.tsx: stale polling closures"
-  ]
+  "fixes_shipped_pr556": [
+    {"id": "AUD-010", "severity": "HIGH", "file": "SupportQueueTab.tsx", "issue": "sendReply double-submit possible", "fix": "Added sending guard + disabled button"},
+    {"id": "AUD-011", "severity": "MEDIUM", "file": "WhatsAppTab.tsx", "issue": "CTA config changes without confirmation", "fix": "Already had ConfirmDialog (pre-existing)"}
+  ],
+  "fixes_shipped_r1_remaining": [
+    {"id": "AUD-012", "severity": "HIGH", "file": "DevicesTab.tsx", "issue": "Device config save without confirmation", "fix": "Added ConfirmDialog for device deactivation via save"},
+    {"id": "AUD-013", "severity": "HIGH", "file": "SuppliersTab.tsx", "issue": "Reject supplier without confirmation", "fix": "Wrapped handleRejectSupplier in ConfirmDialog"},
+    {"id": "AUD-014", "severity": "HIGH", "file": "SuppliersTab.tsx", "issue": "Bank reject without confirmation", "fix": "Wrapped handleBankVerify reject in ConfirmDialog"},
+    {"id": "AUD-015", "severity": "MEDIUM", "file": "SuppliersTab.tsx", "issue": "Auto-approve toggle without confirmation", "fix": "Wrapped handleToggleAutoApprove in ConfirmDialog"},
+    {"id": "AUD-016", "severity": "MEDIUM", "file": "SupportQueueTab.tsx", "issue": "Stale conversation persists on filter change", "fix": "Clear selectedConvId/messages/replyText on view/filter change"},
+    {"id": "AUD-017", "severity": "MEDIUM", "file": "InvoicesTab.tsx", "issue": "Pagination race condition on filter changes", "fix": "Added inFlightRef guard to prevent concurrent fetches"},
+    {"id": "AUD-018", "severity": "MEDIUM", "file": "ApplicationsTab.tsx", "issue": "Rejection reason persists across reviews", "fix": "Clear appRejectReason on filter change"},
+    {"id": "AUD-019", "severity": "HIGH", "file": "App.tsx", "issue": "Modal restore race condition (stale closure)", "fix": "Use refs for pendingProducts/Documents in restore intervals"},
+    {"id": "AUD-020", "severity": "HIGH", "file": "App.tsx", "issue": "Popstate does not abort in-flight requests", "fix": "Added abortActiveRequests + setConfirmDialog(null) to popstate handler"},
+    {"id": "AUD-021", "severity": "HIGH", "file": "App.tsx", "issue": "Polling interval missing applications/staff/grn-alerts", "fix": "Added shouldRefreshApplications, staff, grn-alerts to setInterval callback"}
+  ],
+  "remaining_known_issues": []
 }
