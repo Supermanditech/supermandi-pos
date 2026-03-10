@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-33",
+  "currentAuditJourney": "JOURNEY-34",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
@@ -172,18 +172,33 @@
     "JOURNEY-32",
     "JOURNEY-33",
     "JOURNEY-11",
+    "JOURNEY-34",
+    "JOURNEY-35",
+    "JOURNEY-36",
+    "JOURNEY-37",
+    "JOURNEY-38",
+    "JOURNEY-39",
+    "JOURNEY-40",
+    "JOURNEY-41",
+    "JOURNEY-42",
+    "JOURNEY-43",
+    "JOURNEY-44",
+    "JOURNEY-45",
+    "JOURNEY-46",
+    "JOURNEY-47",
+    "JOURNEY-48",
     "JOURNEY-10",
     "JOURNEY-09",
     "JOURNEY-12"
   ],
   "surfaceJourneyInventory": {
-    "rule": "Declared primary-surface journey inventory is canonical for execution planning. POS_APP exhaustive rediscovery is complete at 15 PARK-READY journeys. Retailer-web surface rediscovery has now expanded the declared retailer inventory from 1 journey to 15 journeys after the reports-only J11 audit proved the platform was severely undercounted. Supplier-web and superadmin-web journey counts remain baseline minimum until their platform rediscovery passes begin.",
+    "rule": "Declared primary-surface journey inventory is canonical for execution planning. POS_APP exhaustive rediscovery is complete at 15 PARK-READY journeys. Retailer-web exhaustive rediscovery is complete at 15 PARK-READY journeys. Supplier-web surface rediscovery has expanded the declared supplier inventory from 1 journey to 16 journeys (J34-J48 plus preserved J10). Superadmin-web journey counts remain baseline minimum until their platform rediscovery pass begins.",
     "declaredPrimaryJourneyTotals": {
       "POS_APP": 15,
       "RETAILER_WEB": 15,
-      "SUPPLIER_WEB": 1,
+      "SUPPLIER_WEB": 16,
       "SUPERADMIN_WEB": 2,
-      "TOTAL": 33
+      "TOTAL": 48
     },
     "declaredPrimaryJourneys": {
       "POS_APP": [
@@ -221,6 +236,21 @@
         "JOURNEY-11"
       ],
       "SUPPLIER_WEB": [
+        "JOURNEY-34",
+        "JOURNEY-35",
+        "JOURNEY-36",
+        "JOURNEY-37",
+        "JOURNEY-38",
+        "JOURNEY-39",
+        "JOURNEY-40",
+        "JOURNEY-41",
+        "JOURNEY-42",
+        "JOURNEY-43",
+        "JOURNEY-44",
+        "JOURNEY-45",
+        "JOURNEY-46",
+        "JOURNEY-47",
+        "JOURNEY-48",
         "JOURNEY-10"
       ],
       "SUPERADMIN_WEB": [
@@ -242,23 +272,23 @@
         "completedAtSha": "bd98e25c"
       },
       "RETAILER_WEB": {
-        "status": "IN_PROGRESS",
+        "status": "COMPLETE",
         "declaredJourneyCountBaseline": 15,
-        "declaredJourneyCountExhaustive": false,
-        "coverageClaimsSuspended": true,
-        "reopenReason": "Retailer-web surface inventory scan found 14 missing journeys beyond historical JOURNEY-11. Canonical retailer inventory is expanded to 15 journeys and must restart from the earliest retailer entrypoint.",
-        "resumeFromJourney": "JOURNEY-20",
+        "declaredJourneyCountExhaustive": true,
+        "coverageClaimsSuspended": false,
+        "completionNote": "All 15 declared retailer-web journeys (J20-J33 + J11) PARK-READY. Platform closure achieved at PR #533.",
+        "completedAt": "2026-03-10T20:00:00.000Z",
         "historicalWorkPreserved": [
           "JOURNEY-11"
         ]
       },
       "SUPPLIER_WEB": {
-        "status": "REOPENED_REQUIRED",
-        "declaredJourneyCountBaseline": 1,
+        "status": "IN_PROGRESS",
+        "declaredJourneyCountBaseline": 16,
         "declaredJourneyCountExhaustive": false,
         "coverageClaimsSuspended": true,
-        "reopenReason": "Historical JOURNEY-10 work is preserved, but supplier-web has not yet undergone exhaustive rediscovery from real user entry.",
-        "resumeFromJourney": "JOURNEY-10",
+        "reopenReason": "Supplier-web surface rediscovery found 15 missing journeys beyond historical J10. Canonical supplier inventory expanded to 16 journeys (J34-J48 plus preserved J10). Active restart from JOURNEY-34.",
+        "resumeFromJourney": "JOURNEY-34",
         "historicalWorkPreserved": [
           "JOURNEY-10"
         ]
@@ -278,20 +308,18 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-21",
-    "status": "RETAILER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
-    "reason": "Retailer-web surface rediscovery proved the historical J11-only inventory was incomplete. Canonical retailer-web inventory is now expanded to 15 journeys. Active standalone execution restarts from JOURNEY-20 (Retailer Auth & Onboarding) as the earliest retailer entrypoint. Historical J11 remains preserved but no longer defines retailer platform completeness.",
+    "journeyId": "JOURNEY-34",
+    "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
+    "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
-      "The expanded retailer-web journey order (J20-J33 plus preserved J11) is stabilized in repo truth",
-      "After retailer-web closure, POS_FEATURE_AUDIT_PACK_01 is activated before any supplier-web execution",
+      "The expanded supplier-web journey order (J34-J48 plus preserved J10) is stabilized in repo truth",
       "Operator explicitly changes currentAuditJourney in repo truth"
     ],
     "forbidden": [
       "sampling the next journey because the current round feels short",
       "breadth-first sweeps of remaining invariants across multiple journeys",
-      "switching primary implementation focus to supplier-web or superadmin-web before the expanded retailer-web journey order is normalized",
-      "skipping from retailer-web directly to supplier-web without first activating POS_FEATURE_AUDIT_PACK_01 if it remains pending",
-      "leaving the active retailer-web journey partially traced while it still has auditable sealing blockers"
+      "switching primary implementation focus to superadmin-web before the expanded supplier-web journey order is normalized",
+      "leaving the active supplier-web journey partially traced while it still has auditable sealing blockers"
     ],
     "ifSessionEndsMidJourney": "Update lastAuditedAction, openGaps, blocker notes, and CLAUDE_CURRENT_STATE.journeyExecutionMachineState {activeAction, auditMode, nextLayer, nextBlocker, remainingCertificationDelta}. If active platform rediscovery is still open, next session resumes from the earliest unresolved entrypoint on that platform."
   },
@@ -7391,6 +7419,335 @@
           "coverage": "COVERED — Backend cleans up OTP on send failure, returns 500 EMAIL_SEND_FAILED"
         }
       ]
+    },
+    "JOURNEY-34": {
+      "id": "JOURNEY-34",
+      "name": "Supplier Registration & Onboarding",
+      "cluster": "C13",
+      "description": "New supplier visits portal → phone OTP registration → GSTIN lookup → business details → KYC document upload → application submit → pending approval status page. Full supplier onboarding funnel from first visit to approval wait.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(auth)/register/page.tsx",
+        "supplier-portal/src/app/(auth)/onboard/page.tsx",
+        "supplier-portal/src/app/(auth)/pending-approval/page.tsx",
+        "supplier-portal/src/lib/api.ts",
+        "supplier-portal/src/lib/firebase.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-35": {
+      "id": "JOURNEY-35",
+      "name": "Supplier Login (OTP + Password)",
+      "cluster": "C13",
+      "description": "Returning supplier → login page → phone OTP lookup → OTP send/verify → dashboard redirect. Alternate: email/password login. Alternate: forgot password → email reset → reset confirmation. Session resume via cookie.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(auth)/login/page.tsx",
+        "supplier-portal/src/app/(auth)/forgot-password/page.tsx",
+        "supplier-portal/src/app/(auth)/reset-password/page.tsx",
+        "supplier-portal/src/lib/api.ts",
+        "supplier-portal/src/lib/firebase.ts",
+        "supplier-portal/src/lib/auth.tsx"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-36": {
+      "id": "JOURNEY-36",
+      "name": "Supplier KYC Document Upload & Verification",
+      "cluster": "C13",
+      "description": "Supplier navigates to KYC page → uploads AADHAAR, PAN, GST cert, bank statement, business proof (max 5MB each) → submission → review status tracking → limited mode banner while pending → approval/rejection display.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/kyc/page.tsx",
+        "supplier-portal/src/lib/api.ts",
+        "supplier-portal/src/components/LimitedModeBanner.tsx"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-37": {
+      "id": "JOURNEY-37",
+      "name": "Supplier Dashboard Overview",
+      "cluster": "C13",
+      "description": "Supplier lands on dashboard → sees stats cards (orders, products, earnings) → recent orders list → recent notifications → quick navigation to detail pages.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/dashboard/page.tsx",
+        "supplier-portal/src/lib/api.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-38": {
+      "id": "JOURNEY-38",
+      "name": "Supplier Product CRUD + Image Upload",
+      "cluster": "C13",
+      "description": "Supplier views product list → searches/filters by status → creates new product (name, price, image upload max 5MB) → edits existing product → deletes product → status tracking (pending/approved/rejected).",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/products/page.tsx",
+        "supplier-portal/src/lib/api.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-39": {
+      "id": "JOURNEY-39",
+      "name": "Supplier CSV Bulk Product Upload",
+      "cluster": "C13",
+      "description": "Supplier navigates to upload page → selects CSV file (max 5MB) → validation preview → submit → error/success reporting per row → products appear in product list.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/upload/page.tsx",
+        "supplier-portal/src/lib/api.ts",
+        "supplier-portal/src/lib/fileLimits.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-40": {
+      "id": "JOURNEY-40",
+      "name": "Supplier Order Management",
+      "cluster": "C13",
+      "description": "Supplier views order list → filters by status → opens order detail → sees line items with quantities/prices → adds order notes → updates order status (confirm/reject) → item-level status updates → SSE live order updates via ReconnectingEventSource.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/orders/page.tsx",
+        "supplier-portal/src/lib/api.ts",
+        "supplier-portal/src/lib/reconnectingEventSource.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-41": {
+      "id": "JOURNEY-41",
+      "name": "Supplier Order Shipment Tracking",
+      "cluster": "C13",
+      "description": "Supplier opens confirmed order → adds shipment tracking (carrier name + tracking ID) → marks order shipped → delivery confirmation flow → retailer GRN receipt.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/orders/page.tsx",
+        "supplier-portal/src/lib/api.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-42": {
+      "id": "JOURNEY-42",
+      "name": "Supplier Earnings & Payouts",
+      "cluster": "C13",
+      "description": "Supplier views earnings page → payout summary (total/pending/paid) → transaction history list → filters by date/status → payout detail → per-order breakdown.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/earnings/page.tsx",
+        "supplier-portal/src/lib/api.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-43": {
+      "id": "JOURNEY-43",
+      "name": "Supplier Invoices",
+      "cluster": "C13",
+      "description": "Supplier views invoice list → filters by status (issued/paid/overdue) → opens invoice detail → sees line items, totals, payment terms.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/invoices/page.tsx",
+        "supplier-portal/src/lib/api.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-44": {
+      "id": "JOURNEY-44",
+      "name": "Supplier Profile & Email Verification",
+      "cluster": "C13",
+      "description": "Supplier views profile page → edits personal info → triggers email verification (code-based) → verifies email → changes password → manages notification preferences.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/profile/page.tsx",
+        "supplier-portal/src/lib/api.ts",
+        "supplier-portal/src/lib/auth.tsx"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-45": {
+      "id": "JOURNEY-45",
+      "name": "Supplier Notifications",
+      "cluster": "C13",
+      "description": "Supplier views notification list → filters by type/date/read status → marks notifications read → navigates to linked order/KYC/payment context.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/notifications/page.tsx",
+        "supplier-portal/src/lib/api.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-46": {
+      "id": "JOURNEY-46",
+      "name": "Supplier Chat & Support",
+      "cluster": "C13",
+      "description": "Supplier opens chat page → two-panel view (conversation list + active chat) → sends messages to SuperMandi support → receives responses via SSE/polling → help/FAQ page.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/chat/page.tsx",
+        "supplier-portal/src/app/(dashboard)/help/page.tsx",
+        "supplier-portal/src/lib/api.ts",
+        "supplier-portal/src/lib/reconnectingEventSource.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-47": {
+      "id": "JOURNEY-47",
+      "name": "Supplier BNPL Orders",
+      "cluster": "C13",
+      "description": "Supplier views BNPL (Buy Now Pay Later) order list → separate status flow from regular orders → order details with BNPL payment terms.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/app/(dashboard)/bnpl-orders/page.tsx",
+        "supplier-portal/src/lib/api.ts"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
+    },
+    "JOURNEY-48": {
+      "id": "JOURNEY-48",
+      "name": "Supplier Auth Guards & Session Management",
+      "cluster": "C13",
+      "description": "Edge middleware enforces supplier_token cookie on all /supplier/dashboard/* routes → redirect to login with ?redirect → 30-min idle timeout with 5-min warning → proactive token refresh every 60s → activity tracking → logout confirmation modal.",
+      "status": "CERT-PENDING",
+      "lastAuditedAction": null,
+      "lastAuditedAt": null,
+      "openGaps": [],
+      "cccBlocker": null,
+      "scopeFiles": [
+        "supplier-portal/src/middleware.ts",
+        "supplier-portal/src/lib/auth.tsx",
+        "supplier-portal/src/app/(dashboard)/layout.tsx"
+      ],
+      "actions": [],
+      "guarantees": [],
+      "crossPortalMatrix": [],
+      "regressionLocks": [],
+      "knownIssues": [],
+      "edgeCases": []
     },
     "JOURNEY-10": {
       "id": "JOURNEY-10",
