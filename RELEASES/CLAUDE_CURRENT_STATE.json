@@ -27,9 +27,9 @@
       "9. Announce: 'Resuming JOURNEY-XX. Audit mode: [mode]. Active action: [action]. Next layer: [layer]. Files: [list]'",
       "10. If actions[] is empty or journeyExecutionMachineState.auditMode=USER_ACTION_ENUMERATION: reiterate the journey, enumerate every real user click/action, build the cross-layer map and edge-case matrix, then choose the first blocker. Otherwise resume from lastAuditedAction + 1 or the recorded blocker."
     ],
-    "currentJourney": "SUPPLIER_WEB_REDISCOVERY",
+    "currentJourney": "SUPERADMIN_WEB_REDISCOVERY",
     "currentPhase": "POST_POS_PLATFORM_PHASE3_EXHAUSTIVE_REDISCOVERY",
-    "auditProgressNote": "POS exhaustive stabilization is COMPLETE (15 PARK-READY). Retailer-web COMPLETE (15 PARK-READY). POS_FEATURE_AUDIT_PACK_01 COMPLETE (7/7 items). Supplier-web surface rediscovery has now proven the platform inventory was severely undercounted: 15 missing supplier journeys found beyond historical J10. Canonical supplier-web inventory is expanded to 16 journeys total (J34-J48 plus preserved J10). Active execution restarts from JOURNEY-34 (Supplier Registration & Onboarding). After supplier-web completes, continue to superadmin-web.",
+    "auditProgressNote": "POS exhaustive stabilization COMPLETE (15 PARK-READY). Retailer-web COMPLETE (15 PARK-READY). POS_FEATURE_AUDIT_PACK_01 COMPLETE (7/7 items). Supplier-web COMPLETE (16/16 PARK-READY, 816 tests). Superadmin-web surface rediscovery starting: historical inventory had only 2 journeys (J09, J12) but portal has 23 tabs + shared components. Exhaustive enumeration required before test expansion.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
       "blockedBy": "POST_POS_PLATFORM_JOURNEY_REDISCOVERY_REQUIRED. POS complete, retailer-web complete, POS audit pack complete, but supplier-web and superadmin-web must be exhaustively rediscovered in locked order before artifact/build/deploy/runtime can begin.",
@@ -777,12 +777,12 @@
         ]
       },
       "SUPPLIER_WEB": {
-        "status": "IN_PROGRESS",
+        "status": "COMPLETE",
         "declaredJourneyCountBaseline": 16,
-        "declaredJourneyCountExhaustive": false,
-        "coverageClaimsSuspended": true,
-        "reopenReason": "Supplier-web surface rediscovery found 15 missing journeys beyond historical J10. Canonical supplier inventory is expanded to 16 journeys (J34-J48 plus preserved J10). Active restart point is JOURNEY-34 as the earliest supplier entry journey (Supplier Registration & Onboarding).",
-        "resumeFromJourney": "JOURNEY-34",
+        "declaredJourneyCountExhaustive": true,
+        "coverageClaimsSuspended": false,
+        "completionNote": "All 16 supplier-web journeys (J34-J48 + J10) PARK-READY. Total tests: 816. Zero regressions.",
+        "resumeFromJourney": null,
         "historicalWorkPreserved": [
           "JOURNEY-10"
         ]
@@ -1048,9 +1048,9 @@
         "JOURNEY-09",
         "JOURNEY-12"
       ],
-      "activePlatform": "SUPPLIER_WEB",
-      "activeEntryJourney": "JOURNEY-34",
-      "switchRule": "Claude may switch away from supplier-web only after the expanded supplier journey order (J34-J48 plus preserved J10) is stabilized. After supplier-web closure, Claude advances to superadmin-web. Claude may switch to superadmin-web only after supplier-web is likewise normalized.",
+      "activePlatform": "SUPERADMIN_WEB",
+      "activeEntryJourney": "JOURNEY-09",
+      "switchRule": "Supplier-web is COMPLETE (16/16 PARK-READY). Claude now advances to superadmin-web exhaustive rediscovery. Surface rediscovery must enumerate all 23 tabs + shared components before test expansion begins.",
       "inventoryExpansionRule": "If a real user journey is missing from the active non-POS platform inventory, stop implementation, update JOURNEY_MAP and coverage state first, then resume in USER_ACTION_ENUMERATION mode from the earliest affected platform entrypoint.",
       "artifactRule": "No artifact/build/deploy/runtime while retailer-web expanded rediscovery remains active, while POS_FEATURE_AUDIT_PACK_01 remains pending, or while supplier-web/superadmin-web rediscovery remain incomplete."
     },
