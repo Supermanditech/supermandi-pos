@@ -830,16 +830,21 @@ export default function App() {
     setSuppliersLoading(true);
     setSuppliersError("");
     try {
-      const [pendingRes, verifiedRes, products, bankChangesRes] = await Promise.all([
+      const [pendingRes, verifiedRes, productsRes, bankChangesRes] = await Promise.allSettled([
         fetchPendingSuppliers(),
         fetchVerifiedSuppliers({ search: supplierSearch?.trim() || undefined }),
         fetchPendingProducts(),
         fetchBankChanges()
       ]);
-      setPendingSuppliers(pendingRes.items);
-      setVerifiedSuppliers(verifiedRes.items);
-      setPendingProducts(products);
-      setBankChanges(bankChangesRes);
+      if (pendingRes.status === "fulfilled") setPendingSuppliers(pendingRes.value.items);
+      if (verifiedRes.status === "fulfilled") setVerifiedSuppliers(verifiedRes.value.items);
+      if (productsRes.status === "fulfilled") setPendingProducts(productsRes.value);
+      if (bankChangesRes.status === "fulfilled") setBankChanges(bankChangesRes.value);
+      const failures = [pendingRes, verifiedRes, productsRes, bankChangesRes].filter(r => r.status === "rejected");
+      if (failures.length > 0) {
+        const msgs = failures.map(f => f.status === "rejected" ? (f.reason instanceof Error ? f.reason.message : String(f.reason)) : "").filter(Boolean);
+        setSuppliersError(msgs.join("; ") || "Failed to fetch suppliers");
+      }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to fetch suppliers";
       setSuppliersError(message);
@@ -1098,12 +1103,17 @@ export default function App() {
     setSettingsLoading(true);
     setSettingsError("");
     try {
-      const [settings, stats] = await Promise.all([
+      const [settingsRes, statsRes] = await Promise.allSettled([
         fetchSettings(),
         fetchSystemStats()
       ]);
-      setSystemSettings(settings);
-      setSystemStats(stats);
+      if (settingsRes.status === "fulfilled") setSystemSettings(settingsRes.value);
+      if (statsRes.status === "fulfilled") setSystemStats(statsRes.value);
+      const failures = [settingsRes, statsRes].filter(r => r.status === "rejected");
+      if (failures.length > 0) {
+        const msgs = failures.map(f => f.status === "rejected" ? (f.reason instanceof Error ? f.reason.message : String(f.reason)) : "").filter(Boolean);
+        setSettingsError(msgs.join("; ") || "Failed to fetch settings");
+      }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to fetch settings";
       setSettingsError(message);
@@ -1414,6 +1424,7 @@ export default function App() {
     guardModalDirty(() => {
       setSelectedDocument(null);
       setDocRejectReason("");
+      setModalDirty(false);
       saveModalState(null);
     });
   }

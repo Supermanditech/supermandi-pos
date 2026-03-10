@@ -637,6 +637,14 @@ html.dark .badgeInfo { background: #1e3a5f; border-color: #1e40af; color: #93c5f
   border: 1px solid var(--color-border);
 }
 
+/* R4-CSS-004: Small button variant for pagination & inline actions */
+.btnSm {
+  padding: 4px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 4px;
+}
+
 /* GL-CRIT-0021/0022/0052: Danger button for destructive actions */
 .btnDanger {
   background: var(--color-error);
