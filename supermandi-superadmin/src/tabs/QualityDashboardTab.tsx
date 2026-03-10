@@ -26,12 +26,17 @@ export function QualityDashboardTab() {
     setLoading(true);
     setError(null);
     try {
-      const [overviewData, testsData] = await Promise.all([
+      // R2-FIX QUA-002: Use allSettled so one failure doesn't lose both datasets
+      const [overviewResult, testsResult] = await Promise.allSettled([
         fetchQualityOverview(),
         fetchTestResults(),
       ]);
-      setOverview(overviewData);
-      setTestResults(testsData);
+      if (overviewResult.status === 'fulfilled') setOverview(overviewResult.value);
+      if (testsResult.status === 'fulfilled') setTestResults(testsResult.value);
+      const failures = [overviewResult, testsResult].filter(r => r.status === 'rejected');
+      if (failures.length > 0) {
+        setError(failures.map(f => (f as PromiseRejectedResult).reason?.message || 'Unknown error').join('; '));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load quality data");
     } finally {

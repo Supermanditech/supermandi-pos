@@ -185,7 +185,7 @@ export function WhatsAppTab() {
         setSendResult("Message sent successfully");
         setSendPhone("");
         setSendMessage("");
-        loadData();
+        void loadData();
       } else {
         setSendResult(`Failed: ${result.error || "Unknown error"}`);
       }
@@ -197,8 +197,13 @@ export function WhatsAppTab() {
   };
 
   // R7.SA.008: Show confirmation before single WhatsApp send (irrevocable action)
+  // R2-FIX WA-003: Validate phone format before send
   const handleSend = () => {
     if (!sendPhone.trim() || !sendMessage.trim()) return;
+    if (!/^(\+?\d{10,15})$/.test(sendPhone.trim())) {
+      setSendResult("Invalid phone number format (10-15 digits, optional + prefix)");
+      return;
+    }
     setConfirmDialog({
       title: "Send WhatsApp Message",
       message: `Send this message to ${sendPhone.trim()}? WhatsApp messages cannot be unsent.`,
@@ -283,6 +288,8 @@ export function WhatsAppTab() {
                   }
                   setCtaSaveResult(null);
                 }
+                // R2-FIX WA-005: Clear stale result on any edit toggle
+                setCtaSaveResult(null);
                 setCtaEditing(e => !e);
               }}
             >

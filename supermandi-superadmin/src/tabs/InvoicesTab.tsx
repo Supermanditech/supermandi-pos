@@ -37,6 +37,10 @@ export function InvoicesTab() {
   // UIUX-SA-008: Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  // R2-FIX INV-001: PDF download loading state
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  // R2-FIX INV-002: Detail open guard
+  const detailInFlightRef = useRef(false);
   // R1-FIX: In-flight guard to prevent pagination race conditions
   const inFlightRef = useRef(false);
 
@@ -64,7 +68,10 @@ export function InvoicesTab() {
   useEffect(() => { refresh(); }, [refresh]);
 
   // STG-815: Clear stale error before each action
+  // R2-FIX INV-002: Guard against concurrent openDetail calls
   const openDetail = async (id: string) => {
+    if (detailInFlightRef.current) return;
+    detailInFlightRef.current = true;
     setError("");
     setDetail(null);
     setDetailLoading(true);
@@ -75,6 +82,7 @@ export function InvoicesTab() {
       setError(err.message || "Failed to load invoice");
     } finally {
       setDetailLoading(false);
+      detailInFlightRef.current = false;
     }
   };
 
@@ -118,12 +126,17 @@ export function InvoicesTab() {
     });
   };
 
+  // R2-FIX INV-001: Add loading state to PDF download
   const handleDownload = async (id: string, invoiceNumber: string) => {
+    if (downloadingId) return;
+    setDownloadingId(id);
     setError("");
     try {
       await downloadInvoicePdf(id, invoiceNumber);
     } catch (err: any) {
       setError(err.message || "Failed to download PDF");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -200,7 +213,7 @@ export function InvoicesTab() {
                     <td>
                       <div className="sa-flex sa-gap-4">
                         <button className="sa-btn-xs sa-btn-ghost-sm" onClick={() => openDetail(inv.id)}>View</button>
-                        <button className="sa-btn-xs sa-btn-ghost-sm" onClick={() => handleDownload(inv.id, inv.invoiceNumber)}>PDF</button>
+                        <button className="sa-btn-xs sa-btn-ghost-sm" onClick={() => handleDownload(inv.id, inv.invoiceNumber)} disabled={downloadingId === inv.id}>{downloadingId === inv.id ? '...' : 'PDF'}</button>
                       </div>
                     </td>
                   </tr>
@@ -243,7 +256,7 @@ export function InvoicesTab() {
                     {(detail.status === "draft" || detail.status === "issued") && (
                       <button className="btnGhost btnSm sa-text-danger" onClick={() => handleCancel(detail.id)} disabled={actionLoading}>Cancel</button>
                     )}
-                    <button className="btn btnSm" onClick={() => handleDownload(detail.id, detail.invoiceNumber)}>Download PDF</button>
+                    <button className="btn btnSm" onClick={() => handleDownload(detail.id, detail.invoiceNumber)} disabled={downloadingId !== null}>{downloadingId === detail.id ? 'Downloading...' : 'Download PDF'}</button>
                     <button className="btnGhost btnSm" onClick={() => setDetail(null)}>Close</button>
                   </div>
                 </div>

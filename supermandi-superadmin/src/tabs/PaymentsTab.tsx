@@ -1,5 +1,5 @@
 // SA-001: Payments tab extracted from App.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { PosEvent } from "../api/posEvents";
 import { PayloadDetails } from "../components/PayloadDetails";
 import { formatDateTime } from "../lib/formatters";
@@ -16,6 +16,8 @@ const PAYMENTS_PAGE_SIZE = 50;
 
 export function PaymentsTab({ paymentEvents, loading, error }: PaymentsTabProps) {
   const [page, setPage] = useState(0);
+  // R2-FIX PAY-001: Reset page when payment events change (prevents out-of-bounds)
+  useEffect(() => { setPage(0); }, [paymentEvents.length]);
   const maxPage = Math.max(0, Math.ceil(paymentEvents.length / PAYMENTS_PAGE_SIZE) - 1);
   const pageEvents = paymentEvents.slice(page * PAYMENTS_PAGE_SIZE, (page + 1) * PAYMENTS_PAGE_SIZE);
 
