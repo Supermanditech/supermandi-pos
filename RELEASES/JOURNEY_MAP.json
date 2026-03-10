@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-34",
+  "currentAuditJourney": "JOURNEY-35",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-34",
+    "journeyId": "JOURNEY-35",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7425,9 +7425,9 @@
       "name": "Supplier Registration & Onboarding",
       "cluster": "C13",
       "description": "New supplier visits portal → phone OTP registration → GSTIN lookup → business details → KYC document upload → application submit → pending approval status page. Full supplier onboarding funnel from first visit to approval wait.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J34-TEST-001",
+      "lastAuditedAt": "2026-03-11T00:15:00.000Z",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
