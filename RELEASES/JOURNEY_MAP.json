@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-36",
+    "journeyId": "JOURNEY-37",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7509,9 +7509,9 @@
       "name": "Supplier KYC Document Upload & Verification",
       "cluster": "C13",
       "description": "Supplier navigates to KYC page → uploads AADHAAR, PAN, GST cert, bank statement, business proof (max 5MB each) → submission → review status tracking → limited mode banner while pending → approval/rejection display.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J36-TEST-001",
+      "lastAuditedAt": "2026-03-11T01:30:00.000Z",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
@@ -7519,12 +7519,45 @@
         "supplier-portal/src/lib/api.ts",
         "supplier-portal/src/components/LimitedModeBanner.tsx"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        {"id": "J36-A01", "description": "Page header, subtitle, breadcrumb (Dashboard → KYC)"},
+        {"id": "J36-A02", "description": "Payout readiness card: ready vs not-ready state, requirements checklist (bankVerified, panCardApproved, cancelledChequeApproved, profileVerified)"},
+        {"id": "J36-A03", "description": "Tab switching: KYC Documents (default) ↔ Bank Verification with proper aria-selected"},
+        {"id": "J36-A04", "description": "Documents tab: 5 document types (PAN, GSTIN, Cancelled Cheque, Address Proof, Business License), Required labels, accepted formats info"},
+        {"id": "J36-A05", "description": "Document upload: hidden file inputs with accept='.jpg,.jpeg,.png,.pdf', aria-label per type, Upload/Replace button"},
+        {"id": "J36-A06", "description": "Document status: pending/approved/rejected badges, rejection reason, file size formatting (B/KB/MB)"},
+        {"id": "J36-A07", "description": "Two-click delete: first click shows 'Confirm Delete', second click triggers mutation"},
+        {"id": "J36-A08", "description": "Bank tab: IFSC input (uppercase), Verify IFSC button (disabled when < 11 chars), IFSC format validation"},
+        {"id": "J36-A09", "description": "Account number: digit-only filter, minimum 9-digit hint, confirm match warning"},
+        {"id": "J36-A10", "description": "Bank submit: disabled until IFSC verified + account matched + name filled"},
+        {"id": "J36-A11", "description": "Bank verified state: read-only display, form hidden, contact support message"},
+        {"id": "J36-A12", "description": "Loading skeleton when status data loading"}
+      ],
+      "guarantees": [
+        {"id": "G1", "name": "UI elements", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/kyc.test.tsx:105-175 (5 doc types, form fields, buttons)"]},
+        {"id": "G2", "name": "UX 4-state", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/kyc.test.tsx:133-137 (loading skeleton), :140-175 (payout ready/not-ready)"]},
+        {"id": "G3", "name": "Navigation", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/kyc.test.tsx:153-170 (tab switching with aria-selected)"]},
+        {"id": "G4", "name": "Wiring", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/kyc.test.tsx:195-235 (upload buttons, file inputs, delete mutation)"]},
+        {"id": "G5", "name": "Business logic", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/kyc.test.tsx:255-330 (IFSC validation, account mismatch, digit filter, bank verified state)"]},
+        {"id": "G6", "name": "Edge cases", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/kyc.test.tsx:236-260 (file size formatting, rejection reason, two-click delete)"]},
+        {"id": "G-LMB", "name": "LimitedModeBanner coverage", "signed": true, "citations": ["supplier-portal/src/__tests__/components/LimitedModeBanner.test.tsx (17 tests, all statuses)"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"testFile": "supplier-portal/src/__tests__/pages/dashboard/kyc.test.tsx", "testCount": 41, "mergedPR": 536, "mergedSHA": "5c2bb8d2"},
+        {"testFile": "supplier-portal/src/__tests__/components/LimitedModeBanner.test.tsx", "testCount": 17, "note": "Pre-existing, verified passing"}
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Two-click delete confirmation (UIUX-SUP-015)",
+        "IFSC uppercase coercion on input",
+        "Account number digit-only filter",
+        "Account number mismatch inline warning",
+        "Submit disabled until IFSC verified + numbers match + name filled",
+        "Bank verified: form hidden, read-only state shown",
+        "File size formatting: B vs KB vs MB thresholds",
+        "Rejected document shows rejection reason"
+      ]
     },
     "JOURNEY-37": {
       "id": "JOURNEY-37",
