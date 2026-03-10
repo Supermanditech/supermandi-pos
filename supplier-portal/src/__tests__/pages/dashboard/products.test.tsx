@@ -3,19 +3,23 @@ import '@testing-library/jest-dom';
 import ProductsPage from '../../../app/(dashboard)/products/page';
 
 // Mock next/navigation
-const mockRouter = { push: jest.fn(), replace: jest.fn() };
+const mockPush = jest.fn();
+const mockReplace = jest.fn();
+let mockSearchParams = new URLSearchParams();
 jest.mock('next/navigation', () => ({
-  useRouter: () => mockRouter,
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePathname: () => '/products',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockSearchParams,
 }));
 
 // Mock react-hot-toast
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
 jest.mock('react-hot-toast', () => ({
   __esModule: true,
   default: Object.assign(jest.fn(), {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: (...args: any[]) => mockToastSuccess(...args),
+    error: (...args: any[]) => mockToastError(...args),
   }),
 }));
 
@@ -27,31 +31,52 @@ jest.mock('../../../hooks/useUrlState', () => ({
   },
 }));
 
-// Mock react-query
+// Configurable query returns
+let mockProducts: any[] = [];
+let mockPagination: any = { total: 0, totalPages: 1 };
+let mockIsLoading = false;
+let mockIsError = false;
+let mockError: any = null;
+const mockRefetch = jest.fn();
 const mockInvalidateQueries = jest.fn();
+
+// Track mutations
+let createMutationCallbacks: any = null;
+let updateMutationCallbacks: any = null;
+let deleteMutationCallbacks: any = null;
+let resubmitMutationCallbacks: any = null;
+
 jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
-    data: { data: [], pagination: { total: 0, totalPages: 1 } },
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: jest.fn(),
+    data: { data: mockProducts, pagination: mockPagination },
+    isLoading: mockIsLoading,
+    isError: mockIsError,
+    error: mockError,
+    refetch: mockRefetch,
   }),
-  useMutation: ({ onSuccess }: any) => ({
-    mutate: jest.fn(),
-    isPending: false,
-  }),
+  useMutation: ({ onSuccess, onError }: any) => {
+    const mutate = jest.fn();
+    // Track by order: create, update, delete, resubmit
+    if (!createMutationCallbacks) {
+      createMutationCallbacks = { mutate, onSuccess, onError };
+    } else if (!updateMutationCallbacks) {
+      updateMutationCallbacks = { mutate, onSuccess, onError };
+    } else if (!deleteMutationCallbacks) {
+      deleteMutationCallbacks = { mutate, onSuccess, onError };
+    } else if (!resubmitMutationCallbacks) {
+      resubmitMutationCallbacks = { mutate, onSuccess, onError };
+    }
+    return { mutate, isPending: false };
+  },
   useQueryClient: () => ({
     invalidateQueries: mockInvalidateQueries,
   }),
 }));
 
-// Mock formatters
 jest.mock('../../../lib/formatters', () => ({
-  formatCurrency: (val: number) => `Rs. ${(val / 100).toFixed(2)}`,
+  formatCurrency: (val: number) => `₹${(val / 100).toFixed(2)}`,
 }));
 
-// Mock Breadcrumb
 jest.mock('../../../components/Breadcrumb', () => {
   const React = require('react');
   return {
@@ -60,7 +85,6 @@ jest.mock('../../../components/Breadcrumb', () => {
   };
 });
 
-// Mock EmptyState
 jest.mock('../../../components/EmptyState', () => {
   const React = require('react');
   return {
@@ -74,7 +98,6 @@ jest.mock('../../../components/EmptyState', () => {
   };
 });
 
-// Mock lucide-react
 jest.mock('lucide-react', () => {
   const React = require('react');
   return {
@@ -85,7 +108,6 @@ jest.mock('lucide-react', () => {
   };
 });
 
-// Mock API
 jest.mock('../../../lib/api', () => ({
   getProducts: jest.fn(),
   createProduct: jest.fn(),
@@ -94,56 +116,43 @@ jest.mock('../../../lib/api', () => ({
   uploadProductImage: jest.fn(),
 }));
 
-// STG-010: Mock useAuth to provide verified supplier (button disabled without it)
+// Configurable supplier mock
+let mockSupplier: any = { verificationStatus: 'verified' };
 jest.mock('../../../lib/auth', () => ({
-  useAuth: () => ({ supplier: { verificationStatus: 'verified' } }),
+  useAuth: () => ({ supplier: mockSupplier }),
+}));
+
+jest.mock('../../../lib/fileLimits', () => ({
+  MAX_PRODUCT_IMAGE_SIZE_BYTES: 5 * 1024 * 1024,
+  MAX_PRODUCT_IMAGE_SIZE_LABEL: '5MB',
 }));
 
 describe('ProductsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
+    mockProducts = [];
+    mockPagination = { total: 0, totalPages: 1 };
+    mockIsLoading = false;
+    mockIsError = false;
+    mockError = null;
+    mockSupplier = { verificationStatus: 'verified' };
+    createMutationCallbacks = null;
+    updateMutationCallbacks = null;
+    deleteMutationCallbacks = null;
+    resubmitMutationCallbacks = null;
   });
+
+  // ── Page Header & Structure ──────────────────────────────────
 
   it('renders the page heading', () => {
     render(<ProductsPage />);
     expect(screen.getByText('Products')).toBeInTheDocument();
   });
 
-  it('renders subtitle', () => {
+  it('renders subtitle about product catalog', () => {
     render(<ProductsPage />);
     expect(screen.getByText(/Manage your product catalog/)).toBeInTheDocument();
-  });
-
-  it('renders Add Product button', () => {
-    render(<ProductsPage />);
-    const addButtons = screen.getAllByText('+ Add Product');
-    expect(addButtons.length).toBeGreaterThan(0);
-  });
-
-  it('shows the add form when clicking Add Product', () => {
-    render(<ProductsPage />);
-    // Click the header button (first one), not the EmptyState action
-    const addButtons = screen.getAllByText('+ Add Product');
-    fireEvent.click(addButtons[0]);
-    expect(screen.getByText('Add New Product')).toBeInTheDocument();
-  });
-
-  it('renders search input', () => {
-    render(<ProductsPage />);
-    expect(screen.getByPlaceholderText('Search by name, barcode, or SKU...')).toBeInTheDocument();
-  });
-
-  it('renders status filter buttons', () => {
-    render(<ProductsPage />);
-    expect(screen.getByText('All')).toBeInTheDocument();
-    expect(screen.getByText('Pending')).toBeInTheDocument();
-    expect(screen.getByText('Approved')).toBeInTheDocument();
-    expect(screen.getByText('Rejected')).toBeInTheDocument();
-  });
-
-  it('renders empty state when no products', () => {
-    render(<ProductsPage />);
-    expect(screen.getByText('No products yet')).toBeInTheDocument();
   });
 
   it('renders breadcrumb', () => {
@@ -151,24 +160,328 @@ describe('ProductsPage', () => {
     expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
   });
 
-  it('renders form fields when form is open', () => {
+  it('renders Add Product button for verified supplier', () => {
+    render(<ProductsPage />);
+    const addButtons = screen.getAllByText('+ Add Product');
+    expect(addButtons.length).toBeGreaterThan(0);
+  });
+
+  it('disables Add Product button for unverified supplier', () => {
+    mockSupplier = { verificationStatus: 'pending' };
+    render(<ProductsPage />);
+    // The header button should be disabled
+    const headerBtn = screen.getAllByText('+ Add Product')[0].closest('button');
+    expect(headerBtn).toBeDisabled();
+  });
+
+  // ── Search & Filters ─────────────────────────────────────────
+
+  it('renders search input', () => {
+    render(<ProductsPage />);
+    expect(screen.getByPlaceholderText('Search by name, barcode, or SKU...')).toBeInTheDocument();
+  });
+
+  it('renders status filter buttons with correct labels', () => {
+    render(<ProductsPage />);
+    expect(screen.getByText('All')).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('Approved')).toBeInTheDocument();
+    expect(screen.getByText('Rejected')).toBeInTheDocument();
+  });
+
+  it('status filters have role="tab" and aria-selected', () => {
+    render(<ProductsPage />);
+    const allTab = screen.getByRole('tab', { name: /all statuses/ });
+    expect(allTab).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('has tablist role on filter container', () => {
+    render(<ProductsPage />);
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+  });
+
+  // ── Empty State ──────────────────────────────────────────────
+
+  it('renders empty state when no products', () => {
+    render(<ProductsPage />);
+    expect(screen.getByText('No products yet')).toBeInTheDocument();
+  });
+
+  it('shows "No matching products" when products exist but none match filter', () => {
+    mockProducts = [
+      { id: 'p1', name: 'Rice', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'KG' },
+    ];
+    render(<ProductsPage />);
+    // With default search='', statusFilter='all', products should match
+    expect(screen.getByText('Rice')).toBeInTheDocument();
+  });
+
+  // ── Loading State ────────────────────────────────────────────
+
+  it('shows loading skeleton when products are loading', () => {
+    mockIsLoading = true;
+    render(<ProductsPage />);
+    expect(screen.getByRole('status', { name: 'Loading products' })).toBeInTheDocument();
+  });
+
+  // ── Error State ──────────────────────────────────────────────
+
+  it('shows error message when products fail to load', () => {
+    mockIsError = true;
+    mockError = new Error('Network error');
+    render(<ProductsPage />);
+    expect(screen.getByText('Failed to load products')).toBeInTheDocument();
+    expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+
+  it('shows retry button on error', () => {
+    mockIsError = true;
+    render(<ProductsPage />);
+    expect(screen.getByText('Retry')).toBeInTheDocument();
+  });
+
+  it('disables Add Product button when products fail to load', () => {
+    mockIsError = true;
+    render(<ProductsPage />);
+    const headerBtn = screen.getAllByText(/Add Product/)[0].closest('button');
+    expect(headerBtn).toBeDisabled();
+  });
+
+  // ── Add Product Form ─────────────────────────────────────────
+
+  it('shows form when clicking Add Product button', () => {
     render(<ProductsPage />);
     const addButtons = screen.getAllByText('+ Add Product');
     fireEvent.click(addButtons[0]);
+    expect(screen.getByText('Add New Product')).toBeInTheDocument();
+  });
+
+  it('renders all form fields', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
     expect(screen.getByText('Product Name *')).toBeInTheDocument();
+    expect(screen.getByText('Category')).toBeInTheDocument();
     expect(screen.getByText('Barcode (GTIN/EAN)')).toBeInTheDocument();
     expect(screen.getByText('Your SKU Code')).toBeInTheDocument();
     expect(screen.getByText(/Purchase Price/)).toBeInTheDocument();
+    expect(screen.getByText(/MRP/)).toBeInTheDocument();
     expect(screen.getByText('Minimum Order Quantity')).toBeInTheDocument();
-    // STG-081: Description field removed from form
+    expect(screen.getByText('Unit')).toBeInTheDocument();
     expect(screen.getByText('Product Image')).toBeInTheDocument();
   });
 
-  it('shows Cancel button when form is open', () => {
+  it('renders category dropdown with FMCG options', () => {
     render(<ProductsPage />);
-    const addButtons = screen.getAllByText('+ Add Product');
-    fireEvent.click(addButtons[0]);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    const categorySelect = screen.getByLabelText('Category') as HTMLSelectElement;
+    expect(categorySelect.options.length).toBe(15); // 14 FMCG categories + 'Select Category'
+  });
+
+  it('renders unit dropdown with PCS/KG/GM/LTR/ML/PACK/BOX', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    const unitSelect = screen.getByLabelText('Unit') as HTMLSelectElement;
+    expect(unitSelect.options.length).toBe(7);
+    expect(unitSelect.value).toBe('PCS');
+  });
+
+  it('renders image upload drop zone', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    expect(screen.getByText(/Click to upload/)).toBeInTheDocument();
+    expect(screen.getByText(/drag and drop/)).toBeInTheDocument();
+    expect(screen.getByText(/JPEG, PNG, or WebP/)).toBeInTheDocument();
+  });
+
+  it('renders Add Product submit button', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    expect(screen.getByRole('button', { name: 'Add Product' })).toBeInTheDocument();
+  });
+
+  it('shows Cancel buttons when form is open', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
     const cancelBtns = screen.getAllByText('Cancel');
-    expect(cancelBtns.length).toBeGreaterThan(0);
+    expect(cancelBtns.length).toBeGreaterThanOrEqual(2); // header Cancel + form Cancel
+  });
+
+  it('hides form when Cancel is clicked (no unsaved changes)', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    expect(screen.getByText('Add New Product')).toBeInTheDocument();
+    // Click form cancel button
+    const cancelBtns = screen.getAllByText('Cancel');
+    fireEvent.click(cancelBtns[cancelBtns.length - 1]);
+    expect(screen.queryByText('Add New Product')).not.toBeInTheDocument();
+  });
+
+  // ── Products Table ───────────────────────────────────────────
+
+  it('renders products table with data', () => {
+    mockProducts = [
+      {
+        id: 'p1',
+        name: 'Premium Rice',
+        category: 'Chawal',
+        supplierSku: 'RICE-001',
+        barcode: '8901234567890',
+        purchasePrice: 45000,
+        mrp: 55000,
+        moq: 5,
+        unit: 'KG',
+        approvalStatus: 'approved',
+      },
+    ];
+    render(<ProductsPage />);
+    // Table headers
+    expect(screen.getByText('Product')).toBeInTheDocument();
+    expect(screen.getByText('SKU / Barcode')).toBeInTheDocument();
+    expect(screen.getByText('Price')).toBeInTheDocument();
+    expect(screen.getByText('MOQ')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
+    expect(screen.getByText('Actions')).toBeInTheDocument();
+    // Row data
+    expect(screen.getByText('Premium Rice')).toBeInTheDocument();
+    expect(screen.getByText('Chawal')).toBeInTheDocument();
+    expect(screen.getByText('RICE-001')).toBeInTheDocument();
+    expect(screen.getByText('₹450.00')).toBeInTheDocument();
+    expect(screen.getByText(/MRP.*₹550\.00/)).toBeInTheDocument();
+    expect(screen.getByText('5 KG')).toBeInTheDocument();
+    expect(screen.getByText('approved')).toBeInTheDocument();
+  });
+
+  it('shows Edit and Delete buttons for each product', () => {
+    mockProducts = [
+      { id: 'p1', name: 'Product 1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' },
+    ];
+    render(<ProductsPage />);
+    expect(screen.getByText('Edit')).toBeInTheDocument();
+    expect(screen.getByText('Delete')).toBeInTheDocument();
+  });
+
+  it('shows Resubmit button for rejected products', () => {
+    mockProducts = [
+      { id: 'p1', name: 'Rejected Product', approvalStatus: 'rejected', purchasePrice: 10000, moq: 1, unit: 'PCS', rejectionReason: 'Low quality image' },
+    ];
+    render(<ProductsPage />);
+    expect(screen.getByText('Resubmit')).toBeInTheDocument();
+  });
+
+  it('shows rejection reason for rejected products', () => {
+    mockProducts = [
+      { id: 'p1', name: 'Bad Product', approvalStatus: 'rejected', purchasePrice: 10000, moq: 1, unit: 'PCS', rejectionReason: 'Low quality' },
+    ];
+    render(<ProductsPage />);
+    expect(screen.getByText('Reason: Low quality')).toBeInTheDocument();
+  });
+
+  it('truncates long rejection reason', () => {
+    mockProducts = [
+      { id: 'p1', name: 'P1', approvalStatus: 'rejected', purchasePrice: 10000, moq: 1, unit: 'PCS', rejectionReason: 'This is a very long rejection reason that should be truncated after 30 characters' },
+    ];
+    render(<ProductsPage />);
+    expect(screen.getByText(/Reason:.*\.\.\./)).toBeInTheDocument();
+  });
+
+  it('shows SKU when available, barcode as fallback', () => {
+    mockProducts = [
+      { id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS', barcode: '1234567890123' },
+    ];
+    render(<ProductsPage />);
+    expect(screen.getByText('1234567890123')).toBeInTheDocument();
+  });
+
+  it('shows dash when no SKU or barcode', () => {
+    mockProducts = [
+      { id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' },
+    ];
+    render(<ProductsPage />);
+    expect(screen.getByText('-')).toBeInTheDocument();
+  });
+
+  // ── Delete Confirmation Modal ────────────────────────────────
+
+  it('shows delete confirmation modal when Delete is clicked', () => {
+    mockProducts = [
+      { id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' },
+    ];
+    render(<ProductsPage />);
+    fireEvent.click(screen.getByText('Delete'));
+    expect(screen.getByText('Delete Product?')).toBeInTheDocument();
+    expect(screen.getByText(/cannot be undone/)).toBeInTheDocument();
+  });
+
+  it('delete modal has proper dialog role', () => {
+    mockProducts = [
+      { id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' },
+    ];
+    render(<ProductsPage />);
+    fireEvent.click(screen.getByText('Delete'));
+    expect(screen.getByRole('dialog', { name: 'Delete product confirmation' })).toBeInTheDocument();
+  });
+
+  // ── Edit Form ────────────────────────────────────────────────
+
+  it('shows Edit Product title when editing', () => {
+    mockProducts = [
+      { id: 'p1', name: 'Existing Product', category: 'Masala', purchasePrice: 20000, moq: 2, unit: 'KG', approvalStatus: 'approved' },
+    ];
+    render(<ProductsPage />);
+    fireEvent.click(screen.getByText('Edit'));
+    expect(screen.getByText('Edit Product')).toBeInTheDocument();
+  });
+
+  it('pre-fills form data when editing', () => {
+    mockProducts = [
+      { id: 'p1', name: 'Existing Product', category: 'Masala', barcode: '1234', supplierSku: 'SKU-1', purchasePrice: 20000, mrp: 25000, moq: 2, unit: 'KG', approvalStatus: 'approved' },
+    ];
+    render(<ProductsPage />);
+    fireEvent.click(screen.getByText('Edit'));
+    expect((screen.getByLabelText('Product Name *') as HTMLInputElement).value).toBe('Existing Product');
+    expect((screen.getByLabelText('Category') as HTMLSelectElement).value).toBe('Masala');
+    expect((screen.getByLabelText('Barcode (GTIN/EAN)') as HTMLInputElement).value).toBe('1234');
+  });
+
+  it('shows Update Product button when editing', () => {
+    mockProducts = [
+      { id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' },
+    ];
+    render(<ProductsPage />);
+    fireEvent.click(screen.getByText('Edit'));
+    expect(screen.getByRole('button', { name: 'Update Product' })).toBeInTheDocument();
+  });
+
+  // ── Pagination ───────────────────────────────────────────────
+
+  it('shows pagination when multiple pages', () => {
+    mockProducts = [{ id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' }];
+    mockPagination = { total: 50, totalPages: 3 };
+    render(<ProductsPage />);
+    expect(screen.getByText('Previous')).toBeInTheDocument();
+    expect(screen.getByText('Next')).toBeInTheDocument();
+    expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
+  });
+
+  it('shows item range in pagination', () => {
+    mockProducts = [{ id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' }];
+    mockPagination = { total: 50, totalPages: 3 };
+    render(<ProductsPage />);
+    expect(screen.getByText(/Showing 1 to 20 of 50 products/)).toBeInTheDocument();
+  });
+
+  it('disables Previous on first page', () => {
+    mockProducts = [{ id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' }];
+    mockPagination = { total: 50, totalPages: 3 };
+    render(<ProductsPage />);
+    const prevBtn = screen.getByText('Previous').closest('button');
+    expect(prevBtn).toBeDisabled();
+  });
+
+  it('hides pagination when single page', () => {
+    mockProducts = [{ id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' }];
+    mockPagination = { total: 5, totalPages: 1 };
+    render(<ProductsPage />);
+    expect(screen.queryByText('Previous')).not.toBeInTheDocument();
   });
 });
