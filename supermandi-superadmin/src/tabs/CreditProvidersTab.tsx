@@ -117,7 +117,7 @@ export function CreditProvidersTab() {
     });
   };
 
-  if (loading) return <div className="sa-p-24 sa-text-muted">Loading finance dashboard...</div>;
+  if (loading && !error) return <div className="sa-p-24 sa-text-muted">Loading finance dashboard...</div>;
 
   // Aggregate totals
   const totalDisbursed = stats.reduce((s, r) => s + Math.round(Number(r.total_disbursed_minor) || 0), 0);
@@ -128,7 +128,7 @@ export function CreditProvidersTab() {
 
   return (
     <div className="sa-p-24">
-      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={togglingId !== null} />}
       <h2 className="sa-text-xl sa-fw-600 sa-mb-20">Finance & Credit Providers</h2>
 
       {error && (

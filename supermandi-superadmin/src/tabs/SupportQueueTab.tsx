@@ -72,6 +72,7 @@ export function SupportQueueTab() {
   const [replyText, setReplyText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'open' | 'resolved' | 'all'>('open');
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
@@ -104,6 +105,8 @@ export function SupportQueueTab() {
 
   const selectConversation = async (convId: string) => {
     setSelectedConvId(convId);
+    setMessages([]);
+    setReplyText('');
     try {
       const result = await apiFetch(`/api/v1/chat/conversations/${convId}/messages?limit=100`);
       // API returns messages newest-first; reverse to show chronological order (oldest at top)
@@ -115,7 +118,8 @@ export function SupportQueueTab() {
   };
 
   const sendReply = async () => {
-    if (!replyText.trim() || !selectedConvId) return;
+    if (!replyText.trim() || !selectedConvId || sending) return;
+    setSending(true);
     try {
       await apiFetch(`/api/v1/chat/conversations/${selectedConvId}/messages`, {
         method: 'POST',
@@ -126,6 +130,8 @@ export function SupportQueueTab() {
       fetchQueue();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to send');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -292,11 +298,11 @@ export function SupportQueueTab() {
                       className="sa-input sa-radius-6 sa-text-md"
                       style={{ flex: 1, outline: 'none' }}
                     />
-                    <button onClick={sendReply} disabled={!replyText.trim()} className="sa-btn-sm sa-radius-6 sa-text-md" style={{
+                    <button onClick={sendReply} disabled={!replyText.trim() || sending} className="sa-btn-sm sa-radius-6 sa-text-md" style={{
                       padding: '0.5rem 1rem', border: 'none',
-                      background: replyText.trim() ? 'var(--color-primary-dark)' : 'var(--color-text-secondary)',
-                      color: 'var(--color-text-inverse)', cursor: 'pointer',
-                    }}>Send</button>
+                      background: replyText.trim() && !sending ? 'var(--color-primary-dark)' : 'var(--color-text-secondary)',
+                      color: 'var(--color-text-inverse)', cursor: sending ? 'not-allowed' : 'pointer',
+                    }}>{sending ? 'Sending...' : 'Send'}</button>
                   </div>
                 </>
               )}

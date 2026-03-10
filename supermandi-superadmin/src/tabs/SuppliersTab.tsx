@@ -3,6 +3,7 @@
 import React, { Component, useEffect, useState } from "react";
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
 import { toggleAutoApproval, publishProduct, batchProductAction } from "../api/suppliers";
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 // STG-822: Use Indian comma grouping for currency display
 const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
@@ -73,6 +74,7 @@ interface SuppliersTabProps {
   productActionLoading: Record<string, boolean>;
   handleOpenEditProduct: (product: PendingProduct) => void;
   handleApproveProduct: (productId: string) => void | Promise<void>;
+  handleApproveProductDirect: (productId: string) => Promise<void>;
   handleRejectProduct: (productId: string) => void;
   // Product edit modal
   editingProduct: PendingProduct | null;
@@ -128,6 +130,7 @@ export function SuppliersTab({
   productActionLoading,
   handleOpenEditProduct,
   handleApproveProduct,
+  handleApproveProductDirect,
   handleRejectProduct,
   editingProduct,
   handleCloseEditProduct,
@@ -139,6 +142,7 @@ export function SuppliersTab({
   editProductLoading,
   handleSubmitEditProduct,
 }: SuppliersTabProps) {
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   // T-119: Wrapper that marks form dirty on any edit
   function updateProductForm(fn: (f: SuppliersTabProps["editProductForm"]) => SuppliersTabProps["editProductForm"]) {
     setEditProductForm(fn);
@@ -705,10 +709,18 @@ export function SuppliersTab({
                     {productActionLoading[product.id] ? "Approving..." : "Approve"}
                   </button>
                   <button
-                    onClick={async () => {
-                      // FIX-047: Await approval before publishing (was setTimeout race)
-                      await handleApproveProduct(product.id);
-                      await handlePublishProduct(product.id);
+                    onClick={() => {
+                      setConfirmDialog({
+                        title: "Approve & Publish Product",
+                        message: `Approve and publish "${product.productName}" to all linked stores?`,
+                        confirmLabel: "Approve & Publish",
+                        variant: "warning",
+                        onConfirm: async () => {
+                          setConfirmDialog(null);
+                          await handleApproveProductDirect(product.id);
+                          await handlePublishProduct(product.id);
+                        },
+                      });
                     }}
                     disabled={productActionLoading[product.id] || publishLoading[product.id]}
                     style={{ background: "var(--color-primary)", color: "var(--color-text-inverse)" }}
@@ -1009,6 +1021,7 @@ export function SuppliersTab({
           </table>
         </div>
       )}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
     </section>
   );
 }

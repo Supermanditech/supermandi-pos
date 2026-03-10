@@ -182,15 +182,15 @@ export function RefundsTab() {
                         <div className="sa-flex sa-gap-4" style={{ justifyContent: "center" }}>
                           <button
                             onClick={() => handleApprove(r.id, r.refundAmount)}
-                            disabled={actionLoading === r.id}
-                            className="sa-btn-xs" style={{ background: "var(--color-success-soft)", color: "var(--color-success-dark)", border: "1px solid var(--color-success)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            disabled={actionLoading !== null}
+                            className="sa-btn-xs" style={{ background: "var(--color-success-soft)", color: "var(--color-success-dark)", border: "1px solid var(--color-success)", cursor: actionLoading !== null ? "not-allowed" : "pointer", opacity: actionLoading !== null && actionLoading !== r.id ? 0.5 : 1 }}
                           >
-                            Approve
+                            {actionLoading === r.id ? "Approving..." : "Approve"}
                           </button>
                           <button
                             onClick={() => setRejectId(r.id)}
-                            disabled={actionLoading === r.id}
-                            className="sa-btn-xs" style={{ background: "var(--color-error-soft)", color: "var(--color-error-dark)", border: "1px solid var(--color-error)", cursor: actionLoading === r.id ? "not-allowed" : "pointer" }}
+                            disabled={actionLoading !== null}
+                            className="sa-btn-xs" style={{ background: "var(--color-error-soft)", color: "var(--color-error-dark)", border: "1px solid var(--color-error)", cursor: actionLoading !== null ? "not-allowed" : "pointer", opacity: actionLoading !== null && actionLoading !== r.id ? 0.5 : 1 }}
                           >
                             Reject
                           </button>
