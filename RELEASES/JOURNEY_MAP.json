@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-39",
+    "journeyId": "JOURNEY-40",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7663,9 +7663,9 @@
       "name": "Supplier CSV Bulk Product Upload",
       "cluster": "C13",
       "description": "Supplier navigates to upload page → selects CSV file (max 5MB) → validation preview → submit → error/success reporting per row → products appear in product list.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J39-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
@@ -7673,12 +7673,42 @@
         "supplier-portal/src/lib/api.ts",
         "supplier-portal/src/lib/fileLimits.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "A1: Render page heading, subtitle, breadcrumb (Dashboard → CSV Upload)",
+        "A2: View CSV template section with 8 column headers and example row",
+        "A3: Download CSV template (client-side blob generation)",
+        "A4: Drag-and-drop CSV file onto upload zone",
+        "A5: Browse and select CSV file via hidden file input",
+        "A6: Reject non-CSV file with toast error",
+        "A7: Reject oversized file (>5MB from fileLimits) with toast error",
+        "A8: View file preview (name, size in KB, close button)",
+        "A9: Reset file selection via close button",
+        "A10: Click Upload & Import to trigger mutation",
+        "A11: View uploading state (spinner, indeterminate progress bar, disabled button)",
+        "A12: View result summary (imported/skipped/total counts)",
+        "A13: View per-row errors in result display",
+        "A14: Click Upload Another File to reset",
+        "A15: Click View Products link to navigate to /products"
+      ],
+      "guarantees": [
+        {"id": "G1", "name": "UI Elements", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/upload.test.tsx:heading,template,dropzone,preview,results,instructions"]},
+        {"id": "G2", "name": "UX 4-State", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/upload.test.tsx:idle-dropzone,uploading-spinner,success-results,error-toast"]},
+        {"id": "G3", "name": "Navigation", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/upload.test.tsx:breadcrumb,view-products-link"]},
+        {"id": "G4", "name": "Wiring", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/upload.test.tsx:mutate-call,invalidate-queries,toast-success"]},
+        {"id": "G5", "name": "Business Logic", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/upload.test.tsx:file-size-validation,csv-type-check,per-row-errors"]},
+        {"id": "G6", "name": "Edge Cases", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/upload.test.tsx:exact-size-limit,empty-files,no-toast-zero-import,fallback-error"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"test": "supplier-portal/src/__tests__/pages/dashboard/upload.test.tsx", "count": 50, "pr": 539, "sha": "6a08c272"}
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "File exactly at 5MB limit is accepted (not > limit)",
+        "Non-CSV files rejected by both extension and mime type check",
+        "Success toast only shown when imported > 0",
+        "Fallback error message 'Upload failed' when error.message is empty"
+      ]
     },
     "JOURNEY-40": {
       "id": "JOURNEY-40",
