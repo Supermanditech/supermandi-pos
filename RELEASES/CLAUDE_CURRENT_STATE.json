@@ -1,6 +1,6 @@
 {
-  "version": "215.0",
-  "lastUpdated": "2026-03-10T11:30:00.000Z",
+  "version": "214.0",
+  "lastUpdated": "2026-03-10T10:11:30.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,10 +104,10 @@
   "journeyExecutionMachineState": {
     "activeJourney": "JOURNEY-27",
     "activeJourneyStatus": "CERT-PENDING",
-    "activeAction": "J27_BLOCKER_RESOLUTION",
-    "auditMode": "BLOCKER_RESOLUTION",
+    "activeAction": "J27_USER_ACTION_ENUMERATION",
+    "auditMode": "USER_ACTION_ENUMERATION",
     "nextLayer": null,
-    "nextBlocker": "BLK-J27-001",
+    "nextBlocker": null,
     "completedBlockers": [
       {
         "id": "J20-TEST-001",
@@ -263,8 +263,8 @@
       "actionsWithFullLayerTrace": 55,
       "actionsWithEdgeCaseAudit": 55,
       "scopeSource": "Retailer-web surface rediscovery proved the historical J11-only inventory was incomplete. Canonical retailer inventory is now expanded to 15 journeys (J20-J33 plus preserved J11). Active restart point is JOURNEY-20 as the earliest retailer entry journey.",
-      "totalActions": 210,
-      "totalEdgeCases": 82,
+      "totalActions": 170,
+      "totalEdgeCases": 64,
       "identifiedIssues": [
         "POS_APP exhaustive rediscovery COMPLETE at 15 PARK-READY journeys",
         "JOURNEY-20 implementation is present across all traced auth/onboarding layers; current blockers are regression and coverage gaps, not missing product code",
@@ -5576,7 +5576,7 @@
     ],
     "completionMessageRule": "Claude must report either '100% required checks resolved' or 'NOT COMPLETE' with remaining check IDs."
   },
-  "nextAction": "J27 enumeration complete (40 actions, 18 edge cases). BLK-J27-001: InvoicesPage has no test file. Create test/J27-TEST-001-invoices-page-coverage branch, write comprehensive tests, push PR, merge, then PARK-READY.",
+  "nextAction": "Begin JOURNEY-27 (Retailer Invoice Viewing) USER_ACTION_ENUMERATION: enumerate real user actions, build cross-layer map and edge-case matrix, then choose first blocker.",
   "productionHardeningDeferred": {
     "status": "DONE â€” PR #288 merged (853a7d8)",
     "date": "2026-02-18",
