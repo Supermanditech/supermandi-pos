@@ -316,4 +316,88 @@ describe('InvoicesTab', () => {
       expect(invoicesApi.downloadInvoicePdf).toHaveBeenCalledWith('inv-1', 'INV/2024/001');
     });
   });
+
+  // =========================================================================
+  // Pagination
+  // =========================================================================
+
+  describe('pagination', () => {
+    it('shows pagination when total exceeds page size', async () => {
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: mockInvoiceList,
+        total: 100,
+      });
+
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByText(/of 100/)).toBeTruthy();
+      });
+    });
+
+    it('shows invoice count text', async () => {
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: mockInvoiceList,
+        total: 5,
+      });
+
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByText('5 invoices')).toBeTruthy();
+      });
+    });
+  });
+
+  // =========================================================================
+  // Detail modal content
+  // =========================================================================
+
+  describe('detail modal content', () => {
+    it('shows seller and buyer addresses in modal', async () => {
+      (invoicesApi.getInvoice as ReturnType<typeof vi.fn>).mockResolvedValue(mockInvoiceDetail);
+
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByText('View')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('View'));
+      await waitFor(() => {
+        expect(screen.getByText('123 Street')).toBeTruthy();
+        expect(screen.getByText('456 Avenue')).toBeTruthy();
+      });
+    });
+  });
+
+  // =========================================================================
+  // Multiple invoices
+  // =========================================================================
+
+  describe('multiple invoices', () => {
+    it('renders multiple invoice rows', async () => {
+      const multiList = [
+        ...mockInvoiceList,
+        {
+          ...mockInvoiceList[0],
+          id: 'inv-2',
+          invoiceNumber: 'INV/2024/002',
+          sellerName: 'Supplier C',
+          buyerName: 'Store D',
+          status: 'issued' as const,
+        },
+      ];
+
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: multiList,
+        total: 2,
+      });
+
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByText('INV/2024/001')).toBeTruthy();
+        expect(screen.getByText('INV/2024/002')).toBeTruthy();
+        expect(screen.getByText('Supplier C')).toBeTruthy();
+        expect(screen.getByText('ISSUED')).toBeTruthy();
+      });
+    });
+  });
 });
