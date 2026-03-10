@@ -7898,9 +7898,9 @@
       "name": "Supplier Profile & Email Verification",
       "cluster": "C13",
       "description": "Supplier views profile page → edits personal info → triggers email verification (code-based) → verifies email → changes password → manages notification preferences.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J44-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
@@ -7908,33 +7908,87 @@
         "supplier-portal/src/lib/api.ts",
         "supplier-portal/src/lib/auth.tsx"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "Render heading, subtitle, breadcrumb",
+        "Business info card with name, GSTIN, verification badge (verified/pending/rejected)",
+        "ARIA tablist with 3 tabs (Contact Details, Bank Details, Change Password)",
+        "Contact Details tab: form pre-fill, disabled email, editable fields, Save Changes",
+        "Bank Details tab: pre-fill, Save Bank Details, info box, verification banners (pending/rejected/verified)",
+        "IFSC input uppercase enforcement",
+        "Change Password tab: current/new/confirm fields, strength checklist, show/hide toggles, mismatch warning",
+        "Loading skeleton when auth loading"
+      ],
+      "guarantees": [
+        "Email field is disabled (read-only after registration)",
+        "All 3 verification badge variants render correctly",
+        "All 3 bank verification status banners render correctly",
+        "Password strength checklist shows 4 criteria",
+        "Show/hide toggles for all 3 password fields with aria-labels",
+        "IFSC auto-uppercase on input"
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {
+          "testFile": "supplier-portal/src/__tests__/pages/dashboard/profile.test.tsx",
+          "testCount": 39,
+          "mergedPR": 543,
+          "mergedSHA": "5cb48817"
+        }
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Supplier with no bank details renders empty form",
+        "Supplier with missing GSTIN shows dash placeholder",
+        "Tab switching preserves form state"
+      ]
     },
     "JOURNEY-45": {
       "id": "JOURNEY-45",
       "name": "Supplier Notifications",
       "cluster": "C13",
       "description": "Supplier views notification list → filters by type/date/read status → marks notifications read → navigates to linked order/KYC/payment context.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J45-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
         "supplier-portal/src/app/(dashboard)/notifications/page.tsx",
         "supplier-portal/src/lib/api.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "Render heading, breadcrumb, Refresh button",
+        "Total count and unread count display",
+        "Empty state with description",
+        "Loading skeleton",
+        "Error state with Retry button",
+        "Notification list with titles, body, formatted date",
+        "Type-specific icons (Truck for order_status, Package for delivery_update, AlertTriangle for grn_mismatch, Bell for default)",
+        "Unread dot indicator",
+        "Mark all read button (conditional on unread)",
+        "Pagination (Previous/Next, range text, disabled state)"
+      ],
+      "guarantees": [
+        "All 4 notification type icons render correctly",
+        "Unread dot visible only for unread notifications",
+        "Mark all read button hidden when all are read",
+        "Pagination disabled on first page",
+        "Refresh triggers re-fetch"
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {
+          "testFile": "supplier-portal/src/__tests__/pages/dashboard/notifications.test.tsx",
+          "testCount": 29,
+          "mergedPR": 544,
+          "mergedSHA": "bab50676"
+        }
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Multiple notification types render together",
+        "Pagination hidden when total fits one page"
+      ]
     },
     "JOURNEY-46": {
       "id": "JOURNEY-46",

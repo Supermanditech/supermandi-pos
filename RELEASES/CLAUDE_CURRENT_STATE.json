@@ -1,6 +1,6 @@
 {
-  "version": "238.0",
-  "lastUpdated": "2026-03-11T05:00:00.000Z",
+  "version": "239.0",
+  "lastUpdated": "2026-03-11T06:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,7 +104,7 @@
   "journeyExecutionMachineState": {
     "activeJourney": "SUPPLIER_WEB_REDISCOVERY",
     "activeJourneyStatus": "PENDING",
-    "activeAction": "J43_SUPPLIER_INVOICES_TESTS_DONE",
+    "activeAction": "J45_SUPPLIER_NOTIFICATIONS_TESTS_DONE",
     "auditMode": "EXHAUSTIVE_STABILIZATION",
     "nextLayer": null,
     "nextBlocker": null,
@@ -405,6 +405,24 @@
         "mergedSHA": "ffe68e3e",
         "testCount": 35,
         "regressions": 0
+      },
+      {
+        "id": "J44-TEST-001",
+        "title": "Supplier profile page tests expanded (12→39): tabs, verification badges, bank banners, password checklist, IFSC, loading",
+        "status": "DONE",
+        "mergedPR": 543,
+        "mergedSHA": "5cb48817",
+        "testCount": 39,
+        "regressions": 0
+      },
+      {
+        "id": "J45-TEST-001",
+        "title": "Supplier notifications page tests expanded (6→29): type icons, unread dots, mark-all-read, pagination, error/empty states",
+        "status": "DONE",
+        "mergedPR": 544,
+        "mergedSHA": "bab50676",
+        "testCount": 29,
+        "regressions": 0
       }
     ],
     "enumerationCoverage": {
@@ -690,11 +708,11 @@
         "coverageClaimsSuspended": true
       },
       "SUPPLIER_WEB": {
-        "parkReady": 11,
+        "parkReady": 13,
         "certSealed": 0,
         "certBlocked": 0,
         "certInProgress": 0,
-        "certPending": 5,
+        "certPending": 3,
         "needsReaudit": 1,
         "coverageClaimsSuspended": true
       },
