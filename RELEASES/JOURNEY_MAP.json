@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-25",
+  "currentAuditJourney": "JOURNEY-26",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
