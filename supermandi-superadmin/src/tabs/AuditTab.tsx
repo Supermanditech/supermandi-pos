@@ -6,7 +6,9 @@ import { formatDateTime } from "../lib/formatters";
 // #186.11: CSV export helper
 // REQ.AUDIT.W5.SUPERADMIN.AUDIT-CSV-NON-RFC4180.001: RFC 4180 compliant field escaping
 function escapeField(v: string | number | null | undefined): string {
-  const s = String(v ?? "");
+  let s = String(v ?? "");
+  // R4-SANIT-001: Prevent CSV formula injection (=, +, -, @, tab, CR at start)
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   // RFC 4180: quote fields containing comma, double-quote, or newline; escape inner quotes by doubling
   if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
     return `"${s.replace(/"/g, '""')}"`;

@@ -60,8 +60,8 @@ export function GrnAlertsTab({
             <tbody>
               {grnAlerts.map((a) => (
                 <tr key={a.id}>
-                  <td className="sa-text-sm">{a.store_name || a.store_id.slice(0, 8)}</td>
-                  <td className="sa-text-sm">{a.order_number || a.purchase_order_id.slice(0, 8)}</td>
+                  <td className="sa-text-sm">{a.store_name || a.store_id?.slice(0, 8) || "-"}</td>
+                  <td className="sa-text-sm">{a.order_number || a.purchase_order_id?.slice(0, 8) || "-"}</td>
                   <td
                     className="sa-fw-600 sa-nowrap"
                     style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", cursor: "default" }}

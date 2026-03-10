@@ -52,7 +52,7 @@ export async function fetchGrnAlerts(params?: {
     cache: "no-store",
     headers: { Accept: "application/json", ...getAuthHeaders() },
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({ _parseError: true }));
   if (!res.ok) {
     if (res.status === 401) throw new Error("Unauthorized");
     throw new Error(sanitizeErrorMessage(data?.error ? String(data.error) : null, `Request failed (${res.status})`));
@@ -75,7 +75,7 @@ export async function updateGrnAlert(
     },
     body: JSON.stringify(input),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({ _parseError: true }));
   if (!res.ok) {
     if (res.status === 401) throw new Error("Unauthorized");
     const msg = data?.error?.message || data?.error || `Request failed (${res.status})`;

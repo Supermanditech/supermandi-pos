@@ -528,7 +528,7 @@ export function StoresTab({
                                 Enable Credit
                               </label>
                               <span className="sa-text-sm sa-text-muted">
-                                Limit: ₹{((s.creditLimit ?? s.credit_limit ?? 0) / 100).toLocaleString("en-IN")}
+                                Limit: ₹{((Number(s.creditLimit ?? s.credit_limit) || 0) / 100).toLocaleString("en-IN")}
                               </span>
                             </div>
                           </div>
