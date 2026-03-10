@@ -12267,30 +12267,37 @@
       "name": "Retailer Admin Approval Queues",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Admin-gated retailer routes for supplier and product approval queues, including approve/reject flows and edit-before-approve product paths.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "Declared from retailer-web surface inventory scan on 2026-03-09 after historical J11 proved the retailer platform inventory was undercounted. Not yet enumerated.",
+      "status": "PARK-READY",
+      "lastAuditedAction": "A18",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "Enumerated 18 actions, 10 edge cases. BLK-J33-001 (test coverage) resolved: SupplierQueuePage 4→28, ProductQueuePage 3→35 (PR #533, SHA 0e119cc2). G1-G6 signed at 0e119cc2. RETAILER-WEB PLATFORM CLOSURE: All 15 retailer journeys now PARK-READY.",
       "openGaps": [],
-      "cccBlocker": null,
+      "cccBlocker": {
+        "id": "BLK-J33-001",
+        "description": "Test coverage for SupplierQueuePage (4 tests) and ProductQueuePage (3 tests) too low for PARK-READY",
+        "status": "DONE",
+        "resolution": "SupplierQueuePage expanded to 28 tests, ProductQueuePage expanded to 35 tests — PR #533 merged at 0e119cc2",
+        "resolvedAt": "2026-03-10",
+        "resolvedSha": "0e119cc2"
+      },
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer admin or owner session", "pending supplier or product approval items, or known empty-state coverage"], "resetScriptNote": "" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
-        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/admin/SupplierQueuePage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/admin/ProductQueuePage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/admin/suppliers.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/products.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": "0e119cc2", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/admin/SupplierQueuePage.tsx", "auditedAtSha": "0e119cc2", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/admin/ProductQueuePage.tsx", "auditedAtSha": "0e119cc2", "reauditRequired": false },
+        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": "0e119cc2", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/admin/suppliers.ts", "auditedAtSha": "0e119cc2", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/products.ts", "auditedAtSha": "0e119cc2", "reauditRequired": false }
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0e119cc2", "citations": ["SupplierQueuePage.tsx:137 — h1 title", "SupplierQueuePage.tsx:188-241 — supplier table with 6 columns", "SupplierQueuePage.tsx:247-295 — reject modal with dialog role", "ProductQueuePage.tsx:302 — h1 title", "ProductQueuePage.tsx:353-411 — product table with 8 columns", "ProductQueuePage.tsx:416-601 — edit modal with form", "ProductQueuePage.tsx:604-651 — reject modal"], "notes": "All UI elements verified: tables, buttons, modals, form inputs" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0e119cc2", "citations": ["SupplierQueuePage.tsx:179-182 — loading", "SupplierQueuePage.tsx:183-186 — empty", "SupplierQueuePage.tsx:157-161 — error", "SupplierQueuePage.tsx:150-154 — success", "ProductQueuePage.tsx:344-347 — loading", "ProductQueuePage.tsx:348-350 — empty", "ProductQueuePage.tsx:322-326 — error", "ProductQueuePage.tsx:315-319 — success"], "notes": "4-state UX verified for both pages" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0e119cc2", "citations": ["SupplierQueuePage.tsx:46 — 401 silent return", "ProductQueuePage.tsx:87 — 401 silent return", "SupplierQueuePage.tsx:45 — authFetch with accessToken", "ProductQueuePage.tsx:86 — authFetch with accessToken"], "notes": "Auth guard and 401 silent return verified" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0e119cc2", "citations": ["SupplierQueuePage.tsx:45 — GET /admin/suppliers/pending", "SupplierQueuePage.tsx:70-73 — POST approve", "SupplierQueuePage.tsx:96-102 — POST reject with reason", "ProductQueuePage.tsx:86 — GET /admin/products/pending", "ProductQueuePage.tsx:168-173 — PUT edit", "ProductQueuePage.tsx:184-188 — POST approve", "ProductQueuePage.tsx:240-245 — POST reject"], "notes": "All API calls use authFetch with token" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0e119cc2", "citations": ["SupplierQueuePage.test.tsx — 28 tests across 6 describe blocks", "ProductQueuePage.test.tsx — 35 tests across 6 describe blocks"], "notes": "63 total tests covering UI, wiring, states, approve/reject flows, modals, edge cases" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "0e119cc2", "citations": ["App.tsx — /s/:storeCode/admin/supplier-queue route", "App.tsx — /s/:storeCode/admin/product-queue route"], "notes": "Navigation routes verified in router config" }
       },
       "scope": {
         "posScreens": [],
@@ -12301,10 +12308,45 @@
         "portals": ["retailer-admin", "supplier-portal"],
         "invariants": []
       },
-      "actions": [],
-      "crossPortalMatrix": [],
+      "actions": [
+        "A1: Navigate to Supplier Queue page",
+        "A2: View pending suppliers table — business name, GSTIN, contact, products, requested date",
+        "A3: See pending approvals count stat",
+        "A4: Click Approve on a supplier — POST API, success message, list re-fetch",
+        "A5: Click Reject — opens modal with supplier name confirmation",
+        "A6: Enter rejection reason in textarea (optional)",
+        "A7: Confirm reject — POST with reason, success message, modal closes, list re-fetch",
+        "A8: Cancel reject modal — closes without action",
+        "A9: Click Refresh — re-fetches pending list",
+        "A10: Navigate to Product Queue page",
+        "A11: View pending products table — name, supplier, SKU/barcode, purchase price, MRP, MOQ, date",
+        "A12: Click Quick Approve — POST approve without editing",
+        "A13: Click Edit & Approve — opens edit modal pre-filled with product name",
+        "A14: Edit product name, category, margin type (percent/fixed), margin value",
+        "A15: Toggle BNPL eligibility, select max payment days",
+        "A16: See retailer price preview calculated from margin",
+        "A17: Click Save & Approve — PUT edit then POST approve, success message",
+        "A18: Click Reject on product — modal with reason, confirm reject"
+      ],
+      "crossPortalMatrix": [
+        "Pending suppliers come from supplier-portal self-registration",
+        "Pending products come from supplier product catalog submissions",
+        "Approved products flow into retailer store product inventory"
+      ],
       "regressionLocks": [],
-      "knownIssues": []
+      "knownIssues": [],
+      "edgeCases": [
+        "E1: Null GSTIN shows dash in supplier table",
+        "E2: Null phone/email not rendered in contact column",
+        "E3: Null SKU/barcode shows dash in product table",
+        "E4: Null MRP shows dash",
+        "E5: Null MOQ defaults to 1",
+        "E6: 401 on supplier list silently returns",
+        "E7: 401 on product list silently returns",
+        "E8: Approve/reject buttons disabled during actionLoading",
+        "E9: Rejecting... state shown during reject API call",
+        "E10: Processing... state shown during save & approve"
+      ]
     }
   }
 }
