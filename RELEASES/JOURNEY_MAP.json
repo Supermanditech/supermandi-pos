@@ -7995,9 +7995,9 @@
       "name": "Supplier Chat & Support",
       "cluster": "C13",
       "description": "Supplier opens chat page → two-panel view (conversation list + active chat) → sends messages to SuperMandi support → receives responses via SSE/polling → help/FAQ page.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J46-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
@@ -8006,42 +8006,104 @@
         "supplier-portal/src/lib/api.ts",
         "supplier-portal/src/lib/reconnectingEventSource.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "Chat: breadcrumb, Messages heading, search conversations input",
+        "Chat: empty state when no conversation selected",
+        "Chat: loading skeleton for conversations",
+        "Chat: conversation list with title, preview, unread badge, type icons (Headphones/MessageSquare)",
+        "Chat: search filters conversations by title/name/preview",
+        "Chat: message input with send button, send error hint",
+        "Chat: thread header with conversation title and type label",
+        "Help: heading, subtitle, breadcrumb",
+        "Help: Contact Us section with email (mailto link) and live chat",
+        "Help: 6 FAQ questions with answers",
+        "Help: copyright footer"
+      ],
+      "guarantees": [
+        "Search input has ARIA label for accessibility",
+        "Send button has ARIA label for accessibility",
+        "Message input has ARIA label for accessibility",
+        "Email link uses mailto: protocol",
+        "All 6 FAQ questions and answers render"
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {
+          "testFile": "supplier-portal/src/__tests__/pages/dashboard/chat.test.tsx",
+          "testCount": 24,
+          "mergedPR": 545,
+          "mergedSHA": "6e1f3434"
+        },
+        {
+          "testFile": "supplier-portal/src/__tests__/pages/dashboard/help.test.tsx",
+          "testCount": 16,
+          "mergedPR": 545,
+          "mergedSHA": "6e1f3434"
+        }
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Conversation with null lastMessagePreview shows 'No messages'",
+        "Conversation with null title falls back to otherParticipantName",
+        "Unread badge hidden when count is 0"
+      ]
     },
     "JOURNEY-47": {
       "id": "JOURNEY-47",
       "name": "Supplier BNPL Orders",
       "cluster": "C13",
       "description": "Supplier views BNPL (Buy Now Pay Later) order list → separate status flow from regular orders → order details with BNPL payment terms.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J47-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
         "supplier-portal/src/app/(dashboard)/bnpl-orders/page.tsx",
         "supplier-portal/src/lib/api.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "Render heading, subtitle, breadcrumb",
+        "4 summary cards (Total Financed, Outstanding, Repaid, Active Orders)",
+        "ARIA tablist filter (All, Active, Overdue, Paid)",
+        "Loading skeleton",
+        "Error state with Retry button",
+        "Empty state when no orders",
+        "Table with 7 columns (Store, Provider, Amount, Outstanding, Due Date, Status, Guaranteed)",
+        "Status badges (Active/Partial/Overdue/Paid)",
+        "Payment guaranteed indicator (ShieldCheck + Yes / Internal)",
+        "Pagination (Previous/Next, page info, disabled state)"
+      ],
+      "guarantees": [
+        "Table has ARIA label for accessibility",
+        "Filter tabs use ARIA tablist with aria-selected",
+        "Payment guaranteed column distinguishes Yes vs Internal",
+        "Outstanding amount shows red when positive",
+        "Pagination disabled on first page"
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {
+          "testFile": "supplier-portal/src/__tests__/pages/dashboard/bnpl-orders.test.tsx",
+          "testCount": 35,
+          "mergedPR": 546,
+          "mergedSHA": "c23f8398"
+        }
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Multiple orders with same store name render correctly",
+        "Pagination hidden when total fits single page"
+      ]
     },
     "JOURNEY-48": {
       "id": "JOURNEY-48",
       "name": "Supplier Auth Guards & Session Management",
       "cluster": "C13",
       "description": "Edge middleware enforces supplier_token cookie on all /supplier/dashboard/* routes → redirect to login with ?redirect → 30-min idle timeout with 5-min warning → proactive token refresh every 60s → activity tracking → logout confirmation modal.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J48-SHARED-SCOPE",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
@@ -8049,10 +8111,33 @@
         "supplier-portal/src/lib/auth.tsx",
         "supplier-portal/src/app/(dashboard)/layout.tsx"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "Redirect to login when not authenticated",
+        "Loading spinner during auth check",
+        "Logout button with confirmation modal",
+        "Navigation links in sidebar",
+        "Skip to content link for accessibility",
+        "BuildStamp in footer",
+        "Auth context: login, logout, token management"
+      ],
+      "guarantees": [
+        "Unauthenticated users redirected to login",
+        "Loading state shown during auth check",
+        "Logout requires modal confirmation"
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {
+          "testFile": "supplier-portal/src/__tests__/pages/dashboard/layout.test.tsx",
+          "testCount": 14,
+          "note": "Existing tests cover auth guards, redirect, logout, navigation"
+        },
+        {
+          "testFile": "supplier-portal/src/__tests__/lib/auth.test.tsx",
+          "testCount": 7,
+          "note": "Existing tests cover auth context login/logout/token"
+        }
+      ],
       "knownIssues": [],
       "edgeCases": []
     },

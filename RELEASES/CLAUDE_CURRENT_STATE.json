@@ -1,6 +1,6 @@
 {
-  "version": "239.0",
-  "lastUpdated": "2026-03-11T06:00:00.000Z",
+  "version": "240.0",
+  "lastUpdated": "2026-03-11T07:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,7 +104,7 @@
   "journeyExecutionMachineState": {
     "activeJourney": "SUPPLIER_WEB_REDISCOVERY",
     "activeJourneyStatus": "PENDING",
-    "activeAction": "J45_SUPPLIER_NOTIFICATIONS_TESTS_DONE",
+    "activeAction": "J48_SUPPLIER_AUTH_GUARDS_TESTS_DONE",
     "auditMode": "EXHAUSTIVE_STABILIZATION",
     "nextLayer": null,
     "nextBlocker": null,
@@ -423,6 +423,30 @@
         "mergedSHA": "bab50676",
         "testCount": 29,
         "regressions": 0
+      },
+      {
+        "id": "J46-TEST-001",
+        "title": "Supplier chat (24) + help (16) page tests: conversation list, search, message input, FAQ, contact section",
+        "status": "DONE",
+        "mergedPR": 545,
+        "mergedSHA": "6e1f3434",
+        "testCount": 40,
+        "regressions": 0
+      },
+      {
+        "id": "J47-TEST-001",
+        "title": "Supplier BNPL orders page tests (0→35): summary cards, status filter, table, payment guarantee, pagination",
+        "status": "DONE",
+        "mergedPR": 546,
+        "mergedSHA": "c23f8398",
+        "testCount": 35,
+        "regressions": 0
+      },
+      {
+        "id": "J48-SHARED-SCOPE",
+        "title": "Auth guards & session management: covered by existing layout.test (14) + auth.test (7) = 21 tests",
+        "status": "DONE",
+        "note": "Shared scope with layout tests — redirect on unauthenticated, loading spinner, logout confirmation already covered"
       }
     ],
     "enumerationCoverage": {
@@ -708,11 +732,11 @@
         "coverageClaimsSuspended": true
       },
       "SUPPLIER_WEB": {
-        "parkReady": 13,
+        "parkReady": 16,
         "certSealed": 0,
         "certBlocked": 0,
         "certInProgress": 0,
-        "certPending": 3,
+        "certPending": 0,
         "needsReaudit": 1,
         "coverageClaimsSuspended": true
       },
