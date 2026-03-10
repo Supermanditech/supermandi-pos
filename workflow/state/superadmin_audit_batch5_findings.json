@@ -2,7 +2,7 @@
   "audit_id": "SA-AUDIT-005",
   "round": 5,
   "date": "2026-03-11",
-  "status": "FINDINGS_PARKED",
+  "status": "ANALYZED_BACKEND_DEFERRED",
   "methodology": "Cross-platform user interaction audit: SuperAdmin → POS App, SuperAdmin → Supplier Portal, SuperAdmin → Retailer Admin. Traced every SA action that cascades to other platforms. Verified backend cascade chains, notification gaps, and race conditions between concurrent operations.",
   "total_findings": 61,
   "by_severity": {
@@ -273,20 +273,30 @@
     {"rank": 14, "id": "R5-NOTIFY-005 + R5-SUP-003", "title": "Application rejection must trigger notification to applicant", "severity": "HIGH"},
     {"rank": 15, "id": "R5-RET-001", "title": "Retailer portal AuthContext must check store status", "severity": "CRITICAL"}
   ],
+  "implementation_analysis": {
+    "frontend_fixable": 0,
+    "backend_required": 61,
+    "reason": "ALL R5 findings are cross-platform cascade issues requiring backend route changes (store/supplier state machines, session revocation, token invalidation), notification service wiring (FCM, email, WhatsApp to suspension/deactivation flows), distributed locking (optimistic locking on store status, FOR UPDATE on invoice void), and cache invalidation (storeStatusGate 30s TTL). Zero frontend-only fixes possible.",
+    "backend_priority_groups": [
+      "P0: Store suspension cascade → device tokens + sessions (R5-CASCADE-001, R5-POS-001, R5-RET-010)",
+      "P0: Cache invalidation on status change (R5-RACE-001, R5-RACE-002)",
+      "P0: User/staff suspension → session revocation (R5-RET-002, R5-CASCADE-003)",
+      "P1: Notification wiring for suspension/deactivation flows (R5-NOTIFY-001 through R5-NOTIFY-010)",
+      "P1: Supplier suspension → catalog visibility (R5-SUP-001, R5-CASCADE-005)",
+      "P2: Optimistic locking on shared resources (R5-RACE-006)",
+      "P2: Invoice void + payment race condition (R5-RACE-003)"
+    ]
+  },
   "cumulative_totals": {
-    "R1_found": 19,
-    "R1_fixed": 9,
-    "R2_found": 98,
-    "R2_fixed": 6,
-    "R3_found": 203,
-    "R3_fixed": 0,
-    "R4_found": 154,
-    "R4_fixed": 0,
-    "R5_found": 61,
-    "R5_fixed": 0,
+    "R1_found": 19, "R1_fixed": 19,
+    "R2_found": 98, "R2_fixed": 45,
+    "R3_found": 203, "R3_fixed_in_r3": 15, "R3_already_fixed": 27,
+    "R4_found": 154, "R4_fixed_in_r4": 6, "R4_already_fixed": 3,
+    "R5_found": 61, "R5_fixed": 0, "R5_backend_deferred": 61,
     "total_found": 535,
-    "total_fixed": 15,
-    "total_remaining": 520
+    "total_fixed_frontend": 85,
+    "total_backend_deferred": "~200+ (R5 + R3/R4 backend items)",
+    "total_feature_requests": "~150+ (R3/R4 architecture/UX items)"
   },
   "prior_rounds": {
     "R1": "workflow/state/superadmin_audit_batch1.json",
