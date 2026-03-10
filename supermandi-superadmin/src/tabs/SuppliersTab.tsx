@@ -331,6 +331,7 @@ export function SuppliersTab({
                     style={{ width: "100%", marginBottom: 8 }}
                     value={selectedSupplierForLink[request.id] || ""}
                     onChange={(e) => setSelectedSupplierForLink((prev) => ({ ...prev, [request.id]: e.target.value }))}
+                    aria-label="Link to verified supplier"
                   >
                     <option value="">-- Select verified supplier --</option>
                     {verifiedSuppliers.map((s) => (
@@ -892,6 +893,7 @@ export function SuppliersTab({
                 <select
                   value={editProductForm.marginType}
                   onChange={(e) => updateProductForm((f) => ({ ...f, marginType: e.target.value as "fixed" | "percent" }))}
+                  aria-label="Margin type"
                 >
                   <option value="fixed">Fixed Amount (INR)</option>
                   <option value="percent">Percentage (%)</option>
@@ -963,6 +965,7 @@ export function SuppliersTab({
                 <select
                   value={editProductForm.invoiceModel}
                   onChange={(e) => updateProductForm((f) => ({ ...f, invoiceModel: e.target.value as "buy_resell" | "platform_fee" | "" }))}
+                  aria-label="Invoice model"
                 >
                   <option value="buy_resell">Buy & Resell</option>
                   <option value="platform_fee">Platform Fee (Commission)</option>
@@ -988,6 +991,7 @@ export function SuppliersTab({
                 <select
                   value={editProductForm.gstRate}
                   onChange={(e) => updateProductForm((f) => ({ ...f, gstRate: e.target.value }))}
+                  aria-label="GST rate"
                 >
                   <option value="">Not set</option>
                   <option value="0">0%</option>

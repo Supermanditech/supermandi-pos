@@ -28,7 +28,8 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  async function handleSendOtp(e: React.FormEvent) {
+  // R4-TS-001: Accept SyntheticEvent base type (works for both form submit and button click)
+  async function handleSendOtp(e: React.SyntheticEvent) {
     e.preventDefault();
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail || !trimmedEmail.includes("@")) {
@@ -177,7 +178,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
               <button
                 type="button"
                 className="loginLink"
-                onClick={(e) => { handleSendOtp(e as any); }}
+                onClick={(e) => { handleSendOtp(e); }}
                 disabled={loading || countdown > 0}
               >
                 {countdown > 0 ? `Resend in ${countdown}s` : "Resend OTP"}

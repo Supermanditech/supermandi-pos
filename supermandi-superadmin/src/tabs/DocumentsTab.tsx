@@ -82,7 +82,7 @@ export function DocumentsTab({
           <button onClick={() => refreshDocuments()} disabled={documentsLoading}>
             {documentsLoading ? "Loading..." : "Refresh"}
           </button>
-          <select value={documentsEntityFilter} onChange={(e) => { setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier"); setDocumentsPage(() => 0); }} className="sa-select">
+          <select value={documentsEntityFilter} onChange={(e) => { setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier"); setDocumentsPage(() => 0); }} className="sa-select" aria-label="Filter by entity type">
             <option value="">All Entities</option>
             <option value="store">Stores</option>
             <option value="supplier">Suppliers</option>

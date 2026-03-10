@@ -98,7 +98,7 @@ export function StaffTab({
             </div>
             <div>
               <label className="sa-form-label">Role</label>
-              <select value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value as any)} className="sa-select sa-w-full sa-radius-6">
+              <select value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value as any)} className="sa-select sa-w-full sa-radius-6" aria-label="Staff role">
                 <option value="CASHIER">CASHIER (sell only)</option>
                 <option value="STOCK_MANAGER">STOCK_MANAGER (sell + stock-in)</option>
                 <option value="MANAGER">MANAGER (all operations)</option>
@@ -131,6 +131,7 @@ export function StaffTab({
                     {/* #186.15: Inline role change dropdown */}
                     <select
                       value={s.role}
+                      aria-label={`Role for ${s.name}`}
                       onChange={(e) => {
                         const newRole = e.target.value as "CASHIER" | "STOCK_MANAGER" | "MANAGER";
                         if (newRole === s.role) return;

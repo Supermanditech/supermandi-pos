@@ -94,6 +94,7 @@ export function DevicesTab({
               value={enrollStoreId}
               onChange={(e) => setEnrollStoreId(e.target.value)}
               className="sa-select sa-radius-4" style={{ minWidth: 260 }}
+              aria-label="Select store for enrollment"
             >
               <option value="">-- Select a store --</option>
               {storeDirectory.map((s) => (
@@ -286,6 +287,7 @@ export function DevicesTab({
                       className="selectSmall"
                       value={draft.deviceType}
                       onChange={(e) => updateDeviceDraft(d.id, { deviceType: e.target.value as DeviceType })}
+                      aria-label="Device type"
                     >
                       {DEVICE_TYPE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -299,6 +301,7 @@ export function DevicesTab({
                       value={draft.printingMode}
                       onChange={(e) => updateDeviceDraft(d.id, { printingMode: e.target.value })}
                       title="Printing Mode"
+                      aria-label="Printing mode"
                     >
                       <option value="DIRECT_ESC_POS">Direct ESC/POS</option>
                       <option value="SHARE_TO_PRINTER_APP">Printer App</option>

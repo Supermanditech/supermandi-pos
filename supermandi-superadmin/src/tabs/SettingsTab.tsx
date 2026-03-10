@@ -45,8 +45,8 @@ export function SettingsTab({
     try {
       const flags = await fetchStoreFeatureFlags(storeId);
       setStoreFlags(flags);
-    } catch (e: any) {
-      setStoreFlagsError(e?.message || "Failed to load store flags");
+    } catch (e: unknown) {
+      setStoreFlagsError(e instanceof Error ? e.message : "Failed to load store flags");
     } finally {
       setStoreFlagsLoading(false);
     }
@@ -65,8 +65,8 @@ export function SettingsTab({
     try {
       await setStoreOverride(selectedStoreId, flagKey, enabled);
       await loadStoreFlags(selectedStoreId);
-    } catch (e: any) {
-      setStoreFlagsError(e?.message || "Failed to set override");
+    } catch (e: unknown) {
+      setStoreFlagsError(e instanceof Error ? e.message : "Failed to set override");
     } finally {
       setStoreFlagSaving((p) => ({ ...p, [flagKey]: false }));
     }
@@ -78,8 +78,8 @@ export function SettingsTab({
     try {
       await removeStoreOverride(selectedStoreId, flagKey);
       await loadStoreFlags(selectedStoreId);
-    } catch (e: any) {
-      setStoreFlagsError(e?.message || "Failed to remove override");
+    } catch (e: unknown) {
+      setStoreFlagsError(e instanceof Error ? e.message : "Failed to remove override");
     } finally {
       setStoreFlagSaving((p) => ({ ...p, [flagKey]: false }));
     }

@@ -61,7 +61,7 @@ export function UsersTab({
             </div>
             <div className="control">
               <label>Type</label>
-              <select value={createUserForm.actor_type} onChange={(e) => setCreateUserForm((f) => ({ ...f, actor_type: e.target.value }))}>
+              <select value={createUserForm.actor_type} onChange={(e) => setCreateUserForm((f) => ({ ...f, actor_type: e.target.value }))} aria-label="User type">
                 <option value="store">Store</option>
                 <option value="supplier">Supplier</option>
                 <option value="platform">Platform Admin</option>

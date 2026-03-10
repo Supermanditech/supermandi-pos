@@ -197,7 +197,7 @@ export function InvoicesTab() {
       {/* Table */}
       {invoices.length > 0 && (
         <div className="tableWrap">
-          <table>
+          <table className="table">
             <thead>
               <tr>
                 <th>Invoice #</th><th>Date</th><th>Model</th><th>Type</th>
@@ -290,7 +290,7 @@ export function InvoicesTab() {
 
                 {/* Items table */}
                 <div className="tableWrap sa-mb-16">
-                  <table>
+                  <table className="table">
                     <thead>
                       <tr>
                         <th>#</th><th>Product</th><th>HSN</th><th className="sa-text-right">Qty</th>

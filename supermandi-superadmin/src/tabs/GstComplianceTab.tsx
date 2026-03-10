@@ -1,5 +1,7 @@
 // T-235: SuperAdmin GST Compliance Dashboard Tab
+// R5-REITERATION: ConfirmDialog for compliance-critical export action
 import { useCallback, useEffect, useState } from "react";
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import { fetchGstStoresOverview, fetchGstSummary, exportGstr1, type GstStoresOverviewResponse, type GstSummary } from "../api/gstCompliance";
 
 // STG-813: Use Indian comma grouping (₹1,00,000.00 not ₹100000.00)
@@ -23,6 +25,7 @@ export function GstComplianceTab() {
   const [overviewError, setOverviewError] = useState("");
   const [detailError, setDetailError] = useState("");
   const [exportingStoreId, setExportingStoreId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
@@ -53,8 +56,7 @@ export function GstComplianceTab() {
     }
   };
 
-  const handleExport = async (storeId: string) => {
-    if (!window.confirm(`Export GSTR-1 data for store ${storeId} (${month})? This is a compliance-critical action.`)) return;
+  const doExport = async (storeId: string) => {
     setExportingStoreId(storeId);
     try {
       const blob = await exportGstr1(storeId, month);
@@ -72,6 +74,17 @@ export function GstComplianceTab() {
     } finally {
       setExportingStoreId(null);
     }
+  };
+
+  // R5-REITERATION: Replace window.confirm with ConfirmDialog
+  const handleExport = (storeId: string) => {
+    setConfirmDialog({
+      title: "Export GSTR-1 Data",
+      message: `Export GSTR-1 data for store ${storeId} (${month})? This is a compliance-critical action.`,
+      confirmLabel: "Export",
+      variant: "danger",
+      onConfirm: () => { setConfirmDialog(null); doExport(storeId); },
+    });
   };
 
   return (
@@ -280,6 +293,7 @@ export function GstComplianceTab() {
           </div>
         </div>
       )}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
     </div>
   );
 }
