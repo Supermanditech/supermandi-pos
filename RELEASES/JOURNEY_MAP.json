@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-32",
+  "currentAuditJourney": "JOURNEY-33",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
@@ -12175,30 +12175,37 @@
       "name": "Retailer Reorder Management (Web)",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer uses web reorder suggestions, pending approvals, reorder settings, and purchase-order linkage across reorder decision paths.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "Declared from retailer-web surface inventory scan on 2026-03-09 after historical J11 proved the retailer platform inventory was undercounted. Not yet enumerated.",
+      "status": "PARK-READY",
+      "lastAuditedAction": "A22",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "Enumerated 22 actions, 12 edge cases. BLK-J32-001 (test coverage) resolved: ReorderPage 2→36, PurchaseOrdersPage 7→37 (PR #532, SHA db464e63). G1-G6 signed at db464e63.",
       "openGaps": [],
-      "cccBlocker": null,
+      "cccBlocker": {
+        "id": "BLK-J32-001",
+        "description": "Test coverage for ReorderPage (2 tests) and PurchaseOrdersPage (7 tests) too low for PARK-READY",
+        "status": "DONE",
+        "resolution": "ReorderPage expanded to 36 tests, PurchaseOrdersPage expanded to 37 tests — PR #532 merged at db464e63",
+        "resolvedAt": "2026-03-10",
+        "resolvedSha": "db464e63"
+      },
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with reorder suggestions or pending reorder state"], "resetScriptNote": "" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
-        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/ReorderPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/pages/PurchaseOrdersPage.tsx", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/reorder.ts", "auditedAtSha": null, "reauditRequired": false },
-        { "path": "backend/src/routes/v1/retailer-admin/purchaseOrders.ts", "auditedAtSha": null, "reauditRequired": false }
+        { "path": "retailer-admin/src/App.tsx", "auditedAtSha": "db464e63", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/ReorderPage.tsx", "auditedAtSha": "db464e63", "reauditRequired": false },
+        { "path": "retailer-admin/src/pages/PurchaseOrdersPage.tsx", "auditedAtSha": "db464e63", "reauditRequired": false },
+        { "path": "retailer-admin/src/lib/api.ts", "auditedAtSha": "db464e63", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/reorder.ts", "auditedAtSha": "db464e63", "reauditRequired": false },
+        { "path": "backend/src/routes/v1/retailer-admin/purchaseOrders.ts", "auditedAtSha": "db464e63", "reauditRequired": false }
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "db464e63", "citations": ["ReorderPage.tsx:196 — h2 title", "ReorderPage.tsx:200-208 — 3 tabs with aria role+selected", "PurchaseOrdersPage.tsx:166 — h1 title", "PurchaseOrdersPage.tsx:225-266 — table with headers", "PurchaseOrdersPage.tsx:295-384 — detail modal"], "notes": "All UI elements verified: tabs, tables, badges, form inputs, buttons, modals" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "db464e63", "citations": ["ReorderPage.tsx:212-215 — loading state per tab", "ReorderPage.tsx:217-219 — empty state", "ReorderPage.tsx:293-296 — error with retry", "PurchaseOrdersPage.tsx:212-214 — loading", "PurchaseOrdersPage.tsx:216-223 — empty with filter-aware message", "PurchaseOrdersPage.tsx:201-208 — error with retry"], "notes": "4-state UX (loading/success/empty/error) verified for both pages" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "db464e63", "citations": ["ReorderPage.tsx:94-95 — 401 silent return (settings)", "PurchaseOrdersPage.tsx:111 — 401 silent return (list)", "ReorderPage.tsx:90-115 — fetchSettings with accessToken", "PurchaseOrdersPage.tsx:99-124 — fetchOrders with accessToken"], "notes": "Auth guard and 401 silent return verified for both pages" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "db464e63", "citations": ["ReorderPage.tsx:94 — authFetch('/api/v1/retailer-admin/reorder/settings', accessToken)", "ReorderPage.tsx:136 — authFetch suggestions", "ReorderPage.tsx:158 — authFetch pending", "PurchaseOrdersPage.tsx:110 — authFetch purchase-orders?params", "PurchaseOrdersPage.tsx:142 — authFetch detail by id"], "notes": "All API calls use authFetch with token, URL-routed mock pattern in tests" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "db464e63", "citations": ["ReorderPage.test.tsx — 36 tests across 6 describe blocks", "PurchaseOrdersPage.test.tsx — 37 tests across 7 describe blocks"], "notes": "73 total tests covering UI, wiring, states, validation, edge cases" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "db464e63", "citations": ["App.tsx — /s/:storeCode/reorder route", "App.tsx — /s/:storeCode/purchase-orders route"], "notes": "Navigation routes verified in router config" }
       },
       "scope": {
         "posScreens": [],
@@ -12209,10 +12216,51 @@
         "portals": ["retailer-admin", "pos", "supplier-portal"],
         "invariants": []
       },
-      "actions": [],
-      "crossPortalMatrix": [],
+      "actions": [
+        "A1: Navigate to Reorder Suggestions page",
+        "A2: View Low Stock tab (default) — table with product, category, current/min/target stock, prices",
+        "A3: See empty state when no suggestions",
+        "A4: See currency formatting (paise to INR ₹)",
+        "A5: See dash for null values (category, maxReorderQty, prices)",
+        "A6: Click Refresh on suggestions tab",
+        "A7: Switch to Pending Reorders tab — triggers fetch",
+        "A8: View pending reorders table with product, supplier, quantity, status badge, unit price",
+        "A9: See pending count in tab label",
+        "A10: See status badge with correct class (warning for pending, success for fulfilled)",
+        "A11: Click Refresh on pending tab",
+        "A12: Switch to Settings tab — view form with checkboxes and inputs",
+        "A13: Toggle reorder enabled checkbox",
+        "A14: Toggle require approval checkbox",
+        "A15: Toggle notify on low stock checkbox",
+        "A16: Change default lead days input",
+        "A17: Change auto-approve threshold input",
+        "A18: Click Save Settings — PUT request, success message",
+        "A19: Navigate to Purchase Orders page — view PO list table",
+        "A20: Filter POs by status dropdown (7 statuses + All)",
+        "A21: Search POs by supplier name",
+        "A22: Click PO row or View button — open detail modal with line items, notes, WhatsApp follow-up"
+      ],
+      "crossPortalMatrix": [
+        "ReorderPage suggestions sourced from POS stock-in and product catalog",
+        "PurchaseOrders created from POS reorder flow or supplier portal",
+        "WhatsApp follow-up links to supplier phone from supplier-portal data"
+      ],
       "regressionLocks": [],
-      "knownIssues": []
+      "knownIssues": [],
+      "edgeCases": [
+        "E1: Zero-stock item highlighted in suggestions",
+        "E2: Null supplier name and null unit price show dashes in pending tab",
+        "E3: Lead days validation (0 or >90 rejected)",
+        "E4: Negative auto-approve threshold rejected",
+        "E5: Inputs disabled during settings save",
+        "E6: 401 on settings fetch silently returns (no error banner)",
+        "E7: 401 on PO list fetch silently returns",
+        "E8: Filtered empty state shows different message than no-data empty state",
+        "E9: Pagination hidden when total <= limit (20)",
+        "E10: Prev disabled on first page, Next disabled on last page",
+        "E11: Detail modal shows loading state then content",
+        "E12: Detail modal error shows retry hint"
+      ]
     },
     "JOURNEY-33": {
       "id": "JOURNEY-33",
