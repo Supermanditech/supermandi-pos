@@ -1,6 +1,6 @@
 {
-  "version": "232.0",
-  "lastUpdated": "2026-03-11T01:30:00.000Z",
+  "version": "233.0",
+  "lastUpdated": "2026-03-11T02:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -104,7 +104,7 @@
   "journeyExecutionMachineState": {
     "activeJourney": "SUPPLIER_WEB_REDISCOVERY",
     "activeJourneyStatus": "PENDING",
-    "activeAction": "J36_SUPPLIER_KYC_TESTS_DONE",
+    "activeAction": "J37_SUPPLIER_DASHBOARD_TESTS_DONE",
     "auditMode": "EXHAUSTIVE_STABILIZATION",
     "nextLayer": null,
     "nextBlocker": null,
@@ -342,6 +342,15 @@
         "mergedSHA": "5c2bb8d2",
         "testCount": 41,
         "regressions": 0
+      },
+      {
+        "id": "J37-TEST-001",
+        "title": "Supplier dashboard tests expanded (9→31): stats, errors, quick actions, orders table",
+        "status": "DONE",
+        "mergedPR": 537,
+        "mergedSHA": "549119bf",
+        "testCount": 31,
+        "regressions": 0
       }
     ],
     "enumerationCoverage": {
@@ -400,6 +409,7 @@
         "J34-TEST-001 DONE: Supplier registration tests expanded (16→85) landed on main at 783df838 (PR #534, 85 tests). JOURNEY-34 PARK-READY.",
         "J35-TEST-001 DONE: Supplier login tests expanded (11→59) landed on main at 4041da05 (PR #535, 59 tests). JOURNEY-35 PARK-READY.",
         "J36-TEST-001 DONE: Supplier KYC page tests expanded (11→41) landed on main at 5c2bb8d2 (PR #536, 41 tests). JOURNEY-36 PARK-READY.",
+        "J37-TEST-001 DONE: Supplier dashboard tests expanded (9→31) landed on main at 549119bf (PR #537, 31 tests). JOURNEY-37 PARK-READY.",
         "SUPERADMIN_WEB historical JOURNEY-09 is preserved, JOURNEY-12 remains pending, and the full superadmin platform inventory is not yet exhaustive"
       ]
     },
@@ -424,6 +434,7 @@
       "J34-TEST-001 DONE. JOURNEY-34 PARK-READY (G1-G6 signed, 85 tests: 49 onboard + 36 register).",
       "J35-TEST-001 DONE. JOURNEY-35 PARK-READY (G1-G6 signed, 83 tests: 59 login + 13 forgot-password + 11 reset-password).",
       "J36-TEST-001 DONE. JOURNEY-36 PARK-READY (G1-G6 signed, 58 tests: 41 KYC page + 17 LimitedModeBanner).",
+      "J37-TEST-001 DONE. JOURNEY-37 PARK-READY (G1-G6 signed, 31 tests: 31 DashboardPage).",
       "after JOURNEY-25 PARK-READY, continue the expanded retailer-web journey inventory through JOURNEY-26 to JOURNEY-33 plus preserved JOURNEY-11",
       "after retailer-web completion, activate POS_FEATURE_AUDIT_PACK_01 and audit/fix the deferred POS product/search/payment/supplier/cart pack",
       "after the pending POS audit pack, repeat exhaustive rediscovery for supplier-web, then superadmin-web",
@@ -615,11 +626,11 @@
         "coverageClaimsSuspended": true
       },
       "SUPPLIER_WEB": {
-        "parkReady": 4,
+        "parkReady": 5,
         "certSealed": 0,
         "certBlocked": 0,
         "certInProgress": 0,
-        "certPending": 12,
+        "certPending": 11,
         "needsReaudit": 1,
         "coverageClaimsSuspended": true
       },

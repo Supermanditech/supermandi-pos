@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-37",
+    "journeyId": "JOURNEY-38",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7564,21 +7564,48 @@
       "name": "Supplier Dashboard Overview",
       "cluster": "C13",
       "description": "Supplier lands on dashboard → sees stats cards (orders, products, earnings) → recent orders list → recent notifications → quick navigation to detail pages.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J37-TEST-001",
+      "lastAuditedAt": "2026-03-11T02:00:00.000Z",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
         "supplier-portal/src/app/(dashboard)/dashboard/page.tsx",
         "supplier-portal/src/lib/api.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        {"id": "J37-A01", "description": "Welcome header with business name and subtitle"},
+        {"id": "J37-A02", "description": "4 stat cards: Total Products, Pending Approval, Active Orders, Total Revenue with loading pulse and null fallback"},
+        {"id": "J37-A03", "description": "Stat card links: products→/products, orders→/orders, revenue unlinked"},
+        {"id": "J37-A04", "description": "Stats error state with retry triggering refetchStats+refetchOrders+refetchProducts"},
+        {"id": "J37-A05", "description": "Pending products warning: count with pluralization, 'not visible to retailers', hidden when 0"},
+        {"id": "J37-A06", "description": "Quick actions: Add Product/Upload CSV enabled for verified, disabled for unverified, View Orders always linked"},
+        {"id": "J37-A07", "description": "Recent orders: table with Order ID (truncated), Store, Items, Total, Status; loading/error/empty states"},
+        {"id": "J37-A08", "description": "Revenue formatting via formatCurrency, pagination fallback when stats null"}
+      ],
+      "guarantees": [
+        {"id": "G1", "name": "UI elements", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx:98-120 (stat cards, quick actions, orders section)"]},
+        {"id": "G2", "name": "UX 4-state", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx:121-150 (loading pulse, error, empty, data)"]},
+        {"id": "G3", "name": "Navigation", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx:131-133 (stat card links), :180-200 (quick action links)"]},
+        {"id": "G4", "name": "Wiring", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx:140-150 (refetch on retry)"]},
+        {"id": "G5", "name": "Business logic", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx:160-200 (verified vs unverified quick actions, pluralization)"]},
+        {"id": "G6", "name": "Edge cases", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx:230-245 (null supplier, pagination fallback)"]},
+        {"id": "G-fmt", "name": "Formatting", "signed": true, "citations": ["supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx:110 (revenue formatting), :220 (order ID truncation)"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"testFile": "supplier-portal/src/__tests__/pages/dashboard/dashboard.test.tsx", "testCount": 31, "mergedPR": 537, "mergedSHA": "549119bf"}
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Null supplier graceful handling",
+        "Stats loading shows pulse animation in stat cards",
+        "Null stat values show em-dash (—)",
+        "Pending products pluralization (1 product vs N products)",
+        "Unverified supplier: Add Product + Upload CSV disabled",
+        "Order ID truncated to first 8 chars",
+        "Stats null fallback to pagination.total from products/orders queries"
+      ]
     },
     "JOURNEY-38": {
       "id": "JOURNEY-38",
