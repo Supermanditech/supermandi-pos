@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-29",
+  "currentAuditJourney": "JOURNEY-30",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
@@ -11880,12 +11880,12 @@
       "name": "Retailer Customer Management",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer browses customers, searches, inspects customer detail context, and validates customer-facing commercial data flows.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "Enumerated 2026-03-10: 32 actions, 14 edge cases across CustomersPage.tsx (275 lines, two-view: list+detail) and customers.ts (128 lines, two endpoints). Existing tests: 6 smoke only — missing detail view, WhatsApp, debounced search, purchase history, edge cases (blocker).",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J29-A32",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "PARK-READY 2026-03-10: 60 tests (expanded from 6 smoke). BLK-J29-001 resolved at d4dc7ad8 (PR #529). All 32 actions and 14 edge cases covered. G1-G6 signed.",
       "openGaps": [],
-      "cccBlocker": "BLK-J29-001",
+      "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "store with customers or known empty-state coverage"], "resetScriptNote": "" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
@@ -11897,12 +11897,12 @@
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "d4dc7ad8", "citations": ["CustomersPage.tsx:50-69 list fetch", "CustomersPage.tsx:71-88 detail fetch", "customers.ts:30-79 list endpoint", "customers.ts:85-127 detail endpoint"], "notes": "All API contracts exercised via 60 tests" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "d4dc7ad8", "citations": ["CustomersPage.tsx:271 loading", "CustomersPage.tsx:224-229 empty", "CustomersPage.tsx:222 error", "CustomersPage.tsx:233-268 success list", "CustomersPage.tsx:115-193 success detail"], "notes": "All 4 UX states (loading/success/empty/error) tested for both list and detail views" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "d4dc7ad8", "citations": ["App.tsx:330 LimitedModeGuard wraps route", "CustomersPage.tsx:95-101 debounce logic", "CustomersPage.tsx:251 WhatsApp stopPropagation + phone formatting"], "notes": "Navigation guards, debounced search, WhatsApp formatting all tested" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "d4dc7ad8", "citations": ["customers.ts:34-35 storeId from x-actor-id header", "customers.ts:57 WHERE store_id = $1", "customers.ts:98 WHERE id = $1 AND store_id = $2"], "notes": "Store isolation enforced via JWT-derived storeId on all queries" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "d4dc7ad8", "citations": ["CustomersPage.tsx:260,263 formatCurrency minor units", "customers.ts:17 credit_limit_minor, total_purchases_minor column aliases"], "notes": "Currency values consistently in minor units (paise), formatted via INR formatter" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "d4dc7ad8", "citations": ["CustomersPage.test.tsx 60 tests, 0 regressions"], "notes": "60 comprehensive tests covering list, detail, search, WhatsApp, purchase history, status badges, empty/loading/error, edge cases" }
       },
       "scope": {
         "posScreens": [],
@@ -11968,7 +11968,7 @@
       ],
       "regressionLocks": [],
       "knownIssues": [
-        { "id": "BLK-J29-001", "title": "CustomersPage has only 6 smoke tests — missing detail view, WhatsApp, debounced search, purchase history, edge cases for 275-line two-view component", "status": "OPEN", "severity": "HIGH" }
+        { "id": "BLK-J29-001", "title": "CustomersPage has only 6 smoke tests — missing detail view, WhatsApp, debounced search, purchase history, edge cases for 275-line two-view component", "status": "DONE", "severity": "HIGH", "resolvedPR": 529, "resolvedSHA": "d4dc7ad8", "testCount": 60 }
       ]
     },
     "JOURNEY-30": {
