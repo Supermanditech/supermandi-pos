@@ -62,6 +62,9 @@ function okResponse(data: unknown) {
 describe('SupportQueueTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // jsdom does not implement scrollIntoView — mock it to prevent uncaught exception
+    // when SupportQueueTab's useEffect calls messagesEndRef.current?.scrollIntoView()
+    Element.prototype.scrollIntoView = vi.fn();
     mockFetchWithTimeout.mockResolvedValue(okResponse({ conversations: mockConversations }));
   });
 

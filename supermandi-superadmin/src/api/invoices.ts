@@ -159,7 +159,8 @@ export async function listInvoices(filters: InvoiceListFilters = {}): Promise<{ 
 }
 
 export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}`, {
+  // R3-SEC-003: Encode path params to prevent URL traversal
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${encodeURIComponent(invoiceId)}`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('Failed to get invoice. Please try again.');
@@ -212,7 +213,7 @@ export async function createSupplierSaleInvoice(input: CreateCommissionInvoiceIn
 }
 
 export async function issueInvoice(invoiceId: string): Promise<void> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}/issue`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${encodeURIComponent(invoiceId)}/issue`, {
     method: "POST",
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -221,7 +222,7 @@ export async function issueInvoice(invoiceId: string): Promise<void> {
 }
 
 export async function recordPayment(invoiceId: string, input: RecordPaymentInput): Promise<void> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}/payment`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${encodeURIComponent(invoiceId)}/payment`, {
     method: "POST",
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -230,7 +231,7 @@ export async function recordPayment(invoiceId: string, input: RecordPaymentInput
 }
 
 export async function cancelInvoice(invoiceId: string, reason?: string): Promise<void> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}/cancel`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${encodeURIComponent(invoiceId)}/cancel`, {
     method: "POST",
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
@@ -239,11 +240,11 @@ export async function cancelInvoice(invoiceId: string, reason?: string): Promise
 }
 
 export function getInvoicePdfUrl(invoiceId: string): string {
-  return `${API_BASE}/api/v1/admin/invoices/${invoiceId}/pdf`;
+  return `${API_BASE}/api/v1/admin/invoices/${encodeURIComponent(invoiceId)}/pdf`;
 }
 
 export async function downloadInvoicePdf(invoiceId: string, invoiceNumber: string): Promise<void> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${invoiceId}/pdf`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/${encodeURIComponent(invoiceId)}/pdf`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('Failed to download PDF. Please try again.');

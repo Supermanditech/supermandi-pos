@@ -45,7 +45,8 @@ export async function fetchPendingSuppliers(params?: { limit?: number; offset?: 
   const base = requireApiBase();
   const url = new URL(`${base}/api/v1/admin/pending-suppliers`, window.location.origin);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
-  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) url.searchParams.set("offset", String(params.offset));
 
   const res = await fetchWithTimeout(url.toString(), {
     method: "GET",
@@ -75,7 +76,8 @@ export async function fetchVerifiedSuppliers(params?: { search?: string; limit?:
   const url = new URL(`${base}/api/v1/admin/verified-suppliers`, window.location.origin);
   if (params?.search) url.searchParams.set("search", params.search);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
-  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) url.searchParams.set("offset", String(params.offset));
 
   const res = await fetchWithTimeout(url.toString(), {
     method: "GET",

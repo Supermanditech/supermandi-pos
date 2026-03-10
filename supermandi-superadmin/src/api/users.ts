@@ -22,7 +22,8 @@ export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; o
 export async function fetchUsers(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<UserRecord>> {
   const url = new URL(`${API_BASE}/api/v1/admin/users`, window.location.origin);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
-  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) url.searchParams.set("offset", String(params.offset));
 
   const res = await fetchWithTimeout(url.toString(), {
     cache: "no-store",

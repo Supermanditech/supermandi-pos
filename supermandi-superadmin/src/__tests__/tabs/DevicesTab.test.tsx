@@ -74,7 +74,7 @@ function createProps(overrides: Partial<Parameters<typeof DevicesTab>[0]> = {}) 
     devices: [] as any[],
     storeDirectory: [],
     handleRevokeEnrollment: vi.fn(),
-    revokeLoading: false,
+    revokeLoading: null,
     ...overrides,
   };
 }
@@ -189,7 +189,7 @@ describe('DevicesTab', () => {
 
   it('shows Revoking... when revokeLoading', () => {
     const enrollment = { code: 'ABC', expiresAt: '2026-02-17T00:00:00Z', qrPayload: 'data' };
-    render(<DevicesTab {...createProps({ enrollment, revokeLoading: true })} />);
+    render(<DevicesTab {...createProps({ enrollment, revokeLoading: 'ABC' })} />);
     expect(screen.getByText('Revoking...')).toBeTruthy();
   });
 

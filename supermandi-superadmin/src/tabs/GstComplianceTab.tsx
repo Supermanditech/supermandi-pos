@@ -1,5 +1,7 @@
 // T-235: SuperAdmin GST Compliance Dashboard Tab
+// R5-REITERATION: ConfirmDialog for compliance-critical export action
 import { useCallback, useEffect, useState } from "react";
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import { fetchGstStoresOverview, fetchGstSummary, exportGstr1, type GstStoresOverviewResponse, type GstSummary } from "../api/gstCompliance";
 
 // STG-813: Use Indian comma grouping (₹1,00,000.00 not ₹100000.00)
@@ -20,17 +22,19 @@ export function GstComplianceTab() {
   const [storeSummary, setStoreSummary] = useState<GstSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [exporting, setExporting] = useState(false);
+  const [overviewError, setOverviewError] = useState("");
+  const [detailError, setDetailError] = useState("");
+  const [exportingStoreId, setExportingStoreId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
-    setError("");
+    setOverviewError("");
     try {
       const data = await fetchGstStoresOverview(month);
       setOverview(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load GST overview");
+      setOverviewError(err instanceof Error ? err.message : "Failed to load GST overview");
     } finally {
       setLoading(false);
     }
@@ -41,19 +45,19 @@ export function GstComplianceTab() {
   const loadStoreDetail = async (storeId: string) => {
     setSelectedStore(storeId);
     setDetailLoading(true);
-    setError("");
+    setDetailError("");
     try {
       const data = await fetchGstSummary(storeId, month);
       setStoreSummary(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load store GST detail");
+      setDetailError(err instanceof Error ? err.message : "Failed to load store GST detail");
     } finally {
       setDetailLoading(false);
     }
   };
 
-  const handleExport = async (storeId: string) => {
-    setExporting(true);
+  const doExport = async (storeId: string) => {
+    setExportingStoreId(storeId);
     try {
       const blob = await exportGstr1(storeId, month);
       const url = URL.createObjectURL(blob);
@@ -66,10 +70,21 @@ export function GstComplianceTab() {
         URL.revokeObjectURL(url);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Export failed");
+      setOverviewError(err instanceof Error ? err.message : "Export failed");
     } finally {
-      setExporting(false);
+      setExportingStoreId(null);
     }
+  };
+
+  // R5-REITERATION: Replace window.confirm with ConfirmDialog
+  const handleExport = (storeId: string) => {
+    setConfirmDialog({
+      title: "Export GSTR-1 Data",
+      message: `Export GSTR-1 data for store ${storeId} (${month})? This is a compliance-critical action.`,
+      confirmLabel: "Export",
+      variant: "danger",
+      onConfirm: () => { setConfirmDialog(null); doExport(storeId); },
+    });
   };
 
   return (
@@ -87,7 +102,7 @@ export function GstComplianceTab() {
             className="sa-input"
             aria-label="Select month"
             value={month}
-            onChange={(e) => { setMonth(e.target.value); setSelectedStore(null); setStoreSummary(null); }}
+            onChange={(e) => { setMonth(e.target.value); setOverview(null); setSelectedStore(null); setStoreSummary(null); }}
           />
           <button className="sa-btn-ghost-sm" onClick={loadOverview}>
             Refresh
@@ -95,7 +110,7 @@ export function GstComplianceTab() {
         </div>
       </div>
 
-      {error && <div className="sa-alert-error sa-mb-16" role="alert">{error}</div>}
+      {overviewError && <div className="sa-alert-error sa-mb-16" role="alert">{overviewError}</div>}
 
       {/* Totals summary */}
       {overview && (
@@ -175,8 +190,8 @@ export function GstComplianceTab() {
                   <button
                     className="sa-btn-xs sa-badge-ok"
                     onClick={() => handleExport(s.storeId)}
-                    disabled={exporting}
-                    style={{ cursor: exporting ? "not-allowed" : "pointer" }}
+                    disabled={exportingStoreId !== null}
+                    style={{ cursor: exportingStoreId !== null ? "not-allowed" : "pointer" }}
                   >
                     GSTR-1
                   </button>
@@ -197,6 +212,7 @@ export function GstComplianceTab() {
               <h3 className="sa-modal-title" style={{ margin: 0 }}>GST Detail — {month}</h3>
               <button onClick={() => { setSelectedStore(null); setStoreSummary(null); }} className="sa-btn-text" style={{ fontSize: "1.25rem" }} aria-label="Close">&times;</button>
             </div>
+            {detailError && <div className="sa-alert-error sa-mb-16" role="alert">{detailError}</div>}
             {detailLoading ? (
               <div className="sa-p-24 sa-text-center sa-text-muted">Loading...</div>
             ) : storeSummary ? (
@@ -277,6 +293,7 @@ export function GstComplianceTab() {
           </div>
         </div>
       )}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
     </div>
   );
 }

@@ -78,7 +78,8 @@ export function WhatsAppTab() {
     setLoading(true);
     setError(null);
     try {
-      const [statusRes, statsRes, logsRes] = await Promise.all([
+      // R4-ERR-007: Use Promise.allSettled so partial failure doesn't lose all data
+      const [statusRes, statsRes, logsRes] = await Promise.allSettled([
         fetchWhatsAppStatus(),
         fetchWhatsAppStats(),
         fetchWhatsAppLogs({
@@ -89,11 +90,27 @@ export function WhatsAppTab() {
           contextType: filterContext || undefined,
         }),
       ]);
-      setConfigured(statusRes.configured);
-      setStats(statsRes);
-      setLogs(logsRes.data);
-      setTotal(logsRes.total);
-    } catch (err) {
+      const errors: string[] = [];
+      if (statusRes.status === "fulfilled") {
+        setConfigured(statusRes.value.configured);
+      } else {
+        errors.push("status");
+      }
+      if (statsRes.status === "fulfilled") {
+        setStats(statsRes.value);
+      } else {
+        errors.push("stats");
+      }
+      if (logsRes.status === "fulfilled") {
+        setLogs(logsRes.value.data);
+        setTotal(logsRes.value.total);
+      } else {
+        errors.push("logs");
+      }
+      if (errors.length > 0) {
+        setError(`Failed to load: ${errors.join(", ")}`);
+      }
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load WhatsApp data");
     } finally {
       setLoading(false);
@@ -116,7 +133,7 @@ export function WhatsAppTab() {
         companyNumber: cfg.companyNumber,
         companyMessage: cfg.companyMessage,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       setCtaError(err instanceof Error ? err.message : "Failed to load CTA config");
     } finally {
       setCtaLoading(false);
@@ -162,7 +179,7 @@ export function WhatsAppTab() {
           setCtaSaveResult("Saved. Landing page will reflect the new numbers on next page load.");
           setCtaEditing(false);
           await loadCtaConfig();
-        } catch (err) {
+        } catch (err: unknown) {
           setCtaSaveResult(`Error: ${err instanceof Error ? err.message : "Save failed"}`);
         } finally {
           setCtaSaving(false);
@@ -189,12 +206,31 @@ export function WhatsAppTab() {
       } else {
         setSendResult(`Failed: ${result.error || "Unknown error"}`);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setSendResult(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(false);
     }
   };
+
+  // R3-WA-004: Auto-clear result banners after 8 seconds
+  useEffect(() => {
+    if (!sendResult) return;
+    const t = setTimeout(() => setSendResult(null), 8000);
+    return () => clearTimeout(t);
+  }, [sendResult]);
+
+  useEffect(() => {
+    if (!broadcastResult) return;
+    const t = setTimeout(() => setBroadcastResult(null), 8000);
+    return () => clearTimeout(t);
+  }, [broadcastResult]);
+
+  useEffect(() => {
+    if (!ctaSaveResult) return;
+    const t = setTimeout(() => setCtaSaveResult(null), 8000);
+    return () => clearTimeout(t);
+  }, [ctaSaveResult]);
 
   // R7.SA.008: Show confirmation before single WhatsApp send (irrevocable action)
   // R2-FIX WA-003: Validate phone format before send
@@ -228,7 +264,7 @@ export function WhatsAppTab() {
       });
       setBroadcastResult(`Sent: ${result.sent}, Failed: ${result.failed}${result.errors.length > 0 ? ` — ${result.errors.join("; ")}` : ""}`);
       if (result.sent > 0) { setBroadcastPhones(""); setBroadcastMessage(""); loadData(); }
-    } catch (err) {
+    } catch (err: unknown) {
       setBroadcastResult(err instanceof Error ? err.message : "Broadcast failed");
     } finally {
       setBroadcasting(false);
@@ -287,6 +323,15 @@ export function WhatsAppTab() {
                       superadminMessage: ctaConfig.superadminMessage,
                       companyNumber: ctaConfig.companyNumber,
                       companyMessage: ctaConfig.companyMessage,
+                    });
+                  } else {
+                    // R3-WA-006: Reset draft when ctaConfig is null
+                    setCtaDraft({
+                      enabled: true,
+                      superadminNumber: "",
+                      superadminMessage: "",
+                      companyNumber: "",
+                      companyMessage: "",
                     });
                   }
                   setCtaSaveResult(null);
@@ -647,7 +692,8 @@ export function WhatsAppTab() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="sa-pagination" style={{ justifyContent: "center" }}>
-          <button className="sa-btn-ghost-sm" disabled={currentPage <= 1} onClick={() => setOffset(offset - limit)}
+          {/* R3-WA-007: Guard offset against going negative */}
+          <button className="sa-btn-ghost-sm" disabled={currentPage <= 1} onClick={() => setOffset(Math.max(0, offset - limit))}
             style={{ opacity: currentPage <= 1 ? 0.5 : 1 }}>
             Prev
           </button>

@@ -79,6 +79,15 @@ export function SupportQueueTab() {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const selectConvRef = useRef(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  // R3-SUP_Q-004: Auto-clear error after 10 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 10_000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   const fetchQueue = useCallback(async () => {
     setLoading(true);
@@ -113,6 +122,16 @@ export function SupportQueueTab() {
       fetchTemplates();
     }
   }, [view, fetchQueue, fetchTemplates]);
+
+  // R3-SUP_Q-010: Auto-scroll message thread to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // R3-SUP_Q-017: Focus detail panel when conversation selected (enables Escape key)
+  useEffect(() => {
+    if (selectedConvId) detailPanelRef.current?.focus();
+  }, [selectedConvId]);
 
   const selectConversation = async (convId: string) => {
     const token = ++selectConvRef.current;
@@ -157,7 +176,8 @@ export function SupportQueueTab() {
     try {
       await apiFetch(`/api/v1/chat/support/${convId}/assign`, {
         method: 'POST',
-        body: JSON.stringify({ agentName: 'Admin' }),
+        // R3-SUP_Q-005: Use 'SuperAdmin Agent' as default (no user-name context available)
+        body: JSON.stringify({ agentName: 'SuperAdmin Agent' }),
       });
       fetchQueue();
       if (selectedConvId === convId) selectConversation(convId);
@@ -177,7 +197,9 @@ export function SupportQueueTab() {
       setSelectedConvId(null);
       setMessages([]);
     } catch (err: unknown) {
+      // R3-SUP_Q-006: On resolve failure, do NOT clear selected conversation (preserve context)
       setError(err instanceof Error ? err.message : 'Failed to resolve');
+      fetchQueue();
     } finally {
       setActionLoading(false);
     }
@@ -268,7 +290,14 @@ export function SupportQueueTab() {
             </div>
 
             {/* Message Thread */}
-            <div className="sa-flex-col" style={{ flex: 1 }}>
+            {/* R3-SUP_Q-017: Escape key closes conversation detail */}
+            <div
+              className="sa-flex-col"
+              style={{ flex: 1 }}
+              ref={detailPanelRef}
+              tabIndex={-1}
+              onKeyDown={(e) => { if (e.key === 'Escape' && selectedConvId) { setSelectedConvId(null); setMessages([]); } }}
+            >
               {!selectedConvId ? (
                 <div className="sa-flex-center sa-text-muted" style={{ flex: 1 }}>
                   Select a conversation to view messages
@@ -308,6 +337,8 @@ export function SupportQueueTab() {
                         )}
                       </div>
                     ))}
+                    {/* R3-SUP_Q-010: Scroll anchor */}
+                    <div ref={messagesEndRef} />
                   </div>
 
                   {/* Reply */}

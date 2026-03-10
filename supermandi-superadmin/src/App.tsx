@@ -505,7 +505,7 @@ export default function App() {
   const [enrollError, setEnrollError] = useState<string>("");
   const [enrollLoading, setEnrollLoading] = useState<boolean>(false);
   // SA-ENROLL-UX: Enrollment revocation and per-store enrollment state
-  const [revokeLoading, setRevokeLoading] = useState<boolean>(false);
+  const [revokeLoading, setRevokeLoading] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState<boolean>(false);
   const [enrollmentForStoreLoading, setEnrollmentForStoreLoading] = useState<string>("");
   const [storeEnrollments, setStoreEnrollments] = useState<Record<string, EnrollmentRecord[]>>({});
@@ -747,8 +747,8 @@ export default function App() {
       const ok = String(data.status).toLowerCase() === "ok";
       setHealth({ ok, statusText: data.status, lastCheckedAt: new Date().toISOString() });
       setHealthError("");
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "Backend unreachable";
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Backend unreachable";
       setHealth({ ok: false, statusText: "down", lastCheckedAt: new Date().toISOString() });
       setHealthError(message);
     } finally {
@@ -773,8 +773,8 @@ export default function App() {
       setEvents(data);
       setEventsError("");
       setLastRefreshAt(new Date().toISOString());
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "Failed to fetch events";
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to fetch events";
       setEventsError(message);
       setLastRefreshAt(new Date().toISOString());
     } finally {
@@ -798,8 +798,8 @@ export default function App() {
       setDeviceRecords(data.items);
       setDeviceTotal(data.total);
       setDevicesError("");
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "Failed to fetch devices";
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to fetch devices";
       setDevicesError(message);
     } finally {
       devicesInFlightRef.current = false;
@@ -815,8 +815,8 @@ export default function App() {
       const data = await fetchStores();
       setStoreDirectory(data.items);
       setStoreDirectoryError("");
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "Failed to fetch stores";
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to fetch stores";
       setStoreDirectoryError(message);
     } finally {
       storesInFlightRef.current = false;
@@ -830,18 +830,23 @@ export default function App() {
     setSuppliersLoading(true);
     setSuppliersError("");
     try {
-      const [pendingRes, verifiedRes, products, bankChangesRes] = await Promise.all([
+      const [pendingRes, verifiedRes, productsRes, bankChangesRes] = await Promise.allSettled([
         fetchPendingSuppliers(),
         fetchVerifiedSuppliers({ search: supplierSearch?.trim() || undefined }),
         fetchPendingProducts(),
         fetchBankChanges()
       ]);
-      setPendingSuppliers(pendingRes.items);
-      setVerifiedSuppliers(verifiedRes.items);
-      setPendingProducts(products);
-      setBankChanges(bankChangesRes);
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "Failed to fetch suppliers";
+      if (pendingRes.status === "fulfilled") setPendingSuppliers(pendingRes.value.items);
+      if (verifiedRes.status === "fulfilled") setVerifiedSuppliers(verifiedRes.value.items);
+      if (productsRes.status === "fulfilled") setPendingProducts(productsRes.value);
+      if (bankChangesRes.status === "fulfilled") setBankChanges(bankChangesRes.value);
+      const failures = [pendingRes, verifiedRes, productsRes, bankChangesRes].filter(r => r.status === "rejected");
+      if (failures.length > 0) {
+        const msgs = failures.map(f => f.status === "rejected" ? (f.reason instanceof Error ? f.reason.message : String(f.reason)) : "").filter(Boolean);
+        setSuppliersError(msgs.join("; ") || "Failed to fetch suppliers");
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to fetch suppliers";
       setSuppliersError(message);
     } finally {
       suppliersInFlightRef.current = false;
@@ -867,8 +872,8 @@ export default function App() {
         delete next[supplierId];
         return next;
       });
-    } catch (e: any) {
-      setSuppliersError(e?.message ? String(e.message) : "Failed to verify bank details");
+    } catch (e: unknown) {
+      setSuppliersError(e instanceof Error ? e.message : "Failed to verify bank details");
     } finally {
       setBankVerifyLoading((prev) => ({ ...prev, [supplierId]: false }));
     }
@@ -950,8 +955,8 @@ export default function App() {
     try {
       const usersRes = await fetchUsers();
       setUserRecords(usersRes.items);
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "Failed to fetch users";
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to fetch users";
       setUsersError(message);
     } finally {
       usersInFlightRef.current = false;
@@ -987,8 +992,8 @@ export default function App() {
       setUserRecords((prev) => prev.map((u) => (u.id === userId ? updated : u)));
       // GL-CRIT-0049: Log successful user status change
       logAdminAction('user_status_change', 'user', userId, { newStatus, userName: updated.name });
-    } catch (e: any) {
-      const errorMsg = e?.message ? String(e.message) : "Failed to update user";
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Failed to update user";
       setUserActionError(errorMsg);
       // GL-CRIT-0049: Log failed user status change
       logAdminActionError('user_status_change', 'user', userId, errorMsg);
@@ -1066,8 +1071,8 @@ export default function App() {
         setShowCreateUser(false);
         setCreateUserSuccess("");
       }, 2000);
-    } catch (e: any) {
-      const errorMsg = e?.message ? String(e.message) : "Failed to create user";
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Failed to create user";
       setCreateUserError(errorMsg);
       // GL-CRIT-0049: Log failed user creation
       logAdminActionError('user_create', 'user', undefined, errorMsg);
@@ -1098,14 +1103,19 @@ export default function App() {
     setSettingsLoading(true);
     setSettingsError("");
     try {
-      const [settings, stats] = await Promise.all([
+      const [settingsRes, statsRes] = await Promise.allSettled([
         fetchSettings(),
         fetchSystemStats()
       ]);
-      setSystemSettings(settings);
-      setSystemStats(stats);
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "Failed to fetch settings";
+      if (settingsRes.status === "fulfilled") setSystemSettings(settingsRes.value);
+      if (statsRes.status === "fulfilled") setSystemStats(statsRes.value);
+      const failures = [settingsRes, statsRes].filter(r => r.status === "rejected");
+      if (failures.length > 0) {
+        const msgs = failures.map(f => f.status === "rejected" ? (f.reason instanceof Error ? f.reason.message : String(f.reason)) : "").filter(Boolean);
+        setSettingsError(msgs.join("; ") || "Failed to fetch settings");
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to fetch settings";
       setSettingsError(message);
     } finally {
       settingsInFlightRef.current = false;
@@ -1129,8 +1139,8 @@ export default function App() {
         delete next[requestId];
         return next;
       });
-    } catch (e: any) {
-      setSupplierActionError(e?.message ? String(e.message) : "Failed to verify supplier");
+    } catch (e: unknown) {
+      setSupplierActionError(e instanceof Error ? e.message : "Failed to verify supplier");
     } finally {
       setSupplierActionLoading((prev) => ({ ...prev, [requestId]: false }));
     }
@@ -1143,8 +1153,8 @@ export default function App() {
     try {
       await verifySupplierRequest(requestId, { verifySupplier: true });
       setPendingSuppliers((prev) => prev.filter((r) => r.id !== requestId));
-    } catch (e: any) {
-      setSupplierActionError(e?.message ? String(e.message) : "Failed to verify supplier");
+    } catch (e: unknown) {
+      setSupplierActionError(e instanceof Error ? e.message : "Failed to verify supplier");
     } finally {
       setSupplierActionLoading((prev) => ({ ...prev, [requestId]: false }));
     }
@@ -1162,8 +1172,8 @@ export default function App() {
         delete next[requestId];
         return next;
       });
-    } catch (e: any) {
-      setSupplierActionError(e?.message ? String(e.message) : "Failed to reject supplier");
+    } catch (e: unknown) {
+      setSupplierActionError(e instanceof Error ? e.message : "Failed to reject supplier");
     } finally {
       setSupplierActionLoading((prev) => ({ ...prev, [requestId]: false }));
     }
@@ -1176,8 +1186,8 @@ export default function App() {
     try {
       await approveProduct(productId);
       setPendingProducts((prev) => prev.filter((p) => p.id !== productId));
-    } catch (e: any) {
-      setProductActionError(e?.message ? String(e.message) : "Failed to approve product");
+    } catch (e: unknown) {
+      setProductActionError(e instanceof Error ? e.message : "Failed to approve product");
     } finally {
       setProductActionLoading((prev) => ({ ...prev, [productId]: false }));
     }
@@ -1200,8 +1210,8 @@ export default function App() {
         delete next[productId];
         return next;
       });
-    } catch (e: any) {
-      setProductActionError(e?.message ? String(e.message) : "Failed to reject product");
+    } catch (e: unknown) {
+      setProductActionError(e instanceof Error ? e.message : "Failed to reject product");
     } finally {
       setProductActionLoading((prev) => ({ ...prev, [productId]: false }));
     }
@@ -1280,8 +1290,8 @@ export default function App() {
             : p
         )
       );
-    } catch (e: any) {
-      setEditProductError(e?.message ? String(e.message) : "Failed to save product");
+    } catch (e: unknown) {
+      setEditProductError(e instanceof Error ? e.message : "Failed to save product");
     } finally {
       setEditProductLoading(false);
     }
@@ -1326,8 +1336,8 @@ export default function App() {
         const res = await fetchAnalyticsDues({ storeId, from, to });
         setAnalyticsDues(res.dues);
       }
-    } catch (e: any) {
-      setAnalyticsError(e?.message ? String(e.message) : "Failed to fetch analytics");
+    } catch (e: unknown) {
+      setAnalyticsError(e instanceof Error ? e.message : "Failed to fetch analytics");
     } finally {
       setAnalyticsLoading(false);
       analyticsInFlightRef.current = false;
@@ -1352,8 +1362,8 @@ export default function App() {
       });
       setAuditLogs(res.logs);
       setAuditLogsTotal(res.total);
-    } catch (e: any) {
-      setAuditLogsError(e?.message ? String(e.message) : "Failed to fetch audit logs");
+    } catch (e: unknown) {
+      setAuditLogsError(e instanceof Error ? e.message : "Failed to fetch audit logs");
     } finally {
       setAuditLogsLoading(false);
       auditLogsInFlightRef.current = false;
@@ -1375,8 +1385,8 @@ export default function App() {
       });
       setRegEvents(res.events);
       setRegEventsTotal(res.pagination.total);
-    } catch (e: any) {
-      setRegEventsError(e?.message ? String(e.message) : "Failed to fetch registration events");
+    } catch (e: unknown) {
+      setRegEventsError(e instanceof Error ? e.message : "Failed to fetch registration events");
     } finally {
       setRegEventsLoading(false);
       regEventsInFlightRef.current = false;
@@ -1395,8 +1405,8 @@ export default function App() {
       const res = await fetchPendingDocuments(entityType, 50, documentsPage * 50);
       setPendingDocuments(res.documents);
       setPendingDocsTotal(res.pagination.total);
-    } catch (e: any) {
-      setDocumentsError(e?.message ? String(e.message) : "Failed to fetch documents");
+    } catch (e: unknown) {
+      setDocumentsError(e instanceof Error ? e.message : "Failed to fetch documents");
     } finally {
       setDocumentsLoading(false);
       documentsInFlightRef.current = false;
@@ -1414,6 +1424,7 @@ export default function App() {
     guardModalDirty(() => {
       setSelectedDocument(null);
       setDocRejectReason("");
+      setModalDirty(false);
       saveModalState(null);
     });
   }
@@ -1431,9 +1442,9 @@ export default function App() {
       setModalDirty(false);
       saveModalState(null);
       refreshDocuments();
-    } catch (e: any) {
-      await logAdminActionError("approve", "document", docId, e?.message || "Unknown error");
-      toast.error(e?.message || "Failed to approve document");
+    } catch (e: unknown) {
+      await logAdminActionError("approve", "document", docId, (e instanceof Error ? e.message : "Unknown error"));
+      toast.error(e instanceof Error ? e.message : "Failed to approve document");
     } finally {
       setDocumentActionLoading(null);
     }
@@ -1456,10 +1467,10 @@ export default function App() {
       setModalDirty(false);
       saveModalState(null);
       refreshDocuments();
-    } catch (e: any) {
-      await logAdminActionError("reject", "document", docId, e?.message || "Unknown error");
+    } catch (e: unknown) {
+      await logAdminActionError("reject", "document", docId, (e instanceof Error ? e.message : "Unknown error"));
       // R2-FIX APP-024: Show error via toast (visible even when modal is open)
-      toast.error(e?.message || "Failed to reject document");
+      toast.error(e instanceof Error ? e.message : "Failed to reject document");
     } finally {
       setDocumentActionLoading(null);
     }
@@ -1473,8 +1484,8 @@ export default function App() {
     try {
       const data = await fetchStoreStaff(staffStoreId);
       setStaffList(data.staff || []);
-    } catch (e: any) {
-      setStaffError(e?.message || "Failed to load staff");
+    } catch (e: unknown) {
+      setStaffError(e instanceof Error ? e.message : "Failed to load staff");
     } finally {
       setStaffLoading(false);
     }
@@ -1502,8 +1513,8 @@ export default function App() {
       setNewStaffPin("");
       setNewStaffRole("CASHIER");
       refreshStaff();
-    } catch (e: any) {
-      setStaffError(e?.message || "Failed to add staff");
+    } catch (e: unknown) {
+      setStaffError(e instanceof Error ? e.message : "Failed to add staff");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1516,8 +1527,8 @@ export default function App() {
     try {
       await updateStaff(staffStoreId, staffId, { is_active: !currentlyActive });
       refreshStaff();
-    } catch (e: any) {
-      setStaffError(e?.message || "Failed to update staff");
+    } catch (e: unknown) {
+      setStaffError(e instanceof Error ? e.message : "Failed to update staff");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1533,8 +1544,8 @@ export default function App() {
       setStaffSuccess("Role updated successfully");
       toast.success("Role updated successfully");
       refreshStaff();
-    } catch (e: any) {
-      setStaffError(e?.message || "Failed to change role");
+    } catch (e: unknown) {
+      setStaffError(e instanceof Error ? e.message : "Failed to change role");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1554,8 +1565,8 @@ export default function App() {
       setResetPinValue("");
       setStaffSuccess("PIN reset successfully");
       toast.success("PIN reset successfully");
-    } catch (e: any) {
-      setStaffError(e?.message || "Failed to reset PIN");
+    } catch (e: unknown) {
+      setStaffError(e instanceof Error ? e.message : "Failed to reset PIN");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1703,8 +1714,8 @@ export default function App() {
       });
       setApplications(data.items);
       setApplicationsTotal(data.total);
-    } catch (e: any) {
-      setApplicationsError(e?.message ? String(e.message) : "Failed to fetch applications");
+    } catch (e: unknown) {
+      setApplicationsError(e instanceof Error ? e.message : "Failed to fetch applications");
     } finally {
       applicationsInFlightRef.current = false;
       setApplicationsLoading(false);
@@ -1727,8 +1738,8 @@ export default function App() {
       });
       setApplications(prev => [...prev, ...data.items].slice(0, MAX_APPLICATIONS));
       setApplicationsTotal(data.total);
-    } catch (e: any) {
-      setApplicationsError(e?.message ? String(e.message) : "Failed to load more applications");
+    } catch (e: unknown) {
+      setApplicationsError(e instanceof Error ? e.message : "Failed to load more applications");
     } finally {
       applicationsInFlightRef.current = false;
       setApplicationsLoading(false);
@@ -1757,8 +1768,8 @@ export default function App() {
           emailDelivered: result.emailDelivered,
         });
       }
-    } catch (e: any) {
-      setApplicationsError(e?.message ? String(e.message) : "Failed to approve application");
+    } catch (e: unknown) {
+      setApplicationsError(e instanceof Error ? e.message : "Failed to approve application");
     } finally {
       setAppActionLoading((prev) => ({ ...prev, [appId]: false }));
     }
@@ -1781,8 +1792,8 @@ export default function App() {
         delete next[appId];
         return next;
       });
-    } catch (e: any) {
-      setApplicationsError(e?.message ? String(e.message) : "Failed to reject application");
+    } catch (e: unknown) {
+      setApplicationsError(e instanceof Error ? e.message : "Failed to reject application");
     } finally {
       setAppActionLoading((prev) => ({ ...prev, [appId]: false }));
     }
@@ -2307,8 +2318,8 @@ export default function App() {
       if (contactDraft) {
         setStoreContactEdits((prev) => { const next = { ...prev }; delete next[storeId]; return next; });
       }
-    } catch (e: any) {
-      setStoreNameError(e?.message ? String(e.message) : "Failed to update store.");
+    } catch (e: unknown) {
+      setStoreNameError(e instanceof Error ? e.message : "Failed to update store.");
     } finally {
       setStoreNameSaving((prev) => ({ ...prev, [storeId]: false }));
     }
@@ -2323,8 +2334,8 @@ export default function App() {
     try {
       const updated = await updateStore(storeId, { creditEnabled: enabled });
       setStoreDirectory((prev) => prev.map((s) => (s.id === storeId ? updated : s)));
-    } catch (e: any) {
-      toast.error(e?.message ? String(e.message) : "Failed to toggle credit.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to toggle credit.");
     } finally {
       setCreditToggleLoading((prev) => ({ ...prev, [storeId]: false }));
     }
@@ -2356,8 +2367,8 @@ export default function App() {
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setBarcodeSheetSuccess("Barcode sheet downloaded.");
-    } catch (e: any) {
-      setBarcodeSheetError(e?.message ? String(e.message) : "Failed to download barcode sheet.");
+    } catch (e: unknown) {
+      setBarcodeSheetError(e instanceof Error ? e.message : "Failed to download barcode sheet.");
     } finally {
       setBarcodeSheetBusy(false);
     }
@@ -2395,9 +2406,9 @@ export default function App() {
         title: "SuperMandi Barcode Sheet"
       });
       setBarcodeSheetSuccess("Share sheet opened.");
-    } catch (e: any) {
-      if (e?.name === "AbortError") return;
-      setBarcodeSheetError(e?.message ? String(e.message) : "Failed to share barcode sheet.");
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setBarcodeSheetError(e instanceof Error ? e.message : "Failed to share barcode sheet.");
     } finally {
       setBarcodeSheetBusy(false);
     }
@@ -2471,8 +2482,8 @@ export default function App() {
       });
       // ISSUE-MICRO-064: Re-fetch devices to update total (may change if filter excludes updated device)
       void refreshDevices();
-    } catch (e: any) {
-      const errorMsg = e?.message ? String(e.message) : "Failed to update device.";
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Failed to update device.";
       setDeviceActionError(errorMsg);
       // GL-CRIT-0049: Log failed device update
       logAdminActionError('device_update', 'device', deviceId, errorMsg);
@@ -2516,8 +2527,8 @@ export default function App() {
       logAdminAction('device_token_reset', 'device', deviceId, { label: updated.label });
       // ISSUE-MICRO-064: Re-fetch devices to update total
       void refreshDevices();
-    } catch (e: any) {
-      const errorMsg = e?.message ? String(e.message) : "Failed to reset device token.";
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Failed to reset device token.";
       setDeviceActionError(errorMsg);
       // GL-CRIT-0049: Log failed device token reset
       logAdminActionError('device_token_reset', 'device', deviceId, errorMsg);
@@ -2545,8 +2556,8 @@ export default function App() {
       setEnrollStoreId(created.id);
       setStoreAdminId(created.id);
       setBarcodeSheetStoreId(created.id);
-    } catch (e: any) {
-      setCreateStoreError(e?.message ? String(e.message) : "Failed to create store");
+    } catch (e: unknown) {
+      setCreateStoreError(e instanceof Error ? e.message : "Failed to create store");
     } finally {
       setCreateStoreLoading(false);
     }
@@ -2565,9 +2576,9 @@ export default function App() {
       const record = await fetchStore(id);
       setStoreRecord(record);
       setStoreUpiInput((prev) => (record.upi_vpa ? record.upi_vpa : prev));
-    } catch (e: any) {
+    } catch (e: unknown) {
       setStoreRecord(null);
-      setStoreError(e?.message ? String(e.message) : "Failed to fetch store");
+      setStoreError(e instanceof Error ? e.message : "Failed to fetch store");
     } finally {
       setStoreLoading(false);
     }
@@ -2584,8 +2595,8 @@ export default function App() {
       setStoreUpiInput(record.upi_vpa ?? "");
       setStoreSuccess(record.active ? "Store activated." : "Store deactivated.");
       void refreshStores();
-    } catch (e: any) {
-      setStoreError(e?.message ? String(e.message) : "Failed to update store");
+    } catch (e: unknown) {
+      setStoreError(e instanceof Error ? e.message : "Failed to update store");
     } finally {
       setStoreLoading(false);
     }
@@ -2627,9 +2638,9 @@ export default function App() {
     try {
       const res = await createDeviceEnrollment(id);
       setEnrollment(res);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setEnrollment(null);
-      setEnrollError(e?.message ? String(e.message) : "Failed to create enrollment");
+      setEnrollError(e instanceof Error ? e.message : "Failed to create enrollment");
     } finally {
       setEnrollLoading(false);
     }
@@ -2643,7 +2654,7 @@ export default function App() {
       "Revoke Code",
       "danger",
       async () => {
-        setRevokeLoading(true);
+        setRevokeLoading(code);
         try {
           await revokeEnrollmentCode(code);
           if (enrollment?.code === code) {
@@ -2655,10 +2666,10 @@ export default function App() {
               void loadStoreEnrollmentsHandler(sid);
             }
           }
-        } catch (e: any) {
-          setEnrollError(e?.message ? String(e.message) : "Failed to revoke enrollment code");
+        } catch (e: unknown) {
+          setEnrollError(e instanceof Error ? e.message : "Failed to revoke enrollment code");
         } finally {
-          setRevokeLoading(false);
+          setRevokeLoading(null);
         }
       },
     );
@@ -2674,8 +2685,8 @@ export default function App() {
       } else {
         toast("Resend request completed but no channels were available.", { icon: "⚠️" });
       }
-    } catch (e: any) {
-      setEnrollError(e?.message ? String(e.message) : "Failed to resend welcome message");
+    } catch (e: unknown) {
+      setEnrollError(e instanceof Error ? e.message : "Failed to resend welcome message");
     } finally {
       setResendLoading(false);
     }
@@ -2687,8 +2698,8 @@ export default function App() {
     try {
       await createDeviceEnrollment(storeId);
       await loadStoreEnrollmentsHandler(storeId);
-    } catch (e: any) {
-      setStoreDirectoryError(e?.message ? String(e.message) : "Failed to create enrollment");
+    } catch (e: unknown) {
+      setStoreDirectoryError(e instanceof Error ? e.message : "Failed to create enrollment");
     } finally {
       setEnrollmentForStoreLoading("");
     }
@@ -3159,6 +3170,7 @@ export default function App() {
           setExpandedStoreId={setExpandedStoreId}
           loadStoreFeatureFlags={loadStoreFeatureFlags}
           requestStoreStatusChange={requestStoreStatusChange}
+          storeSuspendLoading={storeSuspendLoading}
           getStoreContactDraft={getStoreContactDraft}
           updateStoreContactDraft={updateStoreContactDraft}
           getStorePaymentDraft={getStorePaymentDraft}
@@ -3362,7 +3374,7 @@ export default function App() {
       )}
 
       {tab === "payments" && (
-        <PaymentsTab paymentEvents={paymentEvents} loading={eventsLoading} error={eventsError || null} />
+        <PaymentsTab paymentEvents={paymentEvents} loading={eventsLoading} error={eventsError || null} totalEventCount={events.length} fetchLimit={limit} />
       )}
 
       {tab === "users" && (

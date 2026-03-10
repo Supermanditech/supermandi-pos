@@ -98,7 +98,7 @@ export function StaffTab({
             </div>
             <div>
               <label className="sa-form-label">Role</label>
-              <select value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value as any)} className="sa-select sa-w-full sa-radius-6">
+              <select value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value as any)} className="sa-select sa-w-full sa-radius-6" aria-label="Staff role">
                 <option value="CASHIER">CASHIER (sell only)</option>
                 <option value="STOCK_MANAGER">STOCK_MANAGER (sell + stock-in)</option>
                 <option value="MANAGER">MANAGER (all operations)</option>
@@ -106,17 +106,17 @@ export function StaffTab({
             </div>
           </div>
           <div className="sa-flex sa-gap-8 sa-mt-12">
-            <button className="btnSuccess" onClick={handleAddStaff} disabled={staffActionLoading === "add"}>
+            <button className="btnSuccess" onClick={handleAddStaff} disabled={staffActionLoading === "add" || !newStaffName.trim() || !newStaffPhone.trim() || !newStaffPin.trim() || !newStaffRole}>
               {staffActionLoading === "add" ? "Adding..." : "Add Staff"}
             </button>
-            <button className="btnGhost" onClick={() => setShowAddStaff(false)}>Cancel</button>
+            <button className="btnGhost" onClick={() => { setShowAddStaff(false); setNewStaffName(""); setNewStaffPhone(""); setNewStaffPin(""); setNewStaffRole("CASHIER"); }}>Cancel</button>
           </div>
         </div>
       )}
 
       {staffList.length > 0 && (
         <div className="tableWrap">
-          <table>
+          <table className="table">
             <thead>
               <tr>
                 <th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th>Sales</th><th>Stock-Ins</th><th>Created</th><th>Actions</th>
@@ -131,6 +131,7 @@ export function StaffTab({
                     {/* #186.15: Inline role change dropdown */}
                     <select
                       value={s.role}
+                      aria-label={`Role for ${s.name}`}
                       onChange={(e) => {
                         const newRole = e.target.value as "CASHIER" | "STOCK_MANAGER" | "MANAGER";
                         if (newRole === s.role) return;
@@ -156,8 +157,8 @@ export function StaffTab({
                       {s.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td>{s.sales_count}</td>
-                  <td>{s.stock_in_count}</td>
+                  <td>{s.sales_count || 0}</td>
+                  <td>{s.stock_in_count || 0}</td>
                   <td className="sa-text-sm">{formatDateTime(s.created_at)}</td>
                   <td>
                     <div className="sa-flex sa-gap-6">

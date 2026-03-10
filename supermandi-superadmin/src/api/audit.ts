@@ -44,7 +44,8 @@ export async function fetchAuditLogs(params?: {
 }): Promise<AuditLogsResponse> {
   const qs = new URLSearchParams();
   if (params?.limit) qs.set("limit", String(params.limit));
-  if (params?.offset) qs.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) qs.set("offset", String(params.offset));
   if (params?.action) qs.set("action", params.action);
   if (params?.resource_type) qs.set("resource_type", params.resource_type);
   if (params?.from_date) qs.set("from_date", params.from_date);
@@ -117,7 +118,7 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
     if (!res.ok) {
       console.warn('GL-CRIT-0049: Audit log failed:', res.status);
     }
-  } catch (err) {
+  } catch (err: unknown) {
     // Don't throw - audit failures shouldn't block the action
     console.warn('GL-CRIT-0049: Audit log error:', err);
   }

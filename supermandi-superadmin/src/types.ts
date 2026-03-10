@@ -25,7 +25,8 @@ export const PRINTING_MODE_LABELS: Record<string, string> = {
 
 export const ADMIN_POLL_MS = 60000;
 // T-215: Canonical UPI VPA pattern — min 3 chars before @, min 2 after, no dots after @
-export const UPI_VPA_PATTERN = /^[a-z0-9._-]{3,}@[a-z0-9]{2,}$/;
+// R3-FMT-003: Case-insensitive — UPI VPAs accept uppercase input
+export const UPI_VPA_PATTERN = /^[a-z0-9._-]{3,}@[a-z0-9]{2,}$/i;
 
 export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));

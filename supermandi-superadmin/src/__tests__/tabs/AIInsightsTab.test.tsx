@@ -259,6 +259,8 @@ describe('AIInsightsTab', () => {
     render(<AIInsightsTab />);
     fireEvent.click(screen.getByText('Jobs'));
     fireEvent.click(screen.getByText('Run Alert Analysis'));
+    // Confirmation dialog appears — click "Run Job" to execute
+    fireEvent.click(screen.getByText('Run Job'));
     await waitFor(() => {
       expect(screen.getByText(/processed.*5/)).toBeInTheDocument();
     });
@@ -269,6 +271,8 @@ describe('AIInsightsTab', () => {
     render(<AIInsightsTab />);
     fireEvent.click(screen.getByText('Jobs'));
     fireEvent.click(screen.getByText('Run Alert Analysis'));
+    // Confirmation dialog appears — click "Run Job" to execute
+    fireEvent.click(screen.getByText('Run Job'));
     await waitFor(() => {
       expect(screen.getByText('Job failed')).toBeInTheDocument();
     });

@@ -214,10 +214,10 @@ describe('GrnAlertsTab', () => {
     expect(screen.getByText('2026-03-10T10:00:00Z')).toBeTruthy();
   });
 
-  it('renders product name with aria-label', () => {
+  it('renders product name with title tooltip', () => {
     const alerts = [makeAlert({ product_name: 'Basmati Rice' })];
     render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1 })} />);
-    expect(screen.getByLabelText('Product: Basmati Rice')).toBeTruthy();
+    expect(screen.getByTitle('Basmati Rice')).toBeTruthy();
   });
 
   it('falls back to store_id slice when store_name is empty', () => {

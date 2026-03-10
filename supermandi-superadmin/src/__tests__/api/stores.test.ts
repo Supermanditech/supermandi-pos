@@ -153,15 +153,15 @@ describe('stores API client', () => {
       expect(calledUrl).toContain('/api/v1/admin/stores/store%2Fspecial');
     });
 
-    it('returns empty object when store field is missing', async () => {
+    // R4-AC-003: Now throws instead of returning {} as StoreRecord
+    it('throws when store field is missing from response', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({}),
       });
 
-      const result = await fetchStore('store-1');
-      expect(result).toEqual({});
+      await expect(fetchStore('store-1')).rejects.toThrow("Invalid store response");
     });
 
     it('throws on error response', async () => {

@@ -223,17 +223,28 @@ describe('ApplicationsTab', () => {
   });
 
   it('shows Approving... when action is loading', () => {
+    const handleApprove = vi.fn();
+    const handleReject = vi.fn();
     const apps = [makeApp({ id: 'app-x' })];
-    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1, appActionLoading: { 'app-x': true } })} />);
+    // First render: click approve to set actionTypeRef, then re-render with loading=true
+    const props = createProps({ applications: apps, applicationsTotal: 1, handleApproveApplication: handleApprove, handleRejectApplication: handleReject });
+    const { rerender } = render(<ApplicationsTab {...props} />);
+    fireEvent.click(screen.getByText('Approve Store'));
+    rerender(<ApplicationsTab {...{ ...props, appActionLoading: { 'app-x': true } }} />);
     expect(screen.getByText('Approving...')).toBeTruthy();
-    expect(screen.getByText('Rejecting...')).toBeTruthy();
+    // Reject button shows default text since actionTypeRef is 'approve', not 'reject'
+    expect(screen.getByText('Reject')).toBeTruthy();
   });
 
   it('disables buttons when action is loading', () => {
+    const handleApprove = vi.fn();
     const apps = [makeApp({ id: 'app-x' })];
-    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1, appActionLoading: { 'app-x': true } })} />);
+    const props = createProps({ applications: apps, applicationsTotal: 1, handleApproveApplication: handleApprove });
+    const { rerender } = render(<ApplicationsTab {...props} />);
+    fireEvent.click(screen.getByText('Approve Store'));
+    rerender(<ApplicationsTab {...{ ...props, appActionLoading: { 'app-x': true } }} />);
     expect((screen.getByText('Approving...') as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByText('Rejecting...') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByText('Reject') as HTMLButtonElement).disabled).toBe(true);
   });
 
   // ── NEEDS_FIX Status ────────────────────────────────────────
@@ -252,8 +263,13 @@ describe('ApplicationsTab', () => {
   });
 
   it('shows Updating... for NEEDS_FIX when action loading', () => {
+    const handleReject = vi.fn();
     const apps = [makeApp({ id: 'app-nf', status: 'NEEDS_FIX' })];
-    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1, appActionLoading: { 'app-nf': true } })} />);
+    const props = createProps({ applications: apps, applicationsTotal: 1, handleRejectApplication: handleReject });
+    const { rerender } = render(<ApplicationsTab {...props} />);
+    // Click "Update Rejection" to set actionTypeRef to 'reject', then re-render with loading
+    fireEvent.click(screen.getByText('Update Rejection'));
+    rerender(<ApplicationsTab {...{ ...props, appActionLoading: { 'app-nf': true } }} />);
     expect(screen.getByText('Updating...')).toBeTruthy();
   });
 

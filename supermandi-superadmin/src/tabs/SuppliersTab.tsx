@@ -206,8 +206,8 @@ export function SuppliersTab({
       setBatchProgress(`Done: ${result.succeeded} approved, ${result.failed} failed`);
       setSelectedProductIds(new Set());
       refreshSuppliers();
-    } catch (err: any) {
-      setBatchProgress(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setBatchProgress(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setBatchActionLoading(false);
       setTimeout(() => setBatchProgress(""), 5000);
@@ -227,8 +227,8 @@ export function SuppliersTab({
       setSelectedProductIds(new Set());
       setBatchRejectReason("");
       refreshSuppliers();
-    } catch (err: any) {
-      setBatchProgress(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setBatchProgress(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setBatchActionLoading(false);
       setTimeout(() => setBatchProgress(""), 5000);
@@ -240,9 +240,9 @@ export function SuppliersTab({
     try {
       await toggleAutoApproval(supplierId, !currentValue);
       refreshSuppliers();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // R2-FIX SUP-003: Surface auto-approve error to user
-      setConfirmDialog({ title: "Error", message: err?.message || "Failed to toggle auto-approve", confirmLabel: "OK", variant: "info", onConfirm: () => setConfirmDialog(null) });
+      setConfirmDialog({ title: "Error", message: err instanceof Error ? err.message : "Failed to toggle auto-approve", confirmLabel: "OK", variant: "info", onConfirm: () => setConfirmDialog(null) });
     } finally {
       setAutoApproveLoading(prev => ({ ...prev, [supplierId]: false }));
     }
@@ -255,8 +255,8 @@ export function SuppliersTab({
       const result = await publishProduct(productId);
       setPublishResult(prev => ({ ...prev, [productId]: `Published to ${result.publishedToStores} stores` }));
       refreshSuppliers();
-    } catch (err: any) {
-      setPublishResult(prev => ({ ...prev, [productId]: `Error: ${err.message}` }));
+    } catch (err: unknown) {
+      setPublishResult(prev => ({ ...prev, [productId]: `Error: ${err instanceof Error ? err.message : "Unknown error"}` }));
     } finally {
       setPublishLoading(prev => ({ ...prev, [productId]: false }));
     }
@@ -331,6 +331,7 @@ export function SuppliersTab({
                     style={{ width: "100%", marginBottom: 8 }}
                     value={selectedSupplierForLink[request.id] || ""}
                     onChange={(e) => setSelectedSupplierForLink((prev) => ({ ...prev, [request.id]: e.target.value }))}
+                    aria-label="Link to verified supplier"
                   >
                     <option value="">-- Select verified supplier --</option>
                     {verifiedSuppliers.map((s) => (
@@ -892,6 +893,7 @@ export function SuppliersTab({
                 <select
                   value={editProductForm.marginType}
                   onChange={(e) => updateProductForm((f) => ({ ...f, marginType: e.target.value as "fixed" | "percent" }))}
+                  aria-label="Margin type"
                 >
                   <option value="fixed">Fixed Amount (INR)</option>
                   <option value="percent">Percentage (%)</option>
@@ -963,6 +965,7 @@ export function SuppliersTab({
                 <select
                   value={editProductForm.invoiceModel}
                   onChange={(e) => updateProductForm((f) => ({ ...f, invoiceModel: e.target.value as "buy_resell" | "platform_fee" | "" }))}
+                  aria-label="Invoice model"
                 >
                   <option value="buy_resell">Buy & Resell</option>
                   <option value="platform_fee">Platform Fee (Commission)</option>
@@ -988,6 +991,7 @@ export function SuppliersTab({
                 <select
                   value={editProductForm.gstRate}
                   onChange={(e) => updateProductForm((f) => ({ ...f, gstRate: e.target.value }))}
+                  aria-label="GST rate"
                 >
                   <option value="">Not set</option>
                   <option value="0">0%</option>

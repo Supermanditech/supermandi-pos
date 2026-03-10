@@ -1,5 +1,5 @@
 // SA-001: Registration events tab extracted from App.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { RegistrationEvent } from "../api/registrationEvents";
 import { sendEnrollmentCodeToStore } from "../api/registrationEvents";
 import { EnrollmentResultModal, type EnrollmentResult } from "../components/ConfirmDialog";
@@ -39,6 +39,13 @@ export function RegistrationsTab({
   // STBT-186.4: Enrollment code result modal state (replaces alert())
   const [enrollmentResult, setEnrollmentResult] = useState<EnrollmentResult | null>(null);
   const [enrollmentError, setEnrollmentError] = useState("");
+
+  // R3-REG-008: Auto-clear enrollment error after 10 seconds
+  useEffect(() => {
+    if (!enrollmentError) return;
+    const timer = setTimeout(() => setEnrollmentError(""), 10_000);
+    return () => clearTimeout(timer);
+  }, [enrollmentError]);
 
   return (
     <section className="card">
@@ -100,6 +107,13 @@ export function RegistrationsTab({
 
         {regEventsError && <div className="errorText sa-mb-8" role="alert">{regEventsError}</div>}
 
+        {/* R3-REG-005: Enrollment error banner above table so it is not missed */}
+        {enrollmentError && (
+          <div className="sa-alert-error sa-mb-8" role="alert">
+            {enrollmentError}
+          </div>
+        )}
+
         <table className="table">
           <thead>
             <tr>
@@ -149,12 +163,11 @@ export function RegistrationsTab({
                     <button
                       className="sa-btn-xs sa-fw-600 sa-text-green"
                       style={{
-                        border: `1px solid ${sendingEnrollment ? "var(--color-border)" : "var(--color-success)"}`,
-                        background: sendingEnrollment ? "var(--color-surface-alt)" : "var(--color-success-soft)",
-                        cursor: sendingEnrollment ? "not-allowed" : "pointer",
-                        opacity: sendingEnrollment && sendingEnrollment !== evt.storeId ? 0.5 : 1,
+                        border: `1px solid ${sendingEnrollment === evt.storeId ? "var(--color-border)" : "var(--color-success)"}`,
+                        background: sendingEnrollment === evt.storeId ? "var(--color-surface-alt)" : "var(--color-success-soft)",
+                        cursor: sendingEnrollment === evt.storeId ? "not-allowed" : "pointer",
                       }}
-                      disabled={!!sendingEnrollment}
+                      disabled={sendingEnrollment === evt.storeId}
                       onClick={async () => {
                         setSendingEnrollment(evt.storeId!);
                         setEnrollmentError("");
@@ -166,8 +179,8 @@ export function RegistrationsTab({
                             smsSent: resp.notification.smsSent,
                             emailSent: resp.notification.emailSent,
                           });
-                        } catch (err: any) {
-                          setEnrollmentError(err?.message || "Failed to send enrollment code");
+                        } catch (err: unknown) {
+                          setEnrollmentError(err instanceof Error ? err.message : "Failed to send enrollment code");
                         } finally {
                           setSendingEnrollment("");
                         }
@@ -191,13 +204,6 @@ export function RegistrationsTab({
           </tbody>
         </table>
       </div>
-
-      {/* STBT-186.4: Enrollment error banner */}
-      {enrollmentError && (
-        <div className="sa-alert-error sa-mt-8" role="alert">
-          {enrollmentError}
-        </div>
-      )}
 
       {/* STBT-186.4: Enrollment code result modal */}
       {enrollmentResult && (

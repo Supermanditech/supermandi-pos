@@ -32,8 +32,9 @@ export async function fetchBarcodeSheetPdf(params: {
     }
     const fallback = `Request failed (${res.status})`;
     // GL-CRIT-0055: Sanitize error messages
+    // R4-TS-001: Type-safe narrowing instead of `as any`
     const rawError = data && typeof data === "object" && "error" in data
-      ? String((data as any).error)
+      ? String((data as Record<string, unknown>).error)
       : null;
     throw new Error(sanitizeErrorMessage(rawError, fallback));
   }

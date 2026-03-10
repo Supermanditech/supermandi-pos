@@ -82,7 +82,7 @@ export function DocumentsTab({
           <button onClick={() => refreshDocuments()} disabled={documentsLoading}>
             {documentsLoading ? "Loading..." : "Refresh"}
           </button>
-          <select value={documentsEntityFilter} onChange={(e) => { setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier"); setDocumentsPage(() => 0); }} className="sa-select">
+          <select value={documentsEntityFilter} onChange={(e) => { setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier"); setDocumentsPage(() => 0); }} className="sa-select" aria-label="Filter by entity type">
             <option value="">All Entities</option>
             <option value="store">Stores</option>
             <option value="supplier">Suppliers</option>
@@ -161,12 +161,13 @@ export function DocumentsTab({
               ) : null}
             </div>
             <div className="sa-flex-col sa-gap-8">
-              <button onClick={() => handleApproveDocument(selectedDocument.id)} disabled={documentActionLoading === selectedDocument.id} className="btnSuccess sa-radius-4" style={{ padding: "10px 20px", cursor: documentActionLoading ? "wait" : "pointer" }}>
+              {/* R3-DOC-007: Approve/Reject only active for PENDING documents */}
+              <button onClick={() => { handleApproveDocument(selectedDocument.id); onModalDirty(false); }} disabled={documentActionLoading === selectedDocument.id || selectedDocument.status !== "pending"} className="btnSuccess sa-radius-4" style={{ padding: "10px 20px", cursor: documentActionLoading || selectedDocument.status !== "pending" ? "not-allowed" : "pointer" }}>
                 {documentActionLoading === selectedDocument.id ? "Processing..." : "✓ Approve Document"}
               </button>
               <div className="sa-flex sa-gap-8">
-                <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => { setDocRejectReason(e.target.value); onModalDirty(true); }} className="sa-input" style={{ flex: 1 }} />
-                <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10} className="btnDanger sa-radius-4" style={{ padding: "10px 20px", cursor: documentActionLoading || docRejectReason.trim().length < 10 ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 ? 0.5 : 1 }}>
+                <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => { setDocRejectReason(e.target.value); onModalDirty(true); }} className="sa-input" style={{ flex: 1 }} disabled={selectedDocument.status !== "pending"} />
+                <button onClick={() => { handleRejectDocument(selectedDocument.id, docRejectReason); onModalDirty(false); }} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10 || selectedDocument.status !== "pending"} className="btnDanger sa-radius-4" style={{ padding: "10px 20px", cursor: documentActionLoading || docRejectReason.trim().length < 10 || selectedDocument.status !== "pending" ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 || selectedDocument.status !== "pending" ? 0.5 : 1 }}>
                   ✕ Reject
                 </button>
               </div>

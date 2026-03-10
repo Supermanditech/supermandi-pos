@@ -45,7 +45,8 @@ export async function fetchGrnAlerts(params?: {
   if (params?.status) qs.set("status", params.status);
   if (params?.storeId) qs.set("storeId", params.storeId);
   if (params?.limit) qs.set("limit", String(params.limit));
-  if (params?.offset) qs.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid — use != null check
+  if (params?.offset != null) qs.set("offset", String(params.offset));
 
   const url = `${base}/api/v1/admin/grn/alerts${qs.toString() ? `?${qs}` : ""}`;
   const res = await fetchWithTimeout(url, {
@@ -65,7 +66,8 @@ export async function updateGrnAlert(
   input: { status: "ACKNOWLEDGED" | "DISMISSED"; notes?: string }
 ): Promise<{ alert: GrnExcessAlert }> {
   const base = requireApiBase();
-  const res = await fetchWithTimeout(`${base}/api/v1/admin/grn/alerts/${alertId}`, {
+  // R3-SEC-004: Encode path params to prevent URL traversal
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/grn/alerts/${encodeURIComponent(alertId)}`, {
     method: "PATCH",
     cache: "no-store",
     headers: {

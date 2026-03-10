@@ -70,7 +70,8 @@ export async function fetchWhatsAppLogs(params?: {
 }): Promise<{ data: WhatsAppLogEntry[]; total: number }> {
   const qs = new URLSearchParams();
   if (params?.limit) qs.set("limit", String(params.limit));
-  if (params?.offset) qs.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) qs.set("offset", String(params.offset));
   if (params?.senderType) qs.set("senderType", params.senderType);
   if (params?.recipientType) qs.set("recipientType", params.recipientType);
   if (params?.deliveryStatus) qs.set("deliveryStatus", params.deliveryStatus);
@@ -97,9 +98,9 @@ export async function sendWhatsAppMessage(params: {
     },
     body: JSON.stringify(params),
   });
-  const data = await res.json();
-  if (!res.ok && !data.error) data.error = `HTTP ${res.status}`;
-  return data;
+  // R4-AC-007: Throw on !res.ok like all other API functions
+  if (!res.ok) throw new Error(await parseErrorBody(res));
+  return res.json();
 }
 
 export async function sendWhatsAppBroadcast(params: {

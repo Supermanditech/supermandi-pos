@@ -1,5 +1,5 @@
 // SA-001: Applications approval tab extracted from App.tsx
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Application } from "../api/applications";
 import { formatDateTime } from "../lib/formatters";
 
@@ -34,6 +34,9 @@ export function ApplicationsTab({
   handleRejectApplication,
   onLoadMore,
 }: ApplicationsTabProps) {
+  // R3-APP_TAB-005: Track which action (approve/reject) is in progress per app
+  const actionTypeRef = useRef<Record<string, 'approve' | 'reject'>>({});
+
   // SA.016: Refresh when entity filter changes instead of using setTimeout
   // R1-FIX: Clear stale rejection reasons when filter changes to prevent cross-application leakage
   useEffect(() => {
@@ -77,7 +80,7 @@ export function ApplicationsTab({
             {applications.map((app) => (
               <div className="deviceCard" key={app.id}>
                 <div className="deviceHeader">
-                  <div className="deviceLabelInput sa-fw-600">
+                  <div className="deviceLabelInput sa-fw-600" style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={app.businessName || "Unknown Business"}>
                     {app.businessName || "Unknown Business"}
                   </div>
                   <div className="badgeRow">
@@ -130,6 +133,8 @@ export function ApplicationsTab({
                   )}
                 </div>
 
+                {/* R3-APP_TAB-003: Only show rejection textarea for actionable statuses */}
+                {(app.status === 'KYC_SUBMITTED' || app.status === 'NEEDS_FIX') && (
                 <div className="sa-mt-8">
                   <label className="sa-form-label">Rejection Reason (required for reject, min 5 chars):</label>
                   <textarea
@@ -140,47 +145,49 @@ export function ApplicationsTab({
                     onChange={(e) => setAppRejectReason((prev) => ({ ...prev, [app.id]: e.target.value }))}
                   />
                 </div>
+                )}
 
                 {/* T-012: Conditional actions based on application status */}
                 <div className="deviceActions">
+                  {/* R3-APP_TAB-005: Track action type so only the clicked button shows loading text */}
                   {app.status === 'NEEDS_FIX' ? (
                     <>
                       <span className="sa-text-sm sa-text-warning" style={{ fontStyle: "italic", alignSelf: "center" }}>
                         Awaiting applicant resubmission
                       </span>
                       <button
-                        onClick={() => handleApproveApplication(app.id)}
+                        onClick={() => { actionTypeRef.current[app.id] = 'approve'; handleApproveApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                         className="btnSuccess"
                         title={`Approve resubmitted ${app.entityType === 'retailer' ? 'store' : 'supplier'} application`}
                       >
-                        {appActionLoading[app.id] ? "Approving..." : "Approve"}
+                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'approve' ? "Approving..." : "Approve"}
                       </button>
                       <button
                         className="btnGhost sa-text-danger"
-                        onClick={() => handleRejectApplication(app.id)}
+                        onClick={() => { actionTypeRef.current[app.id] = 'reject'; handleRejectApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                         title="Update rejection reason and send back"
                       >
-                        {appActionLoading[app.id] ? "Updating..." : "Update Rejection"}
+                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'reject' ? "Updating..." : "Update Rejection"}
                       </button>
                     </>
                   ) : (
                     <>
                       <button
-                        onClick={() => handleApproveApplication(app.id)}
+                        onClick={() => { actionTypeRef.current[app.id] = 'approve'; handleApproveApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                         className="btnSuccess"
                         title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
                       >
-                        {appActionLoading[app.id] ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
+                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'approve' ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
                       </button>
                       <button
                         className="btnGhost sa-text-danger"
-                        onClick={() => handleRejectApplication(app.id)}
+                        onClick={() => { actionTypeRef.current[app.id] = 'reject'; handleRejectApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                       >
-                        {appActionLoading[app.id] ? "Rejecting..." : "Reject"}
+                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'reject' ? "Rejecting..." : "Reject"}
                       </button>
                     </>
                   )}

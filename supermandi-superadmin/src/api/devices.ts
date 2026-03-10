@@ -31,7 +31,8 @@ export async function fetchDevices(params?: { storeId?: string; deviceId?: strin
   if (params?.storeId?.trim()) url.searchParams.set("storeId", params.storeId.trim());
   if (params?.deviceId?.trim()) url.searchParams.set("deviceId", params.deviceId.trim());
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
-  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+  // R3-API-003: offset=0 is falsy but valid
+  if (params?.offset != null) url.searchParams.set("offset", String(params.offset));
 
   const res = await fetchWithTimeout(url.toString(), {
     cache: "no-store",

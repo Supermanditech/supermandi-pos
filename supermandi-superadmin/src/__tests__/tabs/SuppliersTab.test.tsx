@@ -220,7 +220,14 @@ describe('SuppliersTab', () => {
       const handleReject = vi.fn();
       const pending = [makePendingSupplier()];
       render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending, handleRejectSupplier: handleReject })} />);
+      // Click the initial Reject button — opens ConfirmDialog (R1 fix AUD-013)
       fireEvent.click(screen.getByText('Reject'));
+      // ConfirmDialog is now open with title "Reject Supplier Request" and a confirm button labeled "Reject"
+      expect(screen.getByText('Reject Supplier Request')).toBeTruthy();
+      // Click the confirm "Reject" button inside the dialog (the danger button)
+      const rejectButtons = screen.getAllByText('Reject');
+      // The last "Reject" button is the confirm button in the dialog
+      fireEvent.click(rejectButtons[rejectButtons.length - 1]);
       expect(handleReject).toHaveBeenCalledWith('req-1');
     });
 

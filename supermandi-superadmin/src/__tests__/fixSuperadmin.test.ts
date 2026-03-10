@@ -83,9 +83,9 @@ describe("FIX-048: product edit modal error boundary + dirty guard", () => {
       try {
         if (throwError) throw new Error("Render failure");
         return { rendered: true };
-      } catch (e: any) {
+      } catch (e: unknown) {
         errorCaught = true;
-        return { rendered: false, error: e.message };
+        return { rendered: false, error: e instanceof Error ? e.message : "Unknown error" };
       }
     }
 
