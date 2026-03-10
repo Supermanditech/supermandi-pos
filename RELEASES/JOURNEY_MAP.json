@@ -308,7 +308,7 @@
     }
   },
   "activeJourneyLock": {
-    "journeyId": "JOURNEY-40",
+    "journeyId": "JOURNEY-41",
     "status": "SUPPLIER_PLATFORM_REDISCOVERY_EXPANDED_INVENTORY_LOCK",
     "reason": "Supplier-web surface rediscovery proved the historical J10-only inventory was incomplete. Canonical supplier-web inventory is now expanded to 16 journeys (J34-J48 plus preserved J10). Active standalone execution starts from JOURNEY-34 (Supplier Registration & Onboarding) as the earliest supplier entrypoint. Historical J10 remains preserved as cross-surface order lifecycle.",
     "switchAllowedOnlyWhen": [
@@ -7715,9 +7715,9 @@
       "name": "Supplier Order Management",
       "cluster": "C13",
       "description": "Supplier views order list → filters by status → opens order detail → sees line items with quantities/prices → adds order notes → updates order status (confirm/reject) → item-level status updates → SSE live order updates via ReconnectingEventSource.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
+      "status": "PARK-READY",
+      "lastAuditedAction": "J40-TEST-001",
+      "lastAuditedAt": "2026-03-11",
       "openGaps": [],
       "cccBlocker": null,
       "scopeFiles": [
@@ -7725,12 +7725,41 @@
         "supplier-portal/src/lib/api.ts",
         "supplier-portal/src/lib/reconnectingEventSource.ts"
       ],
-      "actions": [],
-      "guarantees": [],
+      "actions": [
+        "A1: Render page heading, subtitle, breadcrumb",
+        "A2: View 8 status filter tabs (All/Draft/Submitted/Confirmed/Shipped/Partially Received/Delivered/Cancelled) with ARIA",
+        "A3: Switch active status filter tab",
+        "A4: View empty state when no orders",
+        "A5: View loading skeleton (5 rows)",
+        "A6: View error state with Retry button",
+        "A7: View orders table with 7 columns (ID, Store, Items, Total, Status, Date, Actions)",
+        "A8: View truncated order ID (first 8 chars + ...)",
+        "A9: View formatted currency total and date",
+        "A10: View reorder badge for auto-generated orders",
+        "A11: Filter orders by status (client-side)",
+        "A12: View pagination controls when totalPages > 1",
+        "A13: Open order detail modal via View Details button",
+        "A14: markOrdersRead called on mount"
+      ],
+      "guarantees": [
+        {"id": "G1", "name": "UI Elements", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx:heading,filters,table,detail"]},
+        {"id": "G2", "name": "UX 4-State", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx:loading,error-retry,empty,success-table"]},
+        {"id": "G3", "name": "Navigation", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx:breadcrumb,pagination,status-tabs"]},
+        {"id": "G4", "name": "Wiring", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx:refetch,markOrdersRead,view-details"]},
+        {"id": "G5", "name": "Business Logic", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx:status-filtering,reorder-badge,currency-format"]},
+        {"id": "G6", "name": "Edge Cases", "status": "SIGNED", "citations": ["supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx:empty-items,zero-total,all-statuses,null-sse"]}
+      ],
       "crossPortalMatrix": [],
-      "regressionLocks": [],
+      "regressionLocks": [
+        {"test": "supplier-portal/src/__tests__/pages/dashboard/orders.test.tsx", "count": 37, "pr": 540, "sha": "a6931cca"}
+      ],
       "knownIssues": [],
-      "edgeCases": []
+      "edgeCases": [
+        "Order ID truncated to 8 chars for display",
+        "Reorder badge only shown for orderType='reorder'",
+        "SSE stream URL may be null (graceful handling)",
+        "Client-side filtering supplements server-side status param"
+      ]
     },
     "JOURNEY-41": {
       "id": "JOURNEY-41",
