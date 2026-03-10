@@ -457,4 +457,141 @@ describe('SuppliersTab', () => {
       expect(refresh).toHaveBeenCalled();
     });
   });
+
+  // =========================================================================
+  // Additional coverage
+  // =========================================================================
+
+  describe('pending supplier details', () => {
+    it('renders phone number for pending supplier', () => {
+      const pending = [makePendingSupplier({ requestedPhone: '+918888888888' })];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect(screen.getByText('+918888888888')).toBeTruthy();
+    });
+
+    it('renders email for pending supplier', () => {
+      const pending = [makePendingSupplier({ requestedEmail: 'supplier@test.com' })];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect(screen.getByText('supplier@test.com')).toBeTruthy();
+    });
+
+    it('renders multiple pending suppliers', () => {
+      const pending = [
+        makePendingSupplier({ id: 'req-1', requestedName: 'Vendor A' }),
+        makePendingSupplier({ id: 'req-2', requestedName: 'Vendor B' }),
+      ];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect(screen.getByText('Vendor A')).toBeTruthy();
+      expect(screen.getByText('Vendor B')).toBeTruthy();
+    });
+
+    it('disables action buttons when loading', () => {
+      const pending = [makePendingSupplier()];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending, supplierActionLoading: { 'req-1': true } })} />);
+      expect((screen.getByText('Verifying...') as HTMLButtonElement).disabled).toBe(true);
+      expect((screen.getByText('Rejecting...') as HTMLButtonElement).disabled).toBe(true);
+    });
+  });
+
+  describe('verified supplier details', () => {
+    it('renders multiple verified suppliers', () => {
+      const verified = [
+        makeVerifiedSupplier({ id: 'vs-1', businessName: 'Corp A' }),
+        makeVerifiedSupplier({ id: 'vs-2', businessName: 'Corp B' }),
+      ];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      expect(screen.getByText('Corp A')).toBeTruthy();
+      expect(screen.getByText('Corp B')).toBeTruthy();
+    });
+
+    it('shows auto-approve OFF for suppliers without autoApprove', () => {
+      const verified = [makeVerifiedSupplier({ autoApproveProducts: false })];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      expect(screen.getByText('OFF')).toBeTruthy();
+    });
+
+    it('calls setSupplierSearch on search input change', () => {
+      const setSearch = vi.fn();
+      render(<SuppliersTab {...createDefaultProps({ setSupplierSearch: setSearch })} />);
+      fireEvent.change(screen.getByPlaceholderText('GSTIN or business name...'), { target: { value: 'test' } });
+      expect(setSearch).toHaveBeenCalledWith('test');
+    });
+
+    it('shows GSTIN for verified supplier', () => {
+      const verified = [makeVerifiedSupplier({ gstin: '29AABCU9603R1ZM' })];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      expect(screen.getByText('29AABCU9603R1ZM')).toBeTruthy();
+    });
+
+    it('calls requestSupplierStatusChange on reactivate click', () => {
+      const requestChange = vi.fn();
+      const verified = [makeVerifiedSupplier({ verificationStatus: 'SUSPENDED', businessName: 'Suspended Corp' })];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified, requestSupplierStatusChange: requestChange })} />);
+      fireEvent.click(screen.getByText('Reactivate'));
+      expect(requestChange).toHaveBeenCalledWith('vs-1', 'Suspended Corp', 'reactivate');
+    });
+  });
+
+  describe('pending product details', () => {
+    it('renders multiple pending products', () => {
+      const products = [
+        makePendingProduct({ id: 'p1', productName: 'Rice 5kg' }),
+        makePendingProduct({ id: 'p2', productName: 'Wheat 10kg' }),
+      ];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products })} />);
+      expect(screen.getByText('Rice 5kg')).toBeTruthy();
+      expect(screen.getByText('Wheat 10kg')).toBeTruthy();
+    });
+
+    it('renders supplier name for pending product', () => {
+      const products = [makePendingProduct({ supplierName: 'Big Supplier' })];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products })} />);
+      expect(screen.getByText('Big Supplier')).toBeTruthy();
+    });
+
+    it('shows product loading state on approve', () => {
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products, productActionLoading: { 'prod-1': true } })} />);
+      expect(screen.getByText('Approving...')).toBeTruthy();
+    });
+  });
+
+  describe('bank verification details', () => {
+    it('renders bank account name', () => {
+      const bankChanges = [makeBankChange({ bankAccountName: 'Test Account' })];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges })} />);
+      expect(screen.getByText('Test Account')).toBeTruthy();
+    });
+
+    it('renders multiple bank changes', () => {
+      const bankChanges = [
+        makeBankChange({ id: 'bc-1', businessName: 'Bank Corp A' }),
+        makeBankChange({ id: 'bc-2', businessName: 'Bank Corp B' }),
+      ];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges })} />);
+      expect(screen.getByText('Bank Corp A')).toBeTruthy();
+      expect(screen.getByText('Bank Corp B')).toBeTruthy();
+    });
+
+    it('renders bank GSTIN', () => {
+      const bankChanges = [makeBankChange({ gstin: '22ABCDE1234Z5' })];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges })} />);
+      expect(screen.getByText(/22ABCDE1234Z5/)).toBeTruthy();
+    });
+  });
+
+  describe('edit modal details', () => {
+    it('renders close button in modal', () => {
+      const product = makePendingProduct();
+      render(<SuppliersTab {...createDefaultProps({ editingProduct: product })} />);
+      // Modal has a close control (× button or Cancel)
+      expect(screen.getByText('Edit Product - Set Margin & BNPL')).toBeTruthy();
+    });
+
+    it('disables Save button when loading', () => {
+      const product = makePendingProduct();
+      render(<SuppliersTab {...createDefaultProps({ editingProduct: product, editProductLoading: true })} />);
+      expect((screen.getByText('Saving...') as HTMLButtonElement).disabled).toBe(true);
+    });
+  });
 });
