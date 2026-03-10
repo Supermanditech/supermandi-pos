@@ -156,9 +156,15 @@ export function SuppliersTab({
   const [publishResult, setPublishResult] = useState<Record<string, string>>({});
 
   // FIX-050: Clear stale publish state when product list refreshes
+  // R2-FIX SUP-017: Also clear stale product selections
   useEffect(() => {
     setPublishLoading({});
     setPublishResult({});
+    setSelectedProductIds(prev => {
+      const validIds = new Set(pendingProducts.map(p => p.id));
+      const filtered = new Set([...prev].filter(id => validIds.has(id)));
+      return filtered.size === prev.size ? prev : filtered;
+    });
   }, [pendingProducts]);
   // T-188: Batch selection state
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
@@ -234,8 +240,9 @@ export function SuppliersTab({
     try {
       await toggleAutoApproval(supplierId, !currentValue);
       refreshSuppliers();
-    } catch (err) {
-      console.error("Failed to toggle auto-approve:", err);
+    } catch (err: any) {
+      // R2-FIX SUP-003: Surface auto-approve error to user
+      setConfirmDialog({ title: "Error", message: err?.message || "Failed to toggle auto-approve", confirmLabel: "OK", variant: "info", onConfirm: () => setConfirmDialog(null) });
     } finally {
       setAutoApproveLoading(prev => ({ ...prev, [supplierId]: false }));
     }

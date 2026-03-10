@@ -48,6 +48,8 @@ export function MonitoringTab() {
         setConfirmDialog(null);
         setCleaningUp(true);
         setCleanupResult(null);
+        // R2-FIX MON-002: Clear prior error before new operation
+        setError(null);
         try {
           const result = await triggerTokenCleanup();
           setCleanupResult(result);

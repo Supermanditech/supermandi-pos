@@ -241,6 +241,15 @@ export default function App() {
     setRegEventsError(""); setDocumentsError(""); setStaffError("");
     setGrnAlertsError(""); setFeatureFlagsError(""); setApplicationsError("");
     setStaffSuccess(""); setConfirmDialog(null);
+    // R2-FIX: Clear modal/approval/suspension state on tab switch
+    setApprovalResult(null);
+    setPendingDeviceAction(null);
+    setPendingStatusChange(null);
+    setPendingSupplierSuspend(null);
+    setPendingStoreSuspend(null);
+    setSuspendReason("");
+    setStoreSuspendReason("");
+    setAnalyticsLoading(false);
     setTabRaw(newTab);
     setHashParams({});
     window.history.pushState(null, "", `#${newTab}`);
@@ -907,6 +916,11 @@ export default function App() {
       );
       setPendingStoreSuspend(null);
       setStoreSuspendReason("");
+      // R2-FIX APP-003: Invalidate staff data for suspended store
+      if (action === "suspend" && staffStoreId === storeId) {
+        setStaffList([]);
+        setStaffError("");
+      }
     } catch (e: unknown) {
       setStoreSuspendError(e instanceof Error ? e.message : "Failed to update store status");
     } finally {
@@ -1260,7 +1274,10 @@ export default function App() {
     }
   }
 
+  const analyticsInFlightRef = useRef(false);
   async function refreshAnalytics(activeTab: AnalyticsTabKey) {
+    if (analyticsInFlightRef.current) return;
+    analyticsInFlightRef.current = true;
     setAnalyticsLoading(true);
     setAnalyticsError("");
     try {
@@ -1300,6 +1317,7 @@ export default function App() {
       setAnalyticsError(e?.message ? String(e.message) : "Failed to fetch analytics");
     } finally {
       setAnalyticsLoading(false);
+      analyticsInFlightRef.current = false;
     }
   }
 
@@ -1399,7 +1417,7 @@ export default function App() {
       refreshDocuments();
     } catch (e: any) {
       await logAdminActionError("approve", "document", docId, e?.message || "Unknown error");
-      setDocumentsError(e?.message || "Failed to approve document");
+      toast.error(e?.message || "Failed to approve document");
     } finally {
       setDocumentActionLoading(null);
     }
@@ -1424,7 +1442,8 @@ export default function App() {
       refreshDocuments();
     } catch (e: any) {
       await logAdminActionError("reject", "document", docId, e?.message || "Unknown error");
-      setDocumentsError(e?.message || "Failed to reject document");
+      // R2-FIX APP-024: Show error via toast (visible even when modal is open)
+      toast.error(e?.message || "Failed to reject document");
     } finally {
       setDocumentActionLoading(null);
     }
@@ -1566,7 +1585,7 @@ export default function App() {
       const flags = await fetchStoreFeatureFlags(storeId);
       setStoreFeatureFlags((prev) => ({ ...prev, [storeId]: flags }));
     } catch (e: unknown) {
-      console.error("[SA-P1-007] Load store flags failed:", e instanceof Error ? e.message : "unknown");
+      toast.error(e instanceof Error ? e.message : "Failed to load store flags");
     } finally {
       setStoreFFLoading((prev) => ({ ...prev, [storeId]: false }));
     }
@@ -1584,7 +1603,8 @@ export default function App() {
       const flags = await fetchStoreFeatureFlags(storeId);
       setStoreFeatureFlags((prev) => ({ ...prev, [storeId]: flags }));
     } catch (e: unknown) {
-      console.error("[SA-P1-007] Toggle store flag failed:", e instanceof Error ? e.message : "unknown");
+      // R2-FIX APP-016: Surface flag toggle error to user instead of silent console.error
+      toast.error(e instanceof Error ? e.message : "Failed to toggle store flag");
     }
   }
 
@@ -1604,6 +1624,8 @@ export default function App() {
     try {
       const result = await bulkSetOverride(Array.from(selectedStoreIds), bulkFlagKey, bulkFlagAction === "enable");
       setBulkFlagResult(`Updated ${result.updated} store(s)`);
+      // R2-FIX APP-017: Auto-clear after 5 seconds
+      setTimeout(() => setBulkFlagResult(""), 5000);
       setStoreFeatureFlags((prev) => {
         const next = { ...prev };
         for (const id of selectedStoreIds) delete next[id];
@@ -1704,6 +1726,9 @@ export default function App() {
       // #331: Show activation code for retailers; show confirmation for suppliers
       // REQ.SUPERADMIN.APPROVAL_MATRIX: both entity types now get a post-approval dialog
       // REQ.REGRESSION.SUPPLIER_APPROVAL_DELIVERY_TRUTH: pass emailDelivered through to modal
+      // R2-FIX APP-014: Refresh stores/suppliers after approval so new entity is visible
+      if (result.entityType === 'retailer') void refreshStores();
+      if (result.entityType === 'supplier') void refreshSuppliers();
       if (result.activationCode || result.entityType === 'supplier') {
         setApprovalResult({
           entityType: result.entityType || 'retailer',
@@ -1913,6 +1938,19 @@ export default function App() {
     // LIVE.SUPERADMIN.EVENTS_SESSION_UNAUTHORIZED_LOOP.001: Added isAuthenticated dependency
     // Ensures polling stops on logout and restarts on re-authentication
   }, [tab, staffStoreId, isAuthenticated]);
+
+  // R2-FIX APP-008: Reset staff add-form fields when store changes
+  useEffect(() => {
+    setShowAddStaff(false);
+    setNewStaffName("");
+    setNewStaffPhone("");
+    setNewStaffPin("");
+    setNewStaffRole("CASHIER");
+    setResetPinStaffId(null);
+    setResetPinValue("");
+    setStaffError("");
+    setStaffSuccess("");
+  }, [staffStoreId]);
 
   // If user changes limit, refresh immediately.
   useEffect(() => {
@@ -2237,6 +2275,10 @@ export default function App() {
       if (paymentDraft) {
         setStorePaymentEdits((prev) => { const next = { ...prev }; delete next[storeId]; return next; });
       }
+      // R2-FIX STO-004: Clear contact draft after successful save
+      if (contactDraft) {
+        setStoreContactEdits((prev) => { const next = { ...prev }; delete next[storeId]; return next; });
+      }
     } catch (e: any) {
       setStoreNameError(e?.message ? String(e.message) : "Failed to update store.");
     } finally {
@@ -2245,12 +2287,18 @@ export default function App() {
   }
 
   // ISSUE-063: Toggle credit enabled on a store
+  // R2-FIX APP-018: Add per-store loading guard to prevent rapid-click races
+  const [creditToggleLoading, setCreditToggleLoading] = useState<Record<string, boolean>>({});
   async function handleCreditToggle(storeId: string, enabled: boolean) {
+    if (creditToggleLoading[storeId]) return;
+    setCreditToggleLoading((prev) => ({ ...prev, [storeId]: true }));
     try {
       const updated = await updateStore(storeId, { creditEnabled: enabled });
       setStoreDirectory((prev) => prev.map((s) => (s.id === storeId ? updated : s)));
     } catch (e: any) {
       toast.error(e?.message ? String(e.message) : "Failed to toggle credit.");
+    } finally {
+      setCreditToggleLoading((prev) => ({ ...prev, [storeId]: false }));
     }
   }
 
@@ -3102,7 +3150,7 @@ export default function App() {
           bulkFlagResult={bulkFlagResult}
           featureFlags={featureFlags}
           barcodeSheetStoreId={barcodeSheetStoreId}
-          setBarcodeSheetStoreId={setBarcodeSheetStoreId}
+          setBarcodeSheetStoreId={(v: string) => { setBarcodeSheetStoreId(v); resetBarcodeSheetNotice(); }}
           barcodeSheetTier={barcodeSheetTier}
           setBarcodeSheetTier={setBarcodeSheetTier}
           barcodeSheetBusy={barcodeSheetBusy}
@@ -3303,7 +3351,7 @@ export default function App() {
           createUserError={createUserError}
           createUserSuccess={createUserSuccess}
           setUserSearch={setUserSearch}
-          setShowCreateUser={setShowCreateUser}
+          setShowCreateUser={(v: boolean) => { setShowCreateUser(v); if (v) { setCreateUserError(""); setCreateUserSuccess(""); } }}
           setCreateUserForm={setCreateUserForm}
           refreshUsers={refreshUsers}
           requestUserStatusChange={requestUserStatusChange}

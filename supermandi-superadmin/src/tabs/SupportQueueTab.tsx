@@ -74,6 +74,8 @@ export function SupportQueueTab() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // R2-FIX SQ-004: Per-action loading state for assign/resolve
+  const [actionLoading, setActionLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const fetchQueue = useCallback(async () => {
@@ -143,6 +145,8 @@ export function SupportQueueTab() {
   };
 
   const assignToMe = async (convId: string) => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       await apiFetch(`/api/v1/chat/support/${convId}/assign`, {
         method: 'POST',
@@ -152,10 +156,14 @@ export function SupportQueueTab() {
       if (selectedConvId === convId) selectConversation(convId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to assign');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const resolveConversation = async (convId: string) => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       await apiFetch(`/api/v1/chat/support/${convId}/resolve`, { method: 'POST' });
       fetchQueue();
@@ -163,6 +171,8 @@ export function SupportQueueTab() {
       setMessages([]);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to resolve');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -260,10 +270,10 @@ export function SupportQueueTab() {
                 <>
                   {/* Actions */}
                   <div className="sa-flex sa-gap-8 sa-py-8 sa-border-b">
-                    <button onClick={() => assignToMe(selectedConvId)} className="sa-btn-ghost-sm">
-                      Assign to Me
+                    <button onClick={() => assignToMe(selectedConvId)} disabled={actionLoading} className="sa-btn-ghost-sm">
+                      {actionLoading ? 'Processing...' : 'Assign to Me'}
                     </button>
-                    <button onClick={() => setConfirmDialog({ title: 'Resolve Conversation', message: 'Mark this conversation as resolved? The customer will no longer see it as active.', confirmLabel: 'Resolve', variant: 'warning', onConfirm: () => { setConfirmDialog(null); resolveConversation(selectedConvId); } })} className="sa-btn-success-sm">
+                    <button onClick={() => setConfirmDialog({ title: 'Resolve Conversation', message: 'Mark this conversation as resolved? The customer will no longer see it as active.', confirmLabel: 'Resolve', variant: 'warning', onConfirm: () => { setConfirmDialog(null); resolveConversation(selectedConvId); } })} disabled={actionLoading} className="sa-btn-success-sm">
                       Resolve
                     </button>
                   </div>

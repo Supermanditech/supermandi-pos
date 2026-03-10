@@ -56,13 +56,13 @@ export function AiPanel({
           </div>
 
           <div className="aiQuickActions">
-            <button className="aiQuickBtn" onClick={async () => { const q = "Explain the last hour of POS activity. Focus on issues and anomalies."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
+            <button className="aiQuickBtn" disabled={aiLoading} onClick={async () => { if (aiLoading) return; const q = "Explain the last hour of POS activity. Focus on issues and anomalies."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
               📊 Explain last hour
             </button>
-            <button className="aiQuickBtn" onClick={async () => { const q = "Why did payments fail? List likely causes from events and next steps."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
+            <button className="aiQuickBtn" disabled={aiLoading} onClick={async () => { if (aiLoading) return; const q = "Why did payments fail? List likely causes from events and next steps."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
               💳 Payment issues?
             </button>
-            <button className="aiQuickBtn" onClick={async () => { const q = "Summarize today: devices active, stores active, and any printer/network problems."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
+            <button className="aiQuickBtn" disabled={aiLoading} onClick={async () => { if (aiLoading) return; const q = "Summarize today: devices active, stores active, and any printer/network problems."; setAiQuestion(q); resetAiIdleTimer(); setAiLoading(true); setAiError(""); setAiAnswer(""); try { const res = await askAi(q); setAiAnswer(res.answer); } catch (e: unknown) { setAiError(e instanceof Error ? e.message : "AI request failed"); } finally { setAiLoading(false); } }}>
               📋 Summarize today
             </button>
           </div>
