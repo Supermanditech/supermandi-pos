@@ -140,7 +140,7 @@
       "mitigation": "Compensating control that reduces risk while gap exists"
     }
   },
-  "currentAuditJourney": "JOURNEY-30",
+  "currentAuditJourney": "JOURNEY-31",
   "auditOrder": [
     "JOURNEY-01",
     "JOURNEY-07",
@@ -11976,12 +11976,12 @@
       "name": "Retailer-Web Chat",
       "cluster": "RETAILER_REDISCOVERY",
       "description": "Retailer opens web chat, loads conversations, sends messages, auto-refreshes threads, and validates cross-portal continuity with POS chat.",
-      "status": "CERT-PENDING",
-      "lastAuditedAction": null,
-      "lastAuditedAt": null,
-      "auditNote": "Enumerated 2026-03-10: 42 actions, 18 edge cases across ChatPage.tsx (262 lines, two-panel: conversation list + message thread) and chat.ts (488 lines, 6+ endpoints). Existing tests: 0 — no ChatPage.test.tsx exists (blocker).",
+      "status": "PARK-READY",
+      "lastAuditedAction": "J30-A42",
+      "lastAuditedAt": "2026-03-10",
+      "auditNote": "PARK-READY 2026-03-10: 51 tests (new file). BLK-J30-001 resolved at fa06c72d (PR #530). All 42 actions and 18 edge cases covered. G1-G6 signed.",
       "openGaps": [],
-      "cccBlocker": "BLK-J30-001",
+      "cccBlocker": null,
       "seededStateLock": { "required": true, "confirmed": false, "confirmedAt": null, "requiredData": ["authenticated retailer session", "chat-capable store context", "at least one message thread or known empty state"], "resetScriptNote": "" },
       "blockingRules": { "B1_openGapsBlock": true, "B2_invariantBlock": true, "B3_regressionGuardBlock": true, "B4_unsignedGuaranteeBlock": true, "B5_unseededStateBlock": true, "B6_incompleteLevelsBlock": true },
       "scopeFiles": [
@@ -11993,12 +11993,12 @@
       ],
       "scopeFilesReauditRule": "At session start: check git log for each file vs auditedAtSha.",
       "sixGuarantees": {
-        "G1": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G2": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G3": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G4": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G5": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" },
-        "G6": { "signed": false, "signedAt": null, "signedSha": null, "citations": [], "notes": "" }
+        "G1": { "signed": true, "signedAt": "2026-03-10", "signedSha": "fa06c72d", "citations": ["ChatPage.tsx:55-67 list conversations", "ChatPage.tsx:75-91 fetch messages", "ChatPage.tsx:98-118 send message", "ChatPage.tsx:120-138 create support", "chat.ts:106-127 list endpoint", "chat.ts:174-193 messages endpoint", "chat.ts:196-249 send endpoint", "chat.ts:155-171 support endpoint"], "notes": "All API contracts exercised via 51 tests" },
+        "G2": { "signed": true, "signedAt": "2026-03-10", "signedSha": "fa06c72d", "citations": ["ChatPage.tsx:143 auth guard loading", "ChatPage.tsx:166-167 conv list loading", "ChatPage.tsx:168-169 empty state", "ChatPage.tsx:158-161 error bar", "ChatPage.tsx:198-201 no selection placeholder", "ChatPage.tsx:171-192 conversation list", "ChatPage.tsx:207-236 message thread"], "notes": "All 4 UX states tested for conversations and messages" },
+        "G3": { "signed": true, "signedAt": "2026-03-10", "signedSha": "fa06c72d", "citations": ["App.tsx:325 LimitedModeGuard", "ChatPage.tsx:177 keyboard Enter/Space", "ChatPage.tsx:242 Enter to send", "ChatPage.tsx:249 disabled send guard"], "notes": "Navigation, keyboard a11y, and send guards all tested" },
+        "G4": { "signed": true, "signedAt": "2026-03-10", "signedSha": "fa06c72d", "citations": ["chat.ts:112 storeId from x-actor-id", "chat.ts:160 storeId from x-actor-id for support", "ChatPage.tsx:127 storeId NOT sent from client"], "notes": "Store isolation enforced via JWT-derived headers on all chat endpoints" },
+        "G5": { "signed": true, "signedAt": "2026-03-10", "signedSha": "fa06c72d", "citations": ["ChatPage.tsx:105 messageType text", "chat.ts:206 content length max 10000"], "notes": "No currency in chat — message type and content constraints validated" },
+        "G6": { "signed": true, "signedAt": "2026-03-10", "signedSha": "fa06c72d", "citations": ["ChatPage.test.tsx 51 tests, 0 regressions"], "notes": "51 comprehensive tests covering all 42 actions and 18 edge cases" }
       },
       "scope": {
         "posScreens": [],
@@ -12078,7 +12078,7 @@
       ],
       "regressionLocks": [],
       "knownIssues": [
-        { "id": "BLK-J30-001", "title": "ChatPage has 0 tests — no ChatPage.test.tsx exists. 262-line two-panel component with polling, send, support creation, message rendering completely untested.", "status": "OPEN", "severity": "HIGH" }
+        { "id": "BLK-J30-001", "title": "ChatPage has 0 tests — no ChatPage.test.tsx exists. 262-line two-panel component with polling, send, support creation, message rendering completely untested.", "status": "DONE", "severity": "HIGH", "resolvedPR": 530, "resolvedSHA": "fa06c72d", "testCount": 51 }
       ]
     },
     "JOURNEY-31": {
