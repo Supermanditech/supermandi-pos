@@ -11537,7 +11537,7 @@
       "knownIssues": [
         { "id": "BLK-J25-001", "title": "RegisterPage.test.tsx 62 failures — sessionStorage not defined", "status": "CLOSED_FALSE_ALARM", "fixClass": "NONE", "resolution": "Tests pass 55/55 from retailer-admin/ workspace. Earlier failure was CWD mismatch (root dir lacks jsdom)." },
         { "id": "BLK-J25-002", "title": "CompliancePage.test.tsx failures — needs investigation", "status": "CLOSED_FALSE_ALARM", "fixClass": "NONE", "resolution": "Tests pass 7/7 from retailer-admin/ workspace. Same CWD issue." },
-        { "id": "J25-TEST-001", "title": "CompliancePage.test.tsx has only 7 smoke tests — needs comprehensive expansion", "status": "OPEN", "fixClass": "TEST_FIX" }
+        { "id": "J25-TEST-001", "title": "CompliancePage expanded from 7 to 46 comprehensive tests", "status": "DONE", "fixClass": "TEST_FIX", "mergedPR": 525, "mergedSHA": "e4f49841", "testCount": 46 }
       ]
     },
     "JOURNEY-26": {
