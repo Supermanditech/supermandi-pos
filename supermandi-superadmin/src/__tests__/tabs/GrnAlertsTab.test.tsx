@@ -254,8 +254,10 @@ describe('GrnAlertsTab', () => {
   it('disables action buttons when action is loading for that alert', () => {
     const alerts = [makeAlert({ id: 'alert-x' })];
     render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1, grnAlertActionLoading: 'alert-x' })} />);
-    expect((screen.getByText('Acknowledge') as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByText('Dismiss') as HTMLButtonElement).disabled).toBe(true);
+    const updatingBtns = screen.getAllByText('Updating...');
+    expect(updatingBtns.length).toBe(2);
+    expect((updatingBtns[0] as HTMLButtonElement).disabled).toBe(true);
+    expect((updatingBtns[1] as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('does not disable action buttons for other alerts while one is loading', () => {

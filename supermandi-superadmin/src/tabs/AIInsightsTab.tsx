@@ -107,7 +107,7 @@ export function AIInsightsTab() {
         <h2 className="sa-text-lg sa-fw-600" style={{ margin: 0 }}>AI Intelligence</h2>
         <div className="sa-flex sa-gap-8">
           {(['anomalies', 'alerts', 'jobs'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} className="sa-btn-sm sa-radius-6 sa-border" style={{
+            <button key={v} onClick={() => { setView(v); setError(null); setJobResult(null); }} className="sa-btn-sm sa-radius-6 sa-border" style={{
               background: view === v ? 'var(--color-primary-dark)' : 'var(--color-surface)',
               color: view === v ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
             }}>{v.charAt(0).toUpperCase() + v.slice(1)}</button>

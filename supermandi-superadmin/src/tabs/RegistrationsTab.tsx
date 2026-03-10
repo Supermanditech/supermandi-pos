@@ -149,9 +149,10 @@ export function RegistrationsTab({
                     <button
                       className="sa-btn-xs sa-fw-600 sa-text-green"
                       style={{
-                        border: "1px solid var(--color-success)",
-                        background: sendingEnrollment === evt.storeId ? "var(--color-success-soft)" : "var(--color-success-soft)",
-                        cursor: sendingEnrollment === evt.storeId ? "wait" : "pointer",
+                        border: `1px solid ${sendingEnrollment ? "var(--color-border)" : "var(--color-success)"}`,
+                        background: sendingEnrollment ? "var(--color-surface-alt)" : "var(--color-success-soft)",
+                        cursor: sendingEnrollment ? "not-allowed" : "pointer",
+                        opacity: sendingEnrollment && sendingEnrollment !== evt.storeId ? 0.5 : 1,
                       }}
                       disabled={!!sendingEnrollment}
                       onClick={async () => {

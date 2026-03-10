@@ -54,6 +54,8 @@ export function SettingsTab({
 
   const handleStoreSelect = useCallback((storeId: string) => {
     setSelectedStoreId(storeId);
+    setStoreFlags([]);
+    setStoreFlagsError("");
     loadStoreFlags(storeId);
   }, [loadStoreFlags]);
 
@@ -144,7 +146,16 @@ export function SettingsTab({
                     <td><span className={`badge ${flag.enabled ? "badgeOk" : "badgeError"}`}>{flag.enabled ? "ENABLED" : "DISABLED"}</span></td>
                     <td>{flag.flag_key === "minAppVersion" ? (<span className="sa-text-sm sa-text-muted">Auto (from build)</span>) : (<span className="sa-text-xs sa-text-muted">{"\u2014"}</span>)}</td>
                     <td>
-                      <button onClick={() => { handleToggleGlobalFlag(flag.flag_key, !flag.enabled); }} disabled={featureFlagSaving[flag.flag_key]} className={flag.enabled ? "sa-btn-danger-sm" : "sa-btn-success-sm"} style={{ padding: "4px 12px" }}>
+                      <button onClick={() => {
+                        const action = flag.enabled ? "KILL" : "Enable";
+                        setConfirmDialog({
+                          title: `${action} Feature Flag`,
+                          message: `Are you sure you want to ${action.toLowerCase()} "${flag.flag_key}" globally? This affects ALL stores.`,
+                          confirmLabel: action,
+                          variant: flag.enabled ? "danger" : "info",
+                          onConfirm: () => { setConfirmDialog(null); handleToggleGlobalFlag(flag.flag_key, !flag.enabled); },
+                        });
+                      }} disabled={featureFlagSaving[flag.flag_key]} className={flag.enabled ? "sa-btn-danger-sm" : "sa-btn-success-sm"} style={{ padding: "4px 12px" }}>
                         {featureFlagSaving[flag.flag_key] ? "Saving..." : flag.enabled ? "KILL" : "Enable"}
                       </button>
                     </td>

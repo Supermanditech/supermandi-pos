@@ -1,4 +1,6 @@
 // SA-001: Users management tab extracted from App.tsx
+import { useState } from "react";
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import type { UserRecord } from "../api/users";
 import { TableSkeleton } from "../components/TableSkeleton";
 import { formatDate } from "../lib/formatters";
@@ -29,6 +31,7 @@ export function UsersTab({
   createUserError, createUserSuccess, setUserSearch, setShowCreateUser,
   setCreateUserForm, refreshUsers, requestUserStatusChange, requestCreateUser,
 }: UsersTabProps) {
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   return (
     <section className="card">
       <div className="cardHeader">
@@ -112,7 +115,17 @@ export function UsersTab({
                 <td><span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeError" : "badgeWarn"}`}>{user.status}</span></td>
                 <td>{formatDate(user.created_at)}</td>
                 <td>
-                  <select value={user.status} onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")} disabled={userStatusSaving[user.id]} className="sa-select" style={{ minWidth: 100 }} aria-label={`Change status for ${user.name}`}>
+                  <select value={user.status} onChange={(e) => {
+                    const newStatus = e.target.value as "active" | "inactive" | "suspended";
+                    if (newStatus === user.status) return;
+                    setConfirmDialog({
+                      title: "Change User Status",
+                      message: `Change ${user.name}'s status from "${user.status}" to "${newStatus}"?`,
+                      confirmLabel: newStatus === "suspended" ? "Suspend User" : `Set ${newStatus}`,
+                      variant: newStatus === "suspended" ? "danger" : "info",
+                      onConfirm: () => { setConfirmDialog(null); requestUserStatusChange(user.id, newStatus); },
+                    });
+                  }} disabled={userStatusSaving[user.id]} className="sa-select" style={{ minWidth: 100 }} aria-label={`Change status for ${user.name}`}>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     <option value="suspended">Suspended</option>
@@ -127,6 +140,7 @@ export function UsersTab({
         </table>
         )}
       </div>
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
     </section>
   );
 }

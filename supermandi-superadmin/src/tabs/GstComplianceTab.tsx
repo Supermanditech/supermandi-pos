@@ -41,6 +41,7 @@ export function GstComplianceTab() {
   const loadStoreDetail = async (storeId: string) => {
     setSelectedStore(storeId);
     setDetailLoading(true);
+    setError("");
     try {
       const data = await fetchGstSummary(storeId, month);
       setStoreSummary(data);

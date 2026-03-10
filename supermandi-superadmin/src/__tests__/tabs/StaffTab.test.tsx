@@ -306,6 +306,8 @@ describe('StaffTab', () => {
     render(<StaffTab {...createProps({ staffList: staff as any, handleStaffRoleChange: handleRole })} />);
     const roleSelects = screen.getAllByDisplayValue('CASHIER');
     fireEvent.change(roleSelects[0], { target: { value: 'MANAGER' } });
+    // ConfirmDialog appears — click the confirm button
+    fireEvent.click(screen.getByText('Change Role'));
     expect(handleRole).toHaveBeenCalledWith('staff-1', 'MANAGER');
   });
 

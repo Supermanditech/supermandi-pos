@@ -265,6 +265,8 @@ describe('UsersTab', () => {
     const users = [makeUser({ id: 'u-test', name: 'Charlie' })];
     render(<UsersTab {...createProps({ userRecords: users as any, requestUserStatusChange: handler })} />);
     fireEvent.change(screen.getByLabelText('Change status for Charlie'), { target: { value: 'suspended' } });
+    // ConfirmDialog appears — click the confirm button
+    fireEvent.click(screen.getByText('Suspend User'));
     expect(handler).toHaveBeenCalledWith('u-test', 'suspended');
   });
 
