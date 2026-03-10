@@ -3142,6 +3142,7 @@ export default function App() {
           productActionLoading={productActionLoading}
           handleOpenEditProduct={handleOpenEditProduct}
           handleApproveProduct={confirmedApproveProduct}
+          handleApproveProductDirect={handleApproveProduct}
           handleRejectProduct={handleRejectProduct}
           editingProduct={editingProduct}
           setEditingProduct={setEditingProduct}
@@ -3444,7 +3445,9 @@ export default function App() {
         pendingStatusChange={pendingStatusChange}
         setPendingStatusChange={setPendingStatusChange}
         executeUserStatusChange={executeUserStatusChange}
+        userStatusSaving={userStatusSaving}
         pendingDeviceAction={pendingDeviceAction}
+        deviceActionLoading={pendingDeviceAction ? deviceSaving[pendingDeviceAction.deviceId] : false}
         setPendingDeviceAction={setPendingDeviceAction}
         executeDeviceSave={executeDeviceSave}
         executeDeviceReset={executeDeviceReset}

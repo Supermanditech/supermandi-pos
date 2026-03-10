@@ -4,6 +4,7 @@ interface UserSuspendModalProps {
   pendingStatusChange: { userId: string; newStatus: "active" | "inactive" | "suspended"; userName?: string } | null;
   setPendingStatusChange: (v: null) => void;
   executeUserStatusChange: (userId: string, newStatus: "active" | "inactive" | "suspended") => void;
+  userStatusSaving?: Record<string, boolean>;
 }
 
 interface DeviceActionModalProps {
@@ -11,6 +12,7 @@ interface DeviceActionModalProps {
   setPendingDeviceAction: (v: null) => void;
   executeDeviceSave: (deviceId: string) => void;
   executeDeviceReset: (deviceId: string) => void;
+  deviceActionLoading?: boolean;
 }
 
 interface AdminUserModalProps {
@@ -59,8 +61,10 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
               <p className="muted">This action will prevent the user from accessing the system.</p>
             </div>
             <div className="modalFooter">
-              <button className="btnGhost" onClick={() => props.setPendingStatusChange(null)}>Cancel</button>
-              <button className="btnDanger" onClick={() => props.executeUserStatusChange(props.pendingStatusChange!.userId, props.pendingStatusChange!.newStatus)}>Suspend User</button>
+              <button className="btnGhost" onClick={() => props.setPendingStatusChange(null)} disabled={props.userStatusSaving?.[props.pendingStatusChange!.userId]}>Cancel</button>
+              <button className="btnDanger" onClick={() => props.executeUserStatusChange(props.pendingStatusChange!.userId, props.pendingStatusChange!.newStatus)} disabled={props.userStatusSaving?.[props.pendingStatusChange!.userId]}>
+                {props.userStatusSaving?.[props.pendingStatusChange!.userId] ? "Suspending..." : "Suspend User"}
+              </button>
             </div>
           </div>
         </div>
@@ -87,15 +91,15 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
               )}
             </div>
             <div className="modalFooter">
-              <button className="btnGhost" onClick={() => props.setPendingDeviceAction(null)}>Cancel</button>
-              <button className="btnDanger" onClick={() => {
+              <button className="btnGhost" onClick={() => props.setPendingDeviceAction(null)} disabled={props.deviceActionLoading}>Cancel</button>
+              <button className="btnDanger" disabled={props.deviceActionLoading} onClick={() => {
                 if (props.pendingDeviceAction!.action === "deactivate") {
                   props.executeDeviceSave(props.pendingDeviceAction!.deviceId);
                 } else {
                   props.executeDeviceReset(props.pendingDeviceAction!.deviceId);
                 }
               }}>
-                {props.pendingDeviceAction.action === "deactivate" ? "Deactivate Device" : "Reset Token"}
+                {props.deviceActionLoading ? "Processing..." : props.pendingDeviceAction.action === "deactivate" ? "Deactivate Device" : "Reset Token"}
               </button>
             </div>
           </div>

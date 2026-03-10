@@ -1,0 +1,84 @@
+{
+  "audit_id": "SA-AUDIT-001",
+  "pr": "#555",
+  "commit": "579c00fa",
+  "date": "2026-03-11",
+  "status": "MERGED",
+  "fixes_shipped": [
+    {
+      "id": "AUD-001",
+      "severity": "CRITICAL",
+      "file": "SettingsTab.tsx",
+      "issue": "Global feature flag KILL button had no confirm dialog — one misclick disables features for ALL stores",
+      "fix": "Wrapped handleToggleGlobalFlag in ConfirmDialog with danger/info variant"
+    },
+    {
+      "id": "AUD-002",
+      "severity": "CRITICAL",
+      "file": "StaffTab.tsx",
+      "issue": "Staff role change dropdown had no confirmation — accidental touch changes MANAGER role",
+      "fix": "Wrapped role change in ConfirmDialog with warning/info variant"
+    },
+    {
+      "id": "AUD-003",
+      "severity": "CRITICAL",
+      "file": "UsersTab.tsx",
+      "issue": "User status change (suspend/deactivate) had no confirmation dialog",
+      "fix": "Wrapped status change in ConfirmDialog with danger/info variant"
+    },
+    {
+      "id": "AUD-004",
+      "severity": "HIGH",
+      "file": "SettingsTab.tsx",
+      "issue": "Stale store flags persisted when switching stores — old flags shown for new store",
+      "fix": "Added setStoreFlags([]); setStoreFlagsError('') in handleStoreSelect"
+    },
+    {
+      "id": "AUD-005",
+      "severity": "HIGH",
+      "file": "AIInsightsTab.tsx",
+      "issue": "Error and jobResult persisted across view switches (anomalies/alerts/jobs)",
+      "fix": "Added setError(null); setJobResult(null) on view switch"
+    },
+    {
+      "id": "AUD-006",
+      "severity": "HIGH",
+      "file": "GstComplianceTab.tsx",
+      "issue": "loadStoreDetail did not clear error before fetching — old error shown with new store data",
+      "fix": "Added setError('') at start of loadStoreDetail"
+    },
+    {
+      "id": "AUD-007",
+      "severity": "MEDIUM",
+      "file": "GrnAlertsTab.tsx",
+      "issue": "Acknowledge/Dismiss buttons showed no loading feedback during action",
+      "fix": "Added conditional 'Updating...' text when grnAlertActionLoading matches alert id"
+    },
+    {
+      "id": "AUD-008",
+      "severity": "MEDIUM",
+      "file": "RegistrationsTab.tsx",
+      "issue": "Disabled enrollment button visually identical to enabled — no disabled styling",
+      "fix": "Different border, background, cursor, opacity when sendingEnrollment is active"
+    },
+    {
+      "id": "AUD-009",
+      "severity": "MEDIUM",
+      "file": "StaffTab.tsx",
+      "issue": "Reset PIN Save button enabled with empty or <4 digit PIN",
+      "fix": "Added disabled={!resetPinValue || resetPinValue.length < 4}"
+    }
+  ],
+  "remaining_known_issues": [
+    "DevicesTab: device config save without confirmation",
+    "WhatsAppTab: CTA config changes without confirmation",
+    "SuppliersTab: various destructive actions without confirmation",
+    "SupportQueueTab: sendReply double-submit possible",
+    "SupportQueueTab: stale conversation on filter change",
+    "InvoicesTab: pagination race condition on filter changes",
+    "ApplicationsTab: rejection reason persistence across reviews",
+    "App.tsx: modal restore race condition",
+    "App.tsx: tab switch does not abort in-flight requests",
+    "App.tsx: stale polling closures"
+  ]
+}

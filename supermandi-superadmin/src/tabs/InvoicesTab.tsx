@@ -61,6 +61,7 @@ export function InvoicesTab() {
   // STG-815: Clear stale error before each action
   const openDetail = async (id: string) => {
     setError("");
+    setDetail(null);
     setDetailLoading(true);
     try {
       const inv = await getInvoice(id);
