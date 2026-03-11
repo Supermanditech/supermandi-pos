@@ -88,6 +88,8 @@ function createDefaultProps(overrides: Partial<Parameters<typeof StoresTab>[0]> 
     loadStoreSettings: vi.fn(),
     handleBnplSave: vi.fn(),
     bnplSaving: {},
+    handleDiscountLimitSave: vi.fn(),
+    discountLimitSaving: {},
     ...overrides,
   };
   return defaultProps;
@@ -1188,6 +1190,7 @@ describe('StoresTab', () => {
         bnplEnabled: true,
         bnplCreditLimit: 5000000,
         bnplMaxDays: 14,
+        maxDiscountPercent: 100,
         deviceBound: false,
         kycComplete: false,
         upiComplete: false,
@@ -1319,6 +1322,146 @@ describe('StoresTab', () => {
         bnplSaving: { 'store-1': true },
       })} />);
       expect(screen.getByText('Saving...')).toBeTruthy();
+    });
+  });
+
+  // =========================================================================
+  // SA-P0-002: Discount limit section
+  // =========================================================================
+  describe('discount limit (SA-P0-002)', () => {
+    const makeSettingsForStore = (storeId: string, overrides: Record<string, unknown> = {}) => ({
+      [storeId]: {
+        storeId,
+        name: 'Test Store',
+        code: 'TST001',
+        storeType: null,
+        status: 'ACTIVE',
+        statusReason: null,
+        statusUpdatedAt: null,
+        address: null,
+        contactName: null,
+        contactPhone: null,
+        contactEmail: null,
+        city: null,
+        state: null,
+        pincode: null,
+        location: null,
+        upiVpa: null,
+        upiVpaUpdatedAt: null,
+        allowedPaymentMethods: ['CASH'] as string[],
+        creditEnabled: true,
+        creditLimit: 5000,
+        bnplEnabled: true,
+        bnplCreditLimit: 5000000,
+        bnplMaxDays: 14,
+        maxDiscountPercent: 100,
+        deviceBound: false,
+        kycComplete: false,
+        upiComplete: false,
+        adminApproved: false,
+        activeDeviceCount: 0,
+        posDeviceId: null,
+        kycStatus: null,
+        timezone: 'Asia/Kolkata',
+        currency: 'INR',
+        scanLookupV2Enabled: false,
+        featureFlags: [],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-15',
+        ...overrides,
+      },
+    });
+
+    it('renders Discount Limits section header when settings are loaded', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+      })} />);
+      expect(screen.getByText('Discount Limits')).toBeTruthy();
+    });
+
+    it('renders discount limit input with current value', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1', { maxDiscountPercent: 15 });
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+      })} />);
+      const input = screen.getByTestId('discount-limit-input-store-1') as HTMLInputElement;
+      expect(input).toBeTruthy();
+      expect(input.value).toBe('15');
+    });
+
+    it('renders save button for discount limit', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+      })} />);
+      expect(screen.getByTestId('discount-limit-save-store-1')).toBeTruthy();
+    });
+
+    it('save button is disabled when no edit has been made', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+      })} />);
+      const btn = screen.getByTestId('discount-limit-save-store-1') as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+    });
+
+    it('save button is enabled after editing the input', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+      })} />);
+      const input = screen.getByTestId('discount-limit-input-store-1');
+      fireEvent.change(input, { target: { value: '25' } });
+      const btn = screen.getByTestId('discount-limit-save-store-1') as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+    });
+
+    it('calls handleDiscountLimitSave when save is clicked', () => {
+      const handleDiscountLimitSave = vi.fn();
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+        handleDiscountLimitSave,
+      })} />);
+      const input = screen.getByTestId('discount-limit-input-store-1');
+      fireEvent.change(input, { target: { value: '25' } });
+      const btn = screen.getByTestId('discount-limit-save-store-1');
+      fireEvent.click(btn);
+      expect(handleDiscountLimitSave).toHaveBeenCalledWith('store-1', 25);
+    });
+
+    it('shows Saving... when discountLimitSaving is true', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+        discountLimitSaving: { 'store-1': true },
+      })} />);
+      // There may be multiple "Saving..." texts (BNPL too), so check the specific button
+      const btn = screen.getByTestId('discount-limit-save-store-1');
+      expect(btn.textContent).toBe('Saving...');
     });
   });
 });

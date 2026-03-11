@@ -552,6 +552,8 @@ adminStoresRouter.get("/stores/:storeId/settings", requirePermission("stores", "
         bnpl_enabled,
         bnpl_credit_limit,
         bnpl_max_days,
+        -- SA-P0-002: Discount limits
+        max_discount_percent,
         -- Readiness flags
         device_bound,
         kyc_complete,
@@ -633,6 +635,8 @@ adminStoresRouter.get("/stores/:storeId/settings", requirePermission("stores", "
         bnplEnabled: store.bnpl_enabled ?? false,
         bnplCreditLimit: store.bnpl_credit_limit ?? 5000000,
         bnplMaxDays: store.bnpl_max_days ?? 7,
+        // SA-P0-002: Discount limits
+        maxDiscountPercent: Number(store.max_discount_percent ?? 100),
         // Readiness flags
         deviceBound: store.device_bound ?? false,
         kycComplete: store.kyc_complete ?? false,
@@ -914,6 +918,57 @@ adminStoresRouter.patch("/stores/:storeId/bnpl", requirePermission("stores", "wr
   } catch (err: any) {
     log.error("[admin/stores PATCH bnpl] Update failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update BNPL settings" });
+  }
+});
+
+// SA-P0-002: PATCH /api/v1/admin/stores/:storeId/discount-limit - Update max discount percentage
+// Requires 'stores:write' permission
+adminStoresRouter.patch("/stores/:storeId/discount-limit", requirePermission("stores", "write"), adminStoreOperationsRateLimiter, async (req, res) => {
+  const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
+  if (!storeId) {
+    return res.status(400).json({ error: "storeId is required" });
+  }
+
+  const { maxDiscountPercent } = req.body as Record<string, unknown>;
+  if (maxDiscountPercent === undefined || maxDiscountPercent === null) {
+    return res.status(400).json({ error: "maxDiscountPercent is required" });
+  }
+
+  const value = Number(maxDiscountPercent);
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    return res.status(400).json({ error: "maxDiscountPercent must be a number between 0 and 100" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const isUuid = UUID_PATTERN.test(storeId);
+  try {
+    const result = await pool.query(
+      `UPDATE platform.stores
+       SET max_discount_percent = $1, updated_at = NOW()
+       WHERE ${isUuid ? "id = $2::uuid" : "UPPER(code) = UPPER($2)"}
+       RETURNING id::TEXT as id, name, code, status, max_discount_percent, updated_at`,
+      [value, storeId]
+    );
+    const store = result.rows[0];
+    if (!store) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    return res.json({
+      store: {
+        id: store.id,
+        name: store.name,
+        code: store.code,
+        status: store.status,
+        maxDiscountPercent: Number(store.max_discount_percent),
+        updatedAt: store.updated_at,
+      },
+    });
+  } catch (err: any) {
+    log.error("[admin/stores PATCH discount-limit] Update failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update discount limit" });
   }
 });
 
