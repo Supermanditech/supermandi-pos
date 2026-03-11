@@ -98,6 +98,7 @@ import { CreditProvidersTab } from "./tabs/CreditProvidersTab";  // T-289/T-290:
 import { SupportQueueTab } from "./tabs/SupportQueueTab";  // T-300/T-302: Support queue + templates
 import { AIInsightsTab } from "./tabs/AIInsightsTab";  // T-316: AI intelligence dashboard
 import { WhatsAppTab } from "./tabs/WhatsAppTab";  // WA-002: WhatsApp dashboard
+import { MaintenanceTab } from "./tabs/MaintenanceTab";  // SA-P0-007: System maintenance mode
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
@@ -138,6 +139,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   "support": "Support",
   "ai-insights": "AI Intelligence",
   "whatsapp": "WhatsApp",
+  "maintenance": "Maintenance",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -3596,6 +3598,8 @@ export default function App() {
       {tab === "ai-insights" && <AIInsightsTab />}
 
       {tab === "whatsapp" && <WhatsAppTab />}
+
+      {tab === "maintenance" && <MaintenanceTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}
