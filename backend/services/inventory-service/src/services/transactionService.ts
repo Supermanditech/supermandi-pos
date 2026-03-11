@@ -136,6 +136,17 @@ async function createLedgerEntryWithClient(
     [input.storeId, input.productId, newQty, ledgerEntry.id]
   );
 
+  // AUDIT-STORE-LEDGER-001 §F5-2: Dual-write to catalog.store_products.current_stock
+  // Without this, transactions routed through inventory-service (e.g. offline queue
+  // via /api/v1/pos/inventory/transactions) would update stock_balances but leave
+  // store_products.current_stock stale, causing drift visible on retailer dashboard.
+  await client.query(
+    `UPDATE catalog.store_products
+     SET current_stock = $3, updated_at = NOW()
+     WHERE store_id = $1 AND product_id = $2`,
+    [input.storeId, input.productId, newQty]
+  );
+
   return ledgerEntry;
 }
 
