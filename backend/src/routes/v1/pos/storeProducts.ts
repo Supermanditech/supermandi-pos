@@ -15,6 +15,10 @@ import {
   validateStock as validateStockUnified,
 } from "../../../utils/productValidation";
 import { validatePriceBounds } from "../../../utils/priceBoundsValidator";
+import { cacheGet, cacheSet } from "../../../db/redis";
+
+// SCALE-D1: Barcode lookup cache TTL (5 minutes)
+const BARCODE_CACHE_TTL = 300;
 
 export const posStoreProductsRouter = Router();
 
@@ -463,6 +467,13 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
     return res.status(400).json({ error: "VALIDATION_ERROR", message: "barcode is required" });
   }
 
+  // SCALE-D1: Cache-first barcode lookup — barcode:{storeId}:{barcode}, TTL=5min
+  const cacheKey = `barcode:${storeId}:${barcode}`;
+  const cached = await cacheGet<object>(cacheKey);
+  if (cached !== null) {
+    return res.json(cached);
+  }
+
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
@@ -575,7 +586,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
       context: "lookup"
     });
 
-    return res.json({
+    const responseBody = {
       success: true,
       data: {
         productId: row.product_id,
@@ -598,7 +609,12 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         batchNumber: row.batch_number || undefined,
       },
       context: "SELL",
-    });
+    };
+
+    // SCALE-D1: Populate cache for future scans (best-effort, TTL=5min)
+    await cacheSet(cacheKey, responseBody, BARCODE_CACHE_TTL);
+
+    return res.json(responseBody);
   } catch (error) {
     log.error("[storeProducts] Lookup error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Lookup failed" });
