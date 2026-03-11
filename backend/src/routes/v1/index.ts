@@ -114,6 +114,7 @@ import { adminReorderPoliciesRouter } from "./admin/reorderPolicies";  // SA-P1-
 import { adminImportsRouter } from "./admin/imports";  // SA-P2-008: Bulk import notification
 import { adminPriceBoundsRouter } from "./admin/priceBounds";  // SA-P0-003: Price bounds
 import { adminAnomalyAlertsRouter } from "./admin/anomalyAlerts";  // SA-P1-010: Anomaly detection alerts
+import { posExpiryAlertsRouter } from "./pos/expiryAlerts";  // SCALE-C2: POS expiry alerts
 
 export const v1Router = Router();
 
@@ -159,6 +160,7 @@ v1Router.use("/pos", posSyncEventsRouter);  // T-173: SSE real-time sync
 v1Router.use("/pos", posNotificationsRouter);  // Phase 8: FCM push notifications + device token CRUD
 v1Router.use("/pos", posRefundRequestsRouter);  // T-219: UPI refund request management
 v1Router.use("/pos", posWhatsAppRouter);  // WA-001: WhatsApp Cloud API bill sharing
+v1Router.use("/pos", posExpiryAlertsRouter);  // SCALE-C2: Expiry alerts
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
