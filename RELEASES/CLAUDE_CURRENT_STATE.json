@@ -1,6 +1,6 @@
 {
-  "version": "248",
-  "lastUpdated": "2026-03-12T01:19:00.000Z",
+  "version": "249",
+  "lastUpdated": "2026-03-12T00:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -8,10 +8,22 @@
     "createdAt": "2026-03-11T16:00:00.000Z",
     "purpose": "Consolidated cross-platform list of ALL pending, partial, and deferred tickets against git source of truth. This is the single reference for what remains before GCP staging deployment.",
     "stagingReadinessBaseline": {
-      "testSuites": { "total": 5196, "passing": 5196, "failing": 0 },
-      "typecheck": { "clean": 4, "warnings": 1, "note": "Retailer has 4 TS warnings in test files only — non-blocking" },
+      "testSuites": {
+        "total": 5196,
+        "passing": 5196,
+        "failing": 0
+      },
+      "typecheck": {
+        "clean": 4,
+        "warnings": 1,
+        "note": "Retailer has 4 TS warnings in test files only — non-blocking"
+      },
       "batchesOnMain": "BATCH-004 through BATCH-014 + SA-MERGED — all production-grade in git",
-      "journeys": { "total": 70, "parkReady": 70, "pending": 0 }
+      "journeys": {
+        "total": 70,
+        "parkReady": 70,
+        "pending": 0
+      }
     },
     "saGolive": {
       "total": 17,
@@ -23,23 +35,156 @@
       "note": "All 15 remaining tickets split from bundled PR #567 into individual PRs (#568-#582) and squash-merged to main. Prestage tags created for all.",
       "tickets": {
         "done": [
-          { "id": "SA-P0-001", "title": "Store suspension & reactivation", "risk": "B", "status": "DONE", "pr": 12, "sha": "99da6fc", "codeStatus": "Fully implemented with E2E tests" },
-          { "id": "SA-P0-004", "title": "Stock-in supplier info (optional)", "risk": "B", "status": "DONE", "pr": 14, "sha": "57a88db", "codeStatus": "Fully implemented with E2E tests" },
-          { "id": "SA-P0-007", "title": "System maintenance mode", "risk": "B", "status": "DONE", "pr": 573, "sha": "39051f8e", "tag": "prestage-SA-P0-007-2026-03-11_1605IST" },
-          { "id": "SA-P1-009", "title": "Store health dashboard", "risk": "A", "status": "DONE", "pr": 574, "sha": "a678b5bd", "tag": "prestage-SA-P1-009-2026-03-11_1606IST" },
-          { "id": "SA-P1-012", "title": "Offline sale re-validation", "risk": "B", "status": "DONE", "codeStatus": "Sync validates offline sales, tests exist in POS suite" },
-          { "id": "SA-P1-014", "title": "Store settings visibility", "risk": "A", "status": "DONE", "pr": 572, "sha": "e22f9b4f", "tag": "prestage-SA-P1-014-2026-03-11_1604IST" },
-          { "id": "SA-P1-015", "title": "Reorder policy supervision", "risk": "B", "status": "DONE", "pr": 575, "sha": "303b587b", "tag": "prestage-SA-P1-015-2026-03-11_1607IST" },
-          { "id": "SA-P2-001", "title": "Force device re-enrollment", "risk": "B", "status": "DONE", "pr": 570, "sha": "d7ca07e7", "tag": "prestage-SA-P2-001-2026-03-11_1602IST" },
-          { "id": "SA-P2-002", "title": "Remote config push notification", "risk": "B", "status": "DONE", "pr": 579, "sha": "baeb69dd", "tag": "prestage-SA-P2-002-2026-03-11_1611IST" },
-          { "id": "SA-P2-003", "title": "Minimum app version enforcement", "risk": "B", "status": "DONE", "pr": "17+18", "codeStatus": "ForceUpdateScreen + semver + backend endpoint all implemented" },
-          { "id": "SA-P2-004", "title": "Compliance status aggregation", "risk": "A", "status": "DONE", "pr": 576, "sha": "223c3cd2", "tag": "prestage-SA-P2-004-2026-03-11_1608IST" },
-          { "id": "SA-P2-005", "title": "Force POS sync trigger", "risk": "B", "status": "DONE", "pr": 580, "sha": "18cba56d", "tag": "prestage-SA-P2-005-2026-03-11_1612IST" },
-          { "id": "SA-P2-006", "title": "Product category manual override", "risk": "A", "status": "DONE", "pr": 577, "sha": "58f30f72", "tag": "prestage-SA-P2-006-2026-03-11_1609IST" },
-          { "id": "SA-P2-007", "title": "BNPL limit adjustment UI", "risk": "A", "status": "DONE", "pr": 581, "sha": "9e619511", "tag": "prestage-SA-P2-007-2026-03-11_1613IST" },
-          { "id": "SA-P2-008", "title": "Retailer bulk import notification", "risk": "A", "status": "DONE", "pr": 578, "sha": "2f69fa86", "tag": "prestage-SA-P2-008-2026-03-11_1610IST" },
-          { "id": "SA-P2-009", "title": "Device hardware whitelist", "risk": "B", "status": "DONE", "pr": 582, "sha": "7194ce41", "tag": "prestage-SA-P2-009-2026-03-11_1614IST" },
-          { "id": "SA-P2-010", "title": "Retailer user force password reset", "risk": "B", "status": "DONE", "pr": 571, "sha": "57f8b5ee", "tag": "prestage-SA-P2-010-2026-03-11_1603IST" }
+          {
+            "id": "SA-P0-001",
+            "title": "Store suspension & reactivation",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 12,
+            "sha": "99da6fc",
+            "codeStatus": "Fully implemented with E2E tests"
+          },
+          {
+            "id": "SA-P0-004",
+            "title": "Stock-in supplier info (optional)",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 14,
+            "sha": "57a88db",
+            "codeStatus": "Fully implemented with E2E tests"
+          },
+          {
+            "id": "SA-P0-007",
+            "title": "System maintenance mode",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 573,
+            "sha": "39051f8e",
+            "tag": "prestage-SA-P0-007-2026-03-11_1605IST"
+          },
+          {
+            "id": "SA-P1-009",
+            "title": "Store health dashboard",
+            "risk": "A",
+            "status": "DONE",
+            "pr": 574,
+            "sha": "a678b5bd",
+            "tag": "prestage-SA-P1-009-2026-03-11_1606IST"
+          },
+          {
+            "id": "SA-P1-012",
+            "title": "Offline sale re-validation",
+            "risk": "B",
+            "status": "DONE",
+            "codeStatus": "Sync validates offline sales, tests exist in POS suite"
+          },
+          {
+            "id": "SA-P1-014",
+            "title": "Store settings visibility",
+            "risk": "A",
+            "status": "DONE",
+            "pr": 572,
+            "sha": "e22f9b4f",
+            "tag": "prestage-SA-P1-014-2026-03-11_1604IST"
+          },
+          {
+            "id": "SA-P1-015",
+            "title": "Reorder policy supervision",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 575,
+            "sha": "303b587b",
+            "tag": "prestage-SA-P1-015-2026-03-11_1607IST"
+          },
+          {
+            "id": "SA-P2-001",
+            "title": "Force device re-enrollment",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 570,
+            "sha": "d7ca07e7",
+            "tag": "prestage-SA-P2-001-2026-03-11_1602IST"
+          },
+          {
+            "id": "SA-P2-002",
+            "title": "Remote config push notification",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 579,
+            "sha": "baeb69dd",
+            "tag": "prestage-SA-P2-002-2026-03-11_1611IST"
+          },
+          {
+            "id": "SA-P2-003",
+            "title": "Minimum app version enforcement",
+            "risk": "B",
+            "status": "DONE",
+            "pr": "17+18",
+            "codeStatus": "ForceUpdateScreen + semver + backend endpoint all implemented"
+          },
+          {
+            "id": "SA-P2-004",
+            "title": "Compliance status aggregation",
+            "risk": "A",
+            "status": "DONE",
+            "pr": 576,
+            "sha": "223c3cd2",
+            "tag": "prestage-SA-P2-004-2026-03-11_1608IST"
+          },
+          {
+            "id": "SA-P2-005",
+            "title": "Force POS sync trigger",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 580,
+            "sha": "18cba56d",
+            "tag": "prestage-SA-P2-005-2026-03-11_1612IST"
+          },
+          {
+            "id": "SA-P2-006",
+            "title": "Product category manual override",
+            "risk": "A",
+            "status": "DONE",
+            "pr": 577,
+            "sha": "58f30f72",
+            "tag": "prestage-SA-P2-006-2026-03-11_1609IST"
+          },
+          {
+            "id": "SA-P2-007",
+            "title": "BNPL limit adjustment UI",
+            "risk": "A",
+            "status": "DONE",
+            "pr": 581,
+            "sha": "9e619511",
+            "tag": "prestage-SA-P2-007-2026-03-11_1613IST"
+          },
+          {
+            "id": "SA-P2-008",
+            "title": "Retailer bulk import notification",
+            "risk": "A",
+            "status": "DONE",
+            "pr": 578,
+            "sha": "2f69fa86",
+            "tag": "prestage-SA-P2-008-2026-03-11_1610IST"
+          },
+          {
+            "id": "SA-P2-009",
+            "title": "Device hardware whitelist",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 582,
+            "sha": "7194ce41",
+            "tag": "prestage-SA-P2-009-2026-03-11_1614IST"
+          },
+          {
+            "id": "SA-P2-010",
+            "title": "Retailer user force password reset",
+            "risk": "B",
+            "status": "DONE",
+            "pr": 571,
+            "sha": "57f8b5ee",
+            "tag": "prestage-SA-P2-010-2026-03-11_1603IST"
+          }
         ],
         "partial": [],
         "notImplemented": []
@@ -63,14 +208,70 @@
       "blocking": false,
       "completedDate": "2026-03-11",
       "tickets": [
-        { "id": "SA-P0-002", "title": "Discount limits", "status": "DONE", "pr": 585, "sha": "6beb7152", "tag": "prestage-SA-P0-002-2026-03-11_1902IST" },
-        { "id": "SA-P0-003", "title": "Price bounds", "status": "DONE", "pr": 586, "sha": "d07038dc", "tag": "prestage-SA-P0-003-2026-03-11_1903IST" },
-        { "id": "SA-P1-002", "title": "Spending limits", "status": "DONE", "pr": 587, "sha": "5b8bfe09", "tag": "prestage-SA-P1-002-2026-03-11_1904IST" },
-        { "id": "SA-P1-003", "title": "Due limits", "status": "DONE", "pr": 591, "sha": "76de36a2", "tag": "prestage-SA-P1-003-2026-03-11_1906IST" },
-        { "id": "SA-P1-010", "title": "Anomaly detection", "status": "DONE", "pr": 592, "sha": "d09bca6e", "tag": "prestage-SA-P1-010-2026-03-11_1907IST" },
-        { "id": "SA-P1-011", "title": "Stock adjustment audit", "status": "DONE", "pr": 590, "sha": "64eea380", "tag": "prestage-SA-P1-011-2026-03-11_1905IST" },
-        { "id": "SA-P1-013", "title": "Device token revocation UI", "status": "DONE", "pr": 583, "sha": "4bc9521a", "tag": "prestage-SA-P1-013-2026-03-11_1900IST" },
-        { "id": "SA-P2-011", "title": "Persistent rate limiting", "status": "DONE", "pr": 584, "sha": "68798bc5", "tag": "prestage-SA-P2-011-2026-03-11_1901IST" }
+        {
+          "id": "SA-P0-002",
+          "title": "Discount limits",
+          "status": "DONE",
+          "pr": 585,
+          "sha": "6beb7152",
+          "tag": "prestage-SA-P0-002-2026-03-11_1902IST"
+        },
+        {
+          "id": "SA-P0-003",
+          "title": "Price bounds",
+          "status": "DONE",
+          "pr": 586,
+          "sha": "d07038dc",
+          "tag": "prestage-SA-P0-003-2026-03-11_1903IST"
+        },
+        {
+          "id": "SA-P1-002",
+          "title": "Spending limits",
+          "status": "DONE",
+          "pr": 587,
+          "sha": "5b8bfe09",
+          "tag": "prestage-SA-P1-002-2026-03-11_1904IST"
+        },
+        {
+          "id": "SA-P1-003",
+          "title": "Due limits",
+          "status": "DONE",
+          "pr": 591,
+          "sha": "76de36a2",
+          "tag": "prestage-SA-P1-003-2026-03-11_1906IST"
+        },
+        {
+          "id": "SA-P1-010",
+          "title": "Anomaly detection",
+          "status": "DONE",
+          "pr": 592,
+          "sha": "d09bca6e",
+          "tag": "prestage-SA-P1-010-2026-03-11_1907IST"
+        },
+        {
+          "id": "SA-P1-011",
+          "title": "Stock adjustment audit",
+          "status": "DONE",
+          "pr": 590,
+          "sha": "64eea380",
+          "tag": "prestage-SA-P1-011-2026-03-11_1905IST"
+        },
+        {
+          "id": "SA-P1-013",
+          "title": "Device token revocation UI",
+          "status": "DONE",
+          "pr": 583,
+          "sha": "4bc9521a",
+          "tag": "prestage-SA-P1-013-2026-03-11_1900IST"
+        },
+        {
+          "id": "SA-P2-011",
+          "title": "Persistent rate limiting",
+          "status": "DONE",
+          "pr": 584,
+          "sha": "68798bc5",
+          "tag": "prestage-SA-P2-011-2026-03-11_1901IST"
+        }
       ]
     },
     "phase11": {
@@ -95,16 +296,56 @@
       "status": "IDENTIFIED_NOT_FIXED",
       "note": "Per operator instruction: do not update state files, implement pending code instead",
       "fields": [
-        { "path": "deployGateStatus.blockedBy", "line": 35, "issue": "Still says platforms incomplete — all 4 are COMPLETE" },
-        { "path": "deployGateStatus.nextUnblock", "line": 36, "issue": "Stale — refers to supplier-web as pending" },
-        { "path": "postPosPlatformExecutionLock.status", "line": 1057, "issue": "Says LOCKED_TO_SUPPLIER_WEB — should be COMPLETE" },
-        { "path": "postPosPlatformExecutionLock.activePlatform", "line": 1106, "issue": "Says SUPERADMIN_WEB — should be null/COMPLETE" },
-        { "path": "postPosPlatformExecutionLock.switchRule", "line": 1108, "issue": "Stale supplier-web reference" },
-        { "path": "postPosPlatformExecutionLock.artifactRule", "line": 1110, "issue": "References incomplete platforms" },
-        { "path": "artifactExecutionLock.currentReason", "line": 1122, "issue": "Stale reference to supplier-web/superadmin-web" },
-        { "path": "resumeDirective.remainingBeforePhase4", "lines": "58-65", "issue": "Lists supplier-web and SA as incomplete" },
-        { "path": "remainingCertificationDelta", "lines": "576-579", "issue": "Stale future items already DONE" },
-        { "path": "POS-AUDIT-REFACTOR-001", "line": 663, "issue": "Shows PENDING but parent pack says COMPLETED" }
+        {
+          "path": "deployGateStatus.blockedBy",
+          "line": 35,
+          "issue": "Still says platforms incomplete — all 4 are COMPLETE"
+        },
+        {
+          "path": "deployGateStatus.nextUnblock",
+          "line": 36,
+          "issue": "Stale — refers to supplier-web as pending"
+        },
+        {
+          "path": "postPosPlatformExecutionLock.status",
+          "line": 1057,
+          "issue": "Says LOCKED_TO_SUPPLIER_WEB — should be COMPLETE"
+        },
+        {
+          "path": "postPosPlatformExecutionLock.activePlatform",
+          "line": 1106,
+          "issue": "Says SUPERADMIN_WEB — should be null/COMPLETE"
+        },
+        {
+          "path": "postPosPlatformExecutionLock.switchRule",
+          "line": 1108,
+          "issue": "Stale supplier-web reference"
+        },
+        {
+          "path": "postPosPlatformExecutionLock.artifactRule",
+          "line": 1110,
+          "issue": "References incomplete platforms"
+        },
+        {
+          "path": "artifactExecutionLock.currentReason",
+          "line": 1122,
+          "issue": "Stale reference to supplier-web/superadmin-web"
+        },
+        {
+          "path": "resumeDirective.remainingBeforePhase4",
+          "lines": "58-65",
+          "issue": "Lists supplier-web and SA as incomplete"
+        },
+        {
+          "path": "remainingCertificationDelta",
+          "lines": "576-579",
+          "issue": "Stale future items already DONE"
+        },
+        {
+          "path": "POS-AUDIT-REFACTOR-001",
+          "line": 663,
+          "issue": "Shows PENDING but parent pack says COMPLETED"
+        }
       ]
     },
     "operatorGcpActions": {
@@ -127,8 +368,16 @@
     "deferredPostSignoff": {
       "blocking": false,
       "items": [
-        { "id": "posLauncherIconRefresh", "status": "TODO_AFTER_ALL_PLATFORM_SIGNOFF", "description": "POS app launcher icon update — requires APK rebuild" },
-        { "id": "stagingTestDataPurge", "status": "TODO_BEFORE_REAL_USER_STAGING_TEST", "description": "Purge test/seed data before operator real-user staging verification" }
+        {
+          "id": "posLauncherIconRefresh",
+          "status": "TODO_AFTER_ALL_PLATFORM_SIGNOFF",
+          "description": "POS app launcher icon update — requires APK rebuild"
+        },
+        {
+          "id": "stagingTestDataPurge",
+          "status": "TODO_BEFORE_REAL_USER_STAGING_TEST",
+          "description": "Purge test/seed data before operator real-user staging verification"
+        }
       ]
     },
     "operatorDirectedAudits": {
@@ -145,7 +394,11 @@
           "tag": "prestage-AUDIT-STORE-LEDGER-001-2026-03-11_1601IST",
           "priority": "HIGH",
           "risk": "B",
-          "platforms": ["POS_APP", "RETAILER_WEB", "BACKEND"],
+          "platforms": [
+            "POS_APP",
+            "RETAILER_WEB",
+            "BACKEND"
+          ],
           "description": "Full cross-platform audit of product data, stock quantities, and metadata consistency across POS App, Retailer Web, and backend store ledger.",
           "scope": {
             "workflow1_retailerWeb_to_posSync": {
@@ -217,7 +470,10 @@
           "tag": "prestage-AUDIT-POS-FEATURES-001-2026-03-11_1600IST",
           "priority": "HIGH",
           "risk": "B",
-          "platforms": ["POS_APP", "BACKEND"],
+          "platforms": [
+            "POS_APP",
+            "BACKEND"
+          ],
           "description": "Comprehensive audit of POS product handling, search, payment, and supplier interaction systems. Verify production-grade implementation, identify gaps, and implement refactoring where necessary.",
           "note": "Overlaps with POS_FEATURE_AUDIT_PACK_01 (COMPLETED) which audited these same 6 areas and found them production-grade. This is a REAUDIT with deeper scope and explicit refactor mandate.",
           "scope": {
@@ -7146,23 +7402,126 @@
       "gap": "search/list/lookup SQL SELECT missing COALESCE(sp.image_url,p.image_url), p.default_gst_rate, p.net_content_value, p.net_content_unit — SellTile never showed image/GST%/net-content at runtime despite TypeScript passing"
     },
     "tickets": {
-      "SCALE-A1": { "title": "Product compliance fields (manufacturer, origin, shelf_life)", "sha": "d8b26f1b", "pr": 593, "tag": "prestage-SCALE-A1-2026-03-11_2123IST", "status": "DONE" },
-      "SCALE-A2": { "title": "Net content fields (net_content_value, net_content_unit)", "sha": "c8f6c493", "pr": 598, "tag": "prestage-SCALE-A2-2026-03-11_2340IST", "status": "DONE" },
-      "SCALE-A3": { "title": "Batch number on store_products for FEFO", "sha": "9786b88c", "pr": 596, "tag": "prestage-SCALE-A3-2026-03-11_2340IST", "status": "DONE" },
-      "SCALE-D2": { "title": "Connection pool tuning max=25 min=5", "sha": "88a8f8b5", "pr": 595, "tag": "prestage-SCALE-D2-2026-03-11_2340IST", "status": "DONE" },
-      "SCALE-D4": { "title": "Catalog listing Redis cache page1 per store", "sha": "28ebe802", "pr": 599, "tag": "prestage-SCALE-D4-2026-03-11_2345IST", "status": "DONE" },
-      "SCALE-D3": { "title": "Async CSV import via BullMQ with progress polling", "sha": "7c9843eb", "pr": 601, "tag": "prestage-SCALE-D3-2026-03-11_2345IST", "status": "DONE" },
-      "SCALE-D1": { "title": "Redis barcode lookup cache 5-min TTL", "sha": "35587135", "pr": 602, "tag": "prestage-SCALE-D1-2026-03-11_2350IST", "status": "DONE" },
-      "SCALE-B5": { "title": "Supplier form compliance and measurement fields", "sha": "b19dcab5", "pr": 603, "tag": "prestage-SCALE-B5-2026-03-11_2355IST", "status": "DONE" },
-      "SCALE-B3": { "title": "Retailer product table MRP, margin, GST, pack columns", "sha": "c2399b61", "pr": 604, "tag": "prestage-SCALE-B3B4-2026-03-11_2355IST", "status": "DONE" },
-      "SCALE-B4": { "title": "Retailer product table image thumbnail", "sha": "c2399b61", "pr": 604, "tag": "prestage-SCALE-B3B4-2026-03-11_2355IST", "status": "DONE", "note": "Combined with B3 in same PR" },
-      "SCALE-B1": { "title": "POS sell tile with image, brand, MRP, stock colors, expiry warning", "sha": "b055dbe6", "pr": 605, "tag": "prestage-SCALE-B1-2026-03-11_2356IST", "status": "DONE" },
-      "SCALE-E2": { "title": "POS sell tile product images with fallback", "sha": "20d749c9", "pr": 607, "tag": "prestage-SCALE-E2-2026-03-11_2358IST", "status": "DONE" },
-      "SCALE-B2": { "title": "POS buy tile pack config, cost, MRP, supplier, BNPL, GST, HSN", "sha": "493a6fd7", "pr": 608, "tag": "prestage-SCALE-B2-2026-03-12_0005IST", "status": "DONE" },
-      "SCALE-C1": { "title": "POS stock-in captures batch_number and expiry_date", "sha": "b82d0377", "pr": 609, "tag": "prestage-SCALE-C1-2026-03-12_0010IST", "status": "DONE" },
-      "SCALE-E1": { "title": "Retailer product image upload drag-drop GCS", "sha": "d113e115", "pr": 610, "tag": "prestage-SCALE-E1-2026-03-12_0012IST", "status": "DONE" },
-      "SCALE-C2": { "title": "Expiry alerts system backend + retailer UI + POS badge", "sha": "f1865ce5", "pr": 611, "tag": "prestage-SCALE-C2-2026-03-12_0015IST", "status": "DONE" },
-      "SCALE-C3": { "title": "FEFO stock rotation sort=fefo POS and retailer inventory", "sha": "25bb1d8b", "pr": 613, "tag": "prestage-SCALE-C3-2026-03-12_0020IST", "status": "DONE" }
+      "SCALE-A1": {
+        "title": "Product compliance fields (manufacturer, origin, shelf_life)",
+        "sha": "d8b26f1b",
+        "pr": 593,
+        "tag": "prestage-SCALE-A1-2026-03-11_2123IST",
+        "status": "DONE"
+      },
+      "SCALE-A2": {
+        "title": "Net content fields (net_content_value, net_content_unit)",
+        "sha": "c8f6c493",
+        "pr": 598,
+        "tag": "prestage-SCALE-A2-2026-03-11_2340IST",
+        "status": "DONE"
+      },
+      "SCALE-A3": {
+        "title": "Batch number on store_products for FEFO",
+        "sha": "9786b88c",
+        "pr": 596,
+        "tag": "prestage-SCALE-A3-2026-03-11_2340IST",
+        "status": "DONE"
+      },
+      "SCALE-D2": {
+        "title": "Connection pool tuning max=25 min=5",
+        "sha": "88a8f8b5",
+        "pr": 595,
+        "tag": "prestage-SCALE-D2-2026-03-11_2340IST",
+        "status": "DONE"
+      },
+      "SCALE-D4": {
+        "title": "Catalog listing Redis cache page1 per store",
+        "sha": "28ebe802",
+        "pr": 599,
+        "tag": "prestage-SCALE-D4-2026-03-11_2345IST",
+        "status": "DONE"
+      },
+      "SCALE-D3": {
+        "title": "Async CSV import via BullMQ with progress polling",
+        "sha": "7c9843eb",
+        "pr": 601,
+        "tag": "prestage-SCALE-D3-2026-03-11_2345IST",
+        "status": "DONE"
+      },
+      "SCALE-D1": {
+        "title": "Redis barcode lookup cache 5-min TTL",
+        "sha": "35587135",
+        "pr": 602,
+        "tag": "prestage-SCALE-D1-2026-03-11_2350IST",
+        "status": "DONE"
+      },
+      "SCALE-B5": {
+        "title": "Supplier form compliance and measurement fields",
+        "sha": "b19dcab5",
+        "pr": 603,
+        "tag": "prestage-SCALE-B5-2026-03-11_2355IST",
+        "status": "DONE"
+      },
+      "SCALE-B3": {
+        "title": "Retailer product table MRP, margin, GST, pack columns",
+        "sha": "c2399b61",
+        "pr": 604,
+        "tag": "prestage-SCALE-B3B4-2026-03-11_2355IST",
+        "status": "DONE"
+      },
+      "SCALE-B4": {
+        "title": "Retailer product table image thumbnail",
+        "sha": "c2399b61",
+        "pr": 604,
+        "tag": "prestage-SCALE-B3B4-2026-03-11_2355IST",
+        "status": "DONE",
+        "note": "Combined with B3 in same PR"
+      },
+      "SCALE-B1": {
+        "title": "POS sell tile with image, brand, MRP, stock colors, expiry warning",
+        "sha": "b055dbe6",
+        "pr": 605,
+        "tag": "prestage-SCALE-B1-2026-03-11_2356IST",
+        "status": "DONE"
+      },
+      "SCALE-E2": {
+        "title": "POS sell tile product images with fallback",
+        "sha": "20d749c9",
+        "pr": 607,
+        "tag": "prestage-SCALE-E2-2026-03-11_2358IST",
+        "status": "DONE"
+      },
+      "SCALE-B2": {
+        "title": "POS buy tile pack config, cost, MRP, supplier, BNPL, GST, HSN",
+        "sha": "493a6fd7",
+        "pr": 608,
+        "tag": "prestage-SCALE-B2-2026-03-12_0005IST",
+        "status": "DONE"
+      },
+      "SCALE-C1": {
+        "title": "POS stock-in captures batch_number and expiry_date",
+        "sha": "b82d0377",
+        "pr": 609,
+        "tag": "prestage-SCALE-C1-2026-03-12_0010IST",
+        "status": "DONE"
+      },
+      "SCALE-E1": {
+        "title": "Retailer product image upload drag-drop GCS",
+        "sha": "d113e115",
+        "pr": 610,
+        "tag": "prestage-SCALE-E1-2026-03-12_0012IST",
+        "status": "DONE"
+      },
+      "SCALE-C2": {
+        "title": "Expiry alerts system backend + retailer UI + POS badge",
+        "sha": "f1865ce5",
+        "pr": 611,
+        "tag": "prestage-SCALE-C2-2026-03-12_0015IST",
+        "status": "DONE"
+      },
+      "SCALE-C3": {
+        "title": "FEFO stock rotation sort=fefo POS and retailer inventory",
+        "sha": "25bb1d8b",
+        "pr": 613,
+        "tag": "prestage-SCALE-C3-2026-03-12_0020IST",
+        "status": "DONE"
+      }
     },
     "tileDesigns": {
       "tileA_posSellTile": "Staff view: image(40x40), name, brand, mode badge, pack_size, sell_price, MRP, stock(color-coded), GST%, expiry_warning(orange<90d/red<30d), barcode. HIDDEN: purchase_price, margin, supplier_name",
@@ -7173,6 +7532,112 @@
       "180_scale_a1_product_compliance_fields.sql",
       "181_scale_a2_net_content_fields.sql",
       "182_scale_a3_batch_number_store_products.sql"
+    ]
+  },
+  "gcpInfrastructure": {
+    "lastAudited": "2026-03-12",
+    "auditMethod": "live gcloud check",
+    "project": "supermandi-backend",
+    "region": "asia-south1",
+    "overallStatus": "8/9 DONE — DNS pending",
+    "items": [
+      {
+        "id": 1,
+        "name": "GCP project + billing",
+        "status": "DONE",
+        "evidence": "supermandi-backend ACTIVE, billing 01257D-4157DA-D279E1 enabled"
+      },
+      {
+        "id": 2,
+        "name": "Artifact Registry repo",
+        "status": "DONE",
+        "evidence": "asia-south1/supermandi DOCKER repo exists"
+      },
+      {
+        "id": 3,
+        "name": "Cloud SQL (Postgres 15)",
+        "status": "DONE",
+        "evidence": "supermandi-staging POSTGRES_15 RUNNABLE asia-south1"
+      },
+      {
+        "id": 4,
+        "name": "Memorystore (Redis 7)",
+        "status": "DONE",
+        "evidence": "supermandi-redis-staging REDIS_7_0 READY 10.107.71.27:6379"
+      },
+      {
+        "id": 5,
+        "name": "VPC Connector",
+        "status": "DONE",
+        "evidence": "supermandi-connector READY 10.8.0.0/28 default VPC"
+      },
+      {
+        "id": 6,
+        "name": "Secret Manager (all secrets)",
+        "status": "DONE",
+        "evidence": "12 secrets: admin-token, database-url, jwt-secret, postgres-password, smtp-password, SERVICE_TOKEN_SECRET, OPENAI_API_KEY, ADMIN_EMAIL_ALLOWLIST, WHATSAPP_*(4)"
+      },
+      {
+        "id": 7,
+        "name": "Workload Identity Federation",
+        "status": "DONE",
+        "evidence": "github-pool ACTIVE + github-provider ACTIVE, attribute.repository mapping correct"
+      },
+      {
+        "id": 8,
+        "name": "GitHub secrets (GCP_WIF_PROVIDER, GCP_SA_EMAIL)",
+        "status": "DONE",
+        "evidence": "Both set 2026-02-13 via gh secret list"
+      },
+      {
+        "id": 9,
+        "name": "DNS: staging.supermandi.tech",
+        "status": "PENDING",
+        "evidence": "No Cloud DNS zones, no domain mappings. Services on *.run.app only."
+      }
+    ],
+    "cloudRunServices": {
+      "api-gateway": {
+        "status": "READY",
+        "url": "https://api-gateway-jwgq6sc6aq-el.a.run.app",
+        "lastDeploy": "2026-03-08"
+      },
+      "main-backend": {
+        "status": "READY",
+        "url": "https://main-backend-jwgq6sc6aq-el.a.run.app",
+        "lastDeploy": "2026-03-08"
+      },
+      "retailer-admin": {
+        "status": "READY",
+        "url": "https://retailer-admin-jwgq6sc6aq-el.a.run.app",
+        "lastDeploy": "2026-03-08"
+      },
+      "supplier-portal": {
+        "status": "READY",
+        "url": "https://supplier-portal-jwgq6sc6aq-el.a.run.app",
+        "lastDeploy": "2026-03-08"
+      },
+      "superadmin": {
+        "status": "READY",
+        "url": "https://superadmin-jwgq6sc6aq-el.a.run.app",
+        "lastDeploy": "2026-03-08"
+      },
+      "landing": {
+        "status": "DOWN",
+        "url": "https://landing-jwgq6sc6aq-el.a.run.app",
+        "reason": "HealthCheckContainerError — container fails to start on PORT=80",
+        "lastDeploy": "2026-03-08",
+        "blocker": "BLK-LANDING-PORT"
+      }
+    },
+    "blockers": [
+      {
+        "id": "BLK-LANDING-PORT",
+        "severity": "HIGH",
+        "service": "landing",
+        "issue": "HealthCheckContainerError — Cloud Run cannot start landing container on PORT=80. Last deploy 2026-03-08.",
+        "action": "Investigate landing Dockerfile/entrypoint for PORT env var handling. Fix and redeploy."
+      }
     ]
   }
 }

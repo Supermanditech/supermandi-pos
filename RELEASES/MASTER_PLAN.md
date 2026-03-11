@@ -616,22 +616,25 @@ SA-GOLIVE complete
 
 ### Operator Action Tracker (GCP Infrastructure)
 
-> **Owner**: Operator. **Status**: Pre-staging — operator solving immediately.
+> **Owner**: Operator. **Status**: 8/9 DONE — only DNS remaining.
 > Claude CANNOT start BATCH-010 until all rows show `DONE`.
+> **Last audited**: 2026-03-12 via `gcloud` live check.
 
-| # | Action | Script / Method | Status | Date |
-|---|--------|----------------|--------|------|
-| 1 | GCP project with billing enabled | Manual (GCP Console) | PENDING | — |
-| 2 | Artifact Registry repo | `scripts/gcp/setup-artifact-registry.sh` | PENDING | — |
-| 3 | Cloud SQL (Postgres 15) | `scripts/gcp/setup-cloud-sql.sh` | PENDING | — |
-| 4 | Memorystore (Redis 7) | `scripts/gcp/setup-memorystore.sh` | PENDING | — |
-| 5 | VPC Connector | `scripts/gcp/setup-vpc-connector.sh` | PENDING | — |
-| 6 | Secret Manager (all secrets) | `scripts/gcp/setup-secret-manager.sh` | PENDING | — |
-| 7 | Workload Identity Federation | `scripts/gcp/setup-wif.sh` | PENDING | — |
-| 8 | GitHub secrets set | Manual (`GCP_WIF_PROVIDER`, `GCP_SA_EMAIL`) | PENDING | — |
-| 9 | DNS: staging.supermandi.tech | Manual (Cloud LB or domain mapping) | PENDING | — |
+| # | Action | Script / Method | Status | Evidence |
+|---|--------|----------------|--------|---------|
+| 1 | GCP project with billing enabled | Manual (GCP Console) | **DONE** | `supermandi-backend` ACTIVE, billing `01257D-4157DA-D279E1` enabled |
+| 2 | Artifact Registry repo | `scripts/gcp/setup-artifact-registry.sh` | **DONE** | `asia-south1/supermandi` DOCKER repo exists |
+| 3 | Cloud SQL (Postgres 15) | `scripts/gcp/setup-cloud-sql.sh` | **DONE** | `supermandi-staging` POSTGRES_15 RUNNABLE asia-south1 |
+| 4 | Memorystore (Redis 7) | `scripts/gcp/setup-memorystore.sh` | **DONE** | `supermandi-redis-staging` REDIS_7_0 READY `10.107.71.27:6379` |
+| 5 | VPC Connector | `scripts/gcp/setup-vpc-connector.sh` | **DONE** | `supermandi-connector` READY `10.8.0.0/28` on default VPC |
+| 6 | Secret Manager (all secrets) | `scripts/gcp/setup-secret-manager.sh` | **DONE** | 12 secrets: admin-token, database-url, jwt-secret, postgres-password, smtp-password, SERVICE_TOKEN_SECRET, OPENAI_API_KEY, ADMIN_EMAIL_ALLOWLIST, WHATSAPP_* (4) |
+| 7 | Workload Identity Federation | `scripts/gcp/setup-wif.sh` | **DONE** | `github-pool` ACTIVE + `github-provider` ACTIVE (attribute.repository mapping correct) |
+| 8 | GitHub secrets set | Manual (`GCP_WIF_PROVIDER`, `GCP_SA_EMAIL`) | **DONE** | Both set 2026-02-13; confirmed via `gh secret list` |
+| 9 | DNS: staging.supermandi.tech | Manual (Cloud LB or domain mapping) | **PENDING** | No Cloud DNS zones, no domain mappings found. Services on `*.run.app` only. |
 
-**Operator**: Update this table as each item is completed. Paste command output as evidence.
+**Operator**: Only item 9 (DNS) remains. Set up Cloud LB or Cloud Run domain mapping for `staging.supermandi.tech`.
+
+> ⚠️ **BLOCKER FOUND**: `landing` Cloud Run service is DOWN — `HealthCheckContainerError` (container fails to start on PORT=80). Must fix before staging E2E gate. See ticket `BLK-LANDING-PORT` below.
 
 ---
 
