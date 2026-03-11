@@ -460,4 +460,46 @@ describe('UsersTab', () => {
     render(<UsersTab {...createProps({ userRecords: users as any })} />);
     expect(screen.getByText('supplier')).toBeTruthy();
   });
+
+  // ── SA-P2-010: Force Password Reset ──────────────────────────
+
+  it('shows Reset Pwd button for store users', () => {
+    const users = [makeUser({ actor_type: 'store' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.getByText('Reset Pwd')).toBeTruthy();
+  });
+
+  it('shows Reset Pwd button for supplier users', () => {
+    const users = [makeUser({ actor_type: 'supplier' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.getByText('Reset Pwd')).toBeTruthy();
+  });
+
+  it('does NOT show Reset Pwd button for platform users', () => {
+    const users = [makeUser({ actor_type: 'platform' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.queryByText('Reset Pwd')).toBeNull();
+  });
+
+  it('shows confirmation dialog when Reset Pwd is clicked', () => {
+    const users = [makeUser({ name: 'Alice', actor_type: 'store' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    fireEvent.click(screen.getByText('Reset Pwd'));
+    expect(screen.getByText('Force Reset Password')).toBeTruthy();
+    expect(screen.getByText(/Reset password for "Alice"/)).toBeTruthy();
+    expect(screen.getByText('Reset Password')).toBeTruthy();
+  });
+
+  it('shows Reset Pwd button has correct title attribute', () => {
+    const users = [makeUser({ actor_type: 'store' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.getByTitle("Force reset this user's password")).toBeTruthy();
+  });
+
+  it('shows detail text about temporary password in confirm dialog', () => {
+    const users = [makeUser({ actor_type: 'store' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    fireEvent.click(screen.getByText('Reset Pwd'));
+    expect(screen.getByText(/temporary password to log in/)).toBeTruthy();
+  });
 });
