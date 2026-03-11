@@ -41,6 +41,7 @@ const PurchaseOrdersPage = lazy(() => import('./pages/PurchaseOrdersPage'));  //
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));  // T-212
 const CustomersPage = lazy(() => import('./pages/CustomersPage'));  // T-218
 const ReorderPage = lazy(() => import('./pages/ReorderPage'));  // T-230
+const StockAdjustmentHistoryPage = lazy(() => import('./pages/StockAdjustmentHistoryPage'));  // SA-P1-011
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));  // Phase 8: Notifications
 // RET-CLEANUP-001: Forgot password page
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
@@ -329,6 +330,8 @@ function AppRoutes() {
           <Route path="analytics" element={<LimitedModeGuard><LazyPage><AnalyticsPage /></LazyPage></LimitedModeGuard>} />
           <Route path="customers" element={<LimitedModeGuard><LazyPage><CustomersPage /></LazyPage></LimitedModeGuard>} />
           <Route path="reorder" element={<LimitedModeGuard><LazyPage><ReorderPage /></LazyPage></LimitedModeGuard>} />
+          {/* SA-P1-011: Stock Adjustment Audit History */}
+          <Route path="stock-adjustments" element={<LimitedModeGuard><LazyPage><StockAdjustmentHistoryPage /></LazyPage></LimitedModeGuard>} />
           {/* Phase 8: Notifications center */}
           <Route path="notifications" element={<LimitedModeGuard><LazyPage><NotificationsPage /></LazyPage></LimitedModeGuard>} />
           {/* RET-WEB-002: Device Activation page — allowed in limited mode */}
