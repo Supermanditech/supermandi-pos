@@ -68,7 +68,9 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         operating_hours as "operatingHours",
         receipt_settings as "receiptSettings",
         bank_account_number as "bankAccount",
-        bank_ifsc as "bankIfsc"
+        bank_ifsc as "bankIfsc",
+        daily_order_limit_paise as "dailyOrderLimitPaise",
+        monthly_order_limit_paise as "monthlyOrderLimitPaise"
       FROM platform.stores
       WHERE id = $1`,
       [storeId]
@@ -101,6 +103,9 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         // T-202: Bank account fields
         bankAccount: store.bankAccount || '',
         ifscCode: store.bankIfsc || '',
+        // SA-P1-002: Spending limits
+        dailyOrderLimitPaise: store.dailyOrderLimitPaise ?? null,
+        monthlyOrderLimitPaise: store.monthlyOrderLimitPaise ?? null,
       }
     });
 
@@ -410,6 +415,169 @@ retailerAdminSettingsRouter.delete("/settings/upi", async (req: Request, res: Re
     const error = asError(_error);
     log.error("[GL-AUD-004] Remove UPI VPA error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to remove UPI VPA" } });
+  }
+});
+
+// =============================================================================
+// SA-P1-002: PATCH /api/v1/retailer-admin/store/spending-limits
+// Update daily and/or monthly spending limits for purchase orders
+// =============================================================================
+
+retailerAdminSettingsRouter.patch("/store/spending-limits", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { dailyOrderLimitPaise, monthlyOrderLimitPaise } = req.body;
+
+  // Validate: values must be positive integers or null (null = no limit)
+  const fieldErrors: Record<string, string> = {};
+
+  if (dailyOrderLimitPaise !== undefined && dailyOrderLimitPaise !== null) {
+    if (!Number.isInteger(dailyOrderLimitPaise) || dailyOrderLimitPaise <= 0) {
+      fieldErrors.dailyOrderLimitPaise = "Daily limit must be a positive integer (in paise) or null";
+    }
+  }
+
+  if (monthlyOrderLimitPaise !== undefined && monthlyOrderLimitPaise !== null) {
+    if (!Number.isInteger(monthlyOrderLimitPaise) || monthlyOrderLimitPaise <= 0) {
+      fieldErrors.monthlyOrderLimitPaise = "Monthly limit must be a positive integer (in paise) or null";
+    }
+  }
+
+  if (dailyOrderLimitPaise === undefined && monthlyOrderLimitPaise === undefined) {
+    return res.status(400).json({
+      error: { code: "VALIDATION_ERROR", message: "At least one of dailyOrderLimitPaise or monthlyOrderLimitPaise is required" }
+    });
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return res.status(422).json({
+      error: { code: "VALIDATION_ERROR", message: "Validation failed", errors: fieldErrors }
+    });
+  }
+
+  // Cross-validate: daily limit should not exceed monthly limit (when both are set)
+  const effectiveDaily = dailyOrderLimitPaise !== undefined ? dailyOrderLimitPaise : undefined;
+  const effectiveMonthly = monthlyOrderLimitPaise !== undefined ? monthlyOrderLimitPaise : undefined;
+  if (effectiveDaily !== null && effectiveDaily !== undefined &&
+      effectiveMonthly !== null && effectiveMonthly !== undefined &&
+      effectiveDaily > effectiveMonthly) {
+    return res.status(422).json({
+      error: { code: "VALIDATION_ERROR", message: "Daily limit cannot exceed monthly limit" }
+    });
+  }
+
+  try {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (dailyOrderLimitPaise !== undefined) {
+      updates.push(`daily_order_limit_paise = $${paramIndex++}`);
+      values.push(dailyOrderLimitPaise);
+    }
+    if (monthlyOrderLimitPaise !== undefined) {
+      updates.push(`monthly_order_limit_paise = $${paramIndex++}`);
+      values.push(monthlyOrderLimitPaise);
+    }
+
+    updates.push(`updated_at = NOW()`);
+    values.push(storeId);
+
+    const result = await pool.query(
+      `UPDATE platform.stores
+       SET ${updates.join(', ')}
+       WHERE id = $${paramIndex}
+       RETURNING
+         daily_order_limit_paise AS "dailyOrderLimitPaise",
+         monthly_order_limit_paise AS "monthlyOrderLimitPaise"`,
+      values
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Store not found" } });
+    }
+
+    log.info(`[SA-P1-002] Updated spending limits for store ${storeId}`);
+
+    return res.json({
+      success: true,
+      spendingLimits: result.rows[0]
+    });
+
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SA-P1-002] Update spending limits error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update spending limits" } });
+  }
+});
+
+// =============================================================================
+// SA-P1-002: GET /api/v1/retailer-admin/store/spending-limits
+// Get current spending limits and current spend totals
+// =============================================================================
+
+retailerAdminSettingsRouter.get("/store/spending-limits", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  try {
+    // Fetch limits
+    const storeResult = await pool.query(
+      `SELECT
+        daily_order_limit_paise AS "dailyOrderLimitPaise",
+        monthly_order_limit_paise AS "monthlyOrderLimitPaise"
+       FROM platform.stores
+       WHERE id = $1`,
+      [storeId]
+    );
+
+    if (storeResult.rowCount === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Store not found" } });
+    }
+
+    // Fetch current spend totals
+    let dailySpend = 0;
+    let monthlySpend = 0;
+    try {
+      const spendResult = await pool.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('day', NOW()) THEN total_amount ELSE 0 END), 0)::BIGINT AS daily_spend,
+           COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', NOW()) THEN total_amount ELSE 0 END), 0)::BIGINT AS monthly_spend
+         FROM orders.purchase_orders
+         WHERE store_id = $1
+           AND status NOT IN ('cancelled')`,
+        [storeId]
+      );
+      dailySpend = Number(spendResult.rows[0].daily_spend);
+      monthlySpend = Number(spendResult.rows[0].monthly_spend);
+    } catch {
+      // orders table may not exist yet — defaults to 0
+    }
+
+    return res.json({
+      success: true,
+      spendingLimits: {
+        ...storeResult.rows[0],
+        dailySpendPaise: dailySpend,
+        monthlySpendPaise: monthlySpend,
+      }
+    });
+
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SA-P1-002] Get spending limits error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get spending limits" } });
   }
 });
 

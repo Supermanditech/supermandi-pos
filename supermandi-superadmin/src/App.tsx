@@ -8,7 +8,7 @@ import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
-import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, updateStoreBnpl, type StoreRecord } from "./api/stores";
+import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, updateStoreBnpl, updateStoreDiscountLimit, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
@@ -2391,6 +2391,30 @@ export default function App() {
     }
   }
 
+  // SA-P0-002: Save discount limit for a store
+  const [discountLimitSaving, setDiscountLimitSaving] = useState<Record<string, boolean>>({});
+  async function handleDiscountLimitSave(storeId: string, maxDiscountPercent: number) {
+    if (discountLimitSaving[storeId]) return;
+    setDiscountLimitSaving((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      await updateStoreDiscountLimit(storeId, maxDiscountPercent);
+      if (storeSettings[storeId]) {
+        setStoreSettings((prev) => ({
+          ...prev,
+          [storeId]: {
+            ...prev[storeId],
+            maxDiscountPercent,
+          },
+        }));
+      }
+      toast.success("Discount limit updated.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update discount limit.");
+    } finally {
+      setDiscountLimitSaving((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
   function resetBarcodeSheetNotice() {
     setBarcodeSheetError("");
     setBarcodeSheetSuccess("");
@@ -3357,6 +3381,8 @@ export default function App() {
           loadStoreSettings={loadStoreSettingsHandler}
           handleBnplSave={handleBnplSave}
           bnplSaving={bnplSaving}
+          handleDiscountLimitSave={handleDiscountLimitSave}
+          discountLimitSaving={discountLimitSaving}
         />
       )}
 

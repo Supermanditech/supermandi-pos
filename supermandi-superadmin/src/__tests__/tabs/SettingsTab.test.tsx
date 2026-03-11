@@ -13,6 +13,20 @@ vi.mock('../../api/featureFlags', () => ({
   removeStoreOverride: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../../api/priceBounds', () => ({
+  fetchPriceBounds: vi.fn().mockResolvedValue({
+    minPricePaise: 100,
+    maxPricePaise: 10000000,
+    updatedAt: null,
+    updatedBy: null,
+  }),
+  updatePriceBounds: vi.fn().mockResolvedValue({
+    minPricePaise: 200,
+    maxPricePaise: 5000000,
+    updatedBy: 'admin',
+  }),
+}));
+
 vi.mock('../../components/ConfirmDialog', () => ({
   ConfirmDialog: ({ title, onConfirm, onCancel }: any) => (
     <div data-testid="confirm-dialog">
@@ -428,5 +442,76 @@ describe('SettingsTab', () => {
     // "Status" column header exists
     const statusHeaders = screen.getAllByText('Status');
     expect(statusHeaders.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ── SA-P0-003: Price Bounds ──────────────────────────────
+
+  it('renders Price Bounds section header', async () => {
+    render(<SettingsTab {...createProps()} />);
+    expect(screen.getByText('Price Bounds')).toBeTruthy();
+  });
+
+  it('renders Price Bounds description', async () => {
+    render(<SettingsTab {...createProps()} />);
+    expect(screen.getByText(/Configure global minimum and maximum/)).toBeTruthy();
+  });
+
+  it('shows price bounds input fields after load', async () => {
+    render(<SettingsTab {...createProps()} />);
+    await waitFor(() => {
+      expect(screen.getByLabelText('Minimum price in rupees')).toBeTruthy();
+      expect(screen.getByLabelText('Maximum price in rupees')).toBeTruthy();
+    });
+  });
+
+  it('shows Save Bounds button', async () => {
+    render(<SettingsTab {...createProps()} />);
+    await waitFor(() => {
+      expect(screen.getByText('Save Bounds')).toBeTruthy();
+    });
+  });
+
+  it('populates min/max inputs with fetched values in rupees', async () => {
+    render(<SettingsTab {...createProps()} />);
+    await waitFor(() => {
+      const minInput = screen.getByLabelText('Minimum price in rupees') as HTMLInputElement;
+      const maxInput = screen.getByLabelText('Maximum price in rupees') as HTMLInputElement;
+      expect(minInput.value).toBe('1');
+      expect(maxInput.value).toBe('100000');
+    });
+  });
+
+  it('shows price bounds Refresh button', async () => {
+    render(<SettingsTab {...createProps()} />);
+    // There are multiple Refresh buttons; one for price bounds
+    const refreshButtons = screen.getAllByText('Refresh');
+    expect(refreshButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calls updatePriceBounds on Save Bounds click', async () => {
+    const { updatePriceBounds: mockUpdate } = await import('../../api/priceBounds');
+    render(<SettingsTab {...createProps()} />);
+    await waitFor(() => {
+      expect(screen.getByText('Save Bounds')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByText('Save Bounds'));
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(100, 10000000);
+    });
+  });
+
+  it('shows error when max is not greater than min', async () => {
+    render(<SettingsTab {...createProps()} />);
+    await waitFor(() => {
+      expect(screen.getByLabelText('Minimum price in rupees')).toBeTruthy();
+    });
+    const minInput = screen.getByLabelText('Minimum price in rupees');
+    const maxInput = screen.getByLabelText('Maximum price in rupees');
+    fireEvent.change(minInput, { target: { value: '1000' } });
+    fireEvent.change(maxInput, { target: { value: '500' } });
+    fireEvent.click(screen.getByText('Save Bounds'));
+    await waitFor(() => {
+      expect(screen.getByText('Maximum must be greater than minimum')).toBeTruthy();
+    });
   });
 });

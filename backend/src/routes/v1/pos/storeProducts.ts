@@ -14,6 +14,7 @@ import {
   validatePrice as validatePriceUnified,
   validateStock as validateStockUnified,
 } from "../../../utils/productValidation";
+import { validatePriceBounds } from "../../../utils/priceBoundsValidator";
 
 export const posStoreProductsRouter = Router();
 
@@ -196,6 +197,16 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
       return res.status(422).json({
         error: "VALIDATION_ERROR",
         message: "Sell price exceeds maximum allowed value"
+      });
+    }
+    // SA-P0-003: Global price bounds enforcement
+    const sellBoundsCheck = await validatePriceBounds(sellPrice);
+    if (!sellBoundsCheck.valid) {
+      return res.status(422).json({
+        error: "PRICE_OUT_OF_BOUNDS",
+        message: sellBoundsCheck.error,
+        min: sellBoundsCheck.min,
+        max: sellBoundsCheck.max,
       });
     }
   }
@@ -751,6 +762,16 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requir
   }
   if (sellPrice > MAX_PRICE_MINOR) {
     return res.status(422).json({ error: "VALIDATION_ERROR", message: "sellPrice exceeds maximum allowed value" });
+  }
+  // SA-P0-003: Global price bounds enforcement
+  const priceBoundsCheck = await validatePriceBounds(sellPrice);
+  if (!priceBoundsCheck.valid) {
+    return res.status(422).json({
+      error: "PRICE_OUT_OF_BOUNDS",
+      message: priceBoundsCheck.error,
+      min: priceBoundsCheck.min,
+      max: priceBoundsCheck.max,
+    });
   }
 
   // ITER3-001: Accept any of the three identifiers

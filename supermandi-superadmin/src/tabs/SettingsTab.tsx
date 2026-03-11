@@ -1,11 +1,13 @@
 // SA-001: Settings tab extracted from App.tsx
 // T-234: Per-store feature flag overrides UI
+// SA-P0-003: Price bounds configuration
 // UIUX-SA-011: Styled confirmation dialog instead of bare confirm()
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import type { SystemSettings, SystemStats } from "../api/settings";
 import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
 import { fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride } from "../api/featureFlags";
+import { fetchPriceBounds, updatePriceBounds, type PriceBounds } from "../api/priceBounds";
 import type { StoreRecord } from "../api/stores";
 import { formatDateTime } from "../lib/formatters";
 
@@ -31,6 +33,59 @@ export function SettingsTab({
   storeDirectory,
 }: SettingsTabProps) {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+
+  // SA-P0-003: Price bounds state
+  const [priceBounds, setPriceBounds] = useState<PriceBounds | null>(null);
+  const [priceBoundsLoading, setPriceBoundsLoading] = useState(false);
+  const [priceBoundsError, setPriceBoundsError] = useState("");
+  const [priceBoundsSaving, setPriceBoundsSaving] = useState(false);
+  const [pbMinInput, setPbMinInput] = useState("");
+  const [pbMaxInput, setPbMaxInput] = useState("");
+
+  const loadPriceBounds = useCallback(async () => {
+    setPriceBoundsLoading(true);
+    setPriceBoundsError("");
+    try {
+      const bounds = await fetchPriceBounds();
+      setPriceBounds(bounds);
+      setPbMinInput(String(bounds.minPricePaise / 100));
+      setPbMaxInput(String(bounds.maxPricePaise / 100));
+    } catch (e: unknown) {
+      setPriceBoundsError(e instanceof Error ? e.message : "Failed to load price bounds");
+    } finally {
+      setPriceBoundsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadPriceBounds(); }, [loadPriceBounds]);
+
+  const handleSavePriceBounds = useCallback(async () => {
+    const minRupees = parseFloat(pbMinInput);
+    const maxRupees = parseFloat(pbMaxInput);
+    if (isNaN(minRupees) || isNaN(maxRupees) || minRupees <= 0 || maxRupees <= 0) {
+      setPriceBoundsError("Both values must be positive numbers");
+      return;
+    }
+    const minPaise = Math.round(minRupees * 100);
+    const maxPaise = Math.round(maxRupees * 100);
+    if (maxPaise <= minPaise) {
+      setPriceBoundsError("Maximum must be greater than minimum");
+      return;
+    }
+    setPriceBoundsSaving(true);
+    setPriceBoundsError("");
+    try {
+      const updated = await updatePriceBounds(minPaise, maxPaise);
+      setPriceBounds(updated);
+      setPbMinInput(String(minPaise / 100));
+      setPbMaxInput(String(maxPaise / 100));
+    } catch (e: unknown) {
+      setPriceBoundsError(e instanceof Error ? e.message : "Failed to update price bounds");
+    } finally {
+      setPriceBoundsSaving(false);
+    }
+  }, [pbMinInput, pbMaxInput]);
+
   // T-234: Per-store feature flag override state
   const [selectedStoreId, setSelectedStoreId] = useState("");
   const [storeFlags, setStoreFlags] = useState<StoreFeatureFlag[]>([]);
@@ -168,6 +223,67 @@ export function SettingsTab({
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* SA-P0-003: Price Bounds Configuration */}
+        <div className="sa-mt-20">
+          <h3 className="sa-text-lg sa-fw-700 sa-mb-12">Price Bounds</h3>
+          <div className="muted sa-mb-12">Configure global minimum and maximum allowed product prices (in Rupees). Enforced across POS and Retailer Admin.</div>
+          <div className="sa-flex sa-gap-8 sa-mb-12">
+            <button onClick={loadPriceBounds} disabled={priceBoundsLoading} className="sa-btn-ghost-sm">
+              {priceBoundsLoading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
+          {priceBoundsError && <div className="banner sa-mb-8" role="alert">{priceBoundsError}</div>}
+          {priceBounds && (
+            <div className="sa-stat-card sa-bg-surface-alt" style={{ maxWidth: 480 }}>
+              <div className="sa-flex-col sa-gap-8">
+                <div className="sa-flex sa-gap-8 sa-align-center">
+                  <label htmlFor="pb-min" className="sa-text-muted" style={{ minWidth: 120 }}>Min Price (Rs):</label>
+                  <input
+                    id="pb-min"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={pbMinInput}
+                    onChange={(e) => setPbMinInput(e.target.value)}
+                    className="sa-input"
+                    style={{ width: 160 }}
+                    aria-label="Minimum price in rupees"
+                  />
+                </div>
+                <div className="sa-flex sa-gap-8 sa-align-center">
+                  <label htmlFor="pb-max" className="sa-text-muted" style={{ minWidth: 120 }}>Max Price (Rs):</label>
+                  <input
+                    id="pb-max"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={pbMaxInput}
+                    onChange={(e) => setPbMaxInput(e.target.value)}
+                    className="sa-input"
+                    style={{ width: 160 }}
+                    aria-label="Maximum price in rupees"
+                  />
+                </div>
+                <div className="sa-flex sa-gap-8 sa-mt-8">
+                  <button
+                    onClick={handleSavePriceBounds}
+                    disabled={priceBoundsSaving}
+                    className="sa-btn-success-sm"
+                  >
+                    {priceBoundsSaving ? "Saving..." : "Save Bounds"}
+                  </button>
+                  {priceBounds.updatedAt && (
+                    <span className="sa-text-xs sa-text-muted">Last updated: {formatDateTime(priceBounds.updatedAt)}{priceBounds.updatedBy ? ` by ${priceBounds.updatedBy}` : ""}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {!priceBounds && !priceBoundsLoading && !priceBoundsError && (
+            <div className="sa-text-muted sa-text-md">No price bounds configured.</div>
+          )}
         </div>
 
         {/* T-234: Per-Store Feature Flag Overrides */}

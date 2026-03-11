@@ -567,14 +567,15 @@ async function getRetailVariantStockMultiplier(
   return qty;
 }
 
-async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean } | null> {
+async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean; max_discount_percent: number } | null> {
   const pool = getPool();
   if (!pool) return null;
   try {
     // AUD-053-A FIX: Query actual upi_vpa from database instead of hardcoding null
     // BATCH-3 FIX: Use uppercase 'ACTIVE' to match StoreStatus enum
+    // SA-P0-002: Also fetch max_discount_percent for discount limit enforcement
     const res = await pool.query(
-      `SELECT id::TEXT as id, name, upi_vpa, (status = 'ACTIVE') as active FROM platform.stores WHERE id = $1::uuid`,
+      `SELECT id::TEXT as id, name, upi_vpa, (status = 'ACTIVE') as active, max_discount_percent FROM platform.stores WHERE id = $1::uuid`,
       [storeId]
     );
     const row = res.rows[0];
@@ -583,7 +584,8 @@ async function getStore(storeId: string): Promise<{ id: string; name: string; up
       id: String(row.id),
       name: String(row.name || ''),
       upi_vpa: row.upi_vpa ? String(row.upi_vpa) : null,
-      active: Boolean(row.active)
+      active: Boolean(row.active),
+      max_discount_percent: Number(row.max_discount_percent ?? 100)
     };
   } catch (err: any) {
     log.error("[sales/getStore] Query failed:", err?.message);
@@ -954,6 +956,21 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
   if (!store) {
     return res.status(404).json({ error: "store not found" });
   }
+
+  // SA-P0-002: Enforce store-level maximum discount percentage
+  if (subtotal > 0 && discount > 0) {
+    const discountPercent = (discount / subtotal) * 100;
+    if (discountPercent > store.max_discount_percent) {
+      return res.status(422).json({
+        error: {
+          code: "DISCOUNT_LIMIT_EXCEEDED",
+          message: `Discount of ${discountPercent.toFixed(2)}% exceeds the store maximum of ${store.max_discount_percent}%`,
+          maxAllowed: store.max_discount_percent,
+        },
+      });
+    }
+  }
+
   if (requestedSaleId) {
     const existing = await pool.query(
       `

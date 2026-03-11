@@ -9,6 +9,8 @@ import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceTok
 import { isPayoutsEnabled } from "../../services/supplierPayoutService";
 // T-232: GRN alert push notifications
 import { notifyGrnExcessAlert, notifyGrnMismatch, notifyOrderStatusChange } from "../../services/grnAlertNotificationService";
+// SA-P1-002: Spending limit enforcement
+import { checkSpendingLimits } from "../../services/spendingLimitService";
 import { log } from "../../lib/logger";
 import { asError } from "../../lib/errorUtils";
 
@@ -160,6 +162,23 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         productName: product.name,
         barcode: product.barcode || null,
       });
+    }
+
+    // SA-P1-002: Check spending limits before creating the order
+    // Only enforce for non-draft orders (drafts don't count toward spend)
+    if (orderStatus !== "draft") {
+      const limitCheck = await checkSpendingLimits(pool, storeId, totalAmount);
+      if (!limitCheck.allowed) {
+        await client.query("ROLLBACK");
+        return res.status(422).json({
+          success: false,
+          error: limitCheck.code,
+          period: limitCheck.period,
+          current: limitCheck.current,
+          limit: limitCheck.limit,
+          message: `${limitCheck.period === "daily" ? "Daily" : "Monthly"} spending limit exceeded`,
+        });
+      }
     }
 
     // 4. Generate order number
