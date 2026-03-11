@@ -25,6 +25,7 @@ import {
   validatePrice as validatePriceUnified,
   validateStock as validateStockUnified,
 } from "../../../utils/productValidation";
+import { validatePriceBounds } from "../../../utils/priceBoundsValidator";
 
 export const retailerAdminProductsRouter = Router();
 
@@ -254,6 +255,11 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
   const sellPriceValidation = validatePriceUnified(sellPrice);
   if (!sellPriceValidation.valid) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: sellPriceValidation.error || "Sell price exceeds maximum allowed value" } });
+  }
+  // SA-P0-003: Global price bounds enforcement
+  const sellBoundsCheck = await validatePriceBounds(sellPrice);
+  if (!sellBoundsCheck.valid) {
+    return res.status(400).json({ error: { code: "PRICE_OUT_OF_BOUNDS", message: sellBoundsCheck.error, min: sellBoundsCheck.min, max: sellBoundsCheck.max } });
   }
 
   // T-186: Unified price validation for purchase price
@@ -501,6 +507,14 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       return res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: categoryValidation.error }
       });
+    }
+  }
+
+  // SA-P0-003: Global price bounds enforcement on update
+  if (sellPrice !== undefined && sellPrice !== null) {
+    const updateSellBoundsCheck = await validatePriceBounds(safeNumber(sellPrice));
+    if (!updateSellBoundsCheck.valid) {
+      return res.status(400).json({ error: { code: "PRICE_OUT_OF_BOUNDS", message: updateSellBoundsCheck.error, min: updateSellBoundsCheck.min, max: updateSellBoundsCheck.max } });
     }
   }
 
@@ -797,6 +811,16 @@ retailerAdminProductsRouter.post("/products/bulk", async (req: Request, res: Res
         const pPurchasePrice = safeNumber(p.purchasePrice);
         const pStock = safeNumber(p.stock);
 
+        // SA-P0-003: Global price bounds enforcement for bulk import
+        if (pSellPrice > 0) {
+          const bulkBoundsCheck = await validatePriceBounds(pSellPrice);
+          if (!bulkBoundsCheck.valid) {
+            errors.push({ row: i + 1, error: bulkBoundsCheck.error || "Price out of bounds" });
+            skipped++;
+            continue;
+          }
+        }
+
         // Create master product
         const prodResult = await client.query(
           `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
@@ -932,6 +956,11 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
   }
   if (!purchasePrice || purchasePrice <= 0) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Valid purchase price is required" } });
+  }
+  // SA-P0-003: Global price bounds enforcement for loose product
+  const looseSellBoundsCheck = await validatePriceBounds(sellPrice);
+  if (!looseSellBoundsCheck.valid) {
+    return res.status(400).json({ error: { code: "PRICE_OUT_OF_BOUNDS", message: looseSellBoundsCheck.error, min: looseSellBoundsCheck.min, max: looseSellBoundsCheck.max } });
   }
 
   // GO-LIVE-015: Validate opening stock is non-negative
