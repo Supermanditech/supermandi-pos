@@ -68,7 +68,8 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         operating_hours as "operatingHours",
         receipt_settings as "receiptSettings",
         bank_account_number as "bankAccount",
-        bank_ifsc as "bankIfsc"
+        bank_ifsc as "bankIfsc",
+        max_outstanding_dues_paise as "maxOutstandingDuesPaise"
       FROM platform.stores
       WHERE id = $1`,
       [storeId]
@@ -101,6 +102,8 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         // T-202: Bank account fields
         bankAccount: store.bankAccount || '',
         ifscCode: store.bankIfsc || '',
+        // SA-P1-003: Due limits
+        maxOutstandingDuesPaise: store.maxOutstandingDuesPaise ?? null,
       }
     });
 
@@ -219,6 +222,7 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
     storeName, upiVpa, receiptFooter, address, phone, gstNumber,
     taxRate, operatingHours, receiptSettings,
     bankAccount, ifscCode, // T-202: Bank account fields
+    maxOutstandingDuesPaise, // SA-P1-003: Due limits
   } = req.body;
 
   // GO-LIVE-251: Collect all validation errors as field-mapped
@@ -237,6 +241,13 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
     const acctRegex = /^\d{9,18}$/;
     if (!acctRegex.test(bankAccount)) {
       fieldErrors.bankAccount = "Bank account number must be 9-18 digits";
+    }
+  }
+
+  // SA-P1-003: Validate due limit if provided
+  if (maxOutstandingDuesPaise !== undefined && maxOutstandingDuesPaise !== null) {
+    if (typeof maxOutstandingDuesPaise !== "number" || !Number.isInteger(maxOutstandingDuesPaise) || maxOutstandingDuesPaise <= 0) {
+      fieldErrors.maxOutstandingDuesPaise = "Due limit must be a positive integer (in paise) or null";
     }
   }
 
@@ -333,6 +344,11 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
       updates.push(`bank_ifsc = $${paramIndex++}`);
       values.push(ifscCode ? ifscCode.toUpperCase() : null);
     }
+    // SA-P1-003: Due limits
+    if (maxOutstandingDuesPaise !== undefined) {
+      updates.push(`max_outstanding_dues_paise = $${paramIndex++}`);
+      values.push(maxOutstandingDuesPaise ?? null);
+    }
 
     if (updates.length === 0) {
       return res.status(400).json({
@@ -358,7 +374,8 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
          operating_hours as "operatingHours",
          receipt_settings as "receiptSettings",
          bank_account_number as "bankAccount",
-         bank_ifsc as "ifscCode"`,
+         bank_ifsc as "ifscCode",
+         max_outstanding_dues_paise as "maxOutstandingDuesPaise"`,
       values
     );
 
@@ -410,6 +427,63 @@ retailerAdminSettingsRouter.delete("/settings/upi", async (req: Request, res: Re
     const error = asError(_error);
     log.error("[GL-AUD-004] Remove UPI VPA error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to remove UPI VPA" } });
+  }
+});
+
+// =============================================================================
+// SA-P1-003: PATCH /api/v1/retailer-admin/store/due-limits
+// Update maximum outstanding dues limit for the store
+// =============================================================================
+
+retailerAdminSettingsRouter.patch("/store/due-limits", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { maxOutstandingDuesPaise } = req.body as { maxOutstandingDuesPaise?: number | null };
+
+  // Validate: must be a positive integer or null (null = no limit)
+  if (maxOutstandingDuesPaise !== null && maxOutstandingDuesPaise !== undefined) {
+    if (typeof maxOutstandingDuesPaise !== "number" || !Number.isInteger(maxOutstandingDuesPaise) || maxOutstandingDuesPaise <= 0) {
+      return res.status(422).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "maxOutstandingDuesPaise must be a positive integer or null"
+        }
+      });
+    }
+  }
+
+  try {
+    const valueToPersist = maxOutstandingDuesPaise ?? null;
+
+    const result = await pool.query(
+      `UPDATE platform.stores
+       SET max_outstanding_dues_paise = $1,
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING max_outstanding_dues_paise AS "maxOutstandingDuesPaise"`,
+      [valueToPersist, storeId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Store not found" } });
+    }
+
+    log.info(`[SA-P1-003] Updated due limit for store ${storeId}: ${valueToPersist}`);
+
+    return res.json({
+      success: true,
+      maxOutstandingDuesPaise: result.rows[0].maxOutstandingDuesPaise,
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SA-P1-003] Update due limits error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update due limits" } });
   }
 });
 

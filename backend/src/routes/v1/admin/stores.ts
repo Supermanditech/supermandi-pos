@@ -454,6 +454,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
           upi_vpa_updated_by,
           allowed_payment_methods,
           max_devices,
+          max_outstanding_dues_paise,
           created_at,
           updated_at
         FROM platform.stores
@@ -482,7 +483,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
       // Non-critical
     }
 
-    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], ...(deviceInfo ?? {}) } });
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], maxOutstandingDuesPaise: store.max_outstanding_dues_paise ?? null, ...(deviceInfo ?? {}) } });
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[admin/stores/:storeId] Query failed:", error?.message);

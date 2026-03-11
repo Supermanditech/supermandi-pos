@@ -26,6 +26,8 @@ interface StoreSettings {
   receiptGstin: string;
   receiptCustomFooter: string;
   showTaxBreakdown: boolean;
+  // SA-P1-003: Due limits
+  maxOutstandingDuesRupees: string; // stored as string for input control; empty = no limit
 }
 
 interface ValidationErrors {
@@ -33,6 +35,7 @@ interface ValidationErrors {
   taxRate?: string;
   phone?: string;
   gstNumber?: string;
+  maxOutstandingDuesRupees?: string;
 }
 
 export default function SettingsPage() {
@@ -54,6 +57,8 @@ export default function SettingsPage() {
     receiptGstin: '',
     receiptCustomFooter: '',
     showTaxBreakdown: false,
+    // SA-P1-003: Due limits (empty = no limit)
+    maxOutstandingDuesRupees: '',
   });
 
   // Track loaded settings for dirty detection
@@ -113,6 +118,10 @@ export default function SettingsPage() {
             receiptGstin: rs.gstin || '',
             receiptCustomFooter: rs.customFooter || '',
             showTaxBreakdown: rs.showTaxBreakdown ?? false,
+            // SA-P1-003: Convert paise to rupees for display
+            maxOutstandingDuesRupees: s.maxOutstandingDuesPaise != null
+              ? String(Math.round(Number(s.maxOutstandingDuesPaise) / 100))
+              : '',
           };
           setSettings(loaded);
           initialSettingsRef.current = JSON.stringify(loaded);
@@ -163,6 +172,16 @@ export default function SettingsPage() {
     return undefined;
   };
 
+  // SA-P1-003: Validate due limit
+  const validateDueLimit = (value: string): string | undefined => {
+    if (!value) return undefined; // Empty = no limit, valid
+    const num = Number(value);
+    if (!Number.isInteger(num) || num <= 0) {
+      return 'Due limit must be a positive whole number (in rupees)';
+    }
+    return undefined;
+  };
+
   // Handle field changes
   const handleChange = useCallback((field: keyof StoreSettings, value: string | number | boolean) => {
     setSettings(prev => ({ ...prev, [field]: value }));
@@ -190,6 +209,7 @@ export default function SettingsPage() {
       taxRate: validateTaxRate(settings.taxRate),
       phone: validatePhone(settings.phone),
       gstNumber: validateGst(settings.gstNumber),
+      maxOutstandingDuesRupees: validateDueLimit(settings.maxOutstandingDuesRupees),
     };
 
     setErrors(newErrors);
@@ -206,6 +226,9 @@ export default function SettingsPage() {
 
     try {
       // T-156: Include receiptSettings JSONB in the save payload
+      // SA-P1-003: Convert rupees to paise for backend
+      const dueRupees = settings.maxOutstandingDuesRupees.trim();
+      const maxOutstandingDuesPaise = dueRupees ? Number(dueRupees) * 100 : null;
       const payload = {
         ...settings,
         receiptSettings: {
@@ -213,6 +236,7 @@ export default function SettingsPage() {
           customFooter: settings.receiptCustomFooter,
           showTaxBreakdown: settings.showTaxBreakdown,
         },
+        maxOutstandingDuesPaise,
       };
       // R6.RET.007: Removed redundant Content-Type header — authFetch sets it automatically
       const response = await authFetch('/api/v1/retailer-admin/settings', accessToken, {
@@ -550,6 +574,37 @@ export default function SettingsPage() {
               />
               <p className="set-hint-text">
                 Additional text printed below the standard footer ({settings.receiptCustomFooter?.length || 0}/300 characters)
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* SA-P1-003: Due Limits */}
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon" aria-hidden="true">&#8377;</span>
+            Due Limits
+          </h2>
+
+          <div className="set-grid">
+            <div>
+              <label className="set-label" htmlFor="set-due-limit">Maximum Outstanding Dues (Rupees)</label>
+              <input
+                id="set-due-limit"
+                type="number"
+                className={`form-input set-input${errors.maxOutstandingDuesRupees ? ' set-input--error' : ''}`}
+                value={settings.maxOutstandingDuesRupees}
+                onChange={(e) => handleChange('maxOutstandingDuesRupees', e.target.value)}
+                placeholder="No limit"
+                min="0"
+                step="1"
+              />
+              {errors.maxOutstandingDuesRupees && (
+                <p className="set-error-text">{errors.maxOutstandingDuesRupees}</p>
+              )}
+              <p className="set-hint-text">
+                Maximum total unpaid dues allowed at any time. Leave empty for no limit.
+                New due sales will be blocked when this limit is reached.
               </p>
             </div>
           </div>

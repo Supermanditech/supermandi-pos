@@ -81,6 +81,42 @@ function isSaleReservationExpired(saleCreatedAt: Date | string | null): boolean 
   return Date.now() - created.getTime() > SALE_RESERVATION_TIMEOUT_MS;
 }
 
+/**
+ * SA-P1-003: Check if adding a new due sale would exceed the store's max outstanding dues limit.
+ * Returns { exceeded: false } if OK, or { exceeded: true, currentPaise, limitPaise } if limit would be breached.
+ * Uses the provided client (inside an existing transaction) for consistency.
+ */
+async function checkDueLimitExceeded(
+  client: PoolClient,
+  storeId: string,
+  newAmountPaise: number
+): Promise<{ exceeded: false } | { exceeded: true; currentPaise: number; limitPaise: number }> {
+  // Fetch store's due limit
+  const limitRes = await client.query(
+    `SELECT max_outstanding_dues_paise FROM platform.stores WHERE id = $1::uuid`,
+    [storeId]
+  );
+  const limitPaise = limitRes.rows[0]?.max_outstanding_dues_paise;
+  if (limitPaise == null) {
+    // No limit configured — always allow
+    return { exceeded: false };
+  }
+
+  // Sum current outstanding dues (pending + partial)
+  const outstandingRes = await client.query(
+    `SELECT COALESCE(SUM(amount_minor - paid_amount_minor), 0)::bigint AS total
+     FROM payments.customer_dues
+     WHERE store_id = $1 AND status IN ('pending', 'partial')`,
+    [storeId]
+  );
+  const currentPaise = Number(outstandingRes.rows[0]?.total ?? 0);
+
+  if (currentPaise + newAmountPaise > Number(limitPaise)) {
+    return { exceeded: true, currentPaise, limitPaise: Number(limitPaise) };
+  }
+  return { exceeded: false };
+}
+
 function asTrimmedString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -1433,6 +1469,20 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
       });
     }
 
+    // SA-P1-003: Check store due limit before allowing DUE payment
+    if (paymentMode === "DUE") {
+      const dueLimitCheck = await checkDueLimitExceeded(client, storeId, Number(sale.total_minor));
+      if (dueLimitCheck.exceeded) {
+        await client.query("ROLLBACK");
+        return res.status(422).json({
+          error: "DUE_LIMIT_EXCEEDED",
+          message: "Store outstanding dues limit would be exceeded",
+          currentPaise: dueLimitCheck.currentPaise,
+          limitPaise: dueLimitCheck.limitPaise,
+        });
+      }
+    }
+
     // GO-LIVE-069: Update sale status and payment_status based on payment mode
     const newStatus = paymentMode === "CASH" ? "PAID_CASH" : paymentMode === "UPI" ? "PAID_UPI" : "DUE";
     const newPaymentStatus = paymentMode === "DUE" ? "due" : "paid";
@@ -2144,6 +2194,20 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
         error: "customer_phone_required",
         message: "Customer phone is required for DUE payments"
       });
+    }
+
+    // SA-P1-003: Check store due limit before allowing DUE payment
+    {
+      const dueLimitCheck = await checkDueLimitExceeded(client, storeId, Number(sale.total_minor));
+      if (dueLimitCheck.exceeded) {
+        await client.query("ROLLBACK");
+        return res.status(422).json({
+          error: "DUE_LIMIT_EXCEEDED",
+          message: "Store outstanding dues limit would be exceeded",
+          currentPaise: dueLimitCheck.currentPaise,
+          limitPaise: dueLimitCheck.limitPaise,
+        });
+      }
     }
 
     // GO-LIVE-042: Check reservation expiry
