@@ -488,7 +488,10 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
         sb.current_qty as stock_balance_qty,
         sp.current_stock as store_product_stock,
-        spb_match.barcode as store_barcode
+        spb_match.barcode as store_barcode,
+        p.manufacturer_name,
+        p.country_of_origin,
+        p.shelf_life_days
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -551,6 +554,9 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
           displayName: canonical.display_name || undefined,
           mode: canonical.product_mode || undefined,
           metadataUpdatedAt: canonical.metadata_updated_at || undefined,
+          manufacturerName: canonical.manufacturer_name || undefined,
+          countryOfOrigin: canonical.country_of_origin || undefined,
+          shelfLifeDays: canonical.shelf_life_days || undefined,
         },
       });
     }
@@ -584,6 +590,9 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         displayName: row.display_name || undefined,
         mode: row.product_mode || undefined,
         metadataUpdatedAt: row.metadata_updated_at || undefined,
+        manufacturerName: row.manufacturer_name || undefined,
+        countryOfOrigin: row.country_of_origin || undefined,
+        shelfLifeDays: row.shelf_life_days || undefined,
       },
       context: "SELL",
     });

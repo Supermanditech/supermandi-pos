@@ -11,6 +11,9 @@ export interface CatalogProduct {
   primaryBarcode?: string;
   hsnCode?: string;
   defaultGstRate?: number;
+  manufacturerName?: string;
+  countryOfOrigin?: string;
+  shelfLifeDays?: number;
   isActive: boolean;
   imageUrl?: string;
   thumbnailUrl?: string;
@@ -66,6 +69,9 @@ export interface CatalogProductRow {
   primary_barcode: string | null;
   hsn_code: string | null;
   default_gst_rate: string | null;
+  manufacturer_name: string | null;
+  country_of_origin: string | null;
+  shelf_life_days: number | null;
   is_active: boolean;
   image_url: string | null;
   thumbnail_url: string | null;
@@ -157,6 +163,9 @@ export function mapCatalogProducts(
       primaryBarcode: row.primary_barcode ?? undefined,
       hsnCode: row.hsn_code ?? undefined,
       defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+      manufacturerName: row.manufacturer_name ?? undefined,
+      countryOfOrigin: row.country_of_origin ?? undefined,
+      shelfLifeDays: row.shelf_life_days ?? undefined,
       isActive: row.is_active,
       imageUrl: row.image_url ?? undefined,
       thumbnailUrl: row.thumbnail_url ?? undefined,
@@ -185,6 +194,9 @@ export function mapCatalogProduct(
     primaryBarcode: row.primary_barcode ?? undefined,
     hsnCode: row.hsn_code ?? undefined,
     defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+    manufacturerName: row.manufacturer_name ?? undefined,
+    countryOfOrigin: row.country_of_origin ?? undefined,
+    shelfLifeDays: row.shelf_life_days ?? undefined,
     isActive: row.is_active,
     imageUrl: row.image_url ?? undefined,
     thumbnailUrl: row.thumbnail_url ?? undefined,
