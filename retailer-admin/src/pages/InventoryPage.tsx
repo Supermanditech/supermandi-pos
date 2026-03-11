@@ -10,8 +10,71 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useUrlState } from '../hooks/useUrlState';
 // GAP-2: EmptyState component for consistent empty states
 import EmptyState from '../components/EmptyState';
-import { ClipboardList, RefreshCw, AlertTriangle } from 'lucide-react';
+import { ClipboardList, RefreshCw, AlertTriangle, ArrowUpDown } from 'lucide-react';
 import { logger } from '../lib/logger';
+
+// SCALE-C3: Stock product row for FEFO-sorted stock table
+interface StockProduct {
+  productId: string;
+  productName: string;
+  barcode: string | null;
+  batchNumber: string | null;
+  expiryDate: string | null;
+  totalStockQty: number;
+  totalPurchaseValue: number;
+  totalSellRevenue: number;
+}
+
+interface StockResponse {
+  success: boolean;
+  data: StockProduct[];
+  totals: {
+    totalProducts: number;
+    totalStockQty: number;
+    totalPurchaseValue: number;
+    totalSellRevenue: number;
+  };
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  sort: string;
+  lastUpdated: string;
+}
+
+// SCALE-C3: Sort options for stock table
+type StockSortOption = 'default' | 'fefo' | 'name' | 'stock_low';
+
+const STOCK_SORT_LABELS: Record<StockSortOption, string> = {
+  default: 'Default',
+  fefo: 'FEFO (Earliest Expiry First)',
+  name: 'Name A-Z',
+  stock_low: 'Stock Low-High',
+};
+
+/** Format expiry date as DD-Mon-YY */
+function formatExpiryDate(isoDate: string | null): string {
+  if (!isoDate) return '—';
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return isoDate;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}-${month}-${year}`;
+}
+
+/** Compute days until expiry from today */
+function daysUntilExpiry(isoDate: string | null): number | null {
+  if (!isoDate) return null;
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  const nowDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const expDay = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((expDay - nowDay) / (1000 * 60 * 60 * 24));
+}
 
 // SCALE-C2: Expiry alert types
 interface ExpiringProduct {
@@ -109,6 +172,15 @@ export default function InventoryPage() {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const AUTO_REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
+  // SCALE-C3: Stock view with FEFO sort support
+  // useUrlState always returns string — cast via as for type safety at usage sites
+  const [activeTab, setActiveTab] = useUrlState('tab', 'ledger');
+  const [stockSort, setStockSort] = useUrlState('stockSort', 'default');
+  const [stockProducts, setStockProducts] = useState<StockProduct[]>([]);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockError, setStockError] = useState<string | null>(null);
+  const [stockSortOpen, setStockSortOpen] = useState(false);
+
   // GO-LIVE-021: Extract fetchLedger to allow retry on error
   const fetchLedger = useCallback(async (options?: { silent?: boolean }) => {
     if (!accessToken) return;
@@ -195,6 +267,46 @@ export default function InventoryPage() {
     fetchExpiryAlerts();
   }, [fetchExpiryAlerts]);
 
+  // SCALE-C3: Fetch stock products with optional FEFO/sort
+  const fetchStock = useCallback(async () => {
+    if (!accessToken) return;
+    setStockLoading(true);
+    setStockError(null);
+    const currentSort = stockSort as StockSortOption;
+    try {
+      let url = '/api/v1/retailer-admin/inventory?limit=200';
+      // SCALE-C3: Map sort option to API params
+      if (currentSort === 'fefo') {
+        url += '&sort=fefo';
+      }
+      // 'name' = default API sort (A-Z), no extra param needed
+      // 'stock_low' = client-side sort after fetch
+      const response = await authFetch(url, accessToken);
+      if (response.status === 401) return;
+      if (!response.ok) throw new Error('Failed to fetch stock');
+      const data = await safeJson<StockResponse>(response);
+      if (!data) throw new Error('Invalid response from server');
+      let products = data.data || [];
+      // Client-side sort for stock_low (server doesn't support this sort natively)
+      if (currentSort === 'stock_low') {
+        products = [...products].sort((a, b) => a.totalStockQty - b.totalStockQty);
+      }
+      setStockProducts(products);
+    } catch (err) {
+      logger.error('Failed to load stock:', err);
+      setStockError('Failed to load stock. Please try again.');
+      setStockProducts([]);
+    } finally {
+      setStockLoading(false);
+    }
+  }, [accessToken, stockSort]);
+
+  useEffect(() => {
+    if (activeTab === 'stock') {
+      fetchStock();
+    }
+  }, [activeTab, fetchStock]);
+
   // T-183: Auto-refresh polling — only when page is focused
   useEffect(() => {
     // Update "seconds ago" counter every second
@@ -245,28 +357,63 @@ export default function InventoryPage() {
       </div>
       <header className="page-header">
         <div className="flex-between-wrap">
-          <h1 className="page-title page-title--compact">Inventory Ledger</h1>
+          <h1 className="page-title page-title--compact">Inventory</h1>
           <div className="flex-row btn-icon">
-            {/* T-183: Last updated indicator */}
-            <span className="text-xs-muted">
-              Updated {secondsSinceRefresh < 5 ? 'just now' : `${secondsSinceRefresh}s ago`}
-            </span>
-            {/* T-183: Manual refresh button */}
-            <button
-              aria-label="Refresh inventory data"
-              className="btn btn-secondary btn-icon btn-sm"
-              onClick={() => fetchLedger()}
-              disabled={loading}
-            >
-              <RefreshCw style={{ width: 14, height: 14, transition: 'transform 0.3s', transform: loading ? 'rotate(180deg)' : 'none' }} />
-              Refresh
-            </button>
+            {activeTab === 'ledger' && (
+              <>
+                {/* T-183: Last updated indicator */}
+                <span className="text-xs-muted">
+                  Updated {secondsSinceRefresh < 5 ? 'just now' : `${secondsSinceRefresh}s ago`}
+                </span>
+                {/* T-183: Manual refresh button */}
+                <button
+                  aria-label="Refresh inventory data"
+                  className="btn btn-secondary btn-icon btn-sm"
+                  onClick={() => fetchLedger()}
+                  disabled={loading}
+                >
+                  <RefreshCw style={{ width: 14, height: 14, transition: 'transform 0.3s', transform: loading ? 'rotate(180deg)' : 'none' }} />
+                  Refresh
+                </button>
+              </>
+            )}
+            {activeTab === 'stock' && (
+              <button
+                aria-label="Refresh stock data"
+                className="btn btn-secondary btn-icon btn-sm"
+                onClick={() => fetchStock()}
+                disabled={stockLoading}
+              >
+                <RefreshCw style={{ width: 14, height: 14, transition: 'transform 0.3s', transform: stockLoading ? 'rotate(180deg)' : 'none' }} />
+                Refresh
+              </button>
+            )}
           </div>
+        </div>
+        {/* SCALE-C3: Tab switcher — Ledger | Stock */}
+        <div className="flex-row grid-mb-sm" style={{ marginTop: 8 }}>
+          <button
+            className={`btn ${activeTab === 'ledger' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('ledger')}
+            aria-pressed={activeTab === 'ledger'}
+            data-testid="tab-ledger"
+          >
+            Ledger
+          </button>
+          <button
+            className={`btn ${activeTab === 'stock' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('stock')}
+            aria-pressed={activeTab === 'stock'}
+            data-testid="tab-stock"
+          >
+            Stock
+          </button>
         </div>
       </header>
 
       <div className="page-content">
-        {/* Summary Stats */}
+        {/* Summary Stats (Ledger tab only) */}
+        {activeTab === 'ledger' && (
         <div className="grid grid-4 grid-mb-lg">
           <div className="stat-card">
             <div className="stat-label">📦 Total SKUs</div>
@@ -285,6 +432,119 @@ export default function InventoryPage() {
             <div className="stat-value">{loading ? '...' : ledgerEntries.length}</div>
           </div>
         </div>
+        )}
+
+        {/* SCALE-C3: Stock tab with FEFO sort */}
+        {activeTab === 'stock' && (
+          <div>
+            {/* Sort selector */}
+            <div className="flex-between-wrap grid-mb">
+              <div className="flex-row btn-icon" style={{ position: 'relative' }}>
+                <button
+                  className="btn btn-secondary btn-icon btn-sm"
+                  onClick={() => setStockSortOpen((prev) => !prev)}
+                  data-testid="stock-sort-btn"
+                  aria-label="Change stock sort order"
+                >
+                  <ArrowUpDown style={{ width: 14, height: 14 }} />
+                  {STOCK_SORT_LABELS[stockSort as StockSortOption]}
+                </button>
+                {stockSortOpen && (
+                  <div
+                    className="card card-no-padding"
+                    style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, minWidth: 220, marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
+                    data-testid="stock-sort-dropdown"
+                  >
+                    {(Object.keys(STOCK_SORT_LABELS) as StockSortOption[]).map((opt) => (
+                      <button
+                        key={opt}
+                        className={`btn btn-ghost btn-sm ${stockSort === opt ? 'btn-primary' : ''}`}
+                        style={{ width: '100%', textAlign: 'left', borderRadius: 0 }}
+                        onClick={() => {
+                          setStockSort(opt);
+                          setStockSortOpen(false);
+                        }}
+                        data-testid={`sort-option-${opt}`}
+                      >
+                        {opt === 'fefo' ? '⏰ ' : ''}{STOCK_SORT_LABELS[opt]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {stockSort === 'fefo' && (
+                <span className="badge badge-warning" style={{ fontSize: 12 }}>
+                  FEFO active — earliest expiry shown first
+                </span>
+              )}
+            </div>
+
+            {/* Stock table */}
+            <div className="card card-no-padding">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Barcode</th>
+                    <th>Batch</th>
+                    <th>Expiry</th>
+                    <th>Stock Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockLoading ? (
+                    <tr>
+                      <td colSpan={5} className="td-center-muted">Loading stock...</td>
+                    </tr>
+                  ) : stockError ? (
+                    <tr>
+                      <td colSpan={5} className="td-center">
+                        <div className="text-danger-mb">{stockError}</div>
+                        <button onClick={() => fetchStock()} className="btn btn-primary">Retry</button>
+                      </td>
+                    </tr>
+                  ) : stockProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <EmptyState
+                          icon={<ClipboardList size={24} />}
+                          title="No stock found"
+                          description="Add products to your store to see stock here."
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    stockProducts.map((product) => {
+                      const days = daysUntilExpiry(product.expiryDate);
+                      const expiryBadge = days === null ? null
+                        : days < 0 ? <span className="badge badge-danger" style={{ marginLeft: 4, fontSize: 10 }}>EXPIRED</span>
+                        : days <= 30 ? <span className="badge badge-danger" style={{ marginLeft: 4, fontSize: 10 }}>{days}d</span>
+                        : days <= 90 ? <span className="badge badge-warning" style={{ marginLeft: 4, fontSize: 10 }}>{days}d</span>
+                        : null;
+                      return (
+                        <tr key={product.productId}>
+                          <td>{product.productName}</td>
+                          <td className="text-sm-muted">{product.barcode || '—'}</td>
+                          <td className="text-sm-muted">{product.batchNumber || '—'}</td>
+                          <td>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              {formatExpiryDate(product.expiryDate)}
+                              {expiryBadge}
+                            </span>
+                          </td>
+                          <td className="cell-bold">{product.totalStockQty}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Ledger tab content */}
+        {activeTab === 'ledger' && (<>
 
         {/* SCALE-C2: Expiry Alerts Section */}
         <div className="card" style={{ marginBottom: '1.5rem' }} data-testid="expiry-alerts-section">
@@ -598,6 +858,7 @@ export default function InventoryPage() {
             Direct stock edits create ADJUSTMENT entries for audit trail.
           </p>
         </div>
+        </>)}
       </div>
     </>
   );

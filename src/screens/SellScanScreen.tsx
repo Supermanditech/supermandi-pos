@@ -121,7 +121,7 @@ const resolveSkuPrice = (item: SkuItem) => {
 
 type DiscountType = "percentage" | "fixed";
 
-async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
+async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"): Promise<SkuItem[]> {
   const trimmedQuery = query?.trim() || "";
   try {
     const items: SkuItem[] = [];
@@ -134,7 +134,8 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
       let offset = 0;
       let allProducts: sellSearchApi.StoreProductListItem[] = [];
       for (;;) {
-        const page = await sellSearchApi.listStoreProducts({ limit: PAGE, offset });
+        // SCALE-C3: Pass sort=fefo when FEFO mode is active
+        const page = await sellSearchApi.listStoreProducts({ limit: PAGE, offset, sort });
         allProducts.push(...page);
         if (page.length < PAGE) break;
         offset += PAGE;
@@ -924,6 +925,8 @@ export default function SellScanScreen({
   const [catalogPage, setCatalogPage] = useState(0);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogHasMore, setCatalogHasMore] = useState(true);
+  // SCALE-C3: FEFO (First Expired First Out) sort toggle — off by default
+  const [fefoSort, setFefoSort] = useState(false);
 
   const [lastAddMessage, setLastAddMessage] = useState<string | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
@@ -1776,6 +1779,10 @@ export default function SellScanScreen({
     }
 
     const params: Array<string | number> = [PAGE_SIZE, offset];
+    // SCALE-C3: When FEFO is active, sort by expiry_date ASC NULLS LAST then name
+    const fefoOrderBy = fefoSort
+      ? `ORDER BY CASE WHEN p.expiry_date IS NULL THEN 1 ELSE 0 END, p.expiry_date ASC, p.name ASC`
+      : `ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC`;
     const sql = `
       SELECT
         p.product_id as productId,
@@ -1788,21 +1795,25 @@ export default function SellScanScreen({
         p.current_stock as currentStock
       FROM offline_products p
       LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
-      ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC
+      ${fefoOrderBy}
       LIMIT ? OFFSET ?
     `;
+
+    const fefoSortParam: "fefo" | "default" = fefoSort ? "fefo" : "default";
 
     try {
       let rows = await offlineDb.all<SkuItem>(sql, params);
       if (reset && rows.length === 0) {
         // DB empty - sync blocking before showing UI
-        const remote = await syncProductsToOffline();
+        // SCALE-C3: Pass sort param to fetch FEFO-sorted results from server
+        const remote = await syncProductsToOffline(undefined, fefoSortParam);
         if (remote.length > 0) {
           rows = await offlineDb.all<SkuItem>(sql, params);
         }
       } else if (reset && rows.length > 0) {
         // DB has data - show immediately, sync in background for freshness
-        syncProductsToOffline().then(async () => {
+        // SCALE-C3: Pass sort param so server repopulates offline DB with FEFO order
+        syncProductsToOffline(undefined, fefoSortParam).then(async () => {
           const fresh = await offlineDb.all<SkuItem>(sql, params);
           if (fresh.length > 0) {
             setCatalogItems(fresh);
@@ -1815,7 +1826,7 @@ export default function SellScanScreen({
     } finally {
       setCatalogLoading(false);
     }
-  }, [catalogHasMore, catalogLoading, catalogPage]);
+  }, [catalogHasMore, catalogLoading, catalogPage, fefoSort]);
 
   const loadAddResults = useCallback(async (reset: boolean) => {
     if (addLoading) return;
@@ -1906,6 +1917,16 @@ export default function SellScanScreen({
     setCatalogPage(0);
     void loadCatalog(true);
   }, [loadCatalog]);
+
+  // SCALE-C3: Re-load catalog when FEFO sort toggle changes
+  const prevFefoSortRef = useRef(fefoSort);
+  useEffect(() => {
+    if (prevFefoSortRef.current === fefoSort) return;
+    prevFefoSortRef.current = fefoSort;
+    setCatalogHasMore(true);
+    setCatalogPage(0);
+    void loadCatalog(true);
+  }, [fefoSort, loadCatalog]);
 
   useEffect(() => {
     if (!addExpanded) return;
@@ -3227,22 +3248,43 @@ export default function SellScanScreen({
 
         {/* Product Grid */}
         <View style={styles.productGridContainer}>
-          {/* Category filter label (Demo Store only) */}
-          {showCategoryRail && selectedCategory !== "all" && (
-            <View style={styles.categoryFilterLabel}>
-              <Text style={styles.categoryFilterText}>
-                Category: {displayCategories.find((c) => c.id === selectedCategory)?.label ?? selectedCategory}
+          {/* SCALE-C3: FEFO sort toggle + Category filter label row */}
+          <View style={styles.catalogToolbar}>
+            {/* SCALE-C3: FEFO toggle button */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setFefoSort((prev) => !prev)}
+              hitSlop={8}
+              style={[styles.fefoToggle, fefoSort && styles.fefoToggleActive]}
+              testID="fefo-toggle-btn"
+              accessibilityLabel={fefoSort ? "FEFO sort active — tap to disable" : "Enable FEFO sort (earliest expiry first)"}
+            >
+              <MaterialCommunityIcons
+                name="clock-alert-outline"
+                size={14}
+                color={fefoSort ? colors.surface : colors.textTertiary}
+              />
+              <Text style={[styles.fefoToggleText, fefoSort && styles.fefoToggleTextActive]}>
+                {fefoSort ? "FEFO ON" : "FEFO"}
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setSelectedCategory("all")}
-                hitSlop={8}
-                accessibilityLabel="Clear category filter"
-              >
-                <MaterialCommunityIcons name="close-circle" size={16} color={colors.textTertiary} />
-              </Pressable>
-            </View>
-          )}
+            </Pressable>
+            {/* Category filter label */}
+            {showCategoryRail && selectedCategory !== "all" && (
+              <View style={styles.categoryFilterLabel}>
+                <Text style={styles.categoryFilterText}>
+                  Category: {displayCategories.find((c) => c.id === selectedCategory)?.label ?? selectedCategory}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setSelectedCategory("all")}
+                  hitSlop={8}
+                  accessibilityLabel="Clear category filter"
+                >
+                  <MaterialCommunityIcons name="close-circle" size={16} color={colors.textTertiary} />
+                </Pressable>
+              </View>
+            )}
+          </View>
           <FlatList
             data={gridItems}
             keyExtractor={(item) => item.barcode}
@@ -4106,11 +4148,42 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   productGridContainer: {
     flex: 1,
   },
-  categoryFilterLabel: {
+  // SCALE-C3: Toolbar row containing FEFO toggle + category filter
+  catalogToolbar: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  fefoToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: colors.surface,
+  },
+  fefoToggleActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  fefoToggleText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.textTertiary,
+  },
+  fefoToggleTextActive: {
+    color: colors.surface,
+  },
+  categoryFilterLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 2,
     gap: 8,
   },
   categoryFilterText: {
