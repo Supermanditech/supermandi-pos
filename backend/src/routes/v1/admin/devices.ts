@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { log } from "../../../lib/logger";
+import * as fcmService from "../../../services/fcmService";
 
 export const adminDevicesRouter = Router();
 
@@ -423,4 +424,500 @@ adminDevicesRouter.post("/devices/:deviceId/force-re-enroll", requireAdminToken,
     device: result.rows[0],
     message: "Device has been deregistered and will require re-enrollment.",
   });
+});
+
+// SA-P2-005: POST /api/v1/admin/devices/:deviceId/force-sync
+// Queue a force-sync command for a device.
+// The POS app will pick this up on its next sync tick and perform a full sync.
+adminDevicesRouter.post("/devices/:deviceId/force-sync", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Verify device exists
+  const deviceRes = await pool.query(
+    `SELECT id, store_id, label FROM pos_devices WHERE id = $1`,
+    [deviceId]
+  );
+
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+
+  // Insert force-sync request (upsert: if pending request exists for this device, update it)
+  const result = await pool.query(
+    `INSERT INTO device_sync_requests (device_id, store_id, reason, status, requested_at)
+     VALUES ($1, $2, $3, 'pending', NOW())
+     ON CONFLICT (device_id) WHERE status = 'pending'
+     DO UPDATE SET reason = EXCLUDED.reason, requested_at = NOW()
+     RETURNING id, device_id, store_id, reason, status, requested_at`,
+    [deviceId, device.store_id, reason || "Force sync requested by superadmin"]
+  );
+
+  log.info(`[ForceSync] Device ${deviceId} (store=${device.store_id}) force-sync queued. reason=${reason || "none"}`);
+
+  return res.json({
+    success: true,
+    syncRequest: {
+      id: result.rows[0].id,
+      device_id: result.rows[0].device_id,
+      store_id: result.rows[0].store_id,
+      reason: result.rows[0].reason,
+      status: result.rows[0].status,
+      requested_at: new Date(result.rows[0].requested_at).toISOString(),
+    },
+    message: "Force sync has been queued. The device will sync on its next check-in.",
+  });
+});
+
+// SA-P2-005: GET /api/v1/admin/devices/:deviceId/sync-status
+// Get last sync time and pending sync requests for a device.
+adminDevicesRouter.get("/devices/:deviceId/sync-status", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Fetch device sync info and pending requests in parallel
+  const [deviceRes, pendingRes, recentRes] = await Promise.all([
+    pool.query(
+      `SELECT id, last_sync_at, last_seen_online, pending_outbox_count FROM pos_devices WHERE id = $1`,
+      [deviceId]
+    ),
+    pool.query(
+      `SELECT id, reason, status, requested_at
+       FROM device_sync_requests
+       WHERE device_id = $1 AND status = 'pending'
+       ORDER BY requested_at DESC
+       LIMIT 1`,
+      [deviceId]
+    ),
+    pool.query(
+      `SELECT id, reason, status, requested_at, completed_at
+       FROM device_sync_requests
+       WHERE device_id = $1
+       ORDER BY requested_at DESC
+       LIMIT 5`,
+      [deviceId]
+    ),
+  ]);
+
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+  const pendingRequest = pendingRes.rows[0] ?? null;
+  const recentRequests = recentRes.rows.map((r) => ({
+    id: r.id,
+    reason: r.reason,
+    status: r.status,
+    requested_at: r.requested_at ? new Date(r.requested_at).toISOString() : null,
+    completed_at: r.completed_at ? new Date(r.completed_at).toISOString() : null,
+  }));
+
+  return res.json({
+    device_id: device.id,
+    last_sync_at: device.last_sync_at ? new Date(device.last_sync_at).toISOString() : null,
+    last_seen_online: device.last_seen_online ? new Date(device.last_seen_online).toISOString() : null,
+    pending_outbox_count: device.pending_outbox_count ?? 0,
+    pending_sync_request: pendingRequest ? {
+      id: pendingRequest.id,
+      reason: pendingRequest.reason,
+      requested_at: new Date(pendingRequest.requested_at).toISOString(),
+    } : null,
+    recent_sync_requests: recentRequests,
+  });
+});
+
+// =============================================================================
+// SA-P2-002: Remote Config Push
+// =============================================================================
+
+/**
+ * Check if Firebase Admin SDK is initialized and messaging is available.
+ * Returns false if firebase-admin is not configured (no service account).
+ */
+function isFcmAvailable(): boolean {
+  try {
+    // If firebase-admin is not initialized, this will throw
+    const admin = require("firebase-admin");
+    const apps = admin.apps;
+    return Array.isArray(apps) && apps.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+// POST /api/v1/admin/devices/:deviceId/push-config
+// Push a config update to a specific device via FCM or poll fallback
+adminDevicesRouter.post("/devices/:deviceId/push-config", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const configKey = typeof body.configKey === "string" ? body.configKey.trim() : "";
+  const configValue = typeof body.configValue === "string" ? body.configValue.trim() : "";
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+
+  if (!configKey) {
+    return res.status(400).json({ error: "configKey is required" });
+  }
+  if (!configValue && configValue !== "false" && configValue !== "0") {
+    return res.status(400).json({ error: "configValue is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Verify device exists
+  const deviceRes = await pool.query(
+    `SELECT id, store_id FROM pos_devices WHERE id = $1`,
+    [deviceId]
+  );
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+  let method: "fcm" | "poll" = "poll";
+
+  // Attempt FCM delivery if available
+  if (isFcmAvailable()) {
+    try {
+      if (device.store_id) {
+        const tokenRes = await pool.query(
+          `SELECT dt.token
+           FROM auth.device_tokens dt
+           JOIN auth.users u ON u.id = dt.user_id
+           WHERE u.store_id = $1 AND dt.is_active = true`,
+          [device.store_id]
+        );
+        const tokens = tokenRes.rows.map((r: { token: string }) => r.token);
+        if (tokens.length > 0) {
+          await fcmService.sendToTokens(tokens, {
+            title: "Config Update",
+            body: message || `Configuration "${configKey}" updated`,
+            data: {
+              type: "CONFIG_PUSH",
+              configKey,
+              configValue,
+              deviceId,
+            },
+            priority: "high",
+            channel: "alerts",
+          });
+          method = "fcm";
+        }
+      }
+    } catch (err) {
+      log.warn("[ConfigPush] FCM send failed, falling back to poll:", err);
+      method = "poll";
+    }
+  }
+
+  // Record the config push in DB (for poll fallback or audit trail)
+  const insertRes = await pool.query(
+    `INSERT INTO device_config_pushes (device_id, store_id, config_key, config_value, message, method, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, created_at`,
+    [deviceId, device.store_id, configKey, configValue, message || null, method, method === "fcm" ? "delivered" : "pending"]
+  );
+
+  log.info(`[ConfigPush] Pushed "${configKey}" to device ${deviceId} via ${method}`);
+
+  return res.json({
+    queued: true,
+    method,
+    pushId: insertRes.rows[0].id,
+    createdAt: insertRes.rows[0].created_at,
+  });
+});
+
+// POST /api/v1/admin/devices/broadcast-config
+// Broadcast a config update to all active devices
+adminDevicesRouter.post("/devices/broadcast-config", requireAdminToken, async (req, res) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const configKey = typeof body.configKey === "string" ? body.configKey.trim() : "";
+  const configValue = typeof body.configValue === "string" ? body.configValue.trim() : "";
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+
+  if (!configKey) {
+    return res.status(400).json({ error: "configKey is required" });
+  }
+  if (!configValue && configValue !== "false" && configValue !== "0") {
+    return res.status(400).json({ error: "configValue is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Get all active devices
+  const devicesRes = await pool.query(
+    `SELECT id, store_id FROM pos_devices WHERE active = true`
+  );
+
+  if (devicesRes.rowCount === 0) {
+    return res.json({ queued: true, method: "poll" as const, deviceCount: 0 });
+  }
+
+  let method: "fcm" | "poll" = "poll";
+  const devices = devicesRes.rows as Array<{ id: string; store_id: string | null }>;
+
+  // Attempt FCM broadcast if available
+  if (isFcmAvailable()) {
+    try {
+      const tokenRes = await pool.query(
+        `SELECT dt.token FROM auth.device_tokens dt WHERE dt.is_active = true`
+      );
+      const tokens = tokenRes.rows.map((r: { token: string }) => r.token);
+      if (tokens.length > 0) {
+        await fcmService.sendToTokens(tokens, {
+          title: "Config Update",
+          body: message || `Configuration "${configKey}" updated for all devices`,
+          data: {
+            type: "CONFIG_PUSH",
+            configKey,
+            configValue,
+            broadcast: "true",
+          },
+          priority: "high",
+          channel: "alerts",
+        });
+        method = "fcm";
+      }
+    } catch (err) {
+      log.warn("[ConfigPush] FCM broadcast failed, falling back to poll:", err);
+      method = "poll";
+    }
+  }
+
+  // Record a config push entry per device
+  const status = method === "fcm" ? "delivered" : "pending";
+  const values: string[] = [];
+  const params: Array<string | null> = [];
+  let paramIdx = 1;
+  for (const d of devices) {
+    values.push(`($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4}, $${paramIdx + 5}, $${paramIdx + 6})`);
+    params.push(d.id, d.store_id, configKey, configValue, message || null, method, status);
+    paramIdx += 7;
+  }
+
+  await pool.query(
+    `INSERT INTO device_config_pushes (device_id, store_id, config_key, config_value, message, method, status)
+     VALUES ${values.join(", ")}`,
+    params
+  );
+
+  log.info(`[ConfigPush] Broadcast "${configKey}" to ${devices.length} devices via ${method}`);
+
+  return res.json({
+    queued: true,
+    method,
+    deviceCount: devices.length,
+  });
+});
+
+// GET /api/v1/admin/devices/config-push-history
+// Returns recent config push history for display in SuperAdmin
+adminDevicesRouter.get("/devices/config-push-history", requireAdminToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+  const deviceId = typeof req.query.deviceId === "string" ? req.query.deviceId.trim() : "";
+
+  const conditions: string[] = [];
+  const countParams: (string | number)[] = [];
+  const queryParams: (string | number)[] = [];
+  let countIdx = 1;
+  let queryIdx = 1;
+
+  if (deviceId) {
+    conditions.push(`cp.device_id = $${countIdx}`);
+    countParams.push(deviceId);
+    queryParams.push(deviceId);
+    countIdx++;
+    queryIdx++;
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  queryParams.push(limit, offset);
+
+  const [countResult, result] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int as total FROM device_config_pushes cp ${where}`,
+      countParams
+    ),
+    pool.query(
+      `SELECT cp.id, cp.device_id, cp.store_id, cp.config_key, cp.config_value,
+              cp.message, cp.method, cp.status, cp.delivered_at, cp.created_at
+       FROM device_config_pushes cp
+       ${where}
+       ORDER BY cp.created_at DESC
+       LIMIT $${queryIdx} OFFSET $${queryIdx + 1}`,
+      queryParams
+    ),
+  ]);
+
+  return res.json({
+    pushes: result.rows,
+    total: countResult.rows[0]?.total ?? 0,
+    limit,
+    offset,
+  });
+});
+
+// =============================================================================
+// SA-P2-009: Device Hardware Whitelist
+// =============================================================================
+
+const WHITELIST_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// GET /api/v1/admin/devices/whitelist — list active whitelist rules
+adminDevicesRouter.get("/devices/whitelist", requireAdminToken, async (_req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const result = await pool.query(
+      `SELECT id, manufacturer, model, min_android_version, notes, active, created_at, updated_at
+       FROM platform.device_whitelist
+       ORDER BY created_at DESC`
+    );
+
+    return res.json({ rules: result.rows });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error listing rules:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to list whitelist rules" });
+  }
+});
+
+// POST /api/v1/admin/devices/whitelist — add a whitelist rule
+adminDevicesRouter.post("/devices/whitelist", requireAdminToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const body = req.body ?? {};
+  const manufacturer = typeof body.manufacturer === "string" ? body.manufacturer.trim() : "";
+  const model = typeof body.model === "string" ? body.model.trim() : "";
+  const minAndroidVersion = typeof body.minAndroidVersion === "string" ? body.minAndroidVersion.trim() : "";
+  const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 255) : "";
+
+  // At least one criterion must be provided
+  if (!manufacturer && !model && !minAndroidVersion) {
+    return res.status(400).json({ error: "At least one of manufacturer, model, or minAndroidVersion is required" });
+  }
+
+  // Validate minAndroidVersion is numeric if provided
+  if (minAndroidVersion && !/^\d+(\.\d+)*$/.test(minAndroidVersion)) {
+    return res.status(400).json({ error: "minAndroidVersion must be a valid version number (e.g. '12' or '13.0')" });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO platform.device_whitelist (manufacturer, model, min_android_version, notes)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, manufacturer, model, min_android_version, notes, active, created_at, updated_at`,
+      [
+        manufacturer || null,
+        model || null,
+        minAndroidVersion || null,
+        notes || null,
+      ]
+    );
+
+    log.info(`[DeviceWhitelist] Rule created: id=${result.rows[0].id} manufacturer=${manufacturer} model=${model} minAndroid=${minAndroidVersion}`);
+    return res.status(201).json({ rule: result.rows[0] });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error creating rule:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to create whitelist rule" });
+  }
+});
+
+// DELETE /api/v1/admin/devices/whitelist/:ruleId — remove a whitelist rule
+adminDevicesRouter.delete("/devices/whitelist/:ruleId", requireAdminToken, async (req, res) => {
+  const ruleId = req.params.ruleId?.trim();
+  if (!ruleId || !WHITELIST_UUID_RE.test(ruleId)) {
+    return res.status(400).json({ error: "Valid ruleId (UUID) is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM platform.device_whitelist WHERE id = $1 RETURNING id`,
+      [ruleId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Whitelist rule not found" });
+    }
+
+    log.info(`[DeviceWhitelist] Rule deleted: id=${ruleId}`);
+    return res.json({ success: true, deletedId: ruleId });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error deleting rule:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to delete whitelist rule" });
+  }
+});
+
+// PATCH /api/v1/admin/devices/whitelist/:ruleId — toggle active status
+adminDevicesRouter.patch("/devices/whitelist/:ruleId", requireAdminToken, async (req, res) => {
+  const ruleId = req.params.ruleId?.trim();
+  if (!ruleId || !WHITELIST_UUID_RE.test(ruleId)) {
+    return res.status(400).json({ error: "Valid ruleId (UUID) is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const body = req.body ?? {};
+  if (typeof body.active !== "boolean") {
+    return res.status(400).json({ error: "active (boolean) is required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE platform.device_whitelist SET active = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, manufacturer, model, min_android_version, notes, active, created_at, updated_at`,
+      [body.active, ruleId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Whitelist rule not found" });
+    }
+
+    log.info(`[DeviceWhitelist] Rule ${ruleId} active=${body.active}`);
+    return res.json({ rule: result.rows[0] });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error updating rule:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update whitelist rule" });
+  }
 });

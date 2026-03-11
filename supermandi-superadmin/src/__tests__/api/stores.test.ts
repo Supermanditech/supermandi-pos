@@ -1,6 +1,6 @@
 // SuperAdmin — Test stores API client
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchStores, fetchStore, createStore, updateStore, changeStoreStatus, fetchStoreStatusHistory, fetchStoreSettings } from '../../api/stores';
+import { fetchStores, fetchStore, createStore, updateStore, changeStoreStatus, fetchStoreStatusHistory, fetchStoreSettings, updateStoreBnpl } from '../../api/stores';
 
 // Mock authToken module
 vi.mock('../../api/authToken', () => ({
@@ -535,6 +535,104 @@ describe('stores API client', () => {
 
       await fetchStoreSettings('store-1');
       expect(mockFetch.mock.calls[0][1].method).toBe('GET');
+    });
+  });
+
+  // =========================================================================
+  // SA-P2-007: updateStoreBnpl
+  // =========================================================================
+
+  describe('updateStoreBnpl', () => {
+    const mockBnplResult = {
+      id: 'store-1',
+      name: 'Test Store',
+      code: 'TST001',
+      status: 'ACTIVE',
+      creditEnabled: true,
+      creditLimit: 10000,
+      bnplEnabled: true,
+      bnplCreditLimit: 5000000,
+      bnplMaxDays: 14,
+      updatedAt: '2024-01-15',
+    };
+
+    it('sends PATCH to bnpl endpoint with settings', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ store: mockBnplResult }),
+      });
+
+      const result = await updateStoreBnpl('store-1', {
+        bnplEnabled: true,
+        bnplCreditLimit: 5000000,
+        bnplMaxDays: 14,
+        creditEnabled: true,
+        creditLimit: 10000,
+      });
+
+      expect(result).toEqual(mockBnplResult);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/admin/stores/store-1/bnpl'),
+        expect.objectContaining({
+          method: 'PATCH',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          }),
+        })
+      );
+    });
+
+    it('sends correct body fields', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ store: mockBnplResult }),
+      });
+
+      await updateStoreBnpl('store-1', {
+        bnplEnabled: false,
+        bnplMaxDays: 7,
+      });
+
+      const calledInit = mockFetch.mock.calls[0][1];
+      const body = JSON.parse(calledInit.body);
+      expect(body.bnplEnabled).toBe(false);
+      expect(body.bnplMaxDays).toBe(7);
+    });
+
+    it('encodes storeId in URL', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ store: mockBnplResult }),
+      });
+
+      await updateStoreBnpl('store/special', { bnplEnabled: true });
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).toContain('/api/v1/admin/stores/store%2Fspecial/bnpl');
+    });
+
+    it('throws on error response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Validation failed' }),
+      });
+
+      await expect(updateStoreBnpl('store-1', { bnplMaxDays: -1 })).rejects.toThrow();
+    });
+
+    it('throws on missing store data in response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+
+      await expect(updateStoreBnpl('store-1', { bnplEnabled: true })).rejects.toThrow('Invalid BNPL update response');
     });
   });
 });

@@ -8,8 +8,8 @@ import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
-import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, type StoreRecord } from "./api/stores";
-import { fetchDevices, patchDevice, forceReEnrollDevice, type DeviceRecord } from "./api/devices";
+import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, updateStoreBnpl, type StoreRecord } from "./api/stores";
+import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
   fetchAnalyticsOverview,
@@ -91,6 +91,7 @@ import { StaffTab } from "./tabs/StaffTab";
 import { GrnAlertsTab } from "./tabs/GrnAlertsTab";
 import { InvoicesTab } from "./tabs/InvoicesTab";  // T-073: Invoice management
 import { GstComplianceTab } from "./tabs/GstComplianceTab";  // T-235: GST compliance
+import { ComplianceTab } from "./tabs/ComplianceTab";  // SA-P2-004: Compliance status aggregation
 import { RefundsTab } from "./tabs/RefundsTab";  // T-219: Refund management
 import { MonitoringTab } from "./tabs/MonitoringTab";  // T-223: Cloud monitoring dashboard
 import { QualityDashboardTab } from "./tabs/QualityDashboardTab";  // Quality testing dashboard
@@ -98,16 +99,23 @@ import { CreditProvidersTab } from "./tabs/CreditProvidersTab";  // T-289/T-290:
 import { SupportQueueTab } from "./tabs/SupportQueueTab";  // T-300/T-302: Support queue + templates
 import { AIInsightsTab } from "./tabs/AIInsightsTab";  // T-316: AI intelligence dashboard
 import { WhatsAppTab } from "./tabs/WhatsAppTab";  // WA-002: WhatsApp dashboard
+import { MaintenanceTab } from "./tabs/MaintenanceTab";  // SA-P0-007: System maintenance mode
+import { HealthDashboardTab } from "./tabs/HealthDashboardTab";  // SA-P1-009: Store health dashboard
+import { CatalogTab } from "./tabs/CatalogTab";  // SA-P2-006: Product category override
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
   FileCheck, UserPlus, FileText, Truck, CreditCard, BarChart3,
+  Package,  // SA-P2-006: Catalog tab
   Shield, UserCog, Settings2,
   Link2, Check,  // T-118: Copy deep link button icons
   IndianRupee, ArrowLeftRight, HeartPulse, FlaskConical,  // T-235, T-219, T-223, Quality icons
   MessageSquare,  // T-300: Support queue
   Brain,  // T-316: AI Insights
   MessageCircle,  // WA-002: WhatsApp dashboard
+  Wrench,  // SA-P0-007: Maintenance mode
+  ClipboardCheck,  // SA-P2-004: Compliance overview
+  Stethoscope,  // SA-P1-009: Store health dashboard
 } from "lucide-react";
 import "./App.css";
 
@@ -131,6 +139,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   users: "Users",
   settings: "Settings",
   "gst-compliance": "GST Compliance",
+  "compliance": "Compliance",
   refunds: "Refunds",
   monitoring: "Monitoring",
   quality: "Quality Dashboard",
@@ -138,6 +147,9 @@ const TAB_LABELS: Record<TabKey, string> = {
   "support": "Support",
   "ai-insights": "AI Intelligence",
   "whatsapp": "WhatsApp",
+  "maintenance": "Maintenance",
+  "store-health": "Store Health",
+  "catalog": "Catalog",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -498,8 +510,9 @@ export default function App() {
   const [pendingDeviceAction, setPendingDeviceAction] = useState<{
     deviceId: string;
     deviceLabel?: string;
-    action: "deactivate" | "resetToken" | "forceReEnroll";
+    action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync";
   } | null>(null);
+  const [forceSyncingDevices, setForceSyncingDevices] = useState<Record<string, boolean>>({});
   const [enrollStoreId, setEnrollStoreId] = useState<string>("");
   const [enrollment, setEnrollment] = useState<DeviceEnrollmentResponse | null>(null);
   const [enrollError, setEnrollError] = useState<string>("");
@@ -2344,6 +2357,43 @@ export default function App() {
     }
   }
 
+  // SA-P2-007: Save BNPL settings for a store
+  const [bnplSaving, setBnplSaving] = useState<Record<string, boolean>>({});
+  async function handleBnplSave(storeId: string, settings: { bnplEnabled: boolean; bnplCreditLimit: number; bnplMaxDays: number; creditEnabled: boolean; creditLimit: number }) {
+    if (bnplSaving[storeId]) return;
+    setBnplSaving((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      await updateStoreBnpl(storeId, settings);
+      // Refresh store settings to reflect new values
+      if (storeSettings[storeId]) {
+        setStoreSettings((prev) => ({
+          ...prev,
+          [storeId]: {
+            ...prev[storeId],
+            bnplEnabled: settings.bnplEnabled,
+            bnplCreditLimit: settings.bnplCreditLimit,
+            bnplMaxDays: settings.bnplMaxDays,
+            creditEnabled: settings.creditEnabled,
+            creditLimit: settings.creditLimit,
+          },
+        }));
+      }
+      // Also update directory entry
+      setStoreDirectory((prev) =>
+        prev.map((s) =>
+          s.id === storeId
+            ? { ...s, creditEnabled: settings.creditEnabled, creditLimit: settings.creditLimit }
+            : s
+        )
+      );
+      toast.success("BNPL settings updated.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update BNPL settings.");
+    } finally {
+      setBnplSaving((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
   function resetBarcodeSheetNotice() {
     setBarcodeSheetError("");
     setBarcodeSheetSuccess("");
@@ -2574,6 +2624,33 @@ export default function App() {
       logAdminActionError('device_force_re_enroll', 'device', deviceId, errorMsg);
     } finally {
       setDeviceSaving((prev) => ({ ...prev, [deviceId]: false }));
+    }
+  }
+
+  // SA-P2-005: Request force sync with confirmation
+  function requestForceSync(deviceId: string) {
+    const device = deviceRecords.find((d) => d.id === deviceId);
+    setPendingDeviceAction({
+      deviceId,
+      deviceLabel: device?.label ?? deviceId,
+      action: "forceSync"
+    });
+  }
+
+  async function executeForceSync(deviceId: string) {
+    setPendingDeviceAction(null);
+    setDeviceActionError("");
+    setForceSyncingDevices((prev) => ({ ...prev, [deviceId]: true }));
+    try {
+      const result = await forceSyncDevice(deviceId);
+      logAdminAction('device_force_sync', 'device', deviceId, { label: deviceRecords.find((d) => d.id === deviceId)?.label });
+      toast.success(result.message || "Force sync queued successfully.");
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Failed to queue force sync.";
+      setDeviceActionError(errorMsg);
+      logAdminActionError('device_force_sync', 'device', deviceId, errorMsg);
+    } finally {
+      setForceSyncingDevices((prev) => ({ ...prev, [deviceId]: false }));
     }
   }
 
@@ -2941,11 +3018,17 @@ export default function App() {
             <button aria-current={tab === "gst-compliance" ? "page" : undefined} className={`sidebarItem ${tab === "gst-compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("gst-compliance")}>
               <span className="sidebarItemLabel"><IndianRupee size={18} className={`sa-nav-icon ${tab === "gst-compliance" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />GST Compliance</span>
             </button>
+            <button aria-current={tab === "compliance" ? "page" : undefined} className={`sidebarItem ${tab === "compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("compliance")}>
+              <span className="sidebarItemLabel"><ClipboardCheck size={18} className={`sa-nav-icon ${tab === "compliance" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Compliance</span>
+            </button>
             <button aria-current={tab === "refunds" ? "page" : undefined} className={`sidebarItem ${tab === "refunds" ? "sidebarItemActive" : ""}`} onClick={() => setTab("refunds")}>
               <span className="sidebarItemLabel"><ArrowLeftRight size={18} className={`sa-nav-icon ${tab === "refunds" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Refunds</span>
             </button>
             <button aria-current={tab === "monitoring" ? "page" : undefined} className={`sidebarItem ${tab === "monitoring" ? "sidebarItemActive" : ""}`} onClick={() => setTab("monitoring")}>
               <span className="sidebarItemLabel"><HeartPulse size={18} className={`sa-nav-icon ${tab === "monitoring" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Monitoring</span>
+            </button>
+            <button aria-current={tab === "store-health" ? "page" : undefined} className={`sidebarItem ${tab === "store-health" ? "sidebarItemActive" : ""}`} onClick={() => setTab("store-health")}>
+              <span className="sidebarItemLabel"><Stethoscope size={18} className={`sa-nav-icon ${tab === "store-health" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Store Health</span>
             </button>
             <button aria-current={tab === "quality" ? "page" : undefined} className={`sidebarItem ${tab === "quality" ? "sidebarItemActive" : ""}`} onClick={() => setTab("quality")}>
               <span className="sidebarItemLabel"><FlaskConical size={18} className={`sa-nav-icon ${tab === "quality" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Quality</span>
@@ -2995,6 +3078,9 @@ export default function App() {
             <button aria-current={tab === "payments" ? "page" : undefined} className={`sidebarItem ${tab === "payments" ? "sidebarItemActive" : ""}`} onClick={() => setTab("payments")}>
               <span className="sidebarItemLabel"><CreditCard size={18} className={`sa-nav-icon ${tab === "payments" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Payments</span>
             </button>
+            <button aria-current={tab === "catalog" ? "page" : undefined} className={`sidebarItem ${tab === "catalog" ? "sidebarItemActive" : ""}`} onClick={() => setTab("catalog")}>
+              <span className="sidebarItemLabel"><Package size={18} className={`sa-nav-icon ${tab === "catalog" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Catalog</span>
+            </button>
           </div>
 
           {/* Monitoring */}
@@ -3016,6 +3102,9 @@ export default function App() {
             </button>
             <button aria-current={tab === "settings" ? "page" : undefined} className={`sidebarItem ${tab === "settings" ? "sidebarItemActive" : ""}`} onClick={() => setTab("settings")}>
               <span className="sidebarItemLabel"><Settings2 size={18} className={`sa-nav-icon ${tab === "settings" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Settings</span>
+            </button>
+            <button aria-current={tab === "maintenance" ? "page" : undefined} className={`sidebarItem ${tab === "maintenance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("maintenance")}>
+              <span className="sidebarItemLabel"><Wrench size={18} className={`sa-nav-icon ${tab === "maintenance" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Maintenance</span>
             </button>
             <button
               className={`sidebarItem ${aiPanelOpen ? "sidebarItemActive" : ""}`}
@@ -3050,13 +3139,17 @@ export default function App() {
           <button role="tab" aria-selected={tab === "grn-alerts"} className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN Alerts</button>
           <button role="tab" aria-selected={tab === "invoices"} className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
           <button role="tab" aria-selected={tab === "gst-compliance"} className={tab === "gst-compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("gst-compliance")}>GST</button>
+          <button role="tab" aria-selected={tab === "compliance"} className={tab === "compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("compliance")}>Compliance</button>
           <button role="tab" aria-selected={tab === "refunds"} className={tab === "refunds" ? "tab tabActive" : "tab"} onClick={() => setTab("refunds")}>Refunds</button>
           <button role="tab" aria-selected={tab === "monitoring"} className={tab === "monitoring" ? "tab tabActive" : "tab"} onClick={() => setTab("monitoring")}>Monitoring</button>
+          <button role="tab" aria-selected={tab === "store-health"} className={tab === "store-health" ? "tab tabActive" : "tab"} onClick={() => setTab("store-health")}>Store Health</button>
           <button role="tab" aria-selected={tab === "quality"} className={tab === "quality" ? "tab tabActive" : "tab"} onClick={() => setTab("quality")}>Quality</button>
           <button role="tab" aria-selected={tab === "credit-providers"} className={tab === "credit-providers" ? "tab tabActive" : "tab"} onClick={() => setTab("credit-providers")}>Finance</button>
           <button role="tab" aria-selected={tab === "support"} className={tab === "support" ? "tab tabActive" : "tab"} onClick={() => setTab("support")}>Support</button>
           <button role="tab" aria-selected={tab === "ai-insights"} className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI Intelligence</button>
           <button role="tab" aria-selected={tab === "whatsapp"} className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
+          <button role="tab" aria-selected={tab === "maintenance"} className={tab === "maintenance" ? "tab tabActive" : "tab"} onClick={() => setTab("maintenance")}>Maintenance</button>
+          <button role="tab" aria-selected={tab === "catalog"} className={tab === "catalog" ? "tab tabActive" : "tab"} onClick={() => setTab("catalog")}>Catalog</button>
         </nav>
 
         <div id="main-content" className="mainContent" role="main">
@@ -3178,6 +3271,8 @@ export default function App() {
           requestDeviceSave={requestDeviceSave}
           requestDeviceReset={requestDeviceReset}
           requestForceReEnroll={requestForceReEnroll}
+          requestForceSync={requestForceSync}
+          forceSyncingDevices={forceSyncingDevices}
           devicePage={devicePage}
           setDevicePage={setDevicePage}
           devicesLoading={devicesLoading}
@@ -3267,6 +3362,8 @@ export default function App() {
           storeSettings={storeSettings}
           storeSettingsLoading={storeSettingsLoading}
           loadStoreSettings={loadStoreSettingsHandler}
+          handleBnplSave={handleBnplSave}
+          bnplSaving={bnplSaving}
         />
       )}
 
@@ -3583,9 +3680,13 @@ export default function App() {
 
       {tab === "gst-compliance" && <GstComplianceTab />}
 
+      {tab === "compliance" && <ComplianceTab />}
+
       {tab === "refunds" && <RefundsTab />}
 
       {tab === "monitoring" && <MonitoringTab />}
+
+      {tab === "store-health" && <HealthDashboardTab />}
 
       {tab === "quality" && <QualityDashboardTab />}
 
@@ -3596,6 +3697,10 @@ export default function App() {
       {tab === "ai-insights" && <AIInsightsTab />}
 
       {tab === "whatsapp" && <WhatsAppTab />}
+
+      {tab === "maintenance" && <MaintenanceTab />}
+
+      {tab === "catalog" && <CatalogTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}
@@ -3612,6 +3717,7 @@ export default function App() {
         executeDeviceSave={executeDeviceSave}
         executeDeviceReset={executeDeviceReset}
         executeForceReEnroll={executeForceReEnroll}
+        executeForceSync={executeForceSync}
         pendingAdminUser={pendingAdminUser}
         adminVerificationReason={adminVerificationReason}
         createUserError={createUserError}

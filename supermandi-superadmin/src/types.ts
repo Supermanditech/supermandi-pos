@@ -1,6 +1,6 @@
 // SA-001: Shared types and constants extracted from App.tsx monolith
 
-export type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai-insights" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff" | "grn-alerts" | "applications" | "invoices" | "gst-compliance" | "refunds" | "monitoring" | "quality" | "credit-providers" | "support" | "whatsapp";
+export type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai-insights" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff" | "grn-alerts" | "applications" | "invoices" | "gst-compliance" | "compliance" | "refunds" | "monitoring" | "quality" | "credit-providers" | "support" | "whatsapp" | "maintenance" | "store-health" | "catalog";
 export type GroupKey = "none" | "transactionId" | "billId";
 export type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 export type DeviceType = "OEM_HANDHELD" | "SUPMANDI_PHONE" | "RETAILER_PHONE";

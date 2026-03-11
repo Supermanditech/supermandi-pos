@@ -99,13 +99,19 @@ import { posNotificationsRouter } from "./pos/notifications";  // Phase 8: FCM p
 import { posRefundRequestsRouter } from "./pos/refundRequests";  // T-219: UPI refund requests
 import { retailerNotificationsRouter } from "./retailer-admin/notifications";  // Phase 8: Retailer notifications
 import { adminGstComplianceRouter } from "./admin/gstCompliance";  // T-235: GST compliance
+import { adminComplianceRouter } from "./admin/compliance";  // SA-P2-004: Compliance status aggregation
 import { adminScheduledJobsRouter } from "./admin/scheduledJobs";  // T-231/T-223: Scheduled jobs + monitoring
 import { refundWebhookRouter } from "./webhooks/refundWebhook";  // T-219: Razorpay refund webhooks
 import { adminRefundsRouter } from "./admin/refunds";  // T-219: Admin refund management
 import { qualityDashboardRouter } from "./admin/qualityDashboard";  // T-223: Quality dashboard API
 import { posWhatsAppRouter } from "./pos/whatsapp";  // WA-001: POS WhatsApp Cloud API
 import { adminWhatsAppRouter } from "./admin/whatsapp";  // WA-001: Admin WhatsApp Cloud API
+import { adminCatalogRouter } from "./admin/catalog";  // SA-P2-006: Product category override
 import { whatsappWebhookRouter } from "./webhooks/whatsappWebhook";  // WA-001: WhatsApp delivery webhooks
+import { adminMaintenanceRouter } from "./admin/maintenance";  // SA-P0-007: System maintenance mode
+import { maintenanceGate } from "../../middleware/maintenanceMode";  // SA-P0-007: Maintenance gate
+import { adminReorderPoliciesRouter } from "./admin/reorderPolicies";  // SA-P1-015: Reorder policy supervision
+import { adminImportsRouter } from "./admin/imports";  // SA-P2-008: Bulk import notification
 
 export const v1Router = Router();
 
@@ -117,6 +123,12 @@ v1Router.use("/", configStatusRouter);
 
 // REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Public CTA config (no auth, safe display data only)
 v1Router.use("/public", publicConfigRouter);
+
+// SA-P0-007: Maintenance gate — returns 503 to POS/retailer/supplier traffic when enabled
+// Admin routes are excluded (they are checked inside the middleware)
+v1Router.use("/pos", maintenanceGate());
+v1Router.use("/retailer-admin", maintenanceGate());
+v1Router.use("/supplier", maintenanceGate());
 
 v1Router.use("/pos", posEventsRouter);
 v1Router.use("/pos", posScanRouter);
@@ -192,11 +204,16 @@ v1Router.use("/admin", adminApplicationsRouter);  // STAGING-FIX-014: Applicatio
 v1Router.use("/admin", adminInvoicesRouter);  // T-071: Buy-resell invoicing
 v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approval
 v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
+v1Router.use("/admin", adminComplianceRouter);  // SA-P2-004: Compliance status aggregation
 v1Router.use("/admin", adminScheduledJobsRouter);  // T-231/T-223: Payment reminders + monitoring
 v1Router.use("/admin", adminRefundsRouter);  // T-219: Admin refund management
 v1Router.use("/admin", adminWhatsAppRouter);  // WA-001: SuperAdmin WhatsApp Cloud API
+v1Router.use("/admin", adminCatalogRouter);  // SA-P2-006: Product category override
+v1Router.use("/admin", adminReorderPoliciesRouter);  // SA-P1-015: Reorder policy supervision
+v1Router.use("/admin", adminImportsRouter);  // SA-P2-008: Bulk import notification
 v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashboard API
 v1Router.use("/admin/credit-providers", adminCreditProvidersRouter);  // T-281/T-289/T-290: Provider health + management
+v1Router.use("/admin", adminMaintenanceRouter);  // SA-P0-007: System maintenance mode
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);

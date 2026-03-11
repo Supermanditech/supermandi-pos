@@ -5,6 +5,8 @@ import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
 import type { EnrollmentRecord } from "../api/deviceEnrollments";
 import { formatDateTime } from "../lib/formatters";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
+// SA-P2-008: Bulk Import Notification
+import { BulkImportNotifications } from "../components/BulkImportNotifications";
 
 interface StoresTabProps {
   // Create store
@@ -94,6 +96,9 @@ interface StoresTabProps {
   storeSettings: Record<string, StoreSettings>;
   storeSettingsLoading: Record<string, boolean>;
   loadStoreSettings: (storeId: string) => void;
+  // SA-P2-007: BNPL limit adjustment
+  handleBnplSave: (storeId: string, settings: { bnplEnabled: boolean; bnplCreditLimit: number; bnplMaxDays: number; creditEnabled: boolean; creditLimit: number }) => void;
+  bnplSaving: Record<string, boolean>;
 }
 
 export function StoresTab({
@@ -172,7 +177,40 @@ export function StoresTab({
   storeSettings,
   storeSettingsLoading,
   loadStoreSettings,
+  handleBnplSave,
+  bnplSaving,
 }: StoresTabProps) {
+  // SA-P2-007: BNPL edit modal state
+  const [bnplEditStoreId, setBnplEditStoreId] = React.useState<string | null>(null);
+  const [bnplForm, setBnplForm] = React.useState({ bnplEnabled: false, bnplCreditLimitRupees: "0", bnplMaxDays: "7", creditEnabled: false, creditLimitRupees: "0" });
+
+  function openBnplEdit(storeId: string, settings: StoreSettings) {
+    setBnplEditStoreId(storeId);
+    setBnplForm({
+      bnplEnabled: settings.bnplEnabled,
+      bnplCreditLimitRupees: String((settings.bnplCreditLimit || 0) / 100),
+      bnplMaxDays: String(settings.bnplMaxDays || 7),
+      creditEnabled: settings.creditEnabled,
+      creditLimitRupees: String((settings.creditLimit || 0) / 100),
+    });
+  }
+
+  function closeBnplEdit() {
+    setBnplEditStoreId(null);
+  }
+
+  function submitBnplEdit() {
+    if (!bnplEditStoreId) return;
+    handleBnplSave(bnplEditStoreId, {
+      bnplEnabled: bnplForm.bnplEnabled,
+      bnplCreditLimit: Math.round(parseFloat(bnplForm.bnplCreditLimitRupees || "0") * 100),
+      bnplMaxDays: parseInt(bnplForm.bnplMaxDays) || 7,
+      creditEnabled: bnplForm.creditEnabled,
+      creditLimit: Math.round(parseFloat(bnplForm.creditLimitRupees || "0") * 100),
+    });
+    closeBnplEdit();
+  }
+
   return (
     <section className="card">
       <div className="cardHeader">
@@ -669,6 +707,16 @@ export function StoresTab({
                                     <tr><td className="sa-text-muted">BNPL Enabled</td><td className="mono">{storeSettings[s.id].bnplEnabled ? "Yes" : "No"}</td></tr>
                                     <tr><td className="sa-text-muted">BNPL Credit Limit</td><td className="mono">{"\u20B9"}{((storeSettings[s.id].bnplCreditLimit || 0) / 100).toLocaleString("en-IN")}</td></tr>
                                     <tr><td className="sa-text-muted">BNPL Max Days</td><td className="mono">{storeSettings[s.id].bnplMaxDays}</td></tr>
+                                    <tr><td colSpan={2} style={{ paddingTop: 6 }}>
+                                      <button
+                                        className="btnSm"
+                                        disabled={!!bnplSaving[s.id]}
+                                        onClick={() => openBnplEdit(s.id, storeSettings[s.id])}
+                                        data-testid={`edit-bnpl-${s.id}`}
+                                      >
+                                        {bnplSaving[s.id] ? "Saving..." : "Edit BNPL Settings"}
+                                      </button>
+                                    </td></tr>
                                     {/* Readiness Flags */}
                                     <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Readiness Flags</td></tr>
                                     <tr><td className="sa-text-muted">Device Bound</td><td className="mono">{storeSettings[s.id].deviceBound ? "Yes" : "No"}</td></tr>
@@ -787,6 +835,85 @@ export function StoresTab({
           </table>
         </div>
       )}
+
+      {/* SA-P2-007: BNPL Edit Modal */}
+      {bnplEditStoreId && (
+        <div className="modal-overlay" data-testid="bnpl-edit-modal" onClick={closeBnplEdit}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="cardHeader">
+              <div className="cardTitle">Edit BNPL Settings</div>
+            </div>
+            <div style={{ padding: "0 16px 16px" }}>
+              <div className="sa-mb-12">
+                <label className="sa-flex sa-gap-6" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={bnplForm.bnplEnabled}
+                    onChange={(e) => setBnplForm((f) => ({ ...f, bnplEnabled: e.target.checked }))}
+                    data-testid="bnpl-enabled-toggle"
+                  />
+                  BNPL Enabled
+                </label>
+              </div>
+              <div className="sa-mb-12">
+                <label className="sa-form-label">BNPL Credit Limit (Rs)</label>
+                <input
+                  className="tableInput"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={bnplForm.bnplCreditLimitRupees}
+                  onChange={(e) => setBnplForm((f) => ({ ...f, bnplCreditLimitRupees: e.target.value }))}
+                  data-testid="bnpl-credit-limit-input"
+                />
+              </div>
+              <div className="sa-mb-12">
+                <label className="sa-form-label">BNPL Max Days (1-90)</label>
+                <input
+                  className="tableInput"
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={bnplForm.bnplMaxDays}
+                  onChange={(e) => setBnplForm((f) => ({ ...f, bnplMaxDays: e.target.value }))}
+                  data-testid="bnpl-max-days-input"
+                />
+              </div>
+              <hr style={{ margin: "12px 0", borderColor: "var(--color-border)" }} />
+              <div className="sa-mb-12">
+                <label className="sa-flex sa-gap-6" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={bnplForm.creditEnabled}
+                    onChange={(e) => setBnplForm((f) => ({ ...f, creditEnabled: e.target.checked }))}
+                    data-testid="credit-enabled-toggle"
+                  />
+                  Credit Enabled
+                </label>
+              </div>
+              <div className="sa-mb-12">
+                <label className="sa-form-label">Credit Limit (Rs)</label>
+                <input
+                  className="tableInput"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={bnplForm.creditLimitRupees}
+                  onChange={(e) => setBnplForm((f) => ({ ...f, creditLimitRupees: e.target.value }))}
+                  data-testid="credit-limit-input"
+                />
+              </div>
+              <div className="sa-flex sa-gap-12" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+                <button className="btnSm" onClick={closeBnplEdit} data-testid="bnpl-cancel-btn">Cancel</button>
+                <button className="btnSm" onClick={submitBnplEdit} data-testid="bnpl-save-btn" style={{ fontWeight: 600 }}>Save BNPL Settings</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SA-P2-008: Bulk Import Notification */}
+      <BulkImportNotifications />
     </section>
   );
 }
