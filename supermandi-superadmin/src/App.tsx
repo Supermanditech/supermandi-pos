@@ -101,10 +101,12 @@ import { WhatsAppTab } from "./tabs/WhatsAppTab";  // WA-002: WhatsApp dashboard
 import { MaintenanceTab } from "./tabs/MaintenanceTab";  // SA-P0-007: System maintenance mode
 import { HealthDashboardTab } from "./tabs/HealthDashboardTab";  // SA-P1-009: Store health dashboard
 import { ComplianceTab } from "./tabs/ComplianceTab";  // SA-P2-004: Compliance status aggregation
+import { CatalogTab } from "./tabs/CatalogTab";  // SA-P2-006: Product category override
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
   FileCheck, UserPlus, FileText, Truck, CreditCard, BarChart3,
+  Package,  // SA-P2-006: Catalog tab
   Shield, UserCog, Settings2,
   Link2, Check,  // T-118: Copy deep link button icons
   IndianRupee, ArrowLeftRight, HeartPulse, FlaskConical,  // T-235, T-219, T-223, Quality icons
@@ -146,6 +148,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   "maintenance": "Maintenance",
   "store-health": "Store Health",
   "compliance": "Compliance",
+  "catalog": "Catalog",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -3009,6 +3012,9 @@ export default function App() {
             <button aria-current={tab === "payments" ? "page" : undefined} className={`sidebarItem ${tab === "payments" ? "sidebarItemActive" : ""}`} onClick={() => setTab("payments")}>
               <span className="sidebarItemLabel"><CreditCard size={18} className={`sa-nav-icon ${tab === "payments" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Payments</span>
             </button>
+            <button aria-current={tab === "catalog" ? "page" : undefined} className={`sidebarItem ${tab === "catalog" ? "sidebarItemActive" : ""}`} onClick={() => setTab("catalog")}>
+              <span className="sidebarItemLabel"><Package size={18} className={`sa-nav-icon ${tab === "catalog" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Catalog</span>
+            </button>
           </div>
 
           {/* Monitoring */}
@@ -3073,6 +3079,7 @@ export default function App() {
           <button role="tab" aria-selected={tab === "support"} className={tab === "support" ? "tab tabActive" : "tab"} onClick={() => setTab("support")}>Support</button>
           <button role="tab" aria-selected={tab === "ai-insights"} className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI Intelligence</button>
           <button role="tab" aria-selected={tab === "whatsapp"} className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
+          <button role="tab" aria-selected={tab === "catalog"} className={tab === "catalog" ? "tab tabActive" : "tab"} onClick={() => setTab("catalog")}>Catalog</button>
         </nav>
 
         <div id="main-content" className="mainContent" role="main">
@@ -3618,6 +3625,8 @@ export default function App() {
       {tab === "whatsapp" && <WhatsAppTab />}
 
       {tab === "maintenance" && <MaintenanceTab />}
+
+      {tab === "catalog" && <CatalogTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}

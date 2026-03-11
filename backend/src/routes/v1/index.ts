@@ -108,6 +108,7 @@ import { adminRefundsRouter } from "./admin/refunds";  // T-219: Admin refund ma
 import { qualityDashboardRouter } from "./admin/qualityDashboard";  // T-223: Quality dashboard API
 import { posWhatsAppRouter } from "./pos/whatsapp";  // WA-001: POS WhatsApp Cloud API
 import { adminWhatsAppRouter } from "./admin/whatsapp";  // WA-001: Admin WhatsApp Cloud API
+import { adminCatalogRouter } from "./admin/catalog";  // SA-P2-006: Product category override
 import { whatsappWebhookRouter } from "./webhooks/whatsappWebhook";  // WA-001: WhatsApp delivery webhooks
 import { adminReorderPoliciesRouter } from "./admin/reorderPolicies";  // SA-P1-015: Reorder policy supervision
 
@@ -197,6 +198,7 @@ v1Router.use("/admin", adminInvoicesRouter);  // T-071: Buy-resell invoicing
 v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approval
 v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
 v1Router.use("/admin", adminComplianceRouter);  // SA-P2-004: Compliance status aggregation
+v1Router.use("/admin", adminCatalogRouter);  // SA-P2-006: Product category override
 v1Router.use("/admin", adminScheduledJobsRouter);  // T-231/T-223: Payment reminders + monitoring
 v1Router.use("/admin", adminRefundsRouter);  // T-219: Admin refund management
 v1Router.use("/admin", adminWhatsAppRouter);  // WA-001: SuperAdmin WhatsApp Cloud API
