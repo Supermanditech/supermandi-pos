@@ -1,6 +1,6 @@
 {
-  "version": "245",
-  "lastUpdated": "2026-03-11T19:00:00.000Z",
+  "version": "246",
+  "lastUpdated": "2026-03-11T20:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -57,18 +57,20 @@
       "blocking": false
     },
     "saDeferred": {
-      "status": "IN_PROGRESS",
+      "status": "ALL_DONE",
       "total": 8,
+      "done": 8,
       "blocking": false,
+      "completedDate": "2026-03-11",
       "tickets": [
-        { "id": "SA-P0-002", "title": "Discount limits", "reason": "Store-owned, not blocking launch" },
-        { "id": "SA-P0-003", "title": "Price bounds", "reason": "Store-owned, not blocking launch" },
-        { "id": "SA-P1-002", "title": "Spending limits", "reason": "Retailer Dashboard owned" },
-        { "id": "SA-P1-003", "title": "Due limits", "reason": "Retailer Dashboard owned" },
-        { "id": "SA-P1-010", "title": "Anomaly detection", "reason": "Nice-to-have, not blocking" },
-        { "id": "SA-P1-011", "title": "Stock adjustment audit", "reason": "Retailer Dashboard owned" },
-        { "id": "SA-P1-013", "title": "Device token revocation UI", "reason": "Covered by SA-P2-001 (force re-enroll)" },
-        { "id": "SA-P2-011", "title": "Persistent rate limiting", "reason": "Infra optimization, not blocking" }
+        { "id": "SA-P0-002", "title": "Discount limits", "status": "DONE", "pr": 585, "sha": "6beb7152", "tag": "prestage-SA-P0-002-2026-03-11_1902IST" },
+        { "id": "SA-P0-003", "title": "Price bounds", "status": "DONE", "pr": 586, "sha": "d07038dc", "tag": "prestage-SA-P0-003-2026-03-11_1903IST" },
+        { "id": "SA-P1-002", "title": "Spending limits", "status": "DONE", "pr": 587, "sha": "5b8bfe09", "tag": "prestage-SA-P1-002-2026-03-11_1904IST" },
+        { "id": "SA-P1-003", "title": "Due limits", "status": "DONE", "pr": 591, "sha": "76de36a2", "tag": "prestage-SA-P1-003-2026-03-11_1906IST" },
+        { "id": "SA-P1-010", "title": "Anomaly detection", "status": "DONE", "pr": 592, "sha": "d09bca6e", "tag": "prestage-SA-P1-010-2026-03-11_1907IST" },
+        { "id": "SA-P1-011", "title": "Stock adjustment audit", "status": "DONE", "pr": 590, "sha": "64eea380", "tag": "prestage-SA-P1-011-2026-03-11_1905IST" },
+        { "id": "SA-P1-013", "title": "Device token revocation UI", "status": "DONE", "pr": 583, "sha": "4bc9521a", "tag": "prestage-SA-P1-013-2026-03-11_1900IST" },
+        { "id": "SA-P2-011", "title": "Persistent rate limiting", "status": "DONE", "pr": 584, "sha": "68798bc5", "tag": "prestage-SA-P2-011-2026-03-11_1901IST" }
       ]
     },
     "phase11": {
