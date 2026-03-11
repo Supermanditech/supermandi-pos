@@ -20,6 +20,22 @@ export interface StoreSkuMatch {
   displayName?: string;
   updatedAt?: string | null;
   metadataUpdatedAt?: string | null;  // SYNC-PRD-001
+  /** SCALE-E2: Product image URL for sell tile and offline caching */
+  image_url?: string | null;
+  /** SCALE-B1: MRP in minor units */
+  mrp?: number | null;
+  /** SCALE-B1: GST rate percentage */
+  gst_rate?: number | null;
+  /** SCALE-A2: Net content numeric value */
+  net_content_value?: number | null;
+  /** SCALE-A2: Net content unit string */
+  net_content_unit?: string | null;
+  /** SCALE-A3: Earliest expiry date for FEFO */
+  expiry_date?: string | null;
+  /** SCALE-B1: Product mode PACKAGED | LOOSE */
+  mode?: "PACKAGED" | "LOOSE";
+  /** SCALE-B1: Rate unit for LOOSE products */
+  rate_unit?: string | null;
 }
 
 /**
@@ -129,6 +145,22 @@ export interface StoreProductListItem {
   unit: string;
   updatedAt?: string | null;
   metadataUpdatedAt?: string | null;  // SYNC-PRD-001
+  /** SCALE-E2: Product image URL for sell tile and offline caching */
+  image_url?: string | null;
+  /** SCALE-B1: MRP in minor units */
+  mrp?: number | null;
+  /** SCALE-B1: GST rate percentage */
+  gst_rate?: number | null;
+  /** SCALE-A2: Net content numeric value */
+  net_content_value?: number | null;
+  /** SCALE-A2: Net content unit string */
+  net_content_unit?: string | null;
+  /** SCALE-A3: Earliest expiry date for FEFO */
+  expiry_date?: string | null;
+  /** SCALE-B1: Product mode PACKAGED | LOOSE */
+  mode?: "PACKAGED" | "LOOSE";
+  /** SCALE-B1: Rate unit for LOOSE products */
+  rate_unit?: string | null;
 }
 
 export interface StoreProductListResponse {

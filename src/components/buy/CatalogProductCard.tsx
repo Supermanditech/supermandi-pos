@@ -2,12 +2,13 @@
 // Product card for BUY screen catalog grid
 
 import React, { useMemo } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import type { CatalogProduct } from "../../services/api/catalogApi";
+import { ProductImage } from "../ProductImage";
 import {
   getLocalizedProductName,
   getLocalizedProductBrand,
@@ -76,15 +77,9 @@ export function CatalogProductCard({
       )}
 
       <View style={styles.content}>
-        {/* T-139: Product image */}
+        {/* T-139 / SCALE-E2: Product image — uses ProductImage for remote load + error fallback */}
         <View style={styles.imageRow}>
-          {product.imageUrl ? (
-            <Image source={{ uri: product.imageUrl }} style={styles.productImage} />
-          ) : (
-            <View style={styles.productImageFallback}>
-              <MaterialCommunityIcons name="package-variant" size={22} color={tc.textTertiary} />
-            </View>
-          )}
+          <ProductImage uri={product.imageUrl} size={48} borderRadius={6} />
           <View style={styles.imageRowInfo}>
             <Text style={styles.name} numberOfLines={2}>
               {displayName}
@@ -189,19 +184,6 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     },
     imageRowInfo: {
       flex: 1,
-    },
-    productImage: {
-      width: 48,
-      height: 48,
-      borderRadius: 6,
-    },
-    productImageFallback: {
-      width: 48,
-      height: 48,
-      borderRadius: 6,
-      backgroundColor: colors.backgroundTertiary,
-      alignItems: "center",
-      justifyContent: "center",
     },
     name: {
       fontSize: 14,

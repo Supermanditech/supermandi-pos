@@ -27,7 +27,7 @@ let currentDb: Db | null = null;
 let currentScope: string | null = null;
 
 // Current schema version - increment when adding migrations
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function buildDbName(scope: string): string {
   return `supermandi_offline_${scope}.db`;
@@ -220,6 +220,15 @@ const migrations: Migration[] = [
       await ensureColumn(db, "offline_outbox", "error_flag", "TEXT NULL");
       await ensureColumn(db, "offline_outbox", "error_at", "TEXT NULL");
     }
+  },
+  {
+    version: 5,
+    name: "add_image_url_to_products",
+    up: async (db: Db) => {
+      // SCALE-E2: Store image_url for offline product display.
+      // Allows sell tile to show cached product images in offline mode.
+      await ensureColumn(db, "offline_products", "image_url", "TEXT NULL");
+    }
   }
 ];
 
@@ -244,6 +253,7 @@ async function selfHealSchema(db: Db): Promise<void> {
     { table: "offline_products", column: "product_id", definition: "TEXT NULL" },
     { table: "offline_products", column: "store_product_id", definition: "TEXT NULL" },
     { table: "offline_products", column: "current_stock", definition: "INTEGER NULL" },
+    { table: "offline_products", column: "image_url", definition: "TEXT NULL" },
     { table: "offline_sale_items", column: "line_subtotal_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
     { table: "offline_sale_items", column: "discount_type", definition: "TEXT NULL" },
     { table: "offline_sale_items", column: "discount_value", definition: "REAL NULL" },

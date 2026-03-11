@@ -158,7 +158,8 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
         const pinnedStock = isPinned ? resolveStockForSku({ productId: product.productId, barcode }) : null;
         const effectiveStock = pinnedStock !== null ? pinnedStock : stock;
         if (barcode) {
-          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null);
+          // SCALE-E2: Pass image_url so offline product tiles show cached images
+          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null, product.image_url ?? null);
           if (product.sellPrice !== null) {
             await setLocalPrice(barcode, product.sellPrice);
           }
@@ -208,7 +209,8 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
           // Store in offline DB (with productId and stock)
           if (barcode) {
-            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null);
+            // SCALE-E2: Pass image_url so offline search results show cached images
+            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null, match.image_url ?? null);
             if (sellPrice !== null) {
               await setLocalPrice(barcode, sellPrice);
             }
