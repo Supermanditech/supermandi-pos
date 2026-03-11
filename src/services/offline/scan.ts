@@ -11,6 +11,8 @@ export type OfflineScanProduct = {
   priceMinor: number | null;
   productId?: string | null;
   storeProductId?: string | null;
+  /** SCALE-E2: Product image URL from GCS (cached for offline display) */
+  imageUrl?: string | null;
 };
 
 export type OfflineScanResult =
@@ -42,8 +44,9 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
     currency: string;
     product_id: string | null;
     store_product_id: string | null;
+    image_url: string | null;
   }>(
-    `SELECT barcode, name, category, currency, product_id, store_product_id FROM offline_products WHERE barcode = ? LIMIT 1`,
+    `SELECT barcode, name, category, currency, product_id, store_product_id, image_url FROM offline_products WHERE barcode = ? LIMIT 1`,
     [barcode]
   );
 
@@ -62,6 +65,7 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
     priceMinor: priceRows[0]?.price_minor ?? null,
     productId: rows[0].product_id ?? null,
     storeProductId: rows[0].store_product_id ?? null,
+    imageUrl: rows[0].image_url ?? null,
   };
 }
 
@@ -72,13 +76,14 @@ export async function upsertLocalProduct(
   category: string | null = null,
   productId: string | null = null,
   currentStock: number | null = null,
-  storeProductId: string | null = null
+  storeProductId: string | null = null,
+  imageUrl: string | null = null
 ): Promise<OfflineScanProduct> {
   const now = new Date().toISOString();
   await offlineDb.run(
     `
-    INSERT INTO offline_products (barcode, name, category, currency, product_id, store_product_id, current_stock, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO offline_products (barcode, name, category, currency, product_id, store_product_id, current_stock, image_url, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(barcode) DO UPDATE SET
       name = excluded.name,
       category = COALESCE(excluded.category, offline_products.category),
@@ -86,9 +91,10 @@ export async function upsertLocalProduct(
       product_id = COALESCE(excluded.product_id, offline_products.product_id),
       store_product_id = COALESCE(excluded.store_product_id, offline_products.store_product_id),
       current_stock = COALESCE(excluded.current_stock, offline_products.current_stock),
+      image_url = COALESCE(excluded.image_url, offline_products.image_url),
       updated_at = excluded.updated_at
     `,
-    [barcode, name, category, currency, productId, storeProductId, currentStock, now, now]
+    [barcode, name, category, currency, productId, storeProductId, currentStock, imageUrl, now, now]
   );
 
   return {
@@ -96,7 +102,8 @@ export async function upsertLocalProduct(
     name,
     category,
     currency,
-    priceMinor: null
+    priceMinor: null,
+    imageUrl,
   };
 }
 
