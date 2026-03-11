@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken } from "../../../middleware/adminToken";
+import { log } from "../../../lib/logger";
 
 export const adminDevicesRouter = Router();
 
@@ -349,4 +350,77 @@ adminDevicesRouter.post("/devices/:deviceId/revoke", requireAdminToken, async (r
   }
 
   return res.json({ success: true, device: result.rows[0] });
+});
+
+// SA-P2-001: POST /api/v1/admin/devices/:deviceId/force-re-enroll
+// Force-invalidates a device's enrollment and requires re-enrollment.
+// Clears device_token, sets active=false, marks token_revoked_at, and logs audit event.
+// On next API call the device middleware returns TOKEN_REVOKED → POS shows enrollment screen.
+adminDevicesRouter.post("/devices/:deviceId/force-re-enroll", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Fetch current device state (verify exists + get store_id for audit)
+  const deviceRes = await pool.query(
+    `SELECT id, store_id, label, active, device_token FROM pos_devices WHERE id = $1`,
+    [deviceId]
+  );
+
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+
+  // Invalidate: clear token, deactivate, mark revoked, clear re_enrolled flag
+  const result = await pool.query(
+    `UPDATE pos_devices
+     SET device_token = NULL,
+         active = false,
+         token_revoked_at = NOW(),
+         re_enrolled = false,
+         updated_at = NOW()
+     WHERE id = $1
+     RETURNING id, store_id, label, active`,
+    [deviceId]
+  );
+
+  // Log audit event to device_enrollment_events table
+  try {
+    await pool.query(
+      `INSERT INTO device_enrollment_events
+         (store_id, device_id, event_type, device_label, metadata)
+       VALUES ($1, $2, 'force_re_enroll', $3, $4)`,
+      [
+        device.store_id,
+        deviceId,
+        device.label,
+        JSON.stringify({
+          reason: reason || "Forced re-enrollment by superadmin",
+          previousActive: device.active,
+          hadToken: Boolean(device.device_token),
+        }),
+      ]
+    );
+  } catch (auditErr) {
+    // Non-critical — device is already invalidated, just log
+    log.warn("[ForceReEnroll] Failed to write audit event:", auditErr);
+  }
+
+  log.info(`[ForceReEnroll] Device ${deviceId} (store=${device.store_id}) forced to re-enroll. reason=${reason || "none"}`);
+
+  return res.json({
+    success: true,
+    device: result.rows[0],
+    message: "Device has been deregistered and will require re-enrollment.",
+  });
 });

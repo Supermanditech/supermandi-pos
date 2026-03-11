@@ -9,7 +9,7 @@ import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, type StoreRecord } from "./api/stores";
-import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
+import { fetchDevices, patchDevice, forceReEnrollDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
   fetchAnalyticsOverview,
@@ -498,7 +498,7 @@ export default function App() {
   const [pendingDeviceAction, setPendingDeviceAction] = useState<{
     deviceId: string;
     deviceLabel?: string;
-    action: "deactivate" | "resetToken";
+    action: "deactivate" | "resetToken" | "forceReEnroll";
   } | null>(null);
   const [enrollStoreId, setEnrollStoreId] = useState<string>("");
   const [enrollment, setEnrollment] = useState<DeviceEnrollmentResponse | null>(null);
@@ -2537,6 +2537,43 @@ export default function App() {
     }
   }
 
+  // SA-P2-001: Request force re-enrollment with confirmation
+  function requestForceReEnroll(deviceId: string) {
+    const device = deviceRecords.find((d) => d.id === deviceId);
+    setPendingDeviceAction({
+      deviceId,
+      deviceLabel: device?.label ?? deviceId,
+      action: "forceReEnroll"
+    });
+  }
+
+  async function executeForceReEnroll(deviceId: string) {
+    setPendingDeviceAction(null);
+    setDeviceActionError("");
+    setDeviceSaving((prev) => ({ ...prev, [deviceId]: true }));
+    try {
+      await forceReEnrollDevice(deviceId);
+      // Mark device as inactive in local state
+      setDeviceRecords((prev) => prev.map((d) =>
+        d.id === deviceId ? { ...d, active: false } : d
+      ));
+      // Reset edit draft to match new state
+      setDeviceEdits((prev) => {
+        const draft = prev[deviceId];
+        if (!draft) return prev;
+        return { ...prev, [deviceId]: { ...draft, active: false } };
+      });
+      logAdminAction('device_force_re_enroll', 'device', deviceId, { label: deviceRecords.find((d) => d.id === deviceId)?.label });
+      void refreshDevices();
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Failed to force re-enroll device.";
+      setDeviceActionError(errorMsg);
+      logAdminActionError('device_force_re_enroll', 'device', deviceId, errorMsg);
+    } finally {
+      setDeviceSaving((prev) => ({ ...prev, [deviceId]: false }));
+    }
+  }
+
   async function handleCreateStore() {
     const name = createStoreName.trim();
     const storeId = createStoreId.trim();
@@ -3124,6 +3161,7 @@ export default function App() {
           deviceSaving={deviceSaving}
           requestDeviceSave={requestDeviceSave}
           requestDeviceReset={requestDeviceReset}
+          requestForceReEnroll={requestForceReEnroll}
           devicePage={devicePage}
           setDevicePage={setDevicePage}
           devicesLoading={devicesLoading}
@@ -3554,6 +3592,7 @@ export default function App() {
         setPendingDeviceAction={setPendingDeviceAction}
         executeDeviceSave={executeDeviceSave}
         executeDeviceReset={executeDeviceReset}
+        executeForceReEnroll={executeForceReEnroll}
         pendingAdminUser={pendingAdminUser}
         adminVerificationReason={adminVerificationReason}
         createUserError={createUserError}
