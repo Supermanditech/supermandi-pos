@@ -622,22 +622,23 @@ jobs:
           echo "    OK: $SERVICE_NAME traffic → LATEST"
 
       # STAGE-002: Portal deploy failure = pipeline failure (no silent swallow)
-      # REGRESSION-FIX-001: Nginx portals need --port=80 (nginx listens on 80, not Cloud Run default 8080).
+      # BLK-LANDING-PORT: nginx:alpine dropped CAP_NET_BIND_SERVICE for non-root users —
+      # port 80 requires root. Changed all nginx portals to port 8080 (Cloud Run standard).
       # supplier-portal (Next.js) uses Cloud Run's PORT env var (8080) automatically.
-      - name: Deploy nginx portals to staging (port 80)
+      - name: Deploy nginx portals to staging (port 8080)
         run: |
           NGINX_PORTALS=(retailer-admin superadmin landing)
           FAILED=0
           for portal in "${NGINX_PORTALS[@]}"; do
             SERVICE_NAME="${portal}"
             IMAGE="${{ env.AR_REPO }}/${portal}:${{ env.SHA }}"
-            echo "--- Deploying: $SERVICE_NAME (nginx, port 80)"
+            echo "--- Deploying: $SERVICE_NAME (nginx, port 8080)"
             if ! gcloud run deploy "$SERVICE_NAME" \
               --image="$IMAGE" \
               --region="${{ env.GCP_REGION }}" \
               --service-account=cloudrun-frontend@${{ env.GCP_PROJECT }}.iam.gserviceaccount.com \
               --ingress=internal-and-cloud-load-balancing \
-              --port=80 \
+              --port=8080 \
               --memory=256Mi \
               --cpu=1 \
               --min-instances=0 \
