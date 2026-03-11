@@ -21,6 +21,10 @@ vi.mock('../../components/EnrollmentCountdown', () => ({
   EnrollmentCountdown: () => <span>5m 00s</span>,
 }));
 
+vi.mock('../../components/DeviceWhitelistSection', () => ({
+  DeviceWhitelistSection: () => <div data-testid="whitelist-section">Whitelist</div>,
+}));
+
 const makeDeviceRecord = (overrides: Record<string, unknown> = {}) => ({
   id: 'dev-001',
   store_id: 's1',
@@ -66,6 +70,15 @@ function createProps(overrides: Partial<Parameters<typeof DevicesTab>[0]> = {}) 
     requestDeviceSave: vi.fn(),
     requestDeviceReset: vi.fn(),
     requestForceReEnroll: vi.fn(),
+    // SA-P2-005
+    requestForceSync: vi.fn(),
+    forceSyncingDevices: {},
+    // SA-P2-002
+    handlePushConfig: vi.fn().mockResolvedValue(undefined),
+    handleBroadcastConfig: vi.fn().mockResolvedValue(undefined),
+    configPushHistory: [] as any[],
+    configPushLoading: false,
+    refreshConfigPushHistory: vi.fn(),
     devicePage: 0,
     setDevicePage: vi.fn(),
     devicesLoading: false,
@@ -541,5 +554,188 @@ describe('DevicesTab', () => {
     render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
     const btn = screen.getByText('Force Re-Enroll');
     expect(btn.getAttribute('title')).toContain('deregistered');
+  });
+
+  // ── SA-P2-005: Force Sync Button ─────────────────────────
+
+  it('renders Force Sync button for each device', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    expect(screen.getByText('Force Sync')).toBeTruthy();
+  });
+
+  it('calls requestForceSync on Force Sync click', () => {
+    const handler = vi.fn();
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device], requestForceSync: handler })} />);
+    fireEvent.click(screen.getByText('Force Sync'));
+    expect(handler).toHaveBeenCalledWith('dev-001');
+  });
+
+  it('shows Syncing... when forceSyncingDevices is true', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      forceSyncingDevices: { 'dev-001': true },
+    })} />);
+    expect(screen.getByText('Syncing…')).toBeTruthy();
+  });
+
+  it('disables Force Sync button when forceSyncingDevices is true', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      forceSyncingDevices: { 'dev-001': true },
+    })} />);
+    const btn = screen.getByText('Syncing…');
+    expect(btn).toHaveProperty('disabled', true);
+  });
+
+  it('disables Force Sync button when deviceSaving', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      deviceSaving: { 'dev-001': true },
+    })} />);
+    const syncBtn = screen.getByText('Force Sync');
+    expect(syncBtn).toHaveProperty('disabled', true);
+  });
+
+  it('shows Force Sync tooltip with explanation', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    const btn = screen.getByText('Force Sync');
+    expect(btn.getAttribute('title')).toContain('force sync');
+  });
+
+  // ── SA-P2-002: Push Config ─────────────────────────────────
+
+  it('renders Push Config button for each device', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    expect(screen.getByText('Push Config')).toBeTruthy();
+  });
+
+  it('Push Config button has tooltip', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    const btn = screen.getByText('Push Config');
+    expect(btn.getAttribute('title')).toContain('config update');
+  });
+
+  it('disables Push Config button when deviceSaving', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      deviceSaving: { 'dev-001': true },
+    })} />);
+    // "Push Config" button is disabled when saving — it should exist
+    const btn = screen.getByTitle('Push a config update to this device via FCM or poll');
+    expect(btn).toHaveProperty('disabled', true);
+  });
+
+  it('opens Push Config modal when button clicked', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    fireEvent.click(screen.getByText('Push Config'));
+    expect(screen.getByText('Push Config to Device')).toBeTruthy();
+    expect(screen.getByLabelText('Config key')).toBeTruthy();
+    expect(screen.getByLabelText('Config value')).toBeTruthy();
+  });
+
+  it('shows device ID in Push Config modal target label', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    fireEvent.click(screen.getByText('Push Config'));
+    // dev-001 appears in both the device card and the modal target
+    const targets = screen.getAllByText('dev-001');
+    expect(targets.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('renders Broadcast to All button', () => {
+    render(<DevicesTab {...createProps()} />);
+    expect(screen.getByText('Broadcast to All')).toBeTruthy();
+  });
+
+  it('opens broadcast modal when Broadcast to All is clicked', () => {
+    render(<DevicesTab {...createProps()} />);
+    fireEvent.click(screen.getByText('Broadcast to All'));
+    expect(screen.getByText('Broadcast Config to All Devices')).toBeTruthy();
+  });
+
+  it('renders Config Push section header', () => {
+    render(<DevicesTab {...createProps()} />);
+    expect(screen.getByText('Config Push')).toBeTruthy();
+  });
+
+  it('shows empty state when no config push history', () => {
+    render(<DevicesTab {...createProps()} />);
+    expect(screen.getByText('No config pushes yet.')).toBeTruthy();
+  });
+
+  it('renders config push history table', () => {
+    const history = [
+      { id: 'p1', device_id: 'dev-1', store_id: null, config_key: 'FORCE_UPDATE', config_value: 'true', message: null, method: 'poll' as const, status: 'pending' as const, delivered_at: null, created_at: '2026-03-11T00:00:00Z' },
+    ];
+    render(<DevicesTab {...createProps({ configPushHistory: history })} />);
+    expect(screen.getByText('FORCE_UPDATE')).toBeTruthy();
+    expect(screen.getByText('poll')).toBeTruthy();
+    expect(screen.getByText('pending')).toBeTruthy();
+  });
+
+  it('shows Refresh button for config push history', () => {
+    render(<DevicesTab {...createProps()} />);
+    expect(screen.getByText('Refresh')).toBeTruthy();
+  });
+
+  it('calls refreshConfigPushHistory on Refresh click', () => {
+    const handler = vi.fn();
+    render(<DevicesTab {...createProps({ refreshConfigPushHistory: handler })} />);
+    fireEvent.click(screen.getByText('Refresh'));
+    expect(handler).toHaveBeenCalled();
+  });
+
+  it('shows Loading... on Refresh when configPushLoading', () => {
+    render(<DevicesTab {...createProps({ configPushLoading: true })} />);
+    expect(screen.getByText('Loading...')).toBeTruthy();
+  });
+
+  it('renders config key dropdown options in modal', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    fireEvent.click(screen.getByText('Push Config'));
+    expect(screen.getByText('Force Update')).toBeTruthy();
+    expect(screen.getByText('Maintenance Mode')).toBeTruthy();
+    expect(screen.getByText('Sync Interval (ms)')).toBeTruthy();
+  });
+
+  it('renders Cancel button in Push Config modal', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    fireEvent.click(screen.getByText('Push Config'));
+    expect(screen.getByText('Cancel')).toBeTruthy();
+  });
+
+  it('closes modal on Cancel click', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    fireEvent.click(screen.getByText('Push Config'));
+    expect(screen.getByText('Push Config to Device')).toBeTruthy();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByText('Push Config to Device')).toBeNull();
+  });
+
+  it('renders method badge with fcm style in history', () => {
+    const history = [
+      { id: 'p1', device_id: 'dev-1', store_id: null, config_key: 'X', config_value: 'Y', message: null, method: 'fcm' as const, status: 'delivered' as const, delivered_at: '2026-03-11T00:00:00Z', created_at: '2026-03-11T00:00:00Z' },
+    ];
+    render(<DevicesTab {...createProps({ configPushHistory: history })} />);
+    expect(screen.getByText('fcm')).toBeTruthy();
+    expect(screen.getByText('delivered')).toBeTruthy();
+  });
+
+  it('shows config push subtitle', () => {
+    render(<DevicesTab {...createProps()} />);
+    expect(screen.getByText(/Push configuration updates to devices/)).toBeTruthy();
   });
 });
