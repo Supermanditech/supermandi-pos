@@ -172,6 +172,12 @@ export default function ProductsPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // RET-AUD-040: Track supplier fetch errors for user feedback
   const [supplierFetchError, setSupplierFetchError] = useState(false);
+  // SCALE-E1: Product image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageDragOver, setImageDragOver] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   // T-120: Sync search term with URL for back/forward persistence
   const [searchTerm, setSearchTerm] = useUrlState('search');
 
@@ -407,6 +413,9 @@ export default function ProductsPage() {
     };
     setFormData(editData);
     formOpenSnapshotRef.current = JSON.stringify(editData);
+    // SCALE-E1: Show existing image as preview when editing
+    setImageFile(null);
+    setImagePreview(product.image_url || null);
     setShowForm(true);
     setError('');
     setSuccess('');
@@ -420,6 +429,11 @@ export default function ProductsPage() {
     setFormData(initialFormData);
     setError('');
     setCreatedProduct(null);
+    // SCALE-E1: Reset image upload state
+    setImageFile(null);
+    setImagePreview(null);
+    setImageUploading(false);
+    setImageDragOver(false);
   };
 
   // Handle delete
@@ -492,6 +506,56 @@ export default function ProductsPage() {
       soldBy: mode === 'LOOSE_BULK' ? (prev.soldBy || 'WEIGHT') : prev.soldBy,
       rateUnit: mode === 'LOOSE_BULK' ? (prev.rateUnit || 'KG') : prev.rateUnit,
     }));
+  };
+
+  // SCALE-E1: Image drag-drop and file picker handlers
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+
+  const handleImageFile = (file: File) => {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError('Image must be JPG, PNG, or WebP');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError('Image must be under 2MB');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError('');
+  };
+
+  const handleImageDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setImageDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageFile(file);
+  };
+
+  const handleImageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+  };
+
+  const uploadProductImage = async (productId: string): Promise<void> => {
+    if (!imageFile) return;
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      const response = await fetch(`/api/v1/retailer-admin/products/${productId}/image`, {
+        method: 'POST',
+        body: formData,
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({})) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Image upload failed');
+      }
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -642,8 +706,21 @@ export default function ProductsPage() {
         throw new Error(errMsg || `Failed to ${isEdit ? 'update' : 'create'} product`);
       }
 
+      // SCALE-E1: Upload image after product save (non-blocking on failure)
+      const productId = isEdit ? editingProduct!.id : data.data.productId;
+      if (imageFile) {
+        try {
+          await uploadProductImage(productId);
+        } catch (imgErr) {
+          // Image upload failure is non-fatal — product is saved, warn user
+          logger.warn('[SCALE-E1] Image upload failed (non-fatal):', imgErr);
+          setError('Product saved, but image upload failed. You can retry by editing the product.');
+        }
+      }
+
       if (isEdit) {
-        setSuccess('Product updated successfully!');
+        if (!imageFile) setSuccess('Product updated successfully!');
+        else if (!error) setSuccess('Product updated successfully with image!');
         closeForm();
       } else {
         // Show success with barcode info for new products
@@ -1407,6 +1484,69 @@ export default function ProductsPage() {
                 <small className="sup-small-hint" style={{ display: 'block', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
                   Allow customers to purchase this product using Buy Now, Pay Later
                 </small>
+              </div>
+
+              {/* SCALE-E1: Product Image Upload */}
+              <div className="prod-form-section">
+                <h4 className="prod-section-title">
+                  Product Image <span style={{ fontWeight: 400, fontSize: '0.8rem', color: 'var(--text-muted)' }}>(optional)</span>
+                </h4>
+                <div className="form-group">
+                  {/* Drag-drop zone */}
+                  <div
+                    data-testid="image-drop-zone"
+                    onDrop={handleImageDrop}
+                    onDragOver={(e) => { e.preventDefault(); setImageDragOver(true); }}
+                    onDragLeave={() => setImageDragOver(false)}
+                    onClick={() => imageInputRef.current?.click()}
+                    style={{
+                      border: `2px dashed ${imageDragOver ? 'var(--primary)' : 'var(--border)'}`,
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      backgroundColor: imageDragOver ? 'var(--bg-alt)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      minHeight: '80px',
+                      transition: 'border-color 0.15s, background-color 0.15s',
+                    }}
+                  >
+                    {imagePreview ? (
+                      <>
+                        <img
+                          src={imagePreview}
+                          alt="Product preview"
+                          data-testid="image-preview"
+                          style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+                        />
+                        <span className="sup-small-hint" style={{ fontSize: '0.8rem' }}>
+                          {imageFile ? imageFile.name : 'Current image'} — click or drag to replace
+                        </span>
+                      </>
+                    ) : (
+                      <span className="sup-small-hint" style={{ width: '100%' }}>
+                        Drag &amp; drop image here, or <strong>click to browse</strong>
+                        <br />
+                        <small>Max 2MB · JPG / PNG / WebP</small>
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    data-testid="image-file-input"
+                    style={{ display: 'none' }}
+                    onChange={handleImageInputChange}
+                  />
+                  {imageUploading && (
+                    <small className="sup-small-hint" style={{ display: 'block', marginTop: '0.25rem' }}>
+                      Uploading image...
+                    </small>
+                  )}
+                </div>
               </div>
 
               <div className="prod-created-actions" style={{ paddingTop: '0.75rem' }}>
