@@ -130,6 +130,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
   // AUD-074-A FIX: Accept supplierId for proper FK tracking
   // SA-P0-004: Accept supplierGstin for GSTIN tracking on stock-in
   // T-207: Accept optional orderId for PO validation
+  // SCALE-A3: Accept batchNumber for FEFO tracking on store_products
   const { items, supplierId, supplierName, supplierGstin, notes, totalAmount, idempotencyKey, orderId } = req.body;
 
   // LIVE.STOCKIN.IDEMPOTENCY_SINGLE_TX_LOCK.001: Idempotency check moved into main transaction
@@ -218,7 +219,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
     let itemsProcessed = 0;
 
     for (const item of items) {
-      const { barcode, quantity, buyPrice } = item;
+      const { barcode, quantity, buyPrice, batchNumber } = item;
 
       // BUG-004: quantity validated upfront — always positive here
 
@@ -248,13 +249,22 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
       const deltaQty = Math.abs(quantity);
       const newStock = currentStock + deltaQty;
 
-      // Update store_products stock
-      await client.query(
-        `UPDATE catalog.store_products
-         SET current_stock = $3, updated_at = NOW()
-         WHERE store_id = $1 AND product_id = $2`,
-        [storeId, productId, newStock]
-      );
+      // Update store_products stock (and batch_number if provided — SCALE-A3 FEFO tracking)
+      if (batchNumber && typeof batchNumber === "string" && batchNumber.trim()) {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, batch_number = $4, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock, batchNumber.trim()]
+        );
+      } else {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock]
+        );
+      }
 
       // Get current stock_balances for accurate ledger entry
       const balanceResult = await client.query(
