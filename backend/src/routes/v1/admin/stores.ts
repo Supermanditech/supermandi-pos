@@ -454,6 +454,8 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
           upi_vpa_updated_by,
           allowed_payment_methods,
           max_devices,
+          daily_order_limit_paise,
+          monthly_order_limit_paise,
           created_at,
           updated_at
         FROM platform.stores
@@ -482,7 +484,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
       // Non-critical
     }
 
-    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], ...(deviceInfo ?? {}) } });
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], ...(deviceInfo ?? {}), dailyOrderLimitPaise: store.daily_order_limit_paise ?? null, monthlyOrderLimitPaise: store.monthly_order_limit_paise ?? null } });
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[admin/stores/:storeId] Query failed:", error?.message);
@@ -563,6 +565,9 @@ adminStoresRouter.get("/stores/:storeId/settings", requirePermission("stores", "
         scan_lookup_v2_enabled,
         pos_device_id,
         kyc_status,
+        -- SA-P1-002: Spending limits
+        daily_order_limit_paise,
+        monthly_order_limit_paise,
         -- Timestamps
         created_at,
         updated_at

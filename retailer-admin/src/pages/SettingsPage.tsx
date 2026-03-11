@@ -26,6 +26,9 @@ interface StoreSettings {
   receiptGstin: string;
   receiptCustomFooter: string;
   showTaxBreakdown: boolean;
+  // SA-P1-002: Spending limits (paise, null = no limit)
+  dailyOrderLimitPaise: number | null;
+  monthlyOrderLimitPaise: number | null;
 }
 
 interface ValidationErrors {
@@ -54,6 +57,9 @@ export default function SettingsPage() {
     receiptGstin: '',
     receiptCustomFooter: '',
     showTaxBreakdown: false,
+    // SA-P1-002: Spending limits
+    dailyOrderLimitPaise: null,
+    monthlyOrderLimitPaise: null,
   });
 
   // Track loaded settings for dirty detection
@@ -66,6 +72,11 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
+
+  // SA-P1-002: Spending limits UI state
+  const [spendingLimitsSaving, setSpendingLimitsSaving] = useState(false);
+  const [spendingLimitsSuccess, setSpendingLimitsSuccess] = useState(false);
+  const [spendingLimitsError, setSpendingLimitsError] = useState<string | null>(null);
 
   // T-004: Change Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -113,6 +124,9 @@ export default function SettingsPage() {
             receiptGstin: rs.gstin || '',
             receiptCustomFooter: rs.customFooter || '',
             showTaxBreakdown: rs.showTaxBreakdown ?? false,
+            // SA-P1-002: Spending limits
+            dailyOrderLimitPaise: s.dailyOrderLimitPaise ?? null,
+            monthlyOrderLimitPaise: s.monthlyOrderLimitPaise ?? null,
           };
           setSettings(loaded);
           initialSettingsRef.current = JSON.stringify(loaded);
@@ -234,6 +248,48 @@ export default function SettingsPage() {
       setSaveError(err.message || 'Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // SA-P1-002: Save spending limits handler
+  const handleSaveSpendingLimits = async () => {
+    if (!accessToken) return;
+
+    setSpendingLimitsSaving(true);
+    setSpendingLimitsError(null);
+    setSpendingLimitsSuccess(false);
+
+    // Validate: daily cannot exceed monthly when both are set
+    if (settings.dailyOrderLimitPaise !== null && settings.monthlyOrderLimitPaise !== null) {
+      if (settings.dailyOrderLimitPaise > settings.monthlyOrderLimitPaise) {
+        setSpendingLimitsError('Daily limit cannot exceed monthly limit');
+        setSpendingLimitsSaving(false);
+        return;
+      }
+    }
+
+    try {
+      const response = await authFetch('/api/v1/retailer-admin/store/spending-limits', accessToken, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          dailyOrderLimitPaise: settings.dailyOrderLimitPaise,
+          monthlyOrderLimitPaise: settings.monthlyOrderLimitPaise,
+        }),
+      });
+
+      if (response.ok) {
+        setSpendingLimitsSuccess(true);
+        initialSettingsRef.current = JSON.stringify(settings);
+        setTimeout(() => setSpendingLimitsSuccess(false), 3000);
+      } else {
+        const data = await safeJson(response);
+        setSpendingLimitsError(typeof data?.error === 'string' ? data.error : (data?.error?.message || 'Failed to save spending limits'));
+      }
+    } catch (err: any) {
+      logger.error('Failed to save spending limits:', err);
+      setSpendingLimitsError(err.message || 'Failed to save spending limits');
+    } finally {
+      setSpendingLimitsSaving(false);
     }
   };
 
@@ -552,6 +608,84 @@ export default function SettingsPage() {
                 Additional text printed below the standard footer ({settings.receiptCustomFooter?.length || 0}/300 characters)
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* SA-P1-002: Spending Limits */}
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon" aria-hidden="true">&#8377;</span>
+            Purchase Order Spending Limits
+          </h2>
+
+          <p className="set-hint-text" style={{ marginBottom: '1rem' }}>
+            Set daily and monthly caps on purchase order spending. Leave blank for no limit.
+          </p>
+
+          {spendingLimitsSuccess && (
+            <div className="set-pw-success" role="alert" aria-live="polite">Spending limits saved successfully!</div>
+          )}
+
+          {spendingLimitsError && (
+            <div className="set-pw-error" role="alert" aria-live="assertive">{spendingLimitsError}</div>
+          )}
+
+          <div className="set-grid-2">
+            <div>
+              <label className="set-label" htmlFor="set-daily-limit">Daily Order Limit (Rs)</label>
+              <input
+                id="set-daily-limit"
+                type="number"
+                className="form-input set-input"
+                value={settings.dailyOrderLimitPaise !== null ? settings.dailyOrderLimitPaise / 100 : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleChange(
+                    'dailyOrderLimitPaise',
+                    val === '' ? null as any : Math.round(parseFloat(val) * 100)
+                  );
+                }}
+                min="0"
+                step="1"
+                placeholder="No limit"
+              />
+              <p className="set-hint-text">
+                Maximum daily purchase order spend. Leave empty for no limit.
+              </p>
+            </div>
+
+            <div>
+              <label className="set-label" htmlFor="set-monthly-limit">Monthly Order Limit (Rs)</label>
+              <input
+                id="set-monthly-limit"
+                type="number"
+                className="form-input set-input"
+                value={settings.monthlyOrderLimitPaise !== null ? settings.monthlyOrderLimitPaise / 100 : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleChange(
+                    'monthlyOrderLimitPaise',
+                    val === '' ? null as any : Math.round(parseFloat(val) * 100)
+                  );
+                }}
+                min="0"
+                step="1"
+                placeholder="No limit"
+              />
+              <p className="set-hint-text">
+                Maximum monthly purchase order spend. Leave empty for no limit.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1rem' }}>
+            <button
+              onClick={handleSaveSpendingLimits}
+              disabled={spendingLimitsSaving}
+              className="set-password-btn"
+            >
+              {spendingLimitsSaving ? 'Saving...' : 'Save Spending Limits'}
+            </button>
           </div>
         </section>
 
