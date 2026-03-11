@@ -85,3 +85,26 @@ export async function patchDevice(deviceId: string, input: DevicePatchInput): Pr
   }
   return data.device;
 }
+
+// SA-P2-001: Force device re-enrollment
+export async function forceReEnrollDevice(deviceId: string, reason?: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}/force-re-enroll`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ reason: reason || "" }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; message?: string };
+  return {
+    success: Boolean(data.success),
+    message: data.message || "Device has been deregistered.",
+  };
+}

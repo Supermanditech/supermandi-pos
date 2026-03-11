@@ -65,6 +65,7 @@ function createProps(overrides: Partial<Parameters<typeof DevicesTab>[0]> = {}) 
     deviceSaving: {},
     requestDeviceSave: vi.fn(),
     requestDeviceReset: vi.fn(),
+    requestForceReEnroll: vi.fn(),
     devicePage: 0,
     setDevicePage: vi.fn(),
     devicesLoading: false,
@@ -507,5 +508,38 @@ describe('DevicesTab', () => {
   it('shows device activity limit info', () => {
     render(<DevicesTab {...createProps({ limit: 200 })} />);
     expect(screen.getByText(/Unique devices in last 200 events/)).toBeTruthy();
+  });
+
+  // ── SA-P2-001: Force Re-Enroll Button ─────────────────────
+
+  it('renders Force Re-Enroll button for each device', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    expect(screen.getByText('Force Re-Enroll')).toBeTruthy();
+  });
+
+  it('calls requestForceReEnroll on Force Re-Enroll click', () => {
+    const handler = vi.fn();
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device], requestForceReEnroll: handler })} />);
+    fireEvent.click(screen.getByText('Force Re-Enroll'));
+    expect(handler).toHaveBeenCalledWith('dev-001');
+  });
+
+  it('disables Force Re-Enroll button when deviceSaving', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      deviceSaving: { 'dev-001': true },
+    })} />);
+    const btn = screen.getByText('Processing…');
+    expect(btn).toHaveProperty('disabled', true);
+  });
+
+  it('shows Force Re-Enroll tooltip with explanation', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    const btn = screen.getByText('Force Re-Enroll');
+    expect(btn.getAttribute('title')).toContain('deregistered');
   });
 });

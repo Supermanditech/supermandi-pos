@@ -27,6 +27,7 @@ interface DevicesTabProps {
   deviceSaving: Record<string, boolean>;
   requestDeviceSave: (deviceId: string) => void;
   requestDeviceReset: (deviceId: string) => void;
+  requestForceReEnroll: (deviceId: string) => void;
   devicePage: number;
   setDevicePage: (p: number) => void;
   devicesLoading: boolean;
@@ -56,6 +57,7 @@ export function DevicesTab({
   deviceSaving,
   requestDeviceSave,
   requestDeviceReset,
+  requestForceReEnroll,
   devicePage,
   setDevicePage,
   devicesLoading,
@@ -350,6 +352,15 @@ export function DevicesTab({
                       setTimeout(() => setResettingDevices((prev) => ({ ...prev, [d.id]: false })), 3000);
                     }} disabled={deviceSaving[d.id] || resettingDevices[d.id]}>
                       {resettingDevices[d.id] ? "Resetting…" : "Reset Token"}
+                    </button>
+                    {/* SA-P2-001: Force Re-Enroll button */}
+                    <button
+                      className="btnDanger btnSm"
+                      onClick={() => requestForceReEnroll(d.id)}
+                      disabled={deviceSaving[d.id]}
+                      title="Force this device to re-enroll. The device will be deregistered and must scan a new QR code."
+                    >
+                      {deviceSaving[d.id] ? "Processing…" : "Force Re-Enroll"}
                     </button>
                   </div>
                 </div>

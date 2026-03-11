@@ -96,6 +96,8 @@ function extractActionInfo(req: Request): {
     resourceId = segments[1] || null;
     if (segments[2] === 'block') action = 'device.block';
     else if (segments[2] === 'unblock') action = 'device.unblock';
+    else if (segments[2] === 'force-re-enroll') action = 'device.force_re_enroll';
+    else if (segments[2] === 'revoke') action = 'device.revoke';
     else if (method === 'GET') action = 'device.get';
     else if (method === 'DELETE') action = 'device.revoke';
   }
