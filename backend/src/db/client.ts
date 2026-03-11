@@ -8,10 +8,13 @@ let db: NodePgDatabase | undefined;
 // ITER4-P1-006: Connection pool configuration
 // T1-004: Reduced default max from 50 to 20 — Cloud SQL basic tier = 100 connections,
 // main-backend has Drizzle pool + common pool. 20 + 10 = 30 per instance is safe.
+// SCALE-D2: Tuned for 10K concurrent users — min raised to 5 to avoid cold-start latency,
+// max raised to 25 to handle burst traffic while staying within Cloud SQL limits
+// (25 + 10 common = 35 per instance, safe for 3 instances under 100-connection cap).
 const POOL_CONFIG = {
-  min: parseInt(process.env.DB_POOL_MIN || '2', 10),
-  // T1-004: 20 default (Cloud SQL basic=100, leave headroom for multiple instances)
-  max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+  min: parseInt(process.env.DB_POOL_MIN || '5', 10),
+  // SCALE-D2: 25 default (Cloud SQL basic=100, 25+10=35 per instance, safe for 3 instances)
+  max: parseInt(process.env.DB_POOL_MAX || '25', 10),
   // Close idle connections after this many milliseconds
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
   // Connection timeout in milliseconds
