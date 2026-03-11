@@ -11,6 +11,8 @@ export interface CatalogProduct {
   primaryBarcode?: string;
   hsnCode?: string;
   defaultGstRate?: number;
+  netContentValue?: number;
+  netContentUnit?: string;
   manufacturerName?: string;
   countryOfOrigin?: string;
   shelfLifeDays?: number;
@@ -69,6 +71,8 @@ export interface CatalogProductRow {
   primary_barcode: string | null;
   hsn_code: string | null;
   default_gst_rate: string | null;
+  net_content_value: string | null;
+  net_content_unit: string | null;
   manufacturer_name: string | null;
   country_of_origin: string | null;
   shelf_life_days: number | null;
@@ -163,6 +167,8 @@ export function mapCatalogProducts(
       primaryBarcode: row.primary_barcode ?? undefined,
       hsnCode: row.hsn_code ?? undefined,
       defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+      netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+      netContentUnit: row.net_content_unit ?? undefined,
       manufacturerName: row.manufacturer_name ?? undefined,
       countryOfOrigin: row.country_of_origin ?? undefined,
       shelfLifeDays: row.shelf_life_days ?? undefined,
@@ -194,6 +200,8 @@ export function mapCatalogProduct(
     primaryBarcode: row.primary_barcode ?? undefined,
     hsnCode: row.hsn_code ?? undefined,
     defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+    netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+    netContentUnit: row.net_content_unit ?? undefined,
     manufacturerName: row.manufacturer_name ?? undefined,
     countryOfOrigin: row.country_of_origin ?? undefined,
     shelfLifeDays: row.shelf_life_days ?? undefined,

@@ -417,6 +417,10 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           mp.brand AS mp_brand,
           mp.primary_barcode AS mp_barcode,
           mp.unit AS mp_unit,
+          sp.net_content_value AS sp_net_content_value,
+          sp.net_content_unit AS sp_net_content_unit,
+          mp.net_content_value AS mp_net_content_value,
+          mp.net_content_unit AS mp_net_content_unit,
           sp.created_at AS sp_created_at
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
@@ -432,6 +436,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
         MIN(COALESCE(mp_brand, product_brand)) AS brand,
         MIN(COALESCE(mp_barcode, product_barcode)) AS "primaryBarcode",
         MIN(COALESCE(mp_unit, unit, 'PCS')) AS unit,
+        MIN(COALESCE(mp_net_content_value, sp_net_content_value)) AS "netContentValue",
+        MIN(COALESCE(mp_net_content_unit, sp_net_content_unit)) AS "netContentUnit",
         MIN(retailer_price) AS "bestPrice",
         MIN(COALESCE(moq, 1)) AS "minMoq",
         COUNT(*)::int AS "supplierCount",
@@ -472,6 +478,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
       brand: row.brand,
       primaryBarcode: row.primaryBarcode,
       unit: row.unit,
+      netContentValue: row.netContentValue ? parseFloat(row.netContentValue) : null,
+      netContentUnit: row.netContentUnit || null,
       isActive: true,
       bestPrice: row.bestPrice,
       minMoq: row.minMoq,
@@ -696,7 +704,11 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           mp.category AS mp_category,
           mp.brand AS mp_brand,
           mp.primary_barcode AS mp_barcode,
-          mp.unit AS mp_unit
+          mp.unit AS mp_unit,
+          sp.net_content_value AS sp_net_content_value,
+          sp.net_content_unit AS sp_net_content_unit,
+          mp.net_content_value AS mp_net_content_value,
+          mp.net_content_unit AS mp_net_content_unit
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
@@ -716,6 +728,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
         MIN(COALESCE(mp_brand, product_brand)) AS brand,
         MIN(COALESCE(mp_barcode, product_barcode)) AS "primaryBarcode",
         MIN(COALESCE(mp_unit, unit, 'PCS')) AS unit,
+        MIN(COALESCE(mp_net_content_value, sp_net_content_value)) AS "netContentValue",
+        MIN(COALESCE(mp_net_content_unit, sp_net_content_unit)) AS "netContentUnit",
         MIN(retailer_price) AS "bestPrice",
         MIN(COALESCE(moq, 1)) AS "minMoq",
         COUNT(*)::int AS "supplierCount",
@@ -762,6 +776,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
       brand: row.brand,
       primaryBarcode: row.primaryBarcode,
       unit: row.unit,
+      netContentValue: row.netContentValue ? parseFloat(row.netContentValue) : null,
+      netContentUnit: row.netContentUnit || null,
       isActive: true,
       bestPrice: row.bestPrice,
       minMoq: row.minMoq,
