@@ -484,4 +484,104 @@ describe('ProductsPage', () => {
     render(<ProductsPage />);
     expect(screen.queryByText('Previous')).not.toBeInTheDocument();
   });
+
+  // ── SCALE-B5: Compliance & Measurements fields ───────────────
+
+  it('renders Compliance & Measurements section heading when form is open', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    expect(screen.getByText('Compliance & Measurements')).toBeInTheDocument();
+  });
+
+  it('renders Manufacturer Name field', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    expect(screen.getByLabelText('Manufacturer Name')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g. Nestlé India Pvt Ltd')).toBeInTheDocument();
+  });
+
+  it('renders Country of Origin field with default value India', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    const countryInput = screen.getByLabelText('Country of Origin') as HTMLInputElement;
+    expect(countryInput).toBeInTheDocument();
+    expect(countryInput.value).toBe('India');
+  });
+
+  it('renders Net Content (value) field that accepts numbers', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    const netContentInput = screen.getByLabelText('Net Content (value)') as HTMLInputElement;
+    expect(netContentInput).toBeInTheDocument();
+    expect(netContentInput.type).toBe('number');
+    expect(screen.getByPlaceholderText('e.g. 500')).toBeInTheDocument();
+  });
+
+  it('renders Net Content (unit) select with g/kg/ml/l/pcs options', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    const unitSelect = screen.getByLabelText('Net Content (unit)') as HTMLSelectElement;
+    expect(unitSelect).toBeInTheDocument();
+    const optionValues = Array.from(unitSelect.options).map((o) => o.value);
+    expect(optionValues).toContain('g');
+    expect(optionValues).toContain('kg');
+    expect(optionValues).toContain('ml');
+    expect(optionValues).toContain('l');
+    expect(optionValues).toContain('pcs');
+  });
+
+  it('renders Shelf Life (days) field', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    const shelfLifeInput = screen.getByLabelText('Shelf Life (days)') as HTMLInputElement;
+    expect(shelfLifeInput).toBeInTheDocument();
+    expect(shelfLifeInput.type).toBe('number');
+    expect(screen.getByPlaceholderText('e.g. 365 for 1 year')).toBeInTheDocument();
+  });
+
+  it('renders HSN Code field', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    expect(screen.getByLabelText('HSN Code')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g. 19023010')).toBeInTheDocument();
+  });
+
+  it('all new compliance fields are optional — form includes defaults without explicit input', () => {
+    render(<ProductsPage />);
+    fireEvent.click(screen.getAllByText('+ Add Product')[0]);
+    // Verify the country of origin field has India as default without any user interaction
+    const countryInput = screen.getByLabelText('Country of Origin') as HTMLInputElement;
+    expect(countryInput.value).toBe('India');
+    // Verify other compliance fields are empty (optional)
+    expect((screen.getByLabelText('Manufacturer Name') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('HSN Code') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Net Content (value)') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Net Content (unit)') as HTMLSelectElement).value).toBe('');
+    expect((screen.getByLabelText('Shelf Life (days)') as HTMLInputElement).value).toBe('');
+  });
+
+  it('pre-fills compliance fields when editing a product', () => {
+    mockProducts = [
+      {
+        id: 'p1',
+        name: 'Test Product',
+        approvalStatus: 'approved',
+        purchasePrice: 10000,
+        moq: 1,
+        unit: 'PCS',
+        manufacturerName: 'Nestlé India',
+        countryOfOrigin: 'India',
+        netContentValue: 500,
+        netContentUnit: 'g',
+        shelfLifeDays: 365,
+        hsnCode: '19023010',
+      },
+    ];
+    render(<ProductsPage />);
+    fireEvent.click(screen.getByText('Edit'));
+    expect((screen.getByLabelText('Manufacturer Name') as HTMLInputElement).value).toBe('Nestlé India');
+    expect((screen.getByLabelText('Country of Origin') as HTMLInputElement).value).toBe('India');
+    expect((screen.getByLabelText('Net Content (unit)') as HTMLSelectElement).value).toBe('g');
+    expect((screen.getByLabelText('HSN Code') as HTMLInputElement).value).toBe('19023010');
+  });
 });

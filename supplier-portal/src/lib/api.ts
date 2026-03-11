@@ -489,6 +489,13 @@ export interface Product {
   approvalStatus: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string; // GL-WF-036: Rejection reason from admin
   createdAt: string;
+  // SCALE-B5: Compliance & measurement fields
+  manufacturerName?: string;
+  countryOfOrigin?: string;
+  netContentValue?: number;
+  netContentUnit?: string;
+  shelfLifeDays?: number;
+  hsnCode?: string;
 }
 
 export interface ProductInput {
@@ -502,6 +509,13 @@ export interface ProductInput {
   moq?: number;
   unit?: string;
   imageUrl?: string; // T-161: Product image URL
+  // SCALE-B5: Compliance & measurement fields
+  manufacturerName?: string;
+  countryOfOrigin?: string;
+  netContentValue?: number;
+  netContentUnit?: string;
+  shelfLifeDays?: number;
+  hsnCode?: string;
 }
 
 // GL-WF-063: Pagination types
