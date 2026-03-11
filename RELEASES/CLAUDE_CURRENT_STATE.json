@@ -1,6 +1,6 @@
 {
-  "version": "244.1",
-  "lastUpdated": "2026-03-11T09:39:26.311Z",
+  "version": "244.2",
+  "lastUpdated": "2026-03-11T09:52:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -783,7 +783,7 @@
         "certInProgress": 0,
         "certPending": 0,
         "needsReaudit": 0,
-        "coverageClaimsSuspended": true
+        "coverageClaimsSuspended": false
       },
       "SUPPLIER_WEB": {
         "parkReady": 16,
@@ -791,8 +791,8 @@
         "certBlocked": 0,
         "certInProgress": 0,
         "certPending": 0,
-        "needsReaudit": 1,
-        "coverageClaimsSuspended": true
+        "needsReaudit": 0,
+        "coverageClaimsSuspended": false
       },
       "SUPERADMIN_WEB": {
         "parkReady": 24,
