@@ -1,6 +1,9 @@
 // ADM-SCR-002: Admin Users Management Route
 // GO-LIVE-128: Enhanced with RBAC permissions
+// SA-P2-010: Force password reset for retailer users
 import { Router } from "express";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { requireAdminToken, requirePermission, generateAdminApiKey, hashAdminApiKey, AdminRole } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
 import { log } from "../../../lib/logger";
@@ -598,5 +601,110 @@ adminUsersRouter.delete("/admins/:adminId", requirePermission("admins", "delete"
     const error = asError(_error);
     log.error("[admin/admins] Failed to delete admin:", error);
     return res.status(500).json({ error: "delete_admin_failed" });
+  }
+});
+
+// =============================================================================
+// SA-P2-010: Force Password Reset for Retailer Users
+// Superadmin generates a temporary password and sets it on the user account.
+// The temporary password is returned ONCE so the admin can share it with the retailer.
+// =============================================================================
+
+const TEMP_PASSWORD_LENGTH = 12;
+
+function generateTempPassword(): string {
+  // Generate a readable temporary password: 8 random hex chars + 4 digits
+  const hex = crypto.randomBytes(4).toString("hex"); // 8 hex chars
+  const digits = String(Math.floor(1000 + Math.random() * 9000)); // 4 digits
+  return `Tmp${hex}${digits}`;
+}
+
+// POST /api/v1/admin/users/:userId/force-reset-password
+// GO-LIVE-128: Requires 'users:update' permission
+adminUsersRouter.post("/users/:userId/force-reset-password", requirePermission("users", "update"), async (req, res) => {
+  const { userId } = req.params;
+  if (!userId) return res.status(400).json({ error: "userId_required" });
+
+  const { reason } = req.body as { reason?: string };
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Verify user exists and is a store (retailer) user
+    const userResult = await pool.query<AdminUserRecord>(
+      `SELECT id::TEXT as id, name, email, phone, actor_type, actor_id::TEXT as actor_id, status, created_at, updated_at
+       FROM auth.users WHERE id = $1::uuid`,
+      [userId]
+    );
+
+    if (userResult.rowCount === 0) {
+      return res.status(404).json({ error: "user_not_found" });
+    }
+
+    const user = userResult.rows[0];
+
+    // Only allow force reset for store (retailer) users — not platform admins
+    if (user.actor_type === "platform") {
+      return res.status(403).json({
+        error: "cannot_reset_platform_user",
+        message: "Force password reset is not allowed for platform admin users. Use admin account management instead.",
+      });
+    }
+
+    // Generate temporary password
+    const tempPassword = generateTempPassword();
+    const BCRYPT_ROUNDS = 12;
+    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_ROUNDS);
+
+    // Update user's password
+    await pool.query(
+      `UPDATE auth.users SET password_hash = $1, updated_at = NOW() WHERE id = $2::uuid`,
+      [passwordHash, userId]
+    );
+
+    // Audit log the action
+    try {
+      await pool.query(
+        `INSERT INTO admin.audit_log (action, entity_type, entity_id, details, performed_by, created_at)
+         VALUES ($1, $2, $3::uuid, $4, $5, NOW())`,
+        [
+          "force_password_reset",
+          "user",
+          userId,
+          JSON.stringify({
+            userName: user.name,
+            userEmail: user.email,
+            userPhone: user.phone,
+            actorType: user.actor_type,
+            reason: reason || "No reason provided",
+            performedBy: req.adminId || "unknown",
+          }),
+          req.adminId || "unknown",
+        ]
+      );
+    } catch (auditError) {
+      // Don't fail the password reset if audit logging fails (table may not exist)
+      log.warn("[admin/users] SA-P2-010: Audit log insert failed (non-blocking):", asError(auditError));
+    }
+
+    log.info(`[admin/users] SA-P2-010: Force password reset for user ${user.name} (${userId}) by admin ${req.adminId}`);
+
+    return res.json({
+      success: true,
+      temporaryPassword: tempPassword,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        actorType: user.actor_type,
+      },
+      message: `Password has been reset for ${user.name}. Share the temporary password securely. The user should change it on next login.`,
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/users] SA-P2-010: Force password reset failed:", error);
+    return res.status(500).json({ error: "force_reset_password_failed" });
   }
 });

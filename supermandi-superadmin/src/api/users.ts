@@ -72,6 +72,42 @@ export async function patchUser(userId: string, input: UserPatchInput): Promise<
   return data.user;
 }
 
+// SA-P2-010: Force reset a user's password
+export type ForceResetPasswordResult = {
+  success: boolean;
+  temporaryPassword: string;
+  user: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    actorType: string;
+  };
+  message: string;
+};
+
+export async function forceResetPassword(userId: string, reason?: string): Promise<ForceResetPasswordResult> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}/force-reset-password`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify({ reason: reason || undefined })
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.message || "Password reset failed");
+  }
+  return data as ForceResetPasswordResult;
+}
+
 // SA-1.3-004: Create a new user
 // GL-CRIT-0053: Add admin_verification for platform user creation
 export type UserCreateInput = {
