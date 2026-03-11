@@ -147,4 +147,79 @@ describe('users module', () => {
       await expect(mod.createUser({ name: 'X' })).rejects.toThrow('Request failed');
     });
   });
+
+  // SA-P2-010: Force password reset tests
+  describe('forceResetPassword', () => {
+    it('sends POST to force-reset-password endpoint', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          temporaryPassword: 'Tmpabcd12341234',
+          user: { id: 'u1', name: 'Alice', email: 'a@test.com', phone: null, actorType: 'store' },
+          message: 'Password has been reset',
+        }),
+      });
+
+      const result = await mod.forceResetPassword('u1', 'Test reason');
+      expect(result.success).toBe(true);
+      expect(result.temporaryPassword).toBe('Tmpabcd12341234');
+      expect(result.user.name).toBe('Alice');
+      expect(authMock.fetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/admin/users/u1/force-reset-password'),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    it('sends reason in request body', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          temporaryPassword: 'Tmp123456781234',
+          user: { id: 'u1', name: 'Alice', email: null, phone: '9999', actorType: 'store' },
+          message: 'Done',
+        }),
+      });
+
+      await mod.forceResetPassword('u1', 'Customer request');
+      const body = JSON.parse(authMock.fetchWithTimeout.mock.calls[0][1].body);
+      expect(body.reason).toBe('Customer request');
+    });
+
+    it('throws on API error', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({}),
+      });
+
+      await expect(mod.forceResetPassword('u1')).rejects.toThrow('Request failed');
+    });
+
+    it('throws when success is false', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: false, message: 'Cannot reset platform user' }),
+      });
+
+      await expect(mod.forceResetPassword('u1')).rejects.toThrow('Cannot reset platform user');
+    });
+
+    it('encodes userId in URL', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          temporaryPassword: 'TmpXXXX12341234',
+          user: { id: 'u-special', name: 'Test', email: null, phone: null, actorType: 'store' },
+          message: 'OK',
+        }),
+      });
+
+      await mod.forceResetPassword('u-special');
+      const url = authMock.fetchWithTimeout.mock.calls[0][0] as string;
+      expect(url).toContain('u-special');
+    });
+  });
 });
