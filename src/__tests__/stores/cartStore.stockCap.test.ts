@@ -78,16 +78,16 @@ describe('cartStore — real stock cap enforcement', () => {
       expect(result.capped).toBe(true);
     });
 
-    it('marks unknown stock when stock is undefined', () => {
+    it('allows add with unknown stock (undefined) — marks unknownStock', () => {
       const result = capAddQuantity(0, 5, undefined);
       expect(result.unknownStock).toBe(true);
-      expect(result.addedQty).toBe(0);
+      expect(result.addedQty).toBe(5);
     });
 
-    it('marks unknown stock when stock is null', () => {
+    it('allows add with unknown stock (null) — marks unknownStock', () => {
       const result = capAddQuantity(0, 5, null);
       expect(result.unknownStock).toBe(true);
-      expect(result.addedQty).toBe(0);
+      expect(result.addedQty).toBe(5);
     });
 
     it('handles NaN inputs gracefully', () => {

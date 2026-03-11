@@ -122,9 +122,13 @@ export async function getSuppliers(): Promise<Supplier[]> {
       address: [s.city, s.state].filter(Boolean).join(', ') || undefined,
       isActive: true, // All returned suppliers are active
     }));
-  } catch (error) {
+  } catch (error: any) {
+    // AUDIT-POS-FEATURES-001 §5.2: Re-throw auth errors so callers can redirect to login.
+    // Only swallow network/server errors to prevent crashes.
+    if (error?.status === 401 || error?.status === 403) {
+      throw error;
+    }
     console.error("[suppliersApi] getSuppliers failed:", error);
-    // Return empty array on error to prevent crashes
     return [];
   }
 }

@@ -45,10 +45,11 @@ function testAddCaps({ capAddQuantity }) {
   assert.strictEqual(addOutOfStock.outOfStock, true);
   assert.strictEqual(addOutOfStock.addedQty, 0);
 
+  // AUDIT-POS-FEATURES-001 §3.1: unknown stock now allows addition
   const addUnknownStock = capAddQuantity(1, 2, null);
-  assert.strictEqual(addUnknownStock.nextQty, 1);
+  assert.strictEqual(addUnknownStock.nextQty, 3);
   assert.strictEqual(addUnknownStock.unknownStock, true);
-  assert.strictEqual(addUnknownStock.addedQty, 0);
+  assert.strictEqual(addUnknownStock.addedQty, 2);
 
   let loopQty = 0;
   for (let i = 0; i < 20; i += 1) {

@@ -20,6 +20,7 @@ import {
   createSplitPayment,
   confirmSplitCash,
   getSplitPaymentStatus,
+  verifyUtr,
   SplitPaymentResponse,
 } from "../../services/api/posApi";
 import { theme } from "../../theme";
@@ -390,23 +391,58 @@ export function SplitPaymentModal({
   }, [saleId]);
 
   // POS-PAY-001: Manual UTR fallback when auto-polling fails
-  const handleManualUtrSubmit = useCallback(() => {
+  // AUDIT-POS-FEATURES-001 §4.2: MUST call verifyUtr() server-side before accepting
+  const [verifyingManualUtr, setVerifyingManualUtr] = useState(false);
+  const handleManualUtrSubmit = useCallback(async () => {
     const trimmedUtr = manualUtr.trim();
     if (trimmedUtr.length < 6) {
       Alert.alert("Invalid UTR", "Please enter a valid UPI Transaction Reference (at least 6 characters).");
       return;
     }
-    // Stop polling
+    // Stop polling while we verify
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
     setPollingActive(false);
-    setUpiCompleted(true);
-    setUpiVerified(true);
-    setStep("cash-collect");
-    console.log(`[SplitPayment] POS-PAY-001: Manual UTR entered: ${trimmedUtr}`);
-  }, [manualUtr]);
+    setVerifyingManualUtr(true);
+
+    try {
+      const upiMinor = splitResponse?.upiPayment
+        ? Math.round(parseFloat(upiAmount || "0") * 100)
+        : 0;
+      const result = await verifyUtr({
+        utr: trimmedUtr,
+        amountMinor: upiMinor,
+        paymentId: splitResponse?.upiPayment?.paymentId,
+      });
+
+      if (result.verified) {
+        setUpiCompleted(true);
+        setUpiVerified(true);
+        setStep("cash-collect");
+        console.log(`[SplitPayment] POS-PAY-001: UTR verified server-side: ${trimmedUtr}`);
+      } else {
+        Alert.alert(
+          "UTR Verification Failed",
+          result.errorMessage || "The UTR could not be verified. Please check and try again.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error: any) {
+      // Offline or server error — inform cashier, do NOT auto-accept
+      Alert.alert(
+        "Verification Error",
+        error?.message === "verification_offline_blocked"
+          ? "Cannot verify UTR while offline. Please check your connection."
+          : "Could not verify UTR. Please check the reference and try again.",
+        [{ text: "OK" }]
+      );
+      console.warn(`[SplitPayment] UTR verification failed:`, error);
+    } finally {
+      setVerifyingManualUtr(false);
+    }
+  }, [manualUtr, splitResponse, upiAmount]);
 
   // GL-RJ-001: Confirm cash payment and verify complete sale status
   const handleCashReceived = async () => {
@@ -656,11 +692,15 @@ export function SplitPaymentModal({
             autoCapitalize="characters"
           />
           <TouchableOpacity
-            style={[styles.proceedBtn, manualUtr.trim().length < 6 && styles.btnDisabled]}
+            style={[styles.proceedBtn, (manualUtr.trim().length < 6 || verifyingManualUtr) && styles.btnDisabled]}
             onPress={handleManualUtrSubmit}
-            disabled={manualUtr.trim().length < 6}
+            disabled={manualUtr.trim().length < 6 || verifyingManualUtr}
           >
-            <Text style={styles.proceedBtnText}>Submit UTR & Proceed</Text>
+            {verifyingManualUtr ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.proceedBtnText}>Verify UTR & Proceed</Text>
+            )}
           </TouchableOpacity>
         </View>
       )}
