@@ -1088,3 +1088,137 @@ retailerAdminInventoryRouter.get("/feature-flags", async (req: Request, res: Res
     data: { features },
   });
 });
+
+// =============================================================================
+// SA-P1-011: STOCK ADJUSTMENT AUDIT HISTORY
+// =============================================================================
+
+/**
+ * GET /api/v1/retailer-admin/store/stock-adjustments
+ * SA-P1-011: List stock adjustment history with filters
+ *
+ * Query params:
+ * - from: ISO date string (YYYY-MM-DD) — start of date range
+ * - to: ISO date string (YYYY-MM-DD) — end of date range
+ * - productId: filter by product UUID (optional)
+ * - reason: filter by adjustment_reason (optional)
+ * - page: page number (default 1)
+ * - limit: page size (default 50, max 200)
+ *
+ * Returns: { adjustments: [...], total, page, limit }
+ * Each adjustment: { id, productId, productName, oldQty, newQty, reason, adjustedBy, adjustedAt, deviceId }
+ */
+retailerAdminInventoryRouter.get("/store/stock-adjustments", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: "Store not identified" });
+  }
+
+  const { from, to, productId, reason, page = "1", limit = "50" } = req.query;
+
+  try {
+    let whereClause = "WHERE il.store_id = $1 AND il.transaction_type = 'adjustment'";
+    const params: unknown[] = [storeId];
+    let paramIndex = 2;
+
+    if (productId && typeof productId === "string") {
+      whereClause += ` AND il.product_id = $${paramIndex}::uuid`;
+      params.push(productId);
+      paramIndex++;
+    }
+
+    if (reason && typeof reason === "string") {
+      whereClause += ` AND il.adjustment_reason = $${paramIndex}`;
+      params.push(reason);
+      paramIndex++;
+    }
+
+    if (from && typeof from === "string") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+        return res.status(400).json({ error: "Invalid 'from' date format. Use YYYY-MM-DD." });
+      }
+      whereClause += ` AND il.created_at >= $${paramIndex}`;
+      params.push(new Date(from).toISOString());
+      paramIndex++;
+    }
+
+    if (to && typeof to === "string") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+        return res.status(400).json({ error: "Invalid 'to' date format. Use YYYY-MM-DD." });
+      }
+      whereClause += ` AND il.created_at <= $${paramIndex}`;
+      const endOfDay = new Date(to);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      params.push(endOfDay.toISOString());
+      paramIndex++;
+    }
+
+    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 200);
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+    const offsetNum = (pageNum - 1) * limitNum;
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM inventory.inventory_ledger il ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    // Get paginated adjustments with product details
+    const result = await pool.query(
+      `SELECT
+        il.id,
+        il.product_id as "productId",
+        COALESCE(sp.display_name, p.name, 'Unknown Product') as "productName",
+        il.stock_before as "oldQty",
+        il.stock_after as "newQty",
+        il.adjustment_reason as "reason",
+        il.source as "adjustedBy",
+        il.created_at as "adjustedAt",
+        il.notes,
+        il.reference_type as "referenceType"
+      FROM inventory.inventory_ledger il
+      LEFT JOIN catalog.store_products sp ON sp.store_id = il.store_id AND sp.product_id = il.product_id
+      LEFT JOIN catalog.products p ON p.id = il.product_id
+      ${whereClause}
+      ORDER BY il.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limitNum, offsetNum]
+    );
+
+    const adjustments = result.rows.map(row => ({
+      ...row,
+      oldQty: Number(row.oldQty) || 0,
+      newQty: Number(row.newQty) || 0,
+    }));
+
+    return res.json({
+      success: true,
+      adjustments,
+      total,
+      page: pageNum,
+      limit: limitNum,
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SA-P1-011] Stock adjustments error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        adjustments: [],
+        total: 0,
+        page: 1,
+        limit: 50,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to load stock adjustments" },
+    });
+  }
+});
