@@ -354,4 +354,128 @@ describe('StaffTab', () => {
     render(<StaffTab {...createProps({ staffStoreId: '' })} />);
     expect(screen.queryByText(/No staff members found/)).toBeNull();
   });
+
+  // ── Additional edge cases ─────────────────────────────────
+
+  it('does not show empty state when loading', () => {
+    render(<StaffTab {...createProps({ staffStoreId: 's1', staffLoading: true })} />);
+    expect(screen.queryByText(/No staff members found/)).toBeNull();
+  });
+
+  it('does not show empty state when error is present', () => {
+    render(<StaffTab {...createProps({ staffStoreId: 's1', staffError: 'Some error' })} />);
+    expect(screen.queryByText(/No staff members found/)).toBeNull();
+  });
+
+  it('calls setNewStaffPhone on phone input change (strips non-digits)', () => {
+    const setPhone = vi.fn();
+    render(<StaffTab {...createProps({ showAddStaff: true, setNewStaffPhone: setPhone })} />);
+    fireEvent.change(screen.getByPlaceholderText('9876543210'), { target: { value: '9876543210' } });
+    expect(setPhone).toHaveBeenCalledWith('9876543210');
+  });
+
+  it('calls setNewStaffPin on PIN input change', () => {
+    const setPin = vi.fn();
+    render(<StaffTab {...createProps({ showAddStaff: true, setNewStaffPin: setPin })} />);
+    fireEvent.change(screen.getByPlaceholderText('1234'), { target: { value: '5678' } });
+    expect(setPin).toHaveBeenCalledWith('5678');
+  });
+
+  it('calls setNewStaffRole on role select change', () => {
+    const setRole = vi.fn();
+    render(<StaffTab {...createProps({ showAddStaff: true, setNewStaffRole: setRole })} />);
+    fireEvent.change(screen.getByLabelText('Staff role'), { target: { value: 'MANAGER' } });
+    expect(setRole).toHaveBeenCalledWith('MANAGER');
+  });
+
+  it('disables Add Staff button when name is empty', () => {
+    render(<StaffTab {...createProps({ showAddStaff: true, newStaffName: '', newStaffPhone: '1234567890', newStaffPin: '1234', newStaffRole: 'CASHIER' })} />);
+    expect((screen.getByText('Add Staff') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('disables Add Staff button when phone is empty', () => {
+    render(<StaffTab {...createProps({ showAddStaff: true, newStaffName: 'Test', newStaffPhone: '', newStaffPin: '1234', newStaffRole: 'CASHIER' })} />);
+    expect((screen.getByText('Add Staff') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('disables Add Staff button when PIN is empty', () => {
+    render(<StaffTab {...createProps({ showAddStaff: true, newStaffName: 'Test', newStaffPhone: '1234567890', newStaffPin: '', newStaffRole: 'CASHIER' })} />);
+    expect((screen.getByText('Add Staff') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('renders Cancel button that clears form fields', () => {
+    const setName = vi.fn();
+    const setPhone = vi.fn();
+    const setPin = vi.fn();
+    const setRole = vi.fn();
+    render(<StaffTab {...createProps({ showAddStaff: true, setShowAddStaff: vi.fn(), setNewStaffName: setName, setNewStaffPhone: setPhone, setNewStaffPin: setPin, setNewStaffRole: setRole })} />);
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(setName).toHaveBeenCalledWith('');
+    expect(setPhone).toHaveBeenCalledWith('');
+    expect(setPin).toHaveBeenCalledWith('');
+    expect(setRole).toHaveBeenCalledWith('CASHIER');
+  });
+
+  it('shows Inactive badge for inactive staff', () => {
+    const staff = [makeStaff({ is_active: false })];
+    render(<StaffTab {...createProps({ staffList: staff as any })} />);
+    expect(screen.getByText('Inactive')).toBeTruthy();
+  });
+
+  it('shows 0 for sales and stock-in counts when zero', () => {
+    const staff = [makeStaff({ sales_count: 0, stock_in_count: 0 })];
+    render(<StaffTab {...createProps({ staffList: staff as any })} />);
+    const zeros = screen.getAllByText('0');
+    expect(zeros.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('disables Save PIN button when PIN is too short', () => {
+    const staff = [makeStaff()];
+    render(<StaffTab {...createProps({ staffList: staff as any, resetPinStaffId: 'staff-1', resetPinValue: '12' })} />);
+    expect((screen.getByText('Save') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('enables Save PIN button when PIN has 4+ digits', () => {
+    const staff = [makeStaff()];
+    render(<StaffTab {...createProps({ staffList: staff as any, resetPinStaffId: 'staff-1', resetPinValue: '1234' })} />);
+    expect((screen.getByText('Save') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('calls setResetPinStaffId(null) on Cancel in PIN reset', () => {
+    const setResetId = vi.fn();
+    const staff = [makeStaff()];
+    render(<StaffTab {...createProps({ staffList: staff as any, resetPinStaffId: 'staff-1', resetPinValue: '', setResetPinStaffId: setResetId })} />);
+    // There are two Cancel buttons if add form is also shown, find the one inside the PIN section
+    const cancelButtons = screen.getAllByText('Cancel');
+    fireEvent.click(cancelButtons[cancelButtons.length - 1]);
+    expect(setResetId).toHaveBeenCalledWith(null);
+  });
+
+  it('calls setResetPinValue on PIN input change', () => {
+    const setValue = vi.fn();
+    const staff = [makeStaff()];
+    render(<StaffTab {...createProps({ staffList: staff as any, resetPinStaffId: 'staff-1', resetPinValue: '', setResetPinValue: setValue })} />);
+    fireEvent.change(screen.getByPlaceholderText('New PIN'), { target: { value: '9999' } });
+    expect(setValue).toHaveBeenCalledWith('9999');
+  });
+
+  it('shows ConfirmDialog when role is changed', () => {
+    const staff = [makeStaff({ id: 'staff-1', name: 'Alice', role: 'CASHIER' })];
+    render(<StaffTab {...createProps({ staffList: staff as any })} />);
+    const roleSelects = screen.getAllByDisplayValue('CASHIER');
+    fireEvent.change(roleSelects[0], { target: { value: 'STOCK_MANAGER' } });
+    expect(screen.getByText('Change Staff Role')).toBeTruthy();
+    expect(screen.getByText(/Change Alice's role from CASHIER to STOCK_MANAGER/)).toBeTruthy();
+  });
+
+  it('does not show table when staff list is empty', () => {
+    render(<StaffTab {...createProps({ staffList: [] })} />);
+    expect(screen.queryByText('Name')).toBeNull();
+  });
+
+  it('renders accessible role dropdown for each staff', () => {
+    const staff = [makeStaff({ name: 'Bob' })];
+    render(<StaffTab {...createProps({ staffList: staff as any })} />);
+    expect(screen.getByLabelText('Role for Bob')).toBeTruthy();
+  });
 });

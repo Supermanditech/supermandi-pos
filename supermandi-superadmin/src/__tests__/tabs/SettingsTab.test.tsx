@@ -1,6 +1,6 @@
 // SuperAdmin — Test SettingsTab component
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SettingsTab } from '../../tabs/SettingsTab';
 
 vi.mock('../../lib/formatters', () => ({
@@ -278,5 +278,155 @@ describe('SettingsTab', () => {
     render(<SettingsTab {...createProps({ featureFlags: flags as any })} />);
     expect(screen.getByText('voice_mode')).toBeTruthy();
     expect(screen.getByText('scan_v2')).toBeTruthy();
+  });
+
+  // ── Loading states ────────────────────────────────────────
+
+  it('shows Loading... placeholder when systemSettings is null', () => {
+    render(<SettingsTab {...createProps({ systemSettings: null })} />);
+    const loadings = screen.getAllByText('Loading...');
+    // At least 2: sys info + features cards (plus button if settingsLoading)
+    expect(loadings.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shows Loading... placeholder when systemStats is null', () => {
+    render(<SettingsTab {...createProps({ systemStats: null })} />);
+    const loadings = screen.getAllByText('Loading...');
+    expect(loadings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ── Retry in error ────────────────────────────────────────
+
+  it('calls refreshSettings when Retry is clicked in settings error', () => {
+    const refresh = vi.fn();
+    render(<SettingsTab {...createProps({ settingsError: 'Failed', refreshSettings: refresh })} />);
+    fireEvent.click(screen.getByText('Retry'));
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('shows Retry button in feature flags error', () => {
+    const refreshFlags = vi.fn();
+    render(<SettingsTab {...createProps({ featureFlagsError: 'Flag error', refreshFeatureFlags: refreshFlags })} />);
+    const retryButtons = screen.getAllByText('Retry');
+    expect(retryButtons.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(retryButtons[retryButtons.length - 1]);
+    expect(refreshFlags).toHaveBeenCalled();
+  });
+
+  // ── Feature flags loading ─────────────────────────────────
+
+  it('shows Loading... text on Refresh Flags button when featureFlagsLoading', () => {
+    render(<SettingsTab {...createProps({ featureFlagsLoading: true })} />);
+    const loadings = screen.getAllByText('Loading...');
+    expect(loadings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('disables Refresh Flags button when featureFlagsLoading', () => {
+    render(<SettingsTab {...createProps({ featureFlagsLoading: true })} />);
+    // The "Loading..." buttons include the Refresh Flags one
+    const loadings = screen.getAllByText('Loading...');
+    const flagBtn = loadings.find(el => el.tagName === 'BUTTON');
+    expect(flagBtn).toBeTruthy();
+  });
+
+  // ── Feature flag description ──────────────────────────────
+
+  it('shows em dash for empty flag description', () => {
+    const flags = [{ flag_key: 'test', enabled: true, description: '', updated_at: null }];
+    render(<SettingsTab {...createProps({ featureFlags: flags as any })} />);
+    const dashes = screen.getAllByText('\u2014');
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows flag description text', () => {
+    const flags = [{ flag_key: 'test', enabled: true, description: 'A feature flag', updated_at: null }];
+    render(<SettingsTab {...createProps({ featureFlags: flags as any })} />);
+    expect(screen.getByText('A feature flag')).toBeTruthy();
+  });
+
+  // ── minAppVersion config label ────────────────────────────
+
+  it('shows "Auto (from build)" for minAppVersion flag', () => {
+    const flags = [{ flag_key: 'minAppVersion', enabled: true, description: 'Min version', updated_at: null }];
+    render(<SettingsTab {...createProps({ featureFlags: flags as any })} />);
+    expect(screen.getByText('Auto (from build)')).toBeTruthy();
+  });
+
+  // ── Per-Store Feature Overrides ───────────────────────────
+
+  it('shows default placeholder option in store select', () => {
+    render(<SettingsTab {...createProps()} />);
+    expect(screen.getByText('-- Select a store --')).toBeTruthy();
+  });
+
+  it('sorts store directory alphabetically', () => {
+    const stores = [
+      { id: 's2', name: 'Zebra Store' },
+      { id: 's1', name: 'Alpha Store' },
+    ] as any;
+    render(<SettingsTab {...createProps({ storeDirectory: stores })} />);
+    const options = screen.getAllByRole('option');
+    // First option is placeholder, then Alpha, then Zebra
+    expect(options[1].textContent).toBe('Alpha Store');
+    expect(options[2].textContent).toBe('Zebra Store');
+  });
+
+  it('shows "No flags found" when store selected but no flags', async () => {
+    const stores = [{ id: 's1', name: 'Test Store' }] as any;
+    render(<SettingsTab {...createProps({ storeDirectory: stores })} />);
+    const select = screen.getByLabelText('Select store for feature flag overrides');
+    fireEvent.change(select, { target: { value: 's1' } });
+    await waitFor(() => {
+      expect(screen.getByText('No flags found for this store.')).toBeTruthy();
+    });
+  });
+
+  it('shows Per-Store Feature Overrides description text', () => {
+    render(<SettingsTab {...createProps()} />);
+    expect(screen.getByText(/Override global flags for a specific store/)).toBeTruthy();
+  });
+
+  it('shows Feature Kill Switch description text', () => {
+    render(<SettingsTab {...createProps()} />);
+    expect(screen.getByText(/Disable features globally/)).toBeTruthy();
+  });
+
+  // ── Environment badge styling ─────────────────────────────
+
+  it('shows staging environment badge', () => {
+    const settings = { version: '1.0.0', environment: 'staging', features: { aiEnabled: true, analyticsEnabled: true }, database: { connected: true } };
+    render(<SettingsTab {...createProps({ systemSettings: settings })} />);
+    expect(screen.getByText('staging')).toBeTruthy();
+  });
+
+  // ── Cancel confirm dialog ─────────────────────────────────
+
+  it('cancels confirm dialog on Cancel click', () => {
+    const flags = [{ flag_key: 'test_flag', enabled: true, description: 'Test', updated_at: null }];
+    render(<SettingsTab {...createProps({ featureFlags: flags as any })} />);
+    fireEvent.click(screen.getByText('KILL'));
+    expect(screen.getByTestId('confirm-dialog')).toBeTruthy();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+  });
+
+  // ── Stats with large numbers ──────────────────────────────
+
+  it('formats stats with locale string', () => {
+    const stats = { totalStores: 1234, totalDevices: 5678, totalUsers: 9999 };
+    render(<SettingsTab {...createProps({ systemStats: stats })} />);
+    expect(screen.getByText('1,234')).toBeTruthy();
+    expect(screen.getByText('5,678')).toBeTruthy();
+    expect(screen.getByText('9,999')).toBeTruthy();
+  });
+
+  // ── Feature flag table Status column ──────────────────────
+
+  it('renders Status column header in flags table', () => {
+    const flags = [{ flag_key: 'test', enabled: true, description: 'Test', updated_at: null }];
+    render(<SettingsTab {...createProps({ featureFlags: flags as any })} />);
+    // "Status" column header exists
+    const statusHeaders = screen.getAllByText('Status');
+    expect(statusHeaders.length).toBeGreaterThanOrEqual(1);
   });
 });

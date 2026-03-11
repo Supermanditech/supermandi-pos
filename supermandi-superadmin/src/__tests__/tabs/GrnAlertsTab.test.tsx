@@ -334,4 +334,83 @@ describe('GrnAlertsTab', () => {
     fireEvent.click(screen.getByText('Previous'));
     expect(setOffset).toHaveBeenCalledWith(0);
   });
+
+  // ── Filter edge cases ─────────────────────────────────────
+
+  it('calls setGrnAlertsFilter with DISMISSED value', () => {
+    const setFilter = vi.fn();
+    render(<GrnAlertsTab {...createProps({ setGrnAlertsFilter: setFilter })} />);
+    fireEvent.change(screen.getByDisplayValue('All Statuses'), { target: { value: 'DISMISSED' } });
+    expect(setFilter).toHaveBeenCalledWith('DISMISSED');
+  });
+
+  it('renders filter with aria-label', () => {
+    render(<GrnAlertsTab {...createProps()} />);
+    expect(screen.getByLabelText('Filter by alert status')).toBeTruthy();
+  });
+
+  // ── Table fallback values ─────────────────────────────────
+
+  it('falls back to po_id slice when order_number is empty', () => {
+    const alerts = [makeAlert({ order_number: '', purchase_order_id: 'po-abcdefgh' })];
+    render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1 })} />);
+    expect(screen.getByText('po-abcde')).toBeTruthy();
+  });
+
+  it('renders dash when both store_name and store_id are empty', () => {
+    const alerts = [makeAlert({ store_name: '', store_id: '' })];
+    render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1 })} />);
+    const dashes = screen.getAllByText('-');
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not show empty state when loading', () => {
+    render(<GrnAlertsTab {...createProps({ grnAlertsLoading: true })} />);
+    expect(screen.queryByText('No GRN excess alerts found.')).toBeNull();
+  });
+
+  it('does not show empty state when error is present', () => {
+    render(<GrnAlertsTab {...createProps({ grnAlertsError: 'some error' })} />);
+    expect(screen.queryByText('No GRN excess alerts found.')).toBeNull();
+  });
+
+  // ── Status badge classes ──────────────────────────────────
+
+  it('renders ACKNOWLEDGED status badge', () => {
+    const alerts = [makeAlert({ status: 'ACKNOWLEDGED', acknowledged_at: '2026-01-02' })];
+    render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1 })} />);
+    expect(screen.getByText('ACKNOWLEDGED')).toBeTruthy();
+  });
+
+  it('renders DISMISSED status badge', () => {
+    const alerts = [makeAlert({ status: 'DISMISSED', acknowledged_at: null })];
+    render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1 })} />);
+    expect(screen.getByText('DISMISSED')).toBeTruthy();
+  });
+
+  // ── Pagination range text ─────────────────────────────────
+
+  it('shows correct range text on page 2', () => {
+    render(<GrnAlertsTab {...createProps({ grnAlertsTotal: 120, grnAlertsOffset: 50 })} />);
+    expect(screen.getByText('51–100 of 120')).toBeTruthy();
+  });
+
+  it('enables Next on first page of multi-page dataset', () => {
+    render(<GrnAlertsTab {...createProps({ grnAlertsTotal: 100, grnAlertsOffset: 0 })} />);
+    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  // ── Percent column ────────────────────────────────────────
+
+  it('renders % column header', () => {
+    const alerts = [makeAlert()];
+    render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1 })} />);
+    expect(screen.getByText('%')).toBeTruthy();
+  });
+
+  it('renders excess percentage value', () => {
+    const alerts = [makeAlert({ excess_pct: 75 })];
+    render(<GrnAlertsTab {...createProps({ grnAlerts: alerts, grnAlertsTotal: 1 })} />);
+    expect(screen.getByText('75%')).toBeTruthy();
+  });
 });

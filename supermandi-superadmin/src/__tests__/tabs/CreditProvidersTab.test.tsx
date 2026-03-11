@@ -350,4 +350,75 @@ describe('CreditProvidersTab', () => {
       expect(screen.getByText(/5000ms/)).toBeInTheDocument();
     });
   });
+
+  // ── Confirm dialog content ──────────────────────────────────
+
+  it('shows disable warning message in confirm dialog', async () => {
+    render(<CreditProvidersTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Disable')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Disable'));
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+      expect(screen.getByText(/stop all new credit applications/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows enable encouragement message in confirm dialog', async () => {
+    render(<CreditProvidersTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Enable')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Enable'));
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+      expect(screen.getByText(/allow new credit applications/)).toBeInTheDocument();
+    });
+  });
+
+  it('confirm dialog shows correct provider name for disable', async () => {
+    render(<CreditProvidersTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Disable')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Disable'));
+    await waitFor(() => {
+      // FinCo appears in both table and dialog message
+      expect(screen.getByText(/Disable "FinCo"\?/)).toBeInTheDocument();
+    });
+  });
+
+  // ── Fallback error message ─────────────────────────────────
+
+  it('shows fallback error for non-Error exceptions', async () => {
+    mockFetchWithTimeout.mockReset();
+    mockFetchWithTimeout.mockRejectedValue('string error');
+    render(<CreditProvidersTab />);
+    await waitFor(() => {
+      // Promise.allSettled catches rejections; reason is string so reason?.message is undefined
+      // -> throws new Error('Partial load failure') -> caught by outer catch -> err.message = 'Partial load failure'
+      expect(screen.getByText('Partial load failure')).toBeInTheDocument();
+    });
+  });
+
+  // ── Provider ID shown under name ───────────────────────────
+
+  it('renders provider IDs under provider names', async () => {
+    render(<CreditProvidersTab />);
+    await waitFor(() => {
+      expect(screen.getAllByText('prov-a').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('prov-b').length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ── Per-provider stats table headers ───────────────────────
+
+  it('renders full per-provider stats table headers', async () => {
+    render(<CreditProvidersTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Total')).toBeInTheDocument();
+      expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

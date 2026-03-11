@@ -1,6 +1,6 @@
 // SuperAdmin — Test PaymentsTab component
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { PaymentsTab } from '../../tabs/PaymentsTab';
 import type { PosEvent } from '../../api/posEvents';
 
@@ -184,5 +184,66 @@ describe('PaymentsTab', () => {
     render(<PaymentsTab paymentEvents={events} />);
     expect(screen.queryByText(/Page/)).toBeNull();
     expect(screen.getByText('d1')).toBeTruthy();
+  });
+
+  // ── Pagination Navigation ─────────────────────────────────────
+
+  it('navigates to next page on → click', () => {
+    const events = Array.from({ length: 60 }, (_, i) => makePaymentEvent({ id: `p-${i}`, deviceId: `dev-${i}` }));
+    render(<PaymentsTab paymentEvents={events} />);
+    expect(screen.getByText(/Page 1/)).toBeTruthy();
+    fireEvent.click(screen.getByText('→'));
+    expect(screen.getByText(/Page 2/)).toBeTruthy();
+  });
+
+  it('navigates back on ← click after going to page 2', () => {
+    const events = Array.from({ length: 60 }, (_, i) => makePaymentEvent({ id: `p-${i}` }));
+    render(<PaymentsTab paymentEvents={events} />);
+    fireEvent.click(screen.getByText('→'));
+    expect(screen.getByText(/Page 2/)).toBeTruthy();
+    fireEvent.click(screen.getByText('←'));
+    expect(screen.getByText(/Page 1/)).toBeTruthy();
+  });
+
+  it('disables → on last page', () => {
+    const events = Array.from({ length: 60 }, (_, i) => makePaymentEvent({ id: `p-${i}` }));
+    render(<PaymentsTab paymentEvents={events} />);
+    fireEvent.click(screen.getByText('→'));
+    expect(screen.getByText('→')).toHaveProperty('disabled', true);
+  });
+
+  // ── Truncation Warning ────────────────────────────────────────
+
+  it('shows truncation warning when totalEventCount >= fetchLimit', () => {
+    const events = [makePaymentEvent()];
+    render(<PaymentsTab paymentEvents={events} totalEventCount={1000} fetchLimit={1000} />);
+    expect(screen.getByText(/Some events may not be displayed/)).toBeTruthy();
+  });
+
+  it('does not show truncation warning when totalEventCount < fetchLimit', () => {
+    const events = [makePaymentEvent()];
+    render(<PaymentsTab paymentEvents={events} totalEventCount={500} fetchLimit={1000} />);
+    expect(screen.queryByText(/Some events may not be displayed/)).toBeNull();
+  });
+
+  it('does not show truncation warning when props not provided', () => {
+    const events = [makePaymentEvent()];
+    render(<PaymentsTab paymentEvents={events} />);
+    expect(screen.queryByText(/Some events may not be displayed/)).toBeNull();
+  });
+
+  // ── Exactly page size events ──────────────────────────────────
+
+  it('does not show pagination for exactly 50 events', () => {
+    const events = Array.from({ length: 50 }, (_, i) => makePaymentEvent({ id: `p-${i}` }));
+    render(<PaymentsTab paymentEvents={events} />);
+    expect(screen.queryByText(/Page/)).toBeNull();
+  });
+
+  it('shows pagination for 51 events', () => {
+    const events = Array.from({ length: 51 }, (_, i) => makePaymentEvent({ id: `p-${i}` }));
+    render(<PaymentsTab paymentEvents={events} />);
+    expect(screen.getByText(/Page 1 \/ 2/)).toBeTruthy();
+    expect(screen.getByText(/51 total/)).toBeTruthy();
   });
 });

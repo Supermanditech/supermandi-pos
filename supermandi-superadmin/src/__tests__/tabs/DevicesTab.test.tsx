@@ -358,4 +358,154 @@ describe('DevicesTab', () => {
     })} />);
     expect(screen.getByText('Prev')).toHaveProperty('disabled', true);
   });
+
+  it('enables Next when more pages exist', () => {
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [makeDeviceRecord()],
+      devicePage: 0,
+      deviceTotal: 100,
+    })} />);
+    expect(screen.getByText('Next')).toHaveProperty('disabled', false);
+  });
+
+  it('disables Next on last page', () => {
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [makeDeviceRecord()],
+      devicePage: 0,
+      deviceTotal: 50,
+    })} />);
+    expect(screen.getByText('Next')).toHaveProperty('disabled', true);
+  });
+
+  it('calls setDevicePage and refreshDevices on Next click', () => {
+    const setDevicePage = vi.fn();
+    const refreshDevices = vi.fn();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [makeDeviceRecord()],
+      devicePage: 0,
+      deviceTotal: 100,
+      setDevicePage,
+      refreshDevices,
+    })} />);
+    fireEvent.click(screen.getByText('Next'));
+    expect(setDevicePage).toHaveBeenCalledWith(1);
+    expect(refreshDevices).toHaveBeenCalledWith(1);
+  });
+
+  it('shows Loading text on pagination buttons when devicesLoading', () => {
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [makeDeviceRecord()],
+      deviceTotal: 100,
+      devicesLoading: true,
+    })} />);
+    const loadingButtons = screen.getAllByText('Loading…');
+    expect(loadingButtons.length).toBe(2);
+  });
+
+  // ── Store Dropdown ────────────────────────────────────────
+
+  it('calls setEnrollStoreId on store dropdown change', () => {
+    const setEnrollStoreId = vi.fn();
+    const stores = [{ id: 's1', name: 'Store A' }];
+    render(<DevicesTab {...createProps({ storeDirectory: stores, setEnrollStoreId })} />);
+    const select = screen.getByLabelText('Select store for enrollment');
+    fireEvent.change(select, { target: { value: 's1' } });
+    expect(setEnrollStoreId).toHaveBeenCalledWith('s1');
+  });
+
+  it('falls back to store ID when name and storeName are null', () => {
+    const stores = [{ id: 's-fallback-id', name: null, storeName: null }];
+    render(<DevicesTab {...createProps({ storeDirectory: stores })} />);
+    expect(screen.getByText('s-fallback-id')).toBeTruthy();
+  });
+
+  // ── Device Draft Updates ──────────────────────────────────
+
+  it('calls updateDeviceDraft on label input change', () => {
+    const updateDeviceDraft = vi.fn();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [makeDeviceRecord()], updateDeviceDraft })} />);
+    fireEvent.change(screen.getByPlaceholderText('Device label'), { target: { value: 'New Label' } });
+    expect(updateDeviceDraft).toHaveBeenCalledWith('dev-001', { label: 'New Label' });
+  });
+
+  it('calls updateDeviceDraft on V2 Scan toggle', () => {
+    const updateDeviceDraft = vi.fn();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [makeDeviceRecord()], updateDeviceDraft })} />);
+    const checkbox = screen.getByTitle('Enable V2 Scan Lookup (faster barcode resolution)').querySelector('input[type="checkbox"]');
+    expect(checkbox).toBeTruthy();
+    fireEvent.click(checkbox!);
+    expect(updateDeviceDraft).toHaveBeenCalledWith('dev-001', expect.objectContaining({ scanLookupV2Enabled: true }));
+  });
+
+  // ── Confirm Dialog: Deactivation ─────────────────────────
+
+  it('shows confirm dialog when deactivating device', () => {
+    const device = makeDeviceRecord({ active: true });
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      deviceEdits: { 'dev-001': { label: 'Counter 1', deviceType: 'RETAILER_PHONE' as any, printingMode: 'NONE', scanLookupV2Enabled: false, active: false } },
+    })} />);
+    fireEvent.click(screen.getByText('Save'));
+    expect(screen.getByText('Confirm Device Deactivation')).toBeTruthy();
+  });
+
+  it('does not show confirm dialog when saving without deactivation', () => {
+    const handler = vi.fn();
+    const device = makeDeviceRecord({ active: true });
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      deviceEdits: { 'dev-001': { label: 'Updated', deviceType: 'RETAILER_PHONE' as any, printingMode: 'NONE', scanLookupV2Enabled: false, active: true } },
+      requestDeviceSave: handler,
+    })} />);
+    fireEvent.click(screen.getByText('Save'));
+    expect(handler).toHaveBeenCalledWith('dev-001');
+    expect(screen.queryByText('Confirm Device Deactivation')).toBeNull();
+  });
+
+  // ── Confirm Dialog: Regenerate QR ─────────────────────────
+
+  it('shows confirm dialog on Regenerate QR click', () => {
+    const enrollment = { code: 'ABC', expiresAt: '2026-02-17T00:00:00Z', qrPayload: 'data' };
+    render(<DevicesTab {...createProps({ enrollment })} />);
+    fireEvent.click(screen.getByText('Regenerate QR'));
+    expect(screen.getByText('Regenerate QR Code')).toBeTruthy();
+    expect(screen.getByText(/invalidate the current enrollment code/)).toBeTruthy();
+  });
+
+  // ── Device Metadata Edge Cases ────────────────────────────
+
+  it('shows "-" for missing last_seen_online', () => {
+    const device = makeDeviceRecord({ last_seen_online: null });
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    const dashes = screen.getAllByText('-');
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows "Not Activated" when store_name and store_id are empty', () => {
+    const device = makeDeviceRecord({ store_name: null, store_id: '' });
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    expect(screen.getByText('Not Activated')).toBeTruthy();
+  });
+
+  it('renders device status message', () => {
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [makeDeviceRecord()] })} />);
+    expect(screen.getByText('All good. Device is online and ready.')).toBeTruthy();
+  });
+
+  it('renders pending sync count badge', () => {
+    const device = makeDeviceRecord({ pending_outbox_count: 5 });
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    expect(screen.getByText('Sync 5')).toBeTruthy();
+  });
+
+  it('shows printing mode label for device', () => {
+    const device = makeDeviceRecord({ printing_mode: 'DIRECT_ESC_POS' });
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    expect(screen.getAllByText('Direct ESC/POS').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows device activity limit info', () => {
+    render(<DevicesTab {...createProps({ limit: 200 })} />);
+    expect(screen.getByText(/Unique devices in last 200 events/)).toBeTruthy();
+  });
 });

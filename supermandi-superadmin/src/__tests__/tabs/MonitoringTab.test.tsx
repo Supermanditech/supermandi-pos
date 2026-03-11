@@ -499,4 +499,227 @@ describe('MonitoringTab', () => {
       expect(screen.getByText('Cloudflare DNS')).toBeInTheDocument();
     });
   });
+
+  // ── Additional Coverage ─────────────────────────────────
+
+  describe('header section', () => {
+    it('renders System Monitoring heading', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('System Monitoring')).toBeInTheDocument();
+      });
+    });
+
+    it('renders subtitle description', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText(/Cloud Run services health, GCP alert policies/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('error state rendering', () => {
+    it('renders error with role=alert', async () => {
+      mockFetchHealthStatus.mockRejectedValue(new Error('Server down'));
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+      });
+    });
+
+    it('shows generic error for non-Error rejects', async () => {
+      mockFetchHealthStatus.mockRejectedValue('unknown');
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('Failed to fetch health status')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('health check edge cases', () => {
+    it('shows health check without latency when latencyMs is undefined', async () => {
+      const noLatencyHealth: HealthResponse = {
+        ...mockHealthData,
+        checks: {
+          database: { status: 'healthy' },
+        },
+      };
+      mockFetchHealthStatus.mockResolvedValue(noLatencyHealth);
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('database')).toBeInTheDocument();
+      });
+      // Should not show any latency text for this check
+      expect(screen.queryByText(/Latency:/)).not.toBeInTheDocument();
+    });
+
+    it('handles warning status check', async () => {
+      const warningHealth: HealthResponse = {
+        ...mockHealthData,
+        checks: {
+          redis: { status: 'warning', latencyMs: 500, details: 'High latency' },
+        },
+      };
+      mockFetchHealthStatus.mockResolvedValue(warningHealth);
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('redis')).toBeInTheDocument();
+        expect(screen.getByText('warning')).toBeInTheDocument();
+        expect(screen.getByText('High latency')).toBeInTheDocument();
+      });
+    });
+
+    it('handles unhealthy status', async () => {
+      const unhealthyHealth: HealthResponse = {
+        ...mockHealthData,
+        status: 'unhealthy',
+        checks: {
+          database: { status: 'unhealthy', latencyMs: 5000 },
+        },
+      };
+      mockFetchHealthStatus.mockResolvedValue(unhealthyHealth);
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        const unhealthyTexts = screen.getAllByText('unhealthy');
+        expect(unhealthyTexts.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+  });
+
+  describe('uptime formatting', () => {
+    it('formats uptime with hours only (no days)', async () => {
+      const hourHealth: HealthResponse = { ...mockHealthData, uptime: 7200 }; // 2 hours
+      mockFetchHealthStatus.mockResolvedValue(hourHealth);
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('2h 0m')).toBeInTheDocument();
+      });
+    });
+
+    it('formats uptime with minutes only', async () => {
+      const minHealth: HealthResponse = { ...mockHealthData, uptime: 300 }; // 5 minutes
+      mockFetchHealthStatus.mockResolvedValue(minHealth);
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('5m')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('version display', () => {
+    it('shows dash when version is undefined', async () => {
+      const noVersionHealth: HealthResponse = { ...mockHealthData, version: undefined as unknown as string };
+      mockFetchHealthStatus.mockResolvedValue(noVersionHealth);
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('\u2014')).toBeInTheDocument(); // em dash
+      });
+    });
+
+    it('truncates long version to 7 chars', async () => {
+      const longVersion: HealthResponse = { ...mockHealthData, version: 'abc1234defgh5678' };
+      mockFetchHealthStatus.mockResolvedValue(longVersion);
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('abc1234')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('confirm dialog for cleanup', () => {
+    it('opens confirm dialog on cleanup click', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('Cleanup Stale Tokens')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Cleanup Stale Tokens'));
+      await waitFor(() => {
+        expect(screen.getByText('Clean Up Expired Tokens')).toBeInTheDocument();
+        expect(screen.getByText(/deactivate tokens unused for 90/)).toBeInTheDocument();
+      });
+    });
+
+    it('cancels confirm dialog', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('Cleanup Stale Tokens')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Cleanup Stale Tokens'));
+      await waitFor(() => {
+        expect(screen.getByText('Run Cleanup')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Cancel'));
+      // Dialog should close
+      expect(screen.queryByText('Run Cleanup')).not.toBeInTheDocument();
+    });
+
+    it('shows generic cleanup error for non-Error rejects', async () => {
+      mockTriggerTokenCleanup.mockRejectedValue('unknown error');
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('Cleanup Stale Tokens')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Cleanup Stale Tokens'));
+      await waitFor(() => {
+        expect(screen.getByText('Run Cleanup')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Run Cleanup'));
+      await waitFor(() => {
+        expect(screen.getByText('Token cleanup failed')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('services table details', () => {
+    it('displays service ports', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('3000')).toBeInTheDocument();
+        expect(screen.getByText('3010')).toBeInTheDocument();
+      });
+    });
+
+    it('displays all service URLs as .run.app', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('retailer-admin.run.app')).toBeInTheDocument();
+        expect(screen.getByText('supplier-portal.run.app')).toBeInTheDocument();
+        expect(screen.getByText('superadmin.run.app')).toBeInTheDocument();
+        expect(screen.getByText('landing.run.app')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('alert policies details', () => {
+    it('displays trigger conditions', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('p95 > 2s')).toBeInTheDocument();
+        expect(screen.getByText('> 5% of requests')).toBeInTheDocument();
+        const gt80 = screen.getAllByText('> 80%');
+        expect(gt80.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('displays service scopes', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        const allServicesEntries = screen.getAllByText('All services');
+        expect(allServicesEntries.length).toBeGreaterThanOrEqual(4);
+        const dbEntries = screen.getAllByText('Database');
+        expect(dbEntries.length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('Cache')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('load balancer info', () => {
+    it('displays load balancer name', async () => {
+      render(<MonitoringTab />);
+      await waitFor(() => {
+        expect(screen.getByText('supermandi-staging-lb')).toBeInTheDocument();
+        expect(screen.getByText('Global HTTPS + SSL cert')).toBeInTheDocument();
+      });
+    });
+  });
 });

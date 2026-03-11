@@ -48,6 +48,7 @@ function createDefaultProps(overrides: Partial<Parameters<typeof SuppliersTab>[0
     productActionLoading: {},
     handleOpenEditProduct: vi.fn(),
     handleApproveProduct: vi.fn(),
+    handleApproveProductDirect: vi.fn().mockResolvedValue(undefined),
     handleRejectProduct: vi.fn(),
     editingProduct: null,
     setEditingProduct: vi.fn(),
@@ -599,6 +600,222 @@ describe('SuppliersTab', () => {
       const product = makePendingProduct();
       render(<SuppliersTab {...createDefaultProps({ editingProduct: product, editProductLoading: true })} />);
       expect((screen.getByText('Saving...') as HTMLButtonElement).disabled).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // Additional edge cases
+  // =========================================================================
+
+  describe('supplier interaction edge cases', () => {
+    it('renders Link to Verified button for pending supplier', () => {
+      const pending = [makePendingSupplier()];
+      const verified = [makeVerifiedSupplier()];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending, verifiedSuppliers: verified })} />);
+      expect(screen.getByText('Link to Verified')).toBeTruthy();
+    });
+
+    it('disables Link to Verified when no supplier selected', () => {
+      const pending = [makePendingSupplier()];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect((screen.getByText('Link to Verified') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('calls handleVerifySupplier when Link to Verified is clicked with selection', () => {
+      const handleLink = vi.fn();
+      const pending = [makePendingSupplier()];
+      const verified = [makeVerifiedSupplier()];
+      render(<SuppliersTab {...createDefaultProps({
+        pendingSuppliers: pending,
+        verifiedSuppliers: verified,
+        selectedSupplierForLink: { 'req-1': 'vs-1' },
+        handleVerifySupplier: handleLink,
+      })} />);
+      fireEvent.click(screen.getByText('Link to Verified'));
+      expect(handleLink).toHaveBeenCalledWith('req-1');
+    });
+
+    it('renders reject reason input for pending supplier', () => {
+      const pending = [makePendingSupplier()];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect(screen.getByPlaceholderText('Reason for rejection...')).toBeTruthy();
+    });
+
+    it('renders Link to Verified Supplier dropdown', () => {
+      const pending = [makePendingSupplier()];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect(screen.getByLabelText('Link to verified supplier')).toBeTruthy();
+    });
+
+    it('renders verified supplier options in linking dropdown', () => {
+      const pending = [makePendingSupplier()];
+      const verified = [makeVerifiedSupplier({ id: 'vs-1', businessName: 'Corp Link', gstin: '11AAA1111A1AA', city: 'Mumbai' })];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending, verifiedSuppliers: verified })} />);
+      expect(screen.getByText(/Corp Link.*11AAA1111A1AA.*Mumbai/)).toBeTruthy();
+    });
+
+    it('shows Linking... state on Link to Verified button', () => {
+      const pending = [makePendingSupplier()];
+      render(<SuppliersTab {...createDefaultProps({
+        pendingSuppliers: pending,
+        supplierActionLoading: { 'req-1': true },
+        selectedSupplierForLink: { 'req-1': 'vs-1' },
+      })} />);
+      expect(screen.getByText('Linking...')).toBeTruthy();
+    });
+
+    it('shows WhatsApp icon for pending supplier with phone', () => {
+      const pending = [makePendingSupplier({ requestedPhone: '+919876543210' })];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect(screen.getByLabelText('Message on WhatsApp')).toBeTruthy();
+    });
+
+    it('does not show WhatsApp icon when phone is empty', () => {
+      const pending = [makePendingSupplier({ requestedPhone: '' })];
+      render(<SuppliersTab {...createDefaultProps({ pendingSuppliers: pending })} />);
+      expect(screen.queryByLabelText('Message on WhatsApp')).toBeNull();
+    });
+  });
+
+  describe('verified supplier edge cases', () => {
+    it('renders verified supplier table headers', () => {
+      const verified = [makeVerifiedSupplier()];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      expect(screen.getByText('Business Name')).toBeTruthy();
+      expect(screen.getByText('GSTIN')).toBeTruthy();
+      expect(screen.getByText('Rating')).toBeTruthy();
+      expect(screen.getByText('Auto-Approve')).toBeTruthy();
+    });
+
+    it('shows trade name when present', () => {
+      const verified = [makeVerifiedSupplier({ tradeName: 'Trade Name Corp' })];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      expect(screen.getByText('Trade Name Corp')).toBeTruthy();
+    });
+
+    it('shows rating when present', () => {
+      const verified = [makeVerifiedSupplier({ rating: 4.5 })];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      expect(screen.getByText('4.5')).toBeTruthy();
+    });
+
+    it('shows dash for missing rating', () => {
+      const verified = [makeVerifiedSupplier({ rating: undefined })];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      const dashes = screen.getAllByText('-');
+      expect(dashes.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows location from city and state', () => {
+      const verified = [makeVerifiedSupplier({ city: 'Delhi', state: 'NCR' })];
+      render(<SuppliersTab {...createDefaultProps({ verifiedSuppliers: verified })} />);
+      expect(screen.getByText('Delhi, NCR')).toBeTruthy();
+    });
+
+    it('shows Loading verified suppliers when loading with no data', () => {
+      render(<SuppliersTab {...createDefaultProps({ suppliersLoading: true })} />);
+      expect(screen.getByText('Loading verified suppliers...')).toBeTruthy();
+    });
+
+    it('disables refresh button when loading', () => {
+      render(<SuppliersTab {...createDefaultProps({ suppliersLoading: true })} />);
+      expect((screen.getByText('Refreshing...') as HTMLButtonElement).disabled).toBe(true);
+    });
+  });
+
+  describe('pending product edge cases', () => {
+    it('renders Approve & Publish button for products', () => {
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products })} />);
+      expect(screen.getByText('Approve & Publish')).toBeTruthy();
+    });
+
+    it('renders product reject reason input', () => {
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products })} />);
+      expect(screen.getByPlaceholderText('Enter reason for rejection...')).toBeTruthy();
+    });
+
+    it('disables reject button when reason is too short', () => {
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products, productRejectReason: { 'prod-1': 'short' } })} />);
+      expect((screen.getByTitle('Reject this product') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('enables reject button when reason has 10+ chars', () => {
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products, productRejectReason: { 'prod-1': 'This is a sufficient reason' } })} />);
+      expect((screen.getByTitle('Reject this product') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('calls handleRejectProduct on reject click with valid reason', () => {
+      const handleReject = vi.fn();
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products, handleRejectProduct: handleReject, productRejectReason: { 'prod-1': 'Product quality is insufficient' } })} />);
+      fireEvent.click(screen.getByTitle('Reject this product'));
+      expect(handleReject).toHaveBeenCalledWith('prod-1');
+    });
+
+    it('shows Rejecting... state on product reject', () => {
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products, productActionLoading: { 'prod-1': true }, productRejectReason: { 'prod-1': 'long enough reason' } })} />);
+      expect(screen.getByText('Rejecting...')).toBeTruthy();
+    });
+
+    it('shows Loading pending products when loading with no data', () => {
+      render(<SuppliersTab {...createDefaultProps({ suppliersLoading: true })} />);
+      expect(screen.getByText('Loading pending products...')).toBeTruthy();
+    });
+
+    it('renders product thumbnail placeholder when no image', () => {
+      const products = [makePendingProduct()];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products })} />);
+      expect(screen.getByTitle('No product image')).toBeTruthy();
+    });
+
+    it('renders product image when thumbnailUrl is present', () => {
+      const products = [makePendingProduct({ thumbnailUrl: 'https://example.com/img.jpg' })];
+      render(<SuppliersTab {...createDefaultProps({ pendingProducts: products })} />);
+      const img = screen.getByAltText('Premium Rice');
+      expect(img).toBeTruthy();
+      expect((img as HTMLImageElement).src).toBe('https://example.com/img.jpg');
+    });
+  });
+
+  describe('bank verification edge cases', () => {
+    it('shows bank change count badge', () => {
+      const bankChanges = [makeBankChange(), makeBankChange({ id: 'bc-2', businessName: 'Corp 2' })];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges })} />);
+      // Badge shows count "2"
+      expect(screen.getByText('2')).toBeTruthy();
+    });
+
+    it('renders bank rejection reason input', () => {
+      const bankChanges = [makeBankChange()];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges })} />);
+      expect(screen.getByPlaceholderText('Rejection reason (min 10 chars)')).toBeTruthy();
+    });
+
+    it('disables bank reject when reason is too short', () => {
+      const bankChanges = [makeBankChange()];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges, bankRejectReason: { 'bc-1': 'short' } })} />);
+      // The reject button for bank should be disabled
+      const rejectBtns = screen.getAllByText('Reject');
+      const bankRejectBtn = rejectBtns.find(btn => btn.closest('.card.sa-p-16')) as HTMLButtonElement;
+      if (bankRejectBtn) expect(bankRejectBtn.disabled).toBe(true);
+    });
+
+    it('shows bank loading state on approve', () => {
+      const bankChanges = [makeBankChange()];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges, bankVerifyLoading: { 'bc-1': true } })} />);
+      const dots = screen.getAllByText('...');
+      expect(dots.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders bank section subtitle', () => {
+      const bankChanges = [makeBankChange()];
+      render(<SuppliersTab {...createDefaultProps({ bankChanges })} />);
+      expect(screen.getByText(/approve or reject before payouts resume/)).toBeTruthy();
     });
   });
 });

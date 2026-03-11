@@ -195,4 +195,103 @@ describe('AuditTab', () => {
     render(<AuditTab {...createProps()} />);
     expect((screen.getByText('Export CSV') as HTMLButtonElement).disabled).toBe(true);
   });
+
+  // ── Filter changes call setAuditLogsFilter ────────────────────
+
+  it('calls setAuditLogsFilter on action filter change', () => {
+    const setFilter = vi.fn();
+    render(<AuditTab {...createProps({ setAuditLogsFilter: setFilter })} />);
+    fireEvent.change(screen.getByLabelText('Action'), { target: { value: 'delete' } });
+    expect(setFilter).toHaveBeenCalled();
+  });
+
+  it('calls setAuditLogsFilter on resource type filter change', () => {
+    const setFilter = vi.fn();
+    render(<AuditTab {...createProps({ setAuditLogsFilter: setFilter })} />);
+    fireEvent.change(screen.getByLabelText('Resource type'), { target: { value: 'device' } });
+    expect(setFilter).toHaveBeenCalled();
+  });
+
+  it('calls setAuditLogsPage(0) on filter change', () => {
+    const setPage = vi.fn();
+    render(<AuditTab {...createProps({ setAuditLogsPage: setPage })} />);
+    fireEvent.change(screen.getByLabelText('Action'), { target: { value: 'create' } });
+    expect(setPage).toHaveBeenCalled();
+  });
+
+  // ── Date range filters ────────────────────────────────────────
+
+  it('renders From date and To date filters', () => {
+    render(<AuditTab {...createProps()} />);
+    expect(screen.getByLabelText('From date')).toBeTruthy();
+    expect(screen.getByLabelText('To date')).toBeTruthy();
+  });
+
+  it('shows inverted date range warning', () => {
+    render(<AuditTab {...createProps({ auditLogsFilter: { from_date: '2026-03-10', to_date: '2026-03-01' } })} />);
+    expect(screen.getByText(/"From" date is after "To" date/)).toBeTruthy();
+  });
+
+  it('does not show inverted date range warning for valid range', () => {
+    render(<AuditTab {...createProps({ auditLogsFilter: { from_date: '2026-03-01', to_date: '2026-03-10' } })} />);
+    expect(screen.queryByText(/"From" date is after "To" date/)).toBeNull();
+  });
+
+  // ── Pagination navigation ─────────────────────────────────────
+
+  it('calls setAuditLogsPage on Next click', () => {
+    const setPage = vi.fn();
+    render(<AuditTab {...createProps({ auditLogsTotal: 100, auditLogsPage: 0, setAuditLogsPage: setPage })} />);
+    fireEvent.click(screen.getByText(/Next/));
+    expect(setPage).toHaveBeenCalled();
+  });
+
+  it('disables Next on last page', () => {
+    render(<AuditTab {...createProps({ auditLogsTotal: 50, auditLogsPage: 0 })} />);
+    expect(screen.getByText(/Next/)).toHaveProperty('disabled', true);
+  });
+
+  // ── Actor fallback to IP then system ──────────────────────────
+
+  it('renders actor_ip when actor_user_id is null', () => {
+    const logs = [makeLog({ actor_user_id: null, actor_ip: '192.168.1.1' })];
+    render(<AuditTab {...createProps({ auditLogs: logs, auditLogsTotal: 1 })} />);
+    expect(screen.getByText('192.168.1.1')).toBeTruthy();
+  });
+
+  it('renders "system" when both actor fields are null', () => {
+    const logs = [makeLog({ actor_user_id: null, actor_ip: null })];
+    render(<AuditTab {...createProps({ auditLogs: logs, auditLogsTotal: 1 })} />);
+    expect(screen.getByText('system')).toBeTruthy();
+  });
+
+  // ── Resource ID fallback ──────────────────────────────────────
+
+  it('shows dash for null resource_id', () => {
+    const logs = [makeLog({ resource_id: null })];
+    render(<AuditTab {...createProps({ auditLogs: logs, auditLogsTotal: 1 })} />);
+    expect(screen.getByText('-')).toBeTruthy();
+  });
+
+  // ── Payload details ───────────────────────────────────────────
+
+  it('renders PayloadDetails for log with request_body', () => {
+    const logs = [makeLog({ request_body: { name: 'test' }, error_message: null })];
+    render(<AuditTab {...createProps({ auditLogs: logs, auditLogsTotal: 1 })} />);
+    expect(screen.getByTestId('payload')).toBeTruthy();
+  });
+
+  // ── Table column headers ──────────────────────────────────────
+
+  it('renders all table column headers', () => {
+    render(<AuditTab {...createProps()} />);
+    expect(screen.getByText('Time')).toBeTruthy();
+    // 'Action' appears in both header and filter — use getAllByText
+    expect(screen.getAllByText('Action').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Resource ID')).toBeTruthy();
+    expect(screen.getByText('Actor')).toBeTruthy();
+    // 'Status' also appears in both header and filter context
+    expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Details')).toBeTruthy();
+  });
 });

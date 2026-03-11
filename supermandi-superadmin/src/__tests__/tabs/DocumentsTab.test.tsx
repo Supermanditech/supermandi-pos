@@ -322,4 +322,118 @@ describe('DocumentsTab', () => {
     fireEvent.click(screen.getByLabelText('Next page'));
     expect(setPage).toHaveBeenCalled();
   });
+
+  it('calls setDocumentsPage on Prev click', () => {
+    const setPage = vi.fn();
+    render(<DocumentsTab {...createProps({ pendingDocsTotal: 100, documentsPage: 1, setDocumentsPage: setPage })} />);
+    fireEvent.click(screen.getByLabelText('Previous page'));
+    expect(setPage).toHaveBeenCalled();
+  });
+
+  // ── Error banner edge case ────────────────────────────────
+
+  it('does not show error banner when no error', () => {
+    render(<DocumentsTab {...createProps()} />);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  // ── Content type display ──────────────────────────────────
+
+  it('renders content type in file info', () => {
+    const docs = [makeDoc({ content_type: 'image/jpeg', file_size: 51200 })];
+    render(<DocumentsTab {...createProps({ pendingDocuments: docs, pendingDocsTotal: 1 })} />);
+    expect(screen.getByText(/image\/jpeg/)).toBeTruthy();
+  });
+
+  // ── Modal interactions ────────────────────────────────────
+
+  it('calls handleCloseDocument on close button click', () => {
+    const handleClose = vi.fn();
+    const doc = makeDoc();
+    render(<DocumentsTab {...createProps({ selectedDocument: doc, handleCloseDocument: handleClose })} />);
+    fireEvent.click(screen.getByLabelText('Close document review'));
+    expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('calls onModalDirty when reject reason is typed', () => {
+    const onDirty = vi.fn();
+    const doc = makeDoc();
+    render(<DocumentsTab {...createProps({ selectedDocument: doc, onModalDirty: onDirty })} />);
+    fireEvent.change(screen.getByPlaceholderText(/Rejection reason/), { target: { value: 'Blurry image uploaded' } });
+    expect(onDirty).toHaveBeenCalledWith(true);
+  });
+
+  it('calls onModalDirty(false) on approve click', () => {
+    const onDirty = vi.fn();
+    const handleApprove = vi.fn();
+    const doc = makeDoc({ id: 'doc-md' });
+    render(<DocumentsTab {...createProps({ selectedDocument: doc, onModalDirty: onDirty, handleApproveDocument: handleApprove })} />);
+    fireEvent.click(screen.getByText(/Approve Document/));
+    expect(onDirty).toHaveBeenCalledWith(false);
+  });
+
+  it('enables reject button when reason has 10+ characters', () => {
+    const doc = makeDoc();
+    render(<DocumentsTab {...createProps({ selectedDocument: doc, docRejectReason: 'Very blurry image that needs fixing' })} />);
+    const rejectBtn = screen.getByText(/Reject/);
+    expect((rejectBtn as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('calls handleRejectDocument with reason on reject click', () => {
+    const handleReject = vi.fn();
+    const doc = makeDoc({ id: 'doc-rej' });
+    render(<DocumentsTab {...createProps({ selectedDocument: doc, docRejectReason: 'Image is completely blurry', handleRejectDocument: handleReject })} />);
+    fireEvent.click(screen.getByText(/Reject/));
+    expect(handleReject).toHaveBeenCalledWith('doc-rej', 'Image is completely blurry');
+  });
+
+  it('disables approve button for non-pending document', () => {
+    const doc = makeDoc({ status: 'approved' });
+    render(<DocumentsTab {...createProps({ selectedDocument: doc })} />);
+    const approveBtn = screen.getByText(/Approve Document/);
+    expect((approveBtn as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('disables rejection input for non-pending document', () => {
+    const doc = makeDoc({ status: 'approved' });
+    render(<DocumentsTab {...createProps({ selectedDocument: doc })} />);
+    const input = screen.getByPlaceholderText(/Rejection reason/);
+    expect((input as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('does not render entity owner_name when missing', () => {
+    const docs = [makeDoc({ owner_name: '' })];
+    render(<DocumentsTab {...createProps({ pendingDocuments: docs, pendingDocsTotal: 1 })} />);
+    expect(screen.queryByText('Owner')).toBeNull();
+  });
+
+  it('renders approved status badge', () => {
+    const docs = [makeDoc({ status: 'approved' })];
+    render(<DocumentsTab {...createProps({ pendingDocuments: docs, pendingDocsTotal: 1 })} />);
+    expect(screen.getByText('approved')).toBeTruthy();
+  });
+
+  it('does not show empty state when loading', () => {
+    render(<DocumentsTab {...createProps({ documentsLoading: true })} />);
+    expect(screen.queryByText('No pending documents to review.')).toBeNull();
+  });
+
+  it('shows entity info in modal', () => {
+    const doc = makeDoc({ entity_type: 'store', entity_name: 'My Shop' });
+    render(<DocumentsTab {...createProps({ selectedDocument: doc })} />);
+    expect(screen.getByText(/store - My Shop/)).toBeTruthy();
+  });
+
+  it('shows document loading preview text', () => {
+    const doc = makeDoc();
+    render(<DocumentsTab {...createProps({ selectedDocument: doc })} />);
+    // fetchDocumentBlob is mocked to resolve, but on initial render blobLoading is true
+    expect(screen.getByText('Loading document preview...')).toBeTruthy();
+  });
+
+  it('renders Status column header in table', () => {
+    const docs = [makeDoc()];
+    render(<DocumentsTab {...createProps({ pendingDocuments: docs, pendingDocsTotal: 1 })} />);
+    expect(screen.getByText('Status')).toBeTruthy();
+  });
 });

@@ -394,4 +394,216 @@ describe('SupportQueueTab', () => {
     const buttons = screen.getAllByRole('button');
     expect(buttons.length).toBeGreaterThanOrEqual(1);
   });
+
+  // ── Send Reply ──────────────────────────────────────────────
+
+  it('sends reply on Send button click', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: [] }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Type a reply...')).toBeInTheDocument();
+    });
+    // Set up mock for reply POST + subsequent refreshes
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({})) // POST reply
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages })) // reload messages
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations })); // reload queue
+    fireEvent.change(screen.getByPlaceholderText('Type a reply...'), { target: { value: 'Thanks!' } });
+    fireEvent.click(screen.getByText('Send'));
+    await waitFor(() => {
+      expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/messages'),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+  });
+
+  it('sends reply on Enter key press', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: [] }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Type a reply...')).toBeInTheDocument();
+    });
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({}))
+      .mockResolvedValueOnce(okResponse({ messages: [] }))
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }));
+    fireEvent.change(screen.getByPlaceholderText('Type a reply...'), { target: { value: 'Hello' } });
+    fireEvent.keyDown(screen.getByPlaceholderText('Type a reply...'), { key: 'Enter' });
+    await waitFor(() => {
+      expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/messages'),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+  });
+
+  // ── Assign to Me ────────────────────────────────────────────
+
+  it('calls assign API on Assign to Me click', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByText('Assign to Me')).toBeInTheDocument();
+    });
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({})) // assign POST
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations })) // reload queue
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages })); // reload messages
+    fireEvent.click(screen.getByText('Assign to Me'));
+    await waitFor(() => {
+      expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/assign'),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+  });
+
+  // ── Resolve Conversation ────────────────────────────────────
+
+  it('shows confirm dialog on Resolve click', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByText('Resolve')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Resolve'));
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+    expect(screen.getByText('Resolve Conversation')).toBeInTheDocument();
+  });
+
+  it('resolves conversation after confirming', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByText('Resolve')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Resolve'));
+    // Confirm the dialog
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({})) // resolve POST
+      .mockResolvedValueOnce(okResponse({ conversations: [] })); // reload queue
+    fireEvent.click(screen.getAllByText('Resolve')[1]); // confirm button
+    await waitFor(() => {
+      expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/resolve'),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+  });
+
+  it('closes confirm dialog on Cancel', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: mockMessages }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByText('Resolve')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Resolve'));
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument();
+  });
+
+  // ── Error on message load ──────────────────────────────────
+
+  it('shows error when message fetch fails', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockRejectedValueOnce(new Error('Messages failed'));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByText('Messages failed')).toBeInTheDocument();
+    });
+  });
+
+  // ── Error on send reply ────────────────────────────────────
+
+  it('shows error when reply send fails', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: mockConversations }))
+      .mockResolvedValueOnce(okResponse({ messages: [] }));
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Billing Issue'));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Type a reply...')).toBeInTheDocument();
+    });
+    mockFetchWithTimeout.mockRejectedValueOnce(new Error('Send failed'));
+    fireEvent.change(screen.getByPlaceholderText('Type a reply...'), { target: { value: 'test' } });
+    fireEvent.click(screen.getByText('Send'));
+    await waitFor(() => {
+      expect(screen.getByText('Send failed')).toBeInTheDocument();
+    });
+  });
+
+  // ── Empty templates state ──────────────────────────────────
+
+  it('shows Active column header in templates view', async () => {
+    mockFetchWithTimeout
+      .mockResolvedValueOnce(okResponse({ conversations: [] }))
+      .mockResolvedValueOnce(okResponse({ templates: mockTemplates }));
+    render(<SupportQueueTab />);
+    fireEvent.click(screen.getByText('Templates'));
+    await waitFor(() => {
+      expect(screen.getByText('Active')).toBeInTheDocument();
+    });
+  });
+
+  // ── Status filter changes correctly ─────────────────────────
+
+  it('clicking All filter fetches with status=all', async () => {
+    render(<SupportQueueTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing Issue')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('All'));
+    await waitFor(() => {
+      expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('status=all'),
+        expect.anything()
+      );
+    });
+  });
 });

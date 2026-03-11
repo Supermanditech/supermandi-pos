@@ -615,5 +615,297 @@ describe('StoresTab', () => {
       fireEvent.click(screen.getByText('Clear'));
       expect(setIds).toHaveBeenCalled();
     });
+
+    it('disables Apply when no flag key selected', () => {
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']), bulkFlagKey: '' })} />);
+      expect((screen.getByText('Apply') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('enables Apply when flag key is selected', () => {
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']), bulkFlagKey: 'some_flag' })} />);
+      expect((screen.getByText('Apply') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('renders feature flag options in bulk dropdown', () => {
+      const featureFlags = [{ flag_key: 'flag_a', description: '', enabled: true }, { flag_key: 'flag_b', description: '', enabled: false }];
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']), featureFlags: featureFlags as any })} />);
+      expect(screen.getByText('flag_a')).toBeTruthy();
+      expect(screen.getByText('flag_b')).toBeTruthy();
+    });
+
+    it('renders enable/disable action options', () => {
+      render(<StoresTab {...createDefaultProps({ selectedStoreIds: new Set(['store-1']) })} />);
+      expect(screen.getByText('Enable')).toBeTruthy();
+      expect(screen.getByText('Disable')).toBeTruthy();
+    });
+  });
+
+  // =========================================================================
+  // Additional edge cases
+  // =========================================================================
+
+  describe('edge cases and interactions', () => {
+    it('calls setCreateStoreName on store name input change', () => {
+      const setName = vi.fn();
+      render(<StoresTab {...createDefaultProps({ setCreateStoreName: setName })} />);
+      fireEvent.change(screen.getByPlaceholderText('Supermandi Pilot Store'), { target: { value: 'New Store' } });
+      expect(setName).toHaveBeenCalledWith('New Store');
+    });
+
+    it('calls setCreateStoreId on store ID input change', () => {
+      const setId = vi.fn();
+      render(<StoresTab {...createDefaultProps({ setCreateStoreId: setId })} />);
+      const inputs = screen.getAllByPlaceholderText('UUID or store code');
+      fireEvent.change(inputs[0], { target: { value: 'custom-id' } });
+      expect(setId).toHaveBeenCalledWith('custom-id');
+    });
+
+    it('calls setStoreAdminId on UPI store ID input change', () => {
+      const setAdminId = vi.fn();
+      render(<StoresTab {...createDefaultProps({ setStoreAdminId: setAdminId })} />);
+      fireEvent.change(screen.getByPlaceholderText('e.g. store-1'), { target: { value: 'store-abc' } });
+      expect(setAdminId).toHaveBeenCalledWith('store-abc');
+    });
+
+    it('calls setStoreUpiInput on UPI VPA input change', () => {
+      const setUpi = vi.fn();
+      render(<StoresTab {...createDefaultProps({ setStoreUpiInput: setUpi })} />);
+      fireEvent.change(screen.getByPlaceholderText('merchant@upi'), { target: { value: 'test@upi' } });
+      expect(setUpi).toHaveBeenCalledWith('test@upi');
+    });
+
+    it('shows loading text on Load store button', () => {
+      render(<StoresTab {...createDefaultProps({ storeLoading: true })} />);
+      expect(screen.getByText('Loading...')).toBeTruthy();
+    });
+
+    it('shows saving text on Save VPA button', () => {
+      render(<StoresTab {...createDefaultProps({ storeLoading: true })} />);
+      expect(screen.getByText('Saving...')).toBeTruthy();
+    });
+
+    it('disables Load store and Save VPA when loading', () => {
+      render(<StoresTab {...createDefaultProps({ storeLoading: true })} />);
+      expect((screen.getByText('Loading...') as HTMLButtonElement).disabled).toBe(true);
+      expect((screen.getByText('Saving...') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('shows store record with inactive status', () => {
+      const storeRecord = makeStore({ active: false });
+      render(<StoresTab {...createDefaultProps({ storeRecord })} />);
+      expect(screen.getByText('false')).toBeTruthy();
+    });
+
+    it('shows dash for missing UPI VPA in store record', () => {
+      const storeRecord = makeStore({ upi_vpa: null as any });
+      render(<StoresTab {...createDefaultProps({ storeRecord })} />);
+      const dashes = screen.getAllByText('-');
+      expect(dashes.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows dash for missing store name in store record', () => {
+      const storeRecord = makeStore({ name: null as any });
+      render(<StoresTab {...createDefaultProps({ storeRecord })} />);
+      const dashes = screen.getAllByText('-');
+      expect(dashes.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('calls requestStoreStatusChange with reactivate for suspended store', () => {
+      const requestChange = vi.fn();
+      const stores = [makeStore({ status: 'SUSPENDED' })];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, requestStoreStatusChange: requestChange })} />);
+      fireEvent.click(screen.getByText('Reactivate'));
+      expect(requestChange).toHaveBeenCalledWith('store-1', 'Test Store', 'reactivate');
+    });
+
+    it('disables suspend button when storeSuspendLoading is true', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, storeSuspendLoading: true })} />);
+      expect((screen.getByText('Suspend') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('calls updateStoreNameDraft on store name edit', () => {
+      const updateDraft = vi.fn();
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, updateStoreNameDraft: updateDraft })} />);
+      fireEvent.change(screen.getByPlaceholderText('Store name'), { target: { value: 'Updated Name' } });
+      expect(updateDraft).toHaveBeenCalledWith('store-1', 'Updated Name');
+    });
+
+    it('calls toggleStoreSelection on per-store checkbox click', () => {
+      const toggle = vi.fn();
+      const stores = [makeStore({ name: 'My Store' })];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, toggleStoreSelection: toggle })} />);
+      fireEvent.click(screen.getByLabelText('Select store My Store'));
+      expect(toggle).toHaveBeenCalledWith('store-1');
+    });
+
+    it('calls setSelectedStoreIds to select all on header checkbox', () => {
+      const setIds = vi.fn();
+      const stores = [makeStore({ id: 'a' }), makeStore({ id: 'b', name: 'Store B' })];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, setSelectedStoreIds: setIds })} />);
+      fireEvent.click(screen.getByLabelText('Select all stores'));
+      expect(setIds).toHaveBeenCalled();
+    });
+
+    it('renders enrollment code with REVOKED status', () => {
+      const stores = [makeStore()];
+      const storeEnrollments = {
+        'store-1': [
+          { id: 'e2', code: 'REV001', status: 'REVOKED' as const, uses_count: 1, max_uses: 5, store_id: 'store-1', created_at: '2024-01-01', expires_at: '2024-12-31', created_by: 'admin', revoked_at: '2024-06-01', used_at: null, last_used_at: null },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeEnrollments })} />);
+      expect(screen.getByText('REV001')).toBeTruthy();
+      expect(screen.getByText('REVOKED')).toBeTruthy();
+    });
+
+    it('renders enrollment code with USED status', () => {
+      const stores = [makeStore()];
+      const storeEnrollments = {
+        'store-1': [
+          { id: 'e3', code: 'USED01', status: 'USED' as const, uses_count: 5, max_uses: 5, store_id: 'store-1', created_at: '2024-01-01', expires_at: '2024-12-31', created_by: 'admin', revoked_at: null, used_at: '2024-03-01', last_used_at: null },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeEnrollments })} />);
+      expect(screen.getByText('USED01')).toBeTruthy();
+      expect(screen.getByText('USED')).toBeTruthy();
+      expect(screen.getByText('5/5 uses')).toBeTruthy();
+    });
+
+    it('calls handleRevokeEnrollment on revoke click', () => {
+      const handleRevoke = vi.fn();
+      const stores = [makeStore()];
+      const storeEnrollments = {
+        'store-1': [
+          { id: 'e1', code: 'ACT001', status: 'ACTIVE' as const, uses_count: 0, max_uses: 5, store_id: 'store-1', created_at: '2024-01-01', expires_at: '2024-12-31', created_by: 'admin', revoked_at: null, used_at: null, last_used_at: null },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeEnrollments, handleRevokeEnrollment: handleRevoke })} />);
+      fireEvent.click(screen.getByLabelText('Revoke enrollment code ACT001'));
+      expect(handleRevoke).toHaveBeenCalledWith('ACT001');
+    });
+
+    it('calls handleResendCode on resend click', () => {
+      const handleResend = vi.fn();
+      const stores = [makeStore()];
+      const storeEnrollments = {
+        'store-1': [
+          { id: 'e1', code: 'ACT002', status: 'ACTIVE' as const, uses_count: 0, max_uses: 5, store_id: 'store-1', created_at: '2024-01-01', expires_at: '2024-12-31', created_by: 'admin', revoked_at: null, used_at: null, last_used_at: null },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeEnrollments, handleResendCode: handleResend })} />);
+      fireEvent.click(screen.getByLabelText('Resend enrollment code ACT002'));
+      expect(handleResend).toHaveBeenCalledWith('ACT002');
+    });
+
+    it('shows feature flags loading state when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeFFLoading: { 'store-1': true } })} />);
+      // "Loading..." text should be present for feature flags
+      const loadingElements = screen.getAllByText('Loading...');
+      expect(loadingElements.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders feature flag checkboxes when loaded', () => {
+      const stores = [makeStore()];
+      const storeFeatureFlags = {
+        'store-1': [
+          { flag_key: 'test_flag', effective: true, global_enabled: true, store_override: null },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeFeatureFlags: storeFeatureFlags as any })} />);
+      expect(screen.getByText('test_flag')).toBeTruthy();
+    });
+
+    it('shows (killed) for globally disabled feature flag', () => {
+      const stores = [makeStore()];
+      const storeFeatureFlags = {
+        'store-1': [
+          { flag_key: 'killed_flag', effective: false, global_enabled: false, store_override: null },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeFeatureFlags: storeFeatureFlags as any })} />);
+      expect(screen.getByText('(killed)')).toBeTruthy();
+    });
+
+    it('shows (override) for store-overridden feature flag', () => {
+      const stores = [makeStore()];
+      const storeFeatureFlags = {
+        'store-1': [
+          { flag_key: 'override_flag', effective: true, global_enabled: true, store_override: true },
+        ],
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeFeatureFlags: storeFeatureFlags as any })} />);
+      expect(screen.getByText('(override)')).toBeTruthy();
+    });
+
+    it('calls handleCreditToggle on credit checkbox click', () => {
+      const handleCredit = vi.fn();
+      const stores = [makeStore({ creditEnabled: false })];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', handleCreditToggle: handleCredit })} />);
+      fireEvent.click(screen.getByText('Enable Credit'));
+      expect(handleCredit).toHaveBeenCalledWith('store-1', true);
+    });
+
+    it('calls setBarcodeSheetStoreId on barcode store ID input change', () => {
+      const setId = vi.fn();
+      render(<StoresTab {...createDefaultProps({ setBarcodeSheetStoreId: setId })} />);
+      const inputs = screen.getAllByPlaceholderText('UUID or store code');
+      fireEvent.change(inputs[inputs.length - 1], { target: { value: 'barcode-store' } });
+      expect(setId).toHaveBeenCalledWith('barcode-store');
+    });
+
+    it('calls setBarcodeSheetTier on tier select change', () => {
+      const setTier = vi.fn();
+      render(<StoresTab {...createDefaultProps({ setBarcodeSheetTier: setTier })} />);
+      fireEvent.change(screen.getByLabelText('Tier'), { target: { value: 'tier2' } });
+      expect(setTier).toHaveBeenCalledWith('tier2');
+    });
+
+    it('shows enrollments loading state when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeEnrollmentsLoading: { 'store-1': true } })} />);
+      const loadingElements = screen.getAllByText('Loading...');
+      expect(loadingElements.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows QR button loading state', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, enrollmentForStoreLoading: 'store-1' })} />);
+      expect(screen.getByText('...')).toBeTruthy();
+    });
+
+    it('renders contact toggle arrow text for expanded vs collapsed', () => {
+      const stores = [makeStore({ contact_name: 'John' })];
+      const { rerender } = render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: null })} />);
+      // Collapsed shows down arrow
+      expect(screen.getByText(/▼/)).toBeTruthy();
+      // Expanded shows up arrow
+      rerender(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText(/▲/)).toBeTruthy();
+    });
+
+    it('calls updateStoreContactDraft on contact name change', () => {
+      const updateContact = vi.fn();
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', updateStoreContactDraft: updateContact })} />);
+      fireEvent.change(screen.getByPlaceholderText('Contact name'), { target: { value: 'Jane' } });
+      expect(updateContact).toHaveBeenCalledWith('store-1', { contactName: 'Jane' });
+    });
+
+    it('calls toggleStorePaymentMethod on payment checkbox click', () => {
+      const togglePayment = vi.fn();
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', toggleStorePaymentMethod: togglePayment })} />);
+      fireEvent.click(screen.getByText('UPI'));
+      expect(togglePayment).toHaveBeenCalledWith('store-1', 'UPI', ['CASH']);
+    });
+
+    it('shows credit limit amount', () => {
+      const stores = [makeStore({ creditLimit: 500000 })];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText(/5,000/)).toBeTruthy();
+    });
   });
 });

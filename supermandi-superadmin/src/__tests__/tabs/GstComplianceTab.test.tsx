@@ -353,4 +353,138 @@ describe('GstComplianceTab', () => {
       expect(gstMock.fetchGstStoresOverview).toHaveBeenCalled();
     });
   });
+
+  // ── GSTR-1 Export Flow ────────────────────────────────────────
+
+  it('shows confirm dialog on GSTR-1 click', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore()],
+    }));
+    render(<GstComplianceTab />);
+    await waitFor(() => {
+      expect(screen.getByText('GSTR-1')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByText('GSTR-1'));
+    await waitFor(() => {
+      expect(screen.getByText('Export GSTR-1 Data')).toBeTruthy();
+    });
+  });
+
+  it('calls exportGstr1 after confirming export', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore()],
+    }));
+    const blobMock = new Blob(['{}'], { type: 'application/json' });
+    gstMock.exportGstr1.mockResolvedValue(blobMock);
+    // Mock URL.createObjectURL/revokeObjectURL
+    const origCreate = URL.createObjectURL;
+    const origRevoke = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn(() => 'blob:test');
+    URL.revokeObjectURL = vi.fn();
+    render(<GstComplianceTab />);
+    await waitFor(() => {
+      expect(screen.getByText('GSTR-1')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByText('GSTR-1'));
+    await waitFor(() => {
+      expect(screen.getByText('Export GSTR-1 Data')).toBeTruthy();
+    });
+    // Real ConfirmDialog renders confirmLabel as button text
+    fireEvent.click(screen.getByText('Export'));
+    await waitFor(() => {
+      expect(gstMock.exportGstr1).toHaveBeenCalledWith('s1', expect.any(String));
+    });
+    URL.createObjectURL = origCreate;
+    URL.revokeObjectURL = origRevoke;
+  });
+
+  // ── Detail modal error ────────────────────────────────────────
+
+  it('shows detail error when fetchGstSummary fails', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore()],
+    }));
+    gstMock.fetchGstSummary.mockRejectedValue(new Error('Detail load error'));
+    render(<GstComplianceTab />);
+    await waitFor(() => expect(screen.getByText('Detail')).toBeTruthy());
+    fireEvent.click(screen.getByText('Detail'));
+    await waitFor(() => {
+      expect(screen.getByText('Detail load error')).toBeTruthy();
+    });
+  });
+
+  // ── Detail modal Loading state ────────────────────────────────
+
+  it('shows Loading in detail modal while fetching', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore()],
+    }));
+    gstMock.fetchGstSummary.mockReturnValue(new Promise(() => {}));
+    render(<GstComplianceTab />);
+    await waitFor(() => expect(screen.getByText('Detail')).toBeTruthy());
+    fireEvent.click(screen.getByText('Detail'));
+    await waitFor(() => {
+      expect(screen.getByText('Loading...')).toBeTruthy();
+    });
+  });
+
+  // ── Detail modal — no data available ──────────────────────────
+
+  it('shows "No data available" in detail modal when summary is null', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore()],
+    }));
+    gstMock.fetchGstSummary.mockResolvedValue(null);
+    render(<GstComplianceTab />);
+    await waitFor(() => expect(screen.getByText('Detail')).toBeTruthy());
+    fireEvent.click(screen.getByText('Detail'));
+    await waitFor(() => {
+      expect(screen.getByText('No data available')).toBeTruthy();
+    });
+  });
+
+  // ── Detail modal shows Input CGST and Input SGST ──────────────
+
+  it('shows Input CGST and Input SGST in detail modal', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore()],
+    }));
+    gstMock.fetchGstSummary.mockResolvedValue(makeSummary());
+    render(<GstComplianceTab />);
+    await waitFor(() => expect(screen.getByText('Detail')).toBeTruthy());
+    fireEvent.click(screen.getByText('Detail'));
+    await waitFor(() => {
+      expect(screen.getByText('Input CGST')).toBeTruthy();
+      expect(screen.getByText('Input SGST')).toBeTruthy();
+    });
+  });
+
+  // ── Invoice count rendered in table ───────────────────────────
+
+  it('renders store invoice count', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore({ invoiceCount: 42 })],
+    }));
+    render(<GstComplianceTab />);
+    await waitFor(() => {
+      expect(screen.getByText('42')).toBeTruthy();
+    });
+  });
+
+  // ── Supplier breakdown shows GSTIN ────────────────────────────
+
+  it('renders supplier GSTIN in breakdown table', async () => {
+    gstMock.fetchGstStoresOverview.mockResolvedValue(makeOverview({
+      stores: [makeStore()],
+    }));
+    gstMock.fetchGstSummary.mockResolvedValue(makeSummary({
+      supplierBreakdown: [{ supplierName: 'AgroFresh', gstin: '33CCCCC9999L2', taxableValue: 60000, totalTax: 10800 }],
+    }));
+    render(<GstComplianceTab />);
+    await waitFor(() => expect(screen.getByText('Detail')).toBeTruthy());
+    fireEvent.click(screen.getByText('Detail'));
+    await waitFor(() => {
+      expect(screen.getByText('33CCCCC9999L2')).toBeTruthy();
+    });
+  });
 });
