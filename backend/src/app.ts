@@ -16,6 +16,8 @@ import { initializeFirebase } from "@supermandi/common";
 import { logger } from "./lib/logger";
 // REQ.AUDIT.W5.BACKEND.HEALTH-ENDPOINT-NO-DEPS-CHECK.001
 import { getPool } from "./db/client";
+// SCALE-D3: Async CSV import worker via BullMQ
+import { initCsvImportWorker } from "./routes/v1/retailer-admin/csvImport";
 
 // Always load backend env from `backend/.env` (not repo root `/.env`).
 // This prevents Prisma errors like missing DATABASE_URL when the process is started with a different CWD (e.g. pm2/systemd).
@@ -39,6 +41,9 @@ if (firebaseEnabled && (firebaseServiceAccountPath || firebaseProjectId)) {
 } else {
   logger.warn('[App] Firebase not configured - retailer portal login will use client-side verification only');
 }
+
+// SCALE-D3: Start BullMQ CSV import worker (no-op when REDIS_ENABLED=false)
+initCsvImportWorker();
 
 // DEV-071: Capture build info at startup for /health endpoint
 // INFRA-003: Use env var baked at Docker build time (execSync fails in containers without .git)

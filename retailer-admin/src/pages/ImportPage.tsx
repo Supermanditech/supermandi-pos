@@ -204,7 +204,7 @@ export default function ImportPage() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [isProcessing]);
 
-  // RET-POS-SYNC-003: Poll commit status
+  // RET-POS-SYNC-003: Poll commit status (legacy DB-backed path)
   // STBT-184.11: Max polling timeout (10 minutes) to prevent infinite spinner
   const POLLING_TIMEOUT_MS = 10 * 60 * 1000;
   const startPolling = (pollJobId: string) => {
@@ -260,7 +260,68 @@ export default function ImportPage() {
     }, IMPORT_POLL_INTERVAL_MS);
   };
 
-  // RCAT-CSV-002 + RET-POS-SYNC-003: Commit (async with polling)
+  // SCALE-D3: Poll BullMQ job status (queued | active | completed | failed)
+  // Returns 0–100 progress percentage. Used after /queue returns 202.
+  const startBullMqPolling = (bullJobId: string, totalRows: number) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    const startedAt = Date.now();
+    pollingRef.current = setInterval(async () => {
+      if (!mountedRef.current) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        return;
+      }
+      if (Date.now() - startedAt > POLLING_TIMEOUT_MS) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        if (!mountedRef.current) return;
+        setError('Import is taking longer than expected. Please check back later or contact support.');
+        setIsProcessing(false);
+        setStep('review');
+        return;
+      }
+      try {
+        const resp = await authFetch(
+          `/api/v1/retailer-admin/products/import/queue/${bullJobId}`,
+          accessToken
+        );
+        if (!mountedRef.current) return;
+        if (!resp.ok) return;
+        const data = await safeJson(resp) as any;
+        if (!mountedRef.current) return;
+        if (!data?.data) return;
+
+        const { status, progress, result, error: jobError } = data.data;
+        // Map BullMQ 0–100 progress % to created/total for progress bar reuse
+        const estimatedCreated = Math.round((progress / 100) * totalRows);
+        setCommitProgress({ created: estimatedCreated, total: totalRows });
+
+        if (status === 'completed' && result) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setCommitResult({
+            created: result.created ?? 0,
+            updated: result.updated ?? 0,
+            skipped: result.skipped ?? 0,
+            warnings: [],
+          });
+          setIsProcessing(false);
+          setStep('done');
+        } else if (status === 'failed') {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setError(jobError || 'Import job failed on server. Please retry.');
+          setIsProcessing(false);
+          setStep('review');
+        }
+      } catch {
+        // Polling errors are transient; keep retrying
+      }
+    }, IMPORT_POLL_INTERVAL_MS);
+  };
+
+  // RCAT-CSV-002 + RET-POS-SYNC-003 + SCALE-D3:
+  // Commit flow — tries BullMQ queue first, falls back to legacy /commit on 503
   const handleCommit = async () => {
     if (!jobId) return;
     setError('');
@@ -269,6 +330,33 @@ export default function ImportPage() {
     setStep('commit');
 
     try {
+      // SCALE-D3: Try async BullMQ queue path first
+      const queueResp = await authFetch(
+        '/api/v1/retailer-admin/products/import/queue',
+        accessToken,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId }),
+        }
+      );
+
+      if (queueResp.status === 202) {
+        // BullMQ enqueue success — poll via BullMQ status endpoint
+        const queueData = await safeJson(queueResp) as any;
+        const bullJobId = queueData?.data?.bullJobId as string | undefined;
+        const total = (queueData?.data?.total as number | undefined) ?? (validation?.validCount ?? 0);
+        setCommitProgress({ created: 0, total });
+        if (bullJobId) {
+          startBullMqPolling(bullJobId, total);
+        } else {
+          // bullJobId missing — fall through to legacy polling
+          startPolling(jobId);
+        }
+        return; // keep isProcessing=true until polling completes
+      }
+
+      // BullMQ unavailable (503) or other non-202 — fall back to legacy /commit
       const resp = await authFetch(
         `/api/v1/retailer-admin/products/import/commit?jobId=${jobId}`,
         accessToken,
@@ -277,10 +365,10 @@ export default function ImportPage() {
       const data = await safeJson(resp) as any;
 
       if (resp.status === 202) {
-        // Async commit started — poll for progress
+        // Legacy async commit started — poll DB status
         setCommitProgress(data?.data?.progress || { created: 0, total: 0 });
         startPolling(jobId);
-        return; // keep isProcessing=true until polling completes
+        return;
       }
 
       if (!resp.ok) {

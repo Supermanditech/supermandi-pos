@@ -1436,6 +1436,252 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", csvUploadRateLi
 });
 
 // =============================================================================
+// SCALE-D3: BullMQ async queue endpoints
+// These sit alongside the existing setImmediate-based commit flow.
+// New flow: validate → POST /queue → get bullJobId → GET /queue/:bullJobId (polls every 2s)
+// Existing flow: validate → POST /commit → GET /status (unchanged — used as fallback)
+// =============================================================================
+
+import {
+  getCsvImportQueue,
+  getJobStatus,
+  startCsvImportWorker,
+} from '../../../queues/csvImportQueue';
+
+// =============================================================================
+// EXPORTED: processBatchForWorker
+// Called by the BullMQ worker to process a single batch of rows.
+// Returns created/updated/skipped counts for the batch only.
+// Two-pass: products first, then variants (mirrors processCommitInBackground).
+// =============================================================================
+
+export async function processBatchForWorker(
+  jobId: string,
+  storeId: string,
+  batchRows: any[]
+): Promise<{ created: number; updated: number; skipped: number }> {
+  const pool = getPool();
+  if (!pool) {
+    return { created: 0, updated: 0, skipped: batchRows.length };
+  }
+
+  const productRows = batchRows.filter((r: any) => !r.isVariant);
+  const variantRows = batchRows.filter((r: any) => r.isVariant);
+
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  // Pass 1: product rows
+  if (productRows.length > 0) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const row of productRows) {
+        const result = await commitSingleRow(client, storeId, row, jobId);
+        if (result.action === 'created') created++;
+        else if (result.action === 'updated') updated++;
+        else skipped++;
+      }
+      await client.query('COMMIT');
+    } catch (err: any) {
+      await client.query('ROLLBACK').catch(() => {});
+      log.error(`[SCALE-D3] processBatchForWorker pass1 error:`, err.message);
+      skipped += productRows.length;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Pass 2: variant rows (parents from pass 1 now exist)
+  if (variantRows.length > 0) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const row of variantRows) {
+        const result = await commitVariantRow(client, storeId, row);
+        if (result.action === 'created') created++;
+        else if (result.action === 'updated') updated++;
+        else skipped++;
+      }
+      await client.query('COMMIT');
+    } catch (err: any) {
+      await client.query('ROLLBACK').catch(() => {});
+      log.error(`[SCALE-D3] processBatchForWorker pass2 error:`, err.message);
+      skipped += variantRows.length;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Update DB progress counter (best-effort)
+  try {
+    await pool.query(
+      `UPDATE platform.csv_imports SET products_created = products_created + $2, updated_at = NOW() WHERE id = $1`,
+      [jobId, created]
+    );
+  } catch { /* non-critical */ }
+
+  return { created, updated, skipped };
+}
+
+// =============================================================================
+// POST /api/v1/retailer-admin/products/import/queue
+// SCALE-D3: Enqueue a validated import job via BullMQ.
+// Client calls this after /validate succeeds.  Returns bullJobId for polling.
+// Returns 503 if Redis is unavailable — client should fall back to /commit.
+// =============================================================================
+
+retailerAdminCsvImportRouter.post('/products/import/queue', async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+  }
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Store not identified' } });
+  }
+
+  const { jobId } = req.body as { jobId?: string };
+  if (!jobId || typeof jobId !== 'string') {
+    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'jobId is required' } });
+  }
+
+  // Verify job belongs to this store and is in a queueable state
+  let validRows: any[];
+  try {
+    const jobResult = await pool.query(
+      `SELECT id, status, validation_errors, store_id, valid_rows
+       FROM platform.csv_imports
+       WHERE id = $1 AND store_id = $2`,
+      [jobId, storeId]
+    );
+
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Import job not found' } });
+    }
+
+    const dbJob = jobResult.rows[0];
+
+    if (!['validated', 'pending'].includes(dbJob.status)) {
+      return res.status(409).json({
+        error: {
+          code: 'ALREADY_PROCESSED',
+          message: `Import job is already in status: ${dbJob.status}`,
+        },
+      });
+    }
+
+    const previewRows = dbJob.validation_errors?.previewRows || [];
+    validRows = previewRows.filter((r: any) => r.valid);
+
+    if (validRows.length === 0) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'No valid rows to import' } });
+    }
+  } catch (err: any) {
+    log.error('[SCALE-D3] /queue DB fetch error:', err.message);
+    return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch import job' } });
+  }
+
+  // Enqueue via BullMQ (fail with 503 if Redis not available)
+  const queue = getCsvImportQueue();
+  if (!queue) {
+    return res.status(503).json({
+      error: {
+        code: 'QUEUE_UNAVAILABLE',
+        message: 'Async import queue is unavailable (Redis not connected). Use /commit endpoint as fallback.',
+      },
+    });
+  }
+
+  try {
+    // Mark DB job as committing immediately so the legacy status endpoint reflects it
+    await pool.query(
+      `UPDATE platform.csv_imports SET status = 'committing', products_created = 0 WHERE id = $1`,
+      [jobId]
+    );
+
+    // BullMQ jobId = platform jobId for deterministic lookup
+    const bullJob = await queue.add(
+      'import',
+      { jobId, storeId, validRows },
+      { jobId, attempts: 1 }
+    );
+
+    return res.status(202).json({
+      success: true,
+      data: {
+        jobId,
+        bullJobId: bullJob.id,
+        total: validRows.length,
+        status: 'queued',
+      },
+      message: 'Import queued. Poll GET /products/import/queue/:bullJobId every 2 seconds for progress.',
+    });
+  } catch (err: any) {
+    log.error('[SCALE-D3] Failed to enqueue job:', err.message);
+    // Revert DB status if enqueue failed
+    await pool.query(
+      `UPDATE platform.csv_imports SET status = 'validated' WHERE id = $1`,
+      [jobId]
+    ).catch(() => {});
+    return res.status(500).json({ error: { code: 'QUEUE_ERROR', message: 'Failed to enqueue import job' } });
+  }
+});
+
+// =============================================================================
+// GET /api/v1/retailer-admin/products/import/queue/:bullJobId
+// SCALE-D3: Poll BullMQ job status every 2s.
+// Returns status: queued | active | completed | failed
+// Returns progress: 0–100 (percentage of rows processed)
+// =============================================================================
+
+retailerAdminCsvImportRouter.get('/products/import/queue/:bullJobId', async (req: Request, res: Response) => {
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Store not identified' } });
+  }
+
+  const { bullJobId } = req.params;
+  if (!bullJobId) {
+    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'bullJobId is required' } });
+  }
+
+  const queue = getCsvImportQueue();
+  if (!queue) {
+    return res.status(503).json({
+      error: { code: 'QUEUE_UNAVAILABLE', message: 'Async import queue is unavailable.' },
+    });
+  }
+
+  const statusInfo = await getJobStatus(bullJobId);
+
+  if (statusInfo.status === 'unknown' && statusInfo.error === 'Job not found in queue') {
+    return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Job not found' } });
+  }
+
+  return res.json({
+    success: true,
+    data: {
+      bullJobId,
+      status: statusInfo.status,      // queued | active | completed | failed
+      progress: statusInfo.progress,  // 0–100 percentage
+      result: statusInfo.result,      // { processed, created, updated, skipped } on completion
+      error: statusInfo.error,
+    },
+  });
+});
+
+// =============================================================================
+// SCALE-D3: Worker init — called by app.ts at process startup
+// =============================================================================
+
+export function initCsvImportWorker(): void {
+  startCsvImportWorker(processBatchForWorker);
+}
+
+// =============================================================================
 // Helper functions
 // =============================================================================
 
