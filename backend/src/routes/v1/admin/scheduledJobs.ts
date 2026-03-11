@@ -10,6 +10,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAdminToken } from '../../../middleware/adminToken';
 import { processOverdueReminders } from '../../../services/paymentReminderService';
+import { detectAnomalies } from '../../../services/ai/anomalyAlertingService';
 import { getPool } from '../../../db/client';
 import { log } from "../../../lib/logger";
 
@@ -84,6 +85,21 @@ adminScheduledJobsRouter.get('/jobs/payment-reminders/history', async (req: Requ
     }
     log.error('[Scheduled Jobs] Reminder history error:', err);
     return res.status(500).json({ error: 'Failed to fetch reminder history' });
+  }
+});
+
+// POST /admin/jobs/anomaly-detection — Run anomaly detection across all stores
+// Called by Cloud Scheduler hourly
+adminScheduledJobsRouter.post('/jobs/anomaly-detection', async (_req: Request, res: Response) => {
+  try {
+    const result = await detectAnomalies();
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    log.error('[Scheduled Jobs] Anomaly detection error:', err);
+    return res.status(500).json({ error: 'Anomaly detection processing failed' });
   }
 });
 

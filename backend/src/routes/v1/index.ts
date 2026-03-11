@@ -113,6 +113,7 @@ import { whatsappWebhookRouter } from "./webhooks/whatsappWebhook";  // WA-001: 
 import { adminReorderPoliciesRouter } from "./admin/reorderPolicies";  // SA-P1-015: Reorder policy supervision
 import { adminImportsRouter } from "./admin/imports";  // SA-P2-008: Bulk import notification
 import { adminPriceBoundsRouter } from "./admin/priceBounds";  // SA-P0-003: Price bounds
+import { adminAnomalyAlertsRouter } from "./admin/anomalyAlerts";  // SA-P1-010: Anomaly detection alerts
 
 export const v1Router = Router();
 
@@ -205,6 +206,7 @@ v1Router.use("/admin", adminWhatsAppRouter);  // WA-001: SuperAdmin WhatsApp Clo
 v1Router.use("/admin", adminReorderPoliciesRouter);  // SA-P1-015: Reorder policy supervision
 v1Router.use("/admin", adminImportsRouter);  // SA-P2-008: Bulk import notification
 v1Router.use("/admin", adminPriceBoundsRouter);  // SA-P0-003: Price bounds
+v1Router.use("/admin", adminAnomalyAlertsRouter);  // SA-P1-010: Anomaly detection alerts
 v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashboard API
 v1Router.use("/admin/credit-providers", adminCreditProvidersRouter);  // T-281/T-289/T-290: Provider health + management
 v1Router.use("/admin", adminMaintenanceRouter);  // SA-P0-007: System maintenance mode
