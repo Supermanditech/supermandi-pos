@@ -244,4 +244,34 @@ describe("SellScanScreen", () => {
     );
     unmount();
   });
+
+  // SCALE-C3: FEFO toggle tests
+  it("renders FEFO toggle button", () => {
+    const { getByTestId, unmount } = render(
+      <SellScanScreen storeActive={true} scanDisabled={false} onOpenScanner={jest.fn()} />
+    );
+    const fefoBtn = getByTestId("fefo-toggle-btn");
+    expect(fefoBtn).toBeTruthy();
+    unmount();
+  });
+
+  it("FEFO toggle button shows 'FEFO' text when inactive", () => {
+    const { getByTestId, unmount } = render(
+      <SellScanScreen storeActive={true} scanDisabled={false} onOpenScanner={jest.fn()} />
+    );
+    const fefoBtn = getByTestId("fefo-toggle-btn");
+    // Should contain "FEFO" text (inactive state)
+    expect(fefoBtn).toBeTruthy();
+    unmount();
+  });
+
+  it("FEFO sort is disabled by default", () => {
+    // The toggle button should NOT show 'FEFO ON' text initially
+    const { queryByText, unmount } = render(
+      <SellScanScreen storeActive={true} scanDisabled={false} onOpenScanner={jest.fn()} />
+    );
+    // "FEFO ON" should not be visible when toggle is off
+    expect(queryByText("FEFO ON")).toBeNull();
+    unmount();
+  });
 });

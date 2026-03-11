@@ -465,6 +465,8 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
     // P1-INV-001: Server-side pagination for 10K store readiness
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
     const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+    // SCALE-C3: FEFO sort — earliest expiry first, NULL expiry last, then alpha
+    const sortFefo = req.query.sort === "fefo";
 
     // P1-INV-001: Get total count + aggregate totals across ALL products (not just page)
     // STG-061: Include totalPurchaseValue and totalSellRevenue in the aggregate query
@@ -500,12 +502,20 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
     // CA-1.4-004: Query store_products with canonical stock from stock_balances
     // Prioritize inventory.stock_balances as the source of truth, fallback to sp.current_stock
     // P1-INV-001: Added LIMIT/OFFSET for pagination
+    // SCALE-C3: Optional FEFO sort — earliest expiry first, NULL expiry last, then alpha
+    const inventoryOrderBy = sortFefo
+      ? `ORDER BY
+          CASE WHEN sp.expiry_date IS NULL THEN 1 ELSE 0 END,
+          sp.expiry_date ASC,
+          COALESCE(sp.display_name, p.name) ASC`
+      : `ORDER BY COALESCE(sp.display_name, p.name) ASC`;
     const result = await pool.query(
       `SELECT
         sp.product_id as "productId",
         COALESCE(sp.display_name, p.name) as "productName",
         p.primary_barcode as "barcode",
         sp.batch_number as "batchNumber",
+        sp.expiry_date as "expiryDate",
         COALESCE(sb.current_qty, sp.current_stock, 0) as "totalStockQty",
         COALESCE(
           (SELECT SUM(ABS(delta_qty) * COALESCE(unit_cost, 0))
@@ -528,7 +538,7 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
       WHERE sp.store_id = $1
         AND (sp.is_active = true OR sp.is_active IS NULL)
-      ORDER BY COALESCE(sp.display_name, p.name) ASC
+      ${inventoryOrderBy}
       LIMIT $2 OFFSET $3`,
       [storeId, limit, offset]
     );
@@ -539,6 +549,8 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
       totalStockQty: Number(row.totalStockQty) || 0,
       totalPurchaseValue: Number(row.totalPurchaseValue) || 0,
       totalSellRevenue: Number(row.totalSellRevenue) || 0,
+      // SCALE-C3: expiryDate is already included from SELECT
+      expiryDate: row.expiryDate || null,
     }));
 
     // RCAT-METRICS-001: Compute totals server-side for accuracy
@@ -563,6 +575,8 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
         hasMore: offset + limit < totalProducts,
       },
       lastUpdated: new Date().toISOString(),
+      // SCALE-C3: Echo back the sort mode
+      sort: sortFefo ? "fefo" : "default",
     });
   } catch (_error: unknown) {
     const error = asError(_error);
