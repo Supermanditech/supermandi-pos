@@ -788,3 +788,125 @@ adminDevicesRouter.get("/devices/:deviceId/sync-status", requireAdminToken, asyn
     recent_sync_requests: recentRequests,
   });
 });
+
+// SA-P2-009: Device Hardware Whitelist
+// =============================================================================
+
+const WHITELIST_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// GET /api/v1/admin/devices/whitelist — list active whitelist rules
+adminDevicesRouter.get("/devices/whitelist", requireAdminToken, async (_req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const result = await pool.query(
+      `SELECT id, manufacturer, model, min_android_version, notes, active, created_at, updated_at
+       FROM platform.device_whitelist
+       ORDER BY created_at DESC`
+    );
+
+    return res.json({ rules: result.rows });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error listing rules:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to list whitelist rules" });
+  }
+});
+
+// POST /api/v1/admin/devices/whitelist — add a whitelist rule
+adminDevicesRouter.post("/devices/whitelist", requireAdminToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const body = req.body ?? {};
+  const manufacturer = typeof body.manufacturer === "string" ? body.manufacturer.trim() : "";
+  const model = typeof body.model === "string" ? body.model.trim() : "";
+  const minAndroidVersion = typeof body.minAndroidVersion === "string" ? body.minAndroidVersion.trim() : "";
+  const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 255) : "";
+
+  if (!manufacturer && !model && !minAndroidVersion) {
+    return res.status(400).json({ error: "At least one of manufacturer, model, or minAndroidVersion is required" });
+  }
+
+  if (minAndroidVersion && !/^\d+(\.\d+)*$/.test(minAndroidVersion)) {
+    return res.status(400).json({ error: "minAndroidVersion must be a valid version number (e.g. '12' or '13.0')" });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO platform.device_whitelist (manufacturer, model, min_android_version, notes)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, manufacturer, model, min_android_version, notes, active, created_at, updated_at`,
+      [manufacturer || null, model || null, minAndroidVersion || null, notes || null]
+    );
+
+    log.info(`[DeviceWhitelist] Rule created: id=${result.rows[0].id} manufacturer=${manufacturer} model=${model} minAndroid=${minAndroidVersion}`);
+    return res.status(201).json({ rule: result.rows[0] });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error creating rule:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to create whitelist rule" });
+  }
+});
+
+// DELETE /api/v1/admin/devices/whitelist/:ruleId — remove a whitelist rule
+adminDevicesRouter.delete("/devices/whitelist/:ruleId", requireAdminToken, async (req, res) => {
+  const ruleId = req.params.ruleId?.trim();
+  if (!ruleId || !WHITELIST_UUID_RE.test(ruleId)) {
+    return res.status(400).json({ error: "Valid ruleId (UUID) is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM platform.device_whitelist WHERE id = $1 RETURNING id`,
+      [ruleId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Whitelist rule not found" });
+    }
+
+    log.info(`[DeviceWhitelist] Rule deleted: id=${ruleId}`);
+    return res.json({ success: true, deletedId: ruleId });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error deleting rule:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to delete whitelist rule" });
+  }
+});
+
+// PATCH /api/v1/admin/devices/whitelist/:ruleId — toggle active status
+adminDevicesRouter.patch("/devices/whitelist/:ruleId", requireAdminToken, async (req, res) => {
+  const ruleId = req.params.ruleId?.trim();
+  if (!ruleId || !WHITELIST_UUID_RE.test(ruleId)) {
+    return res.status(400).json({ error: "Valid ruleId (UUID) is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const body = req.body ?? {};
+  if (typeof body.active !== "boolean") {
+    return res.status(400).json({ error: "active (boolean) is required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE platform.device_whitelist SET active = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, manufacturer, model, min_android_version, notes, active, created_at, updated_at`,
+      [body.active, ruleId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Whitelist rule not found" });
+    }
+
+    log.info(`[DeviceWhitelist] Rule ${ruleId} active=${body.active}`);
+    return res.json({ rule: result.rows[0] });
+  } catch (err) {
+    log.error("[DeviceWhitelist] Error updating rule:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update whitelist rule" });
+  }
+});
