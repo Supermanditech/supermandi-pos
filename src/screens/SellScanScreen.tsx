@@ -930,17 +930,18 @@ export default function SellScanScreen({
   const [editProductBusy, setEditProductBusy] = useState(false);
   const [editProductError, setEditProductError] = useState<string | null>(null);
 
-  // SD-CATEGORY: Category rail state (Demo Store only)
+  // SD-CATEGORY: Category rail state
+  // AUDIT-POS-FEATURES-001 §1.1: Removed DEMO001-only gate — category rail is now
+  // available to ALL stores when the feature flag is enabled.
   const storeCode = useSettingsStore((s) => s.storeCode);
-  const isDemoStore = storeCode === "DEMO001";
   const categoryBrowsingEnabled = useFeatureEnabled("category_browsing"); // CAT-005
   const voiceEnabled = useFeatureEnabled("voice"); // VOICE-009
-  const showCategoryRail = isDemoStore && categoryBrowsingEnabled;
+  const showCategoryRail = categoryBrowsingEnabled;
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categoryRailExpanded, setCategoryRailExpanded] = useState(false);
   const categoryAutoCollapseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // CAT-004: API-driven categories for Demo Store
+  // CAT-004: API-driven categories
   const [apiCategories, setApiCategories] = useState<CategoryItem[]>([]);
   const [apiCategoriesLoading, setApiCategoriesLoading] = useState(false);
   const [categoryProducts, setCategoryProducts] = useState<CategoryProduct[]>([]);
@@ -1815,7 +1816,8 @@ export default function SellScanScreen({
     `;
 
     if (query.length > 0) {
-      // Tokenize: split by whitespace, match any token against name or barcode (OR)
+      // AUDIT-POS-FEATURES-001 §2.1: Tokenize and match ALL tokens (AND) — "tata salt"
+      // matches only products containing BOTH "tata" AND "salt" in name or barcode.
       const tokens = query.split(/\s+/).filter(t => t.length >= 1);
       if (tokens.length > 0) {
         const tokenClauses = tokens.map(token => {
@@ -1823,7 +1825,7 @@ export default function SellScanScreen({
           params.push(like, like);
           return "(lower(p.name) LIKE ? OR lower(p.barcode) LIKE ?)";
         });
-        sql += ` WHERE (${tokenClauses.join(" OR ")})`;
+        sql += ` WHERE (${tokenClauses.join(" AND ")})`;
       }
     }
 
@@ -1926,7 +1928,7 @@ export default function SellScanScreen({
       stockLimitEvent.reason === "out_of_stock"
         ? "Out of stock"
         : stockLimitEvent.reason === "unknown_stock"
-          ? "Stock unavailable. Sync required."
+          ? "Added — stock unknown. Sync recommended."
           : `Only ${stockLimitEvent.availableStock} in stock`;
     showToast(message);
     if (stockLimitEvent.itemId) {

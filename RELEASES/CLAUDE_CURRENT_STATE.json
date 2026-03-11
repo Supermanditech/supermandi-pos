@@ -200,7 +200,8 @@
         {
           "id": "AUDIT-POS-FEATURES-001",
           "title": "Full POS Application Feature Audit — Product Handling, Search, Payments, Supplier Integration",
-          "status": "QUEUED",
+          "status": "AUDIT_COMPLETE",
+          "completedAt": "2026-03-11T17:00:00.000Z",
           "priority": "HIGH",
           "risk": "B",
           "platforms": ["POS_APP", "BACKEND"],
@@ -292,7 +293,41 @@
           },
           "effort": "HIGH",
           "blocking": true,
-          "blockingNote": "Core POS product handling and payment integrity must be re-verified with deeper scope before GCP staging"
+          "blockingNote": "Core POS product handling and payment integrity must be re-verified with deeper scope before GCP staging",
+          "auditFindings": {
+            "completedAt": "2026-03-11T17:00:00.000Z",
+            "filesAudited": 18,
+            "totalFindings": 27,
+            "critical": [
+              { "id": "4.2", "area": "UPI Payment", "title": "Manual UTR entry bypasses verification", "file": "src/screens/SplitPaymentModal.tsx", "lines": "393-409", "detail": "handleManualUtrSubmit does NOT call verifyUtr() — accepts any 6+ char string as valid UTR without server-side verification. Revenue integrity issue." }
+            ],
+            "high": [
+              { "id": "3.1", "area": "Quick Scan", "title": "Unknown stock BLOCKS cart addition entirely", "file": "src/services/stockCap.ts", "lines": "42-51", "detail": "capAddQuantity returns addedQty:0 when stock===null. New products or stale cache blocks legitimate sales." },
+              { "id": "1.2", "area": "Category Rail", "title": "Categories NOT auto-formed from scanned/inwarded products", "file": "src/api/catalogApi.ts", "lines": "298-302", "detail": "Categories fetched from backend taxonomy, not derived from product data. No auto-category on scan/inward." },
+              { "id": "1.1", "area": "Category Rail", "title": "Category rail gated to DEMO001 store only", "file": "src/screens/SellScanScreen.tsx", "lines": "935-938", "detail": "showCategoryRail requires storeCode===DEMO001. Production stores never see categories." },
+              { "id": "5.1", "area": "Supplier Integration", "title": "Supplier products do NOT flow into sell catalog automatically", "file": "src/api/catalogApi.ts", "lines": "242-265", "detail": "BuyScreen and SellScanScreen are separate data paths. Purchase must be manually re-onboarded to sell catalog." }
+            ],
+            "medium": [
+              { "id": "2.1", "area": "Search", "title": "Search uses OR logic instead of AND", "file": "src/screens/SellScanScreen.tsx", "lines": "1821-1826" },
+              { "id": "2.2", "area": "Search", "title": "No SQLite FTS index — O(n) LIKE scans", "file": "src/screens/SellScanScreen.tsx", "line": "1824" },
+              { "id": "2.3", "area": "Search", "title": "Remote search silently swallows all errors", "file": "src/screens/SellScanScreen.tsx", "lines": "230-233" },
+              { "id": "5.2", "area": "Supplier", "title": "getSuppliers() silently returns [] on error", "file": "src/api/suppliersApi.ts", "lines": "125-129" },
+              { "id": "2.4", "area": "Search", "title": "Background sync could cause UI flicker", "file": "src/screens/SellScanScreen.tsx", "lines": "1770-1778" }
+            ],
+            "low": 9,
+            "info": 8,
+            "refactorPriority": [
+              "7.1 CRITICAL: Implement actual UTR verification in SplitPaymentModal",
+              "7.2 HIGH: Allow cart addition with unknown stock (warning instead of block)",
+              "7.3 HIGH: Add auto-category assignment on product inward/scan",
+              "7.4 HIGH: Remove DEMO001 gate on category rail",
+              "7.5 HIGH: Build supplier-to-store product bridge on purchase receipt",
+              "7.6 MEDIUM: Fix search to AND logic",
+              "7.7 MEDIUM: Add SQLite FTS5 index",
+              "7.8 MEDIUM: Surface search/sync errors to user",
+              "7.9 MEDIUM: Surface supplier API errors"
+            ]
+          }
         }
       ]
     },
