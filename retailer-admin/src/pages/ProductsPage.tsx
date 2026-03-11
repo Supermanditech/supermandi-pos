@@ -57,6 +57,11 @@ interface Product {
   categoryId?: string;
   // GL-WF-029: BNPL eligibility
   bnplEligible?: boolean;
+  // SCALE-B4: Product image thumbnail
+  image_url?: string | null;
+  // SCALE-B3: Net content for pack/unit column (from SCALE-A2)
+  net_content_value?: number | null;
+  net_content_unit?: string | null;
 }
 
 // API response for product create
@@ -1608,30 +1613,114 @@ Loose Rice,, , 45, 40, , KG, 25`}
             <table className="table">
               <thead>
                 <tr>
+                  <th style={{ width: '52px' }}>Image</th>
                   <th>Barcode</th>
                   <th>Name</th>
                   <th>Brand</th>
-                  <th>Mode</th>
-                  <th>Price</th>
+                  <th>Pack/Unit</th>
+                  <th>Purchase</th>
+                  <th>Sell</th>
+                  <th>MRP</th>
+                  <th>Margin%</th>
+                  <th>GST%</th>
                   <th>Stock</th>
                   <th>Supplier</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((product) => (
+                {filteredProducts.map((product) => {
+                  // SCALE-B3: Client-side margin computation
+                  const marginDisplay = (() => {
+                    if (!product.purchasePrice || product.purchasePrice === 0) return null;
+                    const pct = ((product.sellPrice - product.purchasePrice) / product.purchasePrice) * 100;
+                    return { value: pct.toFixed(1) + '%', positive: pct > 0 };
+                  })();
+                  // SCALE-B3: Pack/unit display
+                  const packDisplay = (() => {
+                    if (product.mode === 'LOOSE_BULK') {
+                      return `per ${product.rateUnit || product.unit || 'KG'}`;
+                    }
+                    if (product.net_content_value && product.net_content_unit) {
+                      return `${product.net_content_value}${product.net_content_unit}`;
+                    }
+                    if (product.packSize && product.packUnit) {
+                      return `${product.packSize}${product.packUnit}`;
+                    }
+                    return null;
+                  })();
+                  return (
                   <tr key={product.id}>
+                    {/* SCALE-B4: Image thumbnail — first column */}
+                    <td style={{ padding: '0.25rem 0.5rem' }}>
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          data-testid="product-image-thumb"
+                          style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', display: 'block' }}
+                        />
+                      ) : (
+                        <div
+                          data-testid="product-image-placeholder"
+                          style={{
+                            width: '40px', height: '40px', borderRadius: '4px',
+                            background: 'var(--surface-2, #f3f4f6)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.25rem',
+                          }}
+                          title="No image"
+                        >
+                          📦
+                        </div>
+                      )}
+                    </td>
                     <td className="prod-table-barcode">
                       {product.barcode || product.generatedBarcode || '-'}
                     </td>
                     <td style={{ fontWeight: '500' }}>{product.name}</td>
                     <td className="text-sm-muted">{product.brand || <span className="sup-small-hint">-</span>}</td>
-                    <td>
-                      <span className={`badge ${product.mode === 'PACKAGED' ? 'badge-info' : 'badge-secondary'}`}>
-                        {product.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}
-                      </span>
+                    {/* SCALE-B3: Pack/unit */}
+                    <td className="text-sm-muted" data-testid="product-pack-unit">
+                      {packDisplay || <span className="sup-small-hint">-</span>}
                     </td>
+                    {/* SCALE-B3: Purchase price */}
+                    <td data-testid="product-purchase-price">
+                      {product.purchasePrice ? formatCurrency(product.purchasePrice) : <span className="sup-small-hint">—</span>}
+                    </td>
+                    {/* SCALE-B3: Sell price (was "Price") */}
                     <td>{formatCurrency(product.sellPrice)}</td>
+                    {/* SCALE-B3: MRP */}
+                    <td data-testid="product-mrp">
+                      {product.mrp ? formatCurrency(product.mrp) : <span className="sup-small-hint">—</span>}
+                    </td>
+                    {/* SCALE-B3: Margin% badge */}
+                    <td data-testid="product-margin">
+                      {marginDisplay ? (
+                        <span
+                          data-testid={marginDisplay.positive ? 'margin-badge-positive' : 'margin-badge-negative'}
+                          style={{
+                            display: 'inline-block',
+                            padding: '0.125rem 0.375rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            background: marginDisplay.positive ? 'var(--badge-success-bg, #d1fae5)' : 'var(--badge-danger-bg, #fee2e2)',
+                            color: marginDisplay.positive ? 'var(--badge-success-text, #065f46)' : 'var(--badge-danger-text, #991b1b)',
+                          }}
+                        >
+                          {marginDisplay.value}
+                        </span>
+                      ) : (
+                        <span className="sup-small-hint" data-testid="margin-no-purchase">—</span>
+                      )}
+                    </td>
+                    {/* SCALE-B3: GST% */}
+                    <td data-testid="product-gst">
+                      {product.gstPercent !== undefined && product.gstPercent !== null
+                        ? `${product.gstPercent}%`
+                        : <span className="sup-small-hint">—</span>}
+                    </td>
                     <td>
                       <span className={`badge ${
                         product.lowStockAlertQty && product.stock <= product.lowStockAlertQty
@@ -1686,7 +1775,8 @@ Loose Rice,, , 45, 40, , KG, 25`}
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}
