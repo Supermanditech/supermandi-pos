@@ -1,6 +1,6 @@
 {
-  "version": "249",
-  "lastUpdated": "2026-03-12T00:00:00.000Z",
+  "version": "250",
+  "lastUpdated": "2026-03-12T00:05:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -7539,7 +7539,7 @@
     "auditMethod": "live gcloud check",
     "project": "supermandi-backend",
     "region": "asia-south1",
-    "overallStatus": "8/9 DONE — DNS pending",
+    "overallStatus": "9/9 DONE — all infra complete",
     "items": [
       {
         "id": 1,
@@ -7592,8 +7592,8 @@
       {
         "id": 9,
         "name": "DNS: staging.supermandi.tech",
-        "status": "PENDING",
-        "evidence": "No Cloud DNS zones, no domain mappings. Services on *.run.app only."
+        "status": "DONE",
+        "evidence": "staging.supermandi.tech → 34.54.26.145 (Cloud LB EXTERNAL). All portals 200 OK: landing, /api/health, /retailer/, /supplier/, /admin/. DNS at registrar level, not GCP Cloud DNS."
       }
     ],
     "cloudRunServices": {
@@ -7623,19 +7623,19 @@
         "lastDeploy": "2026-03-08"
       },
       "landing": {
-        "status": "DOWN",
+        "status": "DEGRADED",
         "url": "https://landing-jwgq6sc6aq-el.a.run.app",
-        "reason": "HealthCheckContainerError — container fails to start on PORT=80",
+        "reason": "Latest revision (landing-00153-g4c) HealthCheckContainerError PORT=80, but older revision still serving via Cloud LB. staging.supermandi.tech returns 200.",
         "lastDeploy": "2026-03-08",
-        "blocker": "BLK-LANDING-PORT"
+        "blocker": "BLK-LANDING-PORT (non-blocking for staging — older revision serving)"
       }
     },
     "blockers": [
       {
         "id": "BLK-LANDING-PORT",
-        "severity": "HIGH",
+        "severity": "MEDIUM",
         "service": "landing",
-        "issue": "HealthCheckContainerError — Cloud Run cannot start landing container on PORT=80. Last deploy 2026-03-08.",
+        "issue": "Latest landing Cloud Run revision fails (HealthCheckContainerError PORT=80). Older revision still serving via Cloud LB — staging.supermandi.tech/200 OK. Fix needed before next landing redeploy.",
         "action": "Investigate landing Dockerfile/entrypoint for PORT env var handling. Fix and redeploy."
       }
     ]
