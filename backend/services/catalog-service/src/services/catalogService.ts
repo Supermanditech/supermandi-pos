@@ -179,6 +179,8 @@ async function fetchStoreCatalog(
       p.manufacturer_name,
       p.country_of_origin,
       p.shelf_life_days,
+      p.net_content_value,
+      p.net_content_unit,
       MIN(sp.purchase_price) as best_price,
       MIN(sp.moq) as min_moq,
       COUNT(DISTINCT sp.supplier_id)::text as supplier_count,
@@ -191,7 +193,8 @@ async function fetchStoreCatalog(
     WHERE ${whereClause}
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
              p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active,
-             p.image_url, p.thumbnail_url, p.manufacturer_name, p.country_of_origin, p.shelf_life_days
+             p.image_url, p.thumbnail_url, p.manufacturer_name, p.country_of_origin, p.shelf_life_days,
+             p.net_content_value, p.net_content_unit
     ORDER BY p.name ASC
     LIMIT $${paramIndex++} OFFSET $${paramIndex}
   `;
@@ -309,6 +312,8 @@ export async function getStoreCatalogProduct(
       p.manufacturer_name,
       p.country_of_origin,
       p.shelf_life_days,
+      p.net_content_value,
+      p.net_content_unit,
       MIN(sp.purchase_price) as best_price,
       MIN(sp.moq) as min_moq,
       COUNT(DISTINCT sp.supplier_id)::text as supplier_count,
@@ -327,7 +332,8 @@ export async function getStoreCatalogProduct(
       AND sp.approval_status = 'approved'
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
              p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active,
-             p.image_url, p.thumbnail_url, p.manufacturer_name, p.country_of_origin, p.shelf_life_days
+             p.image_url, p.thumbnail_url, p.manufacturer_name, p.country_of_origin, p.shelf_life_days,
+             p.net_content_value, p.net_content_unit
   `;
 
   const productRow = await queryOne<CatalogProductRow>(sql, [storeId, productId]);

@@ -255,6 +255,8 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         manufacturer_name,
         country_of_origin,
         shelf_life_days,
+        net_content_value,
+        net_content_unit,
         created_at,
         updated_at
       FROM catalog.supplier_products
@@ -297,6 +299,9 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         manufacturerName: p.manufacturer_name || null,
         countryOfOrigin: p.country_of_origin || null,
         shelfLifeDays: p.shelf_life_days || null,
+        // SCALE-A2: Net content fields
+        netContentValue: p.net_content_value !== null && p.net_content_value !== undefined ? parseFloat(p.net_content_value) : null,
+        netContentUnit: p.net_content_unit || null,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })),
@@ -333,6 +338,7 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
               price_change_pending, pending_purchase_price, pending_mrp,
               image_url, thumbnail_url,
               manufacturer_name, country_of_origin, shelf_life_days,
+              net_content_value, net_content_unit,
               created_at, updated_at
        FROM catalog.supplier_products
        WHERE id = $1::uuid AND supplier_id = $2`,
@@ -362,6 +368,8 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
         imageUrl: p.image_url || null, thumbnailUrl: p.thumbnail_url || null,
         manufacturerName: p.manufacturer_name || null, countryOfOrigin: p.country_of_origin || null,
         shelfLifeDays: p.shelf_life_days || null,
+        netContentValue: p.net_content_value !== null && p.net_content_value !== undefined ? parseFloat(p.net_content_value) : null,
+        netContentUnit: p.net_content_unit || null,
         createdAt: p.created_at, updatedAt: p.updated_at,
       },
     });
@@ -391,6 +399,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       unit,
       imageUrl,
       manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
+      netContentValue, netContentUnit, // SCALE-A2: Net content fields
     } = req.body;
 
     // Validation
@@ -460,9 +469,11 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         manufacturer_name,
         country_of_origin,
         shelf_life_days,
+        net_content_value,
+        net_content_unit,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'pending', true)
       RETURNING
         id,
         name,
@@ -478,6 +489,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         manufacturer_name,
         country_of_origin,
         shelf_life_days,
+        net_content_value,
+        net_content_unit,
         approval_status,
         is_active,
         created_at`,
@@ -496,6 +509,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         manufacturerName?.trim() || null,
         countryOfOrigin?.trim() || null,
         shelfLifeDays !== undefined && shelfLifeDays !== null ? parseInt(shelfLifeDays) : null,
+        netContentValue !== undefined && netContentValue !== null ? parseFloat(netContentValue) : null,
+        netContentUnit?.trim() || null,
       ]
     );
 
@@ -523,6 +538,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         manufacturerName: product.manufacturer_name || null,
         countryOfOrigin: product.country_of_origin || null,
         shelfLifeDays: product.shelf_life_days || null,
+        netContentValue: product.net_content_value !== null ? parseFloat(product.net_content_value) : null,
+        netContentUnit: product.net_content_unit || null,
         approvalStatus,
         isActive: product.is_active,
         createdAt: product.created_at,
@@ -555,6 +572,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       unit,
       imageUrl,  // STG-080: Accept imageUrl in update
       manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
+      netContentValue, netContentUnit, // SCALE-A2: Net content fields
     } = req.body;
 
     const pool = getPool();
@@ -698,6 +716,15 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       updates.push(`shelf_life_days = $${paramIndex++}`);
       values.push(shelfLifeDays !== null ? parseInt(shelfLifeDays) : null);
     }
+    // SCALE-A2: Net content fields in UPDATE
+    if (netContentValue !== undefined) {
+      updates.push(`net_content_value = $${paramIndex++}`);
+      values.push(netContentValue !== null ? parseFloat(netContentValue) : null);
+    }
+    if (netContentUnit !== undefined) {
+      updates.push(`net_content_unit = $${paramIndex++}`);
+      values.push(netContentUnit?.trim() || null);
+    }
 
     if (updates.length === 0) {
       res.status(400).json({
@@ -785,6 +812,8 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
          manufacturer_name,
          country_of_origin,
          shelf_life_days,
+         net_content_value,
+         net_content_unit,
          approval_status,
          is_active,
          price_change_pending,
@@ -826,6 +855,8 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         manufacturerName: product.manufacturer_name || null,
         countryOfOrigin: product.country_of_origin || null,
         shelfLifeDays: product.shelf_life_days || null,
+        netContentValue: product.net_content_value !== null ? parseFloat(product.net_content_value) : null,
+        netContentUnit: product.net_content_unit || null,
         approvalStatus: product.approval_status,
         isActive: product.is_active,
         // T-147: Include pending price info in response

@@ -201,6 +201,8 @@ export default function ProductsPage() {
       mrp: undefined,
       moq: 1,
       unit: 'PCS',
+      netContentValue: undefined,
+      netContentUnit: '',
     });
   };
 
@@ -260,6 +262,11 @@ export default function ProductsPage() {
       moq: product.moq,
       unit: product.unit,
       imageUrl: product.imageUrl,
+      manufacturerName: product.manufacturerName ?? undefined,
+      countryOfOrigin: product.countryOfOrigin ?? undefined,
+      shelfLifeDays: product.shelfLifeDays ?? undefined,
+      netContentValue: product.netContentValue ?? undefined,
+      netContentUnit: product.netContentUnit ?? '',
     });
     setShowForm(true);
   };
@@ -395,6 +402,8 @@ export default function ProductsPage() {
           ? Math.round((parseFloat(value || '0') + Number.EPSILON) * 100)
           : name === 'moq'
           ? parseInt(value) || 1
+          : name === 'netContentValue'
+          ? (value === '' ? undefined : parseFloat(value))
           : value,
     }));
   };
@@ -600,6 +609,40 @@ export default function ProductsPage() {
                   <option value="ML">Milliliters (ML)</option>
                   <option value="PACK">Pack</option>
                   <option value="BOX">Box</option>
+                </select>
+              </div>
+
+              {/* SCALE-A2: Net Content */}
+              <div>
+                <label htmlFor="product-net-content-value" className="label">Net Content Value</label>
+                <input
+                  id="product-net-content-value"
+                  type="number"
+                  name="netContentValue"
+                  value={formData.netContentValue ?? ''}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="e.g. 500"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="product-net-content-unit" className="label">Net Content Unit</label>
+                <select
+                  id="product-net-content-unit"
+                  name="netContentUnit"
+                  value={formData.netContentUnit ?? ''}
+                  onChange={handleChange}
+                  className="input"
+                >
+                  <option value="">— select —</option>
+                  <option value="g">g (grams)</option>
+                  <option value="kg">kg (kilograms)</option>
+                  <option value="ml">ml (millilitres)</option>
+                  <option value="l">l (litres)</option>
+                  <option value="pcs">pcs (pieces)</option>
                 </select>
               </div>
             </div>

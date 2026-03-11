@@ -486,6 +486,11 @@ export interface Product {
   unit: string;
   imageUrl?: string; // T-161: Product image URL
   thumbnailUrl?: string; // T-161: Thumbnail for list views
+  manufacturerName?: string | null; // SCALE-A1
+  countryOfOrigin?: string | null; // SCALE-A1
+  shelfLifeDays?: number | null; // SCALE-A1
+  netContentValue?: number | null; // SCALE-A2
+  netContentUnit?: string | null; // SCALE-A2
   approvalStatus: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string; // GL-WF-036: Rejection reason from admin
   createdAt: string;
@@ -502,6 +507,11 @@ export interface ProductInput {
   moq?: number;
   unit?: string;
   imageUrl?: string; // T-161: Product image URL
+  manufacturerName?: string | null; // SCALE-A1
+  countryOfOrigin?: string | null; // SCALE-A1
+  shelfLifeDays?: number | null; // SCALE-A1
+  netContentValue?: number | null; // SCALE-A2
+  netContentUnit?: string; // SCALE-A2
 }
 
 // GL-WF-063: Pagination types

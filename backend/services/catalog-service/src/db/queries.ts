@@ -39,6 +39,8 @@ interface ProductRow {
   manufacturer_name: string | null;
   country_of_origin: string | null;
   shelf_life_days: number | null;
+  net_content_value: number | null;
+  net_content_unit: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -98,6 +100,8 @@ function mapProductRow(row: ProductRow): Product {
     manufacturerName: row.manufacturer_name ?? undefined,
     countryOfOrigin: row.country_of_origin ?? undefined,
     shelfLifeDays: row.shelf_life_days ?? undefined,
+    netContentValue: row.net_content_value ?? undefined,
+    netContentUnit: row.net_content_unit ?? undefined,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

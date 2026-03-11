@@ -14,6 +14,8 @@ export interface CatalogProduct {
   manufacturerName?: string;
   countryOfOrigin?: string;
   shelfLifeDays?: number;
+  netContentValue?: number;
+  netContentUnit?: string;
   isActive: boolean;
   imageUrl?: string;
   thumbnailUrl?: string;
@@ -72,6 +74,8 @@ export interface CatalogProductRow {
   manufacturer_name: string | null;
   country_of_origin: string | null;
   shelf_life_days: number | null;
+  net_content_value: string | null;
+  net_content_unit: string | null;
   is_active: boolean;
   image_url: string | null;
   thumbnail_url: string | null;
@@ -166,6 +170,8 @@ export function mapCatalogProducts(
       manufacturerName: row.manufacturer_name ?? undefined,
       countryOfOrigin: row.country_of_origin ?? undefined,
       shelfLifeDays: row.shelf_life_days ?? undefined,
+      netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+      netContentUnit: row.net_content_unit ?? undefined,
       isActive: row.is_active,
       imageUrl: row.image_url ?? undefined,
       thumbnailUrl: row.thumbnail_url ?? undefined,
@@ -197,6 +203,8 @@ export function mapCatalogProduct(
     manufacturerName: row.manufacturer_name ?? undefined,
     countryOfOrigin: row.country_of_origin ?? undefined,
     shelfLifeDays: row.shelf_life_days ?? undefined,
+    netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+    netContentUnit: row.net_content_unit ?? undefined,
     isActive: row.is_active,
     imageUrl: row.image_url ?? undefined,
     thumbnailUrl: row.thumbnail_url ?? undefined,

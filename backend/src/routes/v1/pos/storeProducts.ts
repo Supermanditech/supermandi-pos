@@ -491,7 +491,9 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         spb_match.barcode as store_barcode,
         p.manufacturer_name,
         p.country_of_origin,
-        p.shelf_life_days
+        p.shelf_life_days,
+        p.net_content_value,
+        p.net_content_unit
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -557,6 +559,8 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
           manufacturerName: canonical.manufacturer_name || undefined,
           countryOfOrigin: canonical.country_of_origin || undefined,
           shelfLifeDays: canonical.shelf_life_days || undefined,
+          netContentValue: canonical.net_content_value !== null && canonical.net_content_value !== undefined ? parseFloat(canonical.net_content_value) : undefined,
+          netContentUnit: canonical.net_content_unit || undefined,
         },
       });
     }
@@ -593,6 +597,8 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         manufacturerName: row.manufacturer_name || undefined,
         countryOfOrigin: row.country_of_origin || undefined,
         shelfLifeDays: row.shelf_life_days || undefined,
+        netContentValue: row.net_content_value !== null && row.net_content_value !== undefined ? parseFloat(row.net_content_value) : undefined,
+        netContentUnit: row.net_content_unit || undefined,
       },
       context: "SELL",
     });
