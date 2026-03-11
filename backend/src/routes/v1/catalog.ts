@@ -9,6 +9,14 @@ import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceTok
 import { suggestCategory, getAvailableCategories } from "../../utils/autoCategorization";
 import { log } from "../../lib/logger";
 import { asError } from "../../lib/errorUtils";
+// SCALE-D4: Redis cache helpers for page-1 catalog listing
+import { cacheGet, cacheSet, cacheDelete } from "../../db/redis";
+
+// SCALE-D4: Cache key builder for store catalog page 1
+const CATALOG_PAGE1_TTL = 300; // 5 minutes
+function catalogPage1Key(storeId: string): string {
+  return `catalog:store:${storeId}:page1`;
+}
 
 export const catalogRouter = Router();
 
@@ -42,6 +50,19 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
   const page = parseInt(req.query.page as string) || 1;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
   const offset = (page - 1) * limit;
+
+  // SCALE-D4: Serve page 1 from Redis cache when no filters are applied
+  const isPage1NoFilter = page === 1 && !q && !category && !inStockOnly;
+  if (isPage1NoFilter) {
+    try {
+      const cached = await cacheGet<object>(catalogPage1Key(storeId));
+      if (cached !== null) {
+        return res.json(cached);
+      }
+    } catch {
+      // Redis unavailable — fall through to DB
+    }
+  }
 
   try {
     let whereClause = "WHERE sp.store_id = $1 AND sp.is_active = true";
@@ -124,7 +145,7 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
       suppliers: [],
     }));
 
-    return res.json({
+    const responsePayload = {
       success: true,
       data: products,
       pagination: {
@@ -138,7 +159,14 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
         category: category || null,
         inStockOnly,
       },
-    });
+    };
+
+    // SCALE-D4: Cache page 1 (no-filter) response for 5 minutes
+    if (isPage1NoFilter) {
+      cacheSet(catalogPage1Key(storeId), responsePayload, CATALOG_PAGE1_TTL).catch(() => {});
+    }
+
+    return res.json(responsePayload);
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[Catalog] List error:", error.message);

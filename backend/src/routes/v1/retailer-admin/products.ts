@@ -26,6 +26,20 @@ import {
   validateStock as validateStockUnified,
 } from "../../../utils/productValidation";
 import { validatePriceBounds } from "../../../utils/priceBoundsValidator";
+// SCALE-D4: Invalidate catalog page-1 cache on any product CRUD
+// SCALE-D1: Invalidate barcode lookup cache on any product CRUD
+import { cacheDelete } from "../../../db/redis";
+
+function invalidateCatalogPage1(storeId: string): void {
+  cacheDelete(`catalog:store:${storeId}:page1`).catch(() => {});
+}
+
+/** SCALE-D1: Invalidate barcode:{storeId}:{barcode} cache on product CRUD */
+function invalidateBarcodeCache(storeId: string, barcode: string | null | undefined): void {
+  if (barcode) {
+    cacheDelete(`barcode:${storeId}:${barcode}`).catch(() => {});
+  }
+}
 
 export const retailerAdminProductsRouter = Router();
 
@@ -443,6 +457,11 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
 
     await client.query("COMMIT");
 
+    // SCALE-D4: Invalidate cached catalog page 1 for this store
+    invalidateCatalogPage1(storeId);
+    // SCALE-D1: Invalidate barcode lookup cache for the new product
+    invalidateBarcodeCache(storeId, validatedBarcode || generatedBarcode);
+
     return res.status(201).json({
       ok: true,
       data: {
@@ -742,6 +761,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
 
     await client.query("COMMIT");
 
+    // SCALE-D4: Invalidate cached catalog page 1 for this store
+    invalidateCatalogPage1(storeId);
+
     return res.json({
       ok: true,
       data: { id, productId },
@@ -791,6 +813,9 @@ retailerAdminProductsRouter.delete("/products/:id", async (req: Request, res: Re
         error: { code: "NOT_FOUND", message: "Product not found or already deleted" },
       });
     }
+
+    // SCALE-D4: Invalidate cached catalog page 1 for this store
+    invalidateCatalogPage1(storeId);
 
     return res.json({
       success: true,
