@@ -4,25 +4,17 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import { getPool } from "../../db/client";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../middleware/rateLimit";
 
 const router = Router();
 
-// Rate limiter for auth check endpoints
-const authCheckRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiter for auth check endpoints
+const authCheckRateLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 attempts per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many requests. Please try again later.'
-    }
-  },
   keyGenerator: (req) => {
     return req.ip || 'unknown';
-  }
+  },
 });
 
 // =============================================================================

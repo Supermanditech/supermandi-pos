@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "crypto";
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import bcrypt from "bcryptjs";
 import { getPool } from "../../../db/client";
 import { isDemoStoreCode } from "../../../services/storeCodeService";
@@ -21,30 +21,22 @@ function hashCode(code: string): string {
 // DEPLOY-OPS: Respect RATE_LIMIT_MULTIPLIER for local-prod/staging (production default=1)
 const rateLimitMultiplier = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || "1", 10));
 
-const enrollmentBurstLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+const enrollmentBurstLimiter = redisRateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 3 * rateLimitMultiplier,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: { code: "ENROLLMENT_RATE_LIMITED", message: "Too many enrollment attempts. Please wait a minute before trying again." } }
 });
 
 // Rate limiter for enrollment endpoint to prevent brute force attacks
-const enrollmentLimiter = rateLimit({
+const enrollmentLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10 * rateLimitMultiplier,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: { code: "ENROLLMENT_RATE_LIMITED", message: "Too many enrollment attempts. Please try again in 15 minutes." } }
 });
 
 // GO-LIVE-052: Rate limiter for label check endpoint
-const labelCheckLimiter = rateLimit({
+const labelCheckLimiter = redisRateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30, // Maximum 30 label checks per minute per IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: { code: "RATE_LIMITED", message: "Too many label check requests. Please wait a moment." } }
 });
 
 export const posEnrollRouter = Router();
@@ -823,20 +815,14 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
 // POS enters phone number → backend returns active enrollment code
 // =============================================================================
 
-const lookupBurstLimiter = rateLimit({
+const lookupBurstLimiter = redisRateLimit({
   windowMs: 60 * 1000,
   max: 3 * rateLimitMultiplier,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: { code: "LOOKUP_RATE_LIMITED", message: "Too many lookup attempts. Please wait a minute." } }
 });
 
-const lookupSustainedLimiter = rateLimit({
+const lookupSustainedLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10 * rateLimitMultiplier,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: { code: "LOOKUP_RATE_LIMITED", message: "Too many lookup attempts. Please try again in 15 minutes." } }
 });
 
 posEnrollRouter.post("/lookup-activation", lookupBurstLimiter, lookupSustainedLimiter, async (req, res) => {

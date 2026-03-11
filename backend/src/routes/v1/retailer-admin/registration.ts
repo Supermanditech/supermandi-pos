@@ -10,7 +10,7 @@
 // 6. ONLY THEN can user access full features
 
 import { Router, Request, Response, NextFunction } from "express";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import { getPool } from "../../../db/client";
 import { sendRegistrationConfirmationEmail } from "../../../services/emailService";
 import { log } from "../../../lib/logger";
@@ -18,20 +18,13 @@ import { log } from "../../../lib/logger";
 const router = Router();
 
 // Rate limiter for registration endpoints (matches supplier registration)
-const registrationRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+const registrationRateLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 30, // 30 attempts per window (multi-step flow needs headroom for retries)
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many registration attempts. Please try again in 15 minutes.'
-    }
-  },
   keyGenerator: (req) => {
     return req.ip || 'unknown';
-  }
+  },
 });
 
 // Firebase verification
