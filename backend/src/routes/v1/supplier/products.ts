@@ -252,6 +252,8 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         pending_mrp,
         image_url,
         thumbnail_url,
+        net_content_value,
+        net_content_unit,
         created_at,
         updated_at
       FROM catalog.supplier_products
@@ -290,6 +292,9 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         // STG-080: Include image URLs in response
         imageUrl: p.image_url || null,
         thumbnailUrl: p.thumbnail_url || null,
+        // SCALE-A2: Net content fields
+        netContentValue: p.net_content_value || null,
+        netContentUnit: p.net_content_unit || null,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })),
@@ -324,7 +329,8 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
               is_active, approval_status, rejection_reason,
               edited_name, edited_category, supermandi_margin_minor, bnpl_eligible,
               price_change_pending, pending_purchase_price, pending_mrp,
-              image_url, thumbnail_url, created_at, updated_at
+              image_url, thumbnail_url, net_content_value, net_content_unit,
+              created_at, updated_at
        FROM catalog.supplier_products
        WHERE id = $1::uuid AND supplier_id = $2`,
       [req.params.productId, req.supplierId]
@@ -351,6 +357,7 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
         pendingPurchasePrice: p.pending_purchase_price || null,
         pendingMrp: p.pending_mrp || null,
         imageUrl: p.image_url || null, thumbnailUrl: p.thumbnail_url || null,
+        netContentValue: p.net_content_value || null, netContentUnit: p.net_content_unit || null,
         createdAt: p.created_at, updatedAt: p.updated_at,
       },
     });
@@ -379,6 +386,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       moq,
       unit,
       imageUrl,
+      netContentValue, // SCALE-A2
+      netContentUnit,  // SCALE-A2
     } = req.body;
 
     // Validation
@@ -424,6 +433,17 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       }
     }
 
+    // SCALE-A2: Validate net content unit if provided
+    const VALID_NET_CONTENT_UNITS = ['g', 'kg', 'ml', 'l', 'pcs'];
+    if (netContentUnit !== undefined && netContentUnit !== null && netContentUnit !== '') {
+      if (!VALID_NET_CONTENT_UNITS.includes(netContentUnit)) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: `Invalid net content unit. Must be one of: ${VALID_NET_CONTENT_UNITS.join(', ')}` }
+        });
+        return;
+      }
+    }
+
     const pool = getPool();
     if (!pool) {
       res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
@@ -431,6 +451,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
     }
 
     // STG-080: Include image_url in INSERT
+    // SCALE-A2: Include net_content_value and net_content_unit
     const result = await pool.query(
       `INSERT INTO catalog.supplier_products (
         supplier_id,
@@ -444,9 +465,11 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         moq,
         unit,
         image_url,
+        net_content_value,
+        net_content_unit,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', true)
       RETURNING
         id,
         name,
@@ -459,6 +482,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         moq,
         unit,
         image_url,
+        net_content_value,
+        net_content_unit,
         approval_status,
         is_active,
         created_at`,
@@ -474,6 +499,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         moq || 1,
         unit || 'PCS',
         imageUrl || null,
+        netContentValue !== undefined && netContentValue !== null ? parseFloat(netContentValue) : null,
+        netContentUnit || null,
       ]
     );
 
@@ -498,6 +525,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         mrp: product.mrp,
         moq: product.moq,
         unit: product.unit,
+        netContentValue: product.net_content_value || null,
+        netContentUnit: product.net_content_unit || null,
         approvalStatus,
         isActive: product.is_active,
         createdAt: product.created_at,
@@ -529,6 +558,8 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       moq,
       unit,
       imageUrl,  // STG-080: Accept imageUrl in update
+      netContentValue, // SCALE-A2
+      netContentUnit,  // SCALE-A2
     } = req.body;
 
     const pool = getPool();
@@ -613,6 +644,17 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       }
     }
 
+    // SCALE-A2: Validate net content unit if being updated
+    const VALID_NET_CONTENT_UNITS_PATCH = ['g', 'kg', 'ml', 'l', 'pcs'];
+    if (netContentUnit !== undefined && netContentUnit !== null && netContentUnit !== '') {
+      if (!VALID_NET_CONTENT_UNITS_PATCH.includes(netContentUnit)) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: `Invalid net content unit. Must be one of: ${VALID_NET_CONTENT_UNITS_PATCH.join(', ')}` }
+        });
+        return;
+      }
+    }
+
     // Build dynamic update
     const updates: string[] = [];
     const values: (string | number | null)[] = [];
@@ -658,6 +700,15 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
     if (imageUrl !== undefined) {
       updates.push(`image_url = $${paramIndex++}`);
       values.push(imageUrl || null);
+    }
+    // SCALE-A2: Include net_content fields in UPDATE
+    if (netContentValue !== undefined) {
+      updates.push(`net_content_value = $${paramIndex++}`);
+      values.push(netContentValue !== null ? parseFloat(netContentValue) : null);
+    }
+    if (netContentUnit !== undefined) {
+      updates.push(`net_content_unit = $${paramIndex++}`);
+      values.push(netContentUnit || null);
     }
 
     if (updates.length === 0) {
@@ -743,6 +794,8 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
          mrp,
          moq,
          unit,
+         net_content_value,
+         net_content_unit,
          approval_status,
          is_active,
          price_change_pending,
@@ -781,6 +834,8 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         mrp: product.mrp,
         moq: product.moq,
         unit: product.unit,
+        netContentValue: product.net_content_value || null,
+        netContentUnit: product.net_content_unit || null,
         approvalStatus: product.approval_status,
         isActive: product.is_active,
         // T-147: Include pending price info in response

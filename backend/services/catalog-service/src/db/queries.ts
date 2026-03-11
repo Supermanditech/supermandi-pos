@@ -36,6 +36,8 @@ interface ProductRow {
   primary_barcode: string | null;
   hsn_code: string | null;
   default_gst_rate: string | null;
+  net_content_value: string | null;
+  net_content_unit: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -71,6 +73,8 @@ interface SupplierProductRow {
   stock_status: string;
   moq: number;
   max_qty: number | null;
+  net_content_value: string | null;
+  net_content_unit: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -92,6 +96,8 @@ function mapProductRow(row: ProductRow): Product {
     primaryBarcode: row.primary_barcode ?? undefined,
     hsnCode: row.hsn_code ?? undefined,
     defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+    netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+    netContentUnit: row.net_content_unit ?? undefined,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -131,6 +137,8 @@ function mapSupplierProductRow(row: SupplierProductRow): SupplierProduct {
     stockStatus: row.stock_status as SupplierProduct['stockStatus'],
     moq: row.moq,
     maxQty: row.max_qty ?? undefined,
+    netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+    netContentUnit: row.net_content_unit ?? undefined,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

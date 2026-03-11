@@ -11,6 +11,8 @@ export interface CatalogProduct {
   primaryBarcode?: string;
   hsnCode?: string;
   defaultGstRate?: number;
+  netContentValue?: number;
+  netContentUnit?: string;
   isActive: boolean;
   imageUrl?: string;
   thumbnailUrl?: string;
@@ -66,6 +68,8 @@ export interface CatalogProductRow {
   primary_barcode: string | null;
   hsn_code: string | null;
   default_gst_rate: string | null;
+  net_content_value: string | null;
+  net_content_unit: string | null;
   is_active: boolean;
   image_url: string | null;
   thumbnail_url: string | null;
@@ -157,6 +161,8 @@ export function mapCatalogProducts(
       primaryBarcode: row.primary_barcode ?? undefined,
       hsnCode: row.hsn_code ?? undefined,
       defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+      netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+      netContentUnit: row.net_content_unit ?? undefined,
       isActive: row.is_active,
       imageUrl: row.image_url ?? undefined,
       thumbnailUrl: row.thumbnail_url ?? undefined,
@@ -185,6 +191,8 @@ export function mapCatalogProduct(
     primaryBarcode: row.primary_barcode ?? undefined,
     hsnCode: row.hsn_code ?? undefined,
     defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+    netContentValue: row.net_content_value ? parseFloat(row.net_content_value) : undefined,
+    netContentUnit: row.net_content_unit ?? undefined,
     isActive: row.is_active,
     imageUrl: row.image_url ?? undefined,
     thumbnailUrl: row.thumbnail_url ?? undefined,
