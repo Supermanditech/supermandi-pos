@@ -66,6 +66,11 @@ export interface StoreLookupResponse {
     currentStock: number;
     displayName?: string;           // SYNC-PRD-001: store override name
     metadataUpdatedAt?: string | null;  // SYNC-PRD-001
+    // SCALE-B1/E2: Sell tile display fields
+    imageUrl?: string | null;
+    gstRate?: number | null;
+    netContentValue?: number | null;
+    netContentUnit?: string | null;
   };
   context: "SELL";
 }

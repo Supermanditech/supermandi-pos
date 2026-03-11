@@ -385,7 +385,11 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
           spb.barcode as store_barcode,
           GREATEST(sp.updated_at, p.updated_at) as updated_at,
           LOWER(TRIM(COALESCE(sp.display_name, p.name, ''))) || '::' || LOWER(TRIM(COALESCE(sp.brand, p.brand, ''))) as group_key,
-          (${scoreExpr}) as priority_score
+          (${scoreExpr}) as priority_score,
+          COALESCE(sp.image_url, p.image_url) AS image_url,
+          p.default_gst_rate AS gst_rate,
+          p.net_content_value,
+          p.net_content_unit
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -443,6 +447,11 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         displayName: row.sp_display_name || undefined,
         updatedAt: row.updated_at || undefined,
         metadataUpdatedAt: row.metadata_updated_at || undefined,
+        // SCALE-B1/E2: Sell tile display fields
+        image_url: row.image_url || null,
+        gst_rate: row.gst_rate != null ? Number(row.gst_rate) : null,
+        net_content_value: row.net_content_value != null ? Number(row.net_content_value) : null,
+        net_content_unit: row.net_content_unit || null,
       });
     }
 
@@ -503,7 +512,11 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         p.manufacturer_name,
         p.country_of_origin,
         p.shelf_life_days,
-        sp.batch_number
+        sp.batch_number,
+        COALESCE(sp.image_url, p.image_url) AS image_url,
+        p.default_gst_rate AS gst_rate,
+        p.net_content_value,
+        p.net_content_unit
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -570,6 +583,10 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
           countryOfOrigin: canonical.country_of_origin || undefined,
           shelfLifeDays: canonical.shelf_life_days || undefined,
           batchNumber: canonical.batch_number || undefined,
+          imageUrl: canonical.image_url || null,
+          gstRate: canonical.gst_rate != null ? Number(canonical.gst_rate) : undefined,
+          netContentValue: canonical.net_content_value != null ? Number(canonical.net_content_value) : undefined,
+          netContentUnit: canonical.net_content_unit || undefined,
         },
       });
     }
@@ -607,6 +624,11 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         countryOfOrigin: row.country_of_origin || undefined,
         shelfLifeDays: row.shelf_life_days || undefined,
         batchNumber: row.batch_number || undefined,
+        // SCALE-B1/E2: Sell tile display fields
+        imageUrl: row.image_url || null,
+        gstRate: row.gst_rate != null ? Number(row.gst_rate) : undefined,
+        netContentValue: row.net_content_value != null ? Number(row.net_content_value) : undefined,
+        netContentUnit: row.net_content_unit || undefined,
       },
       context: "SELL",
     };
@@ -668,7 +690,11 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           COALESCE(sp.brand, p.brand) as brand,
           p.unit,
           p.category,
-          GREATEST(sp.updated_at, p.updated_at) as updated_at
+          GREATEST(sp.updated_at, p.updated_at) as updated_at,
+          COALESCE(sp.image_url, p.image_url) AS image_url,
+          p.default_gst_rate AS gst_rate,
+          p.net_content_value,
+          p.net_content_unit
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -723,6 +749,11 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       // SCALE-C3: Expiry fields for FEFO support
       expiry_date: row.expiry_date || null,
       batch_number: row.batch_number || null,
+      // SCALE-B1/E2: Sell tile display fields
+      image_url: row.image_url || null,
+      gst_rate: row.gst_rate != null ? Number(row.gst_rate) : null,
+      net_content_value: row.net_content_value != null ? Number(row.net_content_value) : null,
+      net_content_unit: row.net_content_unit || null,
     }));
 
     const total = countResult.rows[0]?.total || 0;
