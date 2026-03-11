@@ -28,6 +28,9 @@ export interface InventoryTransactionItem {
   productId: string;
   quantity: number;
   unitCost?: number;
+  // SCALE-C1: Optional batch tracking fields for FEFO and expiry alerts
+  batchNumber?: string | null;
+  expiryDate?: string | null; // ISO date YYYY-MM-DD
 }
 
 export interface InventoryTransactionInput {
@@ -230,10 +233,19 @@ export async function recordManualInward(
   // Generate a unique reference ID for this inward batch
   const referenceId = `INWARD-${Date.now()}`;
 
+  // SCALE-C1: Map items preserving batchNumber and expiryDate for backend persistence
+  const mappedItems = items.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+    unitCost: item.unitCost,
+    ...(item.batchNumber ? { batchNumber: item.batchNumber } : {}),
+    ...(item.expiryDate ? { expiryDate: item.expiryDate } : {}),
+  }));
+
   const response = await apiClient.post<{ data: InventoryTransactionResponse }>(
     `/api/v1/pos/inventory/transactions`,
     {
-      items,
+      items: mappedItems,
       transactionType: "purchase_received",
       referenceType: "manual",
       referenceId,

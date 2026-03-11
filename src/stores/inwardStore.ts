@@ -16,6 +16,9 @@ export interface InwardItem {
   supplierName: string | null;
   // GO-LIVE-241: Market price reference for comparison
   marketPriceMinor?: number;
+  // SCALE-C1: Optional batch tracking for FEFO (expiry date) and recall traceability
+  batchNumber?: string | null;
+  expiryDate?: string | null; // ISO date string YYYY-MM-DD
 }
 
 export interface InwardSupplier {
@@ -30,7 +33,7 @@ interface InwardState {
 
   // Actions
   addItem: (item: Omit<InwardItem, "supplierId" | "supplierName">) => void;
-  updateItem: (id: string, updates: Partial<Pick<InwardItem, "quantity" | "purchasePriceMinor">>) => void;
+  updateItem: (id: string, updates: Partial<Pick<InwardItem, "quantity" | "purchasePriceMinor" | "batchNumber" | "expiryDate">>) => void;
   removeItem: (id: string) => void;
   setSupplier: (supplier: InwardSupplier | null) => void;
   setNotes: (notes: string) => void;
