@@ -1,6 +1,6 @@
 {
-  "version": "251",
-  "lastUpdated": "2026-03-12T00:15:00.000Z",
+  "version": "252",
+  "lastUpdated": "2026-03-12T04:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -632,8 +632,8 @@
       "9. Announce: 'Resuming JOURNEY-XX. Audit mode: [mode]. Active action: [action]. Next layer: [layer]. Files: [list]'",
       "10. If actions[] is empty or journeyExecutionMachineState.auditMode=USER_ACTION_ENUMERATION: reiterate the journey, enumerate every real user click/action, build the cross-layer map and edge-case matrix, then choose the first blocker. Otherwise resume from lastAuditedAction + 1 or the recorded blocker."
     ],
-    "currentJourney": "SUPERADMIN_WEB_REDISCOVERY",
-    "currentPhase": "POST_POS_PLATFORM_PHASE3_EXHAUSTIVE_REDISCOVERY",
+    "currentJourney": "MEGA_RC_GATE_RUN",
+    "currentPhase": "ARTIFACT_ELIGIBLE",
     "auditProgressNote": "ALL 4 PLATFORMS COMPLETE. POS 15/15 PARK-READY (952 tests). Retailer-web 15/15 PARK-READY (1601 tests). Supplier-web 16/16 PARK-READY (816 tests). Superadmin-web 24/24 PARK-READY (1827 tests). Total: 70 journeys, 5196 tests, zero failures.",
     "deployGateStatus": {
       "c1ClusterDeployEligible": false,
@@ -1715,8 +1715,8 @@
       "artifactRule": "No artifact/build/deploy/runtime while retailer-web expanded rediscovery remains active, while POS_FEATURE_AUDIT_PACK_01 remains pending, or while supplier-web/superadmin-web rediscovery remain incomplete."
     },
     "artifactExecutionLock": {
-      "status": "LOCKED",
-      "artifactPhaseEligible": false,
+      "status": "UNLOCKED",
+      "artifactPhaseEligible": true,
       "owner": "CLAUDE",
       "appliesTo": [
         "local APK build",
@@ -1724,7 +1724,7 @@
         "staging deploy",
         "operator runtime certification"
       ],
-      "currentReason": "Artifact phase is forbidden while supplier-web expanded rediscovery is active and superadmin-web exhaustive rediscovery remains incomplete. Build/deploy/runtime are last-stage actions, not discovery tools.",
+      "currentReason": null,
       "unlockCondition": "artifactPhaseEligible may be set to true only after POS is complete, the expanded retailer-web journey inventory is complete, POS_FEATURE_AUDIT_PACK_01 is completed or explicitly waived, supplier-web/superadmin-web exhaustive rediscovery are complete, every declared post-POS journey is PARK-READY or explicitly CERT-BLOCKED, and the operator explicitly starts the bounded artifact/runtime phase in repo truth.",
       "requiredStagingParityEvidence": [
         "exact build SHA captured from the clean candidate",
@@ -1739,7 +1739,9 @@
         "release candidate generation",
         "staging deploy of the current implementation batch",
         "operator runtime matrix execution"
-      ]
+      ],
+      "unlockedAt": "2026-03-12",
+      "unlockedReason": "All 70 journeys PARK-READY in JOURNEY_MAP.json. Operator explicitly initiated APK build (Phase 7 post-sleep audit session)."
     },
     "liveTestingLifecycle": {
       "canonicalOrder": [
@@ -7641,5 +7643,60 @@
         "fix": "PR #615 — all 3 nginx portals changed to port 8080, deploy.yml --port=8080. Tag: prestage-BLK-LANDING-PORT-2026-03-12_0157IST on 2ad4b00e"
       }
     ]
+  },
+  "gcpDeployedSHAs": {
+    "lastUpdated": "2026-03-12",
+    "deployDate": "2026-03-08",
+    "deployedSHAs": {
+      "apiGateway": "58228705",
+      "mainBackend": "58228705",
+      "retailerAdmin": "58228705",
+      "superadmin": "58228705",
+      "supplierPortal": "261dfc00",
+      "landing": "261dfc00"
+    },
+    "currentHeadSHA": "806a36c7",
+    "driftSince": "2026-03-08",
+    "pendingMigrations": [
+      180,
+      181,
+      182
+    ],
+    "pendingTickets": [
+      "SCALE-A1 through SCALE-C3 (18 tickets)",
+      "REG-SCALE-B1-E2",
+      "BLK-LANDING-PORT"
+    ],
+    "posApkOnDevice": {
+      "deviceId": "TG8HCYTGGQT885OF",
+      "buildSHA": "58228705",
+      "buildDate": "2026-03-09",
+      "backendUrl": "https://staging.supermandi.tech"
+    }
+  },
+  "gitDisciplineAudit2026_03_12": {
+    "auditDate": "2026-03-12",
+    "period": "2026-03-05 to 2026-03-12",
+    "totalCommits": 289,
+    "findings": [
+      {
+        "type": "DRIFT",
+        "count": 6,
+        "detail": "6 Merge branch main commits from worktree agents (should rebase)"
+      },
+      {
+        "type": "DRIFT",
+        "count": 25,
+        "detail": "25 orphaned SCALE/worktree branches deleted in this session"
+      },
+      {
+        "type": "ACCEPTABLE",
+        "detail": "state() commits direct to main (Mode A machine state updates)"
+      }
+    ],
+    "violations": "NONE — no HL-001/HL-002 rule violations found",
+    "prestageTagsPresent": true,
+    "allTicketsHavePRs": true,
+    "verdict": "CLEAN with minor drift (merge vs rebase in worktree agents)"
   }
 }
