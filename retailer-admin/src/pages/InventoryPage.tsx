@@ -10,8 +10,28 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useUrlState } from '../hooks/useUrlState';
 // GAP-2: EmptyState component for consistent empty states
 import EmptyState from '../components/EmptyState';
-import { ClipboardList, RefreshCw } from 'lucide-react';
+import { ClipboardList, RefreshCw, AlertTriangle } from 'lucide-react';
 import { logger } from '../lib/logger';
+
+// SCALE-C2: Expiry alert types
+interface ExpiringProduct {
+  id: string;
+  productId: string;
+  name: string;
+  barcode: string;
+  quantity: number;
+  expiryDate: string;
+  daysRemaining: number;
+  batchNumber: string | null;
+  severity: 'expired' | 'critical' | 'warning';
+}
+
+interface ExpiryAlertsResponse {
+  expiring: ExpiringProduct[];
+  counts: { expired: number; critical: number; warning: number };
+}
+
+type ExpiryDaysFilter = 30 | 90 | 180;
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -76,6 +96,12 @@ export default function InventoryPage() {
   // RET-AUD-034: Date range filters
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  // SCALE-C2: Expiry alerts state
+  const [expiryData, setExpiryData] = useState<ExpiryAlertsResponse | null>(null);
+  const [expiryLoading, setExpiryLoading] = useState(true);
+  const [expiryError, setExpiryError] = useState<string | null>(null);
+  const [expiryDaysAhead, setExpiryDaysAhead] = useState<ExpiryDaysFilter>(90);
+
   // T-183: Auto-refresh state
   const [lastRefreshAt, setLastRefreshAt] = useState<number>(Date.now());
   const [secondsSinceRefresh, setSecondsSinceRefresh] = useState<number>(0);
@@ -142,6 +168,32 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchLedger();
   }, [fetchLedger]);
+
+  // SCALE-C2: Fetch expiry alerts
+  const fetchExpiryAlerts = useCallback(async () => {
+    if (!accessToken) return;
+    setExpiryLoading(true);
+    setExpiryError(null);
+    try {
+      const url = `/api/v1/retailer-admin/inventory/expiring?daysAhead=${expiryDaysAhead}`;
+      const response = await authFetch(url, accessToken);
+      if (response.status === 401) return;
+      if (!response.ok) throw new Error('Failed to fetch expiry alerts');
+      const data = await safeJson<ExpiryAlertsResponse>(response);
+      if (!data) throw new Error('Invalid response from server');
+      setExpiryData(data);
+    } catch (err) {
+      logger.error('Failed to load expiry alerts:', err);
+      setExpiryError('Failed to load expiry alerts. Please try again.');
+      setExpiryData(null);
+    } finally {
+      setExpiryLoading(false);
+    }
+  }, [accessToken, expiryDaysAhead]);
+
+  useEffect(() => {
+    fetchExpiryAlerts();
+  }, [fetchExpiryAlerts]);
 
   // T-183: Auto-refresh polling — only when page is focused
   useEffect(() => {
@@ -231,6 +283,164 @@ export default function InventoryPage() {
           <div className="stat-card">
             <div className="stat-label">📊 Showing</div>
             <div className="stat-value">{loading ? '...' : ledgerEntries.length}</div>
+          </div>
+        </div>
+
+        {/* SCALE-C2: Expiry Alerts Section */}
+        <div className="card" style={{ marginBottom: '1.5rem' }} data-testid="expiry-alerts-section">
+          <div className="flex-between-wrap" style={{ marginBottom: '0.75rem' }}>
+            <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle size={18} style={{ color: 'var(--warning)' }} />
+              Expiry Alerts
+            </h2>
+            {/* Days ahead toggle */}
+            <div className="flex-row btn-icon" data-testid="expiry-days-toggle">
+              {([30, 90, 180] as ExpiryDaysFilter[]).map((d) => (
+                <button
+                  key={d}
+                  className={`btn btn-sm ${expiryDaysAhead === d ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setExpiryDaysAhead(d)}
+                  aria-pressed={expiryDaysAhead === d}
+                  data-testid={`expiry-toggle-${d}`}
+                >
+                  {d} days
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Summary cards */}
+          <div className="grid grid-4 grid-mb" data-testid="expiry-summary-cards">
+            <div
+              className="stat-card"
+              style={{ borderLeft: '3px solid var(--danger)', background: 'var(--danger-soft, #fff5f5)' }}
+              data-testid="expiry-card-expired"
+            >
+              <div className="stat-label" style={{ color: 'var(--danger)' }}>Expired</div>
+              <div className="stat-value" style={{ color: 'var(--danger)' }}>
+                {expiryLoading ? '...' : (expiryData?.counts.expired ?? 0)}
+              </div>
+            </div>
+            <div
+              className="stat-card"
+              style={{ borderLeft: '3px solid var(--danger)', background: 'var(--danger-soft, #fff5f5)' }}
+              data-testid="expiry-card-critical"
+            >
+              <div className="stat-label" style={{ color: 'var(--danger)' }}>Critical (&le;30 days)</div>
+              <div className="stat-value" style={{ color: 'var(--danger)' }}>
+                {expiryLoading ? '...' : (expiryData?.counts.critical ?? 0)}
+              </div>
+            </div>
+            <div
+              className="stat-card"
+              style={{ borderLeft: '3px solid var(--warning)', background: 'var(--warning-soft, #fffbf0)' }}
+              data-testid="expiry-card-warning"
+            >
+              <div className="stat-label" style={{ color: 'var(--warning)' }}>Warning (31-90 days)</div>
+              <div className="stat-value" style={{ color: 'var(--warning)' }}>
+                {expiryLoading ? '...' : (expiryData?.counts.warning ?? 0)}
+              </div>
+            </div>
+            <div className="stat-card" data-testid="expiry-card-total">
+              <div className="stat-label">Total Expiring</div>
+              <div className="stat-value">
+                {expiryLoading ? '...' : (expiryData?.expiring.length ?? 0)}
+              </div>
+            </div>
+          </div>
+
+          {/* Expiry table */}
+          <div className="card card-no-padding" data-testid="expiry-table-container">
+            <table className="table" data-testid="expiry-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Batch</th>
+                  <th>Expiry Date</th>
+                  <th>Days Remaining</th>
+                  <th>Stock Qty</th>
+                  <th>Severity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expiryLoading ? (
+                  <tr>
+                    <td colSpan={6} className="td-center-muted" data-testid="expiry-loading">
+                      Loading expiry data...
+                    </td>
+                  </tr>
+                ) : expiryError ? (
+                  <tr>
+                    <td colSpan={6} className="td-center" data-testid="expiry-error">
+                      <div className="text-danger-mb">{expiryError}</div>
+                      <button
+                        onClick={() => fetchExpiryAlerts()}
+                        disabled={expiryLoading}
+                        className="btn btn-primary"
+                      >
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ) : !expiryData || expiryData.expiring.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} data-testid="expiry-empty">
+                      <EmptyState
+                        icon={<AlertTriangle size={24} />}
+                        title="No expiring products"
+                        description={`No products expire within the next ${expiryDaysAhead} days.`}
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  expiryData.expiring.map((product) => {
+                    const isExpired = product.daysRemaining < 0;
+                    const isCritical = product.severity === 'critical';
+                    const daysBadgeColor = isExpired || isCritical
+                      ? 'var(--danger)'
+                      : 'var(--warning)';
+                    return (
+                      <tr key={product.id} data-testid="expiry-row">
+                        <td data-testid="expiry-product-name">{product.name}</td>
+                        <td data-testid="expiry-batch">{product.batchNumber ?? '—'}</td>
+                        <td data-testid="expiry-date">{product.expiryDate}</td>
+                        <td>
+                          <span
+                            style={{
+                              color: daysBadgeColor,
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 4,
+                              background: isExpired || isCritical
+                                ? 'var(--danger-soft, #fff5f5)'
+                                : 'var(--warning-soft, #fffbf0)',
+                            }}
+                            data-testid="expiry-days-badge"
+                          >
+                            {product.daysRemaining < 0
+                              ? `${Math.abs(product.daysRemaining)}d ago`
+                              : `${product.daysRemaining}d`}
+                          </span>
+                        </td>
+                        <td data-testid="expiry-qty">{product.quantity}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              product.severity === 'expired' ? 'badge-danger' :
+                              product.severity === 'critical' ? 'badge-danger' :
+                              'badge-warning'
+                            }`}
+                            data-testid="expiry-severity-badge"
+                          >
+                            {product.severity.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
