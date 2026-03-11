@@ -456,6 +456,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
           max_devices,
           daily_order_limit_paise,
           monthly_order_limit_paise,
+          max_outstanding_dues_paise,
           created_at,
           updated_at
         FROM platform.stores
@@ -484,7 +485,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
       // Non-critical
     }
 
-    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], ...(deviceInfo ?? {}), dailyOrderLimitPaise: store.daily_order_limit_paise ?? null, monthlyOrderLimitPaise: store.monthly_order_limit_paise ?? null } });
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], ...(deviceInfo ?? {}), dailyOrderLimitPaise: store.daily_order_limit_paise ?? null, monthlyOrderLimitPaise: store.monthly_order_limit_paise ?? null, maxOutstandingDuesPaise: store.max_outstanding_dues_paise ?? null } });
   } catch (_error: unknown) {
     const error = asError(_error);
     log.error("[admin/stores/:storeId] Query failed:", error?.message);
@@ -570,6 +571,8 @@ adminStoresRouter.get("/stores/:storeId/settings", requirePermission("stores", "
         -- SA-P1-002: Spending limits
         daily_order_limit_paise,
         monthly_order_limit_paise,
+        -- SA-P1-003: Due limits
+        max_outstanding_dues_paise,
         -- Timestamps
         created_at,
         updated_at
@@ -655,6 +658,8 @@ adminStoresRouter.get("/stores/:storeId/settings", requirePermission("stores", "
         timezone: store.timezone ?? 'Asia/Kolkata',
         currency: store.currency ?? 'INR',
         scanLookupV2Enabled: store.scan_lookup_v2_enabled ?? false,
+        // SA-P1-003: Due limits
+        maxOutstandingDuesPaise: store.max_outstanding_dues_paise ?? null,
         // Feature flags
         featureFlags,
         // Timestamps
