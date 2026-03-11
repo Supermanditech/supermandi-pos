@@ -111,6 +111,8 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
         p.pack_unit as "packUnit",
         p.hsn_code as "hsn",
         p.default_gst_rate as "gstPercent",
+        p.net_content_value as "netContentValue",
+        p.net_content_unit as "netContentUnit",
         sp.product_mode as "mode",
         COALESCE(sp.sell_price, 0) as "sellPrice",
         COALESCE(sp.mrp, 0) as "mrp",
@@ -208,6 +210,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     packSize, packUnit, soldBy, rateUnit,
     categoryId, // RCAT-CAT-002: Store override for taxonomy_id
     manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
+    netContentValue, netContentUnit, // SCALE-A2: Net content fields
   } = req.body;
 
   // AUD-059-A/B FIX: Input validation bounds
@@ -304,6 +307,16 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     }
   }
 
+  // SCALE-A2: Validate net content unit if provided
+  const VALID_NET_CONTENT_UNITS = ['g', 'kg', 'ml', 'l', 'pcs'];
+  if (netContentUnit !== undefined && netContentUnit !== null && netContentUnit !== '') {
+    if (!VALID_NET_CONTENT_UNITS.includes(netContentUnit)) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: `Invalid net content unit. Must be one of: ${VALID_NET_CONTENT_UNITS.join(', ')}` }
+      });
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -313,9 +326,9 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     const productResult = await client.query(
       `INSERT INTO catalog.products (
         name, description, brand, category, unit, pack_size, pack_unit,
-        primary_barcode, hsn_code, default_gst_rate, is_active,
+        primary_barcode, hsn_code, default_gst_rate, net_content_value, net_content_unit, is_active,
         manufacturer_name, country_of_origin, shelf_life_days
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11, $12, $13)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true, $13, $14, $15)
       RETURNING id`,
       [
         sanitizedName,
@@ -328,6 +341,8 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         productMode === 'PACKAGED' && validatedBarcode ? validatedBarcode : null,
         hsn?.trim() || null,
         gstPercent !== undefined && gstPercent !== '' ? parseFloat(gstPercent) : null,
+        netContentValue !== undefined && netContentValue !== null ? parseFloat(netContentValue) : null,
+        netContentUnit?.trim() || null,
         manufacturerName?.trim() || null,
         countryOfOrigin?.trim() || null,
         shelfLifeDays !== undefined && shelfLifeDays !== null ? parseInt(shelfLifeDays) : null,
@@ -503,6 +518,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     metadataUpdatedAt, // AUD-025-B: ISO timestamp for last-write-wins comparison
     stockUpdatedAt, // RET-POS-SYNC-012: ISO timestamp for stock LWW comparison
     manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
+    netContentValue, netContentUnit, // SCALE-A2: Net content fields
   } = req.body;
 
   // AUD-025-B: Parse incoming timestamp for LWW comparison
@@ -515,6 +531,16 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     if (!categoryValidation.valid) {
       return res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: categoryValidation.error }
+      });
+    }
+  }
+
+  // SCALE-A2: Validate net content unit if provided on update
+  const VALID_NET_CONTENT_UNITS_PATCH = ['g', 'kg', 'ml', 'l', 'pcs'];
+  if (netContentUnit !== undefined && netContentUnit !== null && netContentUnit !== '') {
+    if (!VALID_NET_CONTENT_UNITS_PATCH.includes(netContentUnit)) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: `Invalid net content unit. Must be one of: ${VALID_NET_CONTENT_UNITS_PATCH.join(', ')}` }
       });
     }
   }
@@ -558,9 +584,11 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         pack_unit = $7,
         hsn_code = $8,
         default_gst_rate = $9,
-        manufacturer_name = $10,
-        country_of_origin = $11,
-        shelf_life_days = $12,
+        net_content_value = COALESCE($10, net_content_value),
+        net_content_unit = COALESCE($11, net_content_unit),
+        manufacturer_name = $12,
+        country_of_origin = $13,
+        shelf_life_days = $14,
         updated_at = NOW()
       WHERE id = $1`,
       [
@@ -573,6 +601,8 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         packUnit?.trim() || null,
         hsn?.trim() || null,
         gstPercent !== undefined && gstPercent !== '' ? parseFloat(gstPercent) : null,
+        netContentValue !== undefined && netContentValue !== null ? parseFloat(netContentValue) : null,
+        netContentUnit?.trim() || null,
         manufacturerName !== undefined ? (manufacturerName?.trim() || null) : null,
         countryOfOrigin !== undefined ? (countryOfOrigin?.trim() || null) : null,
         shelfLifeDays !== undefined && shelfLifeDays !== null ? parseInt(shelfLifeDays) : null,

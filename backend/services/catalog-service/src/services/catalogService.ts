@@ -176,6 +176,8 @@ async function fetchStoreCatalog(
       p.is_active,
       p.image_url,
       p.thumbnail_url,
+      p.net_content_value,
+      p.net_content_unit,
       p.manufacturer_name,
       p.country_of_origin,
       p.shelf_life_days,
@@ -191,7 +193,8 @@ async function fetchStoreCatalog(
     WHERE ${whereClause}
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
              p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active,
-             p.image_url, p.thumbnail_url, p.manufacturer_name, p.country_of_origin, p.shelf_life_days
+             p.image_url, p.thumbnail_url, p.net_content_value, p.net_content_unit,
+             p.manufacturer_name, p.country_of_origin, p.shelf_life_days
     ORDER BY p.name ASC
     LIMIT $${paramIndex++} OFFSET $${paramIndex}
   `;
@@ -306,6 +309,8 @@ export async function getStoreCatalogProduct(
       p.is_active,
       p.image_url,
       p.thumbnail_url,
+      p.net_content_value,
+      p.net_content_unit,
       p.manufacturer_name,
       p.country_of_origin,
       p.shelf_life_days,
@@ -327,7 +332,8 @@ export async function getStoreCatalogProduct(
       AND sp.approval_status = 'approved'
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
              p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active,
-             p.image_url, p.thumbnail_url, p.manufacturer_name, p.country_of_origin, p.shelf_life_days
+             p.image_url, p.thumbnail_url, p.net_content_value, p.net_content_unit,
+             p.manufacturer_name, p.country_of_origin, p.shelf_life_days
   `;
 
   const productRow = await queryOne<CatalogProductRow>(sql, [storeId, productId]);

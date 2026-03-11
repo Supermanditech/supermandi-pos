@@ -19,6 +19,8 @@ export interface Product extends BaseEntity {
   primaryBarcode?: string; // Cache only - canonical is product_barcodes
   hsnCode?: string;
   defaultGstRate?: number;
+  netContentValue?: number;   // SCALE-A2: Net content per unit (e.g. 500 for 500g)
+  netContentUnit?: string;    // SCALE-A2: Unit: g, kg, ml, l, pcs
   isActive: boolean;
 }
 
@@ -62,6 +64,8 @@ export interface SupplierProduct extends BaseEntity {
   stockStatus: 'available' | 'low' | 'out_of_stock';
   moq: number; // Minimum order quantity
   maxQty?: number;
+  netContentValue?: number;   // SCALE-A2: Net content per unit
+  netContentUnit?: string;    // SCALE-A2: Unit: g, kg, ml, l, pcs
   isActive: boolean;
 }
 
