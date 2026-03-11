@@ -70,6 +70,9 @@ function createProps(overrides: Partial<Parameters<typeof DevicesTab>[0]> = {}) 
     requestDeviceSave: vi.fn(),
     requestDeviceReset: vi.fn(),
     requestForceReEnroll: vi.fn(),
+    // SA-P1-013
+    requestRevokeToken: vi.fn(),
+    revokingTokenDevices: {},
     // SA-P2-005
     requestForceSync: vi.fn(),
     forceSyncingDevices: {},
@@ -554,6 +557,73 @@ describe('DevicesTab', () => {
     render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
     const btn = screen.getByText('Force Re-Enroll');
     expect(btn.getAttribute('title')).toContain('deregistered');
+  });
+
+  // ── SA-P1-013: Revoke Token Button ─────────────────────────
+
+  it('renders Revoke Token button for each device', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    expect(screen.getByText('Revoke Token')).toBeTruthy();
+  });
+
+  it('shows confirm dialog when Revoke Token is clicked', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    fireEvent.click(screen.getByText('Revoke Token'));
+    expect(screen.getByText('Revoke Device Token')).toBeTruthy();
+    expect(screen.getByText(/Revoke the authentication token/)).toBeTruthy();
+  });
+
+  it('calls requestRevokeToken after confirming dialog', () => {
+    const handler = vi.fn();
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device], requestRevokeToken: handler })} />);
+    fireEvent.click(screen.getByText('Revoke Token'));
+    // The confirm dialog should be visible
+    expect(screen.getByText('Revoke Device Token')).toBeTruthy();
+    // Click the confirm button in the dialog — it's the btnDanger inside the modal
+    const dialog = screen.getByRole('dialog');
+    const confirmBtn = dialog.querySelector('.btnDanger') as HTMLElement;
+    expect(confirmBtn).toBeTruthy();
+    fireEvent.click(confirmBtn);
+    expect(handler).toHaveBeenCalledWith('dev-001');
+  });
+
+  it('shows Revoking... when revokingTokenDevices is true', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      revokingTokenDevices: { 'dev-001': true },
+    })} />);
+    expect(screen.getByText('Revoking…')).toBeTruthy();
+  });
+
+  it('disables Revoke Token button when revokingTokenDevices is true', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      revokingTokenDevices: { 'dev-001': true },
+    })} />);
+    const btn = screen.getByText('Revoking…');
+    expect(btn).toHaveProperty('disabled', true);
+  });
+
+  it('disables Revoke Token button when deviceSaving', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({
+      filteredDeviceRecords: [device],
+      deviceSaving: { 'dev-001': true },
+    })} />);
+    const btn = screen.getByTitle('Revoke the device\'s current authentication token. The device will need to re-authenticate but not re-enroll.');
+    expect(btn).toHaveProperty('disabled', true);
+  });
+
+  it('shows Revoke Token tooltip with explanation', () => {
+    const device = makeDeviceRecord();
+    render(<DevicesTab {...createProps({ filteredDeviceRecords: [device] })} />);
+    const btn = screen.getByText('Revoke Token');
+    expect(btn.getAttribute('title')).toContain('re-authenticate');
   });
 
   // ── SA-P2-005: Force Sync Button ─────────────────────────

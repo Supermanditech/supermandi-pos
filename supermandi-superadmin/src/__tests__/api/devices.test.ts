@@ -1,6 +1,6 @@
 // SuperAdmin — Test devices API client
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, fetchDeviceSyncStatus, pushConfigToDevice, broadcastConfig, fetchConfigPushHistory, fetchWhitelistRules, createWhitelistRule, deleteWhitelistRule, toggleWhitelistRule } from '../../api/devices';
+import { fetchDevices, patchDevice, revokeDeviceToken, forceReEnrollDevice, forceSyncDevice, fetchDeviceSyncStatus, pushConfigToDevice, broadcastConfig, fetchConfigPushHistory, fetchWhitelistRules, createWhitelistRule, deleteWhitelistRule, toggleWhitelistRule } from '../../api/devices';
 
 vi.mock('../../api/authToken', () => ({
   getAuthHeaders: vi.fn(() => ({ Authorization: 'Bearer mock-token', 'X-Request-ID': 'test-id' })),
@@ -260,6 +260,88 @@ describe('devices API client', () => {
 
       const calledUrl = mockFetch.mock.calls[0][0];
       expect(calledUrl).toContain('dev%2Fspecial');
+    });
+  });
+
+  // =========================================================================
+  // SA-P1-013: revokeDeviceToken
+  // =========================================================================
+
+  describe('revokeDeviceToken', () => {
+    it('sends POST to revoke-token endpoint', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, revokedAt: '2026-03-11T12:00:00.000Z' }),
+      });
+
+      const result = await revokeDeviceToken('dev-1');
+      expect(result.success).toBe(true);
+      expect(result.revokedAt).toBe('2026-03-11T12:00:00.000Z');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/admin/devices/dev-1/revoke-token'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        })
+      );
+    });
+
+    it('sends reason in request body', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, revokedAt: '2026-03-11T12:00:00.000Z' }),
+      });
+
+      await revokeDeviceToken('dev-1', 'Suspicious activity');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.reason).toBe('Suspicious activity');
+    });
+
+    it('sends empty reason when not provided', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, revokedAt: '2026-03-11T12:00:00.000Z' }),
+      });
+
+      await revokeDeviceToken('dev-1');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.reason).toBe('');
+    });
+
+    it('encodes deviceId in URL', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, revokedAt: '2026-03-11T12:00:00.000Z' }),
+      });
+
+      await revokeDeviceToken('dev/special');
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).toContain('dev%2Fspecial/revoke-token');
+    });
+
+    it('throws on error response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({}),
+      });
+
+      await expect(revokeDeviceToken('dev-1')).rejects.toThrow();
+    });
+
+    it('returns fallback revokedAt when response is missing it', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      });
+
+      const result = await revokeDeviceToken('dev-1');
+      expect(result.success).toBe(true);
+      expect(result.revokedAt).toBeTruthy();
     });
   });
 
