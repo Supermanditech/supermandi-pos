@@ -27,7 +27,7 @@ let currentDb: Db | null = null;
 let currentScope: string | null = null;
 
 // Current schema version - increment when adding migrations
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 function buildDbName(scope: string): string {
   return `supermandi_offline_${scope}.db`;
@@ -229,6 +229,17 @@ const migrations: Migration[] = [
       // Stores GCS URL so sell tiles show cached images without a network request
       await ensureColumn(db, "offline_products", "image_url", "TEXT NULL");
     }
+  },
+  {
+    version: 6,
+    name: "add_batch_expiry_to_offline_products",
+    up: async (db: Db) => {
+      // SCALE-C1: Add batch_number and expiry_date for FEFO tracking
+      // batch_number enables recall traceability and FEFO (SCALE-C3)
+      // expiry_date enables expiry alerts (SCALE-C2)
+      await ensureColumn(db, "offline_products", "batch_number", "TEXT NULL");
+      await ensureColumn(db, "offline_products", "expiry_date", "TEXT NULL");
+    }
   }
 ];
 
@@ -254,6 +265,9 @@ async function selfHealSchema(db: Db): Promise<void> {
     { table: "offline_products", column: "store_product_id", definition: "TEXT NULL" },
     { table: "offline_products", column: "current_stock", definition: "INTEGER NULL" },
     { table: "offline_products", column: "image_url", definition: "TEXT NULL" },
+    // SCALE-C1: Batch and expiry for FEFO tracking
+    { table: "offline_products", column: "batch_number", definition: "TEXT NULL" },
+    { table: "offline_products", column: "expiry_date", definition: "TEXT NULL" },
     { table: "offline_sale_items", column: "line_subtotal_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
     { table: "offline_sale_items", column: "discount_type", definition: "TEXT NULL" },
     { table: "offline_sale_items", column: "discount_value", definition: "REAL NULL" },

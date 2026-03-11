@@ -13,6 +13,10 @@ export type OfflineScanProduct = {
   storeProductId?: string | null;
   /** SCALE-E2: Product image URL from GCS (cached for offline display) */
   imageUrl?: string | null;
+  /** SCALE-C1: Batch number for FEFO tracking */
+  batchNumber?: string | null;
+  /** SCALE-C1: Expiry date in ISO format YYYY-MM-DD for expiry alerts */
+  expiryDate?: string | null;
 };
 
 export type OfflineScanResult =
@@ -45,8 +49,11 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
     product_id: string | null;
     store_product_id: string | null;
     image_url: string | null;
+    // SCALE-C1: Batch and expiry columns
+    batch_number: string | null;
+    expiry_date: string | null;
   }>(
-    `SELECT barcode, name, category, currency, product_id, store_product_id, image_url FROM offline_products WHERE barcode = ? LIMIT 1`,
+    `SELECT barcode, name, category, currency, product_id, store_product_id, image_url, batch_number, expiry_date FROM offline_products WHERE barcode = ? LIMIT 1`,
     [barcode]
   );
 
@@ -66,6 +73,9 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
     productId: rows[0].product_id ?? null,
     storeProductId: rows[0].store_product_id ?? null,
     imageUrl: rows[0].image_url ?? null,
+    // SCALE-C1: Return batch/expiry for offline FEFO awareness
+    batchNumber: rows[0].batch_number ?? null,
+    expiryDate: rows[0].expiry_date ?? null,
   };
 }
 
@@ -77,13 +87,16 @@ export async function upsertLocalProduct(
   productId: string | null = null,
   currentStock: number | null = null,
   storeProductId: string | null = null,
-  imageUrl: string | null = null
+  imageUrl: string | null = null,
+  // SCALE-C1: Optional batch and expiry for FEFO tracking
+  batchNumber: string | null = null,
+  expiryDate: string | null = null
 ): Promise<OfflineScanProduct> {
   const now = new Date().toISOString();
   await offlineDb.run(
     `
-    INSERT INTO offline_products (barcode, name, category, currency, product_id, store_product_id, current_stock, image_url, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO offline_products (barcode, name, category, currency, product_id, store_product_id, current_stock, image_url, batch_number, expiry_date, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(barcode) DO UPDATE SET
       name = excluded.name,
       category = COALESCE(excluded.category, offline_products.category),
@@ -92,9 +105,11 @@ export async function upsertLocalProduct(
       store_product_id = COALESCE(excluded.store_product_id, offline_products.store_product_id),
       current_stock = COALESCE(excluded.current_stock, offline_products.current_stock),
       image_url = COALESCE(excluded.image_url, offline_products.image_url),
+      batch_number = COALESCE(excluded.batch_number, offline_products.batch_number),
+      expiry_date = COALESCE(excluded.expiry_date, offline_products.expiry_date),
       updated_at = excluded.updated_at
     `,
-    [barcode, name, category, currency, productId, storeProductId, currentStock, imageUrl, now, now]
+    [barcode, name, category, currency, productId, storeProductId, currentStock, imageUrl, batchNumber, expiryDate, now, now]
   );
 
   return {
@@ -104,6 +119,8 @@ export async function upsertLocalProduct(
     currency,
     priceMinor: null,
     imageUrl,
+    batchNumber,
+    expiryDate,
   };
 }
 

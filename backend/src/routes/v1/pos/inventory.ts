@@ -299,7 +299,8 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
     const entries: any[] = [];
 
     for (const item of items) {
-      const { productId, quantity, unitCost } = item;
+      // SCALE-C1: Destructure batchNumber and expiryDate for purchase_received tracking
+      const { productId, quantity, unitCost, batchNumber, expiryDate } = item;
 
       if (!productId || quantity === undefined || quantity === 0) {
         continue;
@@ -325,13 +326,40 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
 
       const newStock = Math.max(0, currentStock + deltaQty);
 
-      // Update store_products stock
-      await client.query(
-        `UPDATE catalog.store_products
-         SET current_stock = $3, updated_at = NOW()
-         WHERE store_id = $1 AND product_id = $2`,
-        [storeId, productId, newStock]
-      );
+      // SCALE-C1: Update store_products stock (plus batch_number/expiry_date for purchase_received)
+      const isPurchaseReceived = transactionType === "purchase_received" || transactionType === "stock_in";
+      const hasBatch = isPurchaseReceived && batchNumber && typeof batchNumber === "string" && batchNumber.trim();
+      const hasExpiry = isPurchaseReceived && expiryDate && typeof expiryDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(expiryDate.trim());
+
+      if (hasBatch && hasExpiry) {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, batch_number = $4, expiry_date = $5, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock, batchNumber.trim(), expiryDate.trim()]
+        );
+      } else if (hasBatch) {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, batch_number = $4, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock, batchNumber.trim()]
+        );
+      } else if (hasExpiry) {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, expiry_date = $4, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock, expiryDate.trim()]
+        );
+      } else {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock]
+        );
+      }
 
       // Get current stock_balances for accurate ledger entry
       const balanceResult = await client.query(

@@ -219,9 +219,23 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
     let itemsProcessed = 0;
 
     for (const item of items) {
-      const { barcode, quantity, buyPrice, batchNumber } = item;
+      // SCALE-C1: Destructure batchNumber and expiryDate (both optional)
+      const { barcode, quantity, buyPrice, batchNumber, expiryDate } = item;
 
       // BUG-004: quantity validated upfront — always positive here
+
+      // Validate expiryDate format if provided (must be YYYY-MM-DD ISO date)
+      if (expiryDate !== undefined && expiryDate !== null && expiryDate !== "") {
+        if (typeof expiryDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDate.trim())) {
+          await client.query("ROLLBACK");
+          client.release();
+          return res.status(400).json({
+            success: false,
+            error: "INVALID_EXPIRY_DATE",
+            message: "expiryDate must be in YYYY-MM-DD format",
+          });
+        }
+      }
 
       // Look up product by barcode in store_product_barcodes + store_products
       const productResult = await client.query(
@@ -249,13 +263,31 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
       const deltaQty = Math.abs(quantity);
       const newStock = currentStock + deltaQty;
 
-      // Update store_products stock (and batch_number if provided — SCALE-A3 FEFO tracking)
-      if (batchNumber && typeof batchNumber === "string" && batchNumber.trim()) {
+      // SCALE-C1: Update store_products with stock, batch_number, and/or expiry_date
+      // Only update batch_number/expiry_date when explicitly provided (non-null, non-empty)
+      const hasBatch = batchNumber && typeof batchNumber === "string" && batchNumber.trim();
+      const hasExpiry = expiryDate && typeof expiryDate === "string" && expiryDate.trim();
+
+      if (hasBatch && hasExpiry) {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, batch_number = $4, expiry_date = $5, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock, batchNumber.trim(), expiryDate.trim()]
+        );
+      } else if (hasBatch) {
         await client.query(
           `UPDATE catalog.store_products
            SET current_stock = $3, batch_number = $4, updated_at = NOW()
            WHERE store_id = $1 AND product_id = $2`,
           [storeId, productId, newStock, batchNumber.trim()]
+        );
+      } else if (hasExpiry) {
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, expiry_date = $4, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, newStock, expiryDate.trim()]
         );
       } else {
         await client.query(

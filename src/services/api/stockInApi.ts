@@ -14,6 +14,9 @@ export interface StockInItem {
   buyPrice: number;      // Cost price per unit
   sellPrice: number;     // Retail price per unit
   isNewProduct?: boolean; // Flag for products not yet in catalog
+  // SCALE-C1: Optional batch tracking for FEFO and recall traceability
+  batchNumber?: string | null;
+  expiryDate?: string | null; // ISO date YYYY-MM-DD
 }
 
 export interface StockInPayload {

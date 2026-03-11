@@ -115,17 +115,24 @@ function InwardItemRow({
   item,
   onUpdateQty,
   onUpdatePrice,
+  onUpdateBatch,
+  onUpdateExpiry,
   onRemove,
 }: {
   item: InwardItem;
   onUpdateQty: (qty: number) => void;
   onUpdatePrice: (priceMinor: number) => void;
+  onUpdateBatch: (batchNumber: string) => void;
+  onUpdateExpiry: (expiryDate: string) => void;
   onRemove: () => void;
 }) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [qtyText, setQtyText] = useState(String(item.quantity));
   const [priceText, setPriceText] = useState((item.purchasePriceMinor / 100).toFixed(2));
+  // SCALE-C1: batch_number and expiry_date fields (optional)
+  const [batchText, setBatchText] = useState(item.batchNumber ?? "");
+  const [expiryText, setExpiryText] = useState(item.expiryDate ?? "");
 
   useEffect(() => {
     setQtyText(String(item.quantity));
@@ -158,6 +165,34 @@ function InwardItemRow({
       onUpdatePrice(Math.round(parsed * 100));
     } else {
       setPriceText((item.purchasePriceMinor / 100).toFixed(2));
+    }
+  };
+
+  // SCALE-C1: Batch number blur — trim and propagate (empty string treated as no-op)
+  const handleBatchBlur = () => {
+    const trimmed = batchText.trim();
+    onUpdateBatch(trimmed);
+  };
+
+  // SCALE-C1: Expiry date blur — validate DD-MM-YYYY and convert to YYYY-MM-DD ISO
+  const handleExpiryBlur = () => {
+    const trimmed = expiryText.trim();
+    if (!trimmed) {
+      onUpdateExpiry("");
+      return;
+    }
+    // Accept DD-MM-YYYY and convert to ISO
+    const ddmmyyyy = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
+    if (ddmmyyyy) {
+      const [, dd, mm, yyyy] = ddmmyyyy;
+      onUpdateExpiry(`${yyyy}-${mm}-${dd}`);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      // Already ISO format
+      onUpdateExpiry(trimmed);
+    } else {
+      // Invalid — clear
+      setExpiryText("");
+      onUpdateExpiry("");
     }
   };
 
@@ -231,6 +266,39 @@ function InwardItemRow({
         <Pressable accessibilityRole="button" style={styles.removeButton} onPress={onRemove}>
           <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
         </Pressable>
+      </View>
+
+      {/* SCALE-C1: Optional batch/expiry fields for FEFO tracking */}
+      <View style={styles.batchExpiryRow}>
+        <View style={styles.batchField}>
+          <Text style={styles.itemFieldLabel}>Batch No. (optional)</Text>
+          <TextInput
+            testID="batch-number-input"
+            style={styles.batchInput}
+            value={batchText}
+            onChangeText={setBatchText}
+            onBlur={handleBatchBlur}
+            placeholder="e.g. MH-2026-03"
+            placeholderTextColor={colors.textTertiary}
+            keyboardType="default"
+            autoCapitalize="characters"
+          />
+        </View>
+
+        <View style={styles.expiryField}>
+          <Text style={styles.itemFieldLabel}>Expiry Date (optional)</Text>
+          <TextInput
+            testID="expiry-date-input"
+            style={styles.batchInput}
+            value={expiryText}
+            onChangeText={setExpiryText}
+            onBlur={handleExpiryBlur}
+            placeholder="DD-MM-YYYY"
+            placeholderTextColor={colors.textTertiary}
+            keyboardType="numbers-and-punctuation"
+            maxLength={10}
+          />
+        </View>
       </View>
     </View>
   );
@@ -421,10 +489,13 @@ export default function InwardScreen({
 
   const doSubmit = async () => {
     try {
+      // SCALE-C1: Include batchNumber and expiryDate for FEFO tracking
       const txItems: InventoryTransactionItem[] = items.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
         unitCost: item.purchasePriceMinor,
+        batchNumber: item.batchNumber || null,
+        expiryDate: item.expiryDate || null,
       }));
 
       // ITER2-001 (AUD-074-A): Pass supplier object separately for structured storage
@@ -571,6 +642,8 @@ export default function InwardScreen({
             item={item}
             onUpdateQty={(qty) => updateItem(item.id, { quantity: qty })}
             onUpdatePrice={(price) => updateItem(item.id, { purchasePriceMinor: price })}
+            onUpdateBatch={(batchNumber) => updateItem(item.id, { batchNumber: batchNumber || null })}
+            onUpdateExpiry={(expiryDate) => updateItem(item.id, { expiryDate: expiryDate || null })}
             onRemove={() => removeItem(item.id)}
           />
         )}
@@ -891,6 +964,30 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   itemInputWide: {
     width: 70,
+  },
+  // SCALE-C1: Batch number + expiry date fields
+  batchExpiryRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  batchField: {
+    flex: 2,
+    gap: 4,
+  },
+  expiryField: {
+    flex: 1,
+    gap: 4,
+  },
+  batchInput: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: colors.textPrimary,
   },
   itemTotalBlock: {
     flex: 1,
