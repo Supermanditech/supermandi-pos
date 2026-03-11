@@ -8,7 +8,7 @@ import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
-import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, type StoreRecord } from "./api/stores";
+import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, updateStoreBnpl, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
@@ -2356,6 +2356,41 @@ export default function App() {
     }
   }
 
+  // SA-P2-007: Save BNPL settings for a store
+  const [bnplSaving, setBnplSaving] = useState<Record<string, boolean>>({});
+  async function handleBnplSave(storeId: string, settings: { bnplEnabled: boolean; bnplCreditLimit: number; bnplMaxDays: number; creditEnabled: boolean; creditLimit: number }) {
+    if (bnplSaving[storeId]) return;
+    setBnplSaving((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      await updateStoreBnpl(storeId, settings);
+      if (storeSettings[storeId]) {
+        setStoreSettings((prev) => ({
+          ...prev,
+          [storeId]: {
+            ...prev[storeId],
+            bnplEnabled: settings.bnplEnabled,
+            bnplCreditLimit: settings.bnplCreditLimit,
+            bnplMaxDays: settings.bnplMaxDays,
+            creditEnabled: settings.creditEnabled,
+            creditLimit: settings.creditLimit,
+          },
+        }));
+      }
+      setStoreDirectory((prev) =>
+        prev.map((s) =>
+          s.id === storeId
+            ? { ...s, creditEnabled: settings.creditEnabled, creditLimit: settings.creditLimit }
+            : s
+        )
+      );
+      toast.success("BNPL settings updated.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update BNPL settings.");
+    } finally {
+      setBnplSaving((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
   function resetBarcodeSheetNotice() {
     setBarcodeSheetError("");
     setBarcodeSheetSuccess("");
@@ -3320,6 +3355,8 @@ export default function App() {
           storeSettings={storeSettings}
           storeSettingsLoading={storeSettingsLoading}
           loadStoreSettings={loadStoreSettingsHandler}
+          handleBnplSave={handleBnplSave}
+          bnplSaving={bnplSaving}
         />
       )}
 
