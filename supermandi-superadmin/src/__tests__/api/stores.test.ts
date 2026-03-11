@@ -1,6 +1,6 @@
 // SuperAdmin — Test stores API client
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchStores, fetchStore, createStore, updateStore, changeStoreStatus, fetchStoreStatusHistory } from '../../api/stores';
+import { fetchStores, fetchStore, createStore, updateStore, changeStoreStatus, fetchStoreStatusHistory, fetchStoreSettings } from '../../api/stores';
 
 // Mock authToken module
 vi.mock('../../api/authToken', () => ({
@@ -436,6 +436,105 @@ describe('stores API client', () => {
       });
 
       await expect(fetchStoreStatusHistory('nonexistent')).rejects.toThrow();
+    });
+  });
+
+  // =========================================================================
+  // SA-P1-014: fetchStoreSettings
+  // =========================================================================
+
+  describe('fetchStoreSettings', () => {
+    const mockSettings = {
+      storeId: 'store-1',
+      name: 'Test Store',
+      code: 'TST001',
+      storeType: null,
+      status: 'ACTIVE',
+      statusReason: null,
+      statusUpdatedAt: null,
+      address: '123 Main St',
+      contactName: 'John',
+      contactPhone: '+911234567890',
+      contactEmail: 'john@test.com',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      pincode: '400001',
+      location: null,
+      upiVpa: 'test@upi',
+      upiVpaUpdatedAt: '2024-01-15',
+      allowedPaymentMethods: ['CASH', 'UPI', 'DUE'],
+      creditEnabled: false,
+      creditLimit: 0,
+      bnplEnabled: false,
+      bnplCreditLimit: 5000000,
+      bnplMaxDays: 7,
+      deviceBound: true,
+      kycComplete: true,
+      upiComplete: true,
+      adminApproved: true,
+      activeDeviceCount: 1,
+      posDeviceId: null,
+      kycStatus: 'VERIFIED',
+      timezone: 'Asia/Kolkata',
+      currency: 'INR',
+      scanLookupV2Enabled: false,
+      featureFlags: [{ flag_key: 'scan_v2', enabled: true, scope_type: 'global', description: null }],
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-15',
+    };
+
+    it('returns store settings on success', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ settings: mockSettings }),
+      });
+
+      const result = await fetchStoreSettings('store-1');
+      expect(result).toEqual(mockSettings);
+    });
+
+    it('calls correct URL with encoded storeId', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ settings: mockSettings }),
+      });
+
+      await fetchStoreSettings('store/special');
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).toContain('/api/v1/admin/stores/store%2Fspecial/settings');
+    });
+
+    it('throws on missing settings data', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ settings: null }),
+      });
+
+      await expect(fetchStoreSettings('store-1')).rejects.toThrow('Invalid store settings response');
+    });
+
+    it('throws on error response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Store not found' }),
+      });
+
+      await expect(fetchStoreSettings('nonexistent')).rejects.toThrow();
+    });
+
+    it('uses GET method', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ settings: mockSettings }),
+      });
+
+      await fetchStoreSettings('store-1');
+      expect(mockFetch.mock.calls[0][1].method).toBe('GET');
     });
   });
 });

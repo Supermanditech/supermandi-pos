@@ -83,6 +83,9 @@ function createDefaultProps(overrides: Partial<Parameters<typeof StoresTab>[0]> 
     handleResendCode: vi.fn(),
     resendLoading: false,
     handleCreditToggle: vi.fn(),
+    storeSettings: {},
+    storeSettingsLoading: {},
+    loadStoreSettings: vi.fn(),
     ...overrides,
   };
   return defaultProps;
@@ -906,6 +909,249 @@ describe('StoresTab', () => {
       const stores = [makeStore({ creditLimit: 500000 })];
       render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
       expect(screen.getByText(/5,000/)).toBeTruthy();
+    });
+  });
+
+  // =========================================================================
+  // SA-P1-014: Store Settings audit view
+  // =========================================================================
+
+  describe('store settings audit view', () => {
+    it('renders Store Settings section when expanded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText('Store Settings')).toBeTruthy();
+    });
+
+    it('renders View Settings button when no settings loaded', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1' })} />);
+      expect(screen.getByText('View Settings')).toBeTruthy();
+    });
+
+    it('calls loadStoreSettings on View Settings click', () => {
+      const loadSettings = vi.fn();
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', loadStoreSettings: loadSettings })} />);
+      fireEvent.click(screen.getByText('View Settings'));
+      expect(loadSettings).toHaveBeenCalledWith('store-1');
+    });
+
+    it('shows loading state for settings', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettingsLoading: { 'store-1': true } })} />);
+      expect(screen.getByText('Loading settings...')).toBeTruthy();
+    });
+
+    it('does not show View Settings button when loading', () => {
+      const stores = [makeStore()];
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettingsLoading: { 'store-1': true } })} />);
+      expect(screen.queryByText('View Settings')).toBeNull();
+    });
+
+    it('does not show View Settings button when settings are loaded', () => {
+      const stores = [makeStore()];
+      const settings = {
+        'store-1': {
+          storeId: 'store-1',
+          name: 'Test Store',
+          code: 'TST001',
+          storeType: null,
+          status: 'ACTIVE',
+          statusReason: null,
+          statusUpdatedAt: null,
+          address: '123 Main St',
+          contactName: 'John',
+          contactPhone: '+911234567890',
+          contactEmail: 'john@test.com',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          pincode: '400001',
+          location: null,
+          upiVpa: 'test@upi',
+          upiVpaUpdatedAt: '2024-01-15',
+          allowedPaymentMethods: ['CASH', 'UPI'],
+          creditEnabled: true,
+          creditLimit: 500000,
+          bnplEnabled: false,
+          bnplCreditLimit: 5000000,
+          bnplMaxDays: 7,
+          deviceBound: true,
+          kycComplete: true,
+          upiComplete: true,
+          adminApproved: true,
+          activeDeviceCount: 1,
+          posDeviceId: 'dev-123',
+          kycStatus: 'VERIFIED',
+          timezone: 'Asia/Kolkata',
+          currency: 'INR',
+          scanLookupV2Enabled: true,
+          featureFlags: [{ flag_key: 'scan_v2', enabled: true, scope_type: 'global', description: null }],
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-15',
+        },
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      expect(screen.queryByText('View Settings')).toBeNull();
+    });
+
+    it('renders store settings sections when loaded', () => {
+      const stores = [makeStore()];
+      const settings = {
+        'store-1': {
+          storeId: 'store-1',
+          name: 'Test Store',
+          code: 'TST001',
+          storeType: 'retail',
+          status: 'ACTIVE',
+          statusReason: null,
+          statusUpdatedAt: null,
+          address: '123 Main St',
+          contactName: 'John',
+          contactPhone: '+911234567890',
+          contactEmail: 'john@test.com',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          pincode: '400001',
+          location: null,
+          upiVpa: 'test@upi',
+          upiVpaUpdatedAt: null,
+          allowedPaymentMethods: ['CASH', 'UPI'],
+          creditEnabled: true,
+          creditLimit: 500000,
+          bnplEnabled: false,
+          bnplCreditLimit: 5000000,
+          bnplMaxDays: 7,
+          deviceBound: true,
+          kycComplete: true,
+          upiComplete: true,
+          adminApproved: true,
+          activeDeviceCount: 1,
+          posDeviceId: null,
+          kycStatus: null,
+          timezone: 'Asia/Kolkata',
+          currency: 'INR',
+          scanLookupV2Enabled: false,
+          featureFlags: [],
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-15',
+        },
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      // Section headers
+      expect(screen.getByText('Identity')).toBeTruthy();
+      expect(screen.getByText('Payment Settings')).toBeTruthy();
+      expect(screen.getAllByText('Credit / BNPL').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Readiness Flags')).toBeTruthy();
+      expect(screen.getByText('Device Info')).toBeTruthy();
+      expect(screen.getByText('Timestamps')).toBeTruthy();
+      // Values
+      expect(screen.getByText('TST001')).toBeTruthy();
+      expect(screen.getByText('retail')).toBeTruthy();
+      expect(screen.getByText('Asia/Kolkata')).toBeTruthy();
+      expect(screen.getByText('CASH, UPI')).toBeTruthy();
+    });
+
+    it('renders readiness flags correctly', () => {
+      const stores = [makeStore()];
+      const settings = {
+        'store-1': {
+          storeId: 'store-1',
+          name: 'Test Store',
+          code: 'TST001',
+          storeType: null,
+          status: 'ACTIVE',
+          statusReason: null,
+          statusUpdatedAt: null,
+          address: null,
+          contactName: null,
+          contactPhone: null,
+          contactEmail: null,
+          city: null,
+          state: null,
+          pincode: null,
+          location: null,
+          upiVpa: null,
+          upiVpaUpdatedAt: null,
+          allowedPaymentMethods: ['CASH'],
+          creditEnabled: false,
+          creditLimit: 0,
+          bnplEnabled: true,
+          bnplCreditLimit: 5000000,
+          bnplMaxDays: 7,
+          deviceBound: true,
+          kycComplete: false,
+          upiComplete: true,
+          adminApproved: false,
+          activeDeviceCount: 2,
+          posDeviceId: null,
+          kycStatus: null,
+          timezone: 'Asia/Kolkata',
+          currency: 'INR',
+          scanLookupV2Enabled: false,
+          featureFlags: [],
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-15',
+        },
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      // Device bound = Yes, KYC Complete = No (checking "Yes" and "No" appear)
+      const yesElements = screen.getAllByText('Yes');
+      const noElements = screen.getAllByText('No');
+      expect(yesElements.length).toBeGreaterThanOrEqual(1);
+      expect(noElements.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders feature flags in settings when present', () => {
+      const stores = [makeStore()];
+      const settings = {
+        'store-1': {
+          storeId: 'store-1',
+          name: 'Test Store',
+          code: 'TST001',
+          storeType: null,
+          status: 'ACTIVE',
+          statusReason: null,
+          statusUpdatedAt: null,
+          address: null,
+          contactName: null,
+          contactPhone: null,
+          contactEmail: null,
+          city: null,
+          state: null,
+          pincode: null,
+          location: null,
+          upiVpa: null,
+          upiVpaUpdatedAt: null,
+          allowedPaymentMethods: ['CASH'],
+          creditEnabled: false,
+          creditLimit: 0,
+          bnplEnabled: false,
+          bnplCreditLimit: 0,
+          bnplMaxDays: 7,
+          deviceBound: false,
+          kycComplete: false,
+          upiComplete: false,
+          adminApproved: false,
+          activeDeviceCount: 0,
+          posDeviceId: null,
+          kycStatus: null,
+          timezone: 'Asia/Kolkata',
+          currency: 'INR',
+          scanLookupV2Enabled: false,
+          featureFlags: [
+            { flag_key: 'scan_v2', enabled: true, scope_type: 'global', description: null },
+            { flag_key: 'bnpl_beta', enabled: false, scope_type: 'store', description: null },
+          ],
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-15',
+        },
+      };
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      expect(screen.getByText('scan_v2')).toBeTruthy();
+      expect(screen.getByText('bnpl_beta')).toBeTruthy();
+      expect(screen.getByText('Enabled')).toBeTruthy();
+      expect(screen.getByText('Disabled')).toBeTruthy();
     });
   });
 });

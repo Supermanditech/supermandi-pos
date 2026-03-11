@@ -13,6 +13,7 @@ function createProps(overrides: Partial<ConfirmationModalsProps> = {}): Confirma
     setPendingDeviceAction: vi.fn(),
     executeDeviceSave: vi.fn(),
     executeDeviceReset: vi.fn(),
+    executeForceReEnroll: vi.fn(),
     pendingAdminUser: null,
     adminVerificationReason: '',
     createUserError: '',
@@ -120,6 +121,34 @@ describe('ConfirmationModals', () => {
       })} />);
       fireEvent.click(screen.getByText('Reset Token'));
       expect(reset).toHaveBeenCalledWith('d1');
+    });
+
+    // SA-P2-001: Force Re-Enroll modal
+    it('renders force re-enroll modal', () => {
+      render(<ConfirmationModals {...createProps({
+        pendingDeviceAction: { deviceId: 'd1', deviceLabel: 'POS-1', action: 'forceReEnroll' },
+      })} />);
+      expect(screen.getByText('Confirm Force Re-Enrollment')).toBeTruthy();
+      expect(screen.getByText(/POS-1/)).toBeTruthy();
+      expect(screen.getByText(/deregister the device/)).toBeTruthy();
+    });
+
+    it('calls executeForceReEnroll on force re-enroll confirm', () => {
+      const exec = vi.fn();
+      render(<ConfirmationModals {...createProps({
+        pendingDeviceAction: { deviceId: 'd1', action: 'forceReEnroll' },
+        executeForceReEnroll: exec,
+      })} />);
+      fireEvent.click(screen.getByText('Force Re-Enroll'));
+      expect(exec).toHaveBeenCalledWith('d1');
+    });
+
+    it('shows Processing... for force re-enroll when loading', () => {
+      render(<ConfirmationModals {...createProps({
+        pendingDeviceAction: { deviceId: 'd1', action: 'forceReEnroll' },
+        deviceActionLoading: true,
+      })} />);
+      expect(screen.getByText('Processing...')).toBeTruthy();
     });
   });
 

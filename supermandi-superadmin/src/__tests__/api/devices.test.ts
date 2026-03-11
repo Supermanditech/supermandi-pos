@@ -1,6 +1,6 @@
 // SuperAdmin — Test devices API client
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchDevices, patchDevice } from '../../api/devices';
+import { fetchDevices, patchDevice, forceReEnrollDevice } from '../../api/devices';
 
 vi.mock('../../api/authToken', () => ({
   getAuthHeaders: vi.fn(() => ({ Authorization: 'Bearer mock-token', 'X-Request-ID': 'test-id' })),
@@ -260,6 +260,87 @@ describe('devices API client', () => {
 
       const calledUrl = mockFetch.mock.calls[0][0];
       expect(calledUrl).toContain('dev%2Fspecial');
+    });
+  });
+
+  // =========================================================================
+  // SA-P2-001: forceReEnrollDevice
+  // =========================================================================
+
+  describe('forceReEnrollDevice', () => {
+    it('sends POST to force-re-enroll endpoint', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, message: 'Device has been deregistered.' }),
+      });
+
+      const result = await forceReEnrollDevice('dev-1');
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Device has been deregistered.');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/admin/devices/dev-1/force-re-enroll'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        })
+      );
+    });
+
+    it('sends reason in request body', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, message: 'Done' }),
+      });
+
+      await forceReEnrollDevice('dev-1', 'Device stolen');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.reason).toBe('Device stolen');
+    });
+
+    it('sends empty reason when not provided', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, message: 'Done' }),
+      });
+
+      await forceReEnrollDevice('dev-1');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.reason).toBe('');
+    });
+
+    it('encodes deviceId in URL', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      });
+
+      await forceReEnrollDevice('dev/special');
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).toContain('dev%2Fspecial/force-re-enroll');
+    });
+
+    it('throws on error response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({}),
+      });
+
+      await expect(forceReEnrollDevice('dev-1')).rejects.toThrow();
+    });
+
+    it('returns default message when response has no message', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      });
+
+      const result = await forceReEnrollDevice('dev-1');
+      expect(result.message).toBe('Device has been deregistered.');
     });
   });
 });

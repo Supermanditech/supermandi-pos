@@ -1,6 +1,6 @@
 // SA-001: Stores tab extracted from App.tsx
 import React from "react";
-import type { StoreRecord } from "../api/stores";
+import type { StoreRecord, StoreSettings } from "../api/stores";
 import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
 import type { EnrollmentRecord } from "../api/deviceEnrollments";
 import { formatDateTime } from "../lib/formatters";
@@ -90,6 +90,10 @@ interface StoresTabProps {
   resendLoading?: boolean;
   // ISSUE-063: Credit toggle
   handleCreditToggle: (storeId: string, enabled: boolean) => void;
+  // SA-P1-014: Store settings audit view
+  storeSettings: Record<string, StoreSettings>;
+  storeSettingsLoading: Record<string, boolean>;
+  loadStoreSettings: (storeId: string) => void;
 }
 
 export function StoresTab({
@@ -165,6 +169,9 @@ export function StoresTab({
   handleResendCode,
   resendLoading,
   handleCreditToggle,
+  storeSettings,
+  storeSettingsLoading,
+  loadStoreSettings,
 }: StoresTabProps) {
   return (
     <section className="card">
@@ -607,6 +614,92 @@ export function StoresTab({
                             ) : (
                               <span className="sa-text-sm sa-text-muted">No enrollment codes yet</span>
                             )}
+                          </div>
+                          {/* SA-P1-014: Store Settings (read-only audit view) */}
+                          <div className="sa-mt-12">
+                            <div className="sa-flex sa-gap-8 sa-items-center sa-mb-6">
+                              <label className="sa-form-label" style={{ margin: 0 }}>Store Settings</label>
+                              {!storeSettings[s.id] && !storeSettingsLoading[s.id] && (
+                                <button
+                                  className="sa-btn-ghost-sm"
+                                  onClick={() => loadStoreSettings(s.id)}
+                                  title="Load store settings for audit"
+                                >
+                                  View Settings
+                                </button>
+                              )}
+                            </div>
+                            {storeSettingsLoading[s.id] ? (
+                              <span className="sa-text-sm sa-text-muted">Loading settings...</span>
+                            ) : storeSettings[s.id] ? (
+                              <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, padding: 12 }}>
+                                <table className="table" style={{ fontSize: 13 }}>
+                                  <tbody>
+                                    {/* Identity */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 4, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Identity</td></tr>
+                                    <tr><td className="sa-text-muted" style={{ width: 180 }}>Store ID</td><td className="mono">{storeSettings[s.id].storeId}</td></tr>
+                                    <tr><td className="sa-text-muted">Store Code</td><td className="mono">{storeSettings[s.id].code}</td></tr>
+                                    <tr><td className="sa-text-muted">Store Type</td><td>{storeSettings[s.id].storeType ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">Timezone</td><td>{storeSettings[s.id].timezone}</td></tr>
+                                    <tr><td className="sa-text-muted">Currency</td><td>{storeSettings[s.id].currency}</td></tr>
+                                    {/* Status */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Status</td></tr>
+                                    <tr><td className="sa-text-muted">Status</td><td><span className={`mono ${storeSettings[s.id].status === "ACTIVE" ? "sa-badge-ok" : storeSettings[s.id].status === "SUSPENDED" ? "sa-badge-error" : "sa-badge-muted"}`}>{storeSettings[s.id].status}</span></td></tr>
+                                    {storeSettings[s.id].statusReason && <tr><td className="sa-text-muted">Status Reason</td><td>{storeSettings[s.id].statusReason}</td></tr>}
+                                    {storeSettings[s.id].statusUpdatedAt && <tr><td className="sa-text-muted">Status Updated</td><td className="mono">{formatDateTime(storeSettings[s.id].statusUpdatedAt!)}</td></tr>}
+                                    <tr><td className="sa-text-muted">KYC Status</td><td>{storeSettings[s.id].kycStatus ?? "-"}</td></tr>
+                                    {/* Contact / Address */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Contact / Address</td></tr>
+                                    <tr><td className="sa-text-muted">Contact Name</td><td>{storeSettings[s.id].contactName ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">Phone</td><td className="mono">{storeSettings[s.id].contactPhone ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">Email</td><td>{storeSettings[s.id].contactEmail ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">Address</td><td>{storeSettings[s.id].address ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">City</td><td>{storeSettings[s.id].city ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">State</td><td>{storeSettings[s.id].state ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">Pincode</td><td className="mono">{storeSettings[s.id].pincode ?? "-"}</td></tr>
+                                    {/* Payment */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Payment Settings</td></tr>
+                                    <tr><td className="sa-text-muted">UPI VPA</td><td className="mono">{storeSettings[s.id].upiVpa ?? "-"}</td></tr>
+                                    {storeSettings[s.id].upiVpaUpdatedAt && <tr><td className="sa-text-muted">UPI Updated</td><td className="mono">{formatDateTime(storeSettings[s.id].upiVpaUpdatedAt!)}</td></tr>}
+                                    <tr><td className="sa-text-muted">Payment Methods</td><td>{storeSettings[s.id].allowedPaymentMethods.join(", ")}</td></tr>
+                                    {/* Credit / BNPL */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Credit / BNPL</td></tr>
+                                    <tr><td className="sa-text-muted">Credit Enabled</td><td className="mono">{storeSettings[s.id].creditEnabled ? "Yes" : "No"}</td></tr>
+                                    <tr><td className="sa-text-muted">Credit Limit</td><td className="mono">{"\u20B9"}{((storeSettings[s.id].creditLimit || 0) / 100).toLocaleString("en-IN")}</td></tr>
+                                    <tr><td className="sa-text-muted">BNPL Enabled</td><td className="mono">{storeSettings[s.id].bnplEnabled ? "Yes" : "No"}</td></tr>
+                                    <tr><td className="sa-text-muted">BNPL Credit Limit</td><td className="mono">{"\u20B9"}{((storeSettings[s.id].bnplCreditLimit || 0) / 100).toLocaleString("en-IN")}</td></tr>
+                                    <tr><td className="sa-text-muted">BNPL Max Days</td><td className="mono">{storeSettings[s.id].bnplMaxDays}</td></tr>
+                                    {/* Readiness Flags */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Readiness Flags</td></tr>
+                                    <tr><td className="sa-text-muted">Device Bound</td><td className="mono">{storeSettings[s.id].deviceBound ? "Yes" : "No"}</td></tr>
+                                    <tr><td className="sa-text-muted">KYC Complete</td><td className="mono">{storeSettings[s.id].kycComplete ? "Yes" : "No"}</td></tr>
+                                    <tr><td className="sa-text-muted">UPI Complete</td><td className="mono">{storeSettings[s.id].upiComplete ? "Yes" : "No"}</td></tr>
+                                    <tr><td className="sa-text-muted">Admin Approved</td><td className="mono">{storeSettings[s.id].adminApproved ? "Yes" : "No"}</td></tr>
+                                    {/* Device Info */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Device Info</td></tr>
+                                    <tr><td className="sa-text-muted">Active Devices</td><td className="mono">{storeSettings[s.id].activeDeviceCount}</td></tr>
+                                    <tr><td className="sa-text-muted">POS Device ID</td><td className="mono">{storeSettings[s.id].posDeviceId ?? "-"}</td></tr>
+                                    <tr><td className="sa-text-muted">Scan V2 Enabled</td><td className="mono">{storeSettings[s.id].scanLookupV2Enabled ? "Yes" : "No"}</td></tr>
+                                    {/* Feature Flags */}
+                                    {storeSettings[s.id].featureFlags.length > 0 && (
+                                      <>
+                                        <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Feature Flags</td></tr>
+                                        {storeSettings[s.id].featureFlags.map((f) => (
+                                          <tr key={f.flag_key}>
+                                            <td className="sa-text-muted">{f.flag_key} <span className="sa-text-xs sa-text-muted">({f.scope_type})</span></td>
+                                            <td className="mono">{f.enabled ? "Enabled" : "Disabled"}</td>
+                                          </tr>
+                                        ))}
+                                      </>
+                                    )}
+                                    {/* Timestamps */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Timestamps</td></tr>
+                                    <tr><td className="sa-text-muted">Created</td><td className="mono">{formatDateTime(storeSettings[s.id].createdAt)}</td></tr>
+                                    <tr><td className="sa-text-muted">Updated</td><td className="mono">{formatDateTime(storeSettings[s.id].updatedAt)}</td></tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

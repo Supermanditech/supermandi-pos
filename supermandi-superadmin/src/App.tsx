@@ -8,7 +8,7 @@ import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
-import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, type StoreRecord } from "./api/stores";
+import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, forceReEnrollDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
@@ -510,6 +510,9 @@ export default function App() {
   const [enrollmentForStoreLoading, setEnrollmentForStoreLoading] = useState<string>("");
   const [storeEnrollments, setStoreEnrollments] = useState<Record<string, EnrollmentRecord[]>>({});
   const [storeEnrollmentsLoading, setStoreEnrollmentsLoading] = useState<Record<string, boolean>>({});
+  // SA-P1-014: Store settings audit view
+  const [storeSettings, setStoreSettings] = useState<Record<string, import("./api/stores").StoreSettings>>({});
+  const [storeSettingsLoading, setStoreSettingsLoading] = useState<Record<string, boolean>>({});
   // ISSUE-MICRO-086: enrollNow state removed — timer moved to EnrollmentCountdown component
 
   // Analytics state
@@ -2755,6 +2758,19 @@ export default function App() {
     }
   }
 
+  // SA-P1-014: Load store settings for audit view
+  async function loadStoreSettingsHandler(storeId: string) {
+    setStoreSettingsLoading((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      const settings = await fetchStoreSettings(storeId);
+      setStoreSettings((prev) => ({ ...prev, [storeId]: settings }));
+    } catch {
+      // Silently fail — settings are supplementary audit info
+    } finally {
+      setStoreSettingsLoading((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
   // ISSUE-MICRO-086: enrollmentCountdown useMemo removed — rendered by EnrollmentCountdown component
 
   // =========================================================================
@@ -3248,6 +3264,9 @@ export default function App() {
           handleResendCode={handleResendCode}
           resendLoading={resendLoading}
           handleCreditToggle={handleCreditToggle}
+          storeSettings={storeSettings}
+          storeSettingsLoading={storeSettingsLoading}
+          loadStoreSettings={loadStoreSettingsHandler}
         />
       )}
 
