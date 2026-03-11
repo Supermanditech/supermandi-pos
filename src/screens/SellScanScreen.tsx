@@ -58,6 +58,7 @@ import {
 } from "../services/hidScannerService";
 import { theme, useThemeColors } from "../theme";
 import { CategoryRail, DEMO_CATEGORIES, fmcgCategoryToItem, type CategoryItem } from "../components/sell/CategoryRail";
+import { SellTile } from "../components/sell/SellTile";
 import { useSettingsStore } from "../stores/settingsStore";
 import { getFmcgCategories, getCategoryProducts, type CategoryProduct } from "../services/api/catalogApi";
 import { useFeatureEnabled } from "../utils/featureFlags";
@@ -99,6 +100,15 @@ type SkuItem = {
   variantMrpMinor: number | null;
   currentStock?: number | null;
   imageUrl?: string | null; // T-134: Product image URL
+  // SCALE-B1: Enhanced sell tile fields
+  mrp?: number | null;
+  gst_rate?: number | null;
+  net_content_value?: number | null;
+  net_content_unit?: string | null;
+  expiry_date?: string | null;
+  brand?: string | null;
+  mode?: "PACKAGED" | "LOOSE";
+  rate_unit?: string | null;
 };
 
 const resolveSkuPrice = (item: SkuItem) => {
@@ -147,6 +157,16 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
           inventoryPriceMinor: product.sellPrice,
           variantPriceMinor: null,
           variantMrpMinor: null,
+          // SCALE-B1: Enhanced tile fields
+          mrp: product.mrp ?? null,
+          gst_rate: product.gst_rate ?? null,
+          net_content_value: product.net_content_value ?? null,
+          net_content_unit: product.net_content_unit ?? null,
+          imageUrl: product.image_url ?? null,
+          expiry_date: product.expiry_date ?? null,
+          brand: product.brand ?? null,
+          mode: product.mode ?? undefined,
+          rate_unit: product.rate_unit ?? null,
         });
 
         // Store in offline DB (with productId and stock).
@@ -158,7 +178,8 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
         const pinnedStock = isPinned ? resolveStockForSku({ productId: product.productId, barcode }) : null;
         const effectiveStock = pinnedStock !== null ? pinnedStock : stock;
         if (barcode) {
-          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null);
+          // SCALE-E2: Pass image_url so offline product tiles show cached images
+          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null, product.image_url ?? null);
           if (product.sellPrice !== null) {
             await setLocalPrice(barcode, product.sellPrice);
           }
@@ -204,11 +225,22 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
             inventoryPriceMinor: sellPrice,
             variantPriceMinor: null,
             variantMrpMinor: null,
+            // SCALE-B1: Enhanced tile fields from search result
+            mrp: match.mrp ?? null,
+            gst_rate: match.gst_rate ?? null,
+            net_content_value: match.net_content_value ?? null,
+            net_content_unit: match.net_content_unit ?? null,
+            imageUrl: match.image_url ?? null,
+            expiry_date: match.expiry_date ?? null,
+            brand: group.brand ?? null,
+            mode: match.mode ?? undefined,
+            rate_unit: match.rate_unit ?? null,
           });
 
           // Store in offline DB (with productId and stock)
           if (barcode) {
-            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null);
+            // SCALE-E2: Pass image_url so offline search results show cached images
+            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null, match.image_url ?? null);
             if (sellPrice !== null) {
               await setLocalPrice(barcode, sellPrice);
             }
@@ -2432,14 +2464,13 @@ export default function SellScanScreen({
   const renderSkuItem = ({ item }: { item: SkuItem }) => {
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
-    const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
     const stockValue = resolveStockForSku(item) ?? ((item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : null);
-    const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
 
     return (
+      // SCALE-B1: Wrap SellTile in Pressable for tap/long-press gestures
       <Pressable
         accessibilityRole="button"
-        style={[styles.skuCard, storeActive === false && styles.skuCardDisabled]}
+        style={storeActive === false && styles.skuCardDisabled}
         onPressIn={() => {
           detailPressRef.current = false;
         }}
@@ -2457,29 +2488,24 @@ export default function SellScanScreen({
         }}
         disabled={storeActive === false}
       >
-        {/* T-134: Product image */}
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.skuCardImage} />
-        ) : (
-          <View style={styles.skuCardImageFallback}>
-            <MaterialCommunityIcons name="package-variant" size={20} color={colors.textTertiary} />
-          </View>
-        )}
-        <View style={styles.skuCardTop}>
-          <MaterialCommunityIcons name="barcode" size={16} color={colors.textSecondary} />
-          <View style={styles.pricePill}>
-            <Text style={styles.priceText}>{priceLabel}</Text>
-          </View>
-        </View>
-        <Text style={styles.skuName} numberOfLines={2}>
-          {item.name}
-        </Text>
-        <Text style={styles.skuBarcode} numberOfLines={1}>
-          {item.barcode}
-        </Text>
-        <Text style={styles.skuStock} numberOfLines={1}>
-          Stock: {stockLabel}
-        </Text>
+        {/* SCALE-B1: Enhanced sell tile with image, brand, mode badge, MRP, GST, expiry */}
+        <SellTile
+          product={{
+            barcode: item.barcode,
+            name: item.name,
+            sellPriceMinor: resolved.priceMinor,
+            mrp: item.mrp,
+            gst_rate: item.gst_rate,
+            net_content_value: item.net_content_value,
+            net_content_unit: item.net_content_unit,
+            image_url: item.imageUrl,
+            expiry_date: item.expiry_date,
+            brand: item.brand,
+            mode: item.mode,
+            rate_unit: item.rate_unit,
+            currentStock: stockValue,
+          }}
+        />
       </Pressable>
     );
   };
