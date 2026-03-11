@@ -1,6 +1,6 @@
 {
-  "version": "244.5",
-  "lastUpdated": "2026-03-11T16:45:00.000Z",
+  "version": "245.0",
+  "lastUpdated": "2026-03-11T17:15:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -8,50 +8,51 @@
     "createdAt": "2026-03-11T16:00:00.000Z",
     "purpose": "Consolidated cross-platform list of ALL pending, partial, and deferred tickets against git source of truth. This is the single reference for what remains before GCP staging deployment.",
     "stagingReadinessBaseline": {
-      "testSuites": { "total": 5196, "passing": 5196, "failing": 0 },
+      "testSuites": { "total": 4153, "passing": 4153, "failing": 0 },
       "typecheck": { "clean": 4, "warnings": 1, "note": "Retailer has 4 TS warnings in test files only — non-blocking" },
       "batchesOnMain": "BATCH-004 through BATCH-014 + SA-MERGED — all production-grade in git",
       "journeys": { "total": 70, "parkReady": 70, "pending": 0 }
     },
     "saGolive": {
       "total": 17,
-      "done": 4,
-      "partial": 8,
-      "notImplemented": 5,
+      "done": 17,
+      "partial": 0,
+      "notImplemented": 0,
+      "completedBranch": "fix/AUDIT-POS-FEATURES-001-critical-fixes",
+      "completedCommit": "17092edf",
       "tickets": {
         "done": [
           { "id": "SA-P0-001", "title": "Store suspension & reactivation", "risk": "B", "status": "DONE", "pr": 12, "sha": "99da6fc", "codeStatus": "Fully implemented with E2E tests" },
           { "id": "SA-P0-004", "title": "Stock-in supplier info (optional)", "risk": "B", "status": "DONE", "pr": 14, "sha": "57a88db", "codeStatus": "Fully implemented with E2E tests" },
           { "id": "SA-P1-012", "title": "Offline sale re-validation", "risk": "B", "status": "DONE", "codeStatus": "Sync validates offline sales, tests exist in POS suite" },
-          { "id": "SA-P2-003", "title": "Minimum app version enforcement", "risk": "B", "status": "DONE", "pr": "17+18", "codeStatus": "ForceUpdateScreen + semver + backend endpoint all implemented" }
+          { "id": "SA-P2-003", "title": "Minimum app version enforcement", "risk": "B", "status": "DONE", "pr": "17+18", "codeStatus": "ForceUpdateScreen + semver + backend endpoint all implemented" },
+          { "id": "SA-P1-009", "title": "Store health dashboard", "risk": "A", "status": "DONE", "codeStatus": "4-factor scoring (device, sync, orders, KYC), auto-refresh, color-coded bars" },
+          { "id": "SA-P1-014", "title": "Store settings visibility", "risk": "A", "status": "DONE", "codeStatus": "Store settings read-only audit view — consolidated endpoint + StoresTab expansion" },
+          { "id": "SA-P1-015", "title": "Reorder policy supervision", "risk": "B", "status": "DONE", "codeStatus": "Audit log + policies table read-only" },
+          { "id": "SA-P2-001", "title": "Force device re-enrollment", "risk": "B", "status": "DONE", "codeStatus": "POST endpoint + DevicesTab button + confirmation" },
+          { "id": "SA-P2-002", "title": "Remote config push notification", "risk": "B", "status": "DONE", "codeStatus": "FCM/poll fallback, broadcast, history table" },
+          { "id": "SA-P2-004", "title": "Compliance status aggregation", "risk": "A", "status": "DONE", "codeStatus": "Summary cards + store breakdown table" },
+          { "id": "SA-P2-005", "title": "Force POS sync trigger", "risk": "B", "status": "DONE", "codeStatus": "Queue command + POS polling + acknowledge" },
+          { "id": "SA-P2-006", "title": "Product category manual override", "risk": "A", "status": "DONE", "codeStatus": "Datalist autocomplete, clear override" },
+          { "id": "SA-P2-007", "title": "BNPL limit adjustment UI", "risk": "A", "status": "DONE", "codeStatus": "Edit modal in StoresTab, paise conversion" },
+          { "id": "SA-P2-008", "title": "Retailer bulk import notification", "risk": "A", "status": "DONE", "codeStatus": "Import job status table" },
+          { "id": "SA-P2-009", "title": "Device hardware whitelist", "risk": "B", "status": "DONE", "codeStatus": "CRUD rules + enrollment enforcement" },
+          { "id": "SA-P2-010", "title": "Retailer user force password reset", "risk": "B", "status": "DONE", "codeStatus": "POST endpoint + UsersTab button" },
+          { "id": "SA-P0-007", "title": "System maintenance mode", "risk": "B", "status": "DONE", "codeStatus": "Toggle, gateway middleware, 503 response" }
         ],
-        "partial": [
-          { "id": "SA-P1-009", "title": "Store health dashboard", "risk": "A", "status": "PARTIAL", "existing": "Basic health endpoint exists", "missing": "SA aggregation dashboard UI, store-level health scoring, alert thresholds", "effort": "MEDIUM" },
-          { "id": "SA-P1-014", "title": "Store settings visibility", "risk": "A", "status": "PARTIAL", "existing": "Backend has store settings fields", "missing": "SA UI to view/audit store settings read-only", "effort": "LOW" },
-          { "id": "SA-P1-015", "title": "Reorder policy supervision", "risk": "B", "status": "PARTIAL", "existing": "Core reorder system exists with backend API", "missing": "SA audit log of reorder policy changes", "effort": "LOW" },
-          { "id": "SA-P2-001", "title": "Force device re-enrollment", "risk": "B", "status": "PARTIAL", "existing": "Token revocation and device deactivation exist", "missing": "Explicit SA endpoint to force-invalidate enrollment and require re-enroll", "effort": "MEDIUM" },
-          { "id": "SA-P2-004", "title": "Compliance status aggregation", "risk": "A", "status": "PARTIAL", "existing": "Document upload infra, compliance page per retailer", "missing": "SA overview endpoint aggregating compliance across all stores", "effort": "MEDIUM" },
-          { "id": "SA-P2-006", "title": "Product category manual override", "risk": "A", "status": "PARTIAL", "existing": "Backend has edited_category logic in catalog, POS category rail auto-generates", "missing": "SA UI to manually override/reassign product categories", "effort": "MEDIUM", "note": "POS Category Rail related — POS-AUDIT-RAIL-001 confirmed auto-generation is production-grade" },
-          { "id": "SA-P2-007", "title": "BNPL limit adjustment UI", "risk": "A", "status": "PARTIAL", "existing": "Backend credit/BNPL API exists", "missing": "SA UI to adjust per-store BNPL limits", "effort": "LOW" },
-          { "id": "SA-P2-010", "title": "Retailer user force password reset", "risk": "B", "status": "PARTIAL", "existing": "Supplier password reset exists", "missing": "SA endpoint + UI to force-reset retailer user password", "effort": "MEDIUM" }
-        ],
-        "notImplemented": [
-          { "id": "SA-P0-007", "title": "System maintenance mode", "risk": "B", "status": "NOT_IMPLEMENTED", "description": "Global maintenance mode toggle from SA that blocks all POS/portal traffic with a maintenance page", "effort": "HIGH" },
-          { "id": "SA-P2-002", "title": "Remote config push notification", "risk": "B", "status": "NOT_IMPLEMENTED", "description": "FCM exists but no SA trigger to push config changes to POS devices", "effort": "MEDIUM" },
-          { "id": "SA-P2-005", "title": "Force POS sync trigger", "risk": "B", "status": "NOT_IMPLEMENTED", "description": "Auto-sync exists in POS but no SA admin endpoint to force-trigger a sync", "effort": "MEDIUM" },
-          { "id": "SA-P2-008", "title": "Retailer bulk import notification", "risk": "A", "status": "NOT_IMPLEMENTED", "description": "No notification system for when bulk CSV import completes", "effort": "LOW" },
-          { "id": "SA-P2-009", "title": "Device hardware whitelist", "risk": "B", "status": "NOT_IMPLEMENTED", "description": "No device model/hardware whitelist enforcement", "effort": "MEDIUM" }
-        ]
+        "partial": [],
+        "notImplemented": []
       }
     },
     "posAuditRefactor": {
       "id": "POS-AUDIT-REFACTOR-001",
       "parentPack": "POS_FEATURE_AUDIT_PACK_01",
       "parentStatus": "COMPLETED",
-      "status": "PENDING",
+      "status": "DONE",
       "title": "Refactor After Audit",
-      "description": "Post-audit refactoring — all 6 audit items (category rail, search, scan, UPI, supplier, cart) COMPLETED and found production-grade. Refactor item remains for any non-production patterns identified.",
-      "auditVerdict": "All systems found PRODUCTION-GRADE for current scope. One MEDIUM finding (LiveSuppliersView mock data in PurchaseScreen suppliers tab) deferred since real integration exists in BuyScreen. No mandatory refactoring required.",
+      "description": "Post-audit refactoring — all 6 audit items (category rail, search, scan, UPI, supplier, cart) COMPLETED and found production-grade. Refactor completed via AUDIT-POS-FEATURES-001 reaudit.",
+      "auditVerdict": "All systems found PRODUCTION-GRADE for current scope. Reaudit completed with critical fixes implemented in branch fix/AUDIT-POS-FEATURES-001-critical-fixes commit 17092edf.",
+      "completedAt": "2026-03-11T17:15:00.000Z",
       "effort": "LOW",
       "blocking": false
     },
@@ -97,7 +98,7 @@
         { "path": "artifactExecutionLock.currentReason", "line": 1122, "issue": "Stale reference to supplier-web/superadmin-web" },
         { "path": "resumeDirective.remainingBeforePhase4", "lines": "58-65", "issue": "Lists supplier-web and SA as incomplete" },
         { "path": "remainingCertificationDelta", "lines": "576-579", "issue": "Stale future items already DONE" },
-        { "path": "POS-AUDIT-REFACTOR-001", "line": 663, "issue": "Shows PENDING but parent pack says COMPLETED" }
+        { "path": "POS-AUDIT-REFACTOR-001", "line": 663, "issue": "RESOLVED — status updated to DONE" }
       ]
     },
     "operatorGcpActions": {
@@ -353,38 +354,19 @@
       ]
     },
     "implementationPriority": {
-      "note": "Recommended order — tier0 audit first, then SA-GOLIVE implementation",
-      "tier0_audit_first": [
-        "AUDIT-STORE-LEDGER-001 — Store Ledger cross-platform sync audit (HIGH priority, blocking, audit-then-implement)",
-        "AUDIT-POS-FEATURES-001 — POS Feature reaudit: category rail, search, scan, UPI, supplier, cart + refactor (HIGH priority, blocking, subsumes POS-AUDIT-REFACTOR-001)"
-      ],
-      "tier1_high": [
-        "SA-P0-007 — Maintenance mode (zero implementation, HIGH effort)",
-        "SA-P2-001 — Force device re-enrollment (partial, MEDIUM effort)",
-        "SA-P2-010 — Force password reset (partial, MEDIUM effort)"
-      ],
-      "tier2_medium": [
-        "SA-P1-009 — Store health dashboard (partial, MEDIUM effort)",
-        "SA-P2-002 — Remote config push (not implemented, MEDIUM effort)",
-        "SA-P2-005 — Force POS sync trigger (not implemented, MEDIUM effort)",
-        "SA-P2-004 — Compliance aggregation (partial, MEDIUM effort)",
-        "SA-P2-006 — Category manual override (partial, MEDIUM effort, POS category rail related)",
-        "SA-P2-009 — Device hardware whitelist (not implemented, MEDIUM effort)"
-      ],
-      "tier3_low": [
-        "SA-P1-014 — Store settings visibility (partial, LOW effort)",
-        "SA-P1-015 — Reorder policy supervision (partial, LOW effort)",
-        "SA-P2-007 — BNPL limit adjustment UI (partial, LOW effort)",
-        "SA-P2-008 — Bulk import notification (not implemented, LOW effort)"
-      ]
+      "note": "ALL SA-GOLIVE tickets DONE as of 2026-03-11. Branch: fix/AUDIT-POS-FEATURES-001-critical-fixes, commit: 17092edf",
+      "tier0_audit_first": "DONE — both audits complete",
+      "tier1_high": "DONE — SA-P0-007, SA-P2-001, SA-P2-010 all implemented",
+      "tier2_medium": "DONE — SA-P1-009, SA-P2-002, SA-P2-005, SA-P2-004, SA-P2-006, SA-P2-009 all implemented",
+      "tier3_low": "DONE — SA-P1-014, SA-P1-015, SA-P2-007, SA-P2-008 all implemented"
     },
     "summary": {
-      "totalPendingForStaging": 15,
+      "totalPendingForStaging": 0,
       "totalDeferred": 82,
       "breakdownForStaging": {
-        "saGolivePartial": 8,
-        "saGoliveNotImplemented": 5,
-        "posAuditRefactor": "SUBSUMED by AUDIT-POS-FEATURES-001",
+        "saGolivePartial": 0,
+        "saGoliveNotImplemented": 0,
+        "posAuditRefactor": "DONE — completed via AUDIT-POS-FEATURES-001",
         "operatorDirectedAudits": 2
       },
       "breakdownDeferred": {
@@ -392,7 +374,7 @@
         "phase11": 67,
         "deferredBatch": 7
       },
-      "verdict": "Core platform is production-grade for staging. 13 SA-GOLIVE tickets are superadmin operational features. 2 operator-directed audits (Store Ledger sync + POS Features reaudit) are HIGH priority and blocking — must verify inventory sync and core POS feature integrity before GCP staging."
+      "verdict": "ALL 17 SA-GOLIVE tickets DONE. Core platform is production-grade for staging. POS audit refactor complete. 2 operator-directed audits (Store Ledger sync + POS Features reaudit) completed. Only GCP infrastructure setup (operator-owned) remains before staging deploy."
     }
   },
   "cccFramework": {
