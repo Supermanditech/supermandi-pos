@@ -193,6 +193,29 @@ export async function fetchConfigPushHistory(params?: { deviceId?: string; limit
   };
 }
 
+// SA-P1-013: Revoke device token (without forcing re-enrollment)
+export async function revokeDeviceToken(deviceId: string, reason?: string): Promise<{ success: boolean; revokedAt: string }> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}/revoke-token`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ reason: reason || "" }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; revokedAt?: string };
+  return {
+    success: Boolean(data.success),
+    revokedAt: data.revokedAt || new Date().toISOString(),
+  };
+}
+
 // SA-P2-001: Force device re-enrollment
 export async function forceReEnrollDevice(deviceId: string, reason?: string): Promise<{ success: boolean; message: string }> {
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}/force-re-enroll`, {

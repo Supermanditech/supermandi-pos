@@ -40,6 +40,9 @@ interface DevicesTabProps {
   requestDeviceSave: (deviceId: string) => void;
   requestDeviceReset: (deviceId: string) => void;
   requestForceReEnroll: (deviceId: string) => void;
+  // SA-P1-013: Revoke token
+  requestRevokeToken: (deviceId: string) => void;
+  revokingTokenDevices: Record<string, boolean>;
   // SA-P2-005: Force sync
   requestForceSync: (deviceId: string) => void;
   forceSyncingDevices: Record<string, boolean>;
@@ -79,6 +82,9 @@ export function DevicesTab({
   requestDeviceSave,
   requestDeviceReset,
   requestForceReEnroll,
+  // SA-P1-013
+  requestRevokeToken,
+  revokingTokenDevices,
   // SA-P2-005
   requestForceSync,
   forceSyncingDevices,
@@ -413,6 +419,23 @@ export function DevicesTab({
                       title="Push a config update to this device via FCM or poll"
                     >
                       Push Config
+                    </button>
+                    {/* SA-P1-013: Revoke Token button */}
+                    <button
+                      className="btnGhost btnSm sa-text-danger"
+                      onClick={() => {
+                        setConfirmDialog({
+                          title: "Revoke Device Token",
+                          message: `Revoke the authentication token for device "${draft.label || d.id}"? The device will need to re-authenticate on its next API call, but will NOT need to re-enroll.`,
+                          confirmLabel: "Revoke Token",
+                          variant: "danger",
+                          onConfirm: () => { setConfirmDialog(null); requestRevokeToken(d.id); },
+                        });
+                      }}
+                      disabled={deviceSaving[d.id] || revokingTokenDevices[d.id]}
+                      title="Revoke the device's current authentication token. The device will need to re-authenticate but not re-enroll."
+                    >
+                      {revokingTokenDevices[d.id] ? "Revoking…" : "Revoke Token"}
                     </button>
                     {/* SA-P2-001: Force Re-Enroll button */}
                     <button

@@ -426,6 +426,73 @@ adminDevicesRouter.post("/devices/:deviceId/force-re-enroll", requireAdminToken,
   });
 });
 
+// SA-P1-013: POST /api/v1/admin/devices/:deviceId/revoke-token
+// Revokes the device's current token without forcing re-enrollment.
+// Inserts into pos_token_revocations and clears device_token on pos_devices.
+// The device will receive TOKEN_REVOKED on next API call and must re-authenticate.
+adminDevicesRouter.post("/devices/:deviceId/revoke-token", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Verify device exists and get store_id
+  const deviceRes = await pool.query(
+    `SELECT id, store_id, device_token FROM pos_devices WHERE id = $1`,
+    [deviceId]
+  );
+
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+
+  // Insert revocation record
+  const revokedAt = new Date();
+  try {
+    await pool.query(
+      `INSERT INTO pos_token_revocations (device_id, store_id, revoked_at, revoked_by, reason)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        deviceId,
+        device.store_id,
+        revokedAt,
+        "admin",
+        reason || "Token revoked by superadmin",
+      ]
+    );
+  } catch (err) {
+    log.error("[RevokeToken] Failed to insert revocation record:", err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to revoke token" });
+  }
+
+  // Clear device_token and mark revocation timestamp on pos_devices
+  await pool.query(
+    `UPDATE pos_devices
+     SET device_token = NULL,
+         token_revoked_at = $2,
+         token_revoke_reason = $3,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [deviceId, revokedAt, reason || "Token revoked by superadmin"]
+  );
+
+  log.info(`[RevokeToken] Device ${deviceId} (store=${device.store_id}) token revoked. reason=${reason || "none"}`);
+
+  return res.json({
+    success: true,
+    revokedAt: revokedAt.toISOString(),
+  });
+});
+
 // SA-P2-002: Remote Config Push
 // =============================================================================
 
