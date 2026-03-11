@@ -9,6 +9,7 @@ import {
 } from "./api/posApi";
 // STG-101: Removed recordSaleTransaction + enqueueEvent imports — backend handles inventory deduction
 import type { InventoryTransactionItem } from "./api/inventoryApi";
+import { refreshStockSnapshot } from "./stockService";
 
 // =============================================================================
 // TYPES
@@ -78,6 +79,13 @@ export async function completeCheckout(
   // Previously, frontend also called recordSaleTransaction here, causing DOUBLE deduction.
   // Backend is the single source of truth for stock changes.
   const inventoryDeducted = true; // Backend handles via applyBulkDeductions
+
+  // AUDIT-STORE-LEDGER-001 §F2-2: Refresh stock cache immediately after sale so the
+  // sell screen shows updated quantities. Previously relied on 60s auto-sync poll.
+  // Fire-and-forget — don't block checkout completion on cache refresh.
+  refreshStockSnapshot().catch((err) =>
+    console.warn("[Checkout] Post-sale stock refresh failed (non-blocking):", err)
+  );
 
   // Step 3: Return result
   if (__DEV__) console.log(`[Checkout] Completed sale ${saleId}, payment: ${paymentStatus}, inventory: ${inventoryDeducted}`);

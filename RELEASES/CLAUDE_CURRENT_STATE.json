@@ -131,7 +131,8 @@
         {
           "id": "AUDIT-STORE-LEDGER-001",
           "title": "Comprehensive Store Ledger & Inventory Sync Audit",
-          "status": "QUEUED",
+          "status": "AUDIT_COMPLETE",
+          "completedAt": "2026-03-11T17:30:00.000Z",
           "priority": "HIGH",
           "risk": "B",
           "platforms": ["POS_APP", "RETAILER_WEB", "BACKEND"],
@@ -195,7 +196,27 @@
           },
           "effort": "HIGH",
           "blocking": true,
-          "blockingNote": "Inventory sync integrity is a core business invariant — must be verified before GCP staging"
+          "blockingNote": "Inventory sync integrity is a core business invariant — must be verified before GCP staging",
+          "auditFindings": {
+            "completedAt": "2026-03-11T17:30:00.000Z",
+            "architecture": "Dual inventory schema (legacy public + catalog/inventory) with dual-writes. POS reads catalog.store_products + inventory.stock_balances.",
+            "totalFindings": 11,
+            "high": [
+              { "id": "F5-1", "title": "Dual inventory system (3 stock records per product) creates drift risk", "detail": "stock_balances, store_products.current_stock, store_inventory.available_qty updated by different code paths" },
+              { "id": "F5-2", "title": "transactionService.ts missing dual-write to catalog.store_products", "file": "backend/services/inventory-service/src/services/transactionService.ts:63-140", "status": "FIXED" },
+              { "id": "F3-1", "title": "Manual stock inward blocked when offline (no queue support)", "file": "src/services/api/inventoryApi.ts:226", "status": "DEFERRED_POST_LAUNCH" }
+            ],
+            "medium": [
+              { "id": "F1-3", "title": "No real-time push for product changes (60s polling)", "status": "ACKNOWLEDGED" },
+              { "id": "F2-2", "title": "Stale stock display after sale (cache not immediately updated)", "status": "FIXED" },
+              { "id": "F2-3", "title": "Two separate offline sync mechanisms with no coordination", "status": "ACKNOWLEDGED" },
+              { "id": "F4-1", "title": "POS stock edit lacks optimistic concurrency (no version check)", "status": "ACKNOWLEDGED" },
+              { "id": "F5-3", "title": "MAX() of dual stock systems for availability could allow overselling", "status": "ACKNOWLEDGED" }
+            ],
+            "low": 3,
+            "info": 5,
+            "positiveFindings": ["Idempotency on ledger entries (GO-LIVE-121)", "Non-negative stock at DB level", "LWW conflict resolution on metadata", "Reversal chain tracking for returns", "Event outbox for cross-service consistency"]
+          }
         },
         {
           "id": "AUDIT-POS-FEATURES-001",
