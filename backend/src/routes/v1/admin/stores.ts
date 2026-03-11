@@ -279,6 +279,145 @@ adminStoresRouter.get("/stores/stats", requirePermission("stores", "read"), asyn
   }
 });
 
+// =============================================================================
+// SA-P1-009: Store Health Dashboard — aggregated health scoring per store
+// =============================================================================
+
+// GET /api/v1/admin/stores/health — aggregated health dashboard
+// Requires 'stores:read' permission
+// Returns per-store health score (0-100) based on 4 factors:
+//   +25 Device bound & active
+//   +25 Last sync within 24h
+//   +25 Orders in last 7 days
+//   +25 KYC complete & admin approved
+adminStoresRouter.get("/stores/health", requirePermission("stores", "read"), async (_req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Single query joining stores with device and order data for health scoring
+    const result = await pool.query(`
+      WITH store_devices AS (
+        SELECT
+          d.store_id,
+          COUNT(*) FILTER (WHERE d.active = true)::int AS active_device_count,
+          MAX(d.last_sync_at) AS latest_sync
+        FROM pos_devices d
+        GROUP BY d.store_id
+      ),
+      store_orders AS (
+        SELECT
+          o.store_id,
+          COUNT(*)::int AS recent_order_count
+        FROM orders o
+        WHERE o.created_at >= NOW() - INTERVAL '7 days'
+        GROUP BY o.store_id
+      )
+      SELECT
+        s.id::TEXT AS id,
+        s.name,
+        s.code,
+        s.store_code,
+        s.status,
+        s.device_bound,
+        s.kyc_complete,
+        s.admin_approved,
+        s.kyc_status,
+        COALESCE(sd.active_device_count, 0) AS active_device_count,
+        sd.latest_sync,
+        COALESCE(so.recent_order_count, 0) AS recent_order_count
+      FROM platform.stores s
+      LEFT JOIN store_devices sd ON sd.store_id = s.id::TEXT
+      LEFT JOIN store_orders so ON so.store_id = s.id
+      WHERE s.status != 'deleted'
+      ORDER BY s.created_at DESC
+    `);
+
+    const now = new Date();
+    const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+    const stores = result.rows.map((row) => {
+      const factors: Array<{ name: string; status: "healthy" | "warning" | "critical"; detail: string }> = [];
+      let score = 0;
+
+      // Factor 1: Device bound & active (+25)
+      const hasActiveDevice = (row.device_bound === true) && (row.active_device_count > 0);
+      if (hasActiveDevice) {
+        score += 25;
+        factors.push({ name: "Device", status: "healthy", detail: `${row.active_device_count} active device(s)` });
+      } else if (row.device_bound === true) {
+        factors.push({ name: "Device", status: "warning", detail: "Bound but no active devices" });
+      } else {
+        factors.push({ name: "Device", status: "critical", detail: "No device bound" });
+      }
+
+      // Factor 2: Last sync within 24h (+25)
+      const latestSync = row.latest_sync ? new Date(row.latest_sync) : null;
+      const syncAgeMs = latestSync ? now.getTime() - latestSync.getTime() : Infinity;
+      if (latestSync && syncAgeMs <= TWENTY_FOUR_HOURS_MS) {
+        score += 25;
+        const hoursAgo = Math.round(syncAgeMs / (60 * 60 * 1000));
+        factors.push({ name: "Sync", status: "healthy", detail: `Last sync ${hoursAgo}h ago` });
+      } else if (latestSync) {
+        const daysAgo = Math.round(syncAgeMs / (24 * 60 * 60 * 1000));
+        factors.push({ name: "Sync", status: "warning", detail: `Last sync ${daysAgo}d ago` });
+      } else {
+        factors.push({ name: "Sync", status: "critical", detail: "Never synced" });
+      }
+
+      // Factor 3: Orders in last 7 days (+25)
+      const recentOrders = row.recent_order_count ?? 0;
+      if (recentOrders > 0) {
+        score += 25;
+        factors.push({ name: "Orders", status: "healthy", detail: `${recentOrders} orders in 7d` });
+      } else {
+        factors.push({ name: "Orders", status: "critical", detail: "No orders in 7d" });
+      }
+
+      // Factor 4: KYC complete & admin approved (+25)
+      const kycOk = row.kyc_complete === true && row.admin_approved === true;
+      if (kycOk) {
+        score += 25;
+        factors.push({ name: "KYC", status: "healthy", detail: "Complete & approved" });
+      } else if (row.kyc_complete === true) {
+        factors.push({ name: "KYC", status: "warning", detail: "Complete, pending approval" });
+      } else {
+        factors.push({ name: "KYC", status: "critical", detail: `Status: ${row.kyc_status ?? "incomplete"}` });
+      }
+
+      return {
+        id: row.id,
+        name: row.name,
+        code: row.store_code ?? row.code,
+        status: row.status,
+        healthScore: score,
+        factors,
+      };
+    });
+
+    // Sort worst-first for attention
+    stores.sort((a, b) => a.healthScore - b.healthScore);
+
+    const totalStores = stores.length;
+    const healthyCount = stores.filter((s) => s.healthScore >= 80).length;
+    const warningCount = stores.filter((s) => s.healthScore >= 50 && s.healthScore < 80).length;
+    const criticalCount = stores.filter((s) => s.healthScore < 50).length;
+
+    return res.json({
+      summary: {
+        totalStores,
+        healthyCount,
+        warningCount,
+        criticalCount,
+      },
+      stores,
+    });
+  } catch (err: any) {
+    log.error("[admin/stores/health] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch store health data" });
+  }
+});
+
 // GET /api/v1/admin/stores/:storeId
 // GO-LIVE-128: Requires 'stores:read' permission
 adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), async (req, res) => {
