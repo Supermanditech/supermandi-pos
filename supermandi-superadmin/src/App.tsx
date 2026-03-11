@@ -100,6 +100,7 @@ import { AIInsightsTab } from "./tabs/AIInsightsTab";  // T-316: AI intelligence
 import { WhatsAppTab } from "./tabs/WhatsAppTab";  // WA-002: WhatsApp dashboard
 import { MaintenanceTab } from "./tabs/MaintenanceTab";  // SA-P0-007: System maintenance mode
 import { HealthDashboardTab } from "./tabs/HealthDashboardTab";  // SA-P1-009: Store health dashboard
+import { ComplianceTab } from "./tabs/ComplianceTab";  // SA-P2-004: Compliance status aggregation
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
@@ -111,6 +112,7 @@ import {
   Brain,  // T-316: AI Insights
   MessageCircle,  // WA-002: WhatsApp dashboard
   Stethoscope,  // SA-P1-009: Store health dashboard
+  ClipboardCheck,  // SA-P2-004: Compliance overview
 } from "lucide-react";
 import "./App.css";
 
@@ -143,6 +145,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   "whatsapp": "WhatsApp",
   "maintenance": "Maintenance",
   "store-health": "Store Health",
+  "compliance": "Compliance",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -2946,6 +2949,9 @@ export default function App() {
             <button aria-current={tab === "gst-compliance" ? "page" : undefined} className={`sidebarItem ${tab === "gst-compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("gst-compliance")}>
               <span className="sidebarItemLabel"><IndianRupee size={18} className={`sa-nav-icon ${tab === "gst-compliance" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />GST Compliance</span>
             </button>
+            <button aria-current={tab === "compliance" ? "page" : undefined} className={`sidebarItem ${tab === "compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("compliance")}>
+              <span className="sidebarItemLabel"><ClipboardCheck size={18} className={`sa-nav-icon ${tab === "compliance" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Compliance</span>
+            </button>
             <button aria-current={tab === "refunds" ? "page" : undefined} className={`sidebarItem ${tab === "refunds" ? "sidebarItemActive" : ""}`} onClick={() => setTab("refunds")}>
               <span className="sidebarItemLabel"><ArrowLeftRight size={18} className={`sa-nav-icon ${tab === "refunds" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Refunds</span>
             </button>
@@ -3058,6 +3064,7 @@ export default function App() {
           <button role="tab" aria-selected={tab === "grn-alerts"} className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN Alerts</button>
           <button role="tab" aria-selected={tab === "invoices"} className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
           <button role="tab" aria-selected={tab === "gst-compliance"} className={tab === "gst-compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("gst-compliance")}>GST</button>
+          <button role="tab" aria-selected={tab === "compliance"} className={tab === "compliance" ? "tab tabActive" : "tab"} onClick={() => setTab("compliance")}>Compliance</button>
           <button role="tab" aria-selected={tab === "refunds"} className={tab === "refunds" ? "tab tabActive" : "tab"} onClick={() => setTab("refunds")}>Refunds</button>
           <button role="tab" aria-selected={tab === "monitoring"} className={tab === "monitoring" ? "tab tabActive" : "tab"} onClick={() => setTab("monitoring")}>Monitoring</button>
           <button role="tab" aria-selected={tab === "store-health"} className={tab === "store-health" ? "tab tabActive" : "tab"} onClick={() => setTab("store-health")}>Store Health</button>
@@ -3591,6 +3598,8 @@ export default function App() {
       {tab === "invoices" && <InvoicesTab />}
 
       {tab === "gst-compliance" && <GstComplianceTab />}
+
+      {tab === "compliance" && <ComplianceTab />}
 
       {tab === "refunds" && <RefundsTab />}
 
