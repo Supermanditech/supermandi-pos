@@ -8,11 +8,12 @@ interface UserSuspendModalProps {
 }
 
 interface DeviceActionModalProps {
-  pendingDeviceAction: { deviceId: string; deviceLabel?: string; action: "deactivate" | "resetToken" | "forceReEnroll" } | null;
+  pendingDeviceAction: { deviceId: string; deviceLabel?: string; action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync" } | null;
   setPendingDeviceAction: (v: null) => void;
   executeDeviceSave: (deviceId: string) => void;
   executeDeviceReset: (deviceId: string) => void;
   executeForceReEnroll: (deviceId: string) => void;
+  executeForceSync: (deviceId: string) => void;
   deviceActionLoading?: boolean;
 }
 
@@ -76,7 +77,7 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
         <div className="modalOverlay" onClick={() => props.setPendingDeviceAction(null)} onKeyDown={(e) => { if (e.key === "Escape" && !props.deviceActionLoading) props.setPendingDeviceAction(null); }}>
           <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modalHeader">
-              <h3>{props.pendingDeviceAction.action === "deactivate" ? "Confirm Device Deactivation" : props.pendingDeviceAction.action === "forceReEnroll" ? "Confirm Force Re-Enrollment" : "Confirm Token Reset"}</h3>
+              <h3>{props.pendingDeviceAction.action === "deactivate" ? "Confirm Device Deactivation" : props.pendingDeviceAction.action === "forceReEnroll" ? "Confirm Force Re-Enrollment" : props.pendingDeviceAction.action === "forceSync" ? "Confirm Force Sync" : "Confirm Token Reset"}</h3>
             </div>
             <div className="modalBody">
               {props.pendingDeviceAction.action === "deactivate" ? (
@@ -89,6 +90,11 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
                   <p>Are you sure you want to force re-enrollment for device <strong>{props.pendingDeviceAction.deviceLabel}</strong>?</p>
                   <p className="muted sa-text-amber">This will deregister the device and require re-enrollment. The device will immediately lose access and must scan a new enrollment QR code to reconnect.</p>
                 </>
+              ) : props.pendingDeviceAction.action === "forceSync" ? (
+                <>
+                  <p>Queue a force sync for device <strong>{props.pendingDeviceAction.deviceLabel}</strong>?</p>
+                  <p className="muted">The device will perform a full data sync (products, stock, settings) on its next check-in. This is safe and non-destructive.</p>
+                </>
               ) : (
                 <>
                   <p>Are you sure you want to reset the token for device <strong>{props.pendingDeviceAction.deviceLabel}</strong>?</p>
@@ -98,16 +104,18 @@ export function ConfirmationModals(props: ConfirmationModalsProps) {
             </div>
             <div className="modalFooter">
               <button className="btnGhost" onClick={() => props.setPendingDeviceAction(null)} disabled={props.deviceActionLoading}>Cancel</button>
-              <button className="btnDanger" disabled={props.deviceActionLoading} onClick={() => {
+              <button className={props.pendingDeviceAction.action === "forceSync" ? "tab" : "btnDanger"} disabled={props.deviceActionLoading} onClick={() => {
                 if (props.pendingDeviceAction!.action === "deactivate") {
                   props.executeDeviceSave(props.pendingDeviceAction!.deviceId);
                 } else if (props.pendingDeviceAction!.action === "forceReEnroll") {
                   props.executeForceReEnroll(props.pendingDeviceAction!.deviceId);
+                } else if (props.pendingDeviceAction!.action === "forceSync") {
+                  props.executeForceSync(props.pendingDeviceAction!.deviceId);
                 } else {
                   props.executeDeviceReset(props.pendingDeviceAction!.deviceId);
                 }
               }}>
-                {props.deviceActionLoading ? "Processing..." : props.pendingDeviceAction.action === "deactivate" ? "Deactivate Device" : props.pendingDeviceAction.action === "forceReEnroll" ? "Force Re-Enroll" : "Reset Token"}
+                {props.deviceActionLoading ? "Processing..." : props.pendingDeviceAction.action === "deactivate" ? "Deactivate Device" : props.pendingDeviceAction.action === "forceReEnroll" ? "Force Re-Enroll" : props.pendingDeviceAction.action === "forceSync" ? "Queue Force Sync" : "Reset Token"}
               </button>
             </div>
           </div>

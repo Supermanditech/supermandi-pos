@@ -14,6 +14,7 @@ function createProps(overrides: Partial<ConfirmationModalsProps> = {}): Confirma
     executeDeviceSave: vi.fn(),
     executeDeviceReset: vi.fn(),
     executeForceReEnroll: vi.fn(),
+    executeForceSync: vi.fn(),
     pendingAdminUser: null,
     adminVerificationReason: '',
     createUserError: '',
@@ -149,6 +150,45 @@ describe('ConfirmationModals', () => {
         deviceActionLoading: true,
       })} />);
       expect(screen.getByText('Processing...')).toBeTruthy();
+    });
+  });
+
+  // ── SA-P2-005: Force Sync Modal ──
+  describe('Force Sync Modal', () => {
+    it('renders force sync confirmation modal', () => {
+      render(<ConfirmationModals {...createProps({
+        pendingDeviceAction: { deviceId: 'd1', deviceLabel: 'POS-1', action: 'forceSync' },
+      })} />);
+      expect(screen.getByText('Confirm Force Sync')).toBeTruthy();
+      expect(screen.getByText(/POS-1/)).toBeTruthy();
+      expect(screen.getByText(/full data sync/)).toBeTruthy();
+    });
+
+    it('calls executeForceSync on confirm', () => {
+      const exec = vi.fn();
+      render(<ConfirmationModals {...createProps({
+        pendingDeviceAction: { deviceId: 'd1', action: 'forceSync' },
+        executeForceSync: exec,
+      })} />);
+      fireEvent.click(screen.getByText('Queue Force Sync'));
+      expect(exec).toHaveBeenCalledWith('d1');
+    });
+
+    it('shows Processing... when loading', () => {
+      render(<ConfirmationModals {...createProps({
+        pendingDeviceAction: { deviceId: 'd1', action: 'forceSync' },
+        deviceActionLoading: true,
+      })} />);
+      expect(screen.getByText('Processing...')).toBeTruthy();
+    });
+
+    it('uses non-danger button style for force sync', () => {
+      render(<ConfirmationModals {...createProps({
+        pendingDeviceAction: { deviceId: 'd1', action: 'forceSync' },
+      })} />);
+      const btn = screen.getByText('Queue Force Sync');
+      expect(btn.className).toContain('tab');
+      expect(btn.className).not.toContain('btnDanger');
     });
   });
 

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { log } from "../../../lib/logger";
+import * as fcmService from "../../../services/fcmService";
 
 export const adminDevicesRouter = Router();
 
@@ -422,5 +423,251 @@ adminDevicesRouter.post("/devices/:deviceId/force-re-enroll", requireAdminToken,
     success: true,
     device: result.rows[0],
     message: "Device has been deregistered and will require re-enrollment.",
+  });
+});
+
+// SA-P2-002: Remote Config Push
+// =============================================================================
+
+/**
+ * Check if Firebase Admin SDK is initialized and messaging is available.
+ * Returns false if firebase-admin is not configured (no service account).
+ */
+function isFcmAvailable(): boolean {
+  try {
+    // If firebase-admin is not initialized, this will throw
+    const admin = require("firebase-admin");
+    const apps = admin.apps;
+    return Array.isArray(apps) && apps.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+// POST /api/v1/admin/devices/:deviceId/push-config
+// Push a config update to a specific device via FCM or poll fallback
+adminDevicesRouter.post("/devices/:deviceId/push-config", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const configKey = typeof body.configKey === "string" ? body.configKey.trim() : "";
+  const configValue = typeof body.configValue === "string" ? body.configValue.trim() : "";
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+
+  if (!configKey) {
+    return res.status(400).json({ error: "configKey is required" });
+  }
+  if (!configValue && configValue !== "false" && configValue !== "0") {
+    return res.status(400).json({ error: "configValue is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Verify device exists
+  const deviceRes = await pool.query(
+    `SELECT id, store_id FROM pos_devices WHERE id = $1`,
+    [deviceId]
+  );
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+  let method: "fcm" | "poll" = "poll";
+
+  // Attempt FCM delivery if available
+  if (isFcmAvailable()) {
+    try {
+      if (device.store_id) {
+        const tokenRes = await pool.query(
+          `SELECT dt.token
+           FROM auth.device_tokens dt
+           JOIN auth.users u ON u.id = dt.user_id
+           WHERE u.store_id = $1 AND dt.is_active = true`,
+          [device.store_id]
+        );
+        const tokens = tokenRes.rows.map((r: { token: string }) => r.token);
+        if (tokens.length > 0) {
+          await fcmService.sendToTokens(tokens, {
+            title: "Config Update",
+            body: message || `Configuration "${configKey}" updated`,
+            data: {
+              type: "CONFIG_PUSH",
+              configKey,
+              configValue,
+              deviceId,
+            },
+            priority: "high",
+            channel: "alerts",
+          });
+          method = "fcm";
+        }
+      }
+    } catch (err) {
+      log.warn("[ConfigPush] FCM send failed, falling back to poll:", err);
+      method = "poll";
+    }
+  }
+
+  // Record the config push in DB (for poll fallback or audit trail)
+  const insertRes = await pool.query(
+    `INSERT INTO device_config_pushes (device_id, store_id, config_key, config_value, message, method, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, created_at`,
+    [deviceId, device.store_id, configKey, configValue, message || null, method, method === "fcm" ? "delivered" : "pending"]
+  );
+
+  log.info(`[ConfigPush] Pushed "${configKey}" to device ${deviceId} via ${method}`);
+
+  return res.json({
+    queued: true,
+    method,
+    pushId: insertRes.rows[0].id,
+    createdAt: insertRes.rows[0].created_at,
+  });
+});
+
+// POST /api/v1/admin/devices/broadcast-config
+// Broadcast a config update to all active devices
+adminDevicesRouter.post("/devices/broadcast-config", requireAdminToken, async (req, res) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const configKey = typeof body.configKey === "string" ? body.configKey.trim() : "";
+  const configValue = typeof body.configValue === "string" ? body.configValue.trim() : "";
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+
+  if (!configKey) {
+    return res.status(400).json({ error: "configKey is required" });
+  }
+  if (!configValue && configValue !== "false" && configValue !== "0") {
+    return res.status(400).json({ error: "configValue is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Get all active devices
+  const devicesRes = await pool.query(
+    `SELECT id, store_id FROM pos_devices WHERE active = true`
+  );
+
+  if (devicesRes.rowCount === 0) {
+    return res.json({ queued: true, method: "poll" as const, deviceCount: 0 });
+  }
+
+  let method: "fcm" | "poll" = "poll";
+  const devices = devicesRes.rows as Array<{ id: string; store_id: string | null }>;
+
+  // Attempt FCM broadcast if available
+  if (isFcmAvailable()) {
+    try {
+      const tokenRes = await pool.query(
+        `SELECT dt.token FROM auth.device_tokens dt WHERE dt.is_active = true`
+      );
+      const tokens = tokenRes.rows.map((r: { token: string }) => r.token);
+      if (tokens.length > 0) {
+        await fcmService.sendToTokens(tokens, {
+          title: "Config Update",
+          body: message || `Configuration "${configKey}" updated for all devices`,
+          data: {
+            type: "CONFIG_PUSH",
+            configKey,
+            configValue,
+            broadcast: "true",
+          },
+          priority: "high",
+          channel: "alerts",
+        });
+        method = "fcm";
+      }
+    } catch (err) {
+      log.warn("[ConfigPush] FCM broadcast failed, falling back to poll:", err);
+      method = "poll";
+    }
+  }
+
+  // Record a config push entry per device
+  const status = method === "fcm" ? "delivered" : "pending";
+  const values: string[] = [];
+  const params: Array<string | null> = [];
+  let paramIdx = 1;
+  for (const d of devices) {
+    values.push(`($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4}, $${paramIdx + 5}, $${paramIdx + 6})`);
+    params.push(d.id, d.store_id, configKey, configValue, message || null, method, status);
+    paramIdx += 7;
+  }
+
+  await pool.query(
+    `INSERT INTO device_config_pushes (device_id, store_id, config_key, config_value, message, method, status)
+     VALUES ${values.join(", ")}`,
+    params
+  );
+
+  log.info(`[ConfigPush] Broadcast "${configKey}" to ${devices.length} devices via ${method}`);
+
+  return res.json({
+    queued: true,
+    method,
+    deviceCount: devices.length,
+  });
+});
+
+// GET /api/v1/admin/devices/config-push-history
+// Returns recent config push history for display in SuperAdmin
+adminDevicesRouter.get("/devices/config-push-history", requireAdminToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+  const deviceId = typeof req.query.deviceId === "string" ? req.query.deviceId.trim() : "";
+
+  const conditions: string[] = [];
+  const countParams: (string | number)[] = [];
+  const queryParams: (string | number)[] = [];
+  let countIdx = 1;
+  let queryIdx = 1;
+
+  if (deviceId) {
+    conditions.push(`cp.device_id = $${countIdx}`);
+    countParams.push(deviceId);
+    queryParams.push(deviceId);
+    countIdx++;
+    queryIdx++;
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  queryParams.push(limit, offset);
+
+  const [countResult, result] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int as total FROM device_config_pushes cp ${where}`,
+      countParams
+    ),
+    pool.query(
+      `SELECT cp.id, cp.device_id, cp.store_id, cp.config_key, cp.config_value,
+              cp.message, cp.method, cp.status, cp.delivered_at, cp.created_at
+       FROM device_config_pushes cp
+       ${where}
+       ORDER BY cp.created_at DESC
+       LIMIT $${queryIdx} OFFSET $${queryIdx + 1}`,
+      queryParams
+    ),
+  ]);
+
+  return res.json({
+    pushes: result.rows,
+    total: countResult.rows[0]?.total ?? 0,
+    limit,
+    offset,
   });
 });

@@ -1,6 +1,6 @@
 // SA-001: Devices tab extracted from App.tsx
 import { useState } from "react";
-import type { DeviceRecord } from "../api/devices";
+import type { DeviceRecord, ConfigPushRecord } from "../api/devices";
 import type { DeviceEnrollmentResponse } from "../api/deviceEnrollments";
 import { type DeviceType, DEVICE_TYPE_OPTIONS, DEVICE_TYPE_LABELS, PRINTING_MODE_LABELS } from "../types";
 import { EnrollmentCountdown } from "../components/EnrollmentCountdown";
@@ -9,8 +9,20 @@ import { formatDateTime } from "../lib/formatters";
 import { QRCodeSVG } from "qrcode.react";
 // R1-FIX: Confirmation dialog for device config save
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
+// SA-P2-009: Device Hardware Whitelist
+import { DeviceWhitelistSection } from "../components/DeviceWhitelistSection";
 
 const DEVICE_PAGE_SIZE = 50;
+
+// SA-P2-002: Config key options for push config
+const CONFIG_KEY_OPTIONS = [
+  { value: "FORCE_UPDATE", label: "Force Update" },
+  { value: "MAINTENANCE_MODE", label: "Maintenance Mode" },
+  { value: "SCAN_LOOKUP_V2", label: "Scan Lookup V2" },
+  { value: "PRINTING_MODE", label: "Printing Mode" },
+  { value: "SYNC_INTERVAL_MS", label: "Sync Interval (ms)" },
+  { value: "CUSTOM", label: "Custom Key" },
+] as const;
 
 interface DevicesTabProps {
   enrollStoreId: string;
@@ -28,6 +40,15 @@ interface DevicesTabProps {
   requestDeviceSave: (deviceId: string) => void;
   requestDeviceReset: (deviceId: string) => void;
   requestForceReEnroll: (deviceId: string) => void;
+  // SA-P2-005: Force sync
+  requestForceSync: (deviceId: string) => void;
+  forceSyncingDevices: Record<string, boolean>;
+  // SA-P2-002: Config push
+  handlePushConfig: (deviceId: string, config: { configKey: string; configValue: string; message?: string }) => Promise<void>;
+  handleBroadcastConfig: (config: { configKey: string; configValue: string; message?: string }) => Promise<void>;
+  configPushHistory: ConfigPushRecord[];
+  configPushLoading: boolean;
+  refreshConfigPushHistory: () => void;
   devicePage: number;
   setDevicePage: (p: number) => void;
   devicesLoading: boolean;
@@ -58,6 +79,15 @@ export function DevicesTab({
   requestDeviceSave,
   requestDeviceReset,
   requestForceReEnroll,
+  // SA-P2-005
+  requestForceSync,
+  forceSyncingDevices,
+  // SA-P2-002
+  handlePushConfig,
+  handleBroadcastConfig,
+  configPushHistory,
+  configPushLoading,
+  refreshConfigPushHistory,
   devicePage,
   setDevicePage,
   devicesLoading,
@@ -76,6 +106,13 @@ export function DevicesTab({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   // R3-DEV-008: Reset token loading indicator
   const [resettingDevices, setResettingDevices] = useState<Record<string, boolean>>({});
+  // SA-P2-002: Push Config modal state
+  const [pushConfigTarget, setPushConfigTarget] = useState<string | null>(null); // deviceId or "broadcast"
+  const [pushConfigKey, setPushConfigKey] = useState("FORCE_UPDATE");
+  const [pushConfigValue, setPushConfigValue] = useState("");
+  const [pushConfigMessage, setPushConfigMessage] = useState("");
+  const [pushConfigSending, setPushConfigSending] = useState(false);
+  const [pushConfigResult, setPushConfigResult] = useState<string | null>(null);
 
   return (
     <section className="card">
@@ -353,6 +390,30 @@ export function DevicesTab({
                     }} disabled={deviceSaving[d.id] || resettingDevices[d.id]}>
                       {resettingDevices[d.id] ? "Resetting…" : "Reset Token"}
                     </button>
+                    {/* SA-P2-005: Force Sync button */}
+                    <button
+                      className="btnGhost btnSm"
+                      onClick={() => requestForceSync(d.id)}
+                      disabled={deviceSaving[d.id] || forceSyncingDevices[d.id]}
+                      title="Queue a force sync command. The device will perform a full sync on its next check-in."
+                    >
+                      {forceSyncingDevices[d.id] ? "Syncing…" : "Force Sync"}
+                    </button>
+                    {/* SA-P2-002: Push Config button */}
+                    <button
+                      className="btnGhost btnSm"
+                      onClick={() => {
+                        setPushConfigTarget(d.id);
+                        setPushConfigKey("FORCE_UPDATE");
+                        setPushConfigValue("");
+                        setPushConfigMessage("");
+                        setPushConfigResult(null);
+                      }}
+                      disabled={deviceSaving[d.id]}
+                      title="Push a config update to this device via FCM or poll"
+                    >
+                      Push Config
+                    </button>
                     {/* SA-P2-001: Force Re-Enroll button */}
                     <button
                       className="btnDanger btnSm"
@@ -380,6 +441,152 @@ export function DevicesTab({
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* SA-P2-002: Push Config Modal */}
+      {pushConfigTarget && (
+        <div className="modalOverlay" onClick={() => { if (!pushConfigSending) { setPushConfigTarget(null); setPushConfigResult(null); } }} onKeyDown={(e) => { if (e.key === "Escape" && !pushConfigSending) { setPushConfigTarget(null); setPushConfigResult(null); } }}>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Push Config" onClick={(e) => e.stopPropagation()} style={{ minWidth: 400 }}>
+            <div className="modalHeader">
+              <h3>{pushConfigTarget === "broadcast" ? "Broadcast Config to All Devices" : `Push Config to Device`}</h3>
+            </div>
+            <div className="modalBody">
+              {pushConfigTarget !== "broadcast" && (
+                <p className="muted sa-mb-8">Target: <span className="mono">{pushConfigTarget}</span></p>
+              )}
+              <div className="sa-gap-12" style={{ display: "grid" }}>
+                <div className="control">
+                  <label>Config Key</label>
+                  <select
+                    value={pushConfigKey}
+                    onChange={(e) => setPushConfigKey(e.target.value)}
+                    className="sa-select sa-radius-4"
+                    aria-label="Config key"
+                  >
+                    {CONFIG_KEY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="control">
+                  <label>Config Value</label>
+                  <input
+                    type="text"
+                    value={pushConfigValue}
+                    onChange={(e) => setPushConfigValue(e.target.value)}
+                    placeholder="e.g. true, 30000, DIRECT_ESC_POS"
+                    className="sa-radius-4"
+                    aria-label="Config value"
+                  />
+                </div>
+                <div className="control">
+                  <label>Message (optional)</label>
+                  <input
+                    type="text"
+                    value={pushConfigMessage}
+                    onChange={(e) => setPushConfigMessage(e.target.value)}
+                    placeholder="Human-readable note"
+                    className="sa-radius-4"
+                    aria-label="Push config message"
+                  />
+                </div>
+              </div>
+              {pushConfigResult && (
+                <div className="banner sa-mt-12" role="status">{pushConfigResult}</div>
+              )}
+            </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => { setPushConfigTarget(null); setPushConfigResult(null); }} disabled={pushConfigSending}>Cancel</button>
+              <button
+                onClick={async () => {
+                  if (!pushConfigValue.trim()) return;
+                  setPushConfigSending(true);
+                  setPushConfigResult(null);
+                  try {
+                    if (pushConfigTarget === "broadcast") {
+                      await handleBroadcastConfig({ configKey: pushConfigKey, configValue: pushConfigValue.trim(), message: pushConfigMessage.trim() || undefined });
+                      setPushConfigResult("Broadcast queued successfully.");
+                    } else {
+                      await handlePushConfig(pushConfigTarget, { configKey: pushConfigKey, configValue: pushConfigValue.trim(), message: pushConfigMessage.trim() || undefined });
+                      setPushConfigResult("Config push queued successfully.");
+                    }
+                    refreshConfigPushHistory();
+                  } catch (err) {
+                    setPushConfigResult(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+                  } finally {
+                    setPushConfigSending(false);
+                  }
+                }}
+                disabled={pushConfigSending || !pushConfigValue.trim()}
+              >
+                {pushConfigSending ? "Sending..." : pushConfigTarget === "broadcast" ? "Broadcast to All" : "Push Config"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SA-P2-002: Config Push section */}
+      <hr className="sa-border-b" style={{ margin: "16px 0" }} />
+      <div className="cardHeader" style={{ paddingTop: 0 }}>
+        <div>
+          <div className="cardTitle">Config Push</div>
+          <div className="muted">Push configuration updates to devices via FCM or poll</div>
+        </div>
+        <div className="sa-flex sa-gap-8">
+          <button
+            className="btnGhost btnSm"
+            onClick={() => refreshConfigPushHistory()}
+            disabled={configPushLoading}
+          >
+            {configPushLoading ? "Loading..." : "Refresh"}
+          </button>
+          <button
+            onClick={() => {
+              setPushConfigTarget("broadcast");
+              setPushConfigKey("FORCE_UPDATE");
+              setPushConfigValue("");
+              setPushConfigMessage("");
+              setPushConfigResult(null);
+            }}
+            title="Broadcast a config update to all active devices"
+          >
+            Broadcast to All
+          </button>
+        </div>
+      </div>
+
+      {configPushHistory.length === 0 ? (
+        <div className="empty">No config pushes yet.</div>
+      ) : (
+        <div className="tableWrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Device</th>
+                <th>Key</th>
+                <th>Value</th>
+                <th>Method</th>
+                <th>Status</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              {configPushHistory.map((p) => (
+                <tr key={p.id}>
+                  <td className="mono">{p.created_at ? formatDateTime(p.created_at) : "-"}</td>
+                  <td className="mono">{p.device_id ?? "all"}</td>
+                  <td className="mono">{p.config_key}</td>
+                  <td className="mono" style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{p.config_value}</td>
+                  <td><span className={`badge ${p.method === "fcm" ? "badgeOk" : "badgeWarn"}`}>{p.method}</span></td>
+                  <td><span className={`badge ${p.status === "delivered" ? "badgeOk" : p.status === "failed" ? "badgeError" : "badgeWarn"}`}>{p.status}</span></td>
+                  <td className="muted">{p.message ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -418,6 +625,9 @@ export function DevicesTab({
           </table>
         </div>
       )}
+
+      {/* SA-P2-009: Device Hardware Whitelist */}
+      <DeviceWhitelistSection />
     </section>
   );
 }
