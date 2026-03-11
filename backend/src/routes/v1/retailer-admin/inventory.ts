@@ -504,6 +504,7 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
         sp.product_id as "productId",
         COALESCE(sp.display_name, p.name) as "productName",
         p.primary_barcode as "barcode",
+        sp.batch_number as "batchNumber",
         COALESCE(sb.current_qty, sp.current_stock, 0) as "totalStockQty",
         COALESCE(
           (SELECT SUM(ABS(delta_qty) * COALESCE(unit_cost, 0))
