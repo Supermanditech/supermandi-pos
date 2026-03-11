@@ -124,7 +124,10 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
         sp.taxonomy_id as "categoryId",
         sp.display_name as "alias",
         sp.metadata_updated_at as "metadataUpdatedAt",
-        spb.barcode as "generatedBarcode"
+        spb.barcode as "generatedBarcode",
+        p.manufacturer_name as "manufacturerName",
+        p.country_of_origin as "countryOfOrigin",
+        p.shelf_life_days as "shelfLifeDays"
       FROM catalog.store_products sp
       INNER JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -204,6 +207,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     supplierId, lowStockAlertQty, gstPercent, hsn, notes,
     packSize, packUnit, soldBy, rateUnit,
     categoryId, // RCAT-CAT-002: Store override for taxonomy_id
+    manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
   } = req.body;
 
   // AUD-059-A/B FIX: Input validation bounds
@@ -309,8 +313,9 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     const productResult = await client.query(
       `INSERT INTO catalog.products (
         name, description, brand, category, unit, pack_size, pack_unit,
-        primary_barcode, hsn_code, default_gst_rate, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
+        primary_barcode, hsn_code, default_gst_rate, is_active,
+        manufacturer_name, country_of_origin, shelf_life_days
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11, $12, $13)
       RETURNING id`,
       [
         sanitizedName,
@@ -323,6 +328,9 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         productMode === 'PACKAGED' && validatedBarcode ? validatedBarcode : null,
         hsn?.trim() || null,
         gstPercent !== undefined && gstPercent !== '' ? parseFloat(gstPercent) : null,
+        manufacturerName?.trim() || null,
+        countryOfOrigin?.trim() || null,
+        shelfLifeDays !== undefined && shelfLifeDays !== null ? parseInt(shelfLifeDays) : null,
       ]
     );
     const productId = productResult.rows[0].id;
@@ -494,6 +502,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     alias, // Store-level display name
     metadataUpdatedAt, // AUD-025-B: ISO timestamp for last-write-wins comparison
     stockUpdatedAt, // RET-POS-SYNC-012: ISO timestamp for stock LWW comparison
+    manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
   } = req.body;
 
   // AUD-025-B: Parse incoming timestamp for LWW comparison
@@ -549,6 +558,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         pack_unit = $7,
         hsn_code = $8,
         default_gst_rate = $9,
+        manufacturer_name = $10,
+        country_of_origin = $11,
+        shelf_life_days = $12,
         updated_at = NOW()
       WHERE id = $1`,
       [
@@ -561,6 +573,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         packUnit?.trim() || null,
         hsn?.trim() || null,
         gstPercent !== undefined && gstPercent !== '' ? parseFloat(gstPercent) : null,
+        manufacturerName !== undefined ? (manufacturerName?.trim() || null) : null,
+        countryOfOrigin !== undefined ? (countryOfOrigin?.trim() || null) : null,
+        shelfLifeDays !== undefined && shelfLifeDays !== null ? parseInt(shelfLifeDays) : null,
       ]
     );
 

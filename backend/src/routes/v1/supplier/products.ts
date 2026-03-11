@@ -252,6 +252,9 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         pending_mrp,
         image_url,
         thumbnail_url,
+        manufacturer_name,
+        country_of_origin,
+        shelf_life_days,
         created_at,
         updated_at
       FROM catalog.supplier_products
@@ -290,6 +293,10 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         // STG-080: Include image URLs in response
         imageUrl: p.image_url || null,
         thumbnailUrl: p.thumbnail_url || null,
+        // SCALE-A1: Compliance fields
+        manufacturerName: p.manufacturer_name || null,
+        countryOfOrigin: p.country_of_origin || null,
+        shelfLifeDays: p.shelf_life_days || null,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })),
@@ -324,7 +331,9 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
               is_active, approval_status, rejection_reason,
               edited_name, edited_category, supermandi_margin_minor, bnpl_eligible,
               price_change_pending, pending_purchase_price, pending_mrp,
-              image_url, thumbnail_url, created_at, updated_at
+              image_url, thumbnail_url,
+              manufacturer_name, country_of_origin, shelf_life_days,
+              created_at, updated_at
        FROM catalog.supplier_products
        WHERE id = $1::uuid AND supplier_id = $2`,
       [req.params.productId, req.supplierId]
@@ -351,6 +360,8 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
         pendingPurchasePrice: p.pending_purchase_price || null,
         pendingMrp: p.pending_mrp || null,
         imageUrl: p.image_url || null, thumbnailUrl: p.thumbnail_url || null,
+        manufacturerName: p.manufacturer_name || null, countryOfOrigin: p.country_of_origin || null,
+        shelfLifeDays: p.shelf_life_days || null,
         createdAt: p.created_at, updatedAt: p.updated_at,
       },
     });
@@ -379,6 +390,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       moq,
       unit,
       imageUrl,
+      manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
     } = req.body;
 
     // Validation
@@ -431,6 +443,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
     }
 
     // STG-080: Include image_url in INSERT
+    // SCALE-A1: Include compliance fields
     const result = await pool.query(
       `INSERT INTO catalog.supplier_products (
         supplier_id,
@@ -444,9 +457,12 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         moq,
         unit,
         image_url,
+        manufacturer_name,
+        country_of_origin,
+        shelf_life_days,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending', true)
       RETURNING
         id,
         name,
@@ -459,6 +475,9 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         moq,
         unit,
         image_url,
+        manufacturer_name,
+        country_of_origin,
+        shelf_life_days,
         approval_status,
         is_active,
         created_at`,
@@ -474,6 +493,9 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         moq || 1,
         unit || 'PCS',
         imageUrl || null,
+        manufacturerName?.trim() || null,
+        countryOfOrigin?.trim() || null,
+        shelfLifeDays !== undefined && shelfLifeDays !== null ? parseInt(shelfLifeDays) : null,
       ]
     );
 
@@ -498,6 +520,9 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         mrp: product.mrp,
         moq: product.moq,
         unit: product.unit,
+        manufacturerName: product.manufacturer_name || null,
+        countryOfOrigin: product.country_of_origin || null,
+        shelfLifeDays: product.shelf_life_days || null,
         approvalStatus,
         isActive: product.is_active,
         createdAt: product.created_at,
@@ -529,6 +554,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       moq,
       unit,
       imageUrl,  // STG-080: Accept imageUrl in update
+      manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
     } = req.body;
 
     const pool = getPool();
@@ -659,6 +685,19 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       updates.push(`image_url = $${paramIndex++}`);
       values.push(imageUrl || null);
     }
+    // SCALE-A1: Compliance fields in UPDATE
+    if (manufacturerName !== undefined) {
+      updates.push(`manufacturer_name = $${paramIndex++}`);
+      values.push(manufacturerName?.trim() || null);
+    }
+    if (countryOfOrigin !== undefined) {
+      updates.push(`country_of_origin = $${paramIndex++}`);
+      values.push(countryOfOrigin?.trim() || null);
+    }
+    if (shelfLifeDays !== undefined) {
+      updates.push(`shelf_life_days = $${paramIndex++}`);
+      values.push(shelfLifeDays !== null ? parseInt(shelfLifeDays) : null);
+    }
 
     if (updates.length === 0) {
       res.status(400).json({
@@ -743,6 +782,9 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
          mrp,
          moq,
          unit,
+         manufacturer_name,
+         country_of_origin,
+         shelf_life_days,
          approval_status,
          is_active,
          price_change_pending,
@@ -781,6 +823,9 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         mrp: product.mrp,
         moq: product.moq,
         unit: product.unit,
+        manufacturerName: product.manufacturer_name || null,
+        countryOfOrigin: product.country_of_origin || null,
+        shelfLifeDays: product.shelf_life_days || null,
         approvalStatus: product.approval_status,
         isActive: product.is_active,
         // T-147: Include pending price info in response

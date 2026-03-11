@@ -36,6 +36,9 @@ interface ProductRow {
   primary_barcode: string | null;
   hsn_code: string | null;
   default_gst_rate: string | null;
+  manufacturer_name: string | null;
+  country_of_origin: string | null;
+  shelf_life_days: number | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -92,6 +95,9 @@ function mapProductRow(row: ProductRow): Product {
     primaryBarcode: row.primary_barcode ?? undefined,
     hsnCode: row.hsn_code ?? undefined,
     defaultGstRate: row.default_gst_rate ? parseFloat(row.default_gst_rate) : undefined,
+    manufacturerName: row.manufacturer_name ?? undefined,
+    countryOfOrigin: row.country_of_origin ?? undefined,
+    shelfLifeDays: row.shelf_life_days ?? undefined,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
