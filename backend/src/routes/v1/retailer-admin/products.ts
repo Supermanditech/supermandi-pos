@@ -7,7 +7,7 @@
 // RCAT-BULK-002: Bulk paste import
 // GO-LIVE-132: Store-scoped via JWT (x-actor-id header from gateway)
 
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { getStoreId, requireStoreContext } from "../../../middleware/retailerStoreContext";
 import {
@@ -16,6 +16,7 @@ import {
   validateBarcode,
   validateCategoryId,
   validatePrice,
+  uploadBuffer,
 } from "@supermandi/common";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
@@ -29,6 +30,8 @@ import { validatePriceBounds } from "../../../utils/priceBoundsValidator";
 // SCALE-D4: Invalidate catalog page-1 cache on any product CRUD
 // SCALE-D1: Invalidate barcode lookup cache on any product CRUD
 import { cacheDelete } from "../../../db/redis";
+// SCALE-E1: multer for product image upload (2MB, JPEG/PNG/WebP)
+import multer from "multer";
 
 function invalidateCatalogPage1(storeId: string): void {
   cacheDelete(`catalog:store:${storeId}:page1`).catch(() => {});
@@ -1305,6 +1308,111 @@ function generateSkuPdf(product: { name: string; brand?: string; unit?: string; 
 function pdfEscape(str: string): string {
   return str.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
+
+// =============================================================================
+// SCALE-E1: Product Image Upload
+// POST /api/v1/retailer-admin/products/:id/image
+// 2MB limit, JPEG/PNG/WebP only, store-isolation enforced via requireStoreContext
+// =============================================================================
+
+const PRODUCT_IMAGE_MAX_SIZE = 2 * 1024 * 1024; // 2MB
+const PRODUCT_IMAGE_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const GCS_DOCUMENTS_BUCKET = process.env.GCS_DOCUMENTS_BUCKET || 'supermandi-pos-documents';
+
+const productImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: PRODUCT_IMAGE_MAX_SIZE },
+  fileFilter: (_req, file, cb) => {
+    if (PRODUCT_IMAGE_ALLOWED_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed: JPEG, PNG, WebP`));
+    }
+  },
+});
+
+/**
+ * POST /api/v1/retailer-admin/products/:id/image
+ * SCALE-E1: Upload a product image to GCS and store URL in store_products.image_url
+ * Auth: requireStoreContext (storeId from JWT — store isolation enforced)
+ */
+retailerAdminProductsRouter.post(
+  "/products/:id/image",
+  (req: Request, res: Response, next: NextFunction) => {
+    productImageUpload.single("image")(req, res, (err: any) => {
+      if (err) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          res.status(400).json({ error: { code: "FILE_TOO_LARGE", message: "Image exceeds 2MB limit" } });
+          return;
+        }
+        res.status(400).json({ error: { code: "INVALID_FILE", message: err.message || "Invalid file" } });
+        return;
+      }
+      next();
+    });
+  },
+  async (req: Request, res: Response) => {
+    const pool = getPool();
+    if (!pool) {
+      return res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+    }
+
+    const storeId = getStoreId(req);
+    if (!storeId) {
+      return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: { code: "NO_FILE", message: "No image provided" } });
+    }
+
+    // Defense-in-depth: re-validate MIME type after multer
+    if (!PRODUCT_IMAGE_ALLOWED_TYPES.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: { code: "INVALID_FILE", message: "Invalid image type. Use JPEG, PNG, or WebP." } });
+    }
+
+    const { id } = req.params;
+
+    try {
+      // Store isolation: verify product belongs to this store
+      const productResult = await pool.query(
+        `SELECT id FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
+        [id, storeId]
+      );
+      if (productResult.rows.length === 0) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Product not found" } });
+      }
+
+      // Build GCS object key: store-products/{storeId}/{id}_{timestamp}.{ext}
+      const ext = req.file.mimetype === "image/png" ? "png"
+        : req.file.mimetype === "image/webp" ? "webp"
+        : "jpg";
+      const objectKey = `store-products/${storeId}/${id}_${Date.now()}.${ext}`;
+
+      // Upload buffer to GCS (STBT-179 pattern — same as documents route)
+      await uploadBuffer(GCS_DOCUMENTS_BUCKET, objectKey, req.file.buffer, req.file.mimetype);
+
+      const imageUrl = `https://storage.googleapis.com/${GCS_DOCUMENTS_BUCKET}/${objectKey}`;
+
+      // Persist image_url on store_products row
+      await pool.query(
+        `UPDATE catalog.store_products SET image_url = $1, updated_at = NOW() WHERE id = $2 AND store_id = $3`,
+        [imageUrl, id, storeId]
+      );
+
+      // SCALE-D4: Invalidate catalog page-1 cache
+      invalidateCatalogPage1(storeId);
+
+      log.info(`[SCALE-E1] Product image uploaded: store=${storeId} product=${id} url=${imageUrl}`);
+
+      return res.json({ image_url: imageUrl });
+    } catch (err: unknown) {
+      const error = asError(err);
+      log.error("[SCALE-E1] Product image upload error:", error.message);
+      return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to upload image" } });
+    }
+  }
+);
 
 retailerAdminProductsRouter.get("/products/:id/sku.pdf", async (req: Request, res: Response) => {
   const pool = getPool();
