@@ -52,6 +52,11 @@ jest.mock('../../services/eventLogger', () => ({
   eventLogger: { log: (...args: any[]) => mockEventLoggerLog(...args) },
 }));
 
+const mockGetDeviceToken = jest.fn().mockResolvedValue('fake-device-token');
+jest.mock('../../services/deviceSession', () => ({
+  getDeviceToken: (...args: any[]) => mockGetDeviceToken(...args),
+}));
+
 import { useProductsStore, Product } from '../../stores/productsStore';
 
 const store = useProductsStore;

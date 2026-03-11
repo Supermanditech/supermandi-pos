@@ -77,7 +77,7 @@ describe('billingApi', () => {
       listLocalBills.mockResolvedValue(localBills);
 
       const result = await listBills();
-      expect(result).toEqual(localBills);
+      expect(result).toEqual({ bills: localBills, hasMore: false });
     });
   });
 
