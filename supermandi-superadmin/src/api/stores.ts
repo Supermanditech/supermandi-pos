@@ -311,3 +311,61 @@ export async function fetchStoreSettings(storeId: string): Promise<StoreSettings
   }
   return data.settings as StoreSettings;
 }
+
+// =============================================================================
+// SA-P2-007: BNPL Limit Adjustment
+// =============================================================================
+
+export type BnplUpdateInput = {
+  bnplEnabled?: boolean;
+  bnplCreditLimit?: number;
+  bnplMaxDays?: number;
+  creditEnabled?: boolean;
+  creditLimit?: number;
+};
+
+export type BnplUpdateResult = {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  creditEnabled: boolean;
+  creditLimit: number;
+  bnplEnabled: boolean;
+  bnplCreditLimit: number;
+  bnplMaxDays: number;
+  updatedAt: string;
+};
+
+/**
+ * Update BNPL/credit settings for a store
+ */
+export async function updateStoreBnpl(
+  storeId: string,
+  input: BnplUpdateInput
+): Promise<BnplUpdateResult> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/bnpl`,
+    {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(input),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  if (!data?.store || typeof data.store !== "object") {
+    throw new Error("Invalid BNPL update response: missing store data");
+  }
+  return data.store as BnplUpdateResult;
+}

@@ -86,6 +86,8 @@ function createDefaultProps(overrides: Partial<Parameters<typeof StoresTab>[0]> 
     storeSettings: {},
     storeSettingsLoading: {},
     loadStoreSettings: vi.fn(),
+    handleBnplSave: vi.fn(),
+    bnplSaving: {},
     ...overrides,
   };
   return defaultProps;
@@ -679,7 +681,7 @@ describe('StoresTab', () => {
 
     it('shows loading text on Load store button', () => {
       render(<StoresTab {...createDefaultProps({ storeLoading: true })} />);
-      expect(screen.getByText('Loading...')).toBeTruthy();
+      expect(screen.getAllByText('Loading...').length).toBeGreaterThanOrEqual(1);
     });
 
     it('shows saving text on Save VPA button', () => {
@@ -689,7 +691,8 @@ describe('StoresTab', () => {
 
     it('disables Load store and Save VPA when loading', () => {
       render(<StoresTab {...createDefaultProps({ storeLoading: true })} />);
-      expect((screen.getByText('Loading...') as HTMLButtonElement).disabled).toBe(true);
+      const loadingBtns = screen.getAllByText('Loading...');
+      expect((loadingBtns[0] as HTMLButtonElement).disabled).toBe(true);
       expect((screen.getByText('Saving...') as HTMLButtonElement).disabled).toBe(true);
     });
 
@@ -1152,6 +1155,170 @@ describe('StoresTab', () => {
       expect(screen.getByText('bnpl_beta')).toBeTruthy();
       expect(screen.getByText('Enabled')).toBeTruthy();
       expect(screen.getByText('Disabled')).toBeTruthy();
+    });
+  });
+
+  // =========================================================================
+  // SA-P2-007: BNPL Edit
+  // =========================================================================
+
+  describe('BNPL edit', () => {
+    const makeSettingsForStore = (storeId: string) => ({
+      [storeId]: {
+        storeId,
+        name: 'Test Store',
+        code: 'TST001',
+        storeType: null,
+        status: 'ACTIVE',
+        statusReason: null,
+        statusUpdatedAt: null,
+        address: null,
+        contactName: null,
+        contactPhone: null,
+        contactEmail: null,
+        city: null,
+        state: null,
+        pincode: null,
+        location: null,
+        upiVpa: null,
+        upiVpaUpdatedAt: null,
+        allowedPaymentMethods: ['CASH'] as string[],
+        creditEnabled: true,
+        creditLimit: 5000,
+        bnplEnabled: true,
+        bnplCreditLimit: 5000000,
+        bnplMaxDays: 14,
+        deviceBound: false,
+        kycComplete: false,
+        upiComplete: false,
+        adminApproved: false,
+        activeDeviceCount: 0,
+        posDeviceId: null,
+        kycStatus: null,
+        timezone: 'Asia/Kolkata',
+        currency: 'INR',
+        scanLookupV2Enabled: false,
+        featureFlags: [],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-15',
+      },
+    });
+
+    it('renders Edit BNPL Settings button when store settings are loaded', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      expect(screen.getByTestId('edit-bnpl-store-1')).toBeTruthy();
+      expect(screen.getByText('Edit BNPL Settings')).toBeTruthy();
+    });
+
+    it('opens BNPL edit modal when button is clicked', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      fireEvent.click(screen.getByTestId('edit-bnpl-store-1'));
+      expect(screen.getByTestId('bnpl-edit-modal')).toBeTruthy();
+      expect(screen.getByTestId('bnpl-enabled-toggle')).toBeTruthy();
+      expect(screen.getByTestId('bnpl-credit-limit-input')).toBeTruthy();
+      expect(screen.getByTestId('bnpl-max-days-input')).toBeTruthy();
+      expect(screen.getByTestId('credit-enabled-toggle')).toBeTruthy();
+      expect(screen.getByTestId('credit-limit-input')).toBeTruthy();
+    });
+
+    it('pre-populates modal with current store BNPL values', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      fireEvent.click(screen.getByTestId('edit-bnpl-store-1'));
+
+      const bnplToggle = screen.getByTestId('bnpl-enabled-toggle') as HTMLInputElement;
+      expect(bnplToggle.checked).toBe(true);
+
+      const creditLimitInput = screen.getByTestId('bnpl-credit-limit-input') as HTMLInputElement;
+      expect(creditLimitInput.value).toBe('50000'); // 5000000 paise / 100 = 50000 rupees
+
+      const maxDaysInput = screen.getByTestId('bnpl-max-days-input') as HTMLInputElement;
+      expect(maxDaysInput.value).toBe('14');
+
+      const creditToggle = screen.getByTestId('credit-enabled-toggle') as HTMLInputElement;
+      expect(creditToggle.checked).toBe(true);
+
+      const creditLimit = screen.getByTestId('credit-limit-input') as HTMLInputElement;
+      expect(creditLimit.value).toBe('50'); // 5000 paise / 100 = 50 rupees
+    });
+
+    it('closes modal when cancel is clicked', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any })} />);
+      fireEvent.click(screen.getByTestId('edit-bnpl-store-1'));
+      expect(screen.getByTestId('bnpl-edit-modal')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('bnpl-cancel-btn'));
+      expect(screen.queryByTestId('bnpl-edit-modal')).toBeNull();
+    });
+
+    it('calls handleBnplSave and closes modal when save is clicked', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      const handleBnplSave = vi.fn();
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any, handleBnplSave })} />);
+      fireEvent.click(screen.getByTestId('edit-bnpl-store-1'));
+      fireEvent.click(screen.getByTestId('bnpl-save-btn'));
+
+      expect(handleBnplSave).toHaveBeenCalledWith('store-1', {
+        bnplEnabled: true,
+        bnplCreditLimit: 5000000,
+        bnplMaxDays: 14,
+        creditEnabled: true,
+        creditLimit: 5000,
+      });
+      // Modal should close after save
+      expect(screen.queryByTestId('bnpl-edit-modal')).toBeNull();
+    });
+
+    it('allows toggling BNPL enabled off and saving', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      const handleBnplSave = vi.fn();
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any, handleBnplSave })} />);
+      fireEvent.click(screen.getByTestId('edit-bnpl-store-1'));
+
+      // Uncheck BNPL enabled
+      fireEvent.click(screen.getByTestId('bnpl-enabled-toggle'));
+      fireEvent.click(screen.getByTestId('bnpl-save-btn'));
+
+      expect(handleBnplSave).toHaveBeenCalledWith('store-1', expect.objectContaining({
+        bnplEnabled: false,
+      }));
+    });
+
+    it('allows editing credit limit and max days', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      const handleBnplSave = vi.fn();
+      render(<StoresTab {...createDefaultProps({ storeDirectory: stores, expandedStoreId: 'store-1', storeSettings: settings as any, handleBnplSave })} />);
+      fireEvent.click(screen.getByTestId('edit-bnpl-store-1'));
+
+      fireEvent.change(screen.getByTestId('bnpl-credit-limit-input'), { target: { value: '100000' } });
+      fireEvent.change(screen.getByTestId('bnpl-max-days-input'), { target: { value: '30' } });
+      fireEvent.click(screen.getByTestId('bnpl-save-btn'));
+
+      expect(handleBnplSave).toHaveBeenCalledWith('store-1', expect.objectContaining({
+        bnplCreditLimit: 10000000, // 100000 rupees * 100 = 10000000 paise
+        bnplMaxDays: 30,
+      }));
+    });
+
+    it('shows saving state on button when bnplSaving is true', () => {
+      const stores = [makeStore()];
+      const settings = makeSettingsForStore('store-1');
+      render(<StoresTab {...createDefaultProps({
+        storeDirectory: stores,
+        expandedStoreId: 'store-1',
+        storeSettings: settings as any,
+        bnplSaving: { 'store-1': true },
+      })} />);
+      expect(screen.getByText('Saving...')).toBeTruthy();
     });
   });
 });

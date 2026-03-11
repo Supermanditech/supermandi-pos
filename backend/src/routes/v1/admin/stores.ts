@@ -820,6 +820,103 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
   }
 });
 
+// SA-P2-007: PATCH /api/v1/admin/stores/:storeId/bnpl - Update BNPL settings
+// Requires 'stores:write' permission
+adminStoresRouter.patch("/stores/:storeId/bnpl", requirePermission("stores", "write"), adminStoreOperationsRateLimiter, async (req, res) => {
+  const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
+  if (!storeId) {
+    return res.status(400).json({ error: "storeId is required" });
+  }
+
+  const { bnplEnabled, bnplCreditLimit, bnplMaxDays, creditEnabled, creditLimit } = req.body as Record<string, unknown>;
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+
+  const addUpdate = (column: string, value: unknown) => {
+    updates.push(`${column} = $${values.length + 1}`);
+    values.push(value);
+  };
+
+  if (typeof bnplEnabled === "boolean") {
+    addUpdate("bnpl_enabled", bnplEnabled);
+  }
+
+  if (bnplCreditLimit !== undefined) {
+    const limit = Number(bnplCreditLimit);
+    if (!Number.isFinite(limit) || limit < 0) {
+      return res.status(400).json({ error: "bnplCreditLimit must be a non-negative number" });
+    }
+    addUpdate("bnpl_credit_limit", Math.round(limit));
+  }
+
+  if (bnplMaxDays !== undefined) {
+    const days = Number(bnplMaxDays);
+    if (!Number.isFinite(days) || !Number.isInteger(days) || days < 1 || days > 90) {
+      return res.status(400).json({ error: "bnplMaxDays must be an integer between 1 and 90" });
+    }
+    addUpdate("bnpl_max_days", days);
+  }
+
+  if (typeof creditEnabled === "boolean") {
+    addUpdate("credit_enabled", creditEnabled);
+  }
+
+  if (creditLimit !== undefined) {
+    const limit = Number(creditLimit);
+    if (!Number.isFinite(limit) || limit < 0) {
+      return res.status(400).json({ error: "creditLimit must be a non-negative number" });
+    }
+    addUpdate("credit_limit", Math.round(limit));
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: "No BNPL fields to update" });
+  }
+
+  updates.push("updated_at = NOW()");
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const isUuid = UUID_PATTERN.test(storeId);
+  try {
+    const sql = `
+      UPDATE platform.stores
+      SET ${updates.join(", ")}
+      WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `UPPER(code) = UPPER($${values.length + 1})`}
+      RETURNING id::TEXT as id, name, code, status,
+        credit_enabled, credit_limit, bnpl_enabled, bnpl_credit_limit, bnpl_max_days,
+        updated_at
+    `;
+    values.push(storeId);
+
+    const result = await pool.query(sql, values);
+    const store = result.rows[0];
+    if (!store) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    return res.json({
+      store: {
+        id: store.id,
+        name: store.name,
+        code: store.code,
+        status: store.status,
+        creditEnabled: store.credit_enabled ?? false,
+        creditLimit: store.credit_limit ?? 0,
+        bnplEnabled: store.bnpl_enabled ?? false,
+        bnplCreditLimit: store.bnpl_credit_limit ?? 5000000,
+        bnplMaxDays: store.bnpl_max_days ?? 7,
+        updatedAt: store.updated_at,
+      },
+    });
+  } catch (err: any) {
+    log.error("[admin/stores PATCH bnpl] Update failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update BNPL settings" });
+  }
+});
+
 // ITER3-P0-007: DELETE /api/v1/admin/stores/:storeId - Soft delete a store
 // GO-LIVE-128: Requires 'stores:delete' permission (super_admin only)
 // GO-LIVE-186: Rate limit store deletion to 30/min per IP
