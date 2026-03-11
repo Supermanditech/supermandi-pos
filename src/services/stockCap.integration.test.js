@@ -265,7 +265,7 @@ function requireTs(entryPath) {
 function formatStockMessage(event) {
   if (!event) return "";
   if (event.reason === "out_of_stock") return "Out of stock";
-  if (event.reason === "unknown_stock") return "Stock unavailable. Sync required.";
+  if (event.reason === "unknown_stock") return "Added — stock unknown. Sync recommended.";
   return `Only ${event.availableStock} in stock`;
 }
 
@@ -457,9 +457,10 @@ async function testUnknownStock(useCartStore) {
     barcode: "unknown-barcode"
   });
 
-  assert.strictEqual(useCartStore.getState().items.length, 0);
+  // AUDIT-POS-FEATURES-001 §3.1: Item IS now added with unknown stock (was blocked before)
+  assert.strictEqual(useCartStore.getState().items.length, 1);
   const event = useCartStore.getState().stockLimitEvent;
-  assert.strictEqual(formatStockMessage(event), "Stock unavailable. Sync required.");
+  assert.strictEqual(formatStockMessage(event), "Added — stock unknown. Sync recommended.");
   assert.strictEqual(event.itemId, "unknown-sku");
 }
 

@@ -39,11 +39,15 @@ export const capAddQuantity = (
   const requestedQty = safeCurrent + safeAdd;
   const stock = normalizeStock(availableStock);
 
+  // AUDIT-POS-FEATURES-001 §3.1: Allow addition when stock is unknown (e.g. stale
+  // cache or new product). The item is added with unknownStock=true so the UI can
+  // display a "Stock Unknown — Sync Required" badge. Previously this blocked the
+  // cart entirely, causing legitimate sales to fail on first scan.
   if (stock === null) {
     return {
       requestedQty,
-      nextQty: safeCurrent,
-      addedQty: 0,
+      nextQty: requestedQty,
+      addedQty: safeAdd,
       capped: false,
       outOfStock: false,
       unknownStock: safeAdd > 0

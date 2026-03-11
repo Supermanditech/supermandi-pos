@@ -36,20 +36,20 @@ describe('stockCap', () => {
       expect(result.capped).toBe(true);
     });
 
-    it('treats null stock as unknown — caps to current qty', () => {
-      // T1-015: null stock = unknown (not 0), so unknownStock=true and addedQty=0
+    it('allows addition with unknown stock (null) — marks unknownStock', () => {
+      // AUDIT-POS-FEATURES-001 §3.1: null stock = unknown, item IS added with warning
       const result = capAddQuantity(0, 5, null);
       expect(result.unknownStock).toBe(true);
-      expect(result.addedQty).toBe(0);
-      expect(result.nextQty).toBe(0);
+      expect(result.addedQty).toBe(5);
+      expect(result.nextQty).toBe(5);
     });
 
-    it('marks unknownStock when stock is undefined (truly unknown)', () => {
+    it('allows addition with unknown stock (undefined) — marks unknownStock', () => {
       // normalizeStock(undefined) = null (Number(undefined)=NaN → not finite → null)
       const result = capAddQuantity(0, 5, undefined);
       expect(result.unknownStock).toBe(true);
-      expect(result.addedQty).toBe(0);
-      expect(result.nextQty).toBe(0);
+      expect(result.addedQty).toBe(5);
+      expect(result.nextQty).toBe(5);
     });
 
     it('returns unknownStock=false when addQty is 0 and stock unknown', () => {
