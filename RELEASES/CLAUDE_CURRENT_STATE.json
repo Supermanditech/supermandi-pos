@@ -1,6 +1,6 @@
 {
-  "version": "247",
-  "lastUpdated": "2026-03-12T00:20:00.000Z",
+  "version": "248",
+  "lastUpdated": "2026-03-12T01:19:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -7134,8 +7134,17 @@
     "status": "ALL_DONE",
     "completedDate": "2026-03-12",
     "totalTickets": 18,
-    "headSha": "25bb1d8b",
-    "note": "All 18 SCALE audit tickets implemented via parallel worktree agents, merged sequentially with prestage tags. Approved tile designs: POS sell = no margin (staff view), supplier catalog = no margin (retailer as buyer), retailer web = with margin (owner view).",
+    "headSha": "b54daf22",
+    "note": "All 18 SCALE audit tickets implemented via parallel worktree agents, merged sequentially with prestage tags. Approved tile designs: POS sell = no margin (staff view), supplier catalog = no margin (retailer as buyer), retailer web = with margin (owner view). Post-audit gap fix: REG-SCALE-B1-E2 (PR #614) added missing image_url/gst_rate/net_content to 3 POS sell endpoints.",
+    "regressionFix": {
+      "id": "REG-SCALE-B1-E2",
+      "title": "POS sell endpoints missing image_url/gst_rate/net_content fields",
+      "sha": "b54daf22",
+      "pr": 614,
+      "tag": "prestage-REG-SCALE-B1-E2-2026-03-12_0119iST",
+      "status": "DONE",
+      "gap": "search/list/lookup SQL SELECT missing COALESCE(sp.image_url,p.image_url), p.default_gst_rate, p.net_content_value, p.net_content_unit — SellTile never showed image/GST%/net-content at runtime despite TypeScript passing"
+    },
     "tickets": {
       "SCALE-A1": { "title": "Product compliance fields (manufacturer, origin, shelf_life)", "sha": "d8b26f1b", "pr": 593, "tag": "prestage-SCALE-A1-2026-03-11_2123IST", "status": "DONE" },
       "SCALE-A2": { "title": "Net content fields (net_content_value, net_content_unit)", "sha": "c8f6c493", "pr": 598, "tag": "prestage-SCALE-A2-2026-03-11_2340IST", "status": "DONE" },
