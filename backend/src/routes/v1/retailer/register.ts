@@ -9,7 +9,7 @@
  */
 
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import { getPool } from "../../../db/client";
 import {
   validateRegistration,
@@ -24,15 +24,10 @@ import { log } from "../../../lib/logger";
 export const retailerRegisterRouter = Router();
 
 // RO-001: Rate limit registration to 5 req/min per IP
-const registrationRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+const registrationRateLimiter = redisRateLimit({
   windowMs: 60 * 1000,
   max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: "RATE_LIMITED",
-    message: "Too many registration attempts. Please try again in a minute.",
-  },
 });
 
 // Firebase token verification (lazy loaded like auth.ts pattern)

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { apiCache } from "../../../middleware/apiCache";  // GO-LIVE-098
 import {
@@ -19,17 +19,10 @@ export const adminAnalyticsRouter = Router();
 
 // GO-LIVE-053: Rate limiter for analytics endpoints
 // Even with admin token, prevent excessive queries that could strain the database
-const analyticsRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+const analyticsRateLimiter = redisRateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 60, // 60 requests per minute (1 per second average)
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many analytics requests. Please wait before making more requests.'
-    }
-  }
 });
 
 adminAnalyticsRouter.use(requireAdminToken);

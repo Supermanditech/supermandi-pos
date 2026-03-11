@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { randomUUID } from "crypto";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import { getPool } from "../../../db/client";
 import { checkIpBlockMiddleware, recordAuthFailure, clearIpFailures } from "../../../services/ipBlockingService";
 import { logLoginSuccess, logLoginFailed, logAccountLocked } from "../../../services/authAuditService";
@@ -73,60 +73,37 @@ const router = Router();
 // =============================================================================
 
 // Rate limiter for login attempts (5 attempts per 15 minutes per IP)
-const loginRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+const loginRateLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many login attempts. Please try again in 15 minutes.'
-    }
-  },
   keyGenerator: (req) => {
     // Rate limit by IP + email combination for targeted protection
     const email = (req.body?.email || '').toLowerCase();
     return `${req.ip}:${email}`;
-  }
+  },
 });
 
 // Rate limiter for password reset requests (3 per 15 minutes per email)
-const passwordResetRateLimiter = rateLimit({
+const passwordResetRateLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 3, // 3 attempts per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many password reset requests. Please try again later.'
-    }
-  },
   keyGenerator: (req) => {
     // Rate limit by email to prevent email flooding
     return (req.body?.email || req.ip || '').toLowerCase();
-  }
+  },
 });
 
 // GO-LIVE-054: Rate limiter for password change (authenticated)
 // Prevents abuse even from authenticated users
-const passwordChangeRateLimiter = rateLimit({
+const passwordChangeRateLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many password change attempts. Please try again later.'
-    }
-  },
   keyGenerator: (req) => {
     // Rate limit by supplier ID (from auth middleware)
     const supplierId = (req as SupplierAuthRequest).supplierId;
     return supplierId || req.ip || 'unknown';
-  }
+  },
 });
 
 // =============================================================================

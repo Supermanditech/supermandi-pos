@@ -6,7 +6,7 @@
 // GO-LIVE-178: Enhanced error reporting for partial failures
 
 import { Router, Request, Response } from "express";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import { getPool } from "../../../db/client";
 import { sanitizeHtml } from "@supermandi/common";
 import {
@@ -23,13 +23,11 @@ import { asError } from "../../../lib/errorUtils";
 export const retailerAdminCsvImportRouter = Router();
 
 // RET-POS-SYNC-004: Per-store CSV upload rate limit (10 imports per hour per store)
-const csvUploadRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+const csvUploadRateLimiter = redisRateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
   keyGenerator: (req: Request) => getStoreId(req) || req.ip || 'unknown',
-  message: { error: { code: 'RATE_LIMITED', message: 'Max 10 CSV imports per hour. Try again later.' } },
-  standardHeaders: true, // Send RateLimit-* headers
-  legacyHeaders: false,
 });
 
 // GO-LIVE-178: Error categories for better failure diagnosis

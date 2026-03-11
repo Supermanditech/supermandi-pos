@@ -1,5 +1,5 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../middleware/rateLimit";
 import { posEventsRouter } from "./pos/events";
 import { posScanRouter } from "./pos/scan";
 import { posSalesRouter } from "./pos/sales";
@@ -167,12 +167,10 @@ v1Router.use("/admin", adminAuthRouter);  // GO-LIVE-LOGIN-004: Admin email OTP 
 // 200 requests per 15 minutes per IP — high enough for normal use, catches abuse
 // DEPLOY-OPS: Respect RATE_LIMIT_MULTIPLIER for local-prod/staging (production default=1)
 const adminRateLimitMultiplier = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || "1", 10));
-v1Router.use("/admin", rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+v1Router.use("/admin", redisRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200 * adminRateLimitMultiplier,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: { code: "ADMIN_RATE_LIMITED", message: "Too many admin requests. Please slow down." } },
 }));
 // GL-CRIT-0049: Apply audit middleware to all admin mutation routes
 v1Router.use("/admin", adminAuditMiddleware());
