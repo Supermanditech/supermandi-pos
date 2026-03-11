@@ -20,6 +20,15 @@ export interface StoreSkuMatch {
   displayName?: string;
   updatedAt?: string | null;
   metadataUpdatedAt?: string | null;  // SYNC-PRD-001
+  // SCALE-B1: Enhanced tile fields
+  mrp?: number | null;
+  gst_rate?: number | null;
+  net_content_value?: number | null;
+  net_content_unit?: string | null;
+  image_url?: string | null;
+  expiry_date?: string | null;
+  mode?: "PACKAGED" | "LOOSE";
+  rate_unit?: string | null;
 }
 
 /**
@@ -129,6 +138,15 @@ export interface StoreProductListItem {
   unit: string;
   updatedAt?: string | null;
   metadataUpdatedAt?: string | null;  // SYNC-PRD-001
+  // SCALE-B1: Enhanced tile fields
+  mrp?: number | null;
+  gst_rate?: number | null;
+  net_content_value?: number | null;
+  net_content_unit?: string | null;
+  image_url?: string | null;
+  expiry_date?: string | null;
+  mode?: "PACKAGED" | "LOOSE";
+  rate_unit?: string | null;
 }
 
 export interface StoreProductListResponse {
