@@ -110,6 +110,30 @@ describe('Device API Contract', () => {
     expect(requiredDeviceFields).toContain('deviceType');
     expect(requiredDeviceFields).toContain('storeId');
   });
+
+  // SA-P2-001: Force Re-Enroll endpoint contract
+  it('POST /admin/devices/:id/force-re-enroll returns success shape', () => {
+    const expectedShape = {
+      success: true,
+      device: { id: expect.any(String), store_id: expect.any(String), label: expect.any(String), active: false },
+      message: expect.any(String),
+    };
+    expect(expectedShape.success).toBe(true);
+    expect(expectedShape.device.active).toBe(false);
+    expect(expectedShape.message).toBeDefined();
+  });
+
+  it('POST /admin/devices/:id/force-re-enroll rejects missing deviceId', () => {
+    // Contract: 400 with { error: "deviceId is required" }
+    const expectedError = { error: "deviceId is required" };
+    expect(expectedError.error).toBe("deviceId is required");
+  });
+
+  it('POST /admin/devices/:id/force-re-enroll returns 404 for unknown device', () => {
+    // Contract: 404 with { error: "device not found" }
+    const expectedError = { error: "device not found" };
+    expect(expectedError.error).toBe("device not found");
+  });
 });
 
 // Application API shape

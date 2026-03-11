@@ -363,6 +363,164 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
   }
 });
 
+// =============================================================================
+// SA-P1-014: Store Settings (read-only audit view)
+// =============================================================================
+
+// GET /api/v1/admin/stores/:storeId/settings
+// Returns a consolidated read-only view of all store settings for auditing
+// GO-LIVE-128: Requires 'stores:read' permission
+adminStoresRouter.get("/stores/:storeId/settings", requirePermission("stores", "read"), async (req, res) => {
+  const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
+  if (!storeId) {
+    return res.status(400).json({ error: "storeId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    const whereClause = isUuid ? "id = $1::uuid" : "UPPER(code) = UPPER($1)";
+
+    const result = await pool.query(
+      `SELECT
+        id::TEXT as id,
+        name,
+        code,
+        store_code,
+        store_type,
+        status,
+        status_reason,
+        status_updated_at,
+        -- Contact / Address
+        address,
+        contact_name,
+        contact_phone,
+        contact_email,
+        city,
+        state,
+        pincode,
+        location,
+        -- Payment
+        upi_vpa,
+        upi_vpa_updated_at,
+        upi_vpa_updated_by,
+        allowed_payment_methods,
+        -- Credit / BNPL
+        credit_enabled,
+        credit_limit,
+        bnpl_enabled,
+        bnpl_credit_limit,
+        bnpl_max_days,
+        -- Readiness flags
+        device_bound,
+        kyc_complete,
+        upi_complete,
+        admin_approved,
+        -- Other settings
+        timezone,
+        currency,
+        scan_lookup_v2_enabled,
+        pos_device_id,
+        kyc_status,
+        -- Timestamps
+        created_at,
+        updated_at
+      FROM platform.stores
+      WHERE ${whereClause}`,
+      [storeId]
+    );
+
+    const store = result.rows[0];
+    if (!store) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    // Get feature flags for this store
+    let featureFlags: Array<{ flag_key: string; enabled: boolean; scope_type: string; description: string | null }> = [];
+    try {
+      const flagsResult = await pool.query(
+        `SELECT flag_key, enabled, scope_type, description
+         FROM platform.feature_flags
+         WHERE (scope_type = 'store' AND scope_id = $1) OR scope_type = 'global'
+         ORDER BY flag_key`,
+        [store.id]
+      );
+      featureFlags = flagsResult.rows;
+    } catch {
+      // Non-critical — feature_flags table may not exist
+    }
+
+    // Get active device count
+    let activeDeviceCount = 0;
+    try {
+      const deviceResult = await pool.query(
+        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND active = true`,
+        [store.id]
+      );
+      activeDeviceCount = deviceResult.rows[0]?.count ?? 0;
+    } catch {
+      // Non-critical
+    }
+
+    return res.json({
+      settings: {
+        // Identity
+        storeId: store.id,
+        name: store.name,
+        code: store.store_code ?? store.code,
+        storeType: store.store_type ?? null,
+        // Status
+        status: store.status,
+        statusReason: store.status_reason ?? null,
+        statusUpdatedAt: store.status_updated_at ?? null,
+        // Contact / Address
+        address: store.address ?? null,
+        contactName: store.contact_name ?? null,
+        contactPhone: store.contact_phone ?? null,
+        contactEmail: store.contact_email ?? null,
+        city: store.city ?? null,
+        state: store.state ?? null,
+        pincode: store.pincode ?? null,
+        location: store.location ?? null,
+        // Payment settings
+        upiVpa: store.upi_vpa ?? null,
+        upiVpaUpdatedAt: store.upi_vpa_updated_at ?? null,
+        allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'],
+        // Credit / BNPL
+        creditEnabled: store.credit_enabled ?? false,
+        creditLimit: store.credit_limit ?? 0,
+        bnplEnabled: store.bnpl_enabled ?? false,
+        bnplCreditLimit: store.bnpl_credit_limit ?? 5000000,
+        bnplMaxDays: store.bnpl_max_days ?? 7,
+        // Readiness flags
+        deviceBound: store.device_bound ?? false,
+        kycComplete: store.kyc_complete ?? false,
+        upiComplete: store.upi_complete ?? false,
+        adminApproved: store.admin_approved ?? false,
+        // Device info
+        activeDeviceCount,
+        posDeviceId: store.pos_device_id ?? null,
+        kycStatus: store.kyc_status ?? null,
+        // Other settings
+        timezone: store.timezone ?? 'Asia/Kolkata',
+        currency: store.currency ?? 'INR',
+        scanLookupV2Enabled: store.scan_lookup_v2_enabled ?? false,
+        // Feature flags
+        featureFlags,
+        // Timestamps
+        createdAt: store.created_at,
+        updatedAt: store.updated_at,
+      },
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[admin/stores/:storeId/settings] Query failed:", error?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch store settings" });
+  }
+});
+
 // PATCH /api/v1/admin/stores/:storeId
 // GO-LIVE-128: Requires 'stores:update' permission
 // GO-LIVE-186: Rate limit store updates to 30/min per IP
