@@ -29,6 +29,8 @@ interface StoreSettings {
   // SA-P1-002: Spending limits (paise, null = no limit)
   dailyOrderLimitPaise: number | null;
   monthlyOrderLimitPaise: number | null;
+  // SA-P1-003: Due limits (paise, null = no limit)
+  maxOutstandingDuesPaise: number | null;
 }
 
 interface ValidationErrors {
@@ -60,6 +62,8 @@ export default function SettingsPage() {
     // SA-P1-002: Spending limits
     dailyOrderLimitPaise: null,
     monthlyOrderLimitPaise: null,
+    // SA-P1-003: Due limits
+    maxOutstandingDuesPaise: null,
   });
 
   // Track loaded settings for dirty detection
@@ -77,6 +81,11 @@ export default function SettingsPage() {
   const [spendingLimitsSaving, setSpendingLimitsSaving] = useState(false);
   const [spendingLimitsSuccess, setSpendingLimitsSuccess] = useState(false);
   const [spendingLimitsError, setSpendingLimitsError] = useState<string | null>(null);
+
+  // SA-P1-003: Due limits UI state
+  const [dueLimitsSaving, setDueLimitsSaving] = useState(false);
+  const [dueLimitsSuccess, setDueLimitsSuccess] = useState(false);
+  const [dueLimitsError, setDueLimitsError] = useState<string | null>(null);
 
   // T-004: Change Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -127,6 +136,8 @@ export default function SettingsPage() {
             // SA-P1-002: Spending limits
             dailyOrderLimitPaise: s.dailyOrderLimitPaise ?? null,
             monthlyOrderLimitPaise: s.monthlyOrderLimitPaise ?? null,
+            // SA-P1-003: Due limits
+            maxOutstandingDuesPaise: s.maxOutstandingDuesPaise ?? null,
           };
           setSettings(loaded);
           initialSettingsRef.current = JSON.stringify(loaded);
@@ -290,6 +301,38 @@ export default function SettingsPage() {
       setSpendingLimitsError(err.message || 'Failed to save spending limits');
     } finally {
       setSpendingLimitsSaving(false);
+    }
+  };
+
+  // SA-P1-003: Save due limits handler
+  const handleSaveDueLimits = async () => {
+    if (!accessToken) return;
+
+    setDueLimitsSaving(true);
+    setDueLimitsError(null);
+    setDueLimitsSuccess(false);
+
+    try {
+      const response = await authFetch('/api/v1/retailer-admin/store/due-limits', accessToken, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          maxOutstandingDuesPaise: settings.maxOutstandingDuesPaise,
+        }),
+      });
+
+      if (response.ok) {
+        setDueLimitsSuccess(true);
+        initialSettingsRef.current = JSON.stringify(settings);
+        setTimeout(() => setDueLimitsSuccess(false), 3000);
+      } else {
+        const data = await safeJson(response);
+        setDueLimitsError(typeof data?.error === 'string' ? data.error : (data?.error?.message || 'Failed to save due limits'));
+      }
+    } catch (err: any) {
+      logger.error('Failed to save due limits:', err);
+      setDueLimitsError(err.message || 'Failed to save due limits');
+    } finally {
+      setDueLimitsSaving(false);
     }
   };
 
@@ -685,6 +728,61 @@ export default function SettingsPage() {
               className="set-password-btn"
             >
               {spendingLimitsSaving ? 'Saving...' : 'Save Spending Limits'}
+            </button>
+          </div>
+        </section>
+
+        {/* SA-P1-003: Due Limits */}
+        <section className="card set-section">
+          <h2 className="set-section-title">
+            <span className="set-section-icon" aria-hidden="true">&#8377;</span>
+            Outstanding Due Limits
+          </h2>
+
+          <p className="set-hint-text" style={{ marginBottom: '1rem' }}>
+            Set maximum total outstanding dues allowed for your store. Leave blank for no limit.
+          </p>
+
+          {dueLimitsSuccess && (
+            <div className="set-pw-success" role="alert" aria-live="polite">Due limits saved successfully!</div>
+          )}
+
+          {dueLimitsError && (
+            <div className="set-pw-error" role="alert" aria-live="assertive">{dueLimitsError}</div>
+          )}
+
+          <div className="set-grid-2">
+            <div>
+              <label className="set-label" htmlFor="set-due-limit">Max Outstanding Dues (Rs)</label>
+              <input
+                id="set-due-limit"
+                type="number"
+                className="form-input set-input"
+                value={settings.maxOutstandingDuesPaise !== null ? settings.maxOutstandingDuesPaise / 100 : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleChange(
+                    'maxOutstandingDuesPaise',
+                    val === '' ? null as any : Math.round(parseFloat(val) * 100)
+                  );
+                }}
+                min="0"
+                step="1"
+                placeholder="No limit"
+              />
+              <p className="set-hint-text">
+                Maximum total outstanding dues across all customers. Leave empty for no limit.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1rem' }}>
+            <button
+              onClick={handleSaveDueLimits}
+              disabled={dueLimitsSaving}
+              className="set-password-btn"
+            >
+              {dueLimitsSaving ? 'Saving...' : 'Save Due Limits'}
             </button>
           </div>
         </section>

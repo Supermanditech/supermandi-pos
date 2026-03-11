@@ -70,7 +70,8 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         bank_account_number as "bankAccount",
         bank_ifsc as "bankIfsc",
         daily_order_limit_paise as "dailyOrderLimitPaise",
-        monthly_order_limit_paise as "monthlyOrderLimitPaise"
+        monthly_order_limit_paise as "monthlyOrderLimitPaise",
+        max_outstanding_dues_paise as "maxOutstandingDuesPaise"
       FROM platform.stores
       WHERE id = $1`,
       [storeId]
@@ -106,6 +107,8 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         // SA-P1-002: Spending limits
         dailyOrderLimitPaise: store.dailyOrderLimitPaise ?? null,
         monthlyOrderLimitPaise: store.monthlyOrderLimitPaise ?? null,
+        // SA-P1-003: Due limits
+        maxOutstandingDuesPaise: store.maxOutstandingDuesPaise ?? null,
       }
     });
 
@@ -578,6 +581,64 @@ retailerAdminSettingsRouter.get("/store/spending-limits", async (req: Request, r
     const error = asError(_error);
     log.error("[SA-P1-002] Get spending limits error:", error.message);
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get spending limits" } });
+  }
+});
+
+// =============================================================================
+// SA-P1-003: PATCH /api/v1/retailer-admin/store/due-limits
+// Update max outstanding dues limit
+// =============================================================================
+
+retailerAdminSettingsRouter.patch("/store/due-limits", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { maxOutstandingDuesPaise } = req.body;
+
+  // Validate: must be a positive integer or null (null = no limit)
+  if (maxOutstandingDuesPaise === undefined) {
+    return res.status(400).json({
+      error: { code: "VALIDATION_ERROR", message: "maxOutstandingDuesPaise is required" }
+    });
+  }
+
+  if (maxOutstandingDuesPaise !== null) {
+    if (!Number.isInteger(maxOutstandingDuesPaise) || maxOutstandingDuesPaise <= 0) {
+      return res.status(422).json({
+        error: { code: "VALIDATION_ERROR", message: "maxOutstandingDuesPaise must be a positive integer (in paise) or null" }
+      });
+    }
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE platform.stores
+       SET max_outstanding_dues_paise = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING max_outstanding_dues_paise AS "maxOutstandingDuesPaise"`,
+      [maxOutstandingDuesPaise, storeId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Store not found" } });
+    }
+
+    log.info(`[SA-P1-003] Updated due limits for store ${storeId}`);
+
+    return res.json({
+      success: true,
+      dueLimits: result.rows[0]
+    });
+
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[SA-P1-003] Update due limits error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update due limits" } });
   }
 });
 
