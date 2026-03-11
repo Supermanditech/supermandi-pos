@@ -1,6 +1,6 @@
 {
-  "version": "250",
-  "lastUpdated": "2026-03-12T00:05:00.000Z",
+  "version": "251",
+  "lastUpdated": "2026-03-12T00:15:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -7627,7 +7627,7 @@
         "url": "https://landing-jwgq6sc6aq-el.a.run.app",
         "reason": "Latest revision (landing-00153-g4c) HealthCheckContainerError PORT=80, but older revision still serving via Cloud LB. staging.supermandi.tech returns 200.",
         "lastDeploy": "2026-03-08",
-        "blocker": "BLK-LANDING-PORT (non-blocking for staging — older revision serving)"
+        "blocker": "BLK-LANDING-PORT — FIXED in PR #615, will resolve on next deploy"
       }
     },
     "blockers": [
@@ -7636,7 +7636,9 @@
         "severity": "MEDIUM",
         "service": "landing",
         "issue": "Latest landing Cloud Run revision fails (HealthCheckContainerError PORT=80). Older revision still serving via Cloud LB — staging.supermandi.tech/200 OK. Fix needed before next landing redeploy.",
-        "action": "Investigate landing Dockerfile/entrypoint for PORT env var handling. Fix and redeploy."
+        "action": "Investigate landing Dockerfile/entrypoint for PORT env var handling. Fix and redeploy.",
+        "status": "FIXED",
+        "fix": "PR #615 — all 3 nginx portals changed to port 8080, deploy.yml --port=8080. Tag: prestage-BLK-LANDING-PORT-2026-03-12_0157IST on 2ad4b00e"
       }
     ]
   }
