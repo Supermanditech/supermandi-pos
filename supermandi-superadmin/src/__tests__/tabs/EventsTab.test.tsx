@@ -258,6 +258,85 @@ describe('EventsTab', () => {
     expect(screen.getByText('Page 1 / 3')).toBeTruthy();
   });
 
+  // ── Pagination Callback Verification ────────────────────────
+
+  it('Prev callback decrements page by 1', () => {
+    const setPage = vi.fn();
+    render(<EventsTab {...createProps({ setPage, page: 3 })} />);
+    fireEvent.click(screen.getByText('Prev'));
+    // Extract and call the callback function
+    const callback = setPage.mock.calls[0][0];
+    expect(typeof callback).toBe('function');
+    expect(callback(3)).toBe(2);
+    expect(callback(1)).toBe(0);
+  });
+
+  it('Prev callback clamps to 0', () => {
+    const setPage = vi.fn();
+    render(<EventsTab {...createProps({ setPage, page: 1 })} />);
+    fireEvent.click(screen.getByText('Prev'));
+    const callback = setPage.mock.calls[0][0];
+    expect(callback(0)).toBe(0);
+  });
+
+  it('Next callback increments page by 1', () => {
+    const setPage = vi.fn();
+    const events = Array(150).fill(makeEvent());
+    render(<EventsTab {...createProps({ setPage, filteredEvents: events, pageSize: 50, page: 0 })} />);
+    fireEvent.click(screen.getByText('Next'));
+    const callback = setPage.mock.calls[0][0];
+    expect(callback(0)).toBe(1);
+    expect(callback(1)).toBe(2);
+  });
+
+  it('Next callback clamps to maxPage', () => {
+    const setPage = vi.fn();
+    const events = Array(100).fill(makeEvent());
+    render(<EventsTab {...createProps({ setPage, filteredEvents: events, pageSize: 50, page: 0 })} />);
+    fireEvent.click(screen.getByText('Next'));
+    const callback = setPage.mock.calls[0][0];
+    // maxPage = ceil(100/50) - 1 = 1
+    expect(callback(1)).toBe(1);
+    expect(callback(5)).toBe(1);
+  });
+
+  // ── R3-EVT-002: Loading suppresses empty state ────────────
+
+  it('does not show empty state while loading (R3-EVT-002)', () => {
+    render(<EventsTab {...createProps({ filteredEvents: [], loading: true })} />);
+    expect(screen.getByText(/Loading events/)).toBeTruthy();
+    expect(screen.queryByText('No events found for the current filters.')).toBeNull();
+  });
+
+  // ── Zero Events Boundary ──────────────────────────────────
+
+  it('shows Page 1 / 1 with zero events', () => {
+    render(<EventsTab {...createProps({ filteredEvents: [] })} />);
+    expect(screen.getByText('Page 1 / 1')).toBeTruthy();
+  });
+
+  it('disables both Prev and Next with zero events', () => {
+    render(<EventsTab {...createProps({ filteredEvents: [], page: 0 })} />);
+    expect(screen.getByText('Prev')).toHaveProperty('disabled', true);
+    expect(screen.getByText('Next')).toHaveProperty('disabled', true);
+  });
+
+  // ── Grouped View Row Count ────────────────────────────────
+
+  it('renders exactly 50 grouped rows when 55 provided', () => {
+    const grouped = Array.from({ length: 55 }, (_, i) => ({
+      key: `g-${i}`,
+      count: i + 1,
+      lastSeen: '2026-01-01',
+      lastEventType: 'SALE',
+    }));
+    render(<EventsTab {...createProps({ groupBy: 'deviceId', grouped })} />);
+    // 50 data rows in grouped table tbody
+    const tbody = document.querySelector('.tableWrap tbody');
+    expect(tbody).toBeTruthy();
+    expect(tbody!.querySelectorAll('tr').length).toBe(50);
+  });
+
   // ── Edge Cases ──────────────────────────────────────────────
 
   it('handles empty payload gracefully', () => {
@@ -279,5 +358,33 @@ describe('EventsTab', () => {
     render(<EventsTab {...createProps({ filteredEvents: events, pageEvents: events, error: 'Partial failure' })} />);
     expect(screen.getByText('Partial failure')).toBeTruthy();
     expect(screen.getByText('SALE')).toBeTruthy();
+  });
+
+  it('renders error and loading simultaneously', () => {
+    render(<EventsTab {...createProps({ loading: true, error: 'Stale data warning' })} />);
+    expect(screen.getByText(/Loading events/)).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByText('Stale data warning')).toBeTruthy();
+  });
+
+  it('handles null payload gracefully', () => {
+    const events = [makeEvent({ payload: null })];
+    render(<EventsTab {...createProps({ filteredEvents: events, pageEvents: events })} />);
+    const payloadEl = screen.getByTestId('payload');
+    expect(payloadEl.textContent).toBe('null');
+  });
+
+  it('renders section with card class', () => {
+    const { container } = render(<EventsTab {...createProps()} />);
+    expect(container.querySelector('section.card')).toBeTruthy();
+  });
+
+  it('renders grouped view with multiple groupBy values', () => {
+    const grouped = [{ key: 's1', count: 3, lastSeen: '2026-01-01', lastEventType: 'SALE' }];
+    const { rerender } = render(<EventsTab {...createProps({ groupBy: 'storeId', grouped })} />);
+    expect(screen.getByText('s1')).toBeTruthy();
+    // Re-render with different groupBy
+    rerender(<EventsTab {...createProps({ groupBy: 'eventType', grouped: [{ key: 'REFUND', count: 7, lastSeen: '2026-02-01', lastEventType: 'REFUND' }] })} />);
+    expect(screen.getAllByText('REFUND').length).toBeGreaterThanOrEqual(1);
   });
 });

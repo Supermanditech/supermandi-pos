@@ -108,5 +108,89 @@ describe('posEvents module', () => {
 
       await expect(mod.fetchPosEvents({ limit: 100 })).rejects.toThrow('Invalid POS events response');
     });
+
+    it('clamps limit lower bound to 1', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      });
+
+      await mod.fetchPosEvents({ limit: -5 });
+      const url = authMock.fetchWithTimeout.mock.calls[0][0] as string;
+      expect(url).toContain('limit=1');
+    });
+
+    it('throws on non-401 error without detail', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => { throw new Error('parse error'); },
+      });
+
+      await expect(mod.fetchPosEvents({ limit: 100 })).rejects.toThrow('Failed to fetch POS events (503)');
+    });
+
+    it('omits empty optional query params', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      });
+
+      await mod.fetchPosEvents({ limit: 50, storeId: '', deviceId: '  ', eventType: undefined });
+      const url = authMock.fetchWithTimeout.mock.calls[0][0] as string;
+      expect(url).not.toContain('storeId');
+      expect(url).not.toContain('deviceId');
+      expect(url).not.toContain('eventType');
+    });
+
+    it('coerces missing fields to empty strings', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => [{ id: 'e1', createdAt: '2026-01-01' }],
+      });
+
+      const result = await mod.fetchPosEvents({ limit: 100 });
+      expect(result).toHaveLength(1);
+      expect(result[0].deviceId).toBe('');
+      expect(result[0].storeId).toBe('');
+      expect(result[0].eventType).toBe('');
+    });
+
+    it('sends auth headers with request', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      });
+
+      await mod.fetchPosEvents({ limit: 100 });
+      const opts = authMock.fetchWithTimeout.mock.calls[0][1] as RequestInit;
+      expect((opts.headers as Record<string, string>)['Authorization']).toBe('Bearer test-token');
+    });
+
+    it('uses GET method and no-store cache', async () => {
+      authMock.fetchWithTimeout.mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      });
+
+      await mod.fetchPosEvents({ limit: 100 });
+      const opts = authMock.fetchWithTimeout.mock.calls[0][1] as RequestInit;
+      expect(opts.method).toBe('GET');
+      expect(opts.cache).toBe('no-store');
+    });
+  });
+
+  // Placed last: this test re-mocks hasValidSession so it must not run before other tests
+  describe('pre-flight auth check', () => {
+    it('throws when session is not valid', async () => {
+      vi.resetModules();
+      vi.doMock('../../api/authToken', () => ({
+        getAuthHeaders: () => ({ Authorization: 'Bearer test-token' }),
+        fetchWithTimeout: vi.fn(),
+        hasValidSession: () => false,
+      }));
+      const mod2 = await import('../../api/posEvents');
+      await expect(mod2.fetchPosEvents({ limit: 100 })).rejects.toThrow('Not authenticated');
+    });
   });
 });
