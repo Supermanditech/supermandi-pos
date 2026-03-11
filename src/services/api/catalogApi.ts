@@ -25,6 +25,8 @@ export interface CatalogSupplier {
 
 /**
  * TR-PEND-006: Added displayNameHi/brandHi for Hindi localization
+ * SCALE-B2: Added netContentValue, netContentUnit, packSize, gstRate, hsnCode,
+ *           imageUrl, supplierName, supplierCity, bnplEligible for buy tile design
  */
 export interface CatalogProduct {
   id: string;
@@ -35,17 +37,30 @@ export interface CatalogProduct {
   brandHi?: string;
   category?: string;
   unit?: string;
-  packSize?: number;
+  packSize?: number | null;
   primaryBarcode?: string;
-  hsnCode?: string;
+  hsnCode?: string | null;
   defaultGstRate?: number;
+  /** SCALE-B2: GST rate from buy-catalog response (e.g. 18 = 18%) */
+  gstRate?: number | null;
+  /** SCALE-B2: Product image URL from catalog.products */
+  imageUrl?: string | null;
+  /** SCALE-B2: Net content value for pack config display (e.g. 70 for "70g") */
+  netContentValue?: number | null;
+  /** SCALE-B2: Net content unit for pack config display (e.g. "g") */
+  netContentUnit?: string | null;
+  /** SCALE-B2: Best/preferred supplier name for tile display */
+  supplierName?: string | null;
+  /** SCALE-B2: Best/preferred supplier city for tile display */
+  supplierCity?: string | null;
+  /** SCALE-B2: Whether best/preferred supplier offers BNPL */
+  bnplEligible?: boolean;
   isActive: boolean;
   bestPrice: number;
   minMoq: number;
   supplierCount: number;
   stockStatus: "in_stock" | "low_stock" | "out_of_stock";
   suppliers: CatalogSupplier[];
-  imageUrl?: string; // T-139: Product image URL
 }
 
 export interface CatalogPagination {

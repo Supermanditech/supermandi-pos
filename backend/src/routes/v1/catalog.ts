@@ -412,6 +412,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
     // SUP-POS-003: Grouped products with supplier offers via json_agg
+    // SCALE-B2: Added gst_rate, hsn_code, image_url, supplier_city, pack_size to response
     const result = await pool.query(
       `WITH priced AS (
         SELECT
@@ -437,6 +438,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           sp.bnpl_max_days,
           s.id AS supplier_id,
           COALESCE(s.business_name, s.trade_name, 'Unknown') AS supplier_name,
+          s.city AS supplier_city,
           COALESCE(ssl.is_preferred, false) AS is_preferred,
           COALESCE(ssl.min_order_value, 0) AS min_order_value,
           COALESCE(spm.product_id, sp.id) AS group_id,
@@ -445,6 +447,10 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           mp.brand AS mp_brand,
           mp.primary_barcode AS mp_barcode,
           mp.unit AS mp_unit,
+          mp.hsn_code AS mp_hsn_code,
+          mp.default_gst_rate AS mp_gst_rate,
+          mp.image_url AS mp_image_url,
+          mp.pack_size AS mp_pack_size,
           sp.net_content_value AS sp_net_content_value,
           sp.net_content_unit AS sp_net_content_unit,
           mp.net_content_value AS mp_net_content_value,
@@ -477,9 +483,32 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           WHEN 2 THEN 'low_stock'
           ELSE 'out_of_stock'
         END AS "stockStatus",
+        MIN(mp_hsn_code) AS "hsnCode",
+        MIN(mp_gst_rate) AS "gstRate",
+        MIN(mp_image_url) AS "imageUrl",
+        MIN(mp_pack_size) AS "packSize",
+        (
+          SELECT supplier_name FROM priced p2
+          WHERE p2.group_id = priced.group_id
+          ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
+          LIMIT 1
+        ) AS "bestSupplierName",
+        (
+          SELECT supplier_city FROM priced p2
+          WHERE p2.group_id = priced.group_id
+          ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
+          LIMIT 1
+        ) AS "bestSupplierCity",
+        (
+          SELECT COALESCE(bnpl_eligible, false) FROM priced p2
+          WHERE p2.group_id = priced.group_id
+          ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
+          LIMIT 1
+        ) AS "bnplEligible",
         json_agg(json_build_object(
           'supplierId', supplier_id,
           'supplierName', supplier_name,
+          'supplierCity', supplier_city,
           'supplierProductId', sp_id,
           'purchasePrice', retailer_price,
           'mrp', mrp,
@@ -499,6 +528,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
     );
 
     // Map to CatalogProduct format matching frontend types
+    // SCALE-B2: Include gst_rate, hsn_code, image_url, pack_size, best supplier info, bnpl
     const products = result.rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -508,6 +538,13 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
       unit: row.unit,
       netContentValue: row.netContentValue ? parseFloat(row.netContentValue) : null,
       netContentUnit: row.netContentUnit || null,
+      packSize: row.packSize ? parseInt(row.packSize) : null,
+      hsnCode: row.hsnCode || null,
+      gstRate: row.gstRate ? parseFloat(row.gstRate) : null,
+      imageUrl: row.imageUrl || null,
+      supplierName: row.bestSupplierName || null,
+      supplierCity: row.bestSupplierCity || null,
+      bnplEligible: row.bnplEligible || false,
       isActive: true,
       bestPrice: row.bestPrice,
       minMoq: row.minMoq,
@@ -700,6 +737,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
   }
 
   try {
+    // SCALE-B2: Added gst_rate, hsn_code, image_url, pack_size, supplier_city, bnpl to barcode lookup
     const result = await pool.query(
       `WITH priced AS (
         SELECT
@@ -725,6 +763,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           sp.bnpl_max_days,
           s.id AS supplier_id,
           COALESCE(s.business_name, s.trade_name, 'Unknown') AS supplier_name,
+          s.city AS supplier_city,
           COALESCE(ssl.is_preferred, false) AS is_preferred,
           COALESCE(ssl.min_order_value, 0) AS min_order_value,
           COALESCE(spm.product_id, sp.id) AS group_id,
@@ -733,6 +772,10 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           mp.brand AS mp_brand,
           mp.primary_barcode AS mp_barcode,
           mp.unit AS mp_unit,
+          mp.hsn_code AS mp_hsn_code,
+          mp.default_gst_rate AS mp_gst_rate,
+          mp.image_url AS mp_image_url,
+          mp.pack_size AS mp_pack_size,
           sp.net_content_value AS sp_net_content_value,
           sp.net_content_unit AS sp_net_content_unit,
           mp.net_content_value AS mp_net_content_value,
@@ -769,9 +812,32 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           WHEN 2 THEN 'low_stock'
           ELSE 'out_of_stock'
         END AS "stockStatus",
+        MIN(mp_hsn_code) AS "hsnCode",
+        MIN(mp_gst_rate) AS "gstRate",
+        MIN(mp_image_url) AS "imageUrl",
+        MIN(mp_pack_size) AS "packSize",
+        (
+          SELECT supplier_name FROM priced p2
+          WHERE p2.group_id = priced.group_id
+          ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
+          LIMIT 1
+        ) AS "bestSupplierName",
+        (
+          SELECT supplier_city FROM priced p2
+          WHERE p2.group_id = priced.group_id
+          ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
+          LIMIT 1
+        ) AS "bestSupplierCity",
+        (
+          SELECT COALESCE(bnpl_eligible, false) FROM priced p2
+          WHERE p2.group_id = priced.group_id
+          ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
+          LIMIT 1
+        ) AS "bnplEligible",
         json_agg(json_build_object(
           'supplierId', supplier_id,
           'supplierName', supplier_name,
+          'supplierCity', supplier_city,
           'supplierProductId', sp_id,
           'purchasePrice', retailer_price,
           'mrp', mrp,
@@ -806,6 +872,13 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
       unit: row.unit,
       netContentValue: row.netContentValue ? parseFloat(row.netContentValue) : null,
       netContentUnit: row.netContentUnit || null,
+      packSize: row.packSize ? parseInt(row.packSize) : null,
+      hsnCode: row.hsnCode || null,
+      gstRate: row.gstRate ? parseFloat(row.gstRate) : null,
+      imageUrl: row.imageUrl || null,
+      supplierName: row.bestSupplierName || null,
+      supplierCity: row.bestSupplierCity || null,
+      bnplEligible: row.bnplEligible || false,
       isActive: true,
       bestPrice: row.bestPrice,
       minMoq: row.minMoq,
