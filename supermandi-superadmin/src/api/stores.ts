@@ -229,3 +229,85 @@ export async function fetchStoreStatusHistory(
   const data = await res.json();
   return Array.isArray(data?.history) ? data.history : [];
 }
+
+// =============================================================================
+// SA-P1-014: Store Settings (read-only audit view)
+// =============================================================================
+
+export type StoreSettings = {
+  // Identity
+  storeId: string;
+  name: string;
+  code: string;
+  storeType: string | null;
+  // Status
+  status: string;
+  statusReason: string | null;
+  statusUpdatedAt: string | null;
+  // Contact / Address
+  address: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  location: string | null;
+  // Payment settings
+  upiVpa: string | null;
+  upiVpaUpdatedAt: string | null;
+  allowedPaymentMethods: string[];
+  // Credit / BNPL
+  creditEnabled: boolean;
+  creditLimit: number;
+  bnplEnabled: boolean;
+  bnplCreditLimit: number;
+  bnplMaxDays: number;
+  // Readiness flags
+  deviceBound: boolean;
+  kycComplete: boolean;
+  upiComplete: boolean;
+  adminApproved: boolean;
+  // Device info
+  activeDeviceCount: number;
+  posDeviceId: string | null;
+  kycStatus: string | null;
+  // Other settings
+  timezone: string;
+  currency: string;
+  scanLookupV2Enabled: boolean;
+  // Feature flags
+  featureFlags: Array<{ flag_key: string; enabled: boolean; scope_type: string; description: string | null }>;
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * Fetch store settings (read-only audit view)
+ */
+export async function fetchStoreSettings(storeId: string): Promise<StoreSettings> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/settings`,
+    {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  if (!data?.settings || typeof data.settings !== "object") {
+    throw new Error("Invalid store settings response: missing settings data");
+  }
+  return data.settings as StoreSettings;
+}
