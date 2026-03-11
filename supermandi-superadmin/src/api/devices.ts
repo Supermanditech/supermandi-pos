@@ -270,3 +270,95 @@ export async function fetchDeviceSyncStatus(deviceId: string): Promise<DeviceSyn
   const data = (await res.json().catch(() => ({}))) as DeviceSyncStatus;
   return data;
 }
+
+// SA-P2-009: Device Hardware Whitelist
+// =============================================================================
+
+export type WhitelistRule = {
+  id: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  min_android_version?: string | null;
+  notes?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WhitelistRuleInput = {
+  manufacturer?: string;
+  model?: string;
+  minAndroidVersion?: string;
+  notes?: string;
+};
+
+export async function fetchWhitelistRules(): Promise<WhitelistRule[]> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/whitelist`, {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { rules?: WhitelistRule[] };
+  return Array.isArray(data.rules) ? data.rules : [];
+}
+
+export async function createWhitelistRule(input: WhitelistRuleInput): Promise<WhitelistRule> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/whitelist`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { rule?: WhitelistRule };
+  if (!data.rule) throw new Error("Rule response missing");
+  return data.rule;
+}
+
+export async function deleteWhitelistRule(ruleId: string): Promise<void> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/whitelist/${encodeURIComponent(ruleId)}`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+}
+
+export async function toggleWhitelistRule(ruleId: string, active: boolean): Promise<WhitelistRule> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/whitelist/${encodeURIComponent(ruleId)}`, {
+    method: "PATCH",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ active }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { rule?: WhitelistRule };
+  if (!data.rule) throw new Error("Rule response missing");
+  return data.rule;
+}

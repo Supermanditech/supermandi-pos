@@ -200,6 +200,47 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       return res.status(404).json({ error: { code: "STORE_NOT_FOUND", message: "Store not found" } });
     }
 
+    // SA-P2-009: Device Hardware Whitelist check
+    // If any active whitelist rules exist, the enrolling device must match at least one rule.
+    const whitelistRes = await client.query(
+      `SELECT id, manufacturer, model, min_android_version
+       FROM platform.device_whitelist
+       WHERE active = true`
+    );
+    if (whitelistRes.rowCount && whitelistRes.rowCount > 0) {
+      const rules = whitelistRes.rows;
+      const deviceAndroidMajor = parseFloat(androidVersion || "0");
+      const matchesAnyRule = rules.some((rule: { manufacturer?: string; model?: string; min_android_version?: string }) => {
+        if (rule.manufacturer) {
+          if (!manufacturer || manufacturer.toLowerCase() !== rule.manufacturer.toLowerCase()) return false;
+        }
+        if (rule.model) {
+          if (!model) return false;
+          if (rule.model.endsWith("*")) {
+            const prefix = rule.model.slice(0, -1).toLowerCase();
+            if (!model.toLowerCase().startsWith(prefix)) return false;
+          } else {
+            if (model.toLowerCase() !== rule.model.toLowerCase()) return false;
+          }
+        }
+        if (rule.min_android_version) {
+          const minVersion = parseFloat(rule.min_android_version);
+          if (deviceAndroidMajor < minVersion) return false;
+        }
+        return true;
+      });
+
+      if (!matchesAnyRule) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({
+          error: {
+            code: "DEVICE_NOT_WHITELISTED",
+            message: "This device hardware is not on the approved whitelist. Contact your administrator.",
+          },
+        });
+      }
+    }
+
     // AUD-054-A FIX: Add FOR UPDATE lock to prevent race conditions on concurrent enrollment
     // Check for existing device by label (same store) WITH row lock
     const existingDeviceRes = await client.query(

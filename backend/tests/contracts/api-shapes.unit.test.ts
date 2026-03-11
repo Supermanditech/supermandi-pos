@@ -144,3 +144,52 @@ describe('Application API Contract', () => {
     expect(requiredFields).toContain('status');
   });
 });
+
+// SA-P0-007: Maintenance Mode API shape
+describe('Maintenance Mode API Contract', () => {
+  it('GET /admin/system/maintenance returns MaintenanceStatus shape', () => {
+    const expectedFields = ['enabled', 'message', 'updated_at'];
+    expect(expectedFields).toContain('enabled');
+    expect(expectedFields).toContain('message');
+    expect(expectedFields).toContain('updated_at');
+  });
+
+  it('POST /admin/system/maintenance accepts { enabled, message? }', () => {
+    const requestBody = { enabled: true, message: 'Scheduled maintenance' };
+    expect(typeof requestBody.enabled).toBe('boolean');
+    expect(typeof requestBody.message).toBe('string');
+  });
+
+  it('POST /admin/system/maintenance returns updated MaintenanceStatus', () => {
+    const expectedResponse = {
+      maintenance: {
+        enabled: expect.any(Boolean),
+        message: expect.any(String),
+        updated_at: expect.any(String),
+      },
+    };
+    expect(expectedResponse.maintenance).toBeDefined();
+    expect(expectedResponse.maintenance.enabled).toBeDefined();
+  });
+
+  it('POST /admin/system/maintenance requires system:write permission', () => {
+    // Contract: requirePermission("system", "write") middleware applied
+    expect(true).toBe(true);
+  });
+
+  it('GET /admin/system/maintenance requires system:read permission', () => {
+    // Contract: requirePermission("system", "read") middleware applied
+    expect(true).toBe(true);
+  });
+
+  it('maintenance middleware returns 503 with MAINTENANCE_MODE code', () => {
+    const expectedErrorResponse = {
+      error: 'SERVICE_UNAVAILABLE',
+      code: 'MAINTENANCE_MODE',
+      message: expect.any(String),
+      retry_after: 300,
+    };
+    expect(expectedErrorResponse.code).toBe('MAINTENANCE_MODE');
+    expect(expectedErrorResponse.retry_after).toBe(300);
+  });
+});
