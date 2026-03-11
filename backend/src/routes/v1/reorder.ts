@@ -7,6 +7,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { getPool } from "../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
+// SA-P1-002: Spending limit enforcement
+import { checkSpendingLimits } from "../../services/spendingLimitService";
 import { log } from "../../lib/logger";
 import { asError } from "../../lib/errorUtils";
 
