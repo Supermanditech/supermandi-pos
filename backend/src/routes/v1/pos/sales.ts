@@ -1450,6 +1450,31 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
       });
     }
 
+    // SA-P1-003: Due limit enforcement — reject if outstanding dues would exceed store limit
+    if (paymentMode === "DUE") {
+      const dueLimitRes = await client.query(
+        `SELECT max_outstanding_dues_paise FROM platform.stores WHERE id = $1::uuid`,
+        [storeId]
+      );
+      const maxDuesPaise = dueLimitRes.rows[0]?.max_outstanding_dues_paise;
+      if (maxDuesPaise != null) {
+        const currentDuesRes = await client.query(
+          `SELECT COALESCE(SUM(amount_minor), 0)::BIGINT as total FROM payments.customer_dues WHERE store_id = $1 AND status = 'pending'`,
+          [storeId]
+        );
+        const currentPaise = Number(currentDuesRes.rows[0]?.total ?? 0);
+        const newTotal = currentPaise + Number(sale.total_minor);
+        if (newTotal > Number(maxDuesPaise)) {
+          await client.query("ROLLBACK");
+          return res.status(422).json({
+            error: "DUE_LIMIT_EXCEEDED",
+            currentPaise,
+            limitPaise: Number(maxDuesPaise),
+          });
+        }
+      }
+    }
+
     // GO-LIVE-069: Update sale status and payment_status based on payment mode
     const newStatus = paymentMode === "CASH" ? "PAID_CASH" : paymentMode === "UPI" ? "PAID_UPI" : "DUE";
     const newPaymentStatus = paymentMode === "DUE" ? "due" : "paid";
@@ -2161,6 +2186,31 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
         error: "customer_phone_required",
         message: "Customer phone is required for DUE payments"
       });
+    }
+
+    // SA-P1-003: Due limit enforcement — reject if outstanding dues would exceed store limit
+    {
+      const dueLimitRes = await client.query(
+        `SELECT max_outstanding_dues_paise FROM platform.stores WHERE id = $1::uuid`,
+        [storeId]
+      );
+      const maxDuesPaise = dueLimitRes.rows[0]?.max_outstanding_dues_paise;
+      if (maxDuesPaise != null) {
+        const currentDuesRes = await client.query(
+          `SELECT COALESCE(SUM(amount_minor), 0)::BIGINT as total FROM payments.customer_dues WHERE store_id = $1 AND status = 'pending'`,
+          [storeId]
+        );
+        const currentPaise = Number(currentDuesRes.rows[0]?.total ?? 0);
+        const newTotal = currentPaise + Number(sale.total_minor);
+        if (newTotal > Number(maxDuesPaise)) {
+          await client.query("ROLLBACK");
+          return res.status(422).json({
+            error: "DUE_LIMIT_EXCEEDED",
+            currentPaise,
+            limitPaise: Number(maxDuesPaise),
+          });
+        }
+      }
     }
 
     // GO-LIVE-042: Check reservation expiry
