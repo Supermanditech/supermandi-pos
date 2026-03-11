@@ -488,3 +488,58 @@ export async function fetchCompliance(accessToken: string): Promise<ApiResponse<
   if (!data) throw new Error('Invalid response from server');
   return data;
 }
+
+// SA-P1-011: Stock adjustment audit history
+export interface StockAdjustment {
+  id: string;
+  productId: string;
+  productName: string;
+  oldQty: number;
+  newQty: number;
+  reason: string | null;
+  adjustedBy: string | null;
+  adjustedAt: string;
+  notes: string | null;
+  referenceType: string | null;
+}
+
+export interface StockAdjustmentsResponse {
+  success: boolean;
+  adjustments: StockAdjustment[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function fetchStockAdjustments(
+  accessToken: string,
+  params?: {
+    from?: string;
+    to?: string;
+    productId?: string;
+    reason?: string;
+    page?: number;
+    limit?: number;
+  }
+): Promise<StockAdjustmentsResponse> {
+  const qs = new URLSearchParams();
+  if (params?.from) qs.set('from', params.from);
+  if (params?.to) qs.set('to', params.to);
+  if (params?.productId) qs.set('productId', params.productId);
+  if (params?.reason) qs.set('reason', params.reason);
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.limit) qs.set('limit', String(params.limit));
+
+  const queryString = qs.toString();
+  const response = await authFetch(
+    `${API_BASE}/store/stock-adjustments${queryString ? `?${queryString}` : ''}`,
+    accessToken
+  );
+
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (!response.ok) throw new Error('Failed to fetch stock adjustments');
+
+  const data = await safeJson<StockAdjustmentsResponse>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
+}
