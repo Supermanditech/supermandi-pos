@@ -97,6 +97,13 @@ export default function ProductsPage() {
     mrp: undefined,
     moq: 1,
     unit: 'PCS',
+    // SCALE-B5: Compliance & measurement fields
+    manufacturerName: '',
+    countryOfOrigin: 'India',
+    netContentValue: undefined,
+    netContentUnit: '',
+    shelfLifeDays: undefined,
+    hsnCode: '',
   });
 
   // GL-WF-063: Paginated products query
@@ -177,6 +184,13 @@ export default function ProductsPage() {
         mrp: product.mrp,
         moq: product.moq,
         unit: product.unit,
+        // SCALE-B5: Include compliance fields to prevent data loss on resubmit
+        manufacturerName: product.manufacturerName,
+        countryOfOrigin: product.countryOfOrigin,
+        netContentValue: product.netContentValue,
+        netContentUnit: product.netContentUnit,
+        shelfLifeDays: product.shelfLifeDays,
+        hsnCode: product.hsnCode,
       },
     });
   };
@@ -201,6 +215,13 @@ export default function ProductsPage() {
       mrp: undefined,
       moq: 1,
       unit: 'PCS',
+      // SCALE-B5: Compliance & measurement fields reset
+      manufacturerName: '',
+      countryOfOrigin: 'India',
+      netContentValue: undefined,
+      netContentUnit: '',
+      shelfLifeDays: undefined,
+      hsnCode: '',
     });
   };
 
@@ -260,6 +281,13 @@ export default function ProductsPage() {
       moq: product.moq,
       unit: product.unit,
       imageUrl: product.imageUrl,
+      // SCALE-B5: Pre-fill compliance & measurement fields
+      manufacturerName: product.manufacturerName || '',
+      countryOfOrigin: product.countryOfOrigin || 'India',
+      netContentValue: product.netContentValue,
+      netContentUnit: product.netContentUnit || '',
+      shelfLifeDays: product.shelfLifeDays,
+      hsnCode: product.hsnCode || '',
     });
     setShowForm(true);
   };
@@ -395,6 +423,9 @@ export default function ProductsPage() {
           ? Math.round((parseFloat(value || '0') + Number.EPSILON) * 100)
           : name === 'moq'
           ? parseInt(value) || 1
+          // SCALE-B5: netContentValue and shelfLifeDays are optional positive integers
+          : name === 'netContentValue' || name === 'shelfLifeDays'
+          ? value === '' ? undefined : parseFloat(value) || undefined
           : value,
     }));
   };
@@ -606,6 +637,100 @@ export default function ProductsPage() {
 
             {/* STG-081: Description field removed — catalog.supplier_products has no description column.
                 Re-add after migration adds the column. */}
+
+            {/* SCALE-B5: Compliance & Measurements section */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+                Compliance &amp; Measurements
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="product-manufacturerName" className="label">Manufacturer Name</label>
+                  <input
+                    type="text"
+                    id="product-manufacturerName"
+                    name="manufacturerName"
+                    value={formData.manufacturerName || ''}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="e.g. Nestlé India Pvt Ltd"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="product-countryOfOrigin" className="label">Country of Origin</label>
+                  <input
+                    type="text"
+                    id="product-countryOfOrigin"
+                    name="countryOfOrigin"
+                    value={formData.countryOfOrigin || ''}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="e.g. India"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="product-netContentValue" className="label">Net Content (value)</label>
+                  <input
+                    type="number"
+                    id="product-netContentValue"
+                    name="netContentValue"
+                    value={formData.netContentValue ?? ''}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="e.g. 500"
+                    min="0"
+                    step="any"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="product-netContentUnit" className="label">Net Content (unit)</label>
+                  <select
+                    id="product-netContentUnit"
+                    name="netContentUnit"
+                    value={formData.netContentUnit || ''}
+                    onChange={handleChange}
+                    className="input"
+                  >
+                    <option value="">Select unit</option>
+                    <option value="g">g (grams)</option>
+                    <option value="kg">kg (kilograms)</option>
+                    <option value="ml">ml (millilitres)</option>
+                    <option value="l">l (litres)</option>
+                    <option value="pcs">pcs (pieces)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="product-shelfLifeDays" className="label">Shelf Life (days)</label>
+                  <input
+                    type="number"
+                    id="product-shelfLifeDays"
+                    name="shelfLifeDays"
+                    value={formData.shelfLifeDays ?? ''}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="e.g. 365 for 1 year"
+                    min="1"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="product-hsnCode" className="label">HSN Code</label>
+                  <input
+                    type="text"
+                    id="product-hsnCode"
+                    name="hsnCode"
+                    value={formData.hsnCode || ''}
+                    onChange={handleChange}
+                    className="input font-mono"
+                    placeholder="e.g. 19023010"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* T-161: Product Image Upload */}
             <div>
