@@ -671,3 +671,120 @@ adminDevicesRouter.get("/devices/config-push-history", requireAdminToken, async 
     offset,
   });
 });
+
+// SA-P2-005: POST /api/v1/admin/devices/:deviceId/force-sync
+// Queue a force-sync command for a device.
+// The POS app will pick this up on its next sync tick and perform a full sync.
+adminDevicesRouter.post("/devices/:deviceId/force-sync", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  // Verify device exists
+  const deviceRes = await pool.query(
+    `SELECT id, store_id, label FROM pos_devices WHERE id = $1`,
+    [deviceId]
+  );
+
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+
+  // Insert force-sync request (upsert: if pending request exists for this device, update it)
+  const result = await pool.query(
+    `INSERT INTO device_sync_requests (device_id, store_id, reason, status, requested_at)
+     VALUES ($1, $2, $3, 'pending', NOW())
+     ON CONFLICT (device_id) WHERE status = 'pending'
+     DO UPDATE SET reason = EXCLUDED.reason, requested_at = NOW()
+     RETURNING id, device_id, store_id, reason, status, requested_at`,
+    [deviceId, device.store_id, reason || "Force sync requested by superadmin"]
+  );
+
+  log.info(`[ForceSync] Device ${deviceId} (store=${device.store_id}) force-sync queued. reason=${reason || "none"}`);
+
+  return res.json({
+    success: true,
+    syncRequest: {
+      id: result.rows[0].id,
+      device_id: result.rows[0].device_id,
+      store_id: result.rows[0].store_id,
+      reason: result.rows[0].reason,
+      status: result.rows[0].status,
+      requested_at: new Date(result.rows[0].requested_at).toISOString(),
+    },
+    message: "Force sync has been queued. The device will sync on its next check-in.",
+  });
+});
+
+// SA-P2-005: GET /api/v1/admin/devices/:deviceId/sync-status
+adminDevicesRouter.get("/devices/:deviceId/sync-status", requireAdminToken, async (req, res) => {
+  const deviceId = req.params.deviceId?.trim();
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const [deviceRes, pendingRes, recentRes] = await Promise.all([
+    pool.query(
+      `SELECT id, last_sync_at, last_seen_online, pending_outbox_count FROM pos_devices WHERE id = $1`,
+      [deviceId]
+    ),
+    pool.query(
+      `SELECT id, reason, status, requested_at
+       FROM device_sync_requests
+       WHERE device_id = $1 AND status = 'pending'
+       ORDER BY requested_at DESC
+       LIMIT 1`,
+      [deviceId]
+    ),
+    pool.query(
+      `SELECT id, reason, status, requested_at, completed_at
+       FROM device_sync_requests
+       WHERE device_id = $1
+       ORDER BY requested_at DESC
+       LIMIT 5`,
+      [deviceId]
+    ),
+  ]);
+
+  if (deviceRes.rowCount === 0) {
+    return res.status(404).json({ error: "device not found" });
+  }
+
+  const device = deviceRes.rows[0];
+  const pendingRequest = pendingRes.rows[0] ?? null;
+  const recentRequests = recentRes.rows.map((r) => ({
+    id: r.id,
+    reason: r.reason,
+    status: r.status,
+    requested_at: r.requested_at ? new Date(r.requested_at).toISOString() : null,
+    completed_at: r.completed_at ? new Date(r.completed_at).toISOString() : null,
+  }));
+
+  return res.json({
+    device_id: device.id,
+    last_sync_at: device.last_sync_at ? new Date(device.last_sync_at).toISOString() : null,
+    last_seen_online: device.last_seen_online ? new Date(device.last_seen_online).toISOString() : null,
+    pending_outbox_count: device.pending_outbox_count ?? 0,
+    pending_sync_request: pendingRequest ? {
+      id: pendingRequest.id,
+      reason: pendingRequest.reason,
+      requested_at: new Date(pendingRequest.requested_at).toISOString(),
+    } : null,
+    recent_sync_requests: recentRequests,
+  });
+});

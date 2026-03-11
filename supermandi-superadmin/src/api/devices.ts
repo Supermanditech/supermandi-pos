@@ -215,3 +215,58 @@ export async function forceReEnrollDevice(deviceId: string, reason?: string): Pr
     message: data.message || "Device has been deregistered.",
   };
 }
+
+// SA-P2-005: Force sync a device
+export async function forceSyncDevice(deviceId: string, reason?: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}/force-sync`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ reason: reason || "" }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; message?: string };
+  return {
+    success: Boolean(data.success),
+    message: data.message || "Force sync has been queued.",
+  };
+}
+
+// SA-P2-005: Get device sync status
+export type DeviceSyncStatus = {
+  device_id: string;
+  last_sync_at: string | null;
+  last_seen_online: string | null;
+  pending_outbox_count: number;
+  pending_sync_request: { id: string; reason: string; requested_at: string } | null;
+  recent_sync_requests: Array<{
+    id: string;
+    reason: string;
+    status: string;
+    requested_at: string | null;
+    completed_at: string | null;
+  }>;
+};
+
+export async function fetchDeviceSyncStatus(deviceId: string): Promise<DeviceSyncStatus> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}/sync-status`, {
+    headers: {
+      Accept: "application/json",
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as DeviceSyncStatus;
+  return data;
+}

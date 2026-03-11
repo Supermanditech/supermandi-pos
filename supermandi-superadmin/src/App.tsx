@@ -9,7 +9,7 @@ import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, type StoreRecord } from "./api/stores";
-import { fetchDevices, patchDevice, forceReEnrollDevice, type DeviceRecord } from "./api/devices";
+import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
   fetchAnalyticsOverview,
@@ -509,8 +509,9 @@ export default function App() {
   const [pendingDeviceAction, setPendingDeviceAction] = useState<{
     deviceId: string;
     deviceLabel?: string;
-    action: "deactivate" | "resetToken" | "forceReEnroll";
+    action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync";
   } | null>(null);
+  const [forceSyncingDevices, setForceSyncingDevices] = useState<Record<string, boolean>>({});
   const [enrollStoreId, setEnrollStoreId] = useState<string>("");
   const [enrollment, setEnrollment] = useState<DeviceEnrollmentResponse | null>(null);
   const [enrollError, setEnrollError] = useState<string>("");
@@ -2588,6 +2589,33 @@ export default function App() {
     }
   }
 
+  // SA-P2-005: Request force sync with confirmation
+  function requestForceSync(deviceId: string) {
+    const device = deviceRecords.find((d) => d.id === deviceId);
+    setPendingDeviceAction({
+      deviceId,
+      deviceLabel: device?.label ?? deviceId,
+      action: "forceSync"
+    });
+  }
+
+  async function executeForceSync(deviceId: string) {
+    setPendingDeviceAction(null);
+    setDeviceActionError("");
+    setForceSyncingDevices((prev) => ({ ...prev, [deviceId]: true }));
+    try {
+      const result = await forceSyncDevice(deviceId);
+      logAdminAction('device_force_sync', 'device', deviceId, { label: deviceRecords.find((d) => d.id === deviceId)?.label });
+      toast.success(result.message || "Force sync queued successfully.");
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Failed to queue force sync.";
+      setDeviceActionError(errorMsg);
+      logAdminActionError('device_force_sync', 'device', deviceId, errorMsg);
+    } finally {
+      setForceSyncingDevices((prev) => ({ ...prev, [deviceId]: false }));
+    }
+  }
+
   async function handleCreateStore() {
     const name = createStoreName.trim();
     const storeId = createStoreId.trim();
@@ -3201,6 +3229,8 @@ export default function App() {
           requestDeviceSave={requestDeviceSave}
           requestDeviceReset={requestDeviceReset}
           requestForceReEnroll={requestForceReEnroll}
+          requestForceSync={requestForceSync}
+          forceSyncingDevices={forceSyncingDevices}
           devicePage={devicePage}
           setDevicePage={setDevicePage}
           devicesLoading={devicesLoading}
@@ -3643,6 +3673,7 @@ export default function App() {
         executeDeviceSave={executeDeviceSave}
         executeDeviceReset={executeDeviceReset}
         executeForceReEnroll={executeForceReEnroll}
+        executeForceSync={executeForceSync}
         pendingAdminUser={pendingAdminUser}
         adminVerificationReason={adminVerificationReason}
         createUserError={createUserError}

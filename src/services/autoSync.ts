@@ -10,6 +10,7 @@ import { refreshStockSnapshot } from "./stockService";
 import { useProductsStore } from "../stores/productsStore";
 import { useSyncStore } from "../stores/syncStore";
 import { refreshDeadletterCount } from "./deadletterService";
+import { checkAndExecuteForceSync } from "./forceSyncCheck";
 
 const SYNC_INTERVAL_KEY = "supermandi.autoSync.intervalMs";
 const DEFAULT_SYNC_INTERVAL_MS = 60000; // 60 seconds
@@ -119,6 +120,13 @@ async function syncTick(): Promise<void> {
 
     // Step 5: Refresh deadletter count
     await refreshDeadletterCount();
+
+    // Step 6: SA-P2-005 — Check for pending force-sync commands from SuperAdmin
+    try {
+      await checkAndExecuteForceSync();
+    } catch (error) {
+      console.warn("[AutoSync] Force sync check failed:", error);
+    }
 
   } catch (error) {
     console.error("[AutoSync] Tick failed:", error);
