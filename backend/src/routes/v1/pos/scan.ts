@@ -1,5 +1,5 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import {
   lookupProductByBarcode,
   resolveScan,
@@ -16,7 +16,8 @@ export const posScanRouter = Router();
 
 // GO-LIVE-040: Rate limiting for scan endpoints
 // 120 scans per minute per device (2 per second average)
-const scanRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting for scan endpoints
+const scanRateLimiter = redisRateLimit({
   windowMs: 60 * 1000,
   max: 120,
   keyGenerator: (req) => {
@@ -24,14 +25,6 @@ const scanRateLimiter = rateLimit({
     const posDevice = (req as any).posDevice as { deviceId?: string } | undefined;
     return posDevice?.deviceId || req.ip || 'unknown';
   },
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many scan requests. Please slow down.'
-    }
-  }
 });
 
 // GO-LIVE-041: Barcode format validation

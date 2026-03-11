@@ -18,7 +18,7 @@ import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
 import { createEnrollmentCode } from "../../../services/enrollmentCodeService";
 import { sendWelcomeNotification, sendSupplierApprovalNotification } from "../../../services/notificationService";
-import rateLimit from "express-rate-limit";
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import { log } from "../../../lib/logger";
 
 export const adminApplicationsRouter = Router();
@@ -26,10 +26,10 @@ export const adminApplicationsRouter = Router();
 adminApplicationsRouter.use(requireAdminToken);
 
 // Rate limit approval/rejection actions
-const approvalRateLimiter = rateLimit({
+// SA-P2-011: Redis-backed rate limiting
+const approvalRateLimiter = redisRateLimit({
   windowMs: 60 * 1000,
   max: 10,
-  message: { error: { code: "RATE_LIMITED", message: "Too many approval actions. Please slow down." } },
 });
 
 /**
