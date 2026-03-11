@@ -99,6 +99,9 @@ interface StoresTabProps {
   // SA-P2-007: BNPL limit adjustment
   handleBnplSave: (storeId: string, settings: { bnplEnabled: boolean; bnplCreditLimit: number; bnplMaxDays: number; creditEnabled: boolean; creditLimit: number }) => void;
   bnplSaving: Record<string, boolean>;
+  // SA-P0-002: Discount limit
+  handleDiscountLimitSave: (storeId: string, maxDiscountPercent: number) => void;
+  discountLimitSaving: Record<string, boolean>;
 }
 
 export function StoresTab({
@@ -179,6 +182,8 @@ export function StoresTab({
   loadStoreSettings,
   handleBnplSave,
   bnplSaving,
+  handleDiscountLimitSave,
+  discountLimitSaving,
 }: StoresTabProps) {
   // SA-P2-007: BNPL edit modal state
   const [bnplEditStoreId, setBnplEditStoreId] = React.useState<string | null>(null);
@@ -209,6 +214,26 @@ export function StoresTab({
       creditLimit: Math.round(parseFloat(bnplForm.creditLimitRupees || "0") * 100),
     });
     closeBnplEdit();
+  }
+
+  // SA-P0-002: Discount limit inline edit state
+  const [discountLimitEdits, setDiscountLimitEdits] = React.useState<Record<string, string>>({});
+
+  function getDiscountLimitDraft(storeId: string, settings: StoreSettings): string {
+    return discountLimitEdits[storeId] ?? String(settings.maxDiscountPercent ?? 100);
+  }
+
+  function submitDiscountLimit(storeId: string) {
+    const raw = discountLimitEdits[storeId];
+    if (raw === undefined) return;
+    const value = parseFloat(raw);
+    if (!Number.isFinite(value) || value < 0 || value > 100) return;
+    handleDiscountLimitSave(storeId, value);
+    setDiscountLimitEdits((prev) => {
+      const next = { ...prev };
+      delete next[storeId];
+      return next;
+    });
   }
 
   return (
@@ -717,6 +742,32 @@ export function StoresTab({
                                         {bnplSaving[s.id] ? "Saving..." : "Edit BNPL Settings"}
                                       </button>
                                     </td></tr>
+                                    {/* SA-P0-002: Discount Limits */}
+                                    <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Discount Limits</td></tr>
+                                    <tr>
+                                      <td className="sa-text-muted">Max Discount %</td>
+                                      <td>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          step="0.01"
+                                          className="sa-input mono"
+                                          style={{ width: 80, marginRight: 8 }}
+                                          value={getDiscountLimitDraft(s.id, storeSettings[s.id])}
+                                          onChange={(e) => setDiscountLimitEdits((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                                          data-testid={`discount-limit-input-${s.id}`}
+                                        />
+                                        <button
+                                          className="btnSm"
+                                          disabled={!!discountLimitSaving[s.id] || discountLimitEdits[s.id] === undefined}
+                                          onClick={() => submitDiscountLimit(s.id)}
+                                          data-testid={`discount-limit-save-${s.id}`}
+                                        >
+                                          {discountLimitSaving[s.id] ? "Saving..." : "Save"}
+                                        </button>
+                                      </td>
+                                    </tr>
                                     {/* Readiness Flags */}
                                     <tr><td colSpan={2} style={{ fontWeight: 600, paddingTop: 8, paddingBottom: 2, borderBottom: "1px solid var(--color-border)" }}>Readiness Flags</td></tr>
                                     <tr><td className="sa-text-muted">Device Bound</td><td className="mono">{storeSettings[s.id].deviceBound ? "Yes" : "No"}</td></tr>

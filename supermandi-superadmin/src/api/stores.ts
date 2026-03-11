@@ -263,6 +263,8 @@ export type StoreSettings = {
   bnplEnabled: boolean;
   bnplCreditLimit: number;
   bnplMaxDays: number;
+  // SA-P0-002: Discount limits
+  maxDiscountPercent: number;
   // Readiness flags
   deviceBound: boolean;
   kycComplete: boolean;
@@ -368,4 +370,50 @@ export async function updateStoreBnpl(
     throw new Error("Invalid BNPL update response: missing store data");
   }
   return data.store as BnplUpdateResult;
+}
+
+// =============================================================================
+// SA-P0-002: Store Discount Limit
+// =============================================================================
+
+export type DiscountLimitUpdateResult = {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  maxDiscountPercent: number;
+  updatedAt: string;
+};
+
+/**
+ * Update the maximum discount percentage for a store
+ */
+export async function updateStoreDiscountLimit(
+  storeId: string,
+  maxDiscountPercent: number
+): Promise<DiscountLimitUpdateResult> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/discount-limit`,
+    {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ maxDiscountPercent }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  if (!data?.store || typeof data.store !== "object") {
+    throw new Error("Invalid discount limit update response: missing store data");
+  }
+  return data.store as DiscountLimitUpdateResult;
 }
