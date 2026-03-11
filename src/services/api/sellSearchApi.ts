@@ -162,20 +162,27 @@ export interface StoreProductListResponse {
  * List store products for tap-and-add SELL grid.
  * Does NOT require a search query - returns recent products.
  *
- * @param options - List options (limit, offset)
+ * SCALE-C3: Optional sort="fefo" for FEFO (First Expired First Out) ordering.
+ *
+ * @param options - List options (limit, offset, sort)
  */
 export async function listStoreProducts(
   options: {
     limit?: number;
     offset?: number;
+    sort?: "fefo" | "default";
   } = {}
 ): Promise<StoreProductListItem[]> {
-  const { limit = 50, offset = 0 } = options;
+  const { limit = 50, offset = 0, sort } = options;
 
   const params = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   });
+  // SCALE-C3: Append sort=fefo when FEFO mode is active
+  if (sort === "fefo") {
+    params.set("sort", "fefo");
+  }
 
   const response = await apiClient.get<StoreProductListResponse>(
     `/api/v1/pos/store-products/list?${params}`

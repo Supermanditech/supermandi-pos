@@ -622,19 +622,30 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
 });
 
 /**
- * GET /api/v1/pos/store-products/list?limit=...&offset=...
+ * GET /api/v1/pos/store-products/list?limit=...&offset=...&sort=fefo
  * List store products for tap-and-add SELL grid
  * Returns authoritative stock from inventory.stock_balances
+ * SCALE-C3: Optional sort=fefo for FEFO (First Expired First Out) ordering
  */
 posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10) || 50, 1), 200);
   const offset = Math.max(parseInt(String(req.query.offset || "0"), 10) || 0, 0);
+  // SCALE-C3: FEFO sort — earliest expiry first, NULL expiry last, then alpha
+  const sortFefo = req.query.sort === "fefo";
 
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
   }
+
+  // SCALE-C3: ORDER BY clause changes based on sort param
+  const orderByClause = sortFefo
+    ? `ORDER BY
+        CASE WHEN sp.expiry_date IS NULL THEN 1 ELSE 0 END,
+        sp.expiry_date ASC,
+        COALESCE(sp.display_name, p.name) ASC`
+    : `ORDER BY COALESCE(sp.display_name, p.name) ASC`;
 
   try {
     const [dataResult, countResult] = await Promise.all([
@@ -651,6 +662,8 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           sp.display_name,
           sp.product_mode,
           sp.metadata_updated_at,
+          sp.expiry_date,
+          sp.batch_number,
           COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
           COALESCE(sp.brand, p.brand) as brand,
           p.unit,
@@ -676,7 +689,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
               WHERE spm.product_id = sp.product_id AND sup.approval_status = 'approved'
             )
           )
-        ORDER BY COALESCE(sp.display_name, p.name) ASC
+        ${orderByClause}
         LIMIT $2 OFFSET $3`,
         [storeId, limit, offset]
       ),
@@ -707,11 +720,14 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       mode: row.product_mode || null,
       updatedAt: row.updated_at || null,
       metadataUpdatedAt: row.metadata_updated_at || null,
+      // SCALE-C3: Expiry fields for FEFO support
+      expiry_date: row.expiry_date || null,
+      batch_number: row.batch_number || null,
     }));
 
     const total = countResult.rows[0]?.total || 0;
 
-    return res.json({ success: true, data, total, limit, offset, context: "SELL" });
+    return res.json({ success: true, data, total, limit, offset, context: "SELL", sort: sortFefo ? "fefo" : "default" });
   } catch (error) {
     log.error("[storeProducts] List error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "List failed" });
