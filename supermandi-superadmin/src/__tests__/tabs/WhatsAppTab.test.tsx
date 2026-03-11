@@ -431,4 +431,320 @@ describe('WhatsAppTab', () => {
     });
     expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
   });
+
+  // ── Send Message Validation ─────────────────────────────
+
+  it('shows invalid phone error for bad phone format', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Send Message')).toBeInTheDocument();
+    });
+    const phoneInput = screen.getByPlaceholderText('+91 98765 43210');
+    const messageInput = screen.getByPlaceholderText('Type your message...');
+    fireEvent.change(phoneInput, { target: { value: 'abc' } });
+    fireEvent.change(messageInput, { target: { value: 'Hello' } });
+    const sendButtons = screen.getAllByText('Send');
+    const sendBtn = sendButtons.find(el => el.tagName === 'BUTTON' && el.textContent === 'Send');
+    fireEvent.click(sendBtn!);
+    await waitFor(() => {
+      expect(screen.getByText(/Invalid phone number format/)).toBeInTheDocument();
+    });
+  });
+
+  it('does not send when phone is empty', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Send Message')).toBeInTheDocument();
+    });
+    const sendButtons = screen.getAllByText('Send');
+    const sendBtn = sendButtons.find(el => el.tagName === 'BUTTON' && el.textContent === 'Send');
+    expect((sendBtn as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('sends message on valid input and confirms', async () => {
+    mockSendMessage.mockResolvedValue({ sent: true });
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Send Message')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByPlaceholderText('+91 98765 43210'), { target: { value: '9876543210' } });
+    fireEvent.change(screen.getByPlaceholderText('Type your message...'), { target: { value: 'Hello there' } });
+    const sendButtons = screen.getAllByText('Send');
+    const sendBtn = sendButtons.find(el => el.tagName === 'BUTTON' && el.textContent === 'Send');
+    fireEvent.click(sendBtn!);
+    // ConfirmDialog appears
+    await waitFor(() => {
+      expect(screen.getByText('Send WhatsApp Message')).toBeInTheDocument();
+    });
+    // Click confirm
+    const confirmBtns = screen.getAllByText('Send');
+    const confirmBtn = confirmBtns.find(el => el.closest('[data-testid="confirm-dialog"]'));
+    fireEvent.click(confirmBtn!);
+    await waitFor(() => {
+      expect(mockSendMessage).toHaveBeenCalled();
+    });
+  });
+
+  it('shows send failure result', async () => {
+    mockSendMessage.mockResolvedValue({ sent: false, error: 'Rate limited' });
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Send Message')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByPlaceholderText('+91 98765 43210'), { target: { value: '9876543210' } });
+    fireEvent.change(screen.getByPlaceholderText('Type your message...'), { target: { value: 'Test' } });
+    const sendButtons = screen.getAllByText('Send');
+    const sendBtn = sendButtons.find(el => el.tagName === 'BUTTON' && el.textContent === 'Send');
+    fireEvent.click(sendBtn!);
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+    });
+    const confirmBtns = screen.getAllByText('Send');
+    const confirmBtn = confirmBtns.find(el => el.closest('[data-testid="confirm-dialog"]'));
+    fireEvent.click(confirmBtn!);
+    await waitFor(() => {
+      expect(screen.getByText(/Failed: Rate limited/)).toBeInTheDocument();
+    });
+  });
+
+  // ── Broadcast Validation ────────────────────────────────
+
+  it('shows max 50 recipients error for broadcast', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getAllByText('Broadcast').length).toBeGreaterThanOrEqual(1);
+    });
+    const broadcastElements = screen.getAllByText('Broadcast');
+    const broadcastBtn = broadcastElements.find(el => el.tagName === 'BUTTON');
+    fireEvent.click(broadcastBtn!);
+
+    // Enter 51 phone numbers
+    const phones = Array(51).fill('9876543210').join(',');
+    const textareas = document.querySelectorAll('textarea');
+    const phonesTextarea = Array.from(textareas).find(t => t.placeholder.includes('9876543210'));
+    fireEvent.change(phonesTextarea!, { target: { value: phones } });
+    const msgTextarea = Array.from(textareas).find(t => t.placeholder.includes('broadcast'));
+    fireEvent.change(msgTextarea!, { target: { value: 'Bulk message' } });
+    fireEvent.click(screen.getByText('Send Broadcast'));
+    await waitFor(() => {
+      expect(screen.getByText('Max 50 recipients')).toBeInTheDocument();
+    });
+  });
+
+  it('shows invalid phone error for broadcast with bad numbers', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getAllByText('Broadcast').length).toBeGreaterThanOrEqual(1);
+    });
+    const broadcastBtn = screen.getAllByText('Broadcast').find(el => el.tagName === 'BUTTON');
+    fireEvent.click(broadcastBtn!);
+
+    const textareas = document.querySelectorAll('textarea');
+    const phonesTextarea = Array.from(textareas).find(t => t.placeholder.includes('9876543210'));
+    fireEvent.change(phonesTextarea!, { target: { value: 'abc,def' } });
+    const msgTextarea = Array.from(textareas).find(t => t.placeholder.includes('broadcast'));
+    fireEvent.change(msgTextarea!, { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByText('Send Broadcast'));
+    await waitFor(() => {
+      expect(screen.getByText(/Invalid phone number/)).toBeInTheDocument();
+    });
+  });
+
+  it('disables send broadcast button when fields empty', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getAllByText('Broadcast').length).toBeGreaterThanOrEqual(1);
+    });
+    const broadcastBtn = screen.getAllByText('Broadcast').find(el => el.tagName === 'BUTTON');
+    fireEvent.click(broadcastBtn!);
+    const sendBroadcast = screen.getByText('Send Broadcast');
+    expect((sendBroadcast as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  // ── Broadcast Type Dropdown ─────────────────────────────
+
+  it('has broadcast type dropdown', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getAllByText('Broadcast').length).toBeGreaterThanOrEqual(1);
+    });
+    const broadcastBtn = screen.getAllByText('Broadcast').find(el => el.tagName === 'BUTTON');
+    fireEvent.click(broadcastBtn!);
+    expect(screen.getByLabelText('Broadcast recipient type')).toBeInTheDocument();
+  });
+
+  // ── Filter Changes ──────────────────────────────────────
+
+  it('changes sender filter', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('All Senders')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText('Sender type'), { target: { value: 'pos' } });
+    // triggers reload
+    await waitFor(() => {
+      expect(mockFetchLogs).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('changes status filter', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('All Statuses')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText('Delivery status'), { target: { value: 'failed' } });
+    await waitFor(() => {
+      expect(mockFetchLogs).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('changes context filter', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('All Types')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText('Context type'), { target: { value: 'broadcast' } });
+    await waitFor(() => {
+      expect(mockFetchLogs).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ── Send Type Dropdown ──────────────────────────────────
+
+  it('changes send type to supplier', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByLabelText('Type')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'supplier' } });
+    expect((screen.getByLabelText('Type') as HTMLSelectElement).value).toBe('supplier');
+  });
+
+  // ── Log Table Details ───────────────────────────────────
+
+  it('renders failed status with error code', async () => {
+    const failedLog: WhatsAppLogEntry = {
+      ...mockLog,
+      id: 'log-fail',
+      deliveryStatus: 'failed',
+      deliveryErrorCode: 'ERR_131',
+    };
+    mockFetchLogs.mockResolvedValue({ data: [failedLog], total: 1 });
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('failed (ERR_131)')).toBeInTheDocument();
+    });
+  });
+
+  it('renders log entry with empty content preview as dash', async () => {
+    const emptyPreviewLog: WhatsAppLogEntry = {
+      ...mockLog,
+      id: 'log-empty',
+      contentPreview: null as unknown as string,
+    };
+    mockFetchLogs.mockResolvedValue({ data: [emptyPreviewLog], total: 1 });
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      const dashes = screen.getAllByText('\u2014');
+      expect(dashes.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('renders log entry with null context type as dash', async () => {
+    const noContextLog: WhatsAppLogEntry = {
+      ...mockLog,
+      id: 'log-nocontext',
+      contextType: null as unknown as string,
+    };
+    mockFetchLogs.mockResolvedValue({ data: [noContextLog], total: 1 });
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      const dashes = screen.getAllByText('\u2014');
+      expect(dashes.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ── Error with Retry ────────────────────────────────────
+
+  it('shows Retry button in error state', async () => {
+    mockFetchStatus.mockRejectedValue(new Error('fail'));
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load/)).toBeInTheDocument();
+    });
+    const retryBtn = screen.getByText('Retry');
+    expect(retryBtn).toBeInTheDocument();
+    fireEvent.click(retryBtn);
+    await waitFor(() => {
+      expect(mockFetchStatus).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ── CTA Config Validation ──────────────────────────────
+
+  it('shows validation error for bad superadmin number', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Edit'));
+    // Clear the superadmin number to invalid value
+    const inputs = screen.getAllByDisplayValue('919251893684');
+    fireEvent.change(inputs[0], { target: { value: 'abc' } });
+    fireEvent.click(screen.getByText('Save & Apply Live'));
+    await waitFor(() => {
+      expect(screen.getByText(/Superadmin number must be 10-15 digits/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows validation error for empty messages', async () => {
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Edit'));
+    // Clear superadmin message
+    const msgInputs = screen.getAllByDisplayValue('Hi, I need help with SuperMandi');
+    fireEvent.change(msgInputs[0], { target: { value: '' } });
+    fireEvent.click(screen.getByText('Save & Apply Live'));
+    await waitFor(() => {
+      expect(screen.getByText(/Messages cannot be empty/)).toBeInTheDocument();
+    });
+  });
+
+  // ── CTA Retry on Error ─────────────────────────────────
+
+  it('shows retry button in CTA error state', async () => {
+    mockFetchCtaConfig.mockRejectedValue(new Error('CTA error'));
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText(/CTA error/)).toBeInTheDocument();
+    });
+    expect(screen.getByText('Retry')).toBeInTheDocument();
+  });
+
+  // ── Pagination Buttons ─────────────────────────────────
+
+  it('disables Prev on first page', async () => {
+    mockFetchLogs.mockResolvedValue({ data: Array(25).fill(mockLog).map((l, i) => ({ ...l, id: `log-${i}` })), total: 50 });
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Prev')).toBeDisabled();
+    expect(screen.getByText('Next')).not.toBeDisabled();
+  });
+
+  it('navigates to next page', async () => {
+    mockFetchLogs.mockResolvedValue({ data: Array(25).fill(mockLog).map((l, i) => ({ ...l, id: `log-${i}` })), total: 50 });
+    render(<WhatsAppTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Next'));
+    await waitFor(() => {
+      // loadData should be called again with new offset
+      expect(mockFetchLogs).toHaveBeenCalledTimes(2);
+    });
+  });
 });

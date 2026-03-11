@@ -293,4 +293,110 @@ describe('RegistrationsTab', () => {
     fireEvent.click(screen.getByText(/Next/));
     expect(setPage).toHaveBeenCalled();
   });
+
+  it('calls setRegEventsPage on Prev click', () => {
+    const setPage = vi.fn();
+    render(<RegistrationsTab {...createProps({ regEventsTotal: 100, regEventsPage: 1, setRegEventsPage: setPage })} />);
+    fireEvent.click(screen.getByText(/Prev/));
+    expect(setPage).toHaveBeenCalled();
+  });
+
+  // ── Filter resets page ────────────────────────────────────
+
+  it('resets page to 0 on source filter change', () => {
+    const setPage = vi.fn();
+    render(<RegistrationsTab {...createProps({ setRegEventsPage: setPage })} />);
+    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'ADMIN' } });
+    expect(setPage).toHaveBeenCalled();
+  });
+
+  it('resets page to 0 on outcome filter change', () => {
+    const setPage = vi.fn();
+    render(<RegistrationsTab {...createProps({ setRegEventsPage: setPage })} />);
+    fireEvent.change(screen.getByLabelText('Outcome'), { target: { value: 'SUCCESS' } });
+    expect(setPage).toHaveBeenCalled();
+  });
+
+  // ── Table column headers ──────────────────────────────────
+
+  it('renders Phone column header', () => {
+    render(<RegistrationsTab {...createProps()} />);
+    expect(screen.getByText('Phone')).toBeTruthy();
+  });
+
+  it('renders Store column header', () => {
+    render(<RegistrationsTab {...createProps()} />);
+    expect(screen.getByText('Store')).toBeTruthy();
+  });
+
+  // ── Dash fallbacks ────────────────────────────────────────
+
+  it('renders dash for missing gstin', () => {
+    const events = [makeRegEvent({ gstin: '' })];
+    render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1 })} />);
+    const dashes = screen.getAllByText('-');
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders dash for missing ipAddress', () => {
+    const events = [makeRegEvent({ ipAddress: '' })];
+    render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1 })} />);
+    const dashes = screen.getAllByText('-');
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ── Send Code edge cases ──────────────────────────────────
+
+  it('disables Send Code button when sending for same store', () => {
+    const events = [makeRegEvent({ storeId: 'sx' })];
+    render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1, sendingEnrollment: 'sx' })} />);
+    expect((screen.getByText('Sending...') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('does not show Send Code for BLOCKED outcome', () => {
+    const events = [makeRegEvent({ outcome: 'BLOCKED', storeId: 's1' })];
+    render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1 })} />);
+    expect(screen.queryByText('Send Code')).toBeNull();
+  });
+
+  it('does not show Send Code when storeId is null even with SUCCESS', () => {
+    const events = [makeRegEvent({ outcome: 'SUCCESS', storeId: null } as any)];
+    render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1 })} />);
+    expect(screen.queryByText('Send Code')).toBeNull();
+  });
+
+  // ── No empty state when events exist ──────────────────────
+
+  it('does not show empty state when events are present', () => {
+    const events = [makeRegEvent()];
+    render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1 })} />);
+    expect(screen.queryByText('No registration events found')).toBeNull();
+  });
+
+  // ── Pagination display ────────────────────────────────────
+
+  it('shows Page 2 of 2 on second page', () => {
+    render(<RegistrationsTab {...createProps({ regEventsTotal: 100, regEventsPage: 1 })} />);
+    expect(screen.getByText('Page 2 of 2')).toBeTruthy();
+  });
+
+  // ── Store code not shown when null ────────────────────────
+
+  it('does not show store code parenthetical when storeCode is null', () => {
+    const events = [makeRegEvent({ storeName: 'My Store', storeCode: null } as any)];
+    render(<RegistrationsTab {...createProps({ regEvents: events, regEventsTotal: 1 })} />);
+    expect(screen.getByText('My Store')).toBeTruthy();
+    // storeCode parenthetical like (TS01) should not appear
+    expect(screen.queryByText(/\(TS01\)/)).toBeNull();
+  });
+
+  it('renders All Outcomes option in outcome filter', () => {
+    render(<RegistrationsTab {...createProps()} />);
+    expect(screen.getByDisplayValue('All Outcomes')).toBeTruthy();
+  });
+
+  it('does not show empty state when loading', () => {
+    render(<RegistrationsTab {...createProps({ regEventsLoading: true })} />);
+    expect(screen.queryByText('No registration events found')).toBeNull();
+  });
 });

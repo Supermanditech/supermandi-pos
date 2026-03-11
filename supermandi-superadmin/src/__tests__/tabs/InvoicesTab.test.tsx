@@ -400,4 +400,122 @@ describe('InvoicesTab', () => {
       });
     });
   });
+
+  // =========================================================================
+  // Additional coverage
+  // =========================================================================
+
+  describe('table headers', () => {
+    it('renders all table column headers', async () => {
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByText('Invoice #')).toBeTruthy();
+        expect(screen.getByText('Date')).toBeTruthy();
+        expect(screen.getByText('Model')).toBeTruthy();
+        expect(screen.getByText('Type')).toBeTruthy();
+        expect(screen.getByText('Seller')).toBeTruthy();
+        expect(screen.getByText('Buyer')).toBeTruthy();
+        expect(screen.getByText('Total')).toBeTruthy();
+        expect(screen.getByText('Balance')).toBeTruthy();
+        expect(screen.getByText('Actions')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('filter dropdowns', () => {
+    it('renders accessible labels for filter selects', async () => {
+      render(<InvoicesTab />);
+      expect(screen.getByLabelText('Invoice model')).toBeTruthy();
+      expect(screen.getByLabelText('Invoice type')).toBeTruthy();
+      expect(screen.getByLabelText('Invoice status')).toBeTruthy();
+    });
+
+    it('calls listInvoices with model filter when changed', async () => {
+      render(<InvoicesTab />);
+      await waitFor(() => expect(screen.getByText('Refresh')).toBeTruthy());
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockClear();
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [], total: 0 });
+      fireEvent.change(screen.getByLabelText('Invoice model'), { target: { value: 'buy_resell' } });
+      await waitFor(() => {
+        expect(invoicesApi.listInvoices).toHaveBeenCalledWith(
+          expect.objectContaining({ invoiceModel: 'buy_resell' })
+        );
+      });
+    });
+
+    it('calls listInvoices with type filter when changed', async () => {
+      render(<InvoicesTab />);
+      await waitFor(() => expect(screen.getByText('Refresh')).toBeTruthy());
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockClear();
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [], total: 0 });
+      fireEvent.change(screen.getByLabelText('Invoice type'), { target: { value: 'sale' } });
+      await waitFor(() => {
+        expect(invoicesApi.listInvoices).toHaveBeenCalledWith(
+          expect.objectContaining({ invoiceType: 'sale' })
+        );
+      });
+    });
+
+    it('calls listInvoices with status filter when changed', async () => {
+      render(<InvoicesTab />);
+      await waitFor(() => expect(screen.getByText('Refresh')).toBeTruthy());
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockClear();
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [], total: 0 });
+      fireEvent.change(screen.getByLabelText('Invoice status'), { target: { value: 'paid' } });
+      await waitFor(() => {
+        expect(invoicesApi.listInvoices).toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'paid' })
+        );
+      });
+    });
+  });
+
+  describe('error with role=alert', () => {
+    it('renders error banner with role=alert', async () => {
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Server error'));
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('singular invoice count', () => {
+    it('shows singular "invoice" for count of 1', async () => {
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByText('1 invoice')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('loading state', () => {
+    it('shows Loading... on button while fetching', () => {
+      (invoicesApi.listInvoices as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
+      render(<InvoicesTab />);
+      expect(screen.getByText('Loading...')).toBeTruthy();
+    });
+  });
+
+  describe('detail modal GSTIN', () => {
+    it('shows seller and buyer GSTIN in detail modal', async () => {
+      (invoicesApi.getInvoice as ReturnType<typeof vi.fn>).mockResolvedValue(mockInvoiceDetail);
+      render(<InvoicesTab />);
+      await waitFor(() => expect(screen.getByText('View')).toBeTruthy());
+      fireEvent.click(screen.getByText('View'));
+      await waitFor(() => {
+        expect(screen.getByText(/GSTIN: 12ABCDE1234Z5/)).toBeTruthy();
+        expect(screen.getByText(/GSTIN: 12FGHIJ5678K9/)).toBeTruthy();
+      });
+    });
+  });
+
+  describe('invoice model display', () => {
+    it('shows Buy-Resell for buy_resell model', async () => {
+      render(<InvoicesTab />);
+      await waitFor(() => {
+        expect(screen.getByText('Buy-Resell')).toBeTruthy();
+      });
+    });
+  });
 });

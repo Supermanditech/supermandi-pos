@@ -291,4 +291,63 @@ describe('AIInsightsTab', () => {
     render(<AIInsightsTab />);
     expect(screen.getByLabelText('Store ID')).toBeInTheDocument();
   });
+
+  // ── Job confirmation dialog ─────────────────────────────────
+
+  it('shows confirmation dialog when job button clicked', () => {
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Jobs'));
+    fireEvent.click(screen.getByText('Run Demand Forecasting'));
+    expect(screen.getByText('Confirm Job Execution')).toBeInTheDocument();
+    expect(screen.getAllByText(/Run Demand Forecasting/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('closes job confirmation dialog on Cancel', () => {
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Jobs'));
+    fireEvent.click(screen.getByText('Run Smart Reorder'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  // ── Error clears on view switch ─────────────────────────────
+
+  it('clears error when switching views', async () => {
+    mockFetchWithTimeout.mockRejectedValue(new Error('Fetch error'));
+    render(<AIInsightsTab />);
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 's1' } });
+    fireEvent.click(screen.getByText('Load'));
+    await waitFor(() => {
+      expect(screen.getByText('Fetch error')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Jobs'));
+    expect(screen.queryByText('Fetch error')).not.toBeInTheDocument();
+  });
+
+  // ── Anomaly with critical severity ──────────────────────────
+
+  it('renders critical severity anomaly', async () => {
+    const anomalies = [{
+      id: 'a1', storeId: 's1', anomalyType: 'revenue_drop', severity: 'critical',
+      description: 'Revenue dropped 50%', metadata: {}, isReviewed: false,
+      detectedAt: '2026-01-15T10:00:00Z',
+    }];
+    mockFetchWithTimeout.mockResolvedValue(okResponse({ anomalies }));
+    render(<AIInsightsTab />);
+    fireEvent.change(screen.getByPlaceholderText('Enter Store ID...'), { target: { value: 's1' } });
+    fireEvent.click(screen.getByText('Load'));
+    await waitFor(() => {
+      expect(screen.getByText('critical')).toBeInTheDocument();
+      expect(screen.getByText('revenue drop')).toBeInTheDocument();
+    });
+  });
+
+  // ── Jobs view description ───────────────────────────────────
+
+  it('shows production info about Cloud Scheduler', () => {
+    render(<AIInsightsTab />);
+    fireEvent.click(screen.getByText('Jobs'));
+    expect(screen.getByText(/In production, these run on Cloud Scheduler/)).toBeInTheDocument();
+  });
 });

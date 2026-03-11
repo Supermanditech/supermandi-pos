@@ -309,4 +309,183 @@ describe('RefundsTab', () => {
       expect(screen.getByText(/1–50 of 100/)).toBeTruthy();
     });
   });
+
+  // ── Approve Flow (confirm + execute) ──────────────────────────
+
+  it('calls approveRefund after confirm dialog confirmation', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    refundsMock.approveRefund.mockResolvedValue({});
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('Approve')).toBeTruthy());
+    fireEvent.click(screen.getByText('Approve'));
+    expect(screen.getByTestId('confirm-dialog')).toBeTruthy();
+    // After re-fetch setup
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund({ status: 'processed' })], total: 1 });
+    fireEvent.click(screen.getByText('Confirm'));
+    await waitFor(() => {
+      expect(refundsMock.approveRefund).toHaveBeenCalledWith('r1');
+    });
+  });
+
+  it('closes confirm dialog on Cancel click', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('Approve')).toBeTruthy());
+    fireEvent.click(screen.getByText('Approve'));
+    expect(screen.getByTestId('confirm-dialog')).toBeTruthy();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+  });
+
+  // ── Reject Flow (submit) ──────────────────────────────────────
+
+  it('calls rejectRefund after entering reason and clicking Reject Refund', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    refundsMock.rejectRefund.mockResolvedValue({});
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('Reject')).toBeTruthy());
+    fireEvent.click(screen.getByText('Reject'));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText('Reason for rejection...'), { target: { value: 'Wrong item returned' } });
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund({ status: 'cancelled' })], total: 1 });
+    const rejectButtons = screen.getAllByText('Reject Refund');
+    fireEvent.click(rejectButtons[rejectButtons.length - 1]);
+    await waitFor(() => {
+      expect(refundsMock.rejectRefund).toHaveBeenCalledWith('r1', 'Wrong item returned');
+    });
+  });
+
+  it('disables Reject Refund button when reason is empty', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('Reject')).toBeTruthy());
+    fireEvent.click(screen.getByText('Reject'));
+    const rejectButtons = screen.getAllByText('Reject Refund');
+    const submitBtn = rejectButtons[rejectButtons.length - 1] as HTMLButtonElement;
+    expect(submitBtn.disabled).toBe(true);
+  });
+
+  it('closes reject modal on Cancel', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('Reject')).toBeTruthy());
+    fireEvent.click(screen.getByText('Reject'));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    const cancelButtons = screen.getAllByText('Cancel');
+    fireEvent.click(cancelButtons[cancelButtons.length - 1]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  // ── Error during actions ──────────────────────────────────────
+
+  it('shows error when approve fails', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    refundsMock.approveRefund.mockRejectedValue(new Error('Approve denied'));
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('Approve')).toBeTruthy());
+    fireEvent.click(screen.getByText('Approve'));
+    fireEvent.click(screen.getByText('Confirm'));
+    await waitFor(() => {
+      expect(screen.getByText('Approve denied')).toBeTruthy();
+    });
+  });
+
+  it('shows error when reject fails', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    refundsMock.rejectRefund.mockRejectedValue(new Error('Reject denied'));
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('Reject')).toBeTruthy());
+    fireEvent.click(screen.getByText('Reject'));
+    fireEvent.change(screen.getByPlaceholderText('Reason for rejection...'), { target: { value: 'Bad' } });
+    const rejectButtons = screen.getAllByText('Reject Refund');
+    fireEvent.click(rejectButtons[rejectButtons.length - 1]);
+    await waitFor(() => {
+      expect(screen.getByText('Reject denied')).toBeTruthy();
+    });
+  });
+
+  // ── Status filter change ──────────────────────────────────────
+
+  it('calls fetchRefunds with status filter on change', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [], total: 0 });
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('No refund requests found')).toBeTruthy());
+    refundsMock.fetchRefunds.mockClear();
+    fireEvent.change(screen.getByLabelText('Refund status'), { target: { value: 'processing' } });
+    await waitFor(() => {
+      expect(refundsMock.fetchRefunds).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'processing' })
+      );
+    });
+  });
+
+  // ── Table headers ─────────────────────────────────────────────
+
+  it('renders table column headers', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [makeRefund()], total: 1 });
+    render(<RefundsTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Store')).toBeTruthy();
+      expect(screen.getByText('Order')).toBeTruthy();
+      expect(screen.getByText('Amount')).toBeTruthy();
+      expect(screen.getByText('Reason')).toBeTruthy();
+      expect(screen.getByText('Status')).toBeTruthy();
+      expect(screen.getByText('Date')).toBeTruthy();
+      expect(screen.getByText('Actions')).toBeTruthy();
+    });
+  });
+
+  // ── Pagination Previous disabled ──────────────────────────────
+
+  it('Previous button is disabled on first page', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({
+      data: Array.from({ length: 50 }, (_, i) => makeRefund({ id: `r-${i}` })),
+      total: 100,
+    });
+    render(<RefundsTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Previous')).toBeTruthy();
+    });
+    expect((screen.getByText('Previous') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  // ── Failed refund shows failure reason ────────────────────────
+
+  it('shows Failed text for failed refund with failure reason', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({
+      data: [makeRefund({ status: 'failed', failureReason: 'Bank rejected' })],
+      total: 1,
+    });
+    render(<RefundsTab />);
+    await waitFor(() => {
+      const failedElements = screen.getAllByText('Failed');
+      expect(failedElements.length).toBeGreaterThanOrEqual(2); // filter option + cell
+    });
+  });
+
+  // ── Store name fallback to storeId ────────────────────────────
+
+  it('shows truncated storeId when storeName is missing', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({
+      data: [makeRefund({ storeName: '', storeId: 'abcdef12-3456-7890' })],
+      total: 1,
+    });
+    render(<RefundsTab />);
+    await waitFor(() => {
+      expect(screen.getByText('abcdef12')).toBeTruthy();
+    });
+  });
+
+  // ── Subtitle shows status in filter ───────────────────────────
+
+  it('shows status in subtitle when filtered', async () => {
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [], total: 5 });
+    render(<RefundsTab />);
+    await waitFor(() => expect(screen.getByText('No refund requests found')).toBeTruthy());
+    refundsMock.fetchRefunds.mockResolvedValue({ data: [], total: 3 });
+    fireEvent.change(screen.getByLabelText('Refund status'), { target: { value: 'processing' } });
+    await waitFor(() => {
+      expect(screen.getByText(/3 total refund requests \(processing\)/)).toBeTruthy();
+    });
+  });
 });

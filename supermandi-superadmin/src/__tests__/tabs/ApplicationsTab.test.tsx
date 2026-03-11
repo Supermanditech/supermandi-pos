@@ -343,4 +343,102 @@ describe('ApplicationsTab', () => {
     expect(screen.getByText('Alpha Store')).toBeTruthy();
     expect(screen.getByText('Beta Supply')).toBeTruthy();
   });
+
+  // ── Load More edge cases ──────────────────────────────────
+
+  it('does not show Load More when onLoadMore is not provided', () => {
+    const apps = [makeApp()];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 10 })} />);
+    expect(screen.queryByText('Load More')).toBeNull();
+  });
+
+  it('shows Loading... on Load More button when loading', () => {
+    const apps = [makeApp()];
+    const onLoadMore = vi.fn();
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 10, onLoadMore, applicationsLoading: true })} />);
+    expect(screen.getByText('Loading...')).toBeTruthy();
+  });
+
+  it('disables Load More button when loading', () => {
+    const apps = [makeApp()];
+    const onLoadMore = vi.fn();
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 10, onLoadMore, applicationsLoading: true })} />);
+    expect((screen.getByText('Loading...') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('shows count text for large application sets', () => {
+    // Testing the count display without rendering 500 cards (which is too slow)
+    // The component shows "Max reached" when applications.length >= 500
+    // We verify the count footer renders correctly with many items
+    const apps = [makeApp({ id: 'a1' }), makeApp({ id: 'a2' })];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 600 })} />);
+    expect(screen.getByText(/Showing 2 of 600 pending applications/)).toBeTruthy();
+  });
+
+  // ── NEEDS_FIX approve callback ────────────────────────────
+
+  it('calls handleApproveApplication for NEEDS_FIX applications', () => {
+    const handleApprove = vi.fn();
+    const apps = [makeApp({ id: 'nf-1', status: 'NEEDS_FIX' })];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1, handleApproveApplication: handleApprove })} />);
+    fireEvent.click(screen.getByText('Approve'));
+    expect(handleApprove).toHaveBeenCalledWith('nf-1');
+  });
+
+  it('calls handleRejectApplication for NEEDS_FIX (Update Rejection)', () => {
+    const handleReject = vi.fn();
+    const apps = [makeApp({ id: 'nf-2', status: 'NEEDS_FIX' })];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1, handleRejectApplication: handleReject })} />);
+    fireEvent.click(screen.getByText('Update Rejection'));
+    expect(handleReject).toHaveBeenCalledWith('nf-2');
+  });
+
+  // ── Conditional fields ────────────────────────────────────
+
+  it('does not render email when empty', () => {
+    const apps = [makeApp({ email: '' })];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1 })} />);
+    // Email label should not appear
+    expect(screen.queryByText('test@test.com')).toBeNull();
+  });
+
+  it('renders city without state or pincode', () => {
+    const apps = [makeApp({ city: 'Delhi' } as any)];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1 })} />);
+    expect(screen.getByText('Delhi')).toBeTruthy();
+  });
+
+  it('does not render KYC Submitted when submittedAt is missing', () => {
+    const apps = [makeApp({ submittedAt: undefined } as any)];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1 })} />);
+    expect(screen.queryByText('KYC Submitted:')).toBeNull();
+  });
+
+  it('does not render Documents count when documentUrls is empty object', () => {
+    const apps = [makeApp({ documentUrls: {} } as any)];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1 })} />);
+    expect(screen.queryByText(/uploaded/)).toBeNull();
+  });
+
+  it('does not show rejection textarea for non-actionable status', () => {
+    const apps = [makeApp({ status: 'APPROVED' } as any)];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1 })} />);
+    expect(screen.queryByPlaceholderText(/Describe what the applicant needs to fix/)).toBeNull();
+  });
+
+  it('shows Rejecting... when reject action is loading', () => {
+    const handleReject = vi.fn();
+    const apps = [makeApp({ id: 'app-r' })];
+    const props = createProps({ applications: apps, applicationsTotal: 1, handleRejectApplication: handleReject });
+    const { rerender } = render(<ApplicationsTab {...props} />);
+    fireEvent.click(screen.getByText('Reject'));
+    rerender(<ApplicationsTab {...{ ...props, appActionLoading: { 'app-r': true } }} />);
+    expect(screen.getByText('Rejecting...')).toBeTruthy();
+  });
+
+  it('renders NEEDS_FIX status badge text', () => {
+    const apps = [makeApp({ status: 'NEEDS_FIX' })];
+    render(<ApplicationsTab {...createProps({ applications: apps, applicationsTotal: 1 })} />);
+    expect(screen.getByText('NEEDS FIX')).toBeTruthy();
+  });
 });

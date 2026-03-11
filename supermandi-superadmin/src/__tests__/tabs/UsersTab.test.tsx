@@ -306,4 +306,158 @@ describe('UsersTab', () => {
     expect(screen.getByText('Alice')).toBeTruthy();
     expect(screen.getByText('Bob')).toBeTruthy();
   });
+
+  // ── Client-side search filtering ─────────────────────────
+
+  it('filters users by name search', () => {
+    const users = [
+      makeUser({ id: 'u1', name: 'Alice' }),
+      makeUser({ id: 'u2', name: 'Bob', email: 'bob@test.com' }),
+    ];
+    render(<UsersTab {...createProps({ userRecords: users as any, userSearch: 'alice' })} />);
+    expect(screen.getByText('Alice')).toBeTruthy();
+    expect(screen.queryByText('Bob')).toBeNull();
+  });
+
+  it('filters users by email search', () => {
+    const users = [
+      makeUser({ id: 'u1', name: 'Alice', email: 'alice@test.com' }),
+      makeUser({ id: 'u2', name: 'Bob', email: 'bob@test.com' }),
+    ];
+    render(<UsersTab {...createProps({ userRecords: users as any, userSearch: 'bob@test' })} />);
+    expect(screen.queryByText('Alice')).toBeNull();
+    expect(screen.getByText('Bob')).toBeTruthy();
+  });
+
+  it('filters users by phone search', () => {
+    const users = [
+      makeUser({ id: 'u1', name: 'Alice', phone: '1111111111' }),
+      makeUser({ id: 'u2', name: 'Bob', phone: '2222222222' }),
+    ];
+    render(<UsersTab {...createProps({ userRecords: users as any, userSearch: '2222' })} />);
+    expect(screen.queryByText('Alice')).toBeNull();
+    expect(screen.getByText('Bob')).toBeTruthy();
+  });
+
+  it('shows no results when search matches nothing', () => {
+    const users = [makeUser({ id: 'u1', name: 'Alice' })];
+    render(<UsersTab {...createProps({ userRecords: users as any, userSearch: 'zzzzz' })} />);
+    expect(screen.queryByText('Alice')).toBeNull();
+  });
+
+  // ── Status badges ─────────────────────────────────────────
+
+  it('shows suspended badge style for suspended users', () => {
+    const users = [makeUser({ status: 'suspended' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.getByText('suspended')).toBeTruthy();
+  });
+
+  it('shows inactive badge for inactive users', () => {
+    const users = [makeUser({ status: 'inactive' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.getByText('inactive')).toBeTruthy();
+  });
+
+  // ── Status change dropdown ────────────────────────────────
+
+  it('shows status dropdown options', () => {
+    const users = [makeUser({ name: 'TestUser' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    const dropdown = screen.getByLabelText('Change status for TestUser') as HTMLSelectElement;
+    expect(dropdown).toBeTruthy();
+    // Should have Active, Inactive, Suspended options
+    expect(dropdown.options.length).toBe(3);
+  });
+
+  it('shows ConfirmDialog with info variant when setting to inactive', () => {
+    const users = [makeUser({ id: 'u-test', name: 'TestUser' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    fireEvent.change(screen.getByLabelText('Change status for TestUser'), { target: { value: 'inactive' } });
+    expect(screen.getByText('Change User Status')).toBeTruthy();
+    expect(screen.getByText(/Change TestUser's status from "active" to "inactive"/)).toBeTruthy();
+  });
+
+  it('does not trigger status change when same status is selected', () => {
+    const handler = vi.fn();
+    const users = [makeUser({ id: 'u-test', name: 'TestUser', status: 'active' })];
+    render(<UsersTab {...createProps({ userRecords: users as any, requestUserStatusChange: handler })} />);
+    fireEvent.change(screen.getByLabelText('Change status for TestUser'), { target: { value: 'active' } });
+    // No dialog or handler call
+    expect(screen.queryByText('Change User Status')).toBeNull();
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  // ── Create user form edge cases ───────────────────────────
+
+  it('disables Create User button when name is empty', () => {
+    render(<UsersTab {...createProps({ showCreateUser: true, createUserForm: { name: '', email: 'test@test.com', phone: '', actor_type: 'store', actor_id: '' } })} />);
+    expect((screen.getByText('Create User') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('disables Create User button when email is empty', () => {
+    render(<UsersTab {...createProps({ showCreateUser: true, createUserForm: { name: 'Test', email: '', phone: '', actor_type: 'store', actor_id: '' } })} />);
+    expect((screen.getByText('Create User') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('enables Create User button when name and email are provided', () => {
+    render(<UsersTab {...createProps({ showCreateUser: true, createUserForm: { name: 'Test', email: 'a@b.com', phone: '', actor_type: 'store', actor_id: '' } })} />);
+    expect((screen.getByText('Create User') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('calls setCreateUserForm on name input change', () => {
+    const setForm = vi.fn();
+    render(<UsersTab {...createProps({ showCreateUser: true, setCreateUserForm: setForm })} />);
+    fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'New User' } });
+    expect(setForm).toHaveBeenCalled();
+  });
+
+  it('calls setCreateUserForm on email input change', () => {
+    const setForm = vi.fn();
+    render(<UsersTab {...createProps({ showCreateUser: true, setCreateUserForm: setForm })} />);
+    fireEvent.change(screen.getByPlaceholderText('email@example.com'), { target: { value: 'new@test.com' } });
+    expect(setForm).toHaveBeenCalled();
+  });
+
+  it('calls setCreateUserForm on phone input change', () => {
+    const setForm = vi.fn();
+    render(<UsersTab {...createProps({ showCreateUser: true, setCreateUserForm: setForm })} />);
+    fireEvent.change(screen.getByPlaceholderText('+91 98765 43210'), { target: { value: '+91 12345' } });
+    expect(setForm).toHaveBeenCalled();
+  });
+
+  it('calls setCreateUserForm on actor type change', () => {
+    const setForm = vi.fn();
+    render(<UsersTab {...createProps({ showCreateUser: true, setCreateUserForm: setForm })} />);
+    fireEvent.change(screen.getByLabelText('User type'), { target: { value: 'supplier' } });
+    expect(setForm).toHaveBeenCalled();
+  });
+
+  it('shows Phone table header when users exist', () => {
+    const users = [makeUser()];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.getByText('Phone')).toBeTruthy();
+    expect(screen.getByText('Status')).toBeTruthy();
+  });
+
+  it('toggles showCreateUser to false on Cancel click', () => {
+    const setShow = vi.fn();
+    render(<UsersTab {...createProps({ showCreateUser: true, setShowCreateUser: setShow })} />);
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(setShow).toHaveBeenCalledWith(false);
+  });
+
+  it('shows both usersError and userActionError simultaneously', () => {
+    render(<UsersTab {...createProps({ usersError: 'Load error', userActionError: 'Action error' })} />);
+    expect(screen.getByText('Load error')).toBeTruthy();
+    expect(screen.getByText('Action error')).toBeTruthy();
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shows actor_type badge for supplier user', () => {
+    const users = [makeUser({ actor_type: 'supplier' })];
+    render(<UsersTab {...createProps({ userRecords: users as any })} />);
+    expect(screen.getByText('supplier')).toBeTruthy();
+  });
 });

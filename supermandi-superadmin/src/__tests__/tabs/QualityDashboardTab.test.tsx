@@ -338,4 +338,180 @@ describe('QualityDashboardTab', () => {
     fireEvent.click(screen.getByText('Reset Metrics'));
     expect(screen.getByTestId('confirm-dialog')).toBeTruthy();
   });
+
+  it('calls resetMetrics after confirming Reset Metrics dialog', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    qualityMock.resetMetrics.mockResolvedValue({});
+    render(<QualityDashboardTab />);
+    await waitFor(() => expect(screen.getByText('Reset Metrics')).toBeTruthy());
+    fireEvent.click(screen.getByText('Reset Metrics'));
+    fireEvent.click(screen.getByText('Confirm'));
+    await waitFor(() => {
+      expect(qualityMock.resetMetrics).toHaveBeenCalled();
+    });
+  });
+
+  it('closes confirm dialog on Cancel', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => expect(screen.getByText('Reset Metrics')).toBeTruthy());
+    fireEvent.click(screen.getByText('Reset Metrics'));
+    expect(screen.getByTestId('confirm-dialog')).toBeTruthy();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+  });
+
+  // ── Empty overview state ──────────────────────────────────────
+
+  it('shows "No quality data available" when overview is null after loading', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(null);
+    qualityMock.fetchTestResults.mockResolvedValue(null);
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('No quality data available.')).toBeTruthy();
+    });
+  });
+
+  // ── CI Gate Summary ───────────────────────────────────────────
+
+  it('renders CI Gate Summary section', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('CI Gate Summary')).toBeTruthy();
+      expect(screen.getByText('Total Gates: 15')).toBeTruthy();
+    });
+  });
+
+  it('renders gate category names and counts', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('typecheck')).toBeTruthy();
+      expect(screen.getByText('unit')).toBeTruthy();
+      expect(screen.getByText('integration')).toBeTruthy();
+    });
+  });
+
+  // ── Top Endpoints ─────────────────────────────────────────────
+
+  it('renders Top Endpoints section', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Top Endpoints')).toBeTruthy();
+      expect(screen.getByText('/api/v1/health')).toBeTruthy();
+      expect(screen.getByText('GET')).toBeTruthy();
+    });
+  });
+
+  // ── Services ──────────────────────────────────────────────────
+
+  it('renders Services section with service names', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Services')).toBeTruthy();
+      expect(screen.getByText('api-gateway')).toBeTruthy();
+    });
+  });
+
+  it('renders service port and framework', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText(/Port 3000/)).toBeTruthy();
+      expect(screen.getByText(/express/)).toBeTruthy();
+    });
+  });
+
+  // ── Database Health Details ───────────────────────────────────
+
+  it('renders database status, latency and connections', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('healthy')).toBeTruthy();
+      expect(screen.getByText('5ms')).toBeTruthy();
+      expect(screen.getByText('Connections')).toBeTruthy();
+    });
+  });
+
+  it('renders table row counts section', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Table Row Counts')).toBeTruthy();
+      expect(screen.getByText('stores')).toBeTruthy();
+      expect(screen.getByText('devices')).toBeTruthy();
+    });
+  });
+
+  // ── Cloud Monitoring details ──────────────────────────────────
+
+  it('renders Cloud Monitoring alert policies count', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Cloud Monitoring')).toBeTruthy();
+      expect(screen.getByText('3 alert policies')).toBeTruthy();
+    });
+  });
+
+  it('renders Uptime Checks card', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Uptime Checks')).toBeTruthy();
+      expect(screen.getByText('5 services')).toBeTruthy();
+    });
+  });
+
+  // ── Test Results details ──────────────────────────────────────
+
+  it('renders test results table headers', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Suite')).toBeTruthy();
+      expect(screen.getByText('Passed')).toBeTruthy();
+      expect(screen.getByText('Skipped')).toBeTruthy();
+      expect(screen.getByText('Duration')).toBeTruthy();
+    });
+  });
+
+  it('renders coverage percentages', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockResolvedValue(makeTestResults());
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      // 65% appears for both statements and lines
+      expect(screen.getAllByText('65%').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('55%')).toBeTruthy();
+    });
+  });
+
+  // ── Partial failure ───────────────────────────────────────────
+
+  it('renders overview data even when testResults fails', async () => {
+    qualityMock.fetchQualityOverview.mockResolvedValue(makeOverview());
+    qualityMock.fetchTestResults.mockRejectedValue(new Error('Test results unavailable'));
+    render(<QualityDashboardTab />);
+    await waitFor(() => {
+      expect(screen.getByText('Quality Dashboard')).toBeTruthy();
+      expect(screen.getByText('Testing Tools')).toBeTruthy();
+    });
+  });
 });
