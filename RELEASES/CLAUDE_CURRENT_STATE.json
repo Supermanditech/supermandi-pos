@@ -1,6 +1,6 @@
 {
-  "version": "246",
-  "lastUpdated": "2026-03-11T20:00:00.000Z",
+  "version": "247",
+  "lastUpdated": "2026-03-12T00:20:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -7129,5 +7129,41 @@
       "posApkReason": "waves 1-7 changed 30+ POS screen/component/service files",
       "reiterationStatus": "COMPLETE_AFTER_WAVE6"
     }
+  },
+  "scaleAudit": {
+    "status": "ALL_DONE",
+    "completedDate": "2026-03-12",
+    "totalTickets": 18,
+    "headSha": "25bb1d8b",
+    "note": "All 18 SCALE audit tickets implemented via parallel worktree agents, merged sequentially with prestage tags. Approved tile designs: POS sell = no margin (staff view), supplier catalog = no margin (retailer as buyer), retailer web = with margin (owner view).",
+    "tickets": {
+      "SCALE-A1": { "title": "Product compliance fields (manufacturer, origin, shelf_life)", "sha": "d8b26f1b", "pr": 593, "tag": "prestage-SCALE-A1-2026-03-11_2123IST", "status": "DONE" },
+      "SCALE-A2": { "title": "Net content fields (net_content_value, net_content_unit)", "sha": "c8f6c493", "pr": 598, "tag": "prestage-SCALE-A2-2026-03-11_2340IST", "status": "DONE" },
+      "SCALE-A3": { "title": "Batch number on store_products for FEFO", "sha": "9786b88c", "pr": 596, "tag": "prestage-SCALE-A3-2026-03-11_2340IST", "status": "DONE" },
+      "SCALE-D2": { "title": "Connection pool tuning max=25 min=5", "sha": "88a8f8b5", "pr": 595, "tag": "prestage-SCALE-D2-2026-03-11_2340IST", "status": "DONE" },
+      "SCALE-D4": { "title": "Catalog listing Redis cache page1 per store", "sha": "28ebe802", "pr": 599, "tag": "prestage-SCALE-D4-2026-03-11_2345IST", "status": "DONE" },
+      "SCALE-D3": { "title": "Async CSV import via BullMQ with progress polling", "sha": "7c9843eb", "pr": 601, "tag": "prestage-SCALE-D3-2026-03-11_2345IST", "status": "DONE" },
+      "SCALE-D1": { "title": "Redis barcode lookup cache 5-min TTL", "sha": "35587135", "pr": 602, "tag": "prestage-SCALE-D1-2026-03-11_2350IST", "status": "DONE" },
+      "SCALE-B5": { "title": "Supplier form compliance and measurement fields", "sha": "b19dcab5", "pr": 603, "tag": "prestage-SCALE-B5-2026-03-11_2355IST", "status": "DONE" },
+      "SCALE-B3": { "title": "Retailer product table MRP, margin, GST, pack columns", "sha": "c2399b61", "pr": 604, "tag": "prestage-SCALE-B3B4-2026-03-11_2355IST", "status": "DONE" },
+      "SCALE-B4": { "title": "Retailer product table image thumbnail", "sha": "c2399b61", "pr": 604, "tag": "prestage-SCALE-B3B4-2026-03-11_2355IST", "status": "DONE", "note": "Combined with B3 in same PR" },
+      "SCALE-B1": { "title": "POS sell tile with image, brand, MRP, stock colors, expiry warning", "sha": "b055dbe6", "pr": 605, "tag": "prestage-SCALE-B1-2026-03-11_2356IST", "status": "DONE" },
+      "SCALE-E2": { "title": "POS sell tile product images with fallback", "sha": "20d749c9", "pr": 607, "tag": "prestage-SCALE-E2-2026-03-11_2358IST", "status": "DONE" },
+      "SCALE-B2": { "title": "POS buy tile pack config, cost, MRP, supplier, BNPL, GST, HSN", "sha": "493a6fd7", "pr": 608, "tag": "prestage-SCALE-B2-2026-03-12_0005IST", "status": "DONE" },
+      "SCALE-C1": { "title": "POS stock-in captures batch_number and expiry_date", "sha": "b82d0377", "pr": 609, "tag": "prestage-SCALE-C1-2026-03-12_0010IST", "status": "DONE" },
+      "SCALE-E1": { "title": "Retailer product image upload drag-drop GCS", "sha": "d113e115", "pr": 610, "tag": "prestage-SCALE-E1-2026-03-12_0012IST", "status": "DONE" },
+      "SCALE-C2": { "title": "Expiry alerts system backend + retailer UI + POS badge", "sha": "f1865ce5", "pr": 611, "tag": "prestage-SCALE-C2-2026-03-12_0015IST", "status": "DONE" },
+      "SCALE-C3": { "title": "FEFO stock rotation sort=fefo POS and retailer inventory", "sha": "25bb1d8b", "pr": 613, "tag": "prestage-SCALE-C3-2026-03-12_0020IST", "status": "DONE" }
+    },
+    "tileDesigns": {
+      "tileA_posSellTile": "Staff view: image(40x40), name, brand, mode badge, pack_size, sell_price, MRP, stock(color-coded), GST%, expiry_warning(orange<90d/red<30d), barcode. HIDDEN: purchase_price, margin, supplier_name",
+      "tileB_posBuyTile": "Retailer-as-buyer: image(48x48), name, brand, pack_config(net_content×pack_size), cost_price, MRP, MOQ, stock_status_dot, supplier+city, BNPL_badge, GST%, HSN, [+Order]. NO margin (sell price not set yet)",
+      "tableC_retailerWeb": "Owner-only: image(40x40), barcode, name, brand, pack/unit, purchase_price, sell_price, MRP, margin%(green/red), GST%, stock, supplier, actions"
+    },
+    "migrationsAdded": [
+      "180_scale_a1_product_compliance_fields.sql",
+      "181_scale_a2_net_content_fields.sql",
+      "182_scale_a3_batch_number_store_products.sql"
+    ]
   }
 }
