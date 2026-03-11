@@ -759,10 +759,22 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       );
     }
 
+    // SCALE-D1: Fetch barcodes before releasing client, then invalidate cache
+    const barcodeRows = await client.query(
+      `SELECT DISTINCT barcode FROM catalog.store_product_barcodes WHERE store_product_id = $1 AND store_id = $2
+       UNION
+       SELECT primary_barcode FROM catalog.products WHERE id = $3 AND primary_barcode IS NOT NULL`,
+      [id, storeId, productId]
+    );
+
     await client.query("COMMIT");
 
     // SCALE-D4: Invalidate cached catalog page 1 for this store
     invalidateCatalogPage1(storeId);
+    // SCALE-D1: Invalidate barcode lookup cache for all barcodes of this product
+    for (const row of barcodeRows.rows) {
+      invalidateBarcodeCache(storeId, row.barcode);
+    }
 
     return res.json({
       ok: true,
@@ -812,6 +824,19 @@ retailerAdminProductsRouter.delete("/products/:id", async (req: Request, res: Re
       return res.status(404).json({
         error: { code: "NOT_FOUND", message: "Product not found or already deleted" },
       });
+    }
+
+    const deletedProductId = result.rows[0].product_id;
+
+    // SCALE-D1: Fetch and invalidate barcode cache for the soft-deleted product
+    const barcodeResult = await pool.query(
+      `SELECT DISTINCT barcode FROM catalog.store_product_barcodes WHERE store_product_id = $1 AND store_id = $2
+       UNION
+       SELECT primary_barcode FROM catalog.products WHERE id = $3 AND primary_barcode IS NOT NULL`,
+      [id, storeId, deletedProductId]
+    );
+    for (const row of barcodeResult.rows) {
+      invalidateBarcodeCache(storeId, row.barcode);
     }
 
     // SCALE-D4: Invalidate cached catalog page 1 for this store
