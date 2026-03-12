@@ -139,7 +139,8 @@ describe('SCALE-C3: Retailer InventoryPage — FEFO sort UI', () => {
   });
 
   it('has stockSort state initialized to default', () => {
-    expect(fileContent).toContain("useUrlState<StockSortOption>('stockSort', 'default')");
+    // useUrlState always returns string — generic removed, cast at usage sites
+    expect(fileContent).toContain("useUrlState('stockSort', 'default')");
   });
 
   it('has fefo as a stock sort option', () => {
@@ -165,11 +166,14 @@ describe('SCALE-C3: Retailer InventoryPage — FEFO sort UI', () => {
     expect(fileContent).toContain('stock-sort-dropdown');
   });
 
-  it('renders sort option for each STOCK_SORT_LABELS key', () => {
-    expect(fileContent).toContain('sort-option-fefo');
-    expect(fileContent).toContain('sort-option-default');
-    expect(fileContent).toContain('sort-option-name');
-    expect(fileContent).toContain('sort-option-stock_low');
+  it('renders sort option for each STOCK_SORT_LABELS key via template testid', () => {
+    // Source uses data-testid={`sort-option-${opt}`} over STOCK_SORT_LABELS keys
+    expect(fileContent).toContain('sort-option-${opt}');
+    // Verify all four sort keys exist in STOCK_SORT_LABELS
+    expect(fileContent).toContain("default: 'Default'");
+    expect(fileContent).toContain("fefo: 'FEFO (Earliest Expiry First)'");
+    expect(fileContent).toContain("name: 'Name A-Z'");
+    expect(fileContent).toContain("stock_low: 'Stock Low-High'");
   });
 
   it('renders expiry date for each stock product', () => {
