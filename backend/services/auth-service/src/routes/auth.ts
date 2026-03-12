@@ -2,6 +2,7 @@
 // Public authentication endpoints (login, refresh, me)
 
 import { Router, Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { ApiError } from '@supermandi/common';
 import { createLogger } from '@supermandi/common';
 
@@ -32,7 +33,7 @@ import {
 import { authenticate, getAuthUser } from '../middleware';
 import { config } from '../config';
 import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from '../utils/cookies';
-import { getRedis } from '../redis';
+import { getRedis, blacklistAccessToken } from '../redis';
 
 const router: Router = Router();
 
@@ -42,6 +43,26 @@ function isPosClient(req: Request): boolean {
   const ua = (req.get('user-agent') || '').toLowerCase();
   // React Native, Expo, or explicit POS client indicator
   return ua.includes('react-native') || ua.includes('expo') || ua.includes('okhttp') || req.headers['x-device-token'] !== undefined;
+}
+
+// =============================================================================
+// SEC-002: Extract raw access token from request (header or cookie)
+// Used for blacklisting on logout so the gateway rejects it immediately.
+// =============================================================================
+
+function extractAccessToken(req: Request): string | undefined {
+  // POS/mobile: Authorization header
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  // Web: HttpOnly cookie
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const match = cookieHeader.match(/(?:^|;\s*)sm_access_token=([^;]*)/);
+    if (match?.[1]) return decodeURIComponent(match[1]);
+  }
+  return undefined;
 }
 
 // =============================================================================
@@ -369,6 +390,7 @@ router.get(
 /**
  * POST /auth/logout
  * Revoke the provided refresh token
+ * SEC-002: Also blacklists the caller's access token via Redis for immediate revocation
  */
 router.post(
   '/logout',
@@ -381,6 +403,14 @@ router.post(
       await revokeRefreshToken(tokenHash);
     }
 
+    // SEC-002: Blacklist the caller's access token so the gateway rejects it immediately.
+    // Extract from Authorization header (POS) or cookie (web).
+    const rawAccessToken = extractAccessToken(req);
+    if (rawAccessToken) {
+      const atHash = crypto.createHash('sha256').update(rawAccessToken).digest('hex');
+      await blacklistAccessToken(atHash, 900); // 900s = max 15-min token lifetime
+    }
+
     // AUTH-STORAGE-001: Clear HttpOnly cookies
     clearAuthCookies(res);
 
@@ -391,6 +421,8 @@ router.post(
 /**
  * POST /auth/logout-all
  * Revoke all refresh tokens for the authenticated user
+ * SEC-002: Also blacklists the caller's current access token via Redis so the
+ * api-gateway rejects it immediately (T-184) instead of waiting for the 15-min expiry.
  */
 router.post(
   '/logout-all',
@@ -398,6 +430,19 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const authUser = getAuthUser(req);
     const revokedCount = await revokeAllUserRefreshTokens(authUser.id);
+
+    // SEC-002: Blacklist the caller's current access token in Redis.
+    // The gateway uses sha256(token) as the blacklist key (T-184 jwtAuth.ts line 216).
+    // By blacklisting this token, the gateway will reject it immediately on subsequent requests
+    // instead of waiting for the 15-minute natural expiry.
+    // Note: Other sessions' access tokens are NOT blacklisted here — they expire naturally
+    // within 15 minutes, which is acceptable since their refresh tokens are already revoked.
+    const rawAccessToken = extractAccessToken(req);
+    if (rawAccessToken) {
+      const tokenHash = crypto.createHash('sha256').update(rawAccessToken).digest('hex');
+      // 900s = max access token lifetime (15 min)
+      await blacklistAccessToken(tokenHash, 900);
+    }
 
     // AUTH-STORAGE-001: Clear HttpOnly cookies for current browser session
     clearAuthCookies(res);
