@@ -1,6 +1,6 @@
 {
-  "version": "253",
-  "lastUpdated": "2026-03-12T05:00:00.000Z",
+  "version": "254",
+  "lastUpdated": "2026-03-12T06:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -7760,6 +7760,277 @@
       "installCmd": "adb -s TG8HCYTGGQT885OF install -r androidapp\buildoutputsapk\releaseapp-release.apk",
       "staleBundle": "android/app/build/generated/assets/createBundleReleaseJsAndAssets/index.android.bundle",
       "deleteStaleCmd": "Remove-Item -Force androidapp\buildgeneratedassetscreateBundleReleaseJsAndAssetsindex.android.bundle -ErrorAction SilentlyContinue"
+    }
+  },
+  "auditFixPlan": {
+    "createdAt": "2026-03-12",
+    "purpose": "Pre-GCP staging audit fix plan — 13 tickets (AUD-001..AUD-013) to implement one by one, git-disciplined, zero drift to existing code",
+    "gitDisciplineRules": {
+      "branchNaming": "fix/AUD-NNN-<slug>",
+      "tagNaming": "prestage-AUD-NNN-YYYY-MM-DD_HHMMiST",
+      "oneTicketOnePROneTag": true,
+      "noDirectPushToMain": true,
+      "semanticCommits": "fix(AUD-NNN): <description>",
+      "gatesBefore PR": ["pnpm -r typecheck", "pnpm test (affected platform only)", "lint if changed JS/TS"],
+      "noDriftRule": "Only touch files explicitly listed in each ticket's 'files' array — no opportunistic cleanup"
+    },
+    "implementationOrder": [
+      "AUD-001",
+      "AUD-013",
+      "AUD-002",
+      "AUD-003",
+      "AUD-006",
+      "AUD-004",
+      "AUD-005",
+      "AUD-007",
+      "AUD-008",
+      "AUD-009",
+      "AUD-010",
+      "AUD-011",
+      "AUD-012"
+    ],
+    "rationaleForOrder": "Criticals first (DB migration fix must precede any deploy). AUD-013 is verification-only (no code). Then camelCase fix (CRIT-002) that affects every barcode scan. Then cascading POS fixes in same file/interface grouping to minimise context switches. Backend/infra last.",
+    "tickets": {
+      "AUD-001": {
+        "id": "AUD-001",
+        "priority": "CRITICAL",
+        "title": "Fix duplicate migration number prefixes (100, 101, 108)",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "backend",
+        "riskClass": "A",
+        "problem": "Three files share prefix 100, two share 101, two share 108. Sequential migration runner may skip or error on duplicates.",
+        "files": [
+          "backend/migrations/100_ledger_bulk_sale_type.sql (rename to 100a or renumber)",
+          "backend/migrations/100_pos_device_activation_codes.sql (rename)",
+          "backend/migrations/100_sa_p1_006_allowed_payment_methods.sql (rename)",
+          "backend/migrations/101_dedup_001_duplicate_prevention.sql (rename)",
+          "backend/migrations/101_migrate_ledger_source_column.sql (rename)",
+          "backend/migrations/108_auth_idle_timeout_tracking.sql (rename)",
+          "backend/migrations/108_sup_pos_grn_tables.sql (rename)"
+        ],
+        "preSteps": ["Query staging DB via mcp__staging-db__query to see which migrations already ran (check migration tracking table)", "Determine safe renumber strategy based on what is already applied"],
+        "approach": "Renumber conflicts using next-available sequential numbers. Do NOT change content of SQL files. Update migration runner if it uses filenames as keys.",
+        "gates": ["verify no staging DB migration was skipped", "pnpm -r typecheck (backend)", "migration dry-run test"],
+        "branch": "fix/AUD-001-dup-migration-numbers",
+        "commitMsg": "fix(AUD-001): renumber duplicate migration prefixes 100/101/108 to sequential unique numbers"
+      },
+      "AUD-002": {
+        "id": "AUD-002",
+        "priority": "CRITICAL",
+        "title": "Fix barcode lookup camelCase→snake_case mapping in SellScanScreen",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "A",
+        "problem": "StoreLookupResponse fields are camelCase (imageUrl, gstRate, netContentValue, netContentUnit) but SellScanScreen SkuItem mapping reads snake_case (image_url, gst_rate, net_content_value, net_content_unit) — fields silently undefined on every barcode scan.",
+        "files": [
+          "src/screens/SellScanScreen.tsx (update SkuItem mapper for lookup result path only)"
+        ],
+        "doNotTouch": ["src/services/api/sellSearchApi.ts — StoreSkuMatch stays snake_case (search/list path is correct)"],
+        "approach": "In the barcode lookup result mapper block, read result.data.imageUrl → image_url, result.data.gstRate → gst_rate, result.data.netContentValue → net_content_value, result.data.netContentUnit → net_content_unit. Do NOT change the search/list path (already snake_case from backend).",
+        "gates": ["pnpm -r typecheck (POS)", "Jest POS unit tests"],
+        "branch": "fix/AUD-002-barcode-camelcase-mapping",
+        "commitMsg": "fix(AUD-002): map camelCase StoreLookupResponse fields to snake_case SkuItem in barcode scan path"
+      },
+      "AUD-003": {
+        "id": "AUD-003",
+        "priority": "HIGH",
+        "title": "Pass expiryDate to upsertLocalProduct at 2 call sites in SellScanScreen",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "B",
+        "problem": "upsertLocalProduct() now accepts expiryDate as 10th param (added in SCALE-C). Both call sites in SellScanScreen pass only 9 args — expiryDate never persisted to offline DB.",
+        "files": [
+          "src/screens/SellScanScreen.tsx (2 call sites ~183 and ~244)"
+        ],
+        "approach": "Pass item.expiry_date (or undefined) as 10th argument at both upsertLocalProduct call sites. No signature change needed.",
+        "gates": ["pnpm -r typecheck (POS)", "Jest POS unit tests"],
+        "branch": "fix/AUD-003-expiry-date-upsert",
+        "commitMsg": "fix(AUD-003): pass expiryDate to upsertLocalProduct at both SellScanScreen call sites"
+      },
+      "AUD-004": {
+        "id": "AUD-004",
+        "priority": "HIGH",
+        "title": "Strengthen BuyScreen beforeRemove guard to handle GO_BACK/POP/POP_TO_TOP",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "B",
+        "problem": "BuyScreen beforeRemove listener only blocks RESET action type. On Android back gesture (GO_BACK) or stack pop, guard is bypassed — unsaved purchase cart silently discarded.",
+        "files": [
+          "src/screens/BuyScreen.tsx (beforeRemove event handler)"
+        ],
+        "approach": "Expand the action type check to: ['GO_BACK', 'POP', 'POP_TO_TOP', 'RESET']. Preserve existing confirm-dialog logic unchanged.",
+        "gates": ["pnpm -r typecheck (POS)", "Jest POS unit tests"],
+        "branch": "fix/AUD-004-buy-screen-back-guard",
+        "commitMsg": "fix(AUD-004): strengthen BuyScreen beforeRemove guard for GO_BACK/POP/POP_TO_TOP"
+      },
+      "AUD-005": {
+        "id": "AUD-005",
+        "priority": "HIGH",
+        "title": "Replace any-typed event handlers with GestureResponderEvent in SellScanScreen and PaymentScreen",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "C",
+        "problem": "Event handlers typed as 'any' at ~3 call sites in SellScanScreen.tsx and PaymentScreen.tsx. Breaks type safety, masks potential runtime errors.",
+        "files": [
+          "src/screens/SellScanScreen.tsx (lines ~578, ~583, ~588)",
+          "src/screens/PaymentScreen.tsx (similar handlers)"
+        ],
+        "approach": "Import GestureResponderEvent from react-native and replace 'any' with proper type. No logic changes.",
+        "gates": ["pnpm -r typecheck (POS)"],
+        "branch": "fix/AUD-005-event-handler-types",
+        "commitMsg": "fix(AUD-005): type event handlers as GestureResponderEvent in SellScanScreen and PaymentScreen"
+      },
+      "AUD-006": {
+        "id": "AUD-006",
+        "priority": "MEDIUM",
+        "title": "Add batch_number to StoreSkuMatch and StoreProductListItem interfaces",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "C",
+        "problem": "batch_number was added to DB (migration 182) and backend SELECT but is absent from TypeScript interfaces StoreSkuMatch and StoreProductListItem — field silently dropped before reaching UI.",
+        "files": [
+          "src/services/api/sellSearchApi.ts (StoreSkuMatch and StoreProductListItem interfaces)"
+        ],
+        "approach": "Add batch_number?: string to both interfaces. No logic changes, no downstream component changes needed (field is display-only).",
+        "gates": ["pnpm -r typecheck (POS)"],
+        "branch": "fix/AUD-006-batch-number-interfaces",
+        "commitMsg": "fix(AUD-006): add batch_number to StoreSkuMatch and StoreProductListItem TS interfaces"
+      },
+      "AUD-007": {
+        "id": "AUD-007",
+        "priority": "MEDIUM",
+        "title": "Reset priceResolutionError in cartStore.addItem() when merging existing item",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "C",
+        "problem": "When adding a second unit of an item that previously had a priceResolutionError, the merge path doesn't reset the error flag. UI may show stale error on a successful re-add.",
+        "files": [
+          "src/stores/cartStore.ts (addItem merge path)"
+        ],
+        "approach": "In the existing-item merge block, set priceResolutionError: false alongside quantity increment. One-line fix.",
+        "gates": ["pnpm -r typecheck (POS)", "Jest POS cartStore tests"],
+        "branch": "fix/AUD-007-cart-price-error-reset",
+        "commitMsg": "fix(AUD-007): reset priceResolutionError when merging existing item in cartStore.addItem"
+      },
+      "AUD-008": {
+        "id": "AUD-008",
+        "priority": "MEDIUM",
+        "title": "Add GCS_IMAGES_BUCKET startup warning in backend images route",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "backend",
+        "riskClass": "C",
+        "problem": "backend/src/routes/v1/uploads/images.ts silently falls back to hardcoded 'supermandi-pos-images' bucket if GCS_IMAGES_BUCKET env var is missing. No warning on startup — image uploads silently fail in production if var missing.",
+        "files": [
+          "backend/src/routes/v1/uploads/images.ts (startup validation block)"
+        ],
+        "approach": "Add a startup console.warn if GCS_IMAGES_BUCKET is not set. Keep existing fallback but make it visible. Also verify in Cloud Run env var list (AUD-013 is verification gate for this).",
+        "gates": ["pnpm -r typecheck (backend)"],
+        "branch": "fix/AUD-008-gcs-bucket-startup-warn",
+        "commitMsg": "fix(AUD-008): warn at startup if GCS_IMAGES_BUCKET env var is missing"
+      },
+      "AUD-009": {
+        "id": "AUD-009",
+        "priority": "MEDIUM",
+        "title": "Add tab-level error boundary in PosRootLayout",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "C",
+        "problem": "PosRootLayout.tsx has no tab-level error boundary. A crash in one tab propagates to the entire POS screen rather than being contained to the failing tab.",
+        "files": [
+          "src/screens/PosRootLayout.tsx",
+          "src/components/TabErrorBoundary.tsx (new component — minimal)"
+        ],
+        "approach": "Create a minimal class-based ErrorBoundary component. Wrap each Tab.Screen child in PosRootLayout with it. Component shows a 'Restart Tab' fallback. No changes to any tab screen logic.",
+        "gates": ["pnpm -r typecheck (POS)", "Jest render smoke"],
+        "branch": "fix/AUD-009-tab-error-boundary",
+        "commitMsg": "fix(AUD-009): add tab-level error boundary in PosRootLayout"
+      },
+      "AUD-010": {
+        "id": "AUD-010",
+        "priority": "MEDIUM",
+        "title": "Document expiry_date ownership comment in migration 182",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "backend",
+        "riskClass": "D",
+        "problem": "Migration 182 adds batch_number to store_products but doesn't document that expiry_date was added in a prior migration. Confusing for future schema readers.",
+        "files": [
+          "backend/migrations/182_add_batch_number.sql"
+        ],
+        "approach": "Add SQL comment at top of file: '-- batch_number added here. expiry_date was added in migration NNN. Both fields support SCALE-C expiry tracking.' No SQL logic changes.",
+        "gates": ["no typecheck needed — SQL comment only"],
+        "branch": "fix/AUD-010-migration-182-comment",
+        "commitMsg": "docs(AUD-010): add ownership comment to migration 182 for batch_number/expiry_date"
+      },
+      "AUD-011": {
+        "id": "AUD-011",
+        "priority": "LOW",
+        "title": "Add batch_number column to offline_sale_items SQLite schema",
+        "status": "DEFERRED",
+        "deferReason": "Offline sale items are for POS-initiated sales. batch_number is a stock-in concept. Adding to sale items schema needs product owner confirmation. Deferred post-MEGA-RC.",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "D"
+      },
+      "AUD-012": {
+        "id": "AUD-012",
+        "priority": "LOW",
+        "title": "Add priceResolutionError to purchaseCartStore",
+        "status": "DEFERRED",
+        "deferReason": "Purchase flow (Buy screen) does not currently show price resolution errors to staff. Adding field is a UI enhancement, not a bug. Deferred post-MEGA-RC.",
+        "pr": null,
+        "tag": null,
+        "platform": "pos",
+        "riskClass": "D"
+      },
+      "AUD-013": {
+        "id": "AUD-013",
+        "priority": "CRITICAL",
+        "title": "Verify Cloud Run env vars before MEGA-RC deploy",
+        "status": "PENDING",
+        "pr": null,
+        "tag": null,
+        "platform": "infra",
+        "riskClass": "A",
+        "problem": "Three env vars must be confirmed set in Cloud Run before staging deploy: GCS_IMAGES_BUCKET, REDIS_ENABLED, REDIS_URL. Missing any will silently break image uploads or BullMQ queue.",
+        "approach": "Run gcloud run services describe for api-gateway and main-backend. Check env section for these 3 vars. If missing, add via cloudbuild.yaml or terraform — NOT via GCP console.",
+        "noCodeChange": true,
+        "verificationCmd": "gcloud run services describe api-gateway --region asia-south1 --project supermandi-backend --format='value(spec.template.spec.containers[0].env)'",
+        "ifMissing": "Add vars to cloudbuild.yaml env section and re-deploy — creating a new ticket AUD-013-FIX if code change needed",
+        "gates": ["gcloud describe output confirms all 3 vars present"],
+        "branch": "No branch needed — verification only. If fix required, create fix/AUD-013-fix-missing-env-vars"
+      }
+    },
+    "implementationProgress": {
+      "done": [],
+      "inProgress": null,
+      "remaining": ["AUD-001", "AUD-013", "AUD-002", "AUD-003", "AUD-006", "AUD-004", "AUD-005", "AUD-007", "AUD-008", "AUD-009", "AUD-010"],
+      "deferred": ["AUD-011", "AUD-012"]
+    },
+    "stagingGoNoGo": {
+      "blockers": ["AUD-001", "AUD-002", "AUD-013"],
+      "nonBlockers": ["AUD-003", "AUD-004", "AUD-005", "AUD-006", "AUD-007", "AUD-008", "AUD-009", "AUD-010"],
+      "verdict": "NO-GO until AUD-001 + AUD-002 + AUD-013 resolved"
     }
   }
 }
