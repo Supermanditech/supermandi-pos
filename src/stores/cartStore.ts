@@ -345,7 +345,8 @@ export const useCartStore = create<CartState>()(
             flags: item.flags,
             itemDiscount: item.itemDiscount,
             metadata: mergedMetadata,
-            priceFetchedAt: Date.now() // ISSUE-MICRO-068
+            priceFetchedAt: Date.now(), // ISSUE-MICRO-068
+            priceResolutionError: item.priceResolutionError ?? false, // AUD-017: normalise to boolean (spread may carry true from caller)
           };
           newItems = [...state.items, nextItem];
         }
