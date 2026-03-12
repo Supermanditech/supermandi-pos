@@ -55,7 +55,7 @@ export function hasAuthCookie(): boolean {
 export async function authFetch(
   url: string,
   accessToken: string | null,
-  options: RequestInit = {}
+  options: RequestInit & { timeoutMs?: number } = {}
 ): Promise<Response> {
   // DEPLOY-003: Prefix relative API paths with gateway base URL
   const resolvedUrl = (url.startsWith('/') && API_GATEWAY_BASE) ? API_GATEWAY_BASE + url : url;
@@ -81,7 +81,7 @@ export async function authFetch(
   }
 
   // AUDIT-RET-050: Configurable timeout (default 30s, CSV imports may need longer)
-  const timeoutMs = (options as any).timeoutMs ?? 30000;
+  const timeoutMs = options.timeoutMs ?? 30000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -341,7 +341,7 @@ export async function submitRetailerKyc(
   const json = await safeJson(response);
   if (!response.ok) {
     const err = new Error(json?.error?.message || `KYC submission failed (${response.status})`);
-    (err as any).missingDocuments = json?.missingDocuments;
+    Object.assign(err, { missingDocuments: json?.missingDocuments });
     throw err;
   }
   return json;
