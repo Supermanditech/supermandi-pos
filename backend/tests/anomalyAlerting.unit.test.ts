@@ -28,7 +28,7 @@ import {
 
 describe("anomalyAlertingService", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   // ─── detectAnomalies ────────────────────────────────────────────────────
@@ -40,9 +40,10 @@ describe("anomalyAlertingService", () => {
         rows: [{ id: "store-1" }, { id: "store-2" }],
       });
 
-      // For each store, 4 rules x 2 stores = 8 rule checks
-      // Each rule does queries: mock them all as empty/no anomaly
-      for (let i = 0; i < 20; i++) {
+      // For each store, 4 rules x 1 query each = 4 queries per store
+      // (each rule's first query returns empty/no-anomaly, so no further queries)
+      // 2 stores x 4 rules = 8 rule-check queries
+      for (let i = 0; i < 8; i++) {
         mockQuery.mockResolvedValueOnce({ rows: [] });
       }
 
