@@ -395,7 +395,10 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
       `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
       [phoneNormalized]
     );
-    let applicationStatus = appStatusResult.rows[0]?.status || 'ACTIVE';
+    // SEC-011: Don't blindly default to ACTIVE when no application record exists.
+    // Use the store's operational status as the fallback — stores created via SuperAdmin
+    // provisioning have status set by the admin (ACTIVE/DRAFT), not by application workflow.
+    let applicationStatus = appStatusResult.rows[0]?.status || store.status || 'DRAFT';
 
     // PRA-070: Store operational status overrides application status for limited-mode gating
     // When SuperAdmin suspends a store, platform.stores.status changes but auth.applications stays ACTIVE
