@@ -46,6 +46,7 @@ type SaleItemInput = {
   priceMinor?: number;
   name?: string;
   barcode?: string;
+  batchNumber?: string;
 };
 
 type BillPaymentMode = "UPI" | "CASH" | "DUE" | "UNKNOWN";
@@ -1216,8 +1217,8 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       const stockQty = item.stockQuantity !== item.quantity ? item.stockQuantity : null;
       await client.query(
         `
-        INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode, stock_quantity)
-        VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9, $10, $11)
+        INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode, stock_quantity, batch_number)
+        VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9, $10, $11, $12)
         `,
         [
           randomUUID(),
@@ -1230,7 +1231,8 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
           lineTotal,
           itemName,
           itemBarcode,
-          stockQty
+          stockQty,
+          item.batchNumber ?? null
         ]
       );
     }
