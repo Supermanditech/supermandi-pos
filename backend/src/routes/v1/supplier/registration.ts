@@ -262,6 +262,29 @@ router.all("/lookup", registrationRateLimiter, async (req: Request, res: Respons
       return;
     }
 
+    // SEC-010: For DRAFT apps, check if their GSTIN already has an ACTIVE entry
+    // This catches stale duplicates from previous deploys
+    if (application.status === 'DRAFT') {
+      const gstinResult = await pool.query(
+        `SELECT a2.id FROM auth.applications a1
+         JOIN auth.applications a2 ON a1.gstin = a2.gstin AND a2.id != a1.id
+         WHERE a1.id = $1::uuid AND a2.status = 'ACTIVE'
+         LIMIT 1`,
+        [application.id]
+      );
+      if (gstinResult.rows.length > 0) {
+        res.json({
+          exists: true,
+          type: 'supplier',
+          status: 'ACTIVE',
+          nextStep: 'LOGIN_ALLOWED',
+          businessName: application.business_name,
+          message: 'You already have an approved account. Please login instead of re-registering.',
+        });
+        return;
+      }
+    }
+
     // For pending/in-progress applications
     res.json({
       exists: true,
@@ -916,6 +939,31 @@ router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Re
         }
       });
       return;
+    }
+
+    // SEC-010: Pre-check GSTIN uniqueness before status change to give clear error
+    // The ux_applications_gstin_active index enforces uniqueness for KYC_SUBMITTED/PAYMENTS_SUBMITTED/ACTIVE
+    const gstinCheck = await pool.query(
+      `SELECT gstin FROM auth.applications WHERE id = $1::uuid`,
+      [applicationId]
+    );
+    if (gstinCheck.rows[0]?.gstin) {
+      const conflictCheck = await pool.query(
+        `SELECT id, status FROM auth.applications
+         WHERE gstin = $1 AND id != $2::uuid
+           AND status IN ('KYC_SUBMITTED', 'PAYMENTS_SUBMITTED', 'ACTIVE')
+         LIMIT 1`,
+        [gstinCheck.rows[0].gstin, applicationId]
+      );
+      if (conflictCheck.rows.length > 0) {
+        res.status(409).json({
+          error: {
+            code: "GSTIN_ALREADY_ACTIVE",
+            message: "This GSTIN is already associated with an approved or pending application. Please login with your existing account instead of re-registering.",
+          }
+        });
+        return;
+      }
     }
 
     // Check document completeness (supplier-specific)
