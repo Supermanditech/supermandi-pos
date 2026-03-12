@@ -15,6 +15,7 @@ import fs from "fs";
 import os from "os";
 
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";  // SEC-005: Block DRAFT/SUSPENDED stores
 import { rateLimitAi } from "../../../middleware/rateLimit";
 import {
   processVoiceOrder,
@@ -118,6 +119,7 @@ voiceRouter.get("/health", async (_req: Request, res: Response) => {
 voiceRouter.post(
   "/interpret",
   requireDeviceToken,
+  requireActiveStore,  // SEC-005: Only ACTIVE stores can use voice orders
   voiceRateLimit,
   upload.single("audio"),
   async (req: Request, res: Response, next: NextFunction) => {
@@ -252,6 +254,7 @@ voiceRouter.post(
 voiceRouter.post(
   "/parse",
   requireDeviceToken,
+  requireActiveStore,  // SEC-005: Only ACTIVE stores can use voice orders
   voiceRateLimit,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -325,6 +328,7 @@ voiceRouter.post(
 voiceRouter.post(
   "/execute",
   requireDeviceToken,
+  requireActiveStore,  // SEC-005: Only ACTIVE stores can execute voice orders
   async (req: Request, res: Response) => {
     const { requestId, confirmed } = req.body;
 

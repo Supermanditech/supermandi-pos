@@ -4,6 +4,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";  // SEC-005: Block DRAFT/SUSPENDED stores
 import { randomUUID } from "crypto";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
@@ -364,7 +365,7 @@ posCreditRouter.get("/credit/offers", requireDeviceToken, async (req: Request, r
  * POST /api/v1/pos/credit/apply
  * SM-021: Apply for a credit offer
  */
-posCreditRouter.post("/credit/apply", requireDeviceToken, async (req: Request, res: Response) => {
+posCreditRouter.post("/credit/apply", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -470,7 +471,7 @@ posCreditRouter.post("/credit/apply", requireDeviceToken, async (req: Request, r
  * POST /api/v1/pos/credit/:applicationId/kyc
  * SM-021: Submit KYC for credit application
  */
-posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, async (req: Request, res: Response) => {
+posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
