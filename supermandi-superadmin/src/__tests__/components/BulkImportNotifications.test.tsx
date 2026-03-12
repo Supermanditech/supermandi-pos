@@ -1,6 +1,6 @@
 // SA-P2-008: Test BulkImportNotifications component
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { BulkImportNotifications } from '../../components/BulkImportNotifications';
 
 vi.mock('../../lib/formatters', () => ({

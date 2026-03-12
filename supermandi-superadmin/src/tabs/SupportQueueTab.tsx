@@ -316,6 +316,7 @@ export function SupportQueueTab() {
 
                   {/* Messages */}
                   <div className="sa-scroll-y sa-p-12" style={{ flex: 1 }}>
+                    {messagesLoading && <div className="sa-text-center sa-text-muted sa-p-12">Loading messages...</div>}
                     {messages.map(msg => (
                       <div key={msg.id} className="sa-mb-8">
                         {msg.senderType === 'system' ? (

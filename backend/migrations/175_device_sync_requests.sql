@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS device_sync_requests (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  device_id     TEXT NOT NULL REFERENCES pos_devices(id) ON DELETE CASCADE,
+  device_id     UUID NOT NULL REFERENCES pos_devices(id) ON DELETE CASCADE,
   store_id      TEXT,
   reason        TEXT NOT NULL DEFAULT '',
   status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'expired')),

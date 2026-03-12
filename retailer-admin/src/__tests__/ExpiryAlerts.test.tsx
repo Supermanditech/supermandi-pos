@@ -165,18 +165,16 @@ describe('SCALE-C2: ExpiryAlerts section on InventoryPage', () => {
 
     renderInventoryPage();
 
+    // Wait for data to load and verify counts render correctly
     await waitFor(() => {
-      const cards = screen.getAllByTestId('expiry-card-critical');
-      expect(cards.length).toBeGreaterThan(0);
+      const criticalCard = screen.getByTestId('expiry-card-critical');
+      expect(criticalCard.textContent).toContain('3');
     });
 
-    // Critical card should show 3
-    const criticalCard = screen.getByTestId('expiry-card-critical');
-    expect(criticalCard.textContent).toContain('3');
-
-    // Warning card should show 2
-    const warningCard = screen.getByTestId('expiry-card-warning');
-    expect(warningCard.textContent).toContain('2');
+    await waitFor(() => {
+      const warningCard = screen.getByTestId('expiry-card-warning');
+      expect(warningCard.textContent).toContain('2');
+    });
   });
 
   it('renders expiry table with product data', async () => {

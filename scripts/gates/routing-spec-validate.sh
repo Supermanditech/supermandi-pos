@@ -264,10 +264,10 @@ check_port() {
 }
 check_port "backend/services/api-gateway/Dockerfile" "3000" "api-gateway"
 check_port "backend/Dockerfile.main" "3010" "main-backend"
-check_port "retailer-admin/Dockerfile" "80" "retailer-admin"
+check_port "retailer-admin/Dockerfile" "8080" "retailer-admin"
 check_port "supplier-portal/Dockerfile" "8080" "supplier-portal"
-check_port "supermandi-superadmin/Dockerfile" "80" "superadmin"
-check_port "supermandi-landing/Dockerfile" "80" "landing"
+check_port "supermandi-superadmin/Dockerfile" "8080" "superadmin"
+check_port "supermandi-landing/Dockerfile" "8080" "landing"
 
 if [ "$PORT_ERRORS" -eq 0 ]; then
   gate_pass "L-014" "Dockerfile ports match spec"

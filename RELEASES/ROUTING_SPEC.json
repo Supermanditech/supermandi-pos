@@ -8,10 +8,10 @@
   "sslCert": "supermandi-staging-cert",
 
   "services": {
-    "landing":         { "cloudRunService": "landing",         "pathPrefix": "/",          "basePath": "/",          "port": 80,   "framework": "nginx-static" },
-    "retailer-admin":  { "cloudRunService": "retailer-admin",  "pathPrefix": "/retailer",  "basePath": "/retailer/", "port": 80,   "framework": "vite-nginx"   },
-    "supplier-portal": { "cloudRunService": "supplier-portal", "pathPrefix": "/supplier",  "basePath": "/supplier/", "port": 3001, "framework": "nextjs"       },
-    "superadmin":      { "cloudRunService": "superadmin",      "pathPrefix": "/admin",     "basePath": "/admin/",    "port": 80,   "framework": "vite-nginx"   },
+    "landing":         { "cloudRunService": "landing",         "pathPrefix": "/",          "basePath": "/",          "port": 8080, "framework": "nginx-static" },
+    "retailer-admin":  { "cloudRunService": "retailer-admin",  "pathPrefix": "/retailer",  "basePath": "/retailer/", "port": 8080, "framework": "vite-nginx"   },
+    "supplier-portal": { "cloudRunService": "supplier-portal", "pathPrefix": "/supplier",  "basePath": "/supplier/", "port": 8080, "framework": "nextjs"       },
+    "superadmin":      { "cloudRunService": "superadmin",      "pathPrefix": "/admin",     "basePath": "/admin/",    "port": 8080, "framework": "vite-nginx"   },
     "api-gateway":     { "cloudRunService": "api-gateway",     "pathPrefix": "/api",       "basePath": "/api/",      "port": 3000, "framework": "express"      },
     "main-backend":    { "cloudRunService": "main-backend",    "pathPrefix": null,         "basePath": null,         "port": 3010, "framework": "express",     "internal": true }
   },
