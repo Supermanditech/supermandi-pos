@@ -334,7 +334,8 @@ export const useCartStore = create<CartState>()(
             flags: mergeFlags(existingItem.flags, item.flags),
             itemDiscount: item.itemDiscount ?? existingItem.itemDiscount,
             metadata: mergedMetadata,
-            priceFetchedAt: Date.now() // ISSUE-MICRO-068
+            priceFetchedAt: Date.now(), // ISSUE-MICRO-068
+            priceResolutionError: false, // AUD-007: clear stale error on successful re-add
           };
           newItems = state.items.map(i => (i.id === item.id ? nextItem : i));
         } else {
