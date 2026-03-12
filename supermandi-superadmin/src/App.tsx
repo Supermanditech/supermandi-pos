@@ -2456,7 +2456,7 @@ export default function App() {
       return;
     }
 
-    if (!(navigator as any).share) {
+    if (!('share' in navigator)) {
       setBarcodeSheetError("Web Share is not supported. Download the PDF instead.");
       return;
     }
@@ -2466,8 +2466,12 @@ export default function App() {
       const blob = await fetchBarcodeSheetPdf({ storeId, tier: barcodeSheetTier });
       const filename = `supermandi-barcodes-${storeId}-${barcodeSheetTier}.pdf`;
       const file = new File([blob], filename, { type: "application/pdf" });
-      const canShare = typeof (navigator as any).canShare === "function"
-        ? (navigator as any).canShare({ files: [file] })
+      const nav = navigator as Navigator & {
+        share?: (data: { files?: File[]; title?: string; text?: string; url?: string }) => Promise<void>;
+        canShare?: (data: { files?: File[] }) => boolean;
+      };
+      const canShare = typeof nav.canShare === "function"
+        ? nav.canShare({ files: [file] })
         : true;
 
       if (!canShare) {
@@ -2475,7 +2479,7 @@ export default function App() {
         return;
       }
 
-      await (navigator as any).share({
+      await nav.share({
         files: [file],
         title: "SuperMandi Barcode Sheet"
       });

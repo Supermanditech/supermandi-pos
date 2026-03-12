@@ -133,7 +133,14 @@ adminCatalogRouter.get(
           sp.supplier_id AS "supplierId",
           COALESCE(s.business_name, s.trade_name, 'Unknown') AS "supplierName",
           sp.created_at AS "createdAt",
-          sp.updated_at AS "updatedAt"
+          sp.updated_at AS "updatedAt",
+          sp.hsn_code AS "hsnCode",
+          sp.default_gst_rate AS "defaultGstRate",
+          sp.net_content_value AS "netContentValue",
+          sp.net_content_unit AS "netContentUnit",
+          sp.manufacturer_name AS "manufacturerName",
+          sp.country_of_origin AS "countryOfOrigin",
+          sp.shelf_life_days AS "shelfLifeDays"
         FROM catalog.supplier_products sp
         LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
         ${whereClause}
