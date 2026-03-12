@@ -298,3 +298,71 @@ Use these codes to test the scanning functionality:
 - **UPI Compatible**: Works with all UPI apps (Google Pay, PhonePe, Paytm, etc.)
 - **Professional Display**: Clean UI with amount and merchant details
 - **Error Handling**: Fallback display if QR generation fails
+
+---
+
+## POS APK Build Discipline (Local Gradle)
+
+> **Device**: Android phone connected via USB to development laptop.
+> **Build tool**: Local Gradle only (NOT EAS cloud builds — 2+ hours on free tier).
+> **Shell**: cmd.exe or Git Bash only (NOT PowerShell — `gradlew.bat` has PATH issues).
+
+### Prerequisites
+- Android SDK installed with build-tools
+- Java 17+ (bundled with Android Studio)
+- Device connected via USB with USB debugging enabled
+- `adb` in system PATH
+
+### Build Steps
+
+```bash
+# 1. Verify API URL points to correct backend
+node -p "require('./app.json').expo.extra.API_URL"
+# Expected: https://staging.supermandi.tech
+
+# 2. Run readiness check
+npm run apk:check
+# Expected: APK READINESS CHECK PASSED
+
+# 3. Delete stale Gradle bundle (MANDATORY — prevents old JS from being baked in)
+# PowerShell:
+Remove-Item -Force "android\app\build\generated\assets\createBundleReleaseJsAndAssets\index.android.bundle" -ErrorAction SilentlyContinue
+# Or bash:
+rm -f android/app/build/generated/assets/createBundleReleaseJsAndAssets/index.android.bundle
+
+# 4. Build APK (MUST use cmd.exe or Git Bash)
+cd android
+gradlew.bat assembleRelease    # cmd.exe
+# OR
+./gradlew assembleRelease      # Git Bash
+
+# Expected: BUILD SUCCESSFUL
+# APK at: android/app/build/outputs/apk/release/app-release.apk
+
+# 5. Verify APK size (must be 20-80 MB; <5MB = broken)
+ls -la android/app/build/outputs/apk/release/app-release.apk
+
+# 6. Install on device
+adb devices                    # Verify device shows "device" status
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+
+# 7. Launch app
+adb shell am start -n "com.supermandi.pos/.MainActivity"
+```
+
+### On-Device Verification Checklist
+1. App opens without crash
+2. Login screen loads (enrollment or staff selection)
+3. Sell screen loads after login
+4. SellTile shows image, brand, GST%, net content
+5. Cart calculates totals correctly
+6. Offline mode works (airplane mode toggle)
+
+### Common Issues
+| Issue | Fix |
+|-------|-----|
+| `gradlew.bat` not found in PowerShell | Use cmd.exe or Git Bash instead |
+| APK bundles old JS code | Delete stale bundle (step 3) before building |
+| `adb` not found | Add `%LOCALAPPDATA%\Android\Sdk\platform-tools` to PATH |
+| Build fails with Java error | Ensure JAVA_HOME points to JDK 17+ |
+| API calls fail on device | Verify app.json `API_URL` matches your backend URL |
