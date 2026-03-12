@@ -1,6 +1,6 @@
 // SuperAdmin — Test StoresTab component
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { StoresTab } from '../../tabs/StoresTab';
 import type { StoreRecord } from '../../api/stores';
 
@@ -107,6 +107,10 @@ const makeStore = (overrides: Partial<StoreRecord> = {}): StoreRecord => ({
 describe('StoresTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   // =========================================================================
