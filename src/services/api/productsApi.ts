@@ -48,6 +48,11 @@ export type StoreLookupProduct = {
   // T-059: Product mode and store product ID for variant picker
   product_mode?: string;
   store_product_id?: string;
+  // AUD-002: SCALE-B1/E2 display fields from /lookup endpoint (camelCase from backend)
+  imageUrl?: string | null;
+  gstRate?: number | null;
+  netContentValue?: number | null;
+  netContentUnit?: string | null;
 };
 
 export type PriceSources = {
@@ -240,6 +245,11 @@ export async function lookupStoreProductPreviewByScan(input: {
         displayName?: string;
         unit?: string;
         mode?: string;
+        // AUD-002: SCALE-B1/E2 fields — backend returns camelCase from /lookup
+        imageUrl?: string | null;
+        gstRate?: number | null;
+        netContentValue?: number | null;
+        netContentUnit?: string | null;
       };
     }>(url);
     console.log(`[scan_debug] response:`, JSON.stringify(res).slice(0, 300));
@@ -256,6 +266,11 @@ export async function lookupStoreProductPreviewByScan(input: {
       is_first_time_in_store: false,
       product_mode: d.mode || undefined,
       store_product_id: d.storeProductId || undefined,
+      // AUD-002: Preserve display fields for offline cache and SellTile
+      imageUrl: d.imageUrl ?? null,
+      gstRate: d.gstRate ?? null,
+      netContentValue: d.netContentValue ?? null,
+      netContentUnit: d.netContentUnit ?? null,
     };
   } catch (error) {
     console.log(`[scan_debug] error:`, error instanceof ApiError ? `ApiError(${error.status}): ${error.message}` : String(error));

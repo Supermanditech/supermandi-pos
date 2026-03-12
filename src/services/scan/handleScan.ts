@@ -314,9 +314,11 @@ async function cacheLocalProduct(product: {
   name: string;
   currency?: string;
   priceMinor?: number | null;
+  // AUD-002: Optional display fields from /lookup endpoint
+  imageUrl?: string | null;
 }): Promise<void> {
   try {
-    await upsertLocalProduct(product.barcode, product.name, product.currency ?? "INR", null);
+    await upsertLocalProduct(product.barcode, product.name, product.currency ?? "INR", null, null, null, null, product.imageUrl ?? null);
     if (product.priceMinor !== null && product.priceMinor !== undefined) {
       await setLocalPrice(product.barcode, product.priceMinor);
     }
@@ -513,7 +515,9 @@ async function handleScan(
           priceMinor:
             typeof storeProduct.sell_price === "number" && storeProduct.sell_price > 0
               ? storeProduct.sell_price
-              : null
+              : null,
+          // AUD-002: Cache image from /lookup response so offline tiles show image
+          imageUrl: storeProduct.imageUrl ?? null,
         });
 
         const warningKey = trimmed.toUpperCase();
