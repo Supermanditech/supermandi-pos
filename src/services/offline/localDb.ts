@@ -157,7 +157,8 @@ const migrations: Migration[] = [
           discount_type TEXT NULL,
           discount_value REAL NULL,
           discount_minor INTEGER NOT NULL DEFAULT 0,
-          line_total_minor INTEGER NOT NULL DEFAULT 0
+          line_total_minor INTEGER NOT NULL DEFAULT 0,
+          batch_number TEXT NULL
         );
         `
       );
@@ -273,6 +274,8 @@ async function selfHealSchema(db: Db): Promise<void> {
     { table: "offline_sale_items", column: "discount_value", definition: "REAL NULL" },
     { table: "offline_sale_items", column: "discount_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
     { table: "offline_sale_items", column: "line_total_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
+    // AUD-011: batch_number for sale item traceability (SCALE-A3/C recall support)
+    { table: "offline_sale_items", column: "batch_number", definition: "TEXT NULL" },
     // AUD-081-A FIX: Error tracking for corrupted/permanently rejected events
     { table: "offline_outbox", column: "error_flag", definition: "TEXT NULL" },
     { table: "offline_outbox", column: "error_at", definition: "TEXT NULL" }
