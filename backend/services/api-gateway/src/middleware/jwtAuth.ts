@@ -7,7 +7,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { createLogger } from '@supermandi/common';
-import { isTokenBlacklisted } from '../redis';
+import { isTokenBlacklisted, isUserRevoked } from '../redis';
 
 const logger = createLogger({ service: 'api-gateway', level: process.env.LOG_LEVEL || 'info' });
 
@@ -239,6 +239,26 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
         requestId: req.correlationId,
       });
       return;
+    }
+
+    // SEC-009: Check per-user revocation flag (role change / deactivation)
+    if (decoded.sub) {
+      try {
+        const userRevoked = await isUserRevoked(decoded.sub);
+        if (userRevoked) {
+          logger.warn(`[SEC-009] Rejected token for revoked user: ${decoded.sub}`);
+          res.status(401).json({
+            error: {
+              code: 'USER_REVOKED',
+              message: 'Your access has been revoked. Please login again.',
+            },
+            requestId: req.correlationId,
+          });
+          return;
+        }
+      } catch {
+        // Non-fatal — fail open for user revocation check
+      }
     }
 
     // Validate required claims
