@@ -29,37 +29,58 @@ import {
 import { authenticate, getAuthUser } from '../middleware';
 import { config } from '../config';
 import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from '../utils/cookies';
+import { getRedis } from '../redis';
 
 const router: Router = Router();
 
 // =============================================================================
-// AUTH-OTP-002: IN-MEMORY RATE LIMITING
+// SEC-006: REDIS-BACKED RATE LIMITING (with in-memory fallback)
 // =============================================================================
 
-const loginAttempts = new Map<string, { count: number; windowStart: number }>();
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_LOGIN_ATTEMPTS = 10; // per IP per window
+const RATE_LIMIT_PREFIX = 'auth:login_rl:';
 
-function checkLoginRateLimit(ip: string): void {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
+// In-memory fallback when Redis unavailable
+const loginAttemptsFallback = new Map<string, { count: number; windowStart: number }>();
 
-  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    loginAttempts.set(ip, { count: 1, windowStart: now });
-    return;
+async function checkLoginRateLimit(ip: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const key = RATE_LIMIT_PREFIX + ip;
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.expire(key, Math.ceil(RATE_LIMIT_WINDOW_MS / 1000));
+      }
+      if (count > MAX_LOGIN_ATTEMPTS) {
+        throw ApiError.rateLimited('login');
+      }
+      return;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      // Redis error — fall through to in-memory
+    }
   }
 
+  // In-memory fallback
+  const now = Date.now();
+  const entry = loginAttemptsFallback.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    loginAttemptsFallback.set(ip, { count: 1, windowStart: now });
+    return;
+  }
   entry.count++;
   if (entry.count > MAX_LOGIN_ATTEMPTS) {
     throw ApiError.rateLimited('login');
   }
 }
 
-// Cleanup stale entries every 5 minutes
+// Cleanup stale fallback entries every 5 minutes
 setInterval(() => {
   const cutoff = Date.now() - RATE_LIMIT_WINDOW_MS;
-  for (const [key, entry] of loginAttempts) {
-    if (entry.windowStart < cutoff) loginAttempts.delete(key);
+  for (const [key, entry] of loginAttemptsFallback) {
+    if (entry.windowStart < cutoff) loginAttemptsFallback.delete(key);
   }
 }, 5 * 60 * 1000);
 
@@ -113,8 +134,8 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { identifier, password } = req.body as LoginRequest;
 
-    // AUTH-OTP-002: Rate limit login attempts by IP
-    checkLoginRateLimit(req.ip || req.socket.remoteAddress || 'unknown');
+    // SEC-006: Rate limit login attempts by IP (Redis-backed)
+    await checkLoginRateLimit(req.ip || req.socket.remoteAddress || 'unknown');
 
     // Validate input
     if (!identifier || !password) {
