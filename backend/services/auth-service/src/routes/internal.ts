@@ -17,6 +17,7 @@ import {
   type CreateUserInput,
   type UpdateUserInput,
 } from '../services/userService';
+import { revokeUserTokens } from '../redis';
 import {
   getRole,
   getAllRoles,
@@ -171,6 +172,10 @@ router.patch(
   asyncHandler<IdParams>(async (req, res) => {
     const input: UpdateUserInput = req.body;
     const user = await updateUserDetails(req.params.id, input);
+    // SEC-009: Revoke tokens when user status changes to inactive/suspended
+    if (input.status === 'inactive' || input.status === 'suspended') {
+      await revokeUserTokens(req.params.id);
+    }
     res.json({ data: user });
   })
 );
@@ -180,6 +185,8 @@ router.delete(
   '/users/:id',
   asyncHandler<IdParams>(async (req, res) => {
     await removeUser(req.params.id);
+    // SEC-009: Revoke tokens for deleted user
+    await revokeUserTokens(req.params.id);
     res.status(204).send();
   })
 );
@@ -216,6 +223,8 @@ router.post(
       throw ApiError.badRequest('roleName is required', 'roleName');
     }
     await assignUserRole(req.params.id, roleName, scopeType, scopeId);
+    // SEC-009: Revoke tokens so user gets new permissions on next login
+    await revokeUserTokens(req.params.id);
     res.status(201).json({ message: 'Role assigned successfully' });
   })
 );
@@ -225,6 +234,8 @@ router.delete(
   '/users/:id/roles/:roleName',
   asyncHandler<UserRoleParams>(async (req, res) => {
     await revokeUserRole(req.params.id, req.params.roleName);
+    // SEC-009: Revoke tokens so stale permissions are rejected
+    await revokeUserTokens(req.params.id);
     res.status(204).send();
   })
 );

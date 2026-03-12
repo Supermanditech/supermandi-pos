@@ -92,3 +92,46 @@ export async function blacklistAccessToken(jtiOrHash: string, ttlSeconds: number
     logger.error('[SEC-002] Failed to blacklist access token', error instanceof Error ? error : undefined);
   }
 }
+
+// =============================================================================
+// SEC-009: Per-user revocation flag
+// When set, ALL tokens for this user are rejected until the flag expires.
+// Used when admin deactivates a user or changes their role — forces re-login.
+// =============================================================================
+const USER_REVOCATION_PREFIX = 'supermandi:user_revoked:';
+
+/**
+ * SEC-009: Set a per-user revocation flag in Redis.
+ * The API gateway checks this on every request via isUserRevoked().
+ * TTL = 900s (15 minutes) to match access token lifetime — after that,
+ * any old tokens have expired naturally.
+ *
+ * Fails open (silently returns) if Redis is unavailable.
+ */
+export async function revokeUserTokens(userId: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.setex(USER_REVOCATION_PREFIX + userId, 900, '1');
+    logger.info(`[SEC-009] User tokens revoked: ${userId}`);
+  } catch (error) {
+    // Non-fatal — tokens will expire naturally within 15 minutes
+    logger.error('[SEC-009] Failed to revoke user tokens', error instanceof Error ? error : undefined);
+  }
+}
+
+/**
+ * SEC-009: Check if a user has been force-revoked.
+ * Returns true if the user's tokens should be rejected.
+ * Fails open (returns false) if Redis is unavailable.
+ */
+export async function isUserRevoked(userId: string): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return false;
+  try {
+    const result = await redis.get(USER_REVOCATION_PREFIX + userId);
+    return result !== null;
+  } catch {
+    return false;
+  }
+}

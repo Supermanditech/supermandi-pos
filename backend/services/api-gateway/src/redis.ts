@@ -111,3 +111,25 @@ export async function blacklistToken(jtiOrHash: string, ttlSeconds: number): Pro
     // Non-fatal — token will still be checked against DB on next request
   }
 }
+
+// =============================================================================
+// SEC-009: Per-user revocation flag
+// Prefix MUST match auth-service (supermandi:user_revoked:) for cross-service compat.
+// =============================================================================
+const USER_REVOCATION_PREFIX = 'supermandi:user_revoked:';
+
+/**
+ * SEC-009: Check if a user has been force-revoked (role change / deactivation).
+ * Returns true if ALL tokens for this user should be rejected.
+ * Fails open (returns false) if Redis is unavailable.
+ */
+export async function isUserRevoked(userId: string): Promise<boolean> {
+  try {
+    const client = getGatewayRedis();
+    if (!client) return false;
+    const result = await client.get(USER_REVOCATION_PREFIX + userId);
+    return result !== null;
+  } catch {
+    return false; // Fail open
+  }
+}

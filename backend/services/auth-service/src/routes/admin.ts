@@ -17,6 +17,7 @@ import {
   type CreateUserInput,
   type UpdateUserInput,
 } from '../services/userService';
+import { revokeUserTokens } from '../redis';
 
 const router: Router = Router();
 
@@ -216,6 +217,12 @@ router.patch(
     if (status) updateInput.status = status;
 
     const user = await updateUserDetails(userId, updateInput);
+
+    // SEC-009: Revoke all active tokens when user is deactivated/suspended
+    // Forces immediate re-login — tokens rejected by gateway's isUserRevoked() check
+    if (status === 'inactive' || status === 'suspended') {
+      await revokeUserTokens(userId);
+    }
 
     res.json({
       success: true,
