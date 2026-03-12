@@ -1,4 +1,4 @@
--- Migration: 101_migrate_ledger_source_column
+-- Migration: 185_migrate_ledger_source_column
 -- POS-INV-003: Migrate existing [source=X] notes to proper source column
 -- Safe to run multiple times (UPDATE only affects rows where source IS NULL)
 

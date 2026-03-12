@@ -1,4 +1,4 @@
--- Migration: 100_sa_p1_006_allowed_payment_methods
+-- Migration: 184_sa_p1_006_allowed_payment_methods
 -- SA-P1-006: Payment Method Control Per Store
 -- Adds allowed_payment_methods column to platform.stores
 -- Updates public.stores VIEW to expose the new column
