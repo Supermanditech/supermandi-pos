@@ -1,5 +1,5 @@
 // SuperAdmin — Test StoresTab component
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { StoresTab } from '../../tabs/StoresTab';
 import type { StoreRecord } from '../../api/stores';
@@ -105,26 +105,6 @@ const makeStore = (overrides: Partial<StoreRecord> = {}): StoreRecord => ({
 });
 
 describe('StoresTab', () => {
-  // CI-FIX: Suppress "window is not defined" unhandled rejections during jsdom teardown.
-  // These fire after all tests pass when async React internals try to access window
-  // after the jsdom environment is already destroyed. This does not mask real errors
-  // because it only suppresses ReferenceError for 'window'/'document' access.
-  const originalListeners: ((...args: unknown[]) => void)[] = [];
-  beforeAll(() => {
-    const handler = (event: PromiseRejectionEvent) => {
-      if (event.reason instanceof ReferenceError && /window|document/.test(event.reason.message)) {
-        event.preventDefault();
-      }
-    };
-    if (typeof globalThis.addEventListener === 'function') {
-      globalThis.addEventListener('unhandledrejection', handler as EventListener);
-      originalListeners.push(() => globalThis.removeEventListener('unhandledrejection', handler as EventListener));
-    }
-  });
-  afterAll(() => {
-    originalListeners.forEach(fn => fn());
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
