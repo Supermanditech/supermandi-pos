@@ -1,6 +1,14 @@
 import { useParams, Link } from 'react-router-dom';
 
-const pages = [
+interface PageRoute {
+  path: string;
+  name: string;
+  description: string;
+  isPublic?: boolean;
+}
+
+
+const pages: PageRoute[] = [
   { path: '', name: 'Dashboard', description: 'Overview and stats' },
   { path: 'products', name: 'Products', description: 'Manage product catalog' },
   { path: 'import', name: 'Import (CSV)', description: 'Bulk import products from CSV' },
@@ -46,7 +54,7 @@ export default function AllPagesPage() {
           {pages.map((page) => (
             <Link
               key={page.path}
-              to={(page as any).isPublic ? `/retailer/login` : `/s/${storeCode}/${page.path}`}
+              to={page.isPublic ? `/retailer/login` : `/s/${storeCode}/${page.path}`}
               className="page-link-card"
             >
               <span className="page-link-title">{page.name}</span>
@@ -73,7 +81,7 @@ export default function AllPagesPage() {
               {pages.map((page) => (
                 <tr key={page.path}>
                   <td className="cell-mono">/s/:storeCode/{page.path || '(index)'}</td>
-                  <td>{(page as any).isPublic ? 'No' : 'Yes'}</td>
+                  <td>{page.isPublic ? 'No' : 'Yes'}</td>
                   <td><span className="badge badge-success">Implemented</span></td>
                 </tr>
               ))}

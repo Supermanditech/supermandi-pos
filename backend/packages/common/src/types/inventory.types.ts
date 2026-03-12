@@ -64,3 +64,31 @@ export interface TransactionResult {
   ledgerEntries: InventoryLedger[];
   stockAfter: Record<UUID, number>; // productId -> new stock
 }
+
+// Store product list item — shape returned by GET /api/v1/pos/store-products/list
+// Includes SCALE-A3/C1 batch traceability fields and SCALE-B1/E2 sell tile display fields
+export interface StoreProductListItem {
+  storeProductId: UUID;
+  productId: UUID;
+  name: string;
+  barcode: string | null;
+  sellPrice: number | null;
+  mrp: number | null;
+  purchasePrice: number | null;
+  currentStock: number;
+  brand: string | null;
+  unit: string;
+  category: string | null;
+  displayName: string | null;
+  mode: string | null;
+  updatedAt: Date | string | null;
+  metadataUpdatedAt: Date | string | null;
+  // SCALE-C3: Expiry / batch traceability (SCALE-A3/C1)
+  batch_number?: string | null;
+  expiry_date?: string | null;
+  // SCALE-B1/E2: Sell tile display fields
+  image_url: string | null;
+  gst_rate: number | null;
+  net_content_value: number | null;
+  net_content_unit: string | null;
+}

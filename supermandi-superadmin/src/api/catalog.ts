@@ -29,6 +29,14 @@ export type CatalogProduct = {
   supplierName: string;
   createdAt: string;
   updatedAt: string;
+  // SCALE-A1/A2: Compliance fields
+  hsnCode?: string | null;
+  defaultGstRate?: number | null;
+  netContentValue?: number | null;
+  netContentUnit?: string | null;
+  manufacturerName?: string | null;
+  countryOfOrigin?: string | null;
+  shelfLifeDays?: number | null;
 };
 
 export type CatalogProductsResponse = {
