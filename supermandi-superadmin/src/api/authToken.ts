@@ -5,10 +5,14 @@
  * Authentication Flow:
  * 1. User enters admin email address
  * 2. Backend sends OTP to email
- * 3. User verifies OTP, backend issues JWT session token
- * 4. JWT is stored in localStorage and used for API calls (Authorization: Bearer)
+ * 3. User verifies OTP, backend issues JWT session token + sets HttpOnly cookie
+ * 4. SEC-010: HttpOnly cookie is PRIMARY auth; localStorage tracks expiry only
  * 5. JWT expires after 24 hours
  *
+ * SEC-010: Migrated from localStorage token to HttpOnly cookie auth.
+ *   - Backend already sets `admin_session` HttpOnly cookie on login/refresh
+ *   - localStorage stores 'cookie-auth' flag + expiry (no actual token)
+ *   - Authorization header only sent for legacy sessions (backward compat)
  * POST-BATCH-018-FIX-003: localStorage for cross-tab persistence
  * POST-BATCH-018-FIX-002: No hard redirects from API modules — callers decide
  */
@@ -29,14 +33,16 @@ const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 /**
  * Get the current session token if valid
+ * SEC-010: Returns 'cookie-auth' flag (not actual token) for cookie-based sessions.
+ *   Legacy sessions that still have an actual JWT return it for backward compat.
  * POST-BATCH-018-FIX-003: Uses localStorage (cross-tab), no premature buffer
  */
 export function getSessionToken(): string | undefined {
   try {
-    const token = localStorage.getItem(SESSION_TOKEN_KEY);
+    const flag = localStorage.getItem(SESSION_TOKEN_KEY);
     const expiry = localStorage.getItem(SESSION_EXPIRY_KEY);
 
-    if (!token || !expiry) return undefined;
+    if (!flag || !expiry) return undefined;
 
     // POST-BATCH-018-FIX-003: Only reject if actually expired (no 5-min buffer)
     const expiryTime = parseInt(expiry, 10);
@@ -44,20 +50,25 @@ export function getSessionToken(): string | undefined {
       return undefined;
     }
 
-    return token;
+    // SEC-010: Return the flag (not actual token) — cookies handle auth
+    return flag;
   } catch {
     return undefined;
   }
 }
 
 /**
- * Store session token
+ * Store session metadata (expiry + auth flag)
+ * SEC-010: Don't store actual token in localStorage (XSS risk).
+ *   Backend sets HttpOnly cookie; we only track expiry for UX.
  * POST-BATCH-018-FIX-003: Uses localStorage for cross-tab persistence
  */
-function setSessionToken(token: string, expiresAt: number): void {
+function setSessionToken(_token: string, expiresAt: number): void {
   try {
-    localStorage.setItem(SESSION_TOKEN_KEY, token);
+    // SEC-010: Store a flag (not the token) so JS knows we're logged in
+    localStorage.setItem(SESSION_TOKEN_KEY, 'cookie-auth');
     localStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
+    localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
   } catch {
     // ignore
   }
@@ -105,13 +116,17 @@ async function _doRefreshSession(currentToken: string): Promise<boolean> {
   try {
     // STAGING-FIX-006: Use fetchWithTimeout (30s) instead of raw fetch to prevent hanging
     // STG-176: Include body + Content-Type to prevent GCP LB 411 on bodyless POST
+    // SEC-010: Only send Authorization header for legacy sessions (actual JWT)
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (currentToken !== 'cookie-auth') {
+      headers.Authorization = `Bearer ${currentToken}`;
+    }
     const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/refresh`, {
       method: "POST",
       credentials: 'include',
-      headers: {
-        Authorization: `Bearer ${currentToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: '{}',
     });
 
@@ -161,14 +176,18 @@ export async function logout(): Promise<void> {
     try {
       // STAGING-FIX-006: Use fetchWithTimeout (10s) — logout should not hang
       // STG-176: Include body + Content-Type to prevent GCP LB 411 on bodyless POST
+      // SEC-010: Only send Authorization header for legacy sessions (actual JWT)
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (sessionToken !== 'cookie-auth') {
+        headers.Authorization = `Bearer ${sessionToken}`;
+      }
       await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/logout`, {
         method: "POST",
         credentials: 'include',
         timeoutMs: 10000,
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: '{}',
       });
     } catch {
@@ -202,6 +221,8 @@ export function hasValidSession(): boolean {
 
 /**
  * Get auth headers for API calls
+ * SEC-010: HttpOnly cookie is primary auth. Authorization header only sent
+ *   for legacy sessions that still have an actual JWT (backward compat).
  * GO-LIVE-SESSION: Uses Authorization Bearer header with session JWT
  */
 export function getAuthHeaders(): Record<string, string> {
@@ -212,7 +233,9 @@ export function getAuthHeaders(): Record<string, string> {
     'X-Requested-With': 'XMLHttpRequest',
   };
   const sessionToken = getSessionToken();
-  if (sessionToken) {
+  // SEC-010: Only set Authorization header for legacy sessions (actual JWT).
+  // 'cookie-auth' means HttpOnly cookie is handling auth — no Bearer needed.
+  if (sessionToken && sessionToken !== 'cookie-auth') {
     headers.Authorization = `Bearer ${sessionToken}`;
   }
   return headers;
@@ -379,15 +402,17 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
       };
     }
 
-    // Store the JWT token
+    // SEC-010: Don't store actual token in localStorage (XSS risk)
+    // Backend already sets HttpOnly cookie; just track expiry for UX
     if (data.token) {
       // AUDIT-SA-039: Use server-provided expiresIn (seconds), fallback to 24h
       const ttlMs = (data.expiresIn ? data.expiresIn * 1000 : 24 * 60 * 60 * 1000);
       const expiresAt = Date.now() + ttlMs;
       try {
-        localStorage.setItem(SESSION_TOKEN_KEY, data.token);
         localStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
         localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+        // Keep a flag (not the token) so JS knows we're logged in
+        localStorage.setItem(SESSION_TOKEN_KEY, 'cookie-auth');
       } catch {
         // ignore storage errors
       }
