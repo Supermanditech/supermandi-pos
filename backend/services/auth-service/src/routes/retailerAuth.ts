@@ -147,11 +147,6 @@ function asyncHandler(fn: AsyncHandler): AsyncHandler {
 // TYPES
 // =============================================================================
 
-interface FirebaseLoginRequest {
-  idToken: string;
-  storeCode: string;
-}
-
 interface StoreWithPortal {
   id: string;
   code: string;
@@ -260,6 +255,27 @@ async function getRolePermissions(roleName: string): Promise<string[]> {
 }
 
 // =============================================================================
+// SEC-008: RUNTIME INPUT VALIDATION
+// =============================================================================
+
+function validateFirebaseLoginInput(body: unknown): { idToken: string; storeCode: string } {
+  if (!body || typeof body !== 'object') {
+    throw ApiError.badRequest('Request body is required');
+  }
+  const { idToken, storeCode } = body as Record<string, unknown>;
+  if (typeof idToken !== 'string' || !idToken) {
+    throw ApiError.badRequest('Firebase ID token is required');
+  }
+  if (typeof storeCode !== 'string' || !storeCode) {
+    throw ApiError.badRequest('Store code is required');
+  }
+  return {
+    idToken: idToken.substring(0, 5000), // Firebase tokens can be large but bounded
+    storeCode: storeCode.trim().substring(0, 20).toUpperCase(),
+  };
+}
+
+// =============================================================================
 // ROUTES
 // =============================================================================
 
@@ -278,15 +294,8 @@ async function getRolePermissions(roleName: string): Promise<string[]> {
 router.post(
   '/firebase-login',
   asyncHandler(async (req, res) => {
-    const { idToken, storeCode } = req.body as FirebaseLoginRequest;
-
-    // Validate input
-    if (!idToken) {
-      throw ApiError.badRequest('Firebase ID token is required', 'idToken');
-    }
-    if (!storeCode) {
-      throw ApiError.badRequest('Store code is required', 'storeCode');
-    }
+    // SEC-008: Runtime input validation (replaces unsafe cast)
+    const { idToken, storeCode } = validateFirebaseLoginInput(req.body);
 
     // 1. Verify Firebase ID token
     let verifyResult;
@@ -320,7 +329,8 @@ router.post(
     await recordPhoneLoginAttempt(phoneFromToken);
 
     // 3. Get store and verify portal is enabled
-    const store = await getStoreByCode(storeCode.toUpperCase());
+    // SEC-008: storeCode already uppercased by validateFirebaseLoginInput
+    const store = await getStoreByCode(storeCode);
     if (!store) {
       throw ApiError.notFound('Store not found');
     }

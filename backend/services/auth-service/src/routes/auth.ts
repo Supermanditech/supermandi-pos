@@ -133,13 +133,39 @@ function asyncHandler(fn: AsyncHandler): AsyncHandler {
 }
 
 // =============================================================================
-// LOGIN ENDPOINT
+// SEC-008: RUNTIME INPUT VALIDATION
 // =============================================================================
 
-interface LoginRequest {
-  identifier: string; // email or phone
-  password: string;
+function validateLoginInput(body: unknown): { identifier: string; password: string } {
+  if (!body || typeof body !== 'object') {
+    throw ApiError.badRequest('Request body is required');
+  }
+  const { identifier, password } = body as Record<string, unknown>;
+  if (typeof identifier !== 'string' || !identifier.trim()) {
+    throw ApiError.badRequest('Email/phone (identifier) is required and must be a string');
+  }
+  if (typeof password !== 'string' || !password) {
+    throw ApiError.badRequest('Password is required and must be a string');
+  }
+  // Sanitize: trim and limit length to prevent oversized payloads
+  return {
+    identifier: identifier.trim().substring(0, 255),
+    password: password.substring(0, 128),
+  };
 }
+
+function validateRefreshInput(body: unknown): { refreshToken?: string } {
+  if (!body || typeof body !== 'object') return {};
+  const { refreshToken } = body as Record<string, unknown>;
+  if (refreshToken !== undefined && typeof refreshToken !== 'string') {
+    throw ApiError.badRequest('refreshToken must be a string');
+  }
+  return { refreshToken: typeof refreshToken === 'string' ? refreshToken : undefined };
+}
+
+// =============================================================================
+// LOGIN ENDPOINT
+// =============================================================================
 
 interface LoginResponse {
   accessToken: string;
@@ -164,15 +190,11 @@ interface LoginResponse {
 router.post(
   '/login',
   asyncHandler(async (req: Request, res: Response) => {
-    const { identifier, password } = req.body as LoginRequest;
+    // SEC-008: Runtime input validation (replaces unsafe cast)
+    const { identifier, password } = validateLoginInput(req.body);
 
     // SEC-006: Rate limit login attempts by IP (Redis-backed)
     await checkLoginRateLimit(req.ip || req.socket.remoteAddress || 'unknown');
-
-    // Validate input
-    if (!identifier || !password) {
-      throw ApiError.badRequest('Email/phone and password are required');
-    }
 
     // AUTH-OTP-003: Verify credentials with lockout tracking
     const user = await verifyUserCredentials(identifier, password, req.ip || req.socket.remoteAddress);
@@ -260,8 +282,11 @@ interface RefreshResponse {
 router.post(
   '/refresh',
   asyncHandler(async (req: Request, res: Response) => {
+    // SEC-008: Validate body input before extracting refresh token
+    const validatedBody = validateRefreshInput(req.body);
     // AUTH-STORAGE-001: Read refresh token from body (POS) or cookie (web)
-    const refreshToken = getRefreshTokenFromRequest(req);
+    // Use validated body refreshToken if present, otherwise fall back to cookie
+    const refreshToken = validatedBody.refreshToken || getRefreshTokenFromRequest(req);
 
     if (!refreshToken) {
       throw ApiError.badRequest('Refresh token is required');
