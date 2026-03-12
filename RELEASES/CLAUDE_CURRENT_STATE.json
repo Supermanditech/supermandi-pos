@@ -1,6 +1,6 @@
 {
-  "version": "252",
-  "lastUpdated": "2026-03-12T04:00:00.000Z",
+  "version": "253",
+  "lastUpdated": "2026-03-12T05:00:00.000Z",
   "currentPhaseRule": "CANONICAL phase is cccFramework.currentPhase ONLY. Top-level currentPhase field removed to prevent divergence. Claude reads cccFramework.currentPhase.",
   "currentTicket": null,
   "ticketQueue": [],
@@ -7698,5 +7698,68 @@
     "prestageTagsPresent": true,
     "allTicketsHavePRs": true,
     "verdict": "CLEAN with minor drift (merge vs rebase in worktree agents)"
+  },
+  "megaRcDeployPlan": {
+    "playbookFile": "RELEASES/MEGA_RC_DEPLOY_PLAYBOOK.md",
+    "createdAt": "2026-03-12",
+    "status": "READY_TO_EXECUTE",
+    "phases": {
+      "A_megaRcGateRun": {
+        "status": "PENDING",
+        "owner": "CLAUDE",
+        "desc": "typecheck + tests + lint + docker build parity on HEAD f1c4a3be"
+      },
+      "B_operatorE2EGate": {
+        "status": "PENDING",
+        "owner": "OPERATOR",
+        "desc": "HL-002 mandatory: Claude provides script, operator runs on current staging, paste results"
+      },
+      "C_ciPush": {
+        "status": "PENDING",
+        "owner": "CI",
+        "desc": "Push triggers ci-gates.yml then deploy.yml auto-builds 6 images + deploys Cloud Run"
+      },
+      "D_migrationExecution": {
+        "status": "PENDING",
+        "owner": "OPERATOR",
+        "desc": "Cloud SQL Proxy + migrate-prod.js for migrations 180, 181, 182"
+      },
+      "E_postDeployE2E": {
+        "status": "PENDING",
+        "owner": "OPERATOR",
+        "desc": "Second E2E gate on staging after deploy — Claude provides script"
+      },
+      "F_posApkBuild": {
+        "status": "PENDING",
+        "owner": "OPERATOR+CLAUDE",
+        "desc": "cmd /c gradlew.bat assembleRelease from android/ — install on TG8HCYTGGQT885OF"
+      },
+      "G_evidenceAndTag": {
+        "status": "PENDING",
+        "owner": "CLAUDE+OPERATOR",
+        "desc": "Per-batch evidence triplet, MEGA-RC tag on final SHA"
+      },
+      "H_promoteToProduction": {
+        "status": "PENDING",
+        "owner": "OPERATOR",
+        "desc": "promote-to-prod.sh after sign-off — switches to Mode B"
+      }
+    },
+    "criticalNotes": [
+      "POS APK: use cmd.exe or Git Bash for gradlew.bat — NOT PowerShell directly",
+      "Delete stale Gradle bundle before every APK build",
+      "Migrations 180-181-182 must run AFTER deploy, NOT auto on container start",
+      "HL-002: operator must paste E2E results before EVERY CI push — no exceptions",
+      "SCALE-E1 image upload needs GCS_IMAGES_BUCKET env var in Cloud Run",
+      "BullMQ (SCALE-D3) needs Redis — Memorystore at 10.107.71.27:6379 via VPC connector"
+    ],
+    "posApkBuild": {
+      "apiUrl": "https://staging.supermandi.tech",
+      "gradleCmd": "cmd /c \"cd android && gradlew.bat assembleRelease\"",
+      "apkOutput": "android/app/build/outputs/apk/release/app-release.apk",
+      "installCmd": "adb -s TG8HCYTGGQT885OF install -r androidapp\buildoutputsapk\releaseapp-release.apk",
+      "staleBundle": "android/app/build/generated/assets/createBundleReleaseJsAndAssets/index.android.bundle",
+      "deleteStaleCmd": "Remove-Item -Force androidapp\buildgeneratedassetscreateBundleReleaseJsAndAssetsindex.android.bundle -ErrorAction SilentlyContinue"
+    }
   }
 }
