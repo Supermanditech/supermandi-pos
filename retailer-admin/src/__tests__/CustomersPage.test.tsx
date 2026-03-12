@@ -557,7 +557,7 @@ describe('detail view navigation', () => {
 // ==========================================================================
 
 describe('detail view info cards', () => {
-  async function openDetail(customer = customerA, purchases: any[] = []) {
+  async function openDetail(customer: { id: string; storeId: string; name: string; phone: string; email: string | null; address: string | null; creditLimitMinor: number; totalPurchasesMinor: number; visitCount: number; lastVisitAt: string | null; createdAt: string } = customerA, purchases: any[] = []) {
     setupMocks({ list: [customer], detailCustomer: customer, detailPurchases: purchases });
     renderPage();
     await waitFor(() => {

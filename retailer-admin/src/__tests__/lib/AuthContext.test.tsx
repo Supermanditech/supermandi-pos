@@ -457,7 +457,7 @@ describe('Token expiry detection', () => {
 
     // Login with the JWT that has exp claim
     await act(async () => {
-      const auth = screen.getByTestId('login-btn');
+      screen.getByTestId('login-btn');
       // Override the login handler to use our JWT
       // We do this by directly calling the component's login button
       // The TestConsumer hardcodes a token, but login() parses JWT exp from it
@@ -616,9 +616,8 @@ describe('Concurrent refresh prevention (ISSUE-MICRO-049)', () => {
   it('prevents overlapping refresh calls', async () => {
     // Login
     mockedHasAuthCookie.mockReturnValue(false);
-    let refreshResolve: (v: Response) => void;
-    const slowRefreshPromise = new Promise<Response>((resolve) => {
-      refreshResolve = resolve;
+    const slowRefreshPromise = new Promise<Response>((_resolve) => {
+      // intentionally unresolved — simulates a never-settling refresh
     });
     (global.fetch as ReturnType<typeof vi.fn>).mockReturnValue(slowRefreshPromise);
 
@@ -700,7 +699,7 @@ describe('AbortController on logout (ISSUE-MICRO-047)', () => {
     let capturedSignal: AbortSignal | undefined;
     (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
       (_url: string, opts?: RequestInit) => {
-        capturedSignal = opts?.signal;
+        capturedSignal = opts?.signal ?? undefined;
         // Return a promise that never resolves (simulates slow network)
         return new Promise(() => {});
       }
