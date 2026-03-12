@@ -376,7 +376,7 @@ export function SuppliersTab({
                       // R1-FIX: Confirm before rejecting supplier request
                       setConfirmDialog({
                         title: "Reject Supplier Request",
-                        message: `Reject supplier "${request.businessName || request.id}"? They will need to resubmit their application.`,
+                        message: `Reject supplier "${request.requestedName || request.id}"? They will need to resubmit their application.`,
                         confirmLabel: "Reject",
                         variant: "danger",
                         onConfirm: () => { setConfirmDialog(null); handleRejectSupplier(request.id); },

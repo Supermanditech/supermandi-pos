@@ -191,7 +191,7 @@ export function CatalogTab() {
       )}
 
       {/* Loading state */}
-      {loading && <TableSkeleton rows={5} cols={6} />}
+      {loading && <TableSkeleton rows={5} columns={6} />}
 
       {/* Empty state */}
       {!loading && !error && products.length === 0 && (

@@ -509,7 +509,7 @@ export default function App() {
   const [pendingDeviceAction, setPendingDeviceAction] = useState<{
     deviceId: string;
     deviceLabel?: string;
-    action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync";
+    action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync" | "revokeToken";
   } | null>(null);
   const [forceSyncingDevices, setForceSyncingDevices] = useState<Record<string, boolean>>({});
   const [revokingTokenDevices, setRevokingTokenDevices] = useState<Record<string, boolean>>({});

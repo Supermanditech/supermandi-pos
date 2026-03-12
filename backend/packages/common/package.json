@@ -10,7 +10,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.7.0",
+    "@google-cloud/storage": "^7.19.0",
     "@sentry/node": "^7.91.0",
     "pino": "^8.17.0",
     "pino-pretty": "^10.3.0",

@@ -45,7 +45,7 @@ export function RefundsTab() {
       setRefunds(result.data);
       setTotal(result.total);
     } catch (err: unknown) {
-      setError(err.message || "Failed to load refunds");
+      setError(err instanceof Error ? err.message : "Failed to load refunds");
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export function RefundsTab() {
       await approveRefund(id);
       await refresh();
     } catch (err: unknown) {
-      setError(err.message || "Approve failed");
+      setError(err instanceof Error ? err.message : "Approve failed");
     } finally {
       setActionLoading(null);
     }
@@ -92,7 +92,7 @@ export function RefundsTab() {
       setRejectReason("");
       await refresh();
     } catch (err: unknown) {
-      setError(err.message || "Reject failed");
+      setError(err instanceof Error ? err.message : "Reject failed");
     } finally {
       setActionLoading(null);
     }

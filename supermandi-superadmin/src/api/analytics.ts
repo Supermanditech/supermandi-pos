@@ -27,7 +27,7 @@ async function getJson<T>(path: string): Promise<T> {
     // GL-CRIT-0055: Sanitize error messages
     // R4-TS-001: Type-safe narrowing instead of `as any`
     const errorVal = data && typeof data === "object" && "error" in data ? (data as Record<string, unknown>).error : null;
-    const rawError = typeof errorVal === 'string' ? errorVal : errorVal?.message || null;
+    const rawError = typeof errorVal === 'string' ? errorVal : (errorVal && typeof errorVal === 'object' && 'message' in errorVal ? (errorVal as Record<string, unknown>).message as string : null);
     throw new Error(sanitizeErrorMessage(rawError, fallback));
   }
   return data as T;

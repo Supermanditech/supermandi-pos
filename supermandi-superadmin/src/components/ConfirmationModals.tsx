@@ -8,7 +8,7 @@ interface UserSuspendModalProps {
 }
 
 interface DeviceActionModalProps {
-  pendingDeviceAction: { deviceId: string; deviceLabel?: string; action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync" } | null;
+  pendingDeviceAction: { deviceId: string; deviceLabel?: string; action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync" | "revokeToken" } | null;
   setPendingDeviceAction: (v: null) => void;
   executeDeviceSave: (deviceId: string) => void;
   executeDeviceReset: (deviceId: string) => void;

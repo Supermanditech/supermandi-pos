@@ -59,7 +59,6 @@ export function MaintenanceTab() {
           setSaving(false);
         }
       },
-      onCancel: () => setConfirmDialog(null),
     });
   };
 
@@ -169,7 +168,7 @@ export function MaintenanceTab() {
         </div>
       )}
 
-      {confirmDialog && <ConfirmDialog {...confirmDialog} />}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
     </section>
   );
 }

@@ -386,7 +386,7 @@ describe('AnalyticsTab', () => {
       new_products_created_count: 2,
       new_products_created: [
         { id: 'np1', name: 'Onion', barcode: '456', created_at: '2026-01-01' },
-        { id: 'np2', name: 'Garlic', barcode: '789', created_at: null },
+        { id: 'np2', name: 'Garlic', barcode: '789', created_at: '' },
       ],
       sales_by_group: [], group_by: 'day' as const, missing_fields: [],
     };
@@ -404,7 +404,7 @@ describe('AnalyticsTab', () => {
       range: { from: '2026-01-01', to: '2026-01-31' },
       total_minor: 20000,
       vendor_breakdown: [{ supplier: 'FarmFresh', total_minor: 15000 }],
-      sku_cost_summary: [{ product_id: 'p1', sku: 'SKU-1', quantity: 5, avg_cost_minor: 200, last_cost_minor: 250 }],
+      sku_cost_summary: [{ product_id: 'p1' as string | null, sku: 'SKU-1' as string | null, quantity: 5, avg_cost_minor: 200, last_cost_minor: 250 }],
       stock_in_breakdown: null,
     };
     render(<AnalyticsTab {...createProps({ analyticsTab: 'purchases', analyticsPurchases: purchases })} />);
