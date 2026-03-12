@@ -369,7 +369,8 @@ describe('authToken module', () => {
       expect(result.success).toBe(true);
       expect(result.token).toBe('jwt-token-123');
       expect(result.admin?.email).toBe('admin@test.com');
-      expect(localStorage.getItem('supermandi_admin_session')).toBe('jwt-token-123');
+      // SEC-010: localStorage stores 'cookie-auth' flag, not actual token (XSS protection)
+      expect(localStorage.getItem('supermandi_admin_session')).toBe('cookie-auth');
       expect(localStorage.getItem('supermandi_admin_session_expiry')).toBeTruthy();
       expect(localStorage.getItem('supermandi_admin_last_activity')).toBeTruthy();
     });
@@ -454,7 +455,8 @@ describe('authToken module', () => {
 
       const result = await authModule.refreshSession();
       expect(result).toBe(true);
-      expect(localStorage.getItem('supermandi_admin_session')).toBe('new-token');
+      // SEC-010: localStorage stores 'cookie-auth' flag, not actual token (XSS protection)
+      expect(localStorage.getItem('supermandi_admin_session')).toBe('cookie-auth');
     });
 
     it('returns false and clears token on 401', async () => {
