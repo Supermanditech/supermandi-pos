@@ -17,6 +17,8 @@ export interface CartItem {
   metadata?: Record<string, any>;
   flags?: string[];
   itemDiscount?: ItemDiscount;
+  // AUD-016: SCALE-A3 batch traceability — carried through cart to offline sale
+  batchNumber?: string | null;
   // GL-RJ-007: Track price resolution status
   priceResolutionError?: boolean;
   priceResolutionMessage?: string;

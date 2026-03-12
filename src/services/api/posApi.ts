@@ -20,6 +20,8 @@ export type SaleItemInput = {
   quantity: number;
   priceMinor: number;
   itemDiscount?: DiscountInput | null;
+  // AUD-016: SCALE-A3 batch traceability
+  batchNumber?: string | null;
 };
 
 export type SaleCreateResponse = {
@@ -59,7 +61,9 @@ export async function createSale(input: {
       priceMinor: item.priceMinor,
       quantity: item.quantity,
       itemDiscount: item.itemDiscount ?? null,
-      globalProductId
+      globalProductId,
+      // AUD-016: SCALE-A3 batch traceability
+      batchNumber: item.batchNumber ?? null
     };
   });
 

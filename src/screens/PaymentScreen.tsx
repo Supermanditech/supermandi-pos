@@ -457,6 +457,8 @@ const PaymentScreen = () => {
             global_product_id: globalProductId,
             store_product_id: storeProductId,
             retail_variant_id: retailVariantId,
+            // AUD-016: SCALE-A3 batch traceability
+            batchNumber: item.batchNumber ?? undefined,
           };
         }),
         discountMinor,

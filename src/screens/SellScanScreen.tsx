@@ -107,6 +107,8 @@ type SkuItem = {
   net_content_value?: number | null;
   net_content_unit?: string | null;
   expiry_date?: string | null;
+  // AUD-016: SCALE-A3 batch traceability
+  batch_number?: string | null;
   brand?: string | null;
   mode?: "PACKAGED" | "LOOSE";
   rate_unit?: string | null;
@@ -166,6 +168,8 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
           net_content_unit: product.net_content_unit ?? null,
           imageUrl: product.image_url ?? null,
           expiry_date: product.expiry_date ?? null,
+          // AUD-016: SCALE-A3 batch traceability
+          batch_number: product.batch_number ?? null,
           brand: product.brand ?? null,
           mode: product.mode ?? undefined,
           rate_unit: product.rate_unit ?? null,
@@ -235,6 +239,8 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
             net_content_unit: match.net_content_unit ?? null,
             imageUrl: match.image_url ?? null,
             expiry_date: match.expiry_date ?? null,
+            // AUD-016: SCALE-A3 batch traceability
+            batch_number: match.batch_number ?? null,
             brand: group.brand ?? null,
             mode: match.mode ?? undefined,
             rate_unit: match.rate_unit ?? null,
@@ -2454,6 +2460,8 @@ export default function SellScanScreen({
           storeProductId: item.storeProductId || undefined,
           productId: item.productId || undefined,
         },
+        // AUD-016: SCALE-A3 batch traceability
+        batchNumber: item.batch_number ?? undefined,
         // GL-RJ-007: Set price resolution error flag if no price found
         priceResolutionError: priceResolutionFailed,
         priceResolutionMessage: priceResolutionFailed ? "Price not found - enter manually" : undefined,
@@ -3191,6 +3199,8 @@ export default function SellScanScreen({
           storeProductId: bulkQtyItem.storeProductId || undefined,
           productId: bulkQtyItem.productId || undefined,
         },
+        // AUD-016: SCALE-A3 batch traceability
+        batchNumber: bulkQtyItem.batch_number ?? undefined,
         priceResolutionError: priceResolutionFailed,
         priceResolutionMessage: priceResolutionFailed ? "Price not found - enter manually" : undefined,
       });
