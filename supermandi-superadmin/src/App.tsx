@@ -2684,6 +2684,7 @@ export default function App() {
 
   // SA-P1-013: Revoke device token
   function requestRevokeToken(deviceId: string) {
+    setRevokingTokenDevices(prev => ({ ...prev, [deviceId]: true }));
     const device = deviceRecords.find((d) => d.id === deviceId);
     setPendingDeviceAction({
       deviceId,
@@ -2693,16 +2694,31 @@ export default function App() {
   }
 
   // SA-P2-002: Push config to device / broadcast
-  async function handlePushConfig(_deviceId: string, _config: { configKey: string; configValue: string; message?: string }): Promise<void> {
+  async function handlePushConfig(deviceId: string, config: { configKey: string; configValue: string; message?: string }): Promise<void> {
     // Stub — config push API integration pending
+    setConfigPushLoading(true);
+    try {
+      // TODO: POST /api/admin/devices/{deviceId}/config-push with config payload
+      console.log('Config push pending implementation', deviceId, config);
+    } finally {
+      setConfigPushLoading(false);
+    }
   }
 
-  async function handleBroadcastConfig(_config: { configKey: string; configValue: string; message?: string }): Promise<void> {
+  async function handleBroadcastConfig(config: { configKey: string; configValue: string; message?: string }): Promise<void> {
     // Stub — broadcast config API integration pending
+    setConfigPushLoading(true);
+    try {
+      // TODO: POST /api/admin/devices/broadcast-config with config payload
+      console.log('Broadcast config pending implementation', config);
+    } finally {
+      setConfigPushLoading(false);
+    }
   }
 
   function refreshConfigPushHistory() {
     // Stub — config push history refresh pending
+    setConfigPushHistory([]);
   }
 
   async function handleCreateStore() {
