@@ -309,17 +309,33 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
 }
 
 /**
- * Middleware to reject any client-provided x-user-id/x-actor-id headers
- * This prevents clients from spoofing their identity
- * Must be applied BEFORE jwtAuthMiddleware
+ * Headers that clients are legitimately allowed to send with the x- prefix.
+ * Every other x-* header is stripped to prevent internal header spoofing
+ * (e.g. x-user-id, x-actor-id, x-service-name, x-admin-token).
+ */
+const ALLOWED_CLIENT_HEADERS = new Set([
+  'x-requested-with',   // CSRF protection — sent by all frontends
+  'x-correlation-id',   // Distributed request tracing
+  'x-device-token',     // POS device authentication
+  'x-forwarded-for',    // Proxy chain — handled by Express trust proxy
+  'x-forwarded-proto',  // Proxy protocol indicator
+  'x-forwarded-host',   // Proxy host header
+  'x-real-ip',          // nginx / load-balancer client IP
+]);
+
+/**
+ * Middleware to strip ALL client-provided x-* headers except an explicit allowlist.
+ * This prevents clients from spoofing internal headers (x-user-id, x-actor-id,
+ * x-service-name, x-admin-token, x-permissions, etc.).
+ * Must be applied BEFORE jwtAuthMiddleware.
  */
 export function stripClientAuthHeaders(req: Request, _res: Response, next: NextFunction): void {
-  // Remove any client-provided auth headers to prevent spoofing
-  delete req.headers['x-user-id'];
-  delete req.headers['x-actor-id'];
-  delete req.headers['x-actor-type'];
-  delete req.headers['x-permissions'];
-  // LIVE.GW.STORE_ISOLATION.ADMIN_HEADER_STRIP.001: Strip admin token to prevent client spoofing
-  delete req.headers['x-admin-token'];
+  // SEC-004: Comprehensive x-header stripping — delete every x-* header
+  // that is not on the allowlist to prevent internal header spoofing.
+  for (const header of Object.keys(req.headers)) {
+    if (header.startsWith('x-') && !ALLOWED_CLIENT_HEADERS.has(header)) {
+      delete req.headers[header];
+    }
+  }
   next();
 }
