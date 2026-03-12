@@ -7,6 +7,7 @@ import {
   BackHandler,
   Easing,
   FlatList,
+  GestureResponderEvent,
   Image,
   Modal,
   PanResponder,
@@ -577,17 +578,17 @@ function CartItemRow({
   const rowMinWidth = screenWidth;
   const enableRowPress = mode === "SELL" && typeof onPressRow === "function";
 
-  const handleQtyDecrease = (event?: any) => {
+  const handleQtyDecrease = (event?: GestureResponderEvent) => {
     event?.stopPropagation?.();
     onUpdateQuantity(item.id, item.quantity - 1);
   };
 
-  const handleQtyIncrease = (event?: any) => {
+  const handleQtyIncrease = (event?: GestureResponderEvent) => {
     event?.stopPropagation?.();
     handleIncrement();
   };
 
-  const handleRemove = (event?: any) => {
+  const handleRemove = (event?: GestureResponderEvent) => {
     event?.stopPropagation?.();
     onRemoveItem(item.id);
   };
