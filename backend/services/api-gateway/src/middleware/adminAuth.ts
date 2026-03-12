@@ -23,6 +23,8 @@ const ADMIN_PUBLIC_PATHS = [
   '/api/v1/admin/auth/status',
   '/api/v1/admin/auth/send-email-otp',   // GO-LIVE-LOGIN-004: Email OTP request
   '/api/v1/admin/auth/verify-email-otp', // GO-LIVE-LOGIN-004: Email OTP verification
+  '/api/v1/admin/auth/refresh',          // SEC-010: cookie-based refresh (backend validates cookie)
+  '/api/v1/admin/auth/logout',           // SEC-010: cookie-based logout (backend clears cookie)
   '/api/v1/admin/health',
 ];
 
@@ -34,6 +36,17 @@ const MAX_FAILED_ATTEMPTS = 5;
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+/**
+ * SEC-010: Extract a named token from the Cookie header.
+ * Needed because HttpOnly cookies are now the primary auth for SuperAdmin UI.
+ */
+function extractCookieToken(req: Request, name: string): string | undefined {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return undefined;
+  const match = cookieHeader.split(';').find(c => c.trim().startsWith(`${name}=`));
+  return match ? match.trim().substring(name.length + 1) : undefined;
+}
 
 /**
  * GO-LIVE-003: Check if IP is rate limited due to failed attempts
@@ -135,9 +148,13 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
   }
 
   // GO-LIVE-002: Try session JWT first (Authorization: Bearer <token>)
+  // SEC-010: Also check admin_session HttpOnly cookie (primary auth for SuperAdmin UI)
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const sessionToken = authHeader.substring(7);
+  const cookieToken = extractCookieToken(req, 'admin_session');
+  const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : cookieToken;
+  const authSource = authHeader?.startsWith('Bearer ') ? 'header' : (cookieToken ? 'cookie' : null);
+
+  if (sessionToken && authSource) {
     const session = await verifyAdminSession(sessionToken);
 
     if (session) {
@@ -148,13 +165,13 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
       req.headers['x-actor-type'] = 'platform';
       req.headers['x-permissions'] = '[]';
       clearFailedAttempts(clientIp);
-      logger.info(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via session JWT`);
+      logger.info(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via session JWT (${authSource})`);
       return next();
     }
 
     // Invalid session JWT
     recordFailedAttempt(clientIp);
-    logger.warn(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid session JWT (IP: ${clientIp})`);
+    logger.warn(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid session JWT from ${authSource} (IP: ${clientIp})`);
     res.status(401).json({
       error: {
         code: 'INVALID_SESSION',
