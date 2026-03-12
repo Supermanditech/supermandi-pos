@@ -19,8 +19,11 @@ export interface Product extends BaseEntity {
   primaryBarcode?: string; // Cache only - canonical is product_barcodes
   hsnCode?: string;
   defaultGstRate?: number;
-  netContentValue?: number;   // SCALE-A2: Net content per unit (e.g. 500 for 500g)
-  netContentUnit?: string;    // SCALE-A2: Unit: g, kg, ml, l, pcs
+  netContentValue?: number;    // SCALE-A2: Net content per unit (e.g. 500 for 500g)
+  netContentUnit?: string;     // SCALE-A2: Unit: g, kg, ml, l, pcs
+  manufacturerName?: string;   // SCALE-A1: Manufacturer name for compliance labels
+  countryOfOrigin?: string;    // SCALE-A1: Country of origin for compliance labels
+  shelfLifeDays?: number;      // SCALE-A1: Shelf life in days for expiry calculation
   isActive: boolean;
 }
 
