@@ -15,6 +15,15 @@ import {
 import { getRedis, blacklistToken } from "../../../db/redis";
 import crypto from "crypto";
 import { log } from "../../../lib/logger";
+import { redisRateLimit } from "../../../middleware/rateLimit";
+
+// SEC-007: IP-level rate limit for admin OTP endpoints
+// Prevents brute-force OTP requests from a single IP
+// (Complements existing email-level rate limits in emailService)
+const otpRateLimiter = redisRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // 5 requests per minute per IP
+});
 
 export const adminAuthRouter = Router();
 
@@ -143,7 +152,7 @@ function isEmailAllowed(email: string): boolean {
  * Request body:
  * - email: The admin's email address
  */
-adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response) => {
+adminAuthRouter.post("/auth/send-email-otp", otpRateLimiter, async (req: Request, res: Response) => {
   const { email } = req.body as { email?: string };
 
   // Validate email format
@@ -226,7 +235,7 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
  * - email: The admin's email address
  * - otp: The 6-digit OTP code
  */
-adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Response) => {
+adminAuthRouter.post("/auth/verify-email-otp", otpRateLimiter, async (req: Request, res: Response) => {
   const { email, otp } = req.body as { email?: string; otp?: string };
 
   // Validate inputs
