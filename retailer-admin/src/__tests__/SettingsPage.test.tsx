@@ -78,6 +78,13 @@ const renderPage = () =>
 describe('SettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    // MFA-003: Flush orphaned setTimeout(logout, 2000) from password change flow
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   // -----------------------------------------------------------------------

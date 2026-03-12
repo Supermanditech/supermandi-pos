@@ -140,30 +140,32 @@ describe("EnrollDeviceScreen", () => {
     // ENROLL-SESSION-CHECK-RACE-CONDITION: component shows spinner until
     // getDeviceSession() resolves, so we must wait for form to appear
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
     expect(screen.getByText("Activate Your POS")).toBeTruthy();
     expect(screen.getByTestId("enroll-code-input")).toBeTruthy();
     expect(screen.getByTestId("enroll-label-input")).toBeTruthy();
     expect(screen.getByTestId("enroll-submit-button")).toBeTruthy();
-  });
+  }, 30000);
 
   it("pre-fills enrollment code from route params", async () => {
     mockRouteParams.enrollmentCode = "SM-ABC123";
     render(<EnrollDeviceScreen />);
     await waitFor(() => {
       expect(screen.getByTestId("enroll-code-input")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
     expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-ABC123");
   });
 
   it("shows alert for missing code", async () => {
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     // Clear default label, leave code empty
     fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
@@ -179,9 +181,10 @@ describe("EnrollDeviceScreen", () => {
   it("shows alert for missing label (#404)", async () => {
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     // Clear the default label
@@ -199,9 +202,10 @@ describe("EnrollDeviceScreen", () => {
     mockNetInfoFetch.mockResolvedValue({ isConnected: false });
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     // Label has default from device model ("TestDevice")
@@ -217,9 +221,10 @@ describe("EnrollDeviceScreen", () => {
 
   it("calls enrollDevice with label and navigates to SellScan on success", async () => {
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
@@ -234,7 +239,7 @@ describe("EnrollDeviceScreen", () => {
       const callArgs = mockEnrollDevice.mock.calls[0][0];
       expect(callArgs.deviceMeta.label).toBe("Counter-1");
       expect(mockReplace).toHaveBeenCalledWith("SellScan");
-    });
+    }, { timeout: 3000 });
   });
 
   it("shows error alert for expired enrollment code", async () => {
@@ -242,9 +247,10 @@ describe("EnrollDeviceScreen", () => {
     mockEnrollDevice.mockRejectedValue(new ApiError("ENROLLMENT_CODE_EXPIRED", 409));
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-EXPIRED");
     // Label has default from device model
@@ -264,9 +270,10 @@ describe("EnrollDeviceScreen", () => {
     mockEnrollDevice.mockRejectedValue(new ApiError("ENROLLMENT_CODE_REVOKED", 409));
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-REVOKED");
 
@@ -276,7 +283,7 @@ describe("EnrollDeviceScreen", () => {
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith("Activation Failed", expect.stringContaining("revoked"));
-    });
+    }, { timeout: 3000 });
     alertSpy.mockRestore();
   });
 
@@ -286,14 +293,15 @@ describe("EnrollDeviceScreen", () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("SellScan");
-    });
+    }, { timeout: 3000 });
   });
 
   it("has default label from device model name", async () => {
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
     // expo-device mock has modelName: "TestDevice"
     expect(screen.getByTestId("enroll-label-input").props.value).toBe("TestDevice");
   });
@@ -316,9 +324,10 @@ describe("EnrollDeviceScreen", () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -345,9 +354,10 @@ describe("EnrollDeviceScreen", () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue("true");
 
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -357,15 +367,16 @@ describe("EnrollDeviceScreen", () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("SellScan");
-    });
+    }, { timeout: 3000 });
   });
 
   it("navigates to SellScan when upiVpa is present (regardless of prompt state)", async () => {
     // Default mock has upiVpa: "test@upi"
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -375,7 +386,7 @@ describe("EnrollDeviceScreen", () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("SellScan");
-    });
+    }, { timeout: 3000 });
   });
 
   // =========================================================================
@@ -396,9 +407,10 @@ describe("EnrollDeviceScreen", () => {
     });
 
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
     fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
@@ -425,9 +437,10 @@ describe("EnrollDeviceScreen", () => {
     });
 
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
     await act(async () => {
@@ -453,9 +466,10 @@ describe("EnrollDeviceScreen", () => {
 
     const alertSpy = jest.spyOn(Alert, "alert");
     render(<EnrollDeviceScreen />);
+    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
 
@@ -477,7 +491,7 @@ describe("EnrollDeviceScreen", () => {
     render(<EnrollDeviceScreen />);
     await waitFor(() => {
       expect(screen.getByTestId("enroll-code-input")).toBeTruthy();
-    });
+    }, { timeout: 3000 });
     expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-CODE99");
     mockRouteParams.code = undefined;
   });

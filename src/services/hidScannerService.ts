@@ -1,3 +1,6 @@
+// MFA-006: Use structured logger instead of raw console.log for production builds
+import { logger } from "./logger";
+
 type HidScanHandler = (value: string) => void;
 
 const HID_MIN_LENGTH = 4;
@@ -50,15 +53,15 @@ const normalizeHidValue = (value: string): string => value.replace(HID_NEWLINE_R
 const logScanStart = () => {
   if (hidScanStarted) return;
   hidScanStarted = true;
-  console.log("scan_start");
+  logger.debug("HID", "scan_start");
 };
 
 const logScanComplete = (value: string) => {
-  console.log(`scan_complete:${value}`);
+  logger.debug("HID", `scan_complete:${value}`);
 };
 
 const logScanIgnored = () => {
-  console.log("scan_ignored");
+  logger.debug("HID", "scan_ignored");
 };
 
 export function resetHidBuffer(): void {
@@ -116,15 +119,15 @@ const commitHidBuffer = (now: number): string | null => {
     notifyHidScan(true);
     logScanComplete(normalized);
     if (hidScanHandler) {
-      console.log(`hid_calling_handler:${normalized}`);
+      logger.debug("HID", `hid_calling_handler:${normalized}`);
       hidScanHandler(normalized);
     } else {
-      console.log("hid_no_handler_registered");
+      logger.debug("HID", "hid_no_handler_registered");
     }
     return normalized;
   }
 
-  console.log(`hid_scan_rejected:len=${normalizedLength},dur=${duration},avg=${averageInterval.toFixed(0)}`);
+  logger.debug("HID", `hid_scan_rejected:len=${normalizedLength},dur=${duration},avg=${averageInterval.toFixed(0)}`);
   logScanIgnored();
   return null;
 };

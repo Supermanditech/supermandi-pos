@@ -578,7 +578,7 @@ export default function InventoryPage() {
             >
               <div className="stat-label" style={{ color: 'var(--danger)' }}>Expired</div>
               <div className="stat-value" style={{ color: 'var(--danger)' }}>
-                {expiryLoading ? '...' : (expiryData?.counts.expired ?? 0)}
+                {expiryLoading ? '...' : (expiryData?.counts?.expired ?? 0)}
               </div>
             </div>
             <div
@@ -588,7 +588,7 @@ export default function InventoryPage() {
             >
               <div className="stat-label" style={{ color: 'var(--danger)' }}>Critical (&le;30 days)</div>
               <div className="stat-value" style={{ color: 'var(--danger)' }}>
-                {expiryLoading ? '...' : (expiryData?.counts.critical ?? 0)}
+                {expiryLoading ? '...' : (expiryData?.counts?.critical ?? 0)}
               </div>
             </div>
             <div
@@ -598,13 +598,13 @@ export default function InventoryPage() {
             >
               <div className="stat-label" style={{ color: 'var(--warning)' }}>Warning (31-90 days)</div>
               <div className="stat-value" style={{ color: 'var(--warning)' }}>
-                {expiryLoading ? '...' : (expiryData?.counts.warning ?? 0)}
+                {expiryLoading ? '...' : (expiryData?.counts?.warning ?? 0)}
               </div>
             </div>
             <div className="stat-card" data-testid="expiry-card-total">
               <div className="stat-label">Total Expiring</div>
               <div className="stat-value">
-                {expiryLoading ? '...' : (expiryData?.expiring.length ?? 0)}
+                {expiryLoading ? '...' : (expiryData?.expiring?.length ?? 0)}
               </div>
             </div>
           </div>
@@ -642,7 +642,7 @@ export default function InventoryPage() {
                       </button>
                     </td>
                   </tr>
-                ) : !expiryData || expiryData.expiring.length === 0 ? (
+                ) : !expiryData || !expiryData.expiring || expiryData.expiring.length === 0 ? (
                   <tr>
                     <td colSpan={6} data-testid="expiry-empty">
                       <EmptyState

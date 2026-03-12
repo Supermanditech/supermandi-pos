@@ -272,6 +272,7 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS payments (
       id TEXT PRIMARY KEY,
       sale_id TEXT NULL REFERENCES sales(id) ON DELETE SET NULL,
+      store_id TEXT NULL,
       mode TEXT NOT NULL,
       status TEXT NOT NULL,
       amount_minor INTEGER NOT NULL,
