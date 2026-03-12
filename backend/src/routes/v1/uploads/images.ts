@@ -26,7 +26,12 @@ const ALLOWED_MIMETYPES = new Set([
 ]);
 
 // GCS bucket for product images (if available)
+// AUD-008: Warn at startup if env var missing — falls back to hardcoded name which
+// will silently fail in production if the bucket name differs.
 const GCS_IMAGES_BUCKET = process.env.GCS_IMAGES_BUCKET || "supermandi-pos-images";
+if (!process.env.GCS_IMAGES_BUCKET) {
+  console.warn("[uploads/images] GCS_IMAGES_BUCKET env var not set — using fallback 'supermandi-pos-images'. Image uploads may fail if bucket name differs.");
+}
 
 // Local uploads directory (for dev / no-GCS fallback)
 const LOCAL_UPLOADS_DIR = path.resolve(__dirname, "../../../../uploads");
