@@ -211,7 +211,9 @@ export async function createOfflineSale(
       quantity: item.quantity,
       priceMinor: item.priceMinor,
       itemDiscount: item.discount ? { ...item.discount } : null,
-      global_product_id: item.globalProductId ?? undefined
+      global_product_id: item.globalProductId ?? undefined,
+      // AUD-016: SCALE-A3 batch traceability for server sync
+      batchNumber: item.batchNumber ?? null
     })),
     cartDiscount: fallbackCartDiscount ? { ...fallbackCartDiscount } : null,
     itemDiscountMinor,
