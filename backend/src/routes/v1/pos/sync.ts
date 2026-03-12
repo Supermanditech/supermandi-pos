@@ -911,6 +911,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
             name: string;
             barcode: string;
             globalProductId?: string | null;
+            batchNumber?: string | null;
           }> = [];
 
           // Validation constants to prevent overflow and abuse
@@ -924,6 +925,7 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
             const priceMinorRaw = asNumber(item?.priceMinor);
             const globalProductId =
               asTrimmedString(item?.globalProductId) ?? asTrimmedString(item?.global_product_id);
+            const batchNumber = asTrimmedString(item?.batchNumber) ?? null;
             const quantity = quantityRaw === null ? null : Math.round(quantityRaw);
             const priceMinor = priceMinorRaw === null ? null : Math.round(priceMinorRaw);
 
@@ -963,7 +965,8 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
               priceMinor,
               name: itemName,
               barcode,
-              globalProductId
+              globalProductId,
+              batchNumber
             });
           }
 
@@ -990,8 +993,8 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
               const lineTotal = item.priceMinor * item.quantity;
               await client.query(
                 `
-                INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
-                VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10)
+                INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode, batch_number)
+                VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11)
                 `,
                 [
                   randomUUID(),
@@ -1003,7 +1006,8 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
                   item.priceMinor,
                   lineTotal,
                   item.name,
-                  item.barcode
+                  item.barcode,
+                  item.batchNumber ?? null
                 ]
               );
             }
