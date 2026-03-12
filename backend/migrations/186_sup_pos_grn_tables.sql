@@ -1,4 +1,4 @@
--- Migration: 108_sup_pos_grn_tables
+-- Migration: 186_sup_pos_grn_tables
 -- SUP-POS-011: Create order_receives and order_receive_items tables for GRN flow
 -- Safe to run multiple times (idempotent)
 
