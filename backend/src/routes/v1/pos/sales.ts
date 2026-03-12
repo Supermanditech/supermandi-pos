@@ -894,7 +894,8 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       name: asTrimmedString(item.name) ?? undefined,
       barcode: asTrimmedString(item.barcode) ?? undefined,
       quantity,
-      priceMinor
+      priceMinor,
+      batchNumber: asTrimmedString(item.batchNumber) ?? undefined
     };
   });
 
@@ -1025,6 +1026,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       name?: string;
       barcode?: string;
       globalProductId?: string;
+      batchNumber?: string | null;
     }> = [];
 
     for (const item of cleanedItems) {
@@ -1112,7 +1114,8 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
         priceMinor: item.priceMinor,
         name: item.name,
         barcode: item.barcode,
-        globalProductId: catalogGlobalProductId ?? item.globalProductId ?? undefined
+        globalProductId: catalogGlobalProductId ?? item.globalProductId ?? undefined,
+        batchNumber: item.batchNumber ?? null
       });
     }
 
