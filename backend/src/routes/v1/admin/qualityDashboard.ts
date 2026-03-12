@@ -50,10 +50,12 @@ qualityDashboardRouter.get('/overview', async (_req: Request, res: Response) => 
   const tableStats: Record<string, number> = {};
   try {
     if (pool) {
-      const tables = ['stores', 'users', 'products', 'orders', 'transactions', 'devices', 'suppliers'];
-      for (const table of tables) {
+      // MFA-005: Use allowlist Set + identifier quoting to prevent SQL injection pattern
+      const ALLOWED_TABLES = new Set(['stores', 'users', 'products', 'orders', 'transactions', 'devices', 'suppliers']);
+      for (const table of ALLOWED_TABLES) {
         try {
-          const r = await pool.query(`SELECT COUNT(*) as c FROM ${table}`);
+          // Safe: table name validated against hardcoded Set, double-quoted as SQL identifier
+          const r = await pool.query(`SELECT COUNT(*) as c FROM "${table}"`);
           tableStats[table] = parseInt(r.rows[0]?.c || '0', 10);
         } catch {
           tableStats[table] = -1; // table doesn't exist

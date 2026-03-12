@@ -101,7 +101,8 @@ describe('SA-P1-011: StockAdjustmentHistoryPage', () => {
     expect(screen.getByText('100')).toBeTruthy();
     expect(screen.getByText('95')).toBeTruthy();
     expect(screen.getByText('-5')).toBeTruthy();
-    expect(screen.getByText('Damage')).toBeTruthy();
+    // "Damage" appears in both reason column and filter dropdown — use getAllByText
+    expect(screen.getAllByText('Damage').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('POS Device')).toBeTruthy();
   });
 
@@ -130,7 +131,8 @@ describe('SA-P1-011: StockAdjustmentHistoryPage', () => {
     await waitFor(() => {
       expect(screen.getByText('+5')).toBeTruthy();
     });
-    expect(screen.getByText('Found')).toBeTruthy();
+    // "Found" appears in both reason column and filter dropdown — use getAllByText
+    expect(screen.getAllByText('Found').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders error state', async () => {
@@ -278,7 +280,8 @@ describe('SA-P1-011: StockAdjustmentHistoryPage', () => {
       expect(screen.getByText('Old Qty')).toBeTruthy();
       expect(screen.getByText('New Qty')).toBeTruthy();
       expect(screen.getByText('Change')).toBeTruthy();
-      expect(screen.getByText('Reason')).toBeTruthy();
+      // "Reason" appears in table header and filter label — use getAllByText
+      expect(screen.getAllByText('Reason').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Adjusted By')).toBeTruthy();
     });
   });

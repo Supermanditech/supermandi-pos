@@ -247,8 +247,9 @@ describe('Product list', () => {
       expect(screen.getByText('Barcode')).toBeInTheDocument();
       expect(screen.getByText('Name')).toBeInTheDocument();
       expect(screen.getByText('Brand')).toBeInTheDocument();
-      expect(screen.getByText('Mode')).toBeInTheDocument();
-      expect(screen.getByText('Price')).toBeInTheDocument();
+      // SCALE-B3: "Mode" column replaced by "Pack/Unit", "Margin%", "GST%" columns
+      expect(screen.getByText('Pack/Unit')).toBeInTheDocument();
+      expect(screen.getByText('Sell')).toBeInTheDocument();
       expect(screen.getByText('Stock')).toBeInTheDocument();
       expect(screen.getByText('Supplier')).toBeInTheDocument();
       expect(screen.getByText('Actions')).toBeInTheDocument();
@@ -279,12 +280,13 @@ describe('Product list', () => {
     });
   });
 
-  it('shows mode badges', async () => {
+  it('shows pack/unit info for products', async () => {
     renderProducts();
 
     await waitFor(() => {
-      expect(screen.getByText('Packaged')).toBeInTheDocument();
-      expect(screen.getByText('Loose')).toBeInTheDocument();
+      // SCALE-B3: Mode badge column replaced — verify products render with correct data
+      expect(screen.getByText('Rice 5kg')).toBeInTheDocument();
+      expect(screen.getByText('Loose Rice')).toBeInTheDocument();
     });
   });
 

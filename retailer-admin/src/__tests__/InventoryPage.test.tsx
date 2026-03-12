@@ -31,6 +31,8 @@ vi.mock('../lib/formatters', () => ({
 vi.mock('lucide-react', () => ({
   ClipboardList: () => <span>ClipboardIcon</span>,
   RefreshCw: (props: { style?: object }) => <span style={props.style}>RefreshIcon</span>,
+  AlertTriangle: () => <span>AlertTriangleIcon</span>,
+  ArrowUpDown: () => <span>ArrowUpDownIcon</span>,
 }));
 
 vi.mock('../lib/logger', () => ({
@@ -38,8 +40,17 @@ vi.mock('../lib/logger', () => ({
 }));
 
 const mockAuthFetch = vi.fn();
+const defaultExpiryResponse = {
+  ok: true,
+  status: 200,
+  json: () => Promise.resolve({ counts: { expired: 0, critical: 0, warning: 0 }, expiring: [] }),
+};
 vi.mock('../lib/api', () => ({
-  authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+  authFetch: (...args: unknown[]) => {
+    const url = args[0] as string;
+    if (url && url.includes('/expiring')) return Promise.resolve(defaultExpiryResponse);
+    return mockAuthFetch(...args);
+  },
   safeJson: (res: { json: () => Promise<unknown> }) => res.json(),
 }));
 
@@ -97,7 +108,7 @@ describe('InventoryPage', () => {
   it('renders page title', () => {
     mockAuthFetch.mockReturnValue(new Promise(() => {}));
     renderPage();
-    expect(screen.getByText('Inventory Ledger')).toBeInTheDocument();
+    expect(screen.getByText('Inventory')).toBeInTheDocument();
   });
 
   it('shows loading state', () => {
@@ -190,7 +201,7 @@ describe('InventoryPage', () => {
     it('clicking Outward filter re-fetches with transactionType=sale', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockClear();
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
@@ -205,7 +216,7 @@ describe('InventoryPage', () => {
     it('clicking Adjustment filter re-fetches with transactionType=adjustment', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockClear();
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
@@ -220,7 +231,7 @@ describe('InventoryPage', () => {
     it('clicking All filter re-fetches without transactionType param', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       // Switch to Inward first
       mockAuthFetch.mockClear();
@@ -241,7 +252,7 @@ describe('InventoryPage', () => {
     it('active filter tab has aria-pressed=true', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       const allBtn = screen.getByText('All');
       expect(allBtn).toHaveAttribute('aria-pressed', 'true');
@@ -259,7 +270,7 @@ describe('InventoryPage', () => {
     it('setting start date includes startDate param in fetch URL', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockClear();
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
@@ -276,7 +287,7 @@ describe('InventoryPage', () => {
     it('setting end date includes endDate param in fetch URL', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockClear();
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
@@ -293,7 +304,7 @@ describe('InventoryPage', () => {
     it('Clear Dates button appears when dates are set and resets both', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       // No Clear Dates initially
       expect(screen.queryByText('Clear Dates')).not.toBeInTheDocument();
@@ -318,7 +329,7 @@ describe('InventoryPage', () => {
     it('date inputs have max/min constraints', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       const startInput = screen.getByLabelText('From:') as HTMLInputElement;
       const endInput = screen.getByLabelText('To:') as HTMLInputElement;
@@ -339,7 +350,7 @@ describe('InventoryPage', () => {
     it('shows "No inward entries found" when Inward filter selected and empty', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       fireEvent.click(screen.getByText('Inward'));
@@ -351,7 +362,7 @@ describe('InventoryPage', () => {
     it('shows "No sales recorded yet" when Outward filter selected and empty', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       fireEvent.click(screen.getByText('Outward'));
@@ -363,7 +374,7 @@ describe('InventoryPage', () => {
     it('shows "No stock adjustments found" when Adjustment filter selected and empty', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       fireEvent.click(screen.getByText('Adjustment'));
@@ -375,7 +386,7 @@ describe('InventoryPage', () => {
     it('shows date range message when dates set and empty', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       const startInput = screen.getByLabelText('From:');
@@ -609,7 +620,7 @@ describe('InventoryPage', () => {
     it('polls every 30 seconds when tab is visible', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       const initialCallCount = mockAuthFetch.mock.calls.length;
 
@@ -629,7 +640,7 @@ describe('InventoryPage', () => {
     it('skips polling when tab is hidden', async () => {
       mockAuthFetch.mockResolvedValue(makeLedgerResponse());
       renderPage();
-      await waitFor(() => expect(screen.getByTestId('empty-state')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getAllByTestId('empty-state')[0]).toBeInTheDocument());
 
       const callCountAfterLoad = mockAuthFetch.mock.calls.length;
 
@@ -653,11 +664,11 @@ describe('InventoryPage', () => {
   // =========================================================================
 
   describe('Table headers', () => {
-    it('renders all 6 column headers', () => {
+    it('renders all 6 ledger column headers', () => {
       mockAuthFetch.mockReturnValue(new Promise(() => {}));
       renderPage();
       expect(screen.getByText('Date/Time')).toBeInTheDocument();
-      expect(screen.getByText('Product')).toBeInTheDocument();
+      expect(screen.getAllByText('Product').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Type')).toBeInTheDocument();
       expect(screen.getByText('Qty Change')).toBeInTheDocument();
       expect(screen.getByText('Reference')).toBeInTheDocument();
@@ -674,7 +685,7 @@ describe('InventoryPage', () => {
       mockAuthFetch.mockReturnValue(new Promise(() => {}));
       renderPage();
       const dots = screen.getAllByText('...');
-      expect(dots.length).toBe(4); // 4 stat cards
+      expect(dots.length).toBe(8); // 4 ledger stat cards + 4 expiry stat cards
     });
 
     it('shows Showing count matching entry count', async () => {

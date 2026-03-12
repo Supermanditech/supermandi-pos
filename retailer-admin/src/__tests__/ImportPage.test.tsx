@@ -48,6 +48,9 @@ async function selectFile(file: File) {
 }
 
 // Helper: mock successful upload + validate flow
+// SCALE-D3: queue endpoint returns 503 → falls through to legacy /commit
+const queueUnavailable = { ok: false, status: 503, json: () => Promise.resolve({}) };
+
 function mockUploadAndValidateSuccess(validationData: Record<string, unknown>) {
   let callCount = 0;
   mockAuthFetch.mockImplementation(() => {
@@ -561,6 +564,8 @@ describe('Commit flow (J21-TEST-001)', () => {
   it('shows done step with created/updated/skipped counts', async () => {
     await reachReviewStep();
 
+    // Queue unavailable (503) → falls through to legacy /commit
+    mockAuthFetch.mockResolvedValueOnce(queueUnavailable);
     // Synchronous commit (direct success)
     mockAuthFetch.mockResolvedValueOnce({
       ok: true,
@@ -587,6 +592,7 @@ describe('Commit flow (J21-TEST-001)', () => {
   it('shows View Products and Import More buttons on done step', async () => {
     await reachReviewStep();
 
+    mockAuthFetch.mockResolvedValueOnce(queueUnavailable);
     mockAuthFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -608,6 +614,7 @@ describe('Commit flow (J21-TEST-001)', () => {
   it('resets to upload step when Import More is clicked', async () => {
     await reachReviewStep();
 
+    mockAuthFetch.mockResolvedValueOnce(queueUnavailable);
     mockAuthFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -635,6 +642,8 @@ describe('Commit flow (J21-TEST-001)', () => {
   it('shows error and returns to review on commit failure', async () => {
     await reachReviewStep();
 
+    // Queue unavailable → falls through to legacy /commit
+    mockAuthFetch.mockResolvedValueOnce(queueUnavailable);
     mockAuthFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -707,6 +716,8 @@ describe('Warnings and error report download (J21-TEST-001)', () => {
       expect(screen.getByText('Import 3 Valid Rows')).toBeInTheDocument();
     });
 
+    // Queue unavailable → falls through to legacy /commit
+    mockAuthFetch.mockResolvedValueOnce(queueUnavailable);
     mockAuthFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,

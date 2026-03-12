@@ -4,11 +4,16 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import SettingsPage from '../../pages/SettingsPage';
 
 // Mock AuthContext
+// MFA-003: Include logout mock — SettingsPage.tsx:377 calls logout() in setTimeout
+// after password change success. Missing mock causes "TypeError: logout is not a function"
+// uncaught exception that cascades across test files.
+const mockLogout = vi.fn();
 vi.mock('../../lib/AuthContext', () => ({
   useAuth: () => ({
     store: { id: 's1', code: 'STORE1', name: 'My Store' },
     accessToken: 'test-token',
     isAuthenticated: true,
+    logout: mockLogout,
   }),
 }));
 
@@ -66,6 +71,7 @@ function renderSettings(path = '/s/STORE1/settings') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers({ shouldAdvanceTime: true });
 
   // Default: Settings API returns settings successfully
   mockAuthFetch.mockResolvedValue({
@@ -75,6 +81,13 @@ beforeEach(() => {
   });
 
   mockSafeJson.mockImplementation((res: any) => res.json());
+});
+
+afterEach(() => {
+  // MFA-003: Flush orphaned setTimeout(logout, 2000) from password change flow
+  // to prevent uncaught exceptions leaking into other test files
+  vi.runOnlyPendingTimers();
+  vi.useRealTimers();
 });
 
 // ── Loading State ─────────────────────────────────────────────────────────

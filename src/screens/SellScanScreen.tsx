@@ -186,7 +186,8 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
         if (barcode) {
           // SCALE-E2: Pass image_url so offline product tiles show cached images
           // AUD-003: Pass expiry_date (arg 10) so FEFO offline sort is accurate
-          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null, product.image_url ?? null, null, product.expiry_date ?? null);
+          // MFA-001: Pass batch_number (arg 9) so offline cache preserves FEFO batch traceability
+          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null, product.image_url ?? null, product.batch_number ?? null, product.expiry_date ?? null);
           if (product.sellPrice !== null) {
             await setLocalPrice(barcode, product.sellPrice);
           }
@@ -250,7 +251,8 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
           if (barcode) {
             // SCALE-E2: Pass image_url so offline search results show cached images
             // AUD-003: Pass expiry_date (arg 10) so FEFO offline sort is accurate
-            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null, match.image_url ?? null, null, match.expiry_date ?? null);
+            // MFA-001: Pass batch_number (arg 9) so offline cache preserves FEFO batch traceability
+            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null, match.image_url ?? null, match.batch_number ?? null, match.expiry_date ?? null);
             if (sellPrice !== null) {
               await setLocalPrice(barcode, sellPrice);
             }

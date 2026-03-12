@@ -72,7 +72,13 @@ const makeSettingsResponse = (overrides: Record<string, unknown> = {}) => ({
 describe('SettingsPage — Due Limits', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockAccessToken = 'test-token';
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   it('renders due limits section with empty field when no limit set', async () => {

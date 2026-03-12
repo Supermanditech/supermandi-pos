@@ -71,7 +71,13 @@ const makeSettingsResponse = (overrides: Record<string, unknown> = {}) => ({
 describe('SettingsPage — Spending Limits', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockAccessToken = 'test-token';
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   it('renders spending limits section with empty fields when no limits set', async () => {

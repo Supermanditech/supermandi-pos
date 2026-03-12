@@ -1257,12 +1257,13 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
           );
 
           if ((existingPayment.rowCount ?? 0) === 0) {
+            // MFA-004: Include store_id — migration 073 makes it NOT NULL on public.payments
             await client.query(
               `
-              INSERT INTO payments (id, sale_id, mode, status, amount_minor)
-              VALUES ($1, $2, $3, $4, $5)
+              INSERT INTO payments (id, sale_id, store_id, mode, status, amount_minor)
+              VALUES ($1, $2, $3, $4, $5, $6)
               `,
-              [randomUUID(), saleId, mode, status, amountMinor]
+              [randomUUID(), saleId, storeId, mode, status, amountMinor]
             );
 
             // LIVE.BE.STORE_ISOLATION: Add store_id to WHERE clause

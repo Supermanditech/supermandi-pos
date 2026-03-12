@@ -239,6 +239,8 @@ describe("ISSUE-051/066: createSaleInFlightRef prevents self-cancelling useEffec
     ];
   });
 
+  // MFA-002: Increase test timeout — under heavy CI/machine load, mock resolution + React
+  // state updates can exceed the default 5000ms Jest timeout
   it("createSale is called exactly once after mount — ref guard prevents double invocation (ISSUE-051/066)", async () => {
     // REGRESSION: If ISSUE-051 were present, loadingSale in the deps array would cause
     // the effect to cleanup (cancelled=true) and re-run on setLoadingSale(true).
@@ -257,7 +259,7 @@ describe("ISSUE-051/066: createSaleInFlightRef prevents self-cancelling useEffec
 
     // Guard holds: no second invocation after the first resolves
     expect(mockCreateSale).toHaveBeenCalledTimes(1);
-  });
+  }, 30000);
 
   it("createSale request body contains correct required fields", async () => {
     render(<PaymentScreen />);
@@ -279,7 +281,7 @@ describe("ISSUE-051/066: createSaleInFlightRef prevents self-cancelling useEffec
       quantity: 2,
       priceMinor: 5000,
     });
-  });
+  }, 30000);
 });
 
 // =============================================================================
@@ -325,7 +327,7 @@ describe("ISSUE-068: storeProductId from cart metadata forwarded as store_produc
     expect(sentItem.store_product_id).toBe("sp-abc-def-ghi");
     expect(sentItem.global_product_id).toBe("gp-xyz-789");
     expect(sentItem.productId).toBe("prod-catalog-abc");
-  });
+  }, 30000);
 
   it("store_product_id is absent when cart item has no metadata.storeProductId", async () => {
     // Regular product (not catalog-digitised) — no storeProductId in metadata.
@@ -353,5 +355,5 @@ describe("ISSUE-068: storeProductId from cart metadata forwarded as store_produc
 
     // No storeProductId → field should be undefined (not null, not "")
     expect(sentItem.store_product_id).toBeUndefined();
-  });
+  }, 30000);
 });

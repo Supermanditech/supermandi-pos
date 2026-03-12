@@ -636,7 +636,7 @@ export default function ImportPage() {
                 <><br /><strong>{commitResult.skipped}</strong> skipped.</>
               )}
             </p>
-            {commitResult.warnings.length > 0 && (
+            {commitResult.warnings && commitResult.warnings.length > 0 && (
               <div className="imp-warnings">
                 {commitResult.warnings.map((w, i) => <p key={i}>{w}</p>)}
                 {/* RET-POS-SYNC-002: Download error report */}
