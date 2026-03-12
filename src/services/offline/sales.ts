@@ -11,6 +11,8 @@ export type OfflineSaleItem = {
   quantity: number;
   itemDiscount?: DiscountInput | null;
   globalProductId?: string | null;
+  // AUD-011: batch_number for sale item traceability (SCALE-A3/C recall support)
+  batchNumber?: string | null;
 };
 
 export type OfflineSaleInput = {
@@ -178,9 +180,10 @@ export async function createOfflineSale(
         discount_type,
         discount_value,
         discount_minor,
-        line_total_minor
+        line_total_minor,
+        batch_number
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         uuidv4(),
@@ -193,7 +196,8 @@ export async function createOfflineSale(
         item.discount?.type ?? null,
         item.discount?.value ?? null,
         item.lineDiscountMinor,
-        item.lineTotalMinor
+        item.lineTotalMinor,
+        item.batchNumber ?? null
       ]
     );
   }
