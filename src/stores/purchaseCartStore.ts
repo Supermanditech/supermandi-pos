@@ -21,6 +21,8 @@ export interface PurchaseCartItem {
   mrp?: number;
   moq: number;
   minOrderValue?: number; // Supplier min order value from link
+  // AUD-012: Price resolution error flag (mirrors cartStore pattern)
+  priceResolutionError?: boolean;
 }
 
 export interface SupplierGroup {
@@ -164,6 +166,7 @@ export const usePurchaseCartStore = create<PurchaseCartState>()(
           mrp: item.mrp,
           moq: item.moq,
           minOrderValue: item.minOrderValue,
+          priceResolutionError: false, // AUD-012: default false on add/re-add
           quantity,
         };
 
