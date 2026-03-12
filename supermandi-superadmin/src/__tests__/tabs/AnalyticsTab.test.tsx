@@ -405,7 +405,7 @@ describe('AnalyticsTab', () => {
       total_minor: 20000,
       vendor_breakdown: [{ supplier: 'FarmFresh', total_minor: 15000 }],
       sku_cost_summary: [{ product_id: 'p1' as string | null, sku: 'SKU-1' as string | null, quantity: 5, avg_cost_minor: 200, last_cost_minor: 250 as number | null }],
-      stock_in_breakdown: null,
+      stock_in_breakdown: undefined,
     };
     render(<AnalyticsTab {...createProps({ analyticsTab: 'purchases', analyticsPurchases: purchases })} />);
     expect(screen.getByText('Purchases Total')).toBeTruthy();
