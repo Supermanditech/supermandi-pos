@@ -3,6 +3,9 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { ApiError } from '@supermandi/common';
+import { createLogger } from '@supermandi/common';
+
+const logger = createLogger({ service: 'auth-service', level: process.env.LOG_LEVEL || 'info' });
 import {
   verifyUserCredentials,
   getUserWithRoles,
@@ -153,6 +156,14 @@ router.post(
     // AUTH-OTP-003: Verify credentials with lockout tracking
     const user = await verifyUserCredentials(identifier, password, req.ip || req.socket.remoteAddress);
     if (!user) {
+      // SEC-012: Log failed login for security monitoring
+      logger.warn(JSON.stringify({
+        event: 'login_failed',
+        identifier: identifier.includes('@') ? identifier.replace(/(.{2}).*(@.*)/, '$1***$2') : '****' + identifier.slice(-4),
+        ip: req.ip || req.socket.remoteAddress || 'unknown',
+        userAgent: req.get('user-agent')?.substring(0, 100),
+        timestamp: new Date().toISOString(),
+      }));
       throw ApiError.unauthorized('Invalid credentials');
     }
 

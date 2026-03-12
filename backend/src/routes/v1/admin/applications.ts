@@ -407,12 +407,24 @@ adminApplicationsRouter.post(
         [approvedEntityId, adminNote, id]
       );
 
-      // Log status change
+      // Log status change (SEC-012: include changed_by_user_id for audit trail)
+      // changed_by_user_id is UUID FK — only set when adminId is a valid UUID (not email/master-token)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(adminId);
       await client.query(
-        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
-         VALUES ($1, $2, 'ACTIVE', $3)`,
-        [id, app.status, adminNote]
+        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason, changed_by_user_id)
+         VALUES ($1, $2, 'ACTIVE', $3, $4)`,
+        [id, app.status, adminNote, isUuid ? adminId : null]
       ).catch(() => { /* status_log table may not exist yet */ });
+
+      // SEC-012: Structured audit log for application approval
+      log.info(JSON.stringify({
+        event: 'application_approved',
+        applicationId: id,
+        entityType: app.entity_type,
+        adminId,
+        adminIp: req.ip || req.socket.remoteAddress || 'unknown',
+        timestamp: new Date().toISOString(),
+      }));
 
       await client.query('COMMIT');
 
@@ -578,12 +590,25 @@ adminApplicationsRouter.post(
           [rejectionReason.trim(), adminNote, id]
         );
 
-        // Log status change (table may not exist yet — handle gracefully)
+        // Log status change (SEC-012: include changed_by_user_id for audit trail)
+        // changed_by_user_id is UUID FK — only set when adminId is a valid UUID (not email/master-token)
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(adminId);
         await client.query(
-          `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
-           VALUES ($1, $2, 'NEEDS_FIX', $3)`,
-          [id, app.status, rejectionReason.trim()]
+          `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason, changed_by_user_id)
+           VALUES ($1, $2, 'NEEDS_FIX', $3, $4)`,
+          [id, app.status, rejectionReason.trim(), isUuid ? adminId : null]
         ).catch(() => { /* status_log table may not exist yet */ });
+
+        // SEC-012: Structured audit log for application rejection
+        log.info(JSON.stringify({
+          event: 'application_rejected',
+          applicationId: id,
+          entityType: app.entity_type,
+          adminId,
+          adminIp: req.ip || req.socket.remoteAddress || 'unknown',
+          reason: rejectionReason.trim().substring(0, 200),
+          timestamp: new Date().toISOString(),
+        }));
 
         await client.query("COMMIT");
       } catch (txErr) {
