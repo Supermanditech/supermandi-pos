@@ -27,6 +27,8 @@ export interface StoreSkuMatch {
   net_content_unit?: string | null;
   image_url?: string | null;
   expiry_date?: string | null;
+  // AUD-006: SCALE-A3 batch_number from migration 182
+  batch_number?: string | null;
   mode?: "PACKAGED" | "LOOSE";
   rate_unit?: string | null;
 }
@@ -150,6 +152,8 @@ export interface StoreProductListItem {
   net_content_unit?: string | null;
   image_url?: string | null;
   expiry_date?: string | null;
+  // AUD-006: SCALE-A3 batch_number from migration 182
+  batch_number?: string | null;
   mode?: "PACKAGED" | "LOOSE";
   rate_unit?: string | null;
 }
