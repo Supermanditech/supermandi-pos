@@ -272,6 +272,28 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     req.headers['x-actor-type'] = decoded.actorType;
     req.headers['x-permissions'] = JSON.stringify(decoded.permissions);
 
+    // SEC-003: Defense-in-depth — validate URL storeId matches JWT actorId
+    // Retailer-admin routes embed storeId in path: /api/v1/retailer-admin/stores/:storeId/*
+    // If URL contains a storeId and it doesn't match the token's actorId, reject
+    if (decoded.actorType === 'store' || decoded.actorType === 'STORE') {
+      const storeIdMatch = req.path.match(/\/stores\/([a-f0-9-]{36})\//i);
+      if (storeIdMatch && storeIdMatch[1]) {
+        const urlStoreId = storeIdMatch[1].toLowerCase();
+        const tokenStoreId = (decoded.actorId || '').toLowerCase();
+        if (urlStoreId !== tokenStoreId) {
+          logger.warn(`[SEC-003] Store isolation violation at gateway: URL=${urlStoreId}, token=${tokenStoreId}, user=${decoded.sub}`);
+          res.status(403).json({
+            error: {
+              code: 'STORE_ISOLATION_VIOLATION',
+              message: 'Access denied: store mismatch.',
+            },
+            requestId: req.correlationId,
+          });
+          return;
+        }
+      }
+    }
+
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
