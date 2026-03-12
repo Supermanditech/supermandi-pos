@@ -109,6 +109,8 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   useEffect(() => {
     if (cartItems.length === 0) return;
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      // AUD-004: RESET = tab switch (allow without confirm).
+      // GO_BACK / POP / POP_TO_TOP = back-navigation (block with confirm dialog).
       if (e.data.action.type === 'RESET') return;
       e.preventDefault();
       Alert.alert(
