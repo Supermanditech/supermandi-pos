@@ -10,34 +10,64 @@ import {
 import { generateTokenPair } from '../services/jwtService';
 import { config } from '../config';
 import { setAuthCookies } from '../utils/cookies';
+import { getRedis } from '../redis';
 
 const router: Router = Router();
 
 // =============================================================================
-// T-208: Per-phone rate limiting for Firebase login
+// SEC-006: REDIS-BACKED PER-PHONE RATE LIMITING (with in-memory fallback)
 // 5 attempts per phone per 15 minutes + 30-minute lockout
 // =============================================================================
 
-const phoneLoginAttempts = new Map<string, { timestamps: number[]; failCount: number; lockedUntil: number }>();
 const PHONE_LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const PHONE_LOGIN_MAX_ATTEMPTS = 5;
 const PHONE_LOGIN_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
+const PHONE_RL_PREFIX = 'auth:phone_rl:';
+const PHONE_LOCK_PREFIX = 'auth:phone_lock:';
 
-function checkPhoneLoginRateLimit(phone: string): string | null {
+// In-memory fallback when Redis unavailable
+const phoneLoginAttemptsFallback = new Map<string, { timestamps: number[]; failCount: number; lockedUntil: number }>();
+
+async function checkPhoneLoginRateLimit(phone: string): Promise<string | null> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      // Check lockout first
+      const lockKey = PHONE_LOCK_PREFIX + phone;
+      const lockTtl = await redis.ttl(lockKey);
+      if (lockTtl > 0) {
+        const waitMinutes = Math.ceil(lockTtl / 60);
+        return `Too many login attempts. Try again in ${waitMinutes} minute(s).`;
+      }
+
+      // Check attempt count in window
+      const rlKey = PHONE_RL_PREFIX + phone;
+      const countStr = await redis.get(rlKey);
+      const count = countStr ? parseInt(countStr, 10) : 0;
+      if (count >= PHONE_LOGIN_MAX_ATTEMPTS) {
+        // Set lockout
+        await redis.setex(lockKey, Math.ceil(PHONE_LOGIN_LOCKOUT_MS / 1000), '1');
+        const waitMinutes = Math.ceil(PHONE_LOGIN_LOCKOUT_MS / 60000);
+        return `Too many login attempts. Account locked for ${waitMinutes} minutes.`;
+      }
+      return null;
+    } catch {
+      // Redis error — fall through to in-memory
+    }
+  }
+
+  // In-memory fallback
   const now = Date.now();
-  const entry = phoneLoginAttempts.get(phone);
+  const entry = phoneLoginAttemptsFallback.get(phone);
   if (!entry) return null;
 
-  // Check lockout
   if (entry.lockedUntil > now) {
     const waitMinutes = Math.ceil((entry.lockedUntil - now) / 60000);
     return `Too many login attempts. Try again in ${waitMinutes} minute(s).`;
   }
 
-  // Check window
   const recent = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
   if (recent.length >= PHONE_LOGIN_MAX_ATTEMPTS) {
-    // Lock the phone
     entry.lockedUntil = now + PHONE_LOGIN_LOCKOUT_MS;
     const waitMinutes = Math.ceil(PHONE_LOGIN_LOCKOUT_MS / 60000);
     return `Too many login attempts. Account locked for ${waitMinutes} minutes.`;
@@ -46,29 +76,53 @@ function checkPhoneLoginRateLimit(phone: string): string | null {
   return null;
 }
 
-function recordPhoneLoginAttempt(phone: string): void {
+async function recordPhoneLoginAttempt(phone: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const rlKey = PHONE_RL_PREFIX + phone;
+      const count = await redis.incr(rlKey);
+      if (count === 1) {
+        await redis.expire(rlKey, Math.ceil(PHONE_LOGIN_WINDOW_MS / 1000));
+      }
+      return;
+    } catch {
+      // Redis error — fall through to in-memory
+    }
+  }
+
+  // In-memory fallback
   const now = Date.now();
-  let entry = phoneLoginAttempts.get(phone);
+  let entry = phoneLoginAttemptsFallback.get(phone);
   if (!entry) {
     entry = { timestamps: [], failCount: 0, lockedUntil: 0 };
-    phoneLoginAttempts.set(phone, entry);
+    phoneLoginAttemptsFallback.set(phone, entry);
   }
   entry.timestamps = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
   entry.timestamps.push(now);
   entry.failCount++;
 }
 
-function clearPhoneLoginAttempts(phone: string): void {
-  phoneLoginAttempts.delete(phone);
+async function clearPhoneLoginAttempts(phone: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.del(PHONE_RL_PREFIX + phone);
+      await redis.del(PHONE_LOCK_PREFIX + phone);
+    } catch {
+      // Redis error — fall through to in-memory
+    }
+  }
+  phoneLoginAttemptsFallback.delete(phone);
 }
 
-// Cleanup stale entries every 10 minutes
+// Cleanup stale fallback entries every 10 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [phone, entry] of phoneLoginAttempts.entries()) {
+  for (const [phone, entry] of phoneLoginAttemptsFallback.entries()) {
     const recent = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
     if (recent.length === 0 && entry.lockedUntil <= now) {
-      phoneLoginAttempts.delete(phone);
+      phoneLoginAttemptsFallback.delete(phone);
     }
   }
 }, 10 * 60 * 1000);
@@ -258,12 +312,12 @@ router.post(
 
     const phoneFromToken = normalizePhoneNumber(payload.phone_number);
 
-    // T-208: Per-phone rate limiting
-    const phoneRateLimitMsg = checkPhoneLoginRateLimit(phoneFromToken);
+    // SEC-006: Per-phone rate limiting (Redis-backed)
+    const phoneRateLimitMsg = await checkPhoneLoginRateLimit(phoneFromToken);
     if (phoneRateLimitMsg) {
       throw ApiError.forbidden(phoneRateLimitMsg);
     }
-    recordPhoneLoginAttempt(phoneFromToken);
+    await recordPhoneLoginAttempt(phoneFromToken);
 
     // 3. Get store and verify portal is enabled
     const store = await getStoreByCode(storeCode.toUpperCase());
@@ -317,8 +371,8 @@ router.post(
       permissions
     );
 
-    // T-208: Clear rate limit on successful login
-    clearPhoneLoginAttempts(phoneFromToken);
+    // SEC-006: Clear rate limit on successful login
+    await clearPhoneLoginAttempts(phoneFromToken);
 
     // AUTH-STORAGE-001: Set HttpOnly cookies for web clients
     const refreshTokenExpirySeconds = config.jwt.refreshTokenExpiresInDays * 86400;
